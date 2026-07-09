@@ -1,0 +1,46 @@
+name: Docs
+
+# Builds the Antora documentation site under docs/ and publishes it to GitHub Pages (the gh-pages branch)
+# on every push to main. Adapted from the Antora-build/GitHub-Pages-publish stages of the Java/Maven
+# develop.yml/main.yml template in the setup-java-github-workflows skill, minus everything Java/Maven-
+# specific (JDK setup, static analysis, SonarQube, the Maven site report, Maven Central publish) since this
+# repository has no pom.xml — it's a skills catalog, not a Java library.
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write # crazy-max/ghaction-github-pages pushes the built site to the gh-pages branch
+
+jobs:
+  build-and-deploy:
+    name: Build and publish Antora documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Antora
+        run: cd docs && npm ci
+
+      - name: Build Antora docs
+        run: cd docs && npx antora antora-playbook.yml
+
+      - name: Add .nojekyll
+        run: touch ./docs/build/site/.nojekyll
+
+      - name: Deploy to GitHub Pages
+        if: success()
+        uses: crazy-max/ghaction-github-pages@v5
+        with:
+          target_branch: gh-pages
+          build_dir: ./docs/build/site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
