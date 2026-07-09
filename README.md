@@ -9,11 +9,11 @@ slash command such as `/plan` or `/pr-review`.
 | | |
 | --- | --- |
 | License | Apache License 2.0 |
+| CI | GitHub Actions — builds the Antora documentation site and publishes it to GitHub Pages on every push to `main` |
 
 ## Documentation
 
-- [Antora documentation site](https://albertoirurueta.github.io/ai-catalog/) *(inferred from convention — no GitHub Pages workflow is configured yet to confirm it's actually published)*
-- [CHANGELOG.md](CHANGELOG.md)
+- [Antora documentation site](https://albertoirurueta.github.io/ai-catalog/) — published to GitHub Pages by the `docs.yml` workflow on every push to `main`
 
 ## How It Works
 
@@ -44,6 +44,8 @@ The catalog currently includes:
 - **Issue-to-PR workflow** — `issue`, `explore`, `plan`, `code`.
 - **Pull request lifecycle** — `pr-description`, `pr-review`.
 - **Maintenance** — `release`, `update-docs`, `check-license`.
+- **Catalog tooling** — `analyze-claude-skills-and-agents`, which regenerates this catalog's own
+  documentation from the skills and agents actually defined on disk.
 
 ## License
 
