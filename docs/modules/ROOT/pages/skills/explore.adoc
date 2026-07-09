@@ -1,0 +1,85 @@
+= Explore
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Produce a grounded understanding of this repository's codebase and, when available, of a specific GitHub
+issue — without writing a plan or making code changes. This is read-only research: its output is a report,
+not a diff.
+
+== Purpose
+
+`explore` gets an agent (or a human) oriented before any decision or code change is made. Given a GitHub
+issue id, it narrows the investigation to only the areas that issue implicates; given none, it does a
+general architectural tour of the repository. Either way it never edits a file, and it never proposes an
+implementation — that is `plan`'s job, run as a separate, explicit step.
+
+== Purpose group
+
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+
+== Invocation
+
+[source]
+----
+/explore
+/explore <issue-id>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`issue-id`
+|No
+|A GitHub issue number to ground the exploration in. When given, the investigation is scoped to the files,
+classes, and behavior the issue describes.
+|None — if omitted, the skill asks whether to explore a specific issue anyway; declining falls back to a
+general codebase tour.
+|===
+
+== Outputs
+
+* A plain-text report in the conversation — never a written file.
+* If an issue was explored: the task restated in plain language, the specific files/classes/methods
+  relevant to it, how the current code behaves in that area, and anything ambiguous or missing that would
+  block implementation.
+* If codebase-only: a summary of the architecture areas covered and anything notable found.
+* No code, configuration, or documentation is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /explore] --> B{Issue id given?}
+    B -- yes --> C["Fetch issue via gh issue view\n(or GitHub MCP tools)"]
+    B -- no --> D["Ask user: explore an issue,\nor just the codebase?"]
+    D -- issue id given --> C
+    D -- declined / none --> E["General orientation pass:\narchitecture, modules, recent git history"]
+    C --> F["Narrow exploration to files/classes/\nerror messages the issue names,\nplus their closest structural neighbors"]
+    F --> G["Read existing tests covering that area"]
+    E --> H[Report findings]
+    G --> H
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `explore` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/plan.adoc[] — Step 2 runs `explore` first (unless equivalent exploration already happened
+  earlier in the conversation) so the plan it drafts is grounded in the real codebase.
+* xref:skills/issue.adoc[] — Step 5 runs `explore` (scoped to the issue) as the first step of its
+  explore → plan → code → PR pipeline.
+* xref:skills/pr-review.adoc[] — Step 4 runs `explore` to learn the codebase's architecture and conventions
+  before judging a pull request's diff against them.
+
+=== Related agents
+
+* The built-in **`Explore`** agent (see xref:agents/overview.adoc[]) — Step 3 uses it for the actual
+  codebase search (module structure, abstractions, control flow) instead of manually reading every file.

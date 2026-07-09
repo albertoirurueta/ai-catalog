@@ -1,0 +1,5 @@
+name: ai-catalog
+version: 1.0.0
+title: AI Catalog
+nav:
+  - modules/ROOT/nav.adoc

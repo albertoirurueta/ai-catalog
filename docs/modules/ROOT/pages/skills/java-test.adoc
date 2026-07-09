@@ -1,0 +1,140 @@
+= Java Test
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Java project's JUnit test suite through the Maven Surefire plugin (`mvn test`), scoped to whatever the
+caller asked for — everything, a single class, a single method, a wildcard/package pattern, or a JUnit 5 tag
+expression. This is a read-only reporting skill: it runs tests and summarizes the outcome, it does not fix
+failures unless asked to as an explicit follow-up.
+
+== Purpose
+
+`java-test` turns a loosely-specified request ("run the FooTest", "just the fast tests", "everything") into the
+correct Surefire invocation and a concise pass/fail summary. It exists so that running and narrowing down tests
+doesn't require hand-composing `-Dtest`/`-Dgroups` syntax each time, and so that a calling skill (or a human) gets
+back a short report instead of a full raw Maven log.
+
+== Purpose group
+
+xref:index.adoc#group-quality[Java Code Quality]
+
+== Invocation
+
+[source]
+----
+/java-test
+/java-test <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|Names what to run: a test class, a class+method, several classes, a wildcard/package pattern, an exclusion, or a
+JUnit 5 tag expression. Mapped to the correct Surefire parameter per the table below.
+|None — omitting it runs the full suite (`mvn test`).
+|===
+
+The selector maps to Surefire parameters as follows:
+
+[cols="3,3,3", options="header"]
+|===
+|What the user wants |Parameter |Example
+
+|Everything
+|_(none)_
+|`mvn test`
+
+|One test class
+|`-Dtest`
+|`mvn test -Dtest=FooTest`
+
+|One method in a class
+|`-Dtest` with `#`
+|`mvn test -Dtest=FooTest#testSomething`
+
+|Several methods in one class
+|`-Dtest` with `+` between method names after `#`
+|`mvn test -Dtest=FooTest#method1+method2`
+
+|Several classes
+|`-Dtest` comma-separated
+|`mvn test -Dtest=FooTest,BarTest`
+
+|Classes matching a name pattern
+|`-Dtest` with `*` wildcard
+|`mvn test -Dtest=*ServiceTest`
+
+|All classes in a package
+|`-Dtest` with the package path and wildcard
+|`mvn test -Dtest=com.example.pkg.**`
+
+|Excluding some classes/methods
+|`-Dtest` with `!` prefix (combine with other `-Dtest` entries via comma)
+|`mvn test -Dtest=!SlowTest`
+
+|Tests tagged with a JUnit 5 `@Tag`
+|`-Dgroups`
+|`mvn test -Dgroups="fast"`
+
+|Excluding a JUnit 5 tag
+|`-DexcludedGroups`
+|`mvn test -DexcludedGroups="slow"`
+
+|Tag boolean expression
+|`-Dgroups` with `&`, `\|`, `!`
+|`mvn test -Dgroups="fast & !flaky"`
+|===
+
+`#method` selection and `-Dgroups`/`-DexcludedGroups` tag filtering require JUnit 4.x, JUnit 5, or TestNG (not
+plain JUnit 3) — the skill checks the project's `pom.xml` if it's unsure which syntax applies. A selector that
+matches nothing fails the build with "No tests matching pattern..."; `-DfailIfNoSpecifiedTests=false` is only
+added when the user explicitly wants a missing-selector to be a silent no-op.
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Total tests run, failures, errors, and skipped counts.
+* If everything passed: a brief confirmation, without pasting the full log.
+* If there are failures/errors: the failing test names and the relevant assertion/exception output (falling back
+  to `target/surefire-reports/*.txt` if console output was truncated) — without unrelated passing-test noise.
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /java-test\n(optional selector)"] --> B{Selector given?}
+    B -- no --> C["Run mvn test\n(full suite)"]
+    B -- yes --> D["Map selector to -Dtest / -Dgroups /\n-DexcludedGroups syntax"]
+    D --> E["Compose mvn test command\nwith mapped parameters"]
+    E --> F["Run via Bash tool"]
+    C --> F
+    F --> G["Summarize Surefire output:\nrun / failures / errors / skipped"]
+    G --> H{Failures or errors?}
+    H -- yes --> I["Show failing test names +\nassertion/exception output\n(surefire-reports/*.txt if truncated)"]
+    H -- no --> J["Report: all passed, briefly"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `java-test` is a leaf skill; it only runs Maven commands and reports on their output, it does not call any
+other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/code.adoc[] — delegates to `java-test` once per implementation task, every time, via its own
+  `general-purpose` sub-agent, so the full Surefire report output stays out of `code`'s own context and only a
+  short pass/fail summary comes back.
+
+=== Related agents
+
+None directly — but `code` (see xref:skills/code.adoc[] and xref:agents/overview.adoc[]) always invokes this
+skill from inside a `general-purpose` sub-agent it spawns, not inline.

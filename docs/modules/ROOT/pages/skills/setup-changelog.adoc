@@ -1,0 +1,90 @@
+= Setup Changelog
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create a root `CHANGELOG.md` for a repository by reconstructing its release history from git tags, GitHub
+Releases, and the actual code changes between them — not by guessing or leaving placeholder entries.
+
+== Purpose
+
+`setup-changelog` backfills one Keep a Changelog entry per past release, using whichever source is most
+reliable for that release: a non-empty GitHub Release body if one exists (lightly reformatted rather than
+copied verbatim), or a derived analysis of `git log`/diffs between tags otherwise. It skips changes that don't
+affect users of the project (tooling, CI, formatting-only diffs) unless they're genuinely the entire content of
+a release, in which case it says so plainly rather than inventing something more exciting. This skill is
+explicitly **not idempotent** and is a one-time bootstrap only: Step 1 checks whether `CHANGELOG.md` (or an
+equivalent like `CHANGELOG.rst`/`HISTORY.md`) already exists at the repository root, and if it does, the skill
+stops immediately and makes no changes — it never merges into, extends, or touches an existing changelog, since
+that file may already follow its own format and cadence.
+
+== Purpose group
+
+xref:index.adoc#group-bootstrap[Repository Bootstrap]
+
+== Invocation
+
+[source]
+----
+/setup-changelog
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|(none)
+|No
+|This skill takes no arguments — it works entirely from the repository's actual release history: git tags
+(`git for-each-ref`), and, if hosted on GitHub with `gh` available and authenticated, each tag's GitHub Release
+body via `gh release view`.
+|Not applicable.
+|===
+
+== Outputs
+
+* `CHANGELOG.md` at the repository root, in Keep a Changelog format, with one `## [<version>] - <date>`
+  section per past release (newest first, an empty `## [Unreleased]` at the very top) plus a compare-link
+  reference section if the remote is GitHub.
+* **Only produced if `CHANGELOG.md` didn't already exist.** If it did, the skill makes no changes at all and
+  simply reports that an existing changelog was found and left untouched — this is a one-time bootstrap, not an
+  idempotent fill-gaps tool.
+* If no git tags exist at all, the skill asks the user whether to create a minimal file with just an
+  `## [Unreleased]` section, or stop entirely rather than inventing version numbers.
+* A closing report: how many releases were reconstructed and their version range, which releases used a GitHub
+  Release body versus derived commit/diff analysis, any release noted as tooling/docs-only, and whether compare
+  links were included or omitted.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /setup-changelog] --> B{"CHANGELOG.md (or\nequivalent) already exists?"}
+    B -- yes --> Z["Stop immediately.\nNo changes made."]
+    B -- no --> C["Step 2: Discover release history\n(git tags, GitHub Releases via gh)"]
+    C --> D{"Any tags found?"}
+    D -- no --> E["Ask user: minimal Unreleased-only\nfile, or stop entirely?"]
+    D -- yes --> F["Step 3: For each release,\ndetermine source of content\n(GitHub Release body vs. derived diffs)"]
+    F --> G["Step 4: Compose each release's\nKeep a Changelog subsections"]
+    G --> H["Step 5: Determine each version's\ndate and ordering"]
+    H --> I["Step 6: Write CHANGELOG.md"]
+    I --> J["Step 7: Report"]
+    E --> J
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `setup-changelog` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/setup-java-library-repository.adoc[] — Step 7 runs `setup-changelog` with no `args`, working
+  entirely from the repository's own git tag/GitHub Release history.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in agent.

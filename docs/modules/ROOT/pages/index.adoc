@@ -1,0 +1,381 @@
+= AI Catalog
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+AI Catalog is a collection of https://docs.claude.com/en/docs/claude-code/skills[Claude Code Skills] —
+reusable, version-controlled playbooks for common software engineering workflows. Instead of re-explaining
+the same process to Claude in every project (how this team bootstraps a Java library, how a pull request
+should be reviewed, how release notes get written), each workflow is captured once as a `SKILL.md` file and
+invoked on demand with a slash command such as `/plan` or `/pr-review`.
+
+== Why this exists
+
+Prompting an AI assistant to repeat a multi-step process consistently is hard: the steps drift between
+sessions, edge cases get forgotten, and every teammate ends up with a slightly different mental model of
+"how we do X". A skill fixes that by writing the procedure down once — what to check first, what to skip,
+what "done" looks like — so any repository that adopts it gets the same behavior every time it's invoked.
+
+== Core concepts
+
+=== A skill
+
+Each skill lives in its own directory under `.claude/skills/` and contains a single `SKILL.md` file with:
+
+* A short **description** used by Claude Code to decide when the skill is relevant.
+* Step-by-step instructions written for an agent to follow, including what to survey before acting, what
+  to leave untouched, and how to report back.
+
+Skills in this catalog range from small, single-purpose checks (`check-license`, `java-test`) to
+orchestrators that call other skills in sequence.
+
+=== An agent
+
+This repository does not currently define any custom agents under a `.claude/agents/` directory. Several
+skills nevertheless spawn Claude Code's **built-in** agent types through the `Agent` tool, to run a
+sub-task in an isolated context (so its detailed output — a full test log, a static-analysis report —
+doesn't clutter the main conversation) or to search the codebase without derailing the current flow:
+
+* The **`Explore`** agent — a fast, read-only search agent — is used explicitly by the `explore` skill.
+* Every other sub-agent spawned from this catalog (by `code`, `issue`, and the tasks a `plan`-generated
+  `implementation_plan.md` describes) uses the **`general-purpose`** agent, Claude Code's default when no
+  specific agent type is named.
+
+See xref:agents/overview.adoc[] for detail on where and why each is used.
+
+== Skills and agents reference
+
+[cols="2,2,4,1", options="header"]
+|===
+|Name |Group |Purpose |Detail page
+
+|`analyze-claude-skills-and-agents`
+|xref:index.adoc#group-tooling[Catalog Tooling]
+|Regenerate this documentation site itself from the current set of skills and agents on disk.
+|xref:skills/analyze-claude-skills-and-agents.adoc[]
+
+|`antora-setup`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
+|xref:skills/antora-setup.adoc[]
+
+|`check-license`
+|xref:index.adoc#group-maintenance[Repository Maintenance]
+|Verify (and backfill) license headers on source/test files against the repository's actual license.
+|xref:skills/check-license.adoc[]
+
+|`code`
+|xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+|Execute `implementation_plan.md` end to end: implement, test, document, and quality-check each task.
+|xref:skills/code.adoc[]
+
+|`explore`
+|xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+|Read-only research pass over the codebase, optionally grounded in a GitHub issue.
+|xref:skills/explore.adoc[]
+
+|`issue`
+|xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+|End-to-end kickoff for a GitHub issue: branch, explore, plan, implement, open PR, review.
+|xref:skills/issue.adoc[]
+
+|`java-code-quality`
+|xref:index.adoc#group-quality[Java Code Quality]
+|Run Checkstyle/PMD/SpotBugs and summarize every issue found, grouped by tool.
+|xref:skills/java-code-quality.adoc[]
+
+|`java-coverage`
+|xref:index.adoc#group-quality[Java Code Quality]
+|Run JaCoCo and report the exact measured coverage percentage for target class(es).
+|xref:skills/java-coverage.adoc[]
+
+|`java-javadoc`
+|xref:index.adoc#group-quality[Java Code Quality]
+|Audit and complete Javadoc coverage for given classes, then verify it builds cleanly.
+|xref:skills/java-javadoc.adoc[]
+
+|`java-test`
+|xref:index.adoc#group-quality[Java Code Quality]
+|Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.
+|xref:skills/java-test.adoc[]
+
+|`plan`
+|xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+|Write a concrete, reviewable `implementation_plan.md`, grounded in a prior `explore` pass.
+|xref:skills/plan.adoc[]
+
+|`pr-description`
+|xref:index.adoc#group-pr[Pull Request Lifecycle]
+|Draft a PR description from the real diff, and optionally open/update the pull request.
+|xref:skills/pr-description.adoc[]
+
+|`pr-review`
+|xref:index.adoc#group-pr[Pull Request Lifecycle]
+|Review an open pull request against the linked issue's intent and this codebase's conventions.
+|xref:skills/pr-review.adoc[]
+
+|`release`
+|xref:index.adoc#group-maintenance[Repository Maintenance]
+|Cut a release branch, bump versions, draft release notes/changelog, and open the release PR.
+|xref:skills/release.adoc[]
+
+|`setup-changelog`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|One-time bootstrap of `CHANGELOG.md`, backfilled from git tags/GitHub Releases.
+|xref:skills/setup-changelog.adoc[]
+
+|`setup-java-github-workflows`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Scaffold/update the `develop.yml`/`main.yml`/`sync.yml` GitHub Actions CI/CD pipeline.
+|xref:skills/setup-java-github-workflows.adoc[]
+
+|`setup-java-gitignore`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Create or refresh the root `.gitignore` for a Java project.
+|xref:skills/setup-java-gitignore.adoc[]
+
+|`setup-java-library`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Generate `pom.xml` and the standard Maven source layout for a new Java library.
+|xref:skills/setup-java-library.adoc[]
+
+|`setup-java-library-repository`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Orchestrator: bootstrap a brand-new Java library repository end to end in one pass.
+|xref:skills/setup-java-library-repository.adoc[]
+
+|`setup-readme`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Create or refresh the root `README.md` from what actually exists in the repository.
+|xref:skills/setup-readme.adoc[]
+
+|`update-docs`
+|xref:index.adoc#group-maintenance[Repository Maintenance]
+|Bring the Antora documentation module up to date with changes already made to the code.
+|xref:skills/update-docs.adoc[]
+|===
+
+This repository currently defines no custom agents; the built-in agent types it relies on are described in
+xref:agents/overview.adoc[].
+
+== Purpose groups
+
+[[group-bootstrap]]
+=== Repository Bootstrap
+
+Scaffolding a brand-new repository's build, docs, CI/CD, and top-level files: `setup-java-library-repository`
+(the orchestrator), `setup-java-library`, `antora-setup`, `setup-java-gitignore`, `setup-java-github-workflows`,
+`setup-changelog`, `setup-readme`.
+
+[[group-quality]]
+=== Java Code Quality
+
+Point-in-time checks against a Maven/Java project, each reporting real, measured results rather than
+estimates: `java-test`, `java-coverage`, `java-code-quality`, `java-javadoc`. Used standalone, or fanned out
+to by `code` for every task it implements.
+
+[[group-cycle]]
+=== Issue-to-PR Development Cycle
+
+Taking a piece of work from "described" to "implemented": `issue` (the orchestrator), `explore`, `plan`,
+`code`.
+
+[[group-pr]]
+=== Pull Request Lifecycle
+
+Everything after code exists but before it's merged: `pr-description`, `pr-review`.
+
+[[group-maintenance]]
+=== Repository Maintenance
+
+Keeping an already-bootstrapped repository correct and current: `release`, `update-docs`, `check-license`.
+
+[[group-tooling]]
+=== Catalog Tooling
+
+Maintaining this catalog's own documentation rather than a consumer repository's: `analyze-claude-skills-and-agents`.
+
+== Dependency graph
+
+An edge means "invokes" (a solid line, via the `Skill` tool) or "spawns" (a dotted line, via the `Agent`
+tool). `code-review` is an external skill this catalog does not define — `pr-review` uses it only when it
+happens to be available in the current session.
+
+[mermaid]
+....
+flowchart LR
+    subgraph Bootstrap["Repository Bootstrap"]
+        SJLR["setup-java-library-repository"]
+        SJL["setup-java-library"]
+        AS["antora-setup"]
+        SJG["setup-java-gitignore"]
+        SJW["setup-java-github-workflows"]
+        SC["setup-changelog"]
+        SR["setup-readme"]
+    end
+
+    subgraph Cycle["Issue-to-PR Development Cycle"]
+        ISSUE["issue"]
+        EXPLORE["explore"]
+        PLAN["plan"]
+        CODE["code"]
+    end
+
+    subgraph PRLife["Pull Request Lifecycle"]
+        PRD["pr-description"]
+        PRR["pr-review"]
+    end
+
+    subgraph Quality["Java Code Quality"]
+        JT["java-test"]
+        JC["java-coverage"]
+        JCQ["java-code-quality"]
+        JJ["java-javadoc"]
+    end
+
+    subgraph Maintenance["Repository Maintenance"]
+        REL["release"]
+        UD["update-docs"]
+        CL["check-license"]
+    end
+
+    subgraph Tooling["Catalog Tooling"]
+        ACSA["analyze-claude-\nskills-and-agents"]
+    end
+
+    SJLR --> SJL
+    SJLR --> AS
+    SJLR --> SJG
+    SJLR --> SJW
+    SJLR --> SC
+    SJLR --> SR
+
+    ISSUE --> EXPLORE
+    ISSUE --> PLAN
+    ISSUE -.-> CODE
+    ISSUE --> PRD
+    ISSUE --> PRR
+    PLAN --> EXPLORE
+    PRR --> EXPLORE
+
+    CODE -.-> JCQ
+    CODE -.-> CL
+    CODE -.-> JJ
+    CODE -.-> JT
+    CODE -.-> JC
+
+    REL --> SR
+    REL --> PRD
+    UD -.->|only if no Antora module yet| AS
+
+    ACSA -.->|only if no Antora module yet| AS
+    ACSA -.spawns.-> AGT_GP
+
+    PRR -.->|external, not in this catalog| CR[["code-review"]]
+
+    EXPLORE -.uses.-> AGT_EXPLORE(("Explore\nagent"))
+    CODE -.spawns.-> AGT_GP(("general-purpose\nagent"))
+    ISSUE -.spawns.-> AGT_GP
+....
+
+== Common workflows
+
+These sections walk through how the catalog's skills compose for a few recurring jobs. Each is a real,
+supported path through the graph above — not every skill in the catalog appears in one, since some
+(the xref:index.adoc#group-quality[Java Code Quality] skills, `check-license`) are more often invoked as
+building blocks of a larger flow than run standalone by a person.
+
+=== Setting up a new repository
+
+`setup-java-library-repository` collects the project's identity and CI/CD parameters once, then
+orchestrates six other skills in a fixed order so nothing is asked twice:
+
+[mermaid]
+....
+flowchart TD
+    A["/setup-java-library-repository"] --> B["setup-java-library\n(pom.xml + source layout)"]
+    B --> C["antora-setup\n(docs site)"]
+    C --> D["setup-java-gitignore\n(.gitignore)"]
+    D --> E["setup-java-github-workflows\n(CI/CD)"]
+    E --> F["setup-changelog\n(CHANGELOG.md)"]
+    F --> G["setup-readme\n(README.md, last — sees everything above)"]
+....
+
+Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
+`/antora-setup` to add docs to a repository that already has a `pom.xml`).
+
+=== Typical development cycle, starting from an issue
+
+`issue` is the single entry point for taking a tracked GitHub issue to an open, reviewed pull request:
+
+[mermaid]
+....
+flowchart LR
+    A["/issue &lt;id&gt;"] --> B["explore\n(understand the issue)"]
+    B --> C["plan\n(write implementation_plan.md)"]
+    C --> D{Hand off to /code?}
+    D -- yes --> E["code\n(implement + test, via a sub-agent)"]
+    D -- no --> H[Stop for manual review]
+    E --> F["pr-description\n(open PR)"]
+    F --> G["pr-review\n(review the new PR)"]
+....
+
+`code` itself fans out to the xref:index.adoc#group-quality[Java Code Quality] skills and `check-license`
+for every task it implements (each via its own sub-agent, so their detailed output stays out of the main
+conversation) — see xref:skills/code.adoc[].`explore` and `plan` can also be run individually
+(`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow.
+
+=== Generating a release
+
+`release` must be run from `develop` and drives the whole version bump itself, delegating only the README
+and PR description:
+
+[mermaid]
+....
+flowchart LR
+    A["/release"] --> B["Pick release + next SNAPSHOT version"]
+    B --> C["Bump pom.xml, docs/antora.yml, Antora version snippets"]
+    C --> D["setup-readme\n(refresh README.md)"]
+    D --> E["Write whats-new.adoc + CHANGELOG.md"]
+    E --> F["Commit, push release_x.y.z"]
+    F --> G["pr-description\n(fill in the release PR)"]
+....
+
+=== Updating an existing repository with new functionality
+
+There is no single orchestrator for this — it's a set of independent skills, each scoped to one artifact,
+run after code has already changed:
+
+[mermaid]
+....
+flowchart TD
+    Code["Code change already made\n(uncommitted or on a branch)"] --> UD["update-docs\n(Antora pages)"]
+    Code --> RM["setup-readme\n(README.md, if it already exists: proposes a diff)"]
+    Code --> CLI["check-license\n(license headers on touched files)"]
+    UD -.->|only if no Antora module exists yet| AS["antora-setup"]
+....
+
+`setup-changelog` is deliberately **not** part of this flow: it only bootstraps a changelog that doesn't
+exist yet and stops immediately if `CHANGELOG.md` is already present (see xref:skills/setup-changelog.adoc[]).
+Keeping an existing changelog current on each release is `release`'s job, not a standalone update skill's.
+
+=== Keeping this documentation current
+
+This page and every detail page under xref:index.adoc#group-tooling[Catalog Tooling] are themselves
+generated — by `analyze-claude-skills-and-agents`, from whatever skills/agents actually exist under
+`.claude/skills/` (and `.claude/agents/`, if any) at the time it runs:
+
+[mermaid]
+....
+flowchart LR
+    A["/analyze-claude-skills-and-agents"] --> B["Discover every SKILL.md\n+ agent usage on disk"]
+    B --> C["Build the dependency graph\n+ purpose groups + workflows"]
+    C --> D["Write index.adoc, skills/*.adoc,\nagents/*.adoc, nav.adoc"]
+    D --> E["npx antora — verify the\nsite still builds"]
+....
+
+Re-run it (`/analyze-claude-skills-and-agents`) after adding, removing, or materially changing a skill or
+agent, so this page and the detail pages it links to don't drift from what's actually on disk.
+
+Each skill's own detail page (linked from the table above) covers its exact inputs, outputs, and execution
+flow. Each skill is also self-contained under its own `.claude/skills/<name>/SKILL.md` — copy the ones you
+need into another repository's `.claude/skills/` directory to adopt them there.

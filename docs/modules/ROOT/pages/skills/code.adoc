@@ -1,0 +1,133 @@
+= Code
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Execute `implementation_plan.md` end to end: implement each listed task against the real codebase, back it
+with tests that meet this repository's coverage bar, check it off in the plan file, and move on — with as
+little back-and-forth with the user as possible. This skill writes code; it is the execution counterpart to
+the `plan` skill.
+
+== Purpose
+
+`code` is the autonomous implementation engine of the catalog. Given a plan produced by `plan` (or by
+`issue`, which runs `plan` internally), it works through every task in order — implementing it, testing it,
+license-header-checking it, javadoc-ing it, running the affected tests and the full suite, checking coverage
+and code quality against a captured baseline — checking off the plan's checkboxes as it goes so the run is
+resumable if interrupted. On successful completion it archives the plan to `.archive/` and asks the user for
+a final review; it never commits, pushes, or opens a PR itself.
+
+== Purpose group
+
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+
+== Invocation
+
+[source]
+----
+/code
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|(none)
+|—
+|`code` takes no arguments. It always reads `implementation_plan.md` from the repository root — the file
+produced by the `plan` skill (directly, or via `issue`).
+|Not applicable — if `implementation_plan.md` is missing or empty, the skill tells the user there is
+nothing to execute and suggests running `/plan` first, then stops.
+|===
+
+== Outputs
+
+* Source and test files created/modified per each task in `implementation_plan.md`, following this
+  repository's conventions (Java version, `final var` where already used, full Javadoc with
+  `@param`/`@return`/`@throws`, `IllegalArgumentException` for invalid arguments, no new runtime
+  dependencies).
+* JUnit tests added/updated per task, achieving at least 80% line coverage for the changed/new classes,
+  verified against the actual `java-coverage` report rather than estimated.
+* License headers added to every file a task touched, via `check-license`.
+* Javadoc added/updated for every file a task touched, via `java-javadoc`, verified by a Javadoc build.
+* `implementation_plan.md` with each completed task's (and sub-task's) checkbox checked (`[ ]` → `[x]`) and
+  a short note naming the files touched, tests added, coverage achieved, and code-quality result.
+* A project-wide quality baseline (Step 3) compared against the final state (Step 7) — if it regressed, the
+  user is asked to add follow-up tasks, file GitHub issues, or accept it as-is before archiving.
+* A full local verification build (`mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar
+  source:jar -P '!build-extras'`) confirmed healthy before archiving.
+* On success: `implementation_plan.md` moved to `.archive/implementation_plan_<issue-id-or-timestamp>.md`,
+  a summary of tasks completed/files touched/coverage/quality outcome, and a request for the user to review
+  the code changes (`git diff`/`git status`) — no commit, push, or PR is ever made by this skill.
+* On an unresolved blocker: the plan stays unchecked and at the repository root (not archived) so a later
+  run can resume it.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /code] --> B{implementation_plan.md\npresent?}
+    B -- missing/empty --> Z["Stop: suggest running /plan first"]
+    B -- present --> C["Warn if plan already exists\n(fresh / resumed / all-checked)"]
+    C --> D["Verify every task/sub-task\nhas a [ ]/[x] checkbox"]
+    D --> E["Mirror pending tasks into\nsession task list (TaskCreate)"]
+    E --> F["Capture project-wide quality\nbaseline via sub-agent"]
+    F --> G{Next unchecked\ntop-level task?}
+    G -- none left --> P["Step 7: full build verification\n+ quality baseline comparison"]
+    G -- yes --> H["Re-check current code state;\ncapture per-class pre-change\nquality baseline via sub-agent"]
+    H --> I["Implement task: code + tests"]
+    I --> J["Delegate: check-license,\njava-javadoc (each via sub-agent)"]
+    J --> K["Delegate: run scoped tests,\ncheck coverage >= 80%\n(each via sub-agent)"]
+    K -- failing/under 80% --> I
+    K -- pass --> L["Delegate: full mvn clean test\n(via sub-agent)"]
+    L -- regression --> I
+    L -- pass --> M["Delegate: java-code-quality,\ndiff vs. pre-change baseline\n(via sub-agent)"]
+    M -- new issue found --> I
+    M -- clean --> N["Check off task/sub-task boxes\n+ notes in implementation_plan.md"]
+    N --> G
+    P -- build fails --> P
+    P -- build passes --> Q{Quality regressed\nvs. baseline?}
+    Q -- yes --> R["Ask user: follow-up tasks,\nfile GitHub issues, or accept as-is"]
+    R -- follow-up tasks added --> G
+    Q -- no / resolved --> S["Archive plan to .archive/,\nsummarize, ask for final review"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via its own `general-purpose` sub-agent (see xref:agents/overview.adoc[])
+rather than directly, so verbose report output stays out of `code`'s own context window and only the
+distilled outcome comes back:
+
+* xref:skills/check-license.adoc[] — Step 4 item 4, once per task, to add/verify license headers on the
+  file(s) that task touched.
+* xref:skills/java-javadoc.adoc[] — Step 4 item 5, once per task, to update Javadoc for the class(es) that
+  task touched and confirm the Javadoc build passes.
+* xref:skills/java-test.adoc[] — Step 4 item 6, once per task, to run the scoped tests for the affected
+  class(es) (falling back to `mvn test -Dtest=<TestClass>` directly if unavailable).
+* xref:skills/java-coverage.adoc[] — Step 4 item 7, once per task, to check line/branch coverage for the
+  changed/new class(es) is at least 80% (falling back to `mvn jacoco:prepare-agent test jacoco:report`
+  directly if unavailable).
+* xref:skills/java-code-quality.adoc[] — Step 3 (project-wide baseline), Step 4 item 9 (per-task, diffed
+  against a per-class baseline captured in item 1), and Step 7 (final project-wide comparison).
+* Plain, non-skill sub-agent calls: a full `mvn clean test` run (Step 4 item 8) after each task, and a final
+  full-build verification (Step 7) via `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar
+  source:jar -P '!build-extras'`.
+
+=== Invoked by
+
+* xref:skills/issue.adoc[] — Step 6, when the user chooses automatic implementation over manual review,
+  invokes `code` via a `general-purpose` sub-agent so the whole implementation run starts from a clean
+  context.
+* Also invoked directly by a person via `/code`, once a `plan`-produced `implementation_plan.md` exists at
+  the repository root — no orchestrating skill required.
+
+=== Related agents
+
+* `general-purpose` (see xref:agents/overview.adoc[]) — spawned repeatedly, once per delegated check per
+  task (license, Javadoc, scoped tests, coverage, full suite, code quality), plus once for the final
+  build verification and once for the Step 3 baseline. This is the single heaviest agent-spawning skill in
+  the catalog.

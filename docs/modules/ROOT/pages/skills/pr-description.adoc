@@ -1,0 +1,96 @@
+= PR Description
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Draft a pull request description from the real code changes, then either apply it to an existing PR or
+help open a new one. This skill never pushes, commits, or opens/edits a PR without the user explicitly
+confirming the specific action first.
+
+== Purpose
+
+`pr-description` looks at the actual diff for the current branch — commits already ahead of the base
+branch plus anything staged, unstaged, or untracked — and composes a brief, concise description grounded
+in that diff (never invented). It then checks whether a pull request already exists for the branch: if
+one does, it offers to replace that PR's body with the draft; if not, it offers to commit, push, and open a
+new one, asking for a branch name, destination branch, and title (each with an inferred default). Every
+step that writes to shared state — editing a PR body, committing, pushing, opening a PR — requires the
+user's explicit confirmation first; declining always leaves the drafted description as the deliverable.
+
+== Purpose group
+
+xref:index.adoc#group-pr[Pull Request Lifecycle]
+
+== Invocation
+
+[source]
+----
+/pr-description
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|_(none)_
+|—
+|`pr-description` takes no command-line arguments. It derives everything it needs from the current git
+branch's diff against the repository's base branch, and prompts interactively (via `AskUserQuestion`) for
+branch name, destination branch, and PR title only if the user chooses to open a new pull request.
+|Not applicable.
+|===
+
+== Outputs
+
+* A drafted pull request description in the conversation — a short summary, plus a bulleted list of the
+  concrete changes when there is more than one logical change, with sparing emoji categorization and an
+  optional Mermaid diagram when a change reshapes control/data flow enough to warrant one.
+* If an existing PR was found and the user confirmed: the PR's body is replaced with the draft (via
+  `gh pr edit --body-file`), and its URL is reported.
+* If no PR existed and the user confirmed opening one: a new branch (if needed), a commit, a pushed branch,
+  and a newly opened pull request, with its URL reported.
+* If the user declines any action, or no diff exists to describe: no repository or GitHub state is
+  changed — the draft (or a "nothing to describe" notice) is the only output.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /pr-description] --> B["Step 1: Determine current branch,\nbase branch, and full diff\n(commits ahead + staged/unstaged/untracked)"]
+    B --> C{Any changes to describe?}
+    C -- no --> Z[Tell user, stop]
+    C -- yes --> D["Step 2: Check whether a PR\nalready exists via gh pr view / gh pr list"]
+    D --> E["Step 3: Draft description from\nthe diff and commit messages"]
+    E --> F[Show draft to user]
+    F --> G{PR already exists?}
+    G -- yes --> H["Step 4: Show existing body vs draft,\nask to replace"]
+    H -- yes --> I["gh pr edit --body-file"]
+    H -- no --> Y[Stop - draft is the deliverable]
+    G -- no --> J["Step 5: Ask whether to commit,\npush, and open a new PR"]
+    J -- decline --> Y
+    J -- accept --> K["Collect branch name, destination\nbranch, and title via AskUserQuestion"]
+    K --> L["Commit (if needed), push,\ngh pr create --body-file"]
+    I --> M["Step 6: Report outcome"]
+    L --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `pr-description` is a leaf skill. It only drafts text and, once the user explicitly confirms, runs
+`git`/`gh` commands directly (commit, push, `gh pr edit`, `gh pr create`); it does not call any other skill
+in this catalog.
+
+=== Invoked by
+
+* xref:skills/issue.adoc[] — Step 7.4 runs `pr-description` to fill in the description of the pull request
+  it just opened for the issue.
+* xref:skills/release.adoc[] — Step 14 runs `pr-description` to fill in the description of the release
+  branch's pull request.
+
+=== Related agents
+
+None — `pr-description` does not spawn any agent.

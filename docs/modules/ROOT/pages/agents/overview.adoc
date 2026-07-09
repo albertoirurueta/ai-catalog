@@ -1,0 +1,61 @@
+= Agents
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+This repository defines no custom agents under a `.claude/agents/` directory — every skill in this catalog
+is a plain `SKILL.md` playbook (see xref:index.adoc[]). Several of those skills nevertheless spawn an
+**agent** — a sub-instance of Claude Code, run via the `Agent` tool, with its own separate context window —
+either to search the codebase without derailing the current conversation, or to isolate a verbose sub-task
+(a full test run, a static-analysis report) so only its final summary lands back in the main conversation.
+
+This page documents the two built-in agent types this catalog actually relies on, and where each is used.
+Both are Claude Code built-ins, not anything defined by this repository.
+
+== `Explore`
+
+A fast, read-only search agent for locating code — finding files by pattern, grepping for a symbol, or
+answering "where is X defined". It cannot edit files.
+
+=== Used by
+
+* xref:skills/explore.adoc[] — Step 3 uses it to build a picture of the codebase's structure (module layout,
+  core abstractions, control flow) before reporting findings, in place of manually reading every file.
+
+=== Why this one specifically
+
+`explore`'s job is read-only research over a codebase whose size and shape aren't known in advance. The
+`Explore` agent is purpose-built for exactly that: broad, targeted search that stays out of the main
+conversation's context window, without the ability to accidentally make an edit during what's meant to be a
+non-destructive pass.
+
+== `general-purpose`
+
+Claude Code's default agent type — used whenever a skill spawns a sub-agent via the `Agent` tool without
+naming a specific type. It has the same tool access as the main conversation.
+
+=== Used by
+
+* xref:skills/code.adoc[] — spawns one per delegated check while implementing each task: capturing a
+  code-quality baseline, running `java-code-quality`/`check-license`/`java-javadoc`/`java-test`/
+  `java-coverage`, and the final full-suite/full-build verification. Each is asked to report back only a
+  short summary (e.g. "all tests passed", or the list of newly-introduced issues) rather than the full,
+  verbose tool output, keeping that noise out of `code`'s own context.
+* xref:skills/issue.adoc[] — Step 6 hands the entire `code` run to one sub-agent when the user chooses to
+  implement automatically, so that implementation starts from a clean context instead of carrying the whole
+  `explore`/`plan` transcript into it, while `issue` itself keeps running afterward to open the pull request.
+* A `plan`-generated `implementation_plan.md` (see xref:skills/plan.adoc[]) instructs whoever executes it —
+  normally `code` — to delegate test runs to a sub-agent for the same context-isolation reason, rather than
+  running tests inline.
+
+=== Why this one specifically
+
+Every one of these delegations exists to keep something noisy (a report, a build log, an entire
+implementation pass) out of the calling skill's own context window, not to use any capability unique to a
+non-default agent type — so the plain default is the right choice in each case.
+
+== Adding a custom agent to this catalog
+
+If a future need doesn't fit either built-in type (e.g. a sub-agent that should only have a narrow subset of
+tools), define it under `.claude/agents/<name>.md` following the same frontmatter convention Claude Code
+uses for agent definitions, then re-run the `analyze-claude-skills-and-agents` skill so this page and
+xref:index.adoc[]'s dependency graph pick it up.

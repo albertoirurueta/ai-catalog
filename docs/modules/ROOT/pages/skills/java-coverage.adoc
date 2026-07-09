@@ -1,0 +1,105 @@
+= Java Coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run JaCoCo against a scoped (or full) test run via `mvn clean jacoco:prepare-agent test jacoco:report`, then read
+the generated `target/site/jacoco/jacoco.csv` to report the exact, measured line-coverage percentage for the
+specific class(es) the caller cares about. This is a read-only reporting skill: it measures and reports coverage,
+it does not add tests or modify source/test code unless asked to as an explicit follow-up.
+
+== Purpose
+
+`java-coverage` answers "does class X meet the coverage bar?" with an exact, CSV-derived percentage instead of an
+eyeballed guess from Surefire output. It reuses `java-test`'s selector syntax to scope which tests run, infers or
+accepts an explicit list of target classes, and — for classes under the bar — points to the exact uncovered
+lines/branches in the per-class HTML report so a follow-up can target them precisely.
+
+== Purpose group
+
+xref:index.adoc#group-quality[Java Code Quality]
+
+== Invocation
+
+[source]
+----
+/java-coverage
+/java-coverage <selector> [TargetClass1,TargetClass2,...]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|Which tests to run, using the exact same syntax as the `java-test` skill's selector table (class, class+method,
+comma list, wildcard, package pattern, tag expression). Must cover every test class that exercises the target
+class(es) — a selector scoped too narrowly undercounts real coverage, so a broader selector (a whole package, or
+the full suite) is preferred when in doubt.
+|None — omitting it runs the full suite.
+
+|`TargetClass1,TargetClass2,...`
+|No
+|Comma-separated class name(s) to report coverage for.
+|None — if omitted, target classes are inferred from the test selector by convention (`FooTest` → `Foo`), or, for
+a wildcard/package/tag selector where no name can be inferred, every class touched by the run is reported (or the
+user is asked which class(es) matter).
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Per target class: exact line-coverage percentage (and branch coverage where relevant), computed directly from
+  `target/site/jacoco/jacoco.csv` — never estimated.
+* If the user gave a coverage bar (e.g. "at least 80%"): a clear statement of whether each class meets it.
+* For classes under the bar: a pointer to the per-class HTML/`.java.html` report and the exact uncovered line
+  numbers (via the `nc`/`pc`/`fc` span classes) rather than just the aggregate percentage.
+* A class absent from the CSV is reported as 0% coverage, not as an error.
+* No source or test code is ever modified, and coverage is never re-run to try to raise a number.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /java-coverage\n(optional selector, target classes)"] --> B{Selector given?}
+    B -- yes --> C["Scope tests using java-test's\nselector syntax"]
+    B -- no --> D["Run full suite"]
+    C --> E
+    D --> E{Target classes given?}
+    E -- yes --> F["Use given class list"]
+    E -- no --> G["Infer from test selector\n(FooTest -> Foo), or defer to\nevery class touched by the run"]
+    F --> H["Run mvn clean jacoco:prepare-agent\ntest jacoco:report -Dtest=&lt;selector&gt;"]
+    G --> H
+    H --> I{Build succeeded?}
+    I -- no --> J["Report failure, stop\n(don't read a stale report)"]
+    I -- yes --> K["Read target/site/jacoco/jacoco.csv"]
+    K --> L["Compute line / branch / instruction\ncoverage % per target class"]
+    L --> M{Class row found in CSV?}
+    M -- no --> N["Report 0% (not an error)"]
+    M -- yes --> O["Report exact %; state pass/fail\nvs. any given bar"]
+    N --> P
+    O --> P{Under the bar?}
+    P -- yes --> Q["Point to per-class HTML +\n.java.html for uncovered lines"]
+    P -- no --> R["State it meets the bar"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `java-coverage` is a leaf skill; it only runs Maven commands and reads the generated JaCoCo reports, it
+does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/code.adoc[] — delegates to `java-coverage` once per implementation task, every time, via its own
+  `general-purpose` sub-agent, so the full JaCoCo report output stays out of `code`'s own context and only a short
+  coverage summary comes back.
+
+=== Related agents
+
+None directly — but `code` (see xref:skills/code.adoc[] and xref:agents/overview.adoc[]) always invokes this
+skill from inside a `general-purpose` sub-agent it spawns, not inline.
