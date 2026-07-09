@@ -1,21 +1,21 @@
-# ai-catalog
+# 🗂️ ai-catalog
 
 AI Catalog is a collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) —
 reusable, version-controlled playbooks for common software engineering workflows, invoked on demand with a
 slash command such as `/plan` or `/pr-review`.
 
-## Project Status
+## 📊 Project Status
 
 | | |
 | --- | --- |
 | License | Apache License 2.0 |
 | CI | GitHub Actions — builds the Antora documentation site and publishes it to GitHub Pages on every push to `main` |
 
-## Documentation
+## 📖 Documentation
 
 - [Antora documentation site](https://albertoirurueta.github.io/ai-catalog/) — published to GitHub Pages by the `docs.yml` workflow on every push to `main`
 
-## How It Works
+## ⚙️ How It Works
 
 Each skill lives in its own directory under `.claude/skills/` and contains a single `SKILL.md` file with a
 short description (used by Claude Code to decide when the skill is relevant) and step-by-step instructions
@@ -38,15 +38,15 @@ it's documented, e.g. `/plan` or `/pr-review`.
 
 The catalog currently includes:
 
-- **Repository bootstrap** — `setup-java-library-repository`, `setup-java-library`,
+- **🏗️ Repository bootstrap** — `setup-java-library-repository`, `setup-java-library`,
   `setup-java-github-workflows`, `setup-java-gitignore`, `setup-readme`, `setup-changelog`, `antora-setup`.
-- **Java quality** — `java-test`, `java-coverage`, `java-code-quality`, `java-javadoc`.
-- **Issue-to-PR workflow** — `issue`, `explore`, `plan`, `code`.
-- **Pull request lifecycle** — `pr-description`, `pr-review`.
-- **Maintenance** — `release`, `update-docs`, `check-license`.
-- **Catalog tooling** — `analyze-claude-skills-and-agents`, which regenerates this catalog's own
+- **☕ Java quality** — `java-test`, `java-coverage`, `java-code-quality`, `java-javadoc`.
+- **🔄 Issue-to-PR workflow** — `issue`, `explore`, `plan`, `code`.
+- **🔀 Pull request lifecycle** — `pr-description`, `pr-review`.
+- **🛠️ Maintenance** — `release`, `update-docs`, `check-license`.
+- **🧰 Catalog tooling** — `analyze-claude-skills-and-agents`, which regenerates this catalog's own
   documentation from the skills and agents actually defined on disk.
 
-## License
+## 📄 License
 
 Licensed under the [Apache License 2.0](LICENSE).
