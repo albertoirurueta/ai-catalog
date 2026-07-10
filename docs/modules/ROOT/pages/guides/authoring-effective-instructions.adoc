@@ -12,6 +12,16 @@ xref:guides/plugins.adoc[]) point back to, rather than repeating it four times. 
 a system that produces the same good behavior every time, instead of depending on how well any one session
 happens to be prompted.
 
+[IMPORTANT]
+====
+This guidance applies to **all four** of `CLAUDE.md`, a `SKILL.md`, an agent's system prompt, and a
+plugin's bundled instructions — and just as much to a single, ad hoc **prompt you type into a session
+yourself**. A skill is really just a prompt saved for reuse across many runs; the same discipline that makes
+a saved prompt reliable the tenth time also makes a one-off prompt more likely to get the right answer the
+first time. Nothing below is specific to writing files — read "instruction" throughout as "anything you
+give Claude to act on," whichever of the five forms it takes.
+====
+
 == Write direct, concise, step-structured instructions
 
 An agent following a `SKILL.md` executes it closer to a runbook than to a suggestion — ambiguity that a
@@ -74,6 +84,120 @@ Concretely:
 * **Prune, don't just append.** A `CLAUDE.md` or `SKILL.md` that only ever grows accumulates instructions
   that stopped being true or stopped mattering; a periodic pass to delete stale content is as valuable as the
   writing that added it in the first place.
+
+== Examples
+
+The same contrast — vague versus precise, unstructured versus step-based — holds regardless of whether the
+text ends up in a one-off message, a `SKILL.md` step, a `CLAUDE.md` rule, or an agent's system prompt. The
+worked example below deliberately picks a task with several interacting rules and no single "obvious"
+number, since that's where the gap between a vague prompt and a precise one shows up most.
+
+=== A complex worked example: calculating a tax liability
+
+CAUTION: The figures and rules below are illustrative only, chosen to show what a precise prompt looks like
+— they are not current tax guidance. Verify against the actual current-year rules before using anything
+like this for a real filing.
+
+.Vague prompt
+[example]
+====
+Help me figure out my taxes for this year. I have some freelance income and stock stuff too.
+====
+
+This asks for a real conclusion but supplies almost nothing an agent could compute from: no tax year, no
+jurisdiction, no filing status, no actual numbers for the "freelance income" or "stock stuff," and no
+indication of what "figure out" should produce (a dollar amount? a list of forms? both?). Two runs of this
+same prompt can reasonably produce two different sets of assumptions and two different answers — which is
+exactly the inconsistency direct, structured instructions exist to remove.
+
+.Precise, direct, structured prompt
+[example]
+====
+[source]
+----
+Calculate my 2025 US federal income tax liability. Facts:
+- Filing status: single
+- W-2 wages: $95,000 (federal withholding already paid: $14,200)
+- Schedule C freelance income: $32,000 gross, $4,500 deductible business expenses
+- Schedule D stock sales: $3,000 short-term gain, $12,000 long-term gain
+- Traditional IRA contribution: $6,500 (fully deductible; no other above-the-line items)
+- No itemizable deductions — use the standard deduction
+
+Steps:
+1. Net Schedule C income = $32,000 - $4,500.
+2. Self-employment tax = 15.3% of 92.35% of net Schedule C income; half of this amount is an
+   above-the-line deduction.
+3. Total income = wages + net Schedule C income + short-term gain + long-term gain.
+4. AGI = total income - IRA deduction - deductible half of self-employment tax (step 2).
+5. QBI deduction = 20% of net Schedule C income (no phase-out applies at this income level).
+6. Taxable ordinary income = AGI - QBI deduction - 2025 single standard deduction - long-term gain (taxed
+   separately in step 7, not at ordinary rates).
+7. Apply the 2025 single ordinary-income brackets to taxable ordinary income (this includes the short-term
+   gain, which is taxed at ordinary rates, not the long-term gain).
+8. Apply the 2025 preferential long-term capital gains rates to the $12,000 long-term gain, stacked on top
+   of ordinary income for bracket purposes.
+9. Federal tax owed = step 7 + step 8 + self-employment tax (step 2) - withholding ($14,200).
+
+Report each step's numeric result, then a single closing line: "You owe / are refunded $X." Explicitly flag
+any assumption you had to make rather than silently choosing one.
+----
+====
+
+What makes the second version work isn't length, it's what each part of it removes:
+
+* Every fact the calculation needs is given as a number, not a category ("some freelance income" becomes an
+  exact gross figure and an exact expense figure).
+* The two different tax-rate schedules that apply here (ordinary rates for wages/short-term gain, preferential
+  rates for long-term gain) are named explicitly, rather than left for the agent to notice or miss.
+* The one genuinely open question a real preparer would ask (standard vs. itemized) is resolved up front,
+  instead of left as "whichever is better."
+* The output shape is specified ("each step's numeric result, then one closing line"), so the response is
+  checkable step by step instead of a single unverifiable number.
+* It asks for assumptions to be surfaced instead of silently made — the difference between an answer you can
+  audit and one you have to trust blind.
+
+=== Do's and don'ts at a glance
+
+[cols="2,4,4", options="header"]
+|===
+|Dimension |Don't — vague, general, or incorrect |Do — precise, direct, structured
+
+|Facts and scope
+|"Help me figure out my taxes, I have some freelance income and stock stuff."
+|"Calculate my 2025 US federal tax liability for: single filer, $95,000 W-2 wages, $32,000 Schedule C
+income minus $4,500 expenses, $3,000 short-term and $12,000 long-term gains, a $6,500 IRA deduction."
+
+|Steps
+|"Figure out what I owe."
+|"1. Net Schedule C income... 2. Self-employment tax... 3. Total income... [numbered through to the final
+figure]."
+
+|Resolving ambiguity
+|"Use whichever deduction is better, I guess — you decide."
+|"No itemizable deductions — use the standard deduction. State this explicitly in the output."
+
+|Correctness of the premise itself
+|"Assume all my capital gains are taxed at my ordinary marginal rate, that's how it works, right?" — stated
+as fact, but wrong: long-term gains have their own preferential brackets, and treating this as true produces
+a confidently wrong answer no matter how well-structured the rest of the prompt is.
+|"Apply the 2025 preferential long-term capital gains rates to the $12,000 long-term gain, separately from
+the ordinary-rate brackets applied to wages and the short-term gain."
+
+|Output shape
+|"Just tell me the number."
+|"Report each step's numeric result, then one closing line: 'You owe / are refunded $X.' Flag any assumption
+made rather than silently choosing one."
+
+|Verifiability
+|Accepting a single final figure with no visible working, so an error partway through is invisible.
+|Asking for the intermediate result at each step, so a wrong figure can be traced to the exact step that
+produced it.
+|===
+
+A **don't** isn't always merely vague — as the "correctness of the premise" row shows, a confidently
+*wrong* instruction produces a confidently wrong result regardless of how well-structured the rest of the
+prompt is. Precision in phrasing and correctness of the underlying facts are two separate requirements, and
+a well-structured prompt built on a false premise is still a bad prompt.
 
 == Why this matters more than it looks like it should
 

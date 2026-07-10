@@ -26,6 +26,56 @@ persona/instructions in the body.
 folders instead of the repository's own `.claude/` — see xref:guides/plugins.adoc[].
 |===
 
+== How each one is actually invoked
+
+Skills and agents are triggered in genuinely different ways — knowing which is the "proper" channel for
+each avoids the common mistake of expecting one to behave like the other.
+
+=== Skills — slash command, or natural language, or both
+
+A skill is reachable through two channels, and both are open by default:
+
+* **Explicit slash command** — a user (or an orchestrating skill) types `/<name>`, optionally with
+  arguments, e.g. `/plan 42`. This is the precise, reproducible way to invoke exactly the skill you mean.
+* **Autonomous invocation by Claude** — a user just describes the task in plain language ("write me an
+  implementation plan for issue 42"), and Claude, matching the request against the skill's frontmatter
+  `description`, decides on its own to run it — no slash command typed at all.
+
+Two frontmatter fields narrow this default:
+
+* `disable-model-invocation: true` restricts a skill to explicit slash-command invocation only — Claude will
+  never trigger it on its own, and its description isn't kept loaded in context waiting to be matched. Worth
+  setting on a skill whose effect is disruptive if it runs by surprise (e.g. one that opens a PR).
+* `user-invocable: false` is the inverse — the skill can only be triggered by Claude's own autonomous
+  matching; a user typing `/<name>` directly does nothing. Suited to a skill that's really background
+  knowledge for Claude to draw on, not something meant to be run on demand.
+
+Absent either field, **the proper way to invoke a skill is whichever channel fits the moment**: type the
+slash command when you already know which skill you want and what arguments to give it, or describe the
+task in natural language and let Claude pick the matching skill when you'd rather not remember its exact
+name — reliable in proportion to how distinctive that skill's `description` is (see
+xref:guides/authoring-effective-instructions.adoc[] for writing one that matches correctly).
+
+=== Agents — never a slash command; always a delegation
+
+There is no `/agent-name` command that directly spawns a specific agent by name the way `/<name>` invokes a
+skill — typing that would not do anything special. An agent is only ever reached indirectly, through Claude
+itself deciding to call the `Agent`/Task tool with a given `subagent_type`:
+
+* **An active skill's own instructions** cause the delegation — e.g. `code` (xref:skills/code.adoc[])
+  spawning a `general-purpose` sub-agent to isolate a noisy quality check, per its own step list.
+* **A user asks for it in natural language** — "use the Explore agent to find X", "spawn a sub-agent to
+  review this" — which Claude translates into that same `Agent` tool call. The user is requesting a
+  delegation, not invoking the agent directly.
+* **`@`-mentioning an agent by name** in the conversation prompts Claude to run that turn through it.
+* **Setting an agent as the session-wide default** (e.g. `claude --agent <name>`, or an `agent:` setting)
+  makes the whole session inherit that agent's system prompt, rather than it being spawned mid-task.
+
+So **the proper way to get an agent involved is to ask for it** — by name, in natural language, or via
+`@mention` — and let Claude make the actual tool call; there is no direct, user-typed equivalent to a
+skill's slash command. (Don't confuse this with a `/agents` management command some Claude Code versions
+ship, which opens agent configuration/editing — it doesn't invoke any specific agent by name either.)
+
 == Skill or agent — which one?
 
 * Reach for a **skill** when the thing you want repeated is a *procedure*: a sequence of steps a person (or
