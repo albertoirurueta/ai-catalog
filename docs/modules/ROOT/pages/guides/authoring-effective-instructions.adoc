@@ -22,6 +22,31 @@ first time. Nothing below is specific to writing files — read "instruction" th
 give Claude to act on," whichever of the five forms it takes.
 ====
 
+== Naming a skill or agent within a prompt
+
+A one-off prompt can be just as explicit about *which* skill or agent should handle it as a `SKILL.md` step
+is about its own sub-steps — and doing so is itself an application of "direct, not vague" rather than a
+separate rule:
+
+* To invoke a specific **skill**, either type its slash command directly (`/plan 42`) or name it in prose
+  ("run the `plan` skill for issue 42"). Either is unambiguous about which skill you mean. A purely
+  descriptive request instead ("write me a plan for issue 42") leaves Claude to match your wording against
+  every skill's `description` on its own — usually fine, but a second source of run-to-run variation you
+  remove by naming the skill yourself.
+* To involve a specific **agent**, name it and ask for the delegation explicitly ("use the `Explore` agent
+  to find every caller of `X`", "spawn a sub-agent to run the full test suite") rather than leaving Claude to
+  decide whether and how to isolate the sub-task. There is no slash-command equivalent for an agent, so
+  naming it in the prompt is the only precise, repeatable way to request one.
+
+See xref:guides/creating-skills-and-agents.adoc#_how_each_one_is_actually_invoked[How each one is actually
+invoked] for the full mechanics behind both of these — the frontmatter fields that change what's even
+possible for a given skill (`disable-model-invocation`, `user-invocable`), and the other channels an agent
+can be reached through (`@`-mention, a session-wide default).
+
+This matters most for a prompt meant to run the same way every time — one embedded in another skill's
+instructions, or one you expect to reuse — where naming the skill or agent removes one more source of
+drift, the same motivation behind every other piece of guidance on this page.
+
 == Write direct, concise, step-structured instructions
 
 An agent following a `SKILL.md` executes it closer to a runbook than to a suggestion — ambiguity that a
