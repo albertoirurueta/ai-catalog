@@ -133,3 +133,7 @@ None — `setup-java-library-repository` is a top-level entry point; no other sk
 
 None directly — this skill only calls other skills via the `Skill` tool. Any sub-agents spawned further downstream
 (for example inside `code`-style flows) belong to those skills, not to this one.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/setup-java-library-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

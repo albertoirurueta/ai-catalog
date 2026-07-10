@@ -131,3 +131,7 @@ distilled outcome comes back:
   task (license, Javadoc, scoped tests, coverage, full suite, code quality), plus once for the final
   build verification and once for the Step 3 baseline. This is the single heaviest agent-spawning skill in
   the catalog.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/code/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

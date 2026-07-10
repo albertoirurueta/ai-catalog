@@ -98,3 +98,7 @@ None — `antora-setup` is a leaf skill; it does not call any other skill in thi
 
 None directly — `antora-setup` itself runs synchronously. When xref:skills/update-docs.adoc[] invokes it
 conditionally, it does so through a sub-agent it manages, not one this skill spawns itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/antora-setup/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

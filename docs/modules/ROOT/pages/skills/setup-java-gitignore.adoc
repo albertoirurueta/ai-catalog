@@ -86,3 +86,7 @@ None — `setup-java-gitignore` is a leaf skill; it does not call any other skil
 === Related agents
 
 None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/setup-java-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

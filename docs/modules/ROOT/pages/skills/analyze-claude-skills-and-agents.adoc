@@ -92,3 +92,7 @@ whenever the catalog's skill/agent set has changed.
 
 * `general-purpose` (see xref:agents/overview.adoc[]) — spawned only in the fallback path, to run
   xref:skills/antora-setup.adoc[] when no documentation module exists yet.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/analyze-claude-skills-and-agents/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,0 +1,76 @@
+= Packaging and distributing skills, agents, and CLAUDE.md
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Once a skill, agent, or `CLAUDE.md` convention is useful in more than one repository, it needs a
+distribution strategy. There are two, and they suit different situations rather than one strictly
+superseding the other.
+
+== Option 1 — copy the files directly
+
+Drop the relevant `.claude/skills/<name>/`, `.claude/agents/<name>.md`, or `CLAUDE.md` content straight into
+the target repository, the way this catalog's own README already describes adopting one of its skills
+(xref:index.adoc[]: "copy the ones you need into another repository's `.claude/skills/` directory").
+
+Best fit when:
+
+* The skill/agent is being adopted by a handful of repositories, not fleet-wide.
+* Each adopting repository is expected to tweak it for local conventions rather than stay byte-identical to
+  the source.
+* There's no appetite yet for standing up and maintaining a marketplace.
+
+Tradeoff: there is no update mechanism. A fix or improvement made in one copy doesn't reach the others unless
+someone notices and re-copies it — this scales fine to a few repositories and poorly to dozens.
+
+== Option 2 — package as a plugin, distribute via a marketplace
+
+Bundle the skill(s)/agent(s) into a plugin (xref:guides/plugins.adoc[]) and publish it to a marketplace —
+either a private one hosted in an internal git repository, or a public one.
+
+Best fit when:
+
+* The same skill/agent needs to behave identically across many repositories (a compliance check, a house
+  release process) and drift between copies is itself the problem.
+* You want version history and a real update path: bump the plugin's version, and every installing repository
+  can pick up the change deliberately (`/plugin install` again, or however the marketplace tooling surfaces
+  updates) rather than via a manual diff-and-copy.
+* The skill is genuinely reusable beyond one organization, in which case a public marketplace submission
+  reaches adopters you don't otherwise know about.
+
+Tradeoff: real packaging overhead — a manifest to maintain, a marketplace to stand up (for a private one) or
+a submission process to go through (for a public one), and namespacing to be mindful of
+(`/plugin-name:skill-name` instead of a bare `/skill-name`).
+
+== Choosing
+
+[cols="2,3,3", options="header"]
+|===
+|Signal |Favors copying files |Favors a plugin + marketplace
+
+|Number of adopting repositories
+|A handful
+|Many, or unknown in advance
+
+|Expected local drift
+|Repositories will customize it
+|Should stay identical everywhere
+
+|Update cadence
+|Rare, low-stakes changes
+|Needs a real versioned update path
+
+|Audience
+|This org, this repository only
+|Multiple teams, or the public
+|===
+
+`CLAUDE.md` content that's genuinely universal across an organization (not project-specific) is better
+served by the enterprise-managed policy file (xref:guides/claude-md.adoc[]'s locations table) than by either
+option here — that mechanism exists specifically so an org can set instructions no single repository or
+person needs to copy or install at all.
+
+== See also
+
+* xref:guides/plugins.adoc[]
+* xref:guides/creating-skills-and-agents.adoc[]
+* xref:guides/claude-md.adoc[]

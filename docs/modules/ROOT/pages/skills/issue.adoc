@@ -106,3 +106,7 @@ None — `issue` is a top-level entry point; no other skill in this catalog invo
 * `general-purpose` (see xref:agents/overview.adoc[]) — one such sub-agent wraps the entire `code` run in
   Step 6, so implementation happens in an isolated context and this skill can keep running afterward to
   open the pull request in Step 7.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/issue/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

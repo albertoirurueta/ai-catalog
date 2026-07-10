@@ -101,3 +101,7 @@ another skill in a different repository) after code changes have already been ma
 None directly — `update-docs` delegates the conditional `antora-setup` call in Step 2 to a sub-agent (see
 xref:agents/overview.adoc[]), but that is calling a skill through a sub-agent wrapper rather than relying on an
 agent's own unique capability, so no agent is listed as a direct dependency here.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/update-docs/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

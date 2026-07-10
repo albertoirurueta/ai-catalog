@@ -1,0 +1,91 @@
+= Authoring effective instructions
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+`CLAUDE.md`, a `SKILL.md`, an agent definition, and a plugin's bundled instructions are all, mechanically,
+the same thing: text an AI agent reads and is expected to act on faithfully. The quality of the results they
+produce is mostly a function of two things — how the instructions are phrased, and how much of the context
+window they (and everything they cause to happen) consume. This page is the shared guidance the other
+authoring guides (xref:guides/claude-md.adoc[], xref:guides/creating-skills-and-agents.adoc[],
+xref:guides/plugins.adoc[]) point back to, rather than repeating it four times. Together, a well-written
+`CLAUDE.md` plus a well-scoped set of skills and agents is what turns "an AI assistant" into a **harness** —
+a system that produces the same good behavior every time, instead of depending on how well any one session
+happens to be prompted.
+
+== Write direct, concise, step-structured instructions
+
+An agent following a `SKILL.md` executes it closer to a runbook than to a suggestion — ambiguity that a
+human would resolve by intuition, the agent will resolve inconsistently across runs. This catalog's existing
+skills (e.g. `.claude/skills/plan/SKILL.md`, documented at xref:skills/plan.adoc[]) follow a consistent shape
+worth reusing elsewhere:
+
+* **Numbered steps, one decision per step.** `## Step 1 — Locate the Antora documentation module`, not a
+  wall of prose covering discovery, validation, and generation together. A step an agent can point to by
+  number is also a step you can debug ("it went wrong at Step 3") and a step another skill can invoke
+  precisely (a Step number reference in a dependency section).
+* **Imperative, not descriptive.** "Find every `SKILL.md` under `.claude/skills`" reads as an instruction to
+  execute; "This step is about finding skills" reads as a description of intent an agent then has to
+  translate into action itself, and translations vary. Prefer the former.
+* **State branches and stopping conditions explicitly.** "Not found: ask the user whether to bootstrap one.
+  Found: read it for the component name" is unambiguous about what happens in each case. A step that only
+  describes the happy path leaves the agent to invent behavior for every other case, which is precisely the
+  inconsistency a skill exists to remove.
+* **Say what "done" looks like and what to report.** A skill without an explicit final "Report" step tends to
+  either report too much (dumping intermediate detail nobody asked for) or too little (silently stopping
+  without confirming what actually happened).
+* **Avoid hedged, discretionary language** ("consider doing X if it seems appropriate") in the parts of an
+  instruction that are meant to run the same way every time. Reserve genuine judgment calls for an explicit
+  "ask the user" branch (see `plan`'s Step 3, xref:skills/plan.adoc[]) rather than leaving them implicit in
+  vague phrasing.
+
+The same applies to `CLAUDE.md` (a rule stated as "run `mvn test` before considering a change done", not
+"tests should probably be run") and to an agent's system prompt (a narrow, explicit description of what it's
+for and what tools it needs, not an open-ended personality sketch).
+
+[[context-window]]
+== Treat the context window as scarce
+
+Everything loaded into a session — `CLAUDE.md`, the active skill's instructions, prior tool output, a
+sub-agent's full transcript — competes for the same finite context window, and a model's attention degrades
+as that window fills with content irrelevant to the current step. Writing good instructions is only half the
+job; the other half is not loading more of them than the current step actually needs.
+
+Concretely:
+
+* **Keep `CLAUDE.md` short and current.** It loads in *every* session whether or not that session needs it —
+  see xref:guides/claude-md.adoc[]'s "Keep it short" section. An import (`@path`) organizes a large file for
+  human readers; it does not reduce what actually gets loaded, since imported content is still expanded in
+  full at session start.
+* **Isolate noisy sub-tasks in a sub-agent.** A full test run, a broad codebase search, or an entire delegated
+  implementation pass produces far more output than its result — spawning it via the `Agent` tool and asking
+  it to report back only a short summary keeps that noise out of the calling skill's own context. This
+  catalog's `code` skill does exactly this for every quality check it runs per task (see
+  xref:agents/overview.adoc[]).
+* **Collapse repetition in a skill's own instructions.** A step that repeats structurally ("for each task:
+  implement, test, document, quality-check") should be written once as a loop, not unrolled per task — both
+  because it's shorter and because an agent re-reading the same instruction shape for the fifth time is
+  reading, not thinking.
+* **Prefer a reference over an inline copy.** An `xref:` to another page, or an instruction to "read
+  `docs/testing-conventions.md` before writing tests" pulls in detail only when it's relevant, rather than
+  inlining that whole document into every skill that might conceivably need it.
+* **Ask for a report, not a transcript.** When one skill invokes another, or a skill spawns an agent, specify
+  what should come back ("a pass/fail plus the list of new issues", not "everything you saw") — the caller
+  usually needs a conclusion, not the evidence trail that produced it.
+* **Prune, don't just append.** A `CLAUDE.md` or `SKILL.md` that only ever grows accumulates instructions
+  that stopped being true or stopped mattering; a periodic pass to delete stale content is as valuable as the
+  writing that added it in the first place.
+
+== Why this matters more than it looks like it should
+
+A harness built from directly-phrased, step-structured instructions that only load what each moment needs
+behaves the same way on the tenth run as the first. One built from vague, sprawling instructions that dump
+everything into context every time will *look* similar in a quick demo but drift, contradict itself, and
+degrade under real, larger tasks — precisely the problem xref:index.adoc#_why_this_exists[this catalog's own
+premise] describes for undocumented, repeat-explained procedures.
+
+== See also
+
+* xref:guides/claude-md.adoc[]
+* xref:guides/creating-skills-and-agents.adoc[]
+* xref:guides/plugins.adoc[]
+* xref:guides/packaging-and-distribution.adoc[]

@@ -106,3 +106,7 @@ flowchart TD
 
 None directly — `pr-review` does not spawn any agent itself (the `explore` skill it invokes in Step 4 is
 the one that uses the built-in `Explore` agent).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/pr-review/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

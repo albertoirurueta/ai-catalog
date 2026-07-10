@@ -88,3 +88,7 @@ None — `setup-changelog` is a leaf skill; it does not call any other skill in 
 === Related agents
 
 None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/setup-changelog/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

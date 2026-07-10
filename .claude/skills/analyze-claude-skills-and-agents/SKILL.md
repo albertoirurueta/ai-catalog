@@ -156,6 +156,15 @@ for every skill, and `docs/modules/ROOT/pages/agents/<name>.adoc` for every cust
    and each documented agent via `xref:agents/<name-or-overview>.adoc[]`; external dependencies named in prose
    with no link; "None" stated explicitly rather than the section being silently empty when there really are
    no edges.
+9. `== Source` — a link to the actual file this page documents, so a reader can jump straight from the
+   generated docs to the definition it was generated from. Derive the repository's web URL and current
+   branch (`git remote get-url origin`, `git branch --show-current` or equivalent default-branch lookup) once
+   and reuse it for every page rather than hand-guessing or hardcoding a stale one. Skip this section
+   entirely for a built-in agent type (there is no repository file to link to) or note "not tracked in this
+   repository" instead of a broken link if the remote can't be resolved (e.g. no `origin`, or it isn't a
+   web-viewable host).
+   - Skill page link text: "SKILL.md on GitHub", target `<repo-url>/blob/<branch>/.claude/skills/<name>/SKILL.md`
+   - Custom agent page link text: "<name>.md on GitHub", target `<repo-url>/blob/<branch>/.claude/agents/<name>.md`
 
 When re-running this skill after a skill/agent was added, removed, or materially changed: update only the
 pages whose source actually changed, add pages for new skills/agents, and remove pages (and their `nav.adoc`

@@ -1,0 +1,98 @@
+= Claude Code vs. GitHub Copilot vs. OpenAI Codex
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+CAUTION: This is a snapshot of a fast-moving area — every provider here has changed this surface within the
+last year. Treat the specific file paths and command names below as a starting point to verify against each
+provider's current documentation, not a permanent contract.
+
+The four artifacts this catalog is built around (`CLAUDE.md`, skills, agents, plugins) aren't unique to
+Claude Code — GitHub Copilot and OpenAI Codex have converged on broadly similar concepts, sometimes under
+the same file name, sometimes not. This page maps one onto the other so a decision made here (what belongs
+in memory versus an on-demand skill, how far to isolate a sub-agent) transfers if the same team also uses
+another assistant.
+
+== At a glance
+
+[cols="2,3,3,3", options="header"]
+|===
+|Concept |Claude Code |GitHub Copilot |OpenAI Codex
+
+|Persistent, always-loaded project memory
+|`CLAUDE.md` (repo root, user-level `~/.claude/CLAUDE.md`, nested subdirectory files, enterprise policy —
+xref:guides/claude-md.adoc[])
+|`.github/copilot-instructions.md` — broadest support across Chat/IDE/coding agent/review. Increasingly
+supplemented by the cross-tool `AGENTS.md` convention, though `AGENTS.md` support is currently narrower
+(mainly the cloud coding agent; VS Code support is experimental/opt-in).
+|`AGENTS.md` — Codex's primary mechanism. Read hierarchically: a global `~/.codex/AGENTS.md`, plus one file
+per directory from the project root down to the working directory, all concatenated.
+
+|Scoped / path-specific instructions
+|Nested `CLAUDE.md` files load only when that subtree is touched; `.claude/rules/` glob-scoped rule files.
+|`.github/instructions/*.instructions.md`, with an `applyTo:` glob in its frontmatter. Honored broadly in
+IDEs; on github.com itself only by the coding agent and code review, not plain Chat there.
+|An `AGENTS.override.md` in a given directory replaces (rather than adds to) the plain `AGENTS.md` at that
+same level — an explicit escape hatch rather than a glob-matched rule file.
+
+|On-demand, explicitly invoked playbook (this catalog's "skill")
+|`.claude/skills/<name>/SKILL.md`, invoked as `/<name>` — xref:guides/creating-skills-and-agents.adoc[]
+|`.github/prompts/*.prompt.md` in VS Code/Visual Studio, filename becomes the `/name` command. Not yet
+recognized by the Copilot CLI as of this writing.
+|Codex "skills" — packaged instructions (+ resources/scripts), invoked explicitly or matched implicitly to a
+task. Superseding the now-deprecated `~/.codex/prompts/*.md` custom-prompt mechanism.
+
+|Custom sub-agent / persona with its own tools
+|`.claude/agents/<name>.md` — xref:agents/overview.adoc[]
+|Custom agents: an `*.agent.md` file under `.github/agents/` (or an org-wide `.github/agents` repository
+under the organization account itself),
+auto-delegated to as an isolated sub-agent. `.github/chatmodes/*.chatmode.md` covers a lighter-weight
+persona/system-prompt switch without full sub-agent isolation.
+|Built-in `default`/`worker`/`explorer` agents, plus custom agents as TOML files under `~/.codex/agents/`
+(personal) or `.codex/agents/` (project).
+
+|Packaging and distributing across repositories
+|Plugins — a manifest bundling skills/agents/commands/hooks/MCP config, installed via `/plugin install` from
+a public or private marketplace (xref:guides/plugins.adoc[])
+|No direct equivalent today — GitHub deprecated its GitHub-App-based Copilot Extensions marketplace (Nov
+2025) in favor of plain MCP. The closest substitutes are org-wide custom instructions (GA since Apr 2026) and
+community-curated instruction/prompt repositories, neither of which is an installable versioned package.
+|Codex plugins (introduced around v0.117.0) bundle skills, tool integrations, MCP config, and hooks,
+distributed via `marketplace.json` sources — a genuine analog to Claude Code plugins, though without one
+centralized official marketplace yet.
+
+|MCP server configuration
+|`.mcp.json` / plugin `.mcp.json` / settings
+|`.vscode/mcp.json` (or a user-profile file) keyed by `"servers"`; the Copilot CLI has its own
+`mcp-config.json` — configuration is per-surface, not unified.
+|`~/.codex/config.toml`, under `[mcp_servers.<name>]` — stdio or HTTP transport.
+|===
+
+== Where the underlying models genuinely differ
+
+* **Codex is the closest structural match to Claude Code.** `AGENTS.md` ~ `CLAUDE.md`, Codex skills ~ Claude
+  Code skills, Codex sub-agents ~ Claude Code agents, and Codex plugins ~ Claude Code plugins — the two tools
+  converged on nearly the same four-artifact shape independently. If a team already writes clean, step
+  structured skills for Claude Code (xref:guides/authoring-effective-instructions.adoc[]), most of that same
+  content ports to Codex with only mechanical translation.
+* **Copilot's model is scope-matched instructions layered across multiple *product surfaces*
+  (Chat/IDE, the cloud coding agent, code review) rather than one unified agent runtime**, and — notably —
+  each surface currently honors a different subset of the instruction files above. Porting a Claude Code
+  skill/CLAUDE.md to Copilot means checking which surface the team actually uses it from, not just picking
+  the file with the closest name.
+* **Only Claude Code and (more recently) Codex treat packaging/distribution as a first-class, versioned
+  concept** (a plugin manifest, a marketplace, an install command). Copilot dropped its nearest equivalent
+  rather than converging toward one, leaving org-wide sharing there closer to "copy the file" (this
+  catalog's own Option 1 — xref:guides/packaging-and-distribution.adoc[]) than to Option 2.
+* **The `AGENTS.md` convention is a genuine point of convergence worth watching**: Codex treats it as
+  canonical, and Copilot has started reading it as an alternative to `copilot-instructions.md` on some
+  surfaces. A repository that wants one memory file to mean something to more than one assistant should keep
+  an eye on whether that convention keeps spreading, rather than assuming `CLAUDE.md`, `AGENTS.md`, and
+  `copilot-instructions.md` will stay three separate files indefinitely.
+
+== See also
+
+* xref:guides/claude-md.adoc[]
+* xref:guides/creating-skills-and-agents.adoc[]
+* xref:guides/plugins.adoc[]
+* xref:guides/authoring-effective-instructions.adoc[] — the language-and-context-window guidance here applies
+  regardless of which provider's file format it ends up written into.

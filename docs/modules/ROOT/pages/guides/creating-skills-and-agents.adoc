@@ -1,0 +1,84 @@
+= Creating and updating skills and agents
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+This guide is about authoring skills and agents in general — the mechanics and workflow for creating one in
+any repository. For the skills and agents this specific catalog already ships, see
+xref:index.adoc#_skills_and_agents_reference[the reference table] and xref:agents/overview.adoc[].
+
+== Where each one lives
+
+[cols="1,3", options="header"]
+|===
+|Artifact |Location
+
+|Skill
+|`.claude/skills/<name>/SKILL.md` — the directory name is the skill's canonical name and doubles as its
+slash command (`/`+`<name>`). A skill directory may also hold supporting files (scripts, templates)
+alongside `SKILL.md`.
+
+|Custom agent
+|`.claude/agents/<name>.md` — YAML frontmatter (system prompt, allowed tools, model) plus the agent's
+persona/instructions in the body.
+
+|Plugin-bundled skill/agent
+|The same `skills/` and `agents/` layout, but rooted under a plugin directory's `.claude-plugin/` sibling
+folders instead of the repository's own `.claude/` — see xref:guides/plugins.adoc[].
+|===
+
+== Skill or agent — which one?
+
+* Reach for a **skill** when the thing you want repeated is a *procedure*: a sequence of steps a person (or
+  an orchestrating skill) invokes deliberately, on demand, via a slash command — "review this PR", "cut a
+  release", "bootstrap a new repo".
+* Reach for a **custom agent** when what you actually need is a *persona with a narrower tool/context
+  footprint* than the main conversation — something spawned mid-task to isolate a noisy sub-task (a full test
+  log, a broad codebase search) or to run with restricted tool access, rather than something a person invokes
+  directly. Claude Code's built-in `general-purpose` and `Explore` agent types already cover most of this
+  without a custom definition — only add a custom `.claude/agents/<name>.md` when a built-in type's tool
+  access or system prompt genuinely doesn't fit (see xref:agents/overview.adoc[] for how this catalog
+  currently makes that call).
+* Reach for **`CLAUDE.md`** instead of either when the thing isn't a procedure at all but a standing fact or
+  rule that should be true in *every* session, invoked or not — see xref:guides/claude-md.adoc[].
+
+== The fastest reliable way to draft one
+
+Hand-writing a `SKILL.md` or agent definition's frontmatter and prose from a blank file is slower and more
+error-prone than it needs to be. In practice:
+
+1. **Ask Claude Code itself to draft it.** Describe the procedure you want repeated (what to check first,
+   what decisions to make automatically versus ask the user about, what "done" looks like, what it should
+   report back) and ask it to write the `SKILL.md` — Claude already knows the frontmatter schema and the
+   conventions your other skills use. This is dramatically faster than writing YAML frontmatter and step
+   structure from memory, and it's easy to review before saving.
+2. **Ground it in an existing example.** Point it at a similar skill already in `.claude/skills/` (or, for an
+   agent, at `.claude/agents/` if this repository has any, or `xref:agents/overview.adoc[]`'s description of
+   the built-in types) and ask it to follow the same shape — numbered `## Step N` headings, an explicit
+   "Report" step, the same tone. Consistency across skills matters more than any one skill's internal
+   elegance, because a person (or an orchestrator skill) reads several of them together.
+3. **Iterate by running it**, not just by reading it. Invoke the draft skill/agent against a real, low-stakes
+   case and fix whatever it gets wrong or asks about that it shouldn't have to — a skill's instructions are
+   only as good as what actually happens when an agent follows them literally.
+4. Once it's right, if this repository documents its own catalog (as this one does via
+   `analyze-claude-skills-and-agents`), re-run that skill so the reference table, dependency graph, and the
+   new skill/agent's own detail page pick it up — don't hand-maintain that documentation separately.
+
+== How to phrase what you write
+
+Covered in full, with concrete before/after examples, in
+xref:guides/authoring-effective-instructions.adoc[] — the short version: direct imperative steps, one
+decision per step, explicit stopping/branch conditions, and no more context loaded into the step than that
+step actually needs.
+
+== Packaging and sharing what you create
+
+A skill or agent that's useful in one repository is often useful in several. See
+xref:guides/packaging-and-distribution.adoc[] for the tradeoff between copying the directory into each
+repository's `.claude/` versus bundling it into a plugin distributed via a marketplace.
+
+== See also
+
+* xref:guides/claude-md.adoc[]
+* xref:guides/plugins.adoc[]
+* xref:guides/authoring-effective-instructions.adoc[]
+* xref:agents/overview.adoc[]

@@ -138,3 +138,7 @@ other skill in this catalog.
 
 None directly — but `code` (see xref:skills/code.adoc[] and xref:agents/overview.adoc[]) always invokes this
 skill from inside a `general-purpose` sub-agent it spawns, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/java-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

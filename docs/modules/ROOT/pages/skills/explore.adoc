@@ -83,3 +83,7 @@ None — `explore` is a leaf skill; it does not call any other skill in this cat
 
 * The built-in **`Explore`** agent (see xref:agents/overview.adoc[]) — Step 3 uses it for the actual
   codebase search (module structure, abstractions, control flow) instead of manually reading every file.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/explore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

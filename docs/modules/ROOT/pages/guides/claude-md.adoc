@@ -1,0 +1,109 @@
+= The CLAUDE.md file
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+`CLAUDE.md` is a plain markdown file Claude Code reads automatically at the start of every session — the
+one artifact in this catalog's vocabulary that is never explicitly invoked. Everything else (a skill, an
+agent) only acts when called on; `CLAUDE.md` is always in context, which is exactly what makes it powerful
+and easy to misuse.
+
+== Purpose
+
+Without it, every session starts from zero: Claude has to rediscover the build command, the test runner
+invocation, which directories are generated versus hand-written, and any project-specific convention or
+gotcha, by exploring the repository itself. `CLAUDE.md` exists to short-circuit that rediscovery — a small,
+durable set of facts that would otherwise need re-explaining in every conversation:
+
+* Commands: how to build, run tests, lint, start a dev server.
+* Conventions: naming, file layout, where new code of a given kind belongs.
+* Warnings: known footguns, generated files not to hand-edit, a flaky test to ignore.
+* Personal preferences (in a user-level or local file — see below): how *you* like to work, independent of
+  the project.
+
+It is memory, not instruction-on-demand — see xref:index.adoc#core-concepts[Core concepts] for how that
+contrasts with a skill or an agent.
+
+== Locations and precedence
+
+Claude Code loads `CLAUDE.md` from several places at once and **concatenates** them — it does not pick one
+and discard the rest. From broadest to most specific:
+
+[cols="2,3,3", options="header"]
+|===
+|Location |Scope |Typical use
+
+|Enterprise-managed policy file (e.g. `/Library/Application Support/ClaudeCode/CLAUDE.md` on macOS,
+`/etc/claude-code/CLAUDE.md` on Linux/WSL, an equivalent path on Windows)
+|Every user in an organization
+|Org-wide policy that individual projects/users shouldn't be able to override.
+
+|`~/.claude/CLAUDE.md`
+|Every project a given person works in
+|Personal preferences that have nothing to do with any one repository (e.g. "explain reasoning before large
+refactors").
+
+|`./CLAUDE.md` at the repository root
+|Everyone working in this repository
+|Checked into git — the project's own shared conventions. This is the file most repositories mean when they
+say "our CLAUDE.md".
+
+|`./CLAUDE.local.md` at the repository root
+|One person, in this repository, not shared
+|Gitignored personal overrides for this specific repository (e.g. a local port number, a personal shortcut)
+that shouldn't land in every teammate's session.
+
+|`.claude/CLAUDE.md` in a subdirectory
+|Only work touching that subtree
+|Loaded on demand when Claude reads/edits files under that directory — useful for a monorepo module with its
+own conventions that would be noise everywhere else.
+|===
+
+Within a directory tree, files load root-down toward the working directory, so instructions closer to the
+current work appear later (more locally relevant) in context. Nothing here overrides anything else outright
+— if two files disagree, both are visible to Claude, so keep genuinely conflicting rules out of the picture
+rather than relying on one silently winning.
+
+== The `@path` import
+
+A `CLAUDE.md` can pull in another file with `@path/to/file` (relative or absolute). Imports nest up to a
+handful of levels deep. This is useful to split a large file by topic (`@docs/testing-conventions.md`,
+`@docs/deploy-runbook.md`) without every reader scrolling through all of it at once in the raw file — but be
+aware that **an import is expanded in full at session start regardless of whether that session touches the
+topic it covers**. Splitting a file into imports organizes it for humans; it does not, by itself, reduce what
+Claude loads. See xref:guides/authoring-effective-instructions.adoc#context-window[the context window section] of
+the authoring guide for how to actually keep this lean.
+
+== Creating or updating one
+
+The easiest way to bootstrap a `CLAUDE.md` is to ask Claude Code to write it: run `/init` inside the target
+repository. It scans the codebase (manifest/build files, existing docs, directory layout) and drafts a
+starting `CLAUDE.md` grounded in what it actually finds, rather than a generic template.
+
+From there, treat it like any other file under version control:
+
+* Update it directly with an edit whenever a convention changes, a command is renamed, or a recurring
+  mistake shows up in review — the same way you'd fix a stale line in a README.
+* Prefer asking Claude Code itself to draft the addition/edit and review the diff, rather than hand-writing
+  prose — it's faster and it already knows the tone that reads well back to itself as an instruction (see
+  xref:guides/authoring-effective-instructions.adoc[]).
+* Periodically re-read the whole file and cut anything that's stopped being true or stopped mattering. A
+  `CLAUDE.md` that only ever grows degrades the same way an overlong prompt does.
+
+== Keep it short
+
+The file is injected into *every* session's context whether or not that session needs any of it. A large,
+sprawling `CLAUDE.md` competes with the actual task for Claude's attention and measurably degrades
+adherence. As a rule of thumb, keep a single `CLAUDE.md` well under a couple hundred lines; when a project
+genuinely needs more than that, split by concern using nested subdirectory files (which only load when that
+subtree is touched) rather than one ever-growing root file. See
+xref:guides/authoring-effective-instructions.adoc#context-window[Treating the context window as scarce] for the
+underlying reasoning and more techniques that apply equally to skills and agents.
+
+== See also
+
+* xref:guides/authoring-effective-instructions.adoc[] — how to phrase what goes in a `CLAUDE.md` and how to
+  budget context across it, skills, and agents together.
+* xref:guides/creating-skills-and-agents.adoc[] — when a recurring instruction belongs in `CLAUDE.md`
+  (always relevant) versus a skill (invoked on demand) instead.
+* xref:guides/provider-comparison.adoc[] — how `CLAUDE.md` compares to GitHub Copilot's and OpenAI Codex's
+  equivalent memory files.

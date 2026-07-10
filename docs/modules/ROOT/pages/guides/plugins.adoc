@@ -1,0 +1,141 @@
+= Plugins
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+A plugin is not a fourth kind of instruction alongside `CLAUDE.md`, skills, and agents — it's how any
+combination of those (plus slash commands, hooks, and MCP server configs) gets packaged, versioned, and
+installed as one unit, instead of copied file by file into each repository's `.claude/` directory.
+
+== What a plugin bundles
+
+A single plugin directory can carry:
+
+* **Skills** (`skills/<name>/SKILL.md`, same shape as xref:guides/creating-skills-and-agents.adoc[] describes)
+* **Custom agents** (`agents/<name>.md`)
+* **Slash commands** and **hooks** (`hooks/hooks.json` — event handlers that react to Claude Code lifecycle
+  events)
+* **MCP and LSP server configuration** (`.mcp.json`, `.lsp.json`)
+* **Background monitors**, default **settings**, and executables added to `PATH` (`bin/`)
+
+Everything the plugin contributes is namespaced under its own name (e.g. a skill from a `my-org-tools`
+plugin is invoked as `/my-org-tools:some-skill`), so installing several plugins can't silently collide on a
+shared skill/agent/command name the way copy-pasting loose files could.
+
+== Directory layout
+
+[source]
+----
+my-plugin/
+├── .claude-plugin/
+│   └── plugin.json        # manifest: name, version, author, description
+├── skills/
+│   └── some-skill/
+│       └── SKILL.md
+├── agents/
+│   └── some-agent.md
+├── hooks/
+│   └── hooks.json
+├── .mcp.json
+├── .lsp.json
+├── monitors/
+│   └── monitors.json
+├── bin/
+└── settings.json
+----
+
+Only `plugin.json` belongs inside `.claude-plugin/` — `skills/`, `agents/`, `hooks/`, etc. are siblings of
+`.claude-plugin/`, not nested inside it.
+
+== Marketplaces
+
+A **marketplace** is a catalog of installable plugins — a `marketplace.json` served from a git repository,
+another remote URL, or a local path. Two commands drive it:
+
+[source]
+----
+/plugin marketplace add <owner/repo, git URL, or path to marketplace.json>
+/plugin install <plugin-name>@<marketplace-name>
+----
+
+Both public and private marketplaces work the same way:
+
+* **Public** — Anthropic curates an official marketplace, and a separate community marketplace accepts
+  public submissions. Useful for generally-applicable skills/agents not specific to any one organization.
+* **Private/internal** — an organization can host its own marketplace in a private git repository and point
+  `/plugin marketplace add` at it, giving every repository in the org the same install command without that
+  repository needing public visibility. This is the natural home for the kind of skill this catalog defines
+  (release process, PR review conventions) once it needs to reach more than one repository — see
+  xref:guides/packaging-and-distribution.adoc[] for when that step is actually worth taking.
+
+== Getting updates when a new release is published
+
+Installing a plugin is not a one-time copy — it stays linked to the marketplace it came from, and that
+marketplace is how updates reach it once its author publishes a new version:
+
+* **Official Anthropic marketplaces auto-update by default**: Claude Code refreshes the marketplace catalog
+  and updates any installed plugin to its latest version at startup, with no action needed. A
+  **third-party or local-development marketplace has auto-update disabled by default** — check for and pull
+  new versions explicitly with:
++
+[source]
+----
+/plugin marketplace update <marketplace-name>
+----
++
+This is the same command whether the marketplace lives in a public repository or a private,
+organization-internal one (xref:guides/packaging-and-distribution.adoc[]) — there's no separate per-plugin
+update command, since an update is a marketplace-wide refresh rather than a single plugin's action.
+
+* **Updates apply silently, then prompt you to activate them.** Neither the auto-update path nor
+  `/plugin marketplace update` shows a changelog or diff before replacing the installed files. Once a plugin
+  has actually changed, Claude Code shows a notification prompting you to run:
++
+[source]
+----
+/reload-plugins
+----
++
+to pick up the new version within your current session — until that's run, the session keeps using whatever
+version was already loaded.
+
+* **Check what's installed** with `/plugin` (the interactive manager's "Installed" tab, which shows each
+  plugin's scope and last-updated date) or `/plugin list` / `claude plugin list` from the shell. There is no
+  separate command to preview whether a newer version exists without applying it — running
+  `/plugin marketplace update` both checks and applies in one step.
+
+* **Pinning a specific version isn't a per-user control.** Installing/updating tracks whatever the
+  marketplace currently points to; the closest thing to a pin is the marketplace being added against a fixed
+  git ref (`/plugin marketplace add <url>#<tag-or-branch>`), which is an administrator decision about the
+  marketplace, not something each installer chooses individually. If a team needs every repository to
+  advance to a new plugin version deliberately rather than picking it up automatically, host the marketplace
+  privately with auto-update off and treat `/plugin marketplace update` as the explicit "take the new
+  release now" action — the same rollout discipline as bumping a dependency version, rather than letting it
+  drift silently across machines.
+
+== Creating one
+
+Scaffold a new plugin with:
+
+[source]
+----
+claude plugin init <name>
+----
+
+which creates the `.claude-plugin/plugin.json` manifest and a starter skill directory. During development,
+test it in place without publishing or installing it via:
+
+[source]
+----
+claude --plugin-dir ./my-plugin
+----
+
+As with skills and agents (xref:guides/creating-skills-and-agents.adoc[]), the fastest way to fill in the
+actual skill/agent content once the plugin shell exists is to ask Claude Code to draft it, grounded in
+whatever similar skill or agent already exists — either elsewhere in the plugin or in a repository adopting
+it.
+
+== See also
+
+* xref:guides/creating-skills-and-agents.adoc[] — authoring the skills/agents a plugin bundles.
+* xref:guides/packaging-and-distribution.adoc[] — deciding between copying files and packaging as a plugin.
+* xref:guides/provider-comparison.adoc[] — where other providers do and don't have an equivalent.

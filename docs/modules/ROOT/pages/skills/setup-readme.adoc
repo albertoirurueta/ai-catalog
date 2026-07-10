@@ -97,3 +97,7 @@ None — `setup-readme` is a leaf skill; it does not call any other skill in thi
 === Related agents
 
 None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/setup-readme/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

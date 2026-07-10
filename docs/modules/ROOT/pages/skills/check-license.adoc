@@ -96,3 +96,7 @@ None — `check-license` is a leaf skill; it does not call any other skill in th
 
 None directly — `check-license` itself doesn't spawn any agent. See the note in xref:skills/code.adoc[] and
 xref:agents/overview.adoc[] about the sub-agent wrapper that `code` uses to invoke it.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/check-license/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

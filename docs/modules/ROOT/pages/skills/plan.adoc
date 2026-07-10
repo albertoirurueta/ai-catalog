@@ -102,3 +102,7 @@ whoever executes that plan (normally the `code` skill) to delegate each task's t
 `general-purpose` sub-agent (see xref:agents/overview.adoc[]) rather than running tests inline, so test
 output doesn't consume the executing agent's main context window. This is an instruction `plan` embeds in
 its output file for a later execution step to follow — not an `Agent()` call `plan` makes itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/plan/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

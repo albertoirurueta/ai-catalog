@@ -1,4 +1,11 @@
 * xref:index.adoc[]
+* Guides
+** xref:guides/claude-md.adoc[]
+** xref:guides/creating-skills-and-agents.adoc[]
+** xref:guides/plugins.adoc[]
+** xref:guides/authoring-effective-instructions.adoc[]
+** xref:guides/packaging-and-distribution.adoc[]
+** xref:guides/provider-comparison.adoc[]
 * Skills
 ** xref:skills/analyze-claude-skills-and-agents.adoc[]
 ** xref:skills/antora-setup.adoc[]

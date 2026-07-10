@@ -94,3 +94,7 @@ in this catalog.
 === Related agents
 
 None — `pr-description` does not spawn any agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/pr-description/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

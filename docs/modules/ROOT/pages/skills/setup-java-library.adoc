@@ -118,3 +118,7 @@ None — `setup-java-library` is a leaf skill; it does not call any other skill 
 === Related agents
 
 None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/setup-java-library/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

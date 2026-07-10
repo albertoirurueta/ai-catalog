@@ -108,3 +108,7 @@ None — `release` is a top-level entry point, run directly by a person via `/re
 None — every step in `release` (branching, editing files, drafting notes, opening the PR) runs directly in the
 main conversation; it delegates to the `setup-readme` and `pr-description` skills but does not spawn a sub-agent
 to do so.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/release/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
