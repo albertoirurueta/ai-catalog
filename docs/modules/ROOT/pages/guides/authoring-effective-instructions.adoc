@@ -85,6 +85,38 @@ Concretely:
   that stopped being true or stopped mattering; a periodic pass to delete stale content is as valuable as the
   writing that added it in the first place.
 
+== Give examples, not just rules
+
+Claude reasons from a concrete example unusually well — often more reliably than from an abstract rule
+stated on its own. Where a rule is genuinely hard to state completely and precisely in prose (a report
+format, a commit-message style, an edge case that's easier to show than describe), attaching a worked
+example alongside the rule tends to produce closer, more consistent behavior than the rule by itself,
+because an example doesn't leave room for accidental misinterpretation the way a description can.
+
+There are two ways to attach one, and both are legitimate:
+
+* **Inline** — paste the example directly into the instruction (the `SKILL.md` step, the `CLAUDE.md` rule,
+  or the message itself), when it's short enough not to be worth splitting out. For instance: "Follow this
+  commit message shape: `<type>(<scope>): <summary>` — e.g.
+  `fix(auth): reject expired refresh tokens before issuing a new one`."
+* **By reference** — point at a file already in the repository, or a URL, and instruct Claude to read it
+  before proceeding, when the example is long, is one of several to pick from, or already exists as a real
+  artifact (a past PR, a well-formed existing skill) rather than something worth retyping. This catalog
+  already relies on this technique: xref:guides/creating-skills-and-agents.adoc[]'s advice to "ground a new
+  skill in an existing example" is exactly this, applied to writing a `SKILL.md` itself, and several of this
+  catalog's own bootstrap skills (`setup-java-library`, `setup-java-github-workflows`) embed a full example
+  file for the same reason rather than describing its shape in prose.
+
+Which form to use is mostly a xref:#context-window[context-window] tradeoff: inline a short example every
+time it's needed; reference a long or only-occasionally-needed one so it loads only when actually relevant
+— the same reasoning that keeps a `CLAUDE.md` itself lean rather than inlining everything it might ever need.
+
+This applies at every level this page covers — a one-off prompt ("format the output like this: ..."), a
+`SKILL.md` step ("write the summary in this shape: ..."), a `CLAUDE.md` rule ("commits follow the format
+shown in `docs/commit-style.md`"), and an agent's system prompt (a sample of the kind of response it should
+produce). The worked example later on this page is itself an instance of the same idea: showing what a
+precise prompt looks like, not just describing the properties it should have.
+
 == Examples
 
 The same contrast — vague versus precise, unstructured versus step-based — holds regardless of whether the
