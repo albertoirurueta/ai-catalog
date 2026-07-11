@@ -130,10 +130,11 @@ Only reached when Step 6's sub-agent reports successful completion.
    opening a PR are exactly the kind of actions this repository's other skills (`release`, `pr-description`) always
    confirm before taking — do the same here.
 2. Push the branch: `git push -u origin <branch-name>`.
-3. Open the pull request with a minimal placeholder body that keeps the issue linked, mirroring how the `release`
-   skill opens its PR before handing off to `pr-description`:
+3. Open the pull request **as a draft** with a minimal placeholder body that keeps the issue linked, mirroring how
+   the `release` skill opens its PR before handing off to `pr-description`. It stays in draft so the user has an
+   explicit chance to review before marking it ready — this skill never converts it out of draft itself:
    ```bash
-   gh pr create --base <base-branch> --head <branch-name> --title "<issue-title> (#<issue-id>)" \
+   gh pr create --draft --base <base-branch> --head <branch-name> --title "<issue-title> (#<issue-id>)" \
      --body "Closes #<issue-id>."
    ```
 4. Invoke `Skill({skill: "pr-description"})`. It will detect the PR just opened (same branch, via its own Step 2),
@@ -158,3 +159,8 @@ Summarize for the user: the issue ID and title, the classification (feature/hotf
 and its base, and the final outcome — either manual review pending (Step 6), or the sub-agent's implementation
 summary, the PR URL, confirmation the issue is linked, and `pr-review`'s outcome (findings posted, or the drafted
 review if the user declined to post) (Step 7).
+
+If Step 7 ran, close with an explicit warning, not just a passing mention: the pull request was opened **as a
+draft** and still needs the user's own review before it's marked ready and merged — `pr-review`'s automated pass
+does not substitute for that. Include the PR link (from `gh pr create`'s output or `gh pr view <number> --json
+url -q .url`) so the user can open it directly.

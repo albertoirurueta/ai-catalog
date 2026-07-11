@@ -65,85 +65,23 @@ this only if the `java-code-quality` skill is unavailable in this repository.
 ## Step 4 — Implement tasks one at a time, in plan order
 
 Process top-level tasks strictly in the order they appear (the `plan` skill orders them so each is buildable on
-top of the previous one). Skip any task whose checkbox is already checked (`[x]`). For each unchecked task:
+top of the previous one). Skip any task whose checkbox is already checked (`[x]`). For each unchecked task,
+invoke `Skill({skill: "java-code-one-task", args: "<the task's full text from the plan, including its sub-tasks
+and any relevant "Current code state" context>"})`. That skill re-checks the current code state, implements the
+task, writes/updates its tests, adds license headers, updates Javadoc, runs the scoped tests, checks coverage,
+runs the full suite, and checks for new code-quality issues against a pre-change baseline it captures itself —
+then hands back a short summary (files touched, tests added/updated, coverage achieved, and the code-quality
+outcome, including any issue left in place as unavoidable and why, or whether license-header generation was
+skipped by the user).
 
-1. **Re-check the current code state** for the files the task touches — the plan may have gone stale since it
-   was written (other tasks just completed, or the file changed for unrelated reasons). Read the actual current
-   content before editing; don't assume the plan's "Current code state" section is still accurate. Also capture
-   this task's pre-change quality baseline by delegating to a sub-agent, once per touched class:
-   `Agent({description: "Capture pre-change quality baseline for <ClassName>", prompt: "Invoke
-   Skill({skill: \"java-code-quality\", args: \"<ClassName>\"}), then report back only the list of issues
-   found for this class — not the raw generated reports."})`. As in Step 3, running this in a sub-agent and
-   having it return just the issue list (not the full Checkstyle/PMD/SpotBugs reports) keeps unneeded report
-   content out of the main context window. Record the returned issues as this task's pre-change baseline — an
-   empty baseline if the file is new. This is what the quality check later in this task list compares against,
-   so it flags only issues this task introduces, not pre-existing ones.
-2. **Implement exactly what the task specifies**: the named file(s), the described class/method/field, the
-   behavior, the hook/interface it implements. Follow this repository's conventions from `CLAUDE.md` (Java version,
-   `final var` typie inference for locals (only if code already uses it), full Javadoc with `@param`/`@return`/`@throws`
-   on every public/protected member, `IllegalArgumentException` for invalid arguments, no new runtime dependencies). 
-   Don't add anything the task didn't ask for — no speculative abstractions, no unrelated cleanup.
-3. **Write or update the tests** the task calls for, following the existing test style in the same package
-   (JUnit 5, Mockito only where already used). Cover the new/changed behavior, including edge cases implied by
-   the Javadoc `@throws` contracts (e.g. null/invalid-argument cases).
-4. **Add license headers** to the file(s) this task added or modified, by delegating to a sub-agent rather than
-   running `check-license` directly: `Agent({description: "Add license headers for <ClassName>", prompt: "Invoke
-   Skill({skill: \"check-license\", args: \"<file1,file2,...>\"}) scoped to the file(s) this task added or
-   modified. Report back only which files were missing a header vs. fixed vs. already compliant, and — if no
-   header convention existed anywhere in the repo — whether the user chose to skip or generate one, and what was
-   ultimately accepted. Not the full audit output."})`. Running this in a sub-agent's separate context keeps the
-   audit details out of the main context window since only the outcome matters here. If the sub-agent reports
-   the user chose to skip header generation, respect that choice for the rest of this run — don't ask again on
-   later tasks. If the `check-license` skill is unavailable in this repository, skip this item.
-5. **Update Javadoc** for the file(s) this task added or modified, by delegating to a sub-agent rather than
-   running `java-javadoc` directly: `Agent({description: "Update Javadoc for <ClassName>", prompt: "Invoke
-   Skill({skill: \"java-javadoc\", args: \"<ClassName1,ClassName2,...>\"}) scoped to the class(es) this task
-   added or modified. Report back only whether Javadoc was added/updated and for which members, and whether the
-   Javadoc build verification passed — not the full audit output."})`. Running this in a sub-agent's separate
-   context keeps the audit details out of the main context window since only the outcome matters here. If the
-   sub-agent reports the Javadoc build failed, fix the reported issues and re-invoke until it reports success.
-6. **Run the scoped tests** for the affected class(es) by delegating to a sub-agent rather than running
-   `java-test` directly: `Agent({description: "Run tests for <TestClass>", prompt: "Invoke Skill({skill:
-   \"java-test\", args: \"<TestClass>\"}) (or a comma/wildcard selector per that skill's Step 1 if several
-   classes are affected; fall back to `mvn test -Dtest=<TestClass>` directly if the java-test skill is
-   unavailable). If everything passes, report back only that all tests passed. If anything fails, report back
-   only the failing test names, the failure reason, and the stack trace for each — not the full Surefire
-   output."})`. Running this in a sub-agent's separate context keeps unneeded passing-test output out of the
-   main context window. If the sub-agent reports failures, fix the implementation and/or tests based on the
-   reported names/reasons/stack traces, then re-invoke the same sub-agent pattern — repeat until it reports all
-   tests passed. Don't move on with a red test.
-7. **Check coverage** for the changed/new classes is at least 80% line coverage, by delegating to a sub-agent
-   rather than running `java-coverage` directly: `Agent({description: "Check coverage for <TestClass>", prompt:
-   "Invoke Skill({skill: \"java-coverage\", args: \"<TestClass>\"}) (or a comma/wildcard selector per that
-   skill's Step 1, plus explicit target class names, if several classes are involved; fall back to `mvn clean
-   jacoco:prepare-agent test jacoco:report -Dtest=<TestClass>` directly and reading
-   `target/site/jacoco/jacoco.csv` if the java-coverage skill is unavailable). Report back, for each target
-   class only, its line coverage percentage and branch coverage percentage — not the full report or which
-   specific lines/branches are covered or uncovered."})`. Running this in a sub-agent's separate context keeps
-   the detailed per-line/per-branch report data out of the main context window since only the percentages are
-   needed here. Check the actual reported percentage, don't estimate it. If under 80%, add tests for the
-   uncovered branches/lines (re-invoking the sub-agent from item 6, and this one without a sub-agent, to confirm)
-   and re-check.
-8. **Run the full suite** before marking the task done, to catch regressions in other classes this task's change
-   may have affected, by delegating to a sub-agent for the same reason as item 6: `Agent({description: "Run full
-   test suite", prompt: "Run `mvn clean test`. If everything passes, report back only that all tests passed. If
-   anything fails, report back only the failing test names, the failure reason, and the stack trace for each —
-   not the full Surefire output."})`. Running this in a sub-agent's separate context keeps unneeded passing-test
-   output out of the main context window. If the sub-agent reports failures, fix the regression, then re-invoke
-   the same sub-agent pattern — repeat until it reports all tests passed.
-9. **Check code quality for the touched file(s)**, scoped the same way as item 1, by delegating to a sub-agent
-   for the same reason as before: `Agent({description: "Check for new quality issues in <ClassName>", prompt:
-   "Invoke Skill({skill: \"java-code-quality\", args: \"<ClassName>\"}). Compare the reported issues against
-   this pre-change baseline: <baseline from item 1>. Report back only the issues that are newly appearing (not
-   present in the baseline) — not the full reports and not issues that were already present."})`. Running this
-   in a sub-agent's separate context, and having it do the diffing itself, keeps the full reports and
-   already-known pre-existing issues out of the main context window since only newly introduced issues matter
-   here. Any issue reported back is a regression this task introduced — fix it (then re-run items 6–8 to confirm
-   the fix didn't break tests or coverage) and re-check until none remain. Leave a new issue in place only if
-   fixing it is genuinely unavoidable (e.g. it would contradict what the task explicitly specifies) — in that
-   case say so, and why, in the Step 5 note rather than silently accepting it. If the `java-code-quality` skill
-   is unavailable in this repository, skip this item.
-10. Only once 4–9 all pass: proceed to Step 5 for this task, then continue to the next unchecked task.
+If `java-code-one-task` reports that it stopped short on a blocker (a failing test that suggests the plan's
+approach itself is wrong, or an ambiguity only the user can resolve — see that skill's own interrupt step),
+treat it the same as if it happened here: don't check the task's box, surface the blocker to the user via
+`AskUserQuestion`, and stop rather than moving to the next task. If it reports the user chose to skip license-
+header generation, respect that choice for the rest of this run — don't ask again on later tasks.
+
+Once the sub-skill reports a clean outcome, use its summary to proceed to Step 5 for this task, then continue to
+the next unchecked task.
 
 ## Step 5 — Check the task's boxes in `implementation_plan.md`
 
@@ -154,8 +92,8 @@ all times in case the run is interrupted):
   the completed work.
 - Add a short note under the task (one or two lines) naming the files touched, the tests added/updated, the
   coverage achieved, and the code-quality result, e.g. `- [x] **Add `Widget`** — tests in WidgetTest (94% line
-  coverage, no new Checkstyle/PMD/SpotBugs issues).` If a new issue was left in place as unavoidable (Step 4 item
-  8), name it and the reason here instead.
+  coverage, no new Checkstyle/PMD/SpotBugs issues).` If `java-code-one-task`'s summary (its own Step 11) reported
+  a new issue left in place as unavoidable, name it and the reason here instead.
 - Save the file, then update the mirrored entry in the session task list (Step 3) to completed.
 
 ## Step 6 — When to interrupt the user
@@ -163,12 +101,11 @@ all times in case the run is interrupted):
 Keep interruptions rare — by design, this skill should run start-to-finish unattended on a well-formed plan.
 Stop and use `AskUserQuestion` (or plain text if no real choice is being offered) only when:
 
-- A test keeps failing after a genuine attempt to fix it (implementation and/or test), and the failure suggests
-  the plan's described approach is actually wrong or infeasible against the real code — not just a typo you can
-  fix yourself.
-- The plan is ambiguous in a way that changes correctness or scope and can't be safely inferred — conflicting
-  instructions, a choice only the user can make (e.g. which of two APIs to break), or a missing decision. Mirror
-  the bar used by the `plan` skill's Step 3: don't ask about things with an obvious best-practice answer.
+- `java-code-one-task` (Step 4) reports it stopped on a blocker for the current task — a test that keeps failing
+  after a genuine fix attempt where the failure suggests the plan's described approach is actually wrong or
+  infeasible against the real code, or an ambiguity that changes correctness or scope and can't be safely
+  inferred (conflicting instructions, a choice only the user can make, a missing decision). Mirror the bar used
+  by the `plan` skill's Step 3: don't ask about things with an obvious best-practice answer.
 - A tool call needs a permission outside this skill's `allowed-tools` list and the underlying action is risky or
   irreversible (e.g. anything beyond the scoped `mvn`/read-only `git` commands this skill is pre-approved for) —
   in this case the harness will already prompt; just make the case for why it's needed if asked.
