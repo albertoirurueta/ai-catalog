@@ -17,7 +17,7 @@ always analyzes the whole project.
 
 == Purpose group
 
-xref:index.adoc#group-quality[Java Code Quality]
+xref:index.adoc#group-java[Java Development Tooling]
 
 == Invocation
 
@@ -79,14 +79,15 @@ SpotBugs reports, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/code.adoc[] — delegates to `java-code-quality` once per implementation task, every time, via its own
-  `general-purpose` sub-agent, so the full Checkstyle/PMD/SpotBugs report output stays out of `code`'s own context
-  and only a short issue summary comes back.
+* xref:skills/code.adoc[] — Steps 3 and 7, once per run (not per task), via its own `general-purpose` sub-agent,
+  to capture and later re-check a project-wide quality baseline for the `java` language/framework key.
+* xref:skills/java-code-one-task.adoc[] — Steps 1 and 9, once per task, via its own `general-purpose` sub-agent,
+  to capture a per-class pre-change baseline and later diff the post-change result against it.
 
 === Related agents
 
-None directly — but `code` (see xref:skills/code.adoc[] and xref:agents/overview.adoc[]) always invokes this
-skill from inside a `general-purpose` sub-agent it spawns, not inline.
+None directly — but both callers above always invoke this skill from inside a `general-purpose` sub-agent they
+spawn (see xref:agents/overview.adoc[]), not inline.
 
 == Source
 

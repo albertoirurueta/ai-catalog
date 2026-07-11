@@ -19,7 +19,7 @@ generating generic, possibly non-conforming comments.
 
 == Purpose group
 
-xref:index.adoc#group-quality[Java Code Quality]
+xref:index.adoc#group-java[Java Development Tooling]
 
 == Invocation
 
@@ -95,14 +95,14 @@ not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/code.adoc[] — delegates to `java-javadoc` once per implementation task, every time, via its own
-  `general-purpose` sub-agent, so the full Javadoc audit and build output stays out of `code`'s own context and
-  only a short summary comes back.
+* xref:skills/java-code-one-task.adoc[] — Step 5, once per task, via its own `general-purpose` sub-agent, to
+  update Javadoc for the class(es) that task touched and confirm the Javadoc build passes.
 
 === Related agents
 
-None directly — but `code` (see xref:skills/code.adoc[] and xref:agents/overview.adoc[]) always invokes this
-skill from inside a `general-purpose` sub-agent it spawns, not inline.
+None directly — but `java-code-one-task` (see xref:skills/java-code-one-task.adoc[] and
+xref:agents/overview.adoc[]) always invokes this skill from inside a `general-purpose` sub-agent it spawns, not
+inline.
 
 == Source
 

@@ -1,0 +1,112 @@
+= .NET Coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run Coverlet (via `dotnet test`'s built-in "XPlat Code Coverage" collector) against a scoped or full test run,
+then read the generated `coverage.cobertura.xml` to report the exact, measured line/branch coverage percentage for
+the class(es) the caller cares about. This is the .NET/C# equivalent of `java-coverage`. It is a read-only
+reporting skill: it measures and reports coverage, it does not add tests or modify source/test code unless asked
+to as a follow-up.
+
+== Purpose
+
+`dotnet-coverage` answers "does class X meet the coverage bar?" with an exact, Cobertura-XML-derived percentage
+instead of an eyeballed guess. It reuses `dotnet-test`'s selector syntax to scope which tests run, infers or
+accepts an explicit list of target classes, and — for classes under the bar — points to the exact uncovered
+lines/branches directly from the same XML's per-line `hits` data, without needing a separate HTML report the way
+JaCoCo does.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/dotnet-coverage
+/dotnet-coverage <selector> [TargetClass1,TargetClass2,...]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|Which tests to run, using the exact same syntax as the `dotnet-test` skill's selector table (class, class+method,
+several classes, wildcard/namespace pattern, trait/category expression, project/solution path). Must cover every
+test that exercises the target class(es) — a selector scoped too narrowly undercounts real coverage, so a broader
+selector is preferred when in doubt.
+|None — omitting it runs the full suite.
+
+|`TargetClass1,TargetClass2,...`
+|No
+|Comma-separated class name(s) to report coverage for.
+|None — if omitted, target classes are inferred from the test selector by convention (`FooTests` → `Foo`), or,
+for a wildcard/namespace/trait selector where no name can be inferred, every class touched by the run is reported
+(or the user is asked which class(es) matter).
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Per target class: exact line-coverage percentage (and branch coverage where relevant), computed directly from
+  `coverage.cobertura.xml` — never estimated.
+* If the caller gave a coverage bar (e.g. "at least 80%"): a clear statement of whether each class meets it.
+* For classes under the bar: the exact uncovered line numbers and partially-covered branches, read straight from
+  the Cobertura XML's per-line `hits`/`condition-coverage` data.
+* A target class absent from the XML entirely is reported as 0% coverage, not as an error.
+* No source or test code is ever modified, and coverage is never re-run to try to raise a number.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /dotnet-coverage\n(optional selector, target classes)"] --> B{Selector given?}
+    B -- yes --> C["Scope tests using dotnet-test's\nselector syntax"]
+    B -- no --> D["Run full suite"]
+    C --> E
+    D --> E{Target classes given?}
+    E -- yes --> F["Use given class list"]
+    E -- no --> G["Infer from test selector\n(FooTests -> Foo), or defer to\nevery class touched by the run"]
+    F --> H["Delete stale TestResults;\nrun dotnet test --collect:\n\"XPlat Code Coverage\""]
+    G --> H
+    H --> I{Test run succeeded?}
+    I -- no --> J["Report failure, stop\n(don't read a stale report)"]
+    I -- yes --> K["Find and read the generated\ncoverage.cobertura.xml"]
+    K --> L["Compute line / branch coverage %\nper target class from &lt;line&gt; elements"]
+    L --> M{Class found in the XML?}
+    M -- no --> N["Report 0% (not an error)"]
+    M -- yes --> O["Report exact %; state pass/fail\nvs. any given bar"]
+    N --> P
+    O --> P{Under the bar?}
+    P -- yes --> Q["List exact uncovered lines/\npartial branches from the XML"]
+    P -- no --> R["State it meets the bar"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `dotnet-coverage` is a leaf skill; it only runs `dotnet test` and reads the generated Cobertura report, it
+does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/dotnet-code-one-task.adoc[] — Step 7, once per task, via its own `general-purpose` sub-agent, to
+  check the changed/new class(es) meet the 80% coverage bar (falling back to `dotnet test --collect:"XPlat Code
+  Coverage"` directly if this skill is unavailable).
+
+=== Related agents
+
+None directly — but `dotnet-code-one-task` (see xref:skills/dotnet-code-one-task.adoc[] and
+xref:agents/overview.adoc[]) always invokes this skill from inside a `general-purpose` sub-agent it spawns, not
+inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/dotnet-coverage/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -93,8 +93,11 @@ flowchart TD
 
 === Invoked by
 
-None currently in this catalog — `update-docs` is meant to be run directly by a person (or potentially by
-another skill in a different repository) after code changes have already been made.
+* xref:skills/code.adoc[] — Step 8, once per run (not per task), invoked directly (not via a sub-agent) once the
+  build, quality, and security gates all pass, so the project's documentation reflects everything the whole plan
+  changed before the plan is archived.
+* Also meant to be run directly by a person (or potentially by another skill in a different repository) after
+  code changes have already been made outside the `/code` flow.
 
 === Related agents
 

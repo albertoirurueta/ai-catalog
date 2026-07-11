@@ -35,17 +35,21 @@ naming a specific type. It has the same tool access as the main conversation.
 
 === Used by
 
-* xref:skills/code.adoc[] — spawns one per delegated check while implementing each task: capturing a
-  code-quality baseline, running `java-code-quality`/`check-license`/`java-javadoc`/`java-test`/
-  `java-coverage`, and the final full-suite/full-build verification. Each is asked to report back only a
-  short summary (e.g. "all tests passed", or the list of newly-introduced issues) rather than the full,
-  verbose tool output, keeping that noise out of `code`'s own context.
+* xref:skills/code.adoc[] — spawns one per project-wide check it still runs directly: capturing/re-checking the
+  quality baseline (`java-code-quality`/`dotnet-code-quality`) and the security baseline (`check-security`), plus
+  the final full-suite/full-build verification. Each is asked to report back only a short summary (e.g. "all
+  tests passed", or the list of newly-introduced issues) rather than the full, verbose tool output, keeping that
+  noise out of `code`'s own context.
+* xref:skills/java-code-one-task.adoc[] and xref:skills/dotnet-code-one-task.adoc[] — each spawns one per
+  delegated check while implementing its one task: capturing a per-class/per-type quality baseline, running
+  `check-license`, the language's Javadoc/doc-comment skill, its scoped-test skill, its coverage skill, and the
+  full test suite. Same reasoning as `code`: only the distilled outcome comes back, not the raw report.
 * xref:skills/issue.adoc[] — Step 6 hands the entire `code` run to one sub-agent when the user chooses to
   implement automatically, so that implementation starts from a clean context instead of carrying the whole
   `explore`/`plan` transcript into it, while `issue` itself keeps running afterward to open the pull request.
 * A `plan`-generated `implementation_plan.md` (see xref:skills/plan.adoc[]) instructs whoever executes it —
-  normally `code` — to delegate test runs to a sub-agent for the same context-isolation reason, rather than
-  running tests inline.
+  normally `code`, via the `<key>-code-one-task` skill it dispatches to — to delegate test runs to a sub-agent
+  for the same context-isolation reason, rather than running tests inline.
 
 === Why this one specifically
 

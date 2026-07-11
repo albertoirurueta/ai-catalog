@@ -1,0 +1,117 @@
+= Java Code One Task
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task from a Java `implementation_plan.md`-style task list end to end: implement it, back it
+with JUnit tests that meet this repository's coverage bar, keep license headers and Javadoc current, verify
+nothing regressed, and report the outcome. This is the execution unit the `code` skill calls once per Java
+top-level task; it never reads or writes `implementation_plan.md` itself.
+
+== Purpose
+
+`java-code-one-task` is the Java-specific worker behind `code`'s per-task dispatch. Given one task's own text
+(what to build, the named file(s)/class(es)/method(s), the described behavior, and any sub-tasks), it re-checks
+the current code state, implements exactly what's specified, writes/updates JUnit tests, adds license headers via
+`check-license`, updates Javadoc via `java-javadoc`, runs the scoped tests and checks coverage via `java-test`/
+`java-coverage`, runs the full suite, and checks for new static-analysis issues via `java-code-quality` against a
+baseline it captures itself — all through sub-agents so the noisy report output from each stays out of its own
+context. It hands back only a short summary; all plan-file bookkeeping (checking boxes, tracking session tasks)
+is the caller's job, not this skill's.
+
+== Purpose group
+
+xref:index.adoc#group-java[Java Development Tooling]
+
+== Invocation
+
+[source]
+----
+/java-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/class(es)/
+method(s), the described behavior, and any sub-tasks, plus any relevant "Current code state" context. Normally
+supplied by the `code` skill dispatching one plan task at a time.
+|None — this skill has nothing to do without a task description.
+|===
+
+== Outputs
+
+* Source and test files created/modified per the task, following this repository's conventions from `CLAUDE.md`
+  (Java version, `final`/`var` type inference only where already used, full Javadoc, `IllegalArgumentException`
+  for invalid arguments, no new runtime dependencies).
+* JUnit tests added/updated, achieving at least 80% line coverage for the changed/new classes, verified against
+  the actual `java-coverage` report rather than estimated.
+* License headers added to every file the task touched, via `check-license`.
+* Javadoc added/updated for every file the task touched, via `java-javadoc`, verified by a Javadoc build.
+* Confirmation that the scoped tests and the full suite both pass, and that no new `java-code-quality` issue was
+  introduced versus a pre-change, per-class baseline this skill captures itself.
+* A short summary handed back to the caller: file(s) touched, tests added/updated, coverage achieved, and the
+  code-quality outcome — including any new issue left in place as unavoidable and why, whether license-header
+  generation was skipped by the user, or whether the run stopped on a blocker.
+* `implementation_plan.md` is never read or written by this skill — checking off boxes is the caller's job.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /java-code-one-task\n(task description)"] --> B["Re-check current code state;\ncapture per-class pre-change\nquality baseline via sub-agent"]
+    B --> C["Implement exactly what\nthe task specifies"]
+    C --> D["Write/update JUnit tests"]
+    D --> E["Delegate: check-license\n(via sub-agent)"]
+    E --> F["Delegate: java-javadoc\n(via sub-agent)"]
+    F --> G["Delegate: run scoped tests\nvia java-test (via sub-agent)"]
+    G -- failing --> C
+    G -- pass --> H["Delegate: check coverage >= 80%\nvia java-coverage (via sub-agent)"]
+    H -- under 80% --> D
+    H -- pass --> I["Delegate: full mvn clean test\n(via sub-agent)"]
+    I -- regression --> C
+    I -- pass --> J["Delegate: java-code-quality,\ndiff vs. pre-change baseline\n(via sub-agent)"]
+    J -- new issue found --> C
+    J -- clean --> K["Report outcome to caller:\nfiles, tests, coverage, quality"]
+    G -- persistent failure,\napproach looks wrong --> L["Stop: report blocker\nto caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via its own `general-purpose` sub-agent (see xref:agents/overview.adoc[]) rather
+than directly, so verbose report output stays out of this skill's own context window and only the distilled
+outcome comes back:
+
+* xref:skills/java-code-quality.adoc[] — Step 1, to capture a per-class pre-change quality baseline, and Step 9,
+  to diff the post-change result against it and surface only newly-introduced issues.
+* xref:skills/check-license.adoc[] — Step 4, to add/verify license headers on the file(s) this task touched.
+* xref:skills/java-javadoc.adoc[] — Step 5, to update Javadoc for the class(es) this task touched and confirm the
+  Javadoc build passes.
+* xref:skills/java-test.adoc[] — Step 6, to run the scoped tests for the affected class(es) (falling back to
+  `mvn test -Dtest=<TestClass>` directly if unavailable).
+* xref:skills/java-coverage.adoc[] — Step 7, to check line/branch coverage for the changed/new class(es) is at
+  least 80% (falling back to `mvn jacoco:prepare-agent test jacoco:report` directly if unavailable).
+* Plain, non-skill sub-agent call: a full `mvn clean test` run (Step 8).
+
+=== Invoked by
+
+* xref:skills/code.adoc[] — Step 4 invokes `java-code-one-task` once per top-level task tagged (or defaulted to)
+  the `java` language/framework key, passing that task's full text, then checks off its box in
+  `implementation_plan.md` on a clean report.
+
+=== Related agents
+
+* `general-purpose` (see xref:agents/overview.adoc[]) — spawned repeatedly, once per delegated check (baseline
+  capture, license, Javadoc, scoped tests, coverage, full suite, quality diff), for the same reason `code` itself
+  spawns one per delegated check: keeping verbose report/build output out of this skill's own context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/java-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -16,7 +16,7 @@ lines/branches in the per-class HTML report so a follow-up can target them preci
 
 == Purpose group
 
-xref:index.adoc#group-quality[Java Code Quality]
+xref:index.adoc#group-java[Java Development Tooling]
 
 == Invocation
 
@@ -95,14 +95,15 @@ does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/code.adoc[] — delegates to `java-coverage` once per implementation task, every time, via its own
-  `general-purpose` sub-agent, so the full JaCoCo report output stays out of `code`'s own context and only a short
-  coverage summary comes back.
+* xref:skills/java-code-one-task.adoc[] — Step 7, once per task, via its own `general-purpose` sub-agent, to
+  check the changed/new class(es) meet the 80% coverage bar (falling back to `mvn jacoco:prepare-agent test
+  jacoco:report` directly if this skill is unavailable).
 
 === Related agents
 
-None directly — but `code` (see xref:skills/code.adoc[] and xref:agents/overview.adoc[]) always invokes this
-skill from inside a `general-purpose` sub-agent it spawns, not inline.
+None directly — but `java-code-one-task` (see xref:skills/java-code-one-task.adoc[] and
+xref:agents/overview.adoc[]) always invokes this skill from inside a `general-purpose` sub-agent it spawns, not
+inline.
 
 == Source
 

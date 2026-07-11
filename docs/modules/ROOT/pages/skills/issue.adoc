@@ -2,18 +2,23 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Take a GitHub issue from "just filed" to "pull request open for review, with review comments already
-left" in one pass. This skill orchestrates `explore`, `plan`, `code`, `pr-description`, and `pr-review` — it
-does not duplicate their logic, it sequences them around branch creation, issue triage, and PR creation.
+Take a tracked ticket — a GitHub issue or a Jira ticket — from "just filed" to "pull request open for review,
+with review comments already left" in one pass. This skill orchestrates `explore`, `plan`, `code`,
+`pr-description`, and `pr-review` — it does not duplicate their logic, it sequences them around branch creation,
+ticket triage, and PR creation.
 
 == Purpose
 
-`issue` is the top-level, end-to-end entry point for working a tracked GitHub issue. Unlike `explore` and
-`plan`, it requires an issue id and stops immediately if none is given. It fetches the issue, classifies it
-as a feature or a hotfix, creates the matching branch, runs `explore` and `plan` to produce a reviewable
-`implementation_plan.md`, then — depending on the user's choice — either stops for manual review or hands
-implementation off to `code` inside a sub-agent, before pushing the branch, opening the pull request,
-drafting its description with `pr-description`, and leaving an initial review on it with `pr-review`.
+`issue` is the top-level, end-to-end entry point for working a tracked ticket, auto-detecting whether it's a
+GitHub issue or a Jira key the same way `explore` does. Unlike `explore` and `plan`, it requires a ticket id and
+stops immediately if none is given. It fetches the ticket, classifies it as a feature or a hotfix, creates the
+matching branch, runs `explore` and `plan` to produce a reviewable `implementation_plan.md`, then — depending on
+the user's choice — either stops for manual review or hands implementation off to `code` inside a sub-agent,
+before pushing the branch, opening the pull request (as a draft, using whichever tooling matches the detected
+repository host), drafting its description with `pr-description`, and leaving an initial review on it with
+`pr-review`. If `code`'s security gate (backed by `check-security`) ever fires during implementation — even if
+`code` goes on to resolve it and finish cleanly — this skill treats that as a hard stop distinct from an ordinary
+blocker: it warns the user with the specifics and never pushes the branch or opens a PR for that run.
 
 == Purpose group
 
@@ -23,7 +28,7 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 
 [source]
 ----
-/issue <issue-id>
+/issue <ticket-id>
 ----
 
 == Inputs
@@ -32,74 +37,82 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |===
 |Argument |Required |Description |Default
 
-|`issue-id`
+|`ticket-id`
 |Yes
-|The GitHub issue number to work end to end. If omitted, the skill asks for one via `AskUserQuestion`; if
-the user still declines or gives none, the skill stops entirely rather than falling back to a
-codebase-only mode.
-|None — no default; this is the one catalog skill that hard-stops without an issue id.
+|A GitHub issue number or a Jira key (e.g. `PROJ-123`) to work end to end, auto-detected by pattern. If omitted,
+the skill asks for one via `AskUserQuestion`; if the user still declines or gives none, the skill stops entirely
+rather than falling back to a codebase-only mode.
+|None — no default; this is the one catalog skill that hard-stops without a ticket id.
 |===
 
 == Outputs
 
-* A new local branch, `feature/<issue-id>` or `hotfix/<issue-id>` depending on classification, created off
+* A new local branch, `feature/<ticket-id>` or `hotfix/<ticket-id>` depending on classification, created off
   the branch `/issue` was invoked from.
 * `implementation_plan.md` at the repository root (produced by `plan`), ready for manual review, or already
   executed by `code` if the user chose automatic implementation.
-* If implementation proceeded automatically and completed successfully: the branch pushed to `origin`, a
-  pull request opened back to the base branch (title `"<issue-title> (#<issue-id>)"`, body linking
-  `Closes #<issue-id>`), its description filled in by `pr-description`, and an initial review left on it by
-  `pr-review`.
-* If the user chose manual review instead, or if `code` reports a blocker, the skill stops short of pushing
-  or opening a PR and reports exactly where it stopped.
-* A final summary: issue id/title, classification and why, the branch and its base, and either the manual
-  review pending state or the full implementation/PR/review outcome.
+* If implementation proceeded automatically and completed successfully, with `code`'s security gate never
+  firing: the branch pushed to `origin`, a pull request opened **as a draft** back to the base branch (title
+  `"<ticket-title> (#<ticket-id>)"` or `"(<ticket-id>)"` for Jira, body linking the ticket via the convention
+  matching the detected host), its description filled in by `pr-description`, and an initial review left on it
+  by `pr-review`.
+* If the user chose manual review instead, `code` reports a blocker, or `code`'s security gate ever fired during
+  the run, the skill stops short of pushing or opening a PR and reports exactly where it stopped — for the
+  security-gate case, with an explicit warning naming what was flagged and reminding the user to verify the
+  resolution themselves before pushing anything.
+* A final summary: ticket id/title, classification and why, the branch and its base, and one of: manual review
+  pending, the security gate fired (with the sub-agent's implementation summary and what was flagged), or the
+  full implementation/PR/review outcome — always noting the PR is a draft still needing the user's own review.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A[Start /issue] --> B{Issue id given?}
-    B -- no --> C["Ask user for an issue id"]
-    C -- still none --> Z["Stop: issue id is required"]
+    A[Start /issue] --> B{Ticket id given?}
+    B -- no --> C["Ask user for a ticket id"]
+    C -- still none --> Z["Stop: ticket id is required"]
     C -- given --> D
-    B -- yes --> D["Fetch issue via gh issue view\n(or GitHub MCP tools)"]
-    D --> E["Classify as feature or hotfix\n(labels, then title/body content,\nthen ask user if still ambiguous)"]
-    E --> F["Create feature/&lt;id&gt; or hotfix/&lt;id&gt;\nbranch off current branch"]
-    F --> G["Invoke explore skill\n(scoped to issue id)"]
-    G --> H["Invoke plan skill\n(scoped to issue id)"]
-    H --> I{"Ask user: proceed\nautomatically with code,\nor review manually?"}
-    I -- manual review --> J["Stop: implementation_plan.md\nready for user to run /code later"]
-    I -- automatic --> K["Delegate full code skill run\nto a general-purpose sub-agent"]
-    K -- blocker reported --> L["Surface blocker to user and stop"]
-    K -- success --> M["Confirm with user, then\npush branch"]
-    M --> N["Open pull request\n(placeholder body, Closes #issue)"]
-    N --> O["Invoke pr-description skill"]
-    O --> P["Re-confirm Closes #issue\nreference still in PR body"]
-    P --> Q["Invoke pr-review skill\n(passing PR id and issue id)"]
-    Q --> R["Report final summary"]
+    B -- yes --> D["Detect type: Jira key vs.\nbare number/#N (GitHub)"]
+    D --> E["Fetch ticket via gh issue view\nor Jira MCP tools"]
+    E --> F["Classify as feature or hotfix\n(labels/issue type, then title/body content,\nthen ask user if still ambiguous)"]
+    F --> G["Create feature/&lt;id&gt; or hotfix/&lt;id&gt;\nbranch off current branch"]
+    G --> H["Invoke explore skill\n(scoped to ticket id)"]
+    H --> I["Invoke plan skill\n(scoped to ticket id)"]
+    I --> J{"Ask user: proceed\nautomatically with code,\nor review manually?"}
+    J -- manual review --> K["Stop: implementation_plan.md\nready for user to run /code later"]
+    J -- automatic --> L["Delegate full code skill run\nto a general-purpose sub-agent"]
+    L -- blocker reported --> M["Surface blocker to user and stop"]
+    L -- security gate fired --> N["Hard stop: warn user what was\nflagged; do NOT push or open PR"]
+    L -- clean success --> O["Confirm with user, then\npush branch"]
+    O --> P["Open pull request as draft\n(placeholder body, host-appropriate\nticket reference)"]
+    P --> Q["Invoke pr-description skill"]
+    Q --> R["Re-confirm ticket reference\nstill in PR body"]
+    R --> S["Invoke pr-review skill\n(passing PR id and ticket id)"]
+    S --> T["Report final summary\n(PR still a draft)"]
 ....
 
 == Dependencies
 
 === Invokes
 
-* xref:skills/explore.adoc[] — Step 5.1 runs `explore` scoped to the issue id as the first step of the
+* xref:skills/explore.adoc[] — Step 5 runs `explore` scoped to the ticket id as the first step of the
   explore → plan → code → PR pipeline.
-* xref:skills/plan.adoc[] — Step 5.2 runs `plan` scoped to the issue id right after `explore`, producing
+* xref:skills/plan.adoc[] — Step 5 runs `plan` scoped to the ticket id right after `explore`, producing
   `implementation_plan.md`.
 * xref:skills/code.adoc[] — Step 6, when the user chooses automatic implementation over manual review, runs
   `code` via a `general-purpose` sub-agent (see xref:agents/overview.adoc[]) so the whole implementation run
   starts from a clean context rather than carrying the exploration/planning transcript into it.
-* xref:skills/pr-description.adoc[] — Step 7.4 invokes it to draft the new pull request's description from
-  the actual diff, and Step 7.5 checks its output still references the issue.
-* xref:skills/pr-review.adoc[] — Step 7.6 invokes it, passing both the new PR's id and the issue id
+* xref:skills/pr-description.adoc[] — Step 7 invokes it to draft the new pull request's description from
+  the actual diff, then re-checks its output still references the ticket.
+* xref:skills/pr-review.adoc[] — Step 7 invokes it, passing both the new PR's id and the ticket id
   explicitly (rather than relying on its own auto-detection), to leave an initial review on the PR.
 
 === Invoked by
 
-None — `issue` is a top-level entry point; no other skill in this catalog invokes it.
+None — `issue` is a top-level entry point; no other skill in this catalog invokes it, though
+xref:skills/create-github-issue.adoc[] and xref:skills/create-jira-ticket.adoc[] each file a ticket meant to be
+picked up by a subsequent, separate `/issue` invocation.
 
 === Related agents
 

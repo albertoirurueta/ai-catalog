@@ -1,0 +1,146 @@
+= .NET Test
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a .NET project or solution's test suite through the .NET CLI (`dotnet test`), scoped to whatever the caller
+asked for — everything, a single class, a single method, a wildcard/namespace pattern, or a trait/category
+expression. This is the .NET/C# equivalent of `java-test`. It is a read-only reporting skill: it runs tests and
+summarizes the outcome, it does not fix failures unless asked to as an explicit follow-up.
+
+== Purpose
+
+`dotnet-test` turns a loosely-specified request ("run the FooTests", "just the fast ones", "everything") into the
+correct `dotnet test --filter` invocation and a concise pass/fail summary. It exists so that running and
+narrowing down tests doesn't require hand-composing filter-expression syntax each time, and so that a calling
+skill (or a human) gets back a short report instead of a full raw test-run log.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/dotnet-test
+/dotnet-test <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|Names what to run: a test class, a class+method, several classes, a wildcard/namespace pattern, a trait/category
+expression, or a specific project/solution path. Mapped to the correct `--filter` expression per the table below.
+|None — omitting it runs the full suite (`dotnet test`).
+|===
+
+The selector maps to `dotnet test` parameters as follows:
+
+[cols="3,3,3", options="header"]
+|===
+|What the caller wants |Parameter |Example
+
+|Everything
+|_(none)_
+|`dotnet test`
+
+|A specific project or solution
+|positional path
+|`dotnet test MySolution.sln`
+
+|One test class
+|`--filter` with `FullyQualifiedName~`
+|`dotnet test --filter "FullyQualifiedName~FooTests"`
+
+|One method in a class
+|`--filter` with `FullyQualifiedName~Class.Method`
+|`dotnet test --filter "FullyQualifiedName~FooTests.TestSomething"`
+
+|Several classes/methods
+|`--filter` with `\|` between clauses
+|`dotnet test --filter "FullyQualifiedName~FooTests\|FullyQualifiedName~BarTests"`
+
+|Classes matching a name pattern
+|`--filter` with `~` (contains match)
+|`dotnet test --filter "FullyQualifiedName~ServiceTests"`
+
+|All classes in a namespace
+|`--filter` with the namespace as a `~` prefix
+|`dotnet test --filter "FullyQualifiedName~MyProject.Services"`
+
+|Excluding some classes/methods
+|`--filter` with `!~`
+|`dotnet test --filter "FullyQualifiedName!~SlowTests"`
+
+|Tests tagged with a category/trait
+|`--filter` with the trait's property name
+|`dotnet test --filter "Category=fast"`
+
+|Excluding a category/trait
+|`--filter` with `!=`
+|`dotnet test --filter "Category!=slow"`
+
+|Trait/category boolean expression
+|`--filter` with `&`, `\|`, `!`
+|`dotnet test --filter "Category=fast&Priority=1"`
+|===
+
+Which trait/category property name applies depends on the test framework in use (MSTest: `TestCategory`/
+`Priority`; NUnit: `Category`; xUnit: whatever key was passed to `[Trait("Key","Value")]`) — checked against the
+test project's `<PackageReference>` entries if unsure. A selector matching nothing reports "No test matches the
+given testcase filter" and exits successfully having run zero tests, rather than failing the build the way Maven
+Surefire does — called out explicitly in the report rather than treated as a pass.
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Total tests run, passed, failed, and skipped, per test project.
+* If everything passed: a brief confirmation, without pasting the full log.
+* If there are failures: the failing test names and the relevant assertion/exception output (falling back to the
+  `.trx` log under `TestResults/` if console output was truncated) — without unrelated passing-test noise.
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /dotnet-test\n(optional selector)"] --> B{Selector given?}
+    B -- no --> C["Run dotnet test\n(full suite)"]
+    B -- yes --> D["Map selector to --filter expression\n(and/or project/solution path)"]
+    D --> E["Compose dotnet test command\nwith mapped parameters"]
+    E --> F["Run via Bash tool"]
+    C --> F
+    F --> G["Summarize output:\nrun / passed / failed / skipped per project"]
+    G --> H{Failures?}
+    H -- yes --> I["Show failing test names +\nassertion/exception output\n(.trx log if truncated)"]
+    H -- no --> J["Report: all passed, briefly"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `dotnet-test` is a leaf skill; it only runs `dotnet test` and reports on its output, it does not call any
+other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/dotnet-code-one-task.adoc[] — Step 6, once per task, via its own `general-purpose` sub-agent, to
+  run the scoped tests for the affected type(s) (falling back to `dotnet test --filter
+  "FullyQualifiedName~<TestClass>"` directly if this skill is unavailable).
+
+=== Related agents
+
+None directly — but `dotnet-code-one-task` (see xref:skills/dotnet-code-one-task.adoc[] and
+xref:agents/overview.adoc[]) always invokes this skill from inside a `general-purpose` sub-agent it spawns, not
+inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/dotnet-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

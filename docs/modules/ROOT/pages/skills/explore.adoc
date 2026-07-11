@@ -2,16 +2,20 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Produce a grounded understanding of this repository's codebase and, when available, of a specific GitHub
-issue — without writing a plan or making code changes. This is read-only research: its output is a report,
-not a diff.
+Produce a grounded understanding of this repository's codebase and, when available, of a specific tracked
+ticket — a GitHub issue or a Jira ticket — without writing a plan or making code changes. This is read-only
+research: its output is a report, not a diff.
 
 == Purpose
 
-`explore` gets an agent (or a human) oriented before any decision or code change is made. Given a GitHub
-issue id, it narrows the investigation to only the areas that issue implicates; given none, it does a
-general architectural tour of the repository. Either way it never edits a file, and it never proposes an
-implementation — that is `plan`'s job, run as a separate, explicit step.
+`explore` gets an agent (or a human) oriented before any decision or code change is made. Given a ticket id, it
+auto-detects whether it's a GitHub issue or a Jira key and narrows the investigation to only the areas that
+ticket implicates; given none, it does a general architectural tour of the repository. It also detects which
+platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS) and the language(s)/framework(s) in play
+— both in the existing codebase and in whatever change is being requested — so its "Tech stack" report can be
+reused directly by later skills (`plan`, `code`, `update-docs`, PR/branch creation) instead of each re-detecting
+the same facts. Either way it never edits a file, and it never proposes an implementation — that is `plan`'s job,
+run as a separate, explicit step.
 
 == Purpose group
 
@@ -22,7 +26,7 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 [source]
 ----
 /explore
-/explore <issue-id>
+/explore <ticket-id>
 ----
 
 == Inputs
@@ -31,20 +35,25 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |===
 |Argument |Required |Description |Default
 
-|`issue-id`
+|`ticket-id`
 |No
-|A GitHub issue number to ground the exploration in. When given, the investigation is scoped to the files,
-classes, and behavior the issue describes.
-|None — if omitted, the skill asks whether to explore a specific issue anyway; declining falls back to a
+|A GitHub issue number or a Jira key (e.g. `PROJ-123`) to ground the exploration in — auto-detected by pattern
+(a bare number/`#N` is GitHub, a letter-hyphen-digits key is Jira; the skill asks if genuinely ambiguous). When
+given, the investigation is scoped to the files, classes, and behavior the ticket describes.
+|None — if omitted, the skill asks whether to explore a specific ticket anyway; declining falls back to a
 general codebase tour.
 |===
 
 == Outputs
 
 * A plain-text report in the conversation — never a written file.
-* If an issue was explored: the task restated in plain language, the specific files/classes/methods
-  relevant to it, how the current code behaves in that area, and anything ambiguous or missing that would
-  block implementation.
+* Always a **Tech stack** section: codebase languages/frameworks (per module, if more than one), the
+  languages/frameworks implicated by the requested change, the Antora docs location (or "none found"), and the
+  detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, or "no remote configured") — structured so later
+  skills in the same conversation can read it directly instead of re-detecting it.
+* If a ticket was explored: the task restated in plain language, the specific files/classes/methods relevant to
+  it, how the current code behaves in that area, and anything ambiguous or missing that would block
+  implementation.
 * If codebase-only: a summary of the architecture areas covered and anything notable found.
 * No code, configuration, or documentation is ever modified.
 
@@ -53,15 +62,19 @@ general codebase tour.
 [mermaid]
 ....
 flowchart TD
-    A[Start /explore] --> B{Issue id given?}
-    B -- yes --> C["Fetch issue via gh issue view\n(or GitHub MCP tools)"]
-    B -- no --> D["Ask user: explore an issue,\nor just the codebase?"]
-    D -- issue id given --> C
-    D -- declined / none --> E["General orientation pass:\narchitecture, modules, recent git history"]
-    C --> F["Narrow exploration to files/classes/\nerror messages the issue names,\nplus their closest structural neighbors"]
-    F --> G["Read existing tests covering that area"]
-    E --> H[Report findings]
-    G --> H
+    A[Start /explore] --> B{Ticket id given?}
+    B -- yes --> C["Detect type: Jira key pattern\nvs. bare number/#N (GitHub)"]
+    B -- no --> D["Ask user: explore a ticket,\nor just the codebase?"]
+    D -- ticket id given --> C
+    D -- declined / none --> E["Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
+    C --> F["Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
+    F --> G["Fetch ticket: gh issue view\n(GitHub) or Jira MCP tools (Jira)"]
+    G --> H["Narrow exploration to files/classes/\nerror messages the ticket names,\nplus their closest structural neighbors"]
+    H --> I["Check existing tests covering that area"]
+    E --> J["General orientation pass:\narchitecture, modules, recent git history"]
+    I --> K["Detect tech stack: codebase\nlanguages/frameworks + Antora docs"]
+    J --> K
+    K --> L[Report findings + Tech stack section]
 ....
 
 == Dependencies
@@ -74,14 +87,16 @@ None — `explore` is a leaf skill; it does not call any other skill in this cat
 
 * xref:skills/plan.adoc[] — Step 2 runs `explore` first (unless equivalent exploration already happened
   earlier in the conversation) so the plan it drafts is grounded in the real codebase.
-* xref:skills/issue.adoc[] — Step 5 runs `explore` (scoped to the issue) as the first step of its
+* xref:skills/issue.adoc[] — Step 5 runs `explore` (scoped to the ticket) as the first step of its
   explore → plan → code → PR pipeline.
-* xref:skills/pr-review.adoc[] — Step 4 runs `explore` to learn the codebase's architecture and conventions
+* xref:skills/pr-review.adoc[] — Step 5 runs `explore` to learn the codebase's architecture and conventions
   before judging a pull request's diff against them.
+* xref:skills/create-github-issue.adoc[] and xref:skills/create-jira-ticket.adoc[] — each runs `explore` with no
+  argument (general orientation, since no ticket exists yet) to ground the ticket they draft in the real codebase.
 
 === Related agents
 
-* The built-in **`Explore`** agent (see xref:agents/overview.adoc[]) — Step 3 uses it for the actual
+* The built-in **`Explore`** agent (see xref:agents/overview.adoc[]) — Step 4 uses it for the actual
   codebase search (module structure, abstractions, control flow) instead of manually reading every file.
 
 == Source

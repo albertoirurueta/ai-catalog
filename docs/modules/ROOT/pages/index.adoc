@@ -123,44 +123,89 @@ features, and where the underlying models genuinely differ.
 |Verify (and backfill) license headers on source/test files against the repository's actual license.
 |xref:skills/check-license.adoc[]
 
+|`check-security`
+|xref:index.adoc#group-maintenance[Repository Maintenance]
+|Scan for accidentally committed secrets via `detect-secrets`, maintaining a `.secrets.baseline`.
+|xref:skills/check-security.adoc[]
+
 |`code`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Execute `implementation_plan.md` end to end: implement, test, document, and quality-check each task.
+|Execute `implementation_plan.md` end to end, dispatching each task to its language's `<key>-code-one-task` skill.
 |xref:skills/code.adoc[]
+
+|`create-github-issue`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Draft and file a new GitHub issue, grounded in the codebase and confirmed with the user before creation.
+|xref:skills/create-github-issue.adoc[]
+
+|`create-jira-ticket`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Draft and file a new Jira ticket via connected Jira MCP tools, the Jira counterpart to `create-github-issue`.
+|xref:skills/create-jira-ticket.adoc[]
+
+|`dotnet-code-one-task`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Implement one .NET plan task end to end: code, tests, license headers, XML doc comments, coverage, quality.
+|xref:skills/dotnet-code-one-task.adoc[]
+
+|`dotnet-code-quality`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Run StyleCop.Analyzers/CA Roslyn analyzers via a SARIF-logged build and summarize every issue found.
+|xref:skills/dotnet-code-quality.adoc[]
+
+|`dotnet-coverage`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Run Coverlet via `dotnet test` and report the exact measured coverage percentage for target class(es).
+|xref:skills/dotnet-coverage.adoc[]
+
+|`dotnet-docfx`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Audit and complete XML doc-comment coverage for given types, then attempt a DocFX build.
+|xref:skills/dotnet-docfx.adoc[]
+
+|`dotnet-test`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Run the .NET test suite via `dotnet test`, scoped to a class/method/namespace/trait selector.
+|xref:skills/dotnet-test.adoc[]
 
 |`explore`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Read-only research pass over the codebase, optionally grounded in a GitHub issue.
+|Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket.
 |xref:skills/explore.adoc[]
 
 |`issue`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|End-to-end kickoff for a GitHub issue: branch, explore, plan, implement, open PR, review.
+|End-to-end kickoff for a tracked ticket: branch, explore, plan, implement, open PR, review.
 |xref:skills/issue.adoc[]
 
+|`java-code-one-task`
+|xref:index.adoc#group-java[Java Development Tooling]
+|Implement one Java plan task end to end: code, tests, license headers, Javadoc, coverage, quality.
+|xref:skills/java-code-one-task.adoc[]
+
 |`java-code-quality`
-|xref:index.adoc#group-quality[Java Code Quality]
+|xref:index.adoc#group-java[Java Development Tooling]
 |Run Checkstyle/PMD/SpotBugs and summarize every issue found, grouped by tool.
 |xref:skills/java-code-quality.adoc[]
 
 |`java-coverage`
-|xref:index.adoc#group-quality[Java Code Quality]
+|xref:index.adoc#group-java[Java Development Tooling]
 |Run JaCoCo and report the exact measured coverage percentage for target class(es).
 |xref:skills/java-coverage.adoc[]
 
 |`java-javadoc`
-|xref:index.adoc#group-quality[Java Code Quality]
+|xref:index.adoc#group-java[Java Development Tooling]
 |Audit and complete Javadoc coverage for given classes, then verify it builds cleanly.
 |xref:skills/java-javadoc.adoc[]
 
 |`java-test`
-|xref:index.adoc#group-quality[Java Code Quality]
+|xref:index.adoc#group-java[Java Development Tooling]
 |Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.
 |xref:skills/java-test.adoc[]
 
 |`plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Write a concrete, reviewable `implementation_plan.md`, grounded in a prior `explore` pass.
+|Write a concrete, reviewable `implementation_plan.md`, tagging each task's language/framework.
 |xref:skills/plan.adoc[]
 
 |`pr-description`
@@ -170,7 +215,7 @@ features, and where the underlying models genuinely differ.
 
 |`pr-review`
 |xref:index.adoc#group-pr[Pull Request Lifecycle]
-|Review an open pull request against the linked issue's intent and this codebase's conventions.
+|Review an open pull request against the linked ticket's intent and this codebase's conventions.
 |xref:skills/pr-review.adoc[]
 
 |`release`
@@ -244,20 +289,69 @@ some of this in place (e.g. just `/antora-setup` to add docs to a repository tha
 * xref:skills/setup-changelog.adoc[`setup-changelog`] — one-time bootstrap of `CHANGELOG.md`.
 * xref:skills/setup-readme.adoc[`setup-readme`] — creates or refreshes the root `README.md`.
 
-[[group-quality]]
-=== Java Code Quality
+[[group-intake]]
+=== Ticket Intake
 
-Point-in-time checks against a Maven/Java project, each reporting real, measured results — a coverage
-percentage, a pass/fail, a list of lint findings — rather than an estimate.
+Turning a rough idea, bug report, or request into a well-formed, tracked ticket — a GitHub issue or a Jira
+ticket — before the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle] picks it up.
 
 [TIP]
 ====
-Reach for one of these directly, any time, while **iterating on code day to day** — before committing,
-before opening a PR, or just to check where a class currently stands. You rarely need to invoke them
-yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle], though: `code` already fans
-out to all four automatically for every task it implements.
+Reach for one of these when the work doesn't have a ticket yet. Neither is required — a ticket can always be
+filed by hand, or `/issue`/`/plan` can work from a free-form description instead — but both skills ground the
+draft in the actual codebase (via `explore`) and ask for the same context (purpose, links, files, related
+tickets) so what lands in the tracker is immediately actionable.
 ====
 
+* xref:skills/create-github-issue.adoc[`create-github-issue`] — drafts and files a GitHub issue via `gh issue
+  create`, matched against this repository's actual label set.
+* xref:skills/create-jira-ticket.adoc[`create-jira-ticket`] — drafts and files a Jira ticket via connected Jira
+  MCP tools, resolving the target project and issue type against the real Jira configuration.
+
+[[group-cycle]]
+=== Issue-to-PR Development Cycle
+
+Taking a piece of work from "described" — a tracked ticket (a GitHub issue or a Jira ticket), or a task you
+describe yourself — to an implemented, open pull request.
+
+[TIP]
+====
+This is the group to reach for on a **day-to-day basis**: picking up a ticket or an ad hoc task and carrying
+it through branch creation, research, planning, and implementation without re-explaining that process each
+time. `issue` is the single entry point for the full pipeline; `explore` and `plan` are also commonly run
+individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow. `code` itself doesn't
+implement anything directly — for each task it dispatches to whichever xref:index.adoc#group-java[Java] or
+xref:index.adoc#group-dotnet[.NET] Development Tooling skill matches that task's language/framework, and
+brackets the whole run with quality and security baselines (xref:index.adoc#group-maintenance[Repository
+Maintenance]).
+====
+
+* xref:skills/issue.adoc[`issue`] — orchestrator: branch, explore, plan, implement, open PR, review — for a
+  tracked ticket.
+* xref:skills/explore.adoc[`explore`] — read-only research pass over the codebase, optionally grounded in a
+  GitHub issue or Jira ticket.
+* xref:skills/plan.adoc[`plan`] — writes a concrete, reviewable `implementation_plan.md`, tagging each task
+  with the language/framework key a downstream `<key>-code-one-task` skill should handle it with.
+* xref:skills/code.adoc[`code`] — executes `implementation_plan.md` end to end, dispatching each task to its
+  matching `<key>-code-one-task` skill and gating completion on quality/security baselines.
+
+[[group-java]]
+=== Java Development Tooling
+
+Implementing a single plan task end to end, plus the point-in-time checks (tests, coverage, lint, Javadoc) a
+person or another skill can run against a Maven/Java project any time — each reporting real, measured results
+rather than an estimate.
+
+[TIP]
+====
+`code` dispatches every task tagged (or defaulted to) `java` to `java-code-one-task`, which itself fans out to
+the other four skills in this group. Reach for those four directly, any time, while **iterating on code day to
+day** — before committing, before opening a PR, or just to check where a class currently stands. You rarely
+need to invoke any of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
+====
+
+* xref:skills/java-code-one-task.adoc[`java-code-one-task`] — implements one plan task end to end: code,
+  tests, license headers, Javadoc, scoped tests, coverage, and a quality regression check.
 * xref:skills/java-test.adoc[`java-test`] — runs the JUnit suite via Surefire, scoped to a
   class/method/package/tag selector.
 * xref:skills/java-coverage.adoc[`java-coverage`] — runs JaCoCo and reports the exact measured coverage
@@ -267,33 +361,37 @@ out to all four automatically for every task it implements.
 * xref:skills/java-javadoc.adoc[`java-javadoc`] — audits and completes Javadoc coverage for given classes,
   then verifies it builds cleanly.
 
-[[group-cycle]]
-=== Issue-to-PR Development Cycle
+[[group-dotnet]]
+=== .NET Development Tooling
 
-Taking a piece of work from "described" — a tracked GitHub issue, or a task you describe yourself — to an
-implemented, open pull request.
+The .NET/C# counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing a single plan
+task end to end, plus the equivalent point-in-time checks (tests, coverage, Roslyn analyzers, XML doc comments)
+against a .NET project.
 
 [TIP]
 ====
-This is the group to reach for on a **day-to-day basis**: picking up an issue or an ad hoc task and carrying
-it through branch creation, research, planning, and implementation without re-explaining that process each
-time. `issue` is the single entry point for the full pipeline; `explore` and `plan` are also commonly run
-individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow.
+Same shape as the Java group, one tool chain over: `code` dispatches every task tagged `dotnet` to
+`dotnet-code-one-task`, which fans out to the other four skills here. Reach for those four directly any time
+while iterating day to day; `code` rarely needs them invoked directly during the
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
 
-* xref:skills/issue.adoc[`issue`] — orchestrator: branch, explore, plan, implement, open PR, review — for a
-  tracked GitHub issue.
-* xref:skills/explore.adoc[`explore`] — read-only research pass over the codebase, optionally grounded in a
-  GitHub issue.
-* xref:skills/plan.adoc[`plan`] — writes a concrete, reviewable `implementation_plan.md`, grounded in a prior
-  `explore` pass.
-* xref:skills/code.adoc[`code`] — executes `implementation_plan.md` end to end: implement, test, document,
-  and quality-check each task.
+* xref:skills/dotnet-code-one-task.adoc[`dotnet-code-one-task`] — implements one plan task end to end: code,
+  tests, license headers, XML doc comments, scoped tests, coverage, and a quality regression check.
+* xref:skills/dotnet-test.adoc[`dotnet-test`] — runs the test suite via `dotnet test`, scoped to a
+  class/method/namespace/trait selector.
+* xref:skills/dotnet-coverage.adoc[`dotnet-coverage`] — runs Coverlet via `dotnet test` and reports the exact
+  measured coverage percentage for target class(es).
+* xref:skills/dotnet-code-quality.adoc[`dotnet-code-quality`] — runs StyleCop.Analyzers/CA Roslyn analyzers via
+  a SARIF-logged build and summarizes every issue found.
+* xref:skills/dotnet-docfx.adoc[`dotnet-docfx`] — audits and completes XML doc-comment coverage for given
+  types, then attempts a DocFX build.
 
 [[group-pr]]
 === Pull Request Lifecycle
 
-Everything after code exists but before it's merged: describing the change and getting it reviewed.
+Everything after code exists but before it's merged: describing the change and getting it reviewed, on
+whichever platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS).
 
 [NOTE]
 ====
@@ -304,7 +402,7 @@ convention-aware review pass before asking a teammate for one.
 
 * xref:skills/pr-description.adoc[`pr-description`] — drafts a PR description from the real diff, and
   optionally opens/updates the pull request.
-* xref:skills/pr-review.adoc[`pr-review`] — reviews an open pull request against the linked issue's intent
+* xref:skills/pr-review.adoc[`pr-review`] — reviews an open pull request against the linked ticket's intent
   and this codebase's conventions.
 
 [[group-maintenance]]
@@ -315,8 +413,8 @@ Keeping an already-bootstrapped repository correct and current, well after its i
 [NOTE]
 ====
 Intended for whoever **maintains the repository over time** rather than someone mid-feature: cutting
-releases, keeping docs from drifting after unrelated code changes, and periodically verifying license
-headers.
+releases, keeping docs from drifting after unrelated code changes, periodically verifying license headers,
+and scanning for accidentally committed secrets.
 ====
 
 * xref:skills/release.adoc[`release`] — cuts a release branch, bumps versions, drafts release
@@ -325,6 +423,8 @@ headers.
   changes already made to the code.
 * xref:skills/check-license.adoc[`check-license`] — verifies (and backfills) license headers against the
   repository's actual license.
+* xref:skills/check-security.adoc[`check-security`] — scans for accidentally committed secrets via
+  `detect-secrets`, maintaining a `.secrets.baseline` so repeat runs surface only what's new.
 
 [[group-tooling]]
 === Catalog Tooling
@@ -360,6 +460,11 @@ flowchart LR
         SR["setup-readme"]
     end
 
+    subgraph Intake["Ticket Intake"]
+        CGI["create-github-issue"]
+        CJT["create-jira-ticket"]
+    end
+
     subgraph Cycle["Issue-to-PR Development Cycle"]
         ISSUE["issue"]
         EXPLORE["explore"]
@@ -367,22 +472,32 @@ flowchart LR
         CODE["code"]
     end
 
-    subgraph PRLife["Pull Request Lifecycle"]
-        PRD["pr-description"]
-        PRR["pr-review"]
-    end
-
-    subgraph Quality["Java Code Quality"]
+    subgraph Java["Java Development Tooling"]
+        JCOT["java-code-one-task"]
         JT["java-test"]
         JC["java-coverage"]
         JCQ["java-code-quality"]
         JJ["java-javadoc"]
     end
 
+    subgraph Dotnet[".NET Development Tooling"]
+        DCOT["dotnet-code-one-task"]
+        DT["dotnet-test"]
+        DC["dotnet-coverage"]
+        DCQ["dotnet-code-quality"]
+        DDF["dotnet-docfx"]
+    end
+
+    subgraph PRLife["Pull Request Lifecycle"]
+        PRD["pr-description"]
+        PRR["pr-review"]
+    end
+
     subgraph Maintenance["Repository Maintenance"]
         REL["release"]
         UD["update-docs"]
         CL["check-license"]
+        CSEC["check-security"]
     end
 
     subgraph Tooling["Catalog Tooling"]
@@ -396,6 +511,9 @@ flowchart LR
     SJLR --> SC
     SJLR --> SR
 
+    CGI --> EXPLORE
+    CJT --> EXPLORE
+
     ISSUE --> EXPLORE
     ISSUE --> PLAN
     ISSUE -.-> CODE
@@ -404,11 +522,24 @@ flowchart LR
     PLAN --> EXPLORE
     PRR --> EXPLORE
 
+    CODE --> JCOT
+    CODE --> DCOT
     CODE -.-> JCQ
-    CODE -.-> CL
-    CODE -.-> JJ
-    CODE -.-> JT
-    CODE -.-> JC
+    CODE -.-> DCQ
+    CODE -.-> CSEC
+    CODE --> UD
+
+    JCOT -.-> JCQ
+    JCOT -.-> CL
+    JCOT -.-> JJ
+    JCOT -.-> JT
+    JCOT -.-> JC
+
+    DCOT -.-> DCQ
+    DCOT -.-> CL
+    DCOT -.-> DDF
+    DCOT -.-> DT
+    DCOT -.-> DC
 
     REL --> SR
     REL --> PRD
@@ -422,14 +553,16 @@ flowchart LR
     EXPLORE -.uses.-> AGT_EXPLORE(("Explore\nagent"))
     CODE -.spawns.-> AGT_GP(("general-purpose\nagent"))
     ISSUE -.spawns.-> AGT_GP
+    JCOT -.spawns.-> AGT_GP
+    DCOT -.spawns.-> AGT_GP
 ....
 
 == Common workflows
 
 These sections walk through how the catalog's skills compose for a few recurring jobs. Each is a real,
 supported path through the graph above — not every skill in the catalog appears in one, since some
-(the xref:index.adoc#group-quality[Java Code Quality] skills, `check-license`) are more often invoked as
-building blocks of a larger flow than run standalone by a person.
+(the xref:index.adoc#group-java[Java] and xref:index.adoc#group-dotnet[.NET] Development Tooling skills,
+`check-license`) are more often invoked as building blocks of a larger flow than run standalone by a person.
 
 === Setting up a new repository
 
@@ -450,26 +583,49 @@ flowchart TD
 Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
 `/antora-setup` to add docs to a repository that already has a `pom.xml`).
 
-=== Typical development cycle, starting from an issue
+=== Filing a ticket before work begins
 
-`issue` is the single entry point for taking a tracked GitHub issue to an open, reviewed pull request:
+`create-github-issue` and `create-jira-ticket` turn a rough idea into a tracked, actionable ticket, ready for a
+later, separate `/issue` invocation:
 
 [mermaid]
 ....
 flowchart LR
-    A["/issue &lt;id&gt;"] --> B["explore\n(understand the issue)"]
-    B --> C["plan\n(write implementation_plan.md)"]
+    A["/create-github-issue\nor /create-jira-ticket"] --> B["explore\n(ground the draft in the codebase)"]
+    B --> C["Ask purpose + additional context\n(URLs, files, related tickets)"]
+    C --> D["Draft + confirm + file\n(gh issue create /\nJira MCP tools)"]
+    D --> E(["/issue &lt;id-or-key&gt;\n(separate, later invocation)"])
+....
+
+Both skills work the same way up to filing; which one to use depends on which tracker the repository/team
+uses. Neither is required — `/issue` and `/plan` work fine against a ticket filed by hand, or against no ticket
+at all (a free-form description).
+
+=== Typical development cycle, starting from a ticket
+
+`issue` is the single entry point for taking a tracked ticket — a GitHub issue or a Jira ticket — to an open,
+reviewed pull request:
+
+[mermaid]
+....
+flowchart LR
+    A["/issue &lt;ticket-id&gt;"] --> B["explore\n(understand the ticket)"]
+    B --> C["plan\n(write implementation_plan.md,\ntag each task's language/framework)"]
     C --> D{Hand off to /code?}
-    D -- yes --> E["code\n(implement + test, via a sub-agent)"]
+    D -- yes --> E["code\n(dispatch each task to its\n&lt;key&gt;-code-one-task skill,\nvia a sub-agent)"]
     D -- no --> H[Stop for manual review]
-    E --> F["pr-description\n(open PR)"]
+    E --> F["pr-description\n(open PR as a draft)"]
     F --> G["pr-review\n(review the new PR)"]
 ....
 
-`code` itself fans out to the xref:index.adoc#group-quality[Java Code Quality] skills and `check-license`
-for every task it implements (each via its own sub-agent, so their detailed output stays out of the main
-conversation) — see xref:skills/code.adoc[].`explore` and `plan` can also be run individually
-(`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow.
+`code` itself doesn't implement anything directly: for every task it dispatches to whichever
+xref:skills/java-code-one-task.adoc[`java-code-one-task`] or xref:skills/dotnet-code-one-task.adoc[
+`dotnet-code-one-task`] skill matches that task's language/framework — each of which fans out to its own
+group's tests/coverage/quality/doc skills via a sub-agent — and brackets the whole run with project-wide
+quality (`java-code-quality`/`dotnet-code-quality`) and security (`check-security`) baselines, updating
+documentation via `update-docs` once both pass (see xref:skills/code.adoc[]). `explore` and `plan` can also be
+run individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow, and either a GitHub
+issue or a Jira ticket works the same way throughout.
 
 === Generating a release
 
@@ -498,6 +654,7 @@ flowchart TD
     Code["Code change already made\n(uncommitted or on a branch)"] --> UD["update-docs\n(Antora pages)"]
     Code --> RM["setup-readme\n(README.md, if it already exists: proposes a diff)"]
     Code --> CLI["check-license\n(license headers on touched files)"]
+    Code --> CSEC["check-security\n(scan for secrets before committing)"]
     UD -.->|only if no Antora module exists yet| AS["antora-setup"]
 ....
 

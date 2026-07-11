@@ -89,13 +89,15 @@ None — `check-license` is a leaf skill; it does not call any other skill in th
 
 === Invoked by
 
-* xref:skills/code.adoc[] — Step 4.4, once per task, run via a `general-purpose` sub-agent scoped to just the
-  files that task touched, to add or fix license headers on the code it just changed.
+* xref:skills/java-code-one-task.adoc[] — Step 4, once per task, run via a `general-purpose` sub-agent scoped to
+  just the files that task touched, to add or fix license headers on the code it just changed.
+* xref:skills/dotnet-code-one-task.adoc[] — the same role, for tasks in the .NET/C# language/framework key.
 
 === Related agents
 
-None directly — `check-license` itself doesn't spawn any agent. See the note in xref:skills/code.adoc[] and
-xref:agents/overview.adoc[] about the sub-agent wrapper that `code` uses to invoke it.
+None directly — `check-license` itself doesn't spawn any agent. See the note in xref:skills/java-code-one-task.adoc[],
+xref:skills/dotnet-code-one-task.adoc[], and xref:agents/overview.adoc[] about the sub-agent wrapper each one-task
+skill uses to invoke it.
 
 == Source
 
