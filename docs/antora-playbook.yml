@@ -8,7 +8,7 @@ content:
       start_path: docs
 ui:
   bundle:
-    url: ui-bºundle.zip
+    url: ui-bundle.zip
     snapshot: true
   supplemental_files:
     - path: ui.yml
