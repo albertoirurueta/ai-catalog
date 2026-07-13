@@ -81,6 +81,11 @@ get good, consistent results without wasting context, and how they differ across
 |What `CLAUDE.md` is for, every location Claude Code loads one from, precedence between them, and how to
 create or update one (including `/init`) without bloating context.
 
+|xref:guides/common-workflows.adoc[]
+|A closer look at the three workflows a person runs most often — the typical development cycle starting from
+a ticket, filing a ticket before work begins, and generating a release — each with a fuller diagram than the
+one on this page.
+
 |xref:guides/creating-skills-and-agents.adoc[]
 |Where skills and agents live, when to reach for one versus the other, and the fastest reliable way to draft
 a new one — asking Claude Code itself, grounded in existing examples.
@@ -586,7 +591,8 @@ Any of these six can also be run standalone against an existing repository to fi
 === Filing a ticket before work begins
 
 `create-github-issue` and `create-jira-ticket` turn a rough idea into a tracked, actionable ticket, ready for a
-later, separate `/issue` invocation:
+later, separate `/issue` invocation. See xref:guides/common-workflows.adoc#filing-a-ticket[] for a more detailed
+walkthrough.
 
 [mermaid]
 ....
@@ -604,7 +610,8 @@ at all (a free-form description).
 === Typical development cycle, starting from a ticket
 
 `issue` is the single entry point for taking a tracked ticket — a GitHub issue or a Jira ticket — to an open,
-reviewed pull request:
+reviewed pull request. See xref:guides/common-workflows.adoc#typical-development-cycle[] for a more detailed
+walkthrough — this is the main workflow for day-to-day work in this catalog.
 
 [mermaid]
 ....
@@ -630,7 +637,8 @@ issue or a Jira ticket works the same way throughout.
 === Generating a release
 
 `release` must be run from `develop` and drives the whole version bump itself, delegating only the README
-and PR description:
+and PR description. See xref:guides/common-workflows.adoc#generating-a-release[] for a more detailed
+walkthrough.
 
 [mermaid]
 ....

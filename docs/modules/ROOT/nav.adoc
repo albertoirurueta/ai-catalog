@@ -1,6 +1,7 @@
 * xref:index.adoc[]
 * Guides
 ** xref:guides/claude-md.adoc[]
+** xref:guides/common-workflows.adoc[]
 ** xref:guides/creating-skills-and-agents.adoc[]
 ** xref:guides/plugins.adoc[]
 ** xref:guides/authoring-effective-instructions.adoc[]
