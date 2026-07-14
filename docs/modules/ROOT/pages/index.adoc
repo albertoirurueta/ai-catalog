@@ -113,11 +113,6 @@ features, and where the underlying models genuinely differ.
 |===
 |Name |Group |Purpose |Detail page
 
-|`analyze-claude-skills-and-agents`
-|xref:index.adoc#group-tooling[Catalog Tooling]
-|Regenerate this documentation site itself from the current set of skills and agents on disk.
-|xref:skills/analyze-claude-skills-and-agents.adoc[]
-
 |`antora-setup`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
@@ -177,6 +172,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket.
 |xref:skills/explore.adoc[]
+
+|`generate-skill-docs`
+|xref:index.adoc#group-tooling[Catalog Tooling]
+|Regenerate this documentation site itself from the current set of skills and agents on disk.
+|xref:skills/generate-skill-docs.adoc[]
 
 |`issue`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
@@ -443,7 +443,7 @@ current after a skill or agent is added, removed, or changed — not something a
 adopted one of these skills would ever need to run.
 ====
 
-* xref:skills/analyze-claude-skills-and-agents.adoc[`analyze-claude-skills-and-agents`] — regenerates this
+* xref:skills/generate-skill-docs.adoc[`generate-skill-docs`] — regenerates this
   documentation site itself from the current set of skills and agents on disk.
 
 == Dependency graph
@@ -506,7 +506,7 @@ flowchart LR
     end
 
     subgraph Tooling["Catalog Tooling"]
-        ACSA["analyze-claude-\nskills-and-agents"]
+        GSD["generate-skill-docs"]
     end
 
     SJLR --> SJL
@@ -550,8 +550,8 @@ flowchart LR
     REL --> PRD
     UD -.->|only if no Antora module yet| AS
 
-    ACSA -.->|only if no Antora module yet| AS
-    ACSA -.spawns.-> AGT_GP
+    GSD -.->|only if no Antora module yet| AS
+    GSD -.spawns.-> AGT_GP
 
     PRR -.->|external, not in this catalog| CR[["code-review"]]
 
@@ -676,7 +676,7 @@ Keeping an existing changelog current on each release is `release`'s job, not a 
 ====
 This documentation site can be created or updated in two ways:
 
-* **Preferred — run the `analyze-claude-skills-and-agents` skill** (`/analyze-claude-skills-and-agents`).
+* **Preferred — run the `generate-skill-docs` skill** (`/generate-skill-docs`).
 It (re)generates this page — the reference table, purpose groups, dependency graph, and common
 workflows above — plus one detail page per skill/agent under `skills/` and `agents/`, directly from
 whatever `.claude/skills/*/SKILL.md` files and agent definitions actually exist in the repository.
@@ -689,19 +689,19 @@ go through the skill above — hand-written content there will be overwritten th
 ====
 
 This page and every detail page under xref:index.adoc#group-tooling[Catalog Tooling] are themselves
-generated — by `analyze-claude-skills-and-agents`, from whatever skills/agents actually exist under
+generated — by `generate-skill-docs`, from whatever skills/agents actually exist under
 `.claude/skills/` (and `.claude/agents/`, if any) at the time it runs:
 
 [mermaid]
 ....
 flowchart LR
-    A["/analyze-claude-skills-and-agents"] --> B["Discover every SKILL.md\n+ agent usage on disk"]
+    A["/generate-skill-docs"] --> B["Discover every SKILL.md\n+ agent usage on disk"]
     B --> C["Build the dependency graph\n+ purpose groups + workflows"]
     C --> D["Write index.adoc, skills/*.adoc,\nagents/*.adoc, nav.adoc"]
     D --> E["npx antora — verify the\nsite still builds"]
 ....
 
-Re-run it (`/analyze-claude-skills-and-agents`) after adding, removing, or materially changing a skill or
+Re-run it (`/generate-skill-docs`) after adding, removing, or materially changing a skill or
 agent, so this page and the detail pages it links to don't drift from what's actually on disk.
 
 Each skill's own detail page (linked from the table above) covers its exact inputs, outputs, and execution

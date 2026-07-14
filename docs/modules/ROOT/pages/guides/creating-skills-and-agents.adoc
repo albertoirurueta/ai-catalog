@@ -110,7 +110,7 @@ error-prone than it needs to be. In practice:
    case and fix whatever it gets wrong or asks about that it shouldn't have to — a skill's instructions are
    only as good as what actually happens when an agent follows them literally.
 4. Once it's right, if this repository documents its own catalog (as this one does via
-   `analyze-claude-skills-and-agents`), re-run that skill so the reference table, dependency graph, and the
+   `generate-skill-docs`), re-run that skill so the reference table, dependency graph, and the
    new skill/agent's own detail page pick it up — don't hand-maintain that documentation separately.
 
 == How to phrase what you write

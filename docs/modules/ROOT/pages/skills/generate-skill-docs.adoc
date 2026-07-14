@@ -1,4 +1,4 @@
-= Analyze Claude Skills and Agents
+= Generate Skill Docs
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -10,7 +10,7 @@ are reading.
 == Purpose
 
 Hand-maintaining a page per skill invites drift the moment a `SKILL.md` changes and its documentation
-doesn't. `analyze-claude-skills-and-agents` closes that gap by discovering the real, current set of skills
+doesn't. `generate-skill-docs` closes that gap by discovering the real, current set of skills
 and agents on disk each time it runs, and regenerating the documentation from them — rather than treating
 any previously-written page as a source of truth. It only ever writes documentation: it never edits a
 `SKILL.md`, an agent definition, or any other source file.
@@ -23,7 +23,7 @@ xref:index.adoc#group-tooling[Catalog Tooling]
 
 [source]
 ----
-/analyze-claude-skills-and-agents
+/generate-skill-docs
 ----
 
 == Inputs
@@ -57,7 +57,7 @@ existing Antora module each time it runs.
 [mermaid]
 ....
 flowchart TD
-    A[Start /analyze-claude-skills-and-agents] --> B{"antora.yml found?"}
+    A[Start /generate-skill-docs] --> B{"antora.yml found?"}
     B -- no --> C["Ask user: bootstrap via\nantora-setup, or stop?"]
     C -- stop --> Z1[Stop]
     C -- bootstrap --> D
@@ -85,7 +85,7 @@ running afterward) before continuing.
 
 === Invoked by
 
-None currently — it's a top-level entry point, run directly by a person via `/analyze-claude-skills-and-agents`
+None currently — it's a top-level entry point, run directly by a person via `/generate-skill-docs`
 whenever the catalog's skill/agent set has changed.
 
 === Related agents
@@ -95,4 +95,4 @@ whenever the catalog's skill/agent set has changed.
 
 == Source
 
-https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/analyze-claude-skills-and-agents/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/generate-skill-docs/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

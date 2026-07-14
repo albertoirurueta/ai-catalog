@@ -61,5 +61,5 @@ non-default agent type — so the plain default is the right choice in each case
 
 If a future need doesn't fit either built-in type (e.g. a sub-agent that should only have a narrow subset of
 tools), define it under `.claude/agents/<name>.md` following the same frontmatter convention Claude Code
-uses for agent definitions, then re-run the `analyze-claude-skills-and-agents` skill so this page and
+uses for agent definitions, then re-run the `generate-skill-docs` skill so this page and
 xref:index.adoc[]'s dependency graph pick it up.
