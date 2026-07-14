@@ -12,9 +12,10 @@ and never stages or commits the baseline file it may create.
 credentials." For a whole-repository run it maintains a `.secrets.baseline` file so repeat runs only surface what
 changed — newly appeared findings, or ones still lacking a triage label — rather than re-alarming on
 already-audited, accepted false positives every time. For a scoped path it runs an ad hoc scan and reports every
-finding directly, with no baseline involved. It attempts to install `detect-secrets` itself if missing, and if
-every install method fails, lets the user choose whether to stop or continue without scanning rather than
-silently skipping the check.
+finding directly, with no baseline involved. It attempts to install `detect-secrets` itself if missing — first
+verifying its Python prerequisite is met (Linux/macOS ship Python already; on Windows it attempts to install
+Python via `winget`/`choco` first) — and if any prerequisite check or install method fails, lets the user choose
+whether to stop or continue without scanning rather than silently skipping the check.
 
 == Purpose group
 
@@ -65,9 +66,17 @@ never-triaged findings.
 flowchart TD
     A["Start /check-security\n(optional path-or-glob)"] --> B{detect-secrets\ninstalled?}
     B -- yes --> E
-    B -- no --> C["Try pip / pip3 / pipx install,\nthen brew on macOS"]
+    B -- no --> P{Python\ninstalled?}
+    P -- yes --> C["Try pip / pip3 / pipx install,\nthen brew on macOS"]
+    P -- no --> W{Windows?}
+    W -- "no (Linux/macOS)" --> D2["Warn: Python missing\n(unusual); ask stop or\ncontinue without scanning?"]
+    D2 --> Z[Report: no scan performed]
+    W -- yes --> WI["Attempt Python install:\nwinget, then choco"]
+    WI -- succeeds --> C
+    WI -- fails --> D3["Warn: Python could not be\ninstalled; ask stop or\ncontinue without scanning?"]
+    D3 --> Z
     C -- all fail --> D["Warn user with real error;\nask: stop or continue without scanning?"]
-    D --> Z[Report: no scan performed]
+    D --> Z
     C -- succeeds --> E{Argument given?}
     E -- yes --> F["Scoped ad hoc scan:\ndetect-secrets scan &lt;path&gt; --all-files"]
     E -- no --> G{.secrets.baseline exists?}

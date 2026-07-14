@@ -12,7 +12,9 @@ starter pages, and confirm the site actually builds.
 site with a minimal, useful `ROOT` module — without assuming any particular language or build system. It is
 additive: a repository that already has some or all of this in place (this repository, `ai-catalog`, already
 does) is left alone wherever it's already correct, and only genuine gaps are filled — no page, config entry, or
-nav entry already present is overwritten or reordered.
+nav entry already present is overwritten or reordered. It also copies its own bundled `ui-bundle.zip` into
+`docs/`, so the generated `antora-playbook.yml` points `ui.bundle.url` at that local file instead of depending
+on the upstream GitLab CI artifact URL at build time.
 
 == Purpose group
 
@@ -44,6 +46,9 @@ repository itself (README, project manifest such as `pom.xml`, git tags, GitHub 
 
 * `docs/antora.yml` and `docs/antora-playbook.yml`, written fresh or corrected in place if some fields were
   already wrong.
+* `docs/ui-bundle.zip` copied in from this skill's own directory (unless already present), so
+  `antora-playbook.yml`'s `ui.bundle.url: ui-bundle.zip` resolves to a local file instead of the upstream
+  GitLab CI artifact URL.
 * `docs/modules/ROOT/nav.adoc` and a `ROOT` module skeleton at `docs/modules/ROOT/pages/` containing
   `index.adoc` (repository overview), `installation.adoc` (install guide), and `reference.adoc` (links to
   generated reports/dashboards) — skipped for any of the three roles already covered by an existing page under a
@@ -66,7 +71,7 @@ flowchart TD
     B -- yes --> D["Step 2: Survey existing docs/,\nantora.yml, playbook, ROOT module,\nnav.adoc, package.json deps"]
     D --> E["Step 3: Install Antora + lunr/mermaid/\nmathjax extensions under docs/"]
     E --> F["Step 4: Write or correct docs/antora.yml"]
-    F --> G["Step 5: Write or fill docs/antora-playbook.yml"]
+    F --> G["Step 5: Write or fill docs/antora-playbook.yml;\ncopy ui-bundle.zip into docs/"]
     G --> H["Step 6: Create ROOT module skeleton\n(nav.adoc, pages/)"]
     H --> I["Step 7: Write index.adoc\n(repository overview)"]
     I --> J["Step 8: Write installation.adoc\n(install guide)"]
