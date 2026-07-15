@@ -40,3 +40,6 @@
 ** xref:skills/update-docs.adoc[]
 * Agents
 ** xref:agents/overview.adoc[]
+** xref:agents/gate-runner.adoc[]
+** xref:agents/isolated-skill-executor.adoc[]
+** xref:agents/change-summarizer.adoc[]

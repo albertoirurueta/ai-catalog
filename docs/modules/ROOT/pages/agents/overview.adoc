@@ -2,14 +2,16 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-This repository defines no custom agents under a `.claude/agents/` directory — every skill in this catalog
-is a plain `SKILL.md` playbook (see xref:index.adoc[]). Several of those skills nevertheless spawn an
-**agent** — a sub-instance of Claude Code, run via the `Agent` tool, with its own separate context window —
-either to search the codebase without derailing the current conversation, or to isolate a verbose sub-task
-(a full test run, a static-analysis report) so only its final summary lands back in the main conversation.
+An **agent** is a sub-instance of Claude Code, run via the `Agent` tool, with its own separate context window —
+spawned either to search the codebase without derailing the current conversation, or to isolate a sub-task (a
+verbose report, an entire multi-step skill run, a batch of independent summarization work) so only a distilled
+result lands back in the calling skill's own context.
 
-This page documents the two built-in agent types this catalog actually relies on, and where each is used.
-Both are Claude Code built-ins, not anything defined by this repository.
+This repository defines three custom agents under `.claude/agents/`, each with its own detail page —
+xref:agents/gate-runner.adoc[], xref:agents/isolated-skill-executor.adoc[], and
+xref:agents/change-summarizer.adoc[] — for shapes that recurred often enough across this catalog's skills to be
+worth centralizing. This page instead documents the two **built-in** agent types this catalog still relies on
+for everything that doesn't fit one of those three shapes.
 
 == `Explore`
 
@@ -20,10 +22,15 @@ answering "where is X defined". It cannot edit files.
 
 * xref:skills/explore.adoc[] — Step 3 uses it to build a picture of the codebase's structure (module layout,
   core abstractions, control flow) before reporting findings, in place of manually reading every file.
+* xref:skills/antora-setup.adoc[] — Step 7 uses it to locate the top-level source layout and main public entry
+  points before writing `index.adoc`'s repository overview, instead of reading the whole source tree directly.
+* xref:skills/setup-readme.adoc[] — Step 7 uses it the same way, to locate the main source entry points before
+  writing the README's "how it works" example.
 
 === Why this one specifically
 
-`explore`'s job is read-only research over a codebase whose size and shape aren't known in advance. The
+Each of these is read-only research over a codebase whose size and shape aren't known in advance — `explore`'s
+whole job, and a narrower, bounded version of the same need in `antora-setup`/`setup-readme`'s own Step 7. The
 `Explore` agent is purpose-built for exactly that: broad, targeted search that stays out of the main
 conversation's context window, without the ability to accidentally make an edit during what's meant to be a
 non-destructive pass.
@@ -35,31 +42,28 @@ naming a specific type. It has the same tool access as the main conversation.
 
 === Used by
 
-* xref:skills/code.adoc[] — spawns one per project-wide check it still runs directly: capturing/re-checking the
-  quality baseline (`java-code-quality`/`dotnet-code-quality`) and the security baseline (`check-security`), plus
-  the final full-suite/full-build verification. Each is asked to report back only a short summary (e.g. "all
-  tests passed", or the list of newly-introduced issues) rather than the full, verbose tool output, keeping that
-  noise out of `code`'s own context.
-* xref:skills/java-code-one-task.adoc[] and xref:skills/dotnet-code-one-task.adoc[] — each spawns one per
-  delegated check while implementing its one task: capturing a per-class/per-type quality baseline, running
-  `check-license`, the language's Javadoc/doc-comment skill, its scoped-test skill, its coverage skill, and the
-  full test suite. Same reasoning as `code`: only the distilled outcome comes back, not the raw report.
-* xref:skills/issue.adoc[] — Step 6 hands the entire `code` run to one sub-agent when the user chooses to
-  implement automatically, so that implementation starts from a clean context instead of carrying the whole
-  `explore`/`plan` transcript into it, while `issue` itself keeps running afterward to open the pull request.
-* A `plan`-generated `implementation_plan.md` (see xref:skills/plan.adoc[]) instructs whoever executes it —
-  normally `code`, via the `<key>-code-one-task` skill it dispatches to — to delegate test runs to a sub-agent
-  for the same context-isolation reason, rather than running tests inline.
+* xref:skills/generate-skill-docs.adoc[] — Step 3 spawns one per skill and per documented agent found, each
+  reading only its own file and returning a compact structured summary (purpose, inputs, outputs, steps,
+  invokes/spawns edges) instead of this skill's own conversation reading every `SKILL.md` in the catalog
+  directly; separately, it also spawns one (as does xref:skills/update-docs.adoc[]) only when no Antora
+  documentation module exists yet, to run the `antora-setup` skill (briefed with the context of what's about to
+  follow) before continuing with the rest of their own work.
+* xref:skills/pr-description.adoc[] — Step 2 spawns one, given the branch/base-branch names, to read the full
+  diff and recent commit messages and draft the PR description, so the raw diff stays out of this skill's own
+  context and only the drafted text comes back.
 
 === Why this one specifically
 
-Every one of these delegations exists to keep something noisy (a report, a build log, an entire
-implementation pass) out of the calling skill's own context window, not to use any capability unique to a
-non-default agent type — so the plain default is the right choice in each case.
+Bootstrapping a documentation module mid-run, extracting one skill's metadata, and drafting a description from a
+diff are each one-off, occasional delegations — not a shape common enough across the catalog to justify a
+dedicated custom agent definition the way
+xref:agents/gate-runner.adoc[], xref:agents/isolated-skill-executor.adoc[], and
+xref:agents/change-summarizer.adoc[] were. The plain default is the right choice here: nothing about the
+delegation needs restricted tool access or a specialized system prompt.
 
 == Adding a custom agent to this catalog
 
-If a future need doesn't fit either built-in type (e.g. a sub-agent that should only have a narrow subset of
-tools), define it under `.claude/agents/<name>.md` following the same frontmatter convention Claude Code
-uses for agent definitions, then re-run the `generate-skill-docs` skill so this page and
-xref:index.adoc[]'s dependency graph pick it up.
+If a future need doesn't fit either built-in type above or one of this catalog's three custom agents, define it
+under `.claude/agents/<name>.md` following the same frontmatter convention Claude Code uses for agent
+definitions, then re-run the `generate-skill-docs` skill so this page and xref:index.adoc[]'s dependency graph
+pick it up.

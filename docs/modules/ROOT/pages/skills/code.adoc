@@ -89,7 +89,7 @@ flowchart TD
     G -- none left --> P["Step 7: full build verification\n+ quality/security baseline comparison"]
     G -- yes --> H["Resolve task's key: per-task tag,\nelse plan-wide key, else unresolved"]
     H --> I{"Matching &lt;key&gt;-code-one-task\nskill installed?"}
-    I -- yes --> J["Invoke &lt;key&gt;-code-one-task\nwith the task's full text"]
+    I -- yes --> J["Invoke &lt;key&gt;-code-one-task\nvia isolated-skill-executor agent"]
     I -- no --> K["Implement task directly,\nsame obligations as a one-task skill"]
     J -- blocker reported --> L["Surface blocker to user and stop"]
     J -- clean report --> M["Check off task/sub-task boxes\n+ notes in implementation_plan.md"]
@@ -111,41 +111,44 @@ flowchart TD
 === Invokes
 
 * xref:skills/java-code-one-task.adoc[] — Step 4, once per top-level task tagged (or defaulted to) the `java`
-  key, passing that task's full text and any relevant code-state context, directly via `Skill` (not wrapped in a
-  sub-agent) — this skill re-checks the code state, implements, tests, and documents that one task and hands back
-  a short summary.
+  key, passing that task's full text and any relevant code-state context — invoked via the
+  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent rather than a direct `Skill` call, so
+  each task's own file re-reads/edits/reasoning stay out of `code`'s own context. That skill re-checks the code
+  state itself, implements, tests, and documents that one task and hands back a short, self-contained summary.
 * xref:skills/dotnet-code-one-task.adoc[] — the same role as `java-code-one-task`, for tasks tagged `dotnet`.
 * xref:skills/update-docs.adoc[] — Step 8, once per run (not per task), invoked directly via `Skill` once the
   build, quality, and security gates all pass, so the project's documentation reflects everything the whole plan
   changed.
 
-Each of the following is invoked via its own `general-purpose` sub-agent (see xref:agents/overview.adoc[])
-rather than directly, so verbose report output stays out of `code`'s own context window and only the distilled
-outcome comes back:
+Each of the following is invoked via the xref:agents/gate-runner.adoc[`gate-runner`] agent rather than directly,
+so verbose report output stays out of `code`'s own context window and only the distilled outcome comes back:
 
 * xref:skills/java-code-quality.adoc[] / xref:skills/dotnet-code-quality.adoc[] — Step 3 (project-wide baseline,
   once per language/framework key involved) and Step 7 (final project-wide comparison against that baseline).
 * xref:skills/check-security.adoc[] — Step 3 (project-wide baseline) and Step 7 (final comparison) — any increase
   is a hard stop, unlike the quality gate's "accept as-is" option.
-* Plain, non-skill sub-agent calls: a final full-build verification (Step 7) via `mvn clean jacoco:prepare-agent
-  install jacoco:report javadoc:jar source:jar -P '!build-extras'` (or the equivalent for other languages/
-  frameworks in play).
+* A final full-build verification (Step 7) via `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar
+  source:jar -P '!build-extras'` (or the equivalent for other languages/frameworks in play), run directly as a
+  raw command rather than via a skill.
 
 === Invoked by
 
 * xref:skills/issue.adoc[] — Step 6, when the user chooses automatic implementation over manual review,
-  invokes `code` via a `general-purpose` sub-agent so the whole implementation run starts from a clean
-  context.
+  invokes `code` via the xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent so the whole
+  implementation run starts from a clean context.
 * Also invoked directly by a person via `/code`, once a `plan`-produced `implementation_plan.md` exists at
   the repository root — no orchestrating skill required.
 
 === Related agents
 
-* `general-purpose` (see xref:agents/overview.adoc[]) — spawned for each project-wide quality/security baseline
-  capture and comparison (Steps 3 and 7) and the final build verification. Unlike the previous version of this
-  skill, per-task delegation (license headers, Javadoc, scoped tests, coverage, per-task quality) is no longer
-  spawned directly by `code` — it happens one level down, inside whichever `<key>-code-one-task` skill handles
-  each task.
+* xref:agents/gate-runner.adoc[`gate-runner`] — spawned for each project-wide quality/security baseline capture
+  and comparison (Steps 3 and 7) and the final build verification. Unlike the previous version of this skill,
+  per-task delegation (license headers, Javadoc, scoped tests, coverage, per-task quality) is no longer spawned
+  directly by `code` — it happens one level down, inside whichever `<key>-code-one-task` skill handles each
+  task.
+* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — spawned once per top-level task (Step 4)
+  to invoke the matching `<key>-code-one-task` skill, so a plan with many tasks doesn't accumulate every task's
+  full implementation transcript in `code`'s own context.
 
 == Source
 

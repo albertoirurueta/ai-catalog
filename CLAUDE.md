@@ -44,10 +44,23 @@ Skills compose into a few recurring pipelines rather than each standing alone:
 - **Ticket intake**: `create-github-issue` / `create-jira-ticket` ground a draft in the codebase via
   `explore` before filing.
 
-This repository has no `.claude/agents/` directory — it defines no custom agents. Skills that need a
-sub-task isolated in its own context use Claude Code's *built-in* agent types via the `Agent` tool: `explore`
-uses the `Explore` agent explicitly; everything else (`code`, `issue`, plan-generated tasks) uses
-`general-purpose`, the default.
+### Agents (`.claude/agents/<name>.md`)
+
+This repository defines three custom agents for its most-duplicated sub-agent shapes:
+
+- **`gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
+  headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
+  reports back only a compact summary. Used throughout `code`, `java-code-one-task`, and `dotnet-code-one-task`,
+  and recommended by `plan` for the scoped test-run step it writes into generated plans.
+- **`isolated-skill-executor`** — runs one named skill end-to-end in a completely fresh context so an earlier
+  exploration/planning transcript can't bias it, while the caller keeps running afterward. Used by `issue` to
+  delegate the entire `code` run for a ticket.
+- **`change-summarizer`** — fans out over a git commit/tag range and returns only the user-facing changes.
+  Used by `setup-changelog` to summarize one release at a time when backfilling a long tag history.
+
+Skills that need ad hoc context isolation beyond these three shapes still use Claude Code's *built-in* agent
+types via the `Agent` tool: `explore` uses the `Explore` agent explicitly; one-off cases like bootstrapping
+`antora-setup` mid-run (`generate-skill-docs`, `update-docs`) use `general-purpose`, the default.
 
 ### Documentation (`docs/`)
 

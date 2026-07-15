@@ -66,7 +66,7 @@ flowchart TD
     B -- no --> C["Step 2: Discover release history\n(git tags, GitHub Releases via gh)"]
     C --> D{"Any tags found?"}
     D -- no --> E["Ask user: minimal Unreleased-only\nfile, or stop entirely?"]
-    D -- yes --> F["Step 3: For each release,\ndetermine source of content\n(GitHub Release body vs. derived diffs)"]
+    D -- yes --> F["Step 3: For each release,\ndetermine source of content\n(GitHub Release body vs. derived diffs);\nlong tag history fans out to\nchange-summarizer agents"]
     F --> G["Step 4: Compose each release's\nKeep a Changelog subsections"]
     G --> H["Step 5: Determine each version's\ndate and ordering"]
     H --> I["Step 6: Write CHANGELOG.md"]
@@ -78,7 +78,8 @@ flowchart TD
 
 === Invokes
 
-None — `setup-changelog` is a leaf skill; it does not call any other skill in this catalog.
+None — `setup-changelog` does not call any other skill in this catalog, but see "Related agents" below for a
+sub-agent it delegates to.
 
 === Invoked by
 
@@ -87,7 +88,9 @@ None — `setup-changelog` is a leaf skill; it does not call any other skill in 
 
 === Related agents
 
-None — this skill does not delegate any part of its work to a built-in agent.
+* xref:agents/change-summarizer.adoc[`change-summarizer`] — Step 3, dispatched one per past release (or small
+  batch of releases) instead of reading every diff inline, when the repository's tag history is long enough
+  (a few dozen releases or more) that doing so serially would be context-heavy.
 
 == Source
 

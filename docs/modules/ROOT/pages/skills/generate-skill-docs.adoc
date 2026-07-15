@@ -62,8 +62,8 @@ flowchart TD
     C -- stop --> Z1[Stop]
     C -- bootstrap --> D
     B -- yes --> D["Discover every SKILL.md,\ncustom agent, and built-in\nagent type actually used"]
-    D --> E["Read + classify each:\npurpose, inputs, outputs,\nstep-by-step flow"]
-    E --> F["Build the dependency graph\n(invokes / spawns, both directions,\nexternal deps noted separately)"]
+    D --> E["Read + classify each via one\nsub-agent per skill/agent\n(purpose, inputs, outputs,\nstep flow, invokes/spawns)"]
+    E --> F["Build the dependency graph from the\ncollected summaries (invokes / spawns,\nboth directions, external deps noted)"]
     F --> G["Group skills by purpose"]
     G --> H["Identify recurring\nend-to-end workflows"]
     H --> I["Write/update index.adoc\n(table, groups, graph, workflows)"]
@@ -90,7 +90,9 @@ whenever the catalog's skill/agent set has changed.
 
 === Related agents
 
-* `general-purpose` (see xref:agents/overview.adoc[]) — spawned only in the fallback path, to run
+* `general-purpose` (see xref:agents/overview.adoc[]) — spawned once per skill and per documented agent in Step
+  3 (each reading only its own file and returning a compact structured summary, rather than this skill's own
+  conversation reading every `SKILL.md` in the catalog directly), and separately in the fallback path to run
   xref:skills/antora-setup.adoc[] when no documentation module exists yet.
 
 == Source

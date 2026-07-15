@@ -81,7 +81,7 @@ flowchart TD
     H --> I["Invoke plan skill\n(scoped to ticket id)"]
     I --> J{"Ask user: proceed\nautomatically with code,\nor review manually?"}
     J -- manual review --> K["Stop: implementation_plan.md\nready for user to run /code later"]
-    J -- automatic --> L["Delegate full code skill run\nto a general-purpose sub-agent"]
+    J -- automatic --> L["Delegate full code skill run\nto isolated-skill-executor agent"]
     L -- blocker reported --> M["Surface blocker to user and stop"]
     L -- security gate fired --> N["Hard stop: warn user what was\nflagged; do NOT push or open PR"]
     L -- clean success --> O["Confirm with user, then\npush branch"]
@@ -101,8 +101,8 @@ flowchart TD
 * xref:skills/plan.adoc[] — Step 5 runs `plan` scoped to the ticket id right after `explore`, producing
   `implementation_plan.md`.
 * xref:skills/code.adoc[] — Step 6, when the user chooses automatic implementation over manual review, runs
-  `code` via a `general-purpose` sub-agent (see xref:agents/overview.adoc[]) so the whole implementation run
-  starts from a clean context rather than carrying the exploration/planning transcript into it.
+  `code` via the xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent so the whole
+  implementation run starts from a clean context rather than carrying the exploration/planning transcript into it.
 * xref:skills/pr-description.adoc[] — Step 7 invokes it to draft the new pull request's description from
   the actual diff, then re-checks its output still references the ticket.
 * xref:skills/pr-review.adoc[] — Step 7 invokes it, passing both the new PR's id and the ticket id
@@ -116,9 +116,9 @@ picked up by a subsequent, separate `/issue` invocation.
 
 === Related agents
 
-* `general-purpose` (see xref:agents/overview.adoc[]) — one such sub-agent wraps the entire `code` run in
-  Step 6, so implementation happens in an isolated context and this skill can keep running afterward to
-  open the pull request in Step 7.
+* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — wraps the entire `code` run in Step 6,
+  so implementation happens in an isolated context and this skill can keep running afterward to open the pull
+  request in Step 7.
 
 == Source
 

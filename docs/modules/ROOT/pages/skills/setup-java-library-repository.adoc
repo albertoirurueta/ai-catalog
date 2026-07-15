@@ -96,19 +96,24 @@ name and URL directly).
 flowchart TD
     A[Start /setup-java-library-repository] --> B["Step 1: Collect project identity\n(groupId, artifactId, package,\ndeveloper info, license)"]
     B --> C["Step 2: Collect pipeline parameters\n(branch, Java version, server/profile ids,\nsettings file)"]
-    C --> D["Step 3: Run setup-java-library\n(pom.xml + source folders)"]
+    C --> D["Step 3: Run setup-java-library\n(pom.xml + source folders, via sub-agent)"]
     D -- pom.xml existed and user chose stop --> E[Stop entire pipeline; report]
-    D -- ok --> F["Step 4: Run antora-setup\n(documentation site)"]
-    F --> G["Step 5: Run setup-java-gitignore\n(root .gitignore)"]
-    G --> H["Step 6: Run setup-java-github-workflows\n(CI/CD workflows)"]
-    H --> I["Step 7: Run setup-changelog\n(root CHANGELOG.md)"]
-    I --> J["Step 8: Run setup-readme\n(root README.md)"]
+    D -- ok --> F["Step 4: Run antora-setup\n(documentation site, via sub-agent)"]
+    F --> G["Step 5: Run setup-java-gitignore\n(root .gitignore, via sub-agent)"]
+    G --> H["Step 6: Run setup-java-github-workflows\n(CI/CD workflows, via sub-agent)"]
+    H --> I["Step 7: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
+    I --> J["Step 8: Run setup-readme\n(root README.md, via sub-agent)"]
     J --> K["Step 9: Report combined outcome\nand review warnings"]
 ....
 
 == Dependencies
 
 === Invokes
+
+Each of the following is invoked via the xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`]
+agent rather than a direct `Skill` call — every sub-skill re-derives what it needs straight from the filesystem
+this orchestrator has just written to, so only a short completion summary needs to come back, keeping each
+sub-skill's own exploration/file reads out of this orchestrator's own context:
 
 * xref:skills/setup-java-library.adoc[] — Step 3, first: writes `pom.xml` and the source folders, passing
   Step 1's answers (groupId, artifactId, package, developer name/email/organizationUrl, license) as `args`
@@ -118,8 +123,9 @@ flowchart TD
 * xref:skills/setup-java-gitignore.adoc[] — Step 5: writes or updates the root `.gitignore`, invoked with no
   `args` since it explores the repository directly (including what Steps 3–4 just wrote).
 * xref:skills/setup-java-github-workflows.adoc[] — Step 6: writes the CI/CD workflows, passing Step 2's pipeline
-  parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file) as
-  `args` `key: value` lines.
+  parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file)
+  plus Step 1's already-collected `groupId`/`artifactId` as `args` `key: value` lines, so that skill's own survey
+  doesn't need to re-read them from `pom.xml`.
 * xref:skills/setup-changelog.adoc[] — Step 7: bootstraps the root `CHANGELOG.md`, invoked with no `args` since
   it works from the repository's own git tag/GitHub Release history.
 * xref:skills/setup-readme.adoc[] — Step 8, last: bootstraps the root `README.md`, invoked with no `args` since
@@ -131,8 +137,9 @@ None — `setup-java-library-repository` is a top-level entry point; no other sk
 
 === Related agents
 
-None directly — this skill only calls other skills via the `Skill` tool. Any sub-agents spawned further downstream
-(for example inside `code`-style flows) belong to those skills, not to this one.
+* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — spawned once per sub-skill (Steps 3–8),
+  so all six sub-skills' own exploration/file-read transcripts don't accumulate in this orchestrator's context
+  over the course of a single bootstrap run.
 
 == Source
 

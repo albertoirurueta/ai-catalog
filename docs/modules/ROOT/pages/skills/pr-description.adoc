@@ -9,14 +9,16 @@ confirming the specific action first.
 == Purpose
 
 `pr-description` detects which platform hosts the repository — GitHub, Bitbucket, Azure DevOps, or TFS — and uses
-that platform's own tooling throughout instead of assuming `gh`/GitHub. It looks at the actual diff for the
-current branch — commits already ahead of the base branch plus anything staged, unstaged, or untracked — and
-composes a brief, concise description grounded in that diff (never invented). It then checks whether a pull
-request already exists for the branch, using the tool matching the detected host: if one does, it offers to
-replace that PR's body with the draft; if not, it offers to commit, push, and open a new one, asking for a branch
-name, destination branch, and title (each with an inferred default). Every step that writes to shared state —
-editing a PR body, committing, pushing, opening a PR — requires the user's explicit confirmation first; declining
-always leaves the drafted description as the deliverable.
+that platform's own tooling throughout instead of assuming `gh`/GitHub. After a cheap stat-only check confirms
+there's something to describe, it delegates reading the actual diff for the current branch — commits already
+ahead of the base branch plus anything staged, unstaged, or untracked — and drafting a brief, concise description
+grounded in that diff (never invented) to a sub-agent, so the raw diff never has to load into this skill's own
+context, only the drafted text. It then checks whether a pull request already exists for the branch, using the
+tool matching the detected host: if one does, it offers to replace that PR's body with the draft; if not, it
+offers to commit, push, and open a new one, asking for a branch name, destination branch, and title (each with an
+inferred default). Every step that writes to shared state — editing a PR body, committing, pushing, opening a PR
+— requires the user's explicit confirmation first; declining always leaves the drafted description as the
+deliverable.
 
 == Purpose group
 
@@ -64,12 +66,13 @@ branch name, destination branch, and PR title only if the user chooses to open a
 ....
 flowchart TD
     A[Start /pr-description] --> B["Step 1: Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
-    B --> C["Step 2: Determine current branch,\nbase branch, and full diff\n(commits ahead + staged/unstaged/untracked)"]
+    B --> C["Step 2: Determine current branch,\nbase branch; check for changes\n(stat only, not full diff)"]
     C --> D{Any changes to describe?}
     D -- no --> Z[Tell user, stop]
-    D -- yes --> E["Step 3: Check whether a PR\nalready exists via the host's own tool"]
-    E --> F["Step 4: Draft description from\nthe diff and commit messages"]
-    F --> G[Show draft to user]
+    D -- yes --> C2["Step 2: Delegate full diff read\n+ drafting to a sub-agent"]
+    C2 --> E["Step 3: Check whether a PR\nalready exists via the host's own tool"]
+    E --> F["Step 4: Show the drafted\ndescription to the user"]
+    F --> G[Strip/flag Mermaid if host is Bitbucket]
     G --> H{PR already exists?}
     H -- yes --> I["Step 5: Show existing body vs draft,\nask to replace"]
     I -- yes --> J["Edit PR body via host-matching tool"]
@@ -99,7 +102,11 @@ DevOps MCP tools); it does not call any other skill in this catalog.
 
 === Related agents
 
-None — `pr-description` does not spawn any agent.
+* `general-purpose` (see xref:agents/overview.adoc[]) — spawned once in Step 2, given the branch/base-branch
+  names, to read the full diff and recent commit messages and draft the description — so the raw diff stays out
+  of this skill's own context and only the drafted text comes back. A plain, unnamed sub-agent is used rather
+  than a dedicated custom agent since this is a single, localized delegation, not a shape repeated across several
+  skills the way xref:agents/gate-runner.adoc[] or xref:agents/change-summarizer.adoc[] are.
 
 == Source
 

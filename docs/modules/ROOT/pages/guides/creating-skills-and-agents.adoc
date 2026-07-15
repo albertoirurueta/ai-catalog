@@ -4,7 +4,8 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 
 This guide is about authoring skills and agents in general — the mechanics and workflow for creating one in
 any repository. For the skills and agents this specific catalog already ships, see
-xref:index.adoc#_skills_and_agents_reference[the reference table] and xref:agents/overview.adoc[].
+xref:index.adoc#_skills_reference[the skills reference table], xref:index.adoc#_agents_reference[the agents
+reference table], and xref:agents/overview.adoc[].
 
 == Where each one lives
 

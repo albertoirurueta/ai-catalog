@@ -88,9 +88,8 @@ flowchart TD
 
 === Invokes
 
-Each of the following is invoked via its own `general-purpose` sub-agent (see xref:agents/overview.adoc[]) rather
-than directly, so verbose report output stays out of this skill's own context window and only the distilled
-outcome comes back:
+Each of the following is invoked via the xref:agents/gate-runner.adoc[`gate-runner`] agent rather than directly,
+so verbose report output stays out of this skill's own context window and only the distilled outcome comes back:
 
 * xref:skills/dotnet-code-quality.adoc[] — Step 1, to capture a per-type pre-change quality baseline, and Step 9,
   to diff the post-change result against it and surface only newly-introduced issues.
@@ -101,7 +100,7 @@ outcome comes back:
   `dotnet test --filter "FullyQualifiedName~<TestClass>"` directly if unavailable).
 * xref:skills/dotnet-coverage.adoc[] — Step 7, to check line/branch coverage for the changed/new class(es) is at
   least 80% (falling back to `dotnet test --collect:"XPlat Code Coverage"` directly if unavailable).
-* Plain, non-skill sub-agent call: a full `dotnet test` run (Step 8).
+* A full `dotnet test` run (Step 8), run directly as a raw command rather than via a skill.
 
 === Invoked by
 
@@ -111,9 +110,9 @@ outcome comes back:
 
 === Related agents
 
-* `general-purpose` (see xref:agents/overview.adoc[]) — spawned repeatedly, once per delegated check (baseline
-  capture, license, doc comments, scoped tests, coverage, full suite, quality diff), for the same reason
-  `java-code-one-task` and `code` itself spawn one per delegated check: keeping verbose report/build output out of
+* xref:agents/gate-runner.adoc[`gate-runner`] — spawned repeatedly, once per delegated check (baseline capture,
+  license, doc comments, scoped tests, coverage, full suite, quality diff), for the same reason
+  `java-code-one-task` and `code` itself spawn it per delegated check: keeping verbose report/build output out of
   this skill's own context.
 
 == Source

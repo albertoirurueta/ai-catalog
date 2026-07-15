@@ -70,7 +70,7 @@ flowchart TD
     E --> F["Step 4: Build project status table"]
     F --> G["Step 5: Gather documentation links"]
     G --> H["Step 6: Compose installation\ninstructions for detected build tool"]
-    H --> I["Step 7: Write how-it-works\nsection with a real example"]
+    H --> I["Step 7: Write how-it-works\nsection with a real example\n(via Explore agent)"]
     I --> J["Step 8: Compose remaining structural\nsections; preserve hand-written extras"]
     J --> K{"Did README.md\nalready exist?"}
     K -- no --> L["Write README.md directly"]
@@ -96,7 +96,9 @@ None — `setup-readme` is a leaf skill; it does not call any other skill in thi
 
 === Related agents
 
-None — this skill does not delegate any part of its work to a built-in agent.
+* `Explore` (see xref:agents/overview.adoc[]) — used in Step 7 to locate the main source entry points before
+  reading them directly, rather than reading the whole source tree — the same agent the `explore` skill itself
+  uses for this kind of broad structural search.
 
 == Source
 

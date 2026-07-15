@@ -75,7 +75,7 @@ flowchart TD
     D --> E[Ask user for the upcoming SNAPSHOT version]
     E --> F[Create release_x.y.z branch off develop]
     F --> G["Update pom.xml, README.md (via setup-readme\nor by hand), docs/antora.yml, and Antora\npages with version snippets"]
-    G --> H["Determine changes since previous tag;\nwrite whats-new.adoc and CHANGELOG.md sections"]
+    G --> H["Determine changes since previous tag\n(via change-summarizer agent);\nwrite whats-new.adoc and CHANGELOG.md sections"]
     H --> I[Show diff summary, then commit]
     I --> J{Confirm push + PR with user}
     J -- declines --> J1[Stop without pushing]
@@ -105,9 +105,10 @@ None — `release` is a top-level entry point, run directly by a person via `/re
 
 === Related agents
 
-None — every step in `release` (branching, editing files, drafting notes, opening the PR) runs directly in the
-main conversation; it delegates to the `setup-readme` and `pr-description` skills but does not spawn a sub-agent
-to do so.
+* xref:agents/change-summarizer.adoc[`change-summarizer`] — Step 10, to summarize the commit/diff range since the
+  previous release into user-facing changes for `whats-new.adoc`/`CHANGELOG.md`, keeping the raw `git log`/diff
+  content out of this skill's own context — the same agent `setup-changelog` uses, applied here to a single range
+  instead of a fan-out across many past releases.
 
 == Source
 

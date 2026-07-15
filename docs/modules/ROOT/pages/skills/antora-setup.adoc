@@ -73,7 +73,7 @@ flowchart TD
     E --> F["Step 4: Write or correct docs/antora.yml"]
     F --> G["Step 5: Write or fill docs/antora-playbook.yml;\ncopy ui-bundle.zip into docs/"]
     G --> H["Step 6: Create ROOT module skeleton\n(nav.adoc, pages/)"]
-    H --> I["Step 7: Write index.adoc\n(repository overview)"]
+    H --> I["Step 7: Write index.adoc\n(repository overview, via Explore agent)"]
     I --> J["Step 8: Write installation.adoc\n(install guide)"]
     J --> K["Step 9: Write reference.adoc\n(links of interest)"]
     K --> L["Step 10: Update nav.adoc\nwith new page entries"]
@@ -101,8 +101,12 @@ None — `antora-setup` is a leaf skill; it does not call any other skill in thi
 
 === Related agents
 
-None directly — `antora-setup` itself runs synchronously. When xref:skills/update-docs.adoc[] invokes it
-conditionally, it does so through a sub-agent it manages, not one this skill spawns itself.
+* `Explore` (see xref:agents/overview.adoc[]) — used in Step 7 to build a picture of the top-level source layout
+  and main public entry points before writing `index.adoc`'s overview, rather than reading the whole source tree
+  directly — the same agent the `explore` skill itself uses for this kind of broad structural search.
+
+When xref:skills/update-docs.adoc[] invokes `antora-setup` conditionally, it does so through a sub-agent it
+manages, not one this skill spawns itself.
 
 == Source
 

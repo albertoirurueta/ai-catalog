@@ -31,17 +31,26 @@ orchestrators that call other skills in sequence.
 
 === An agent
 
-This repository does not currently define any custom agents under a `.claude/agents/` directory. Several
-skills nevertheless spawn Claude Code's **built-in** agent types through the `Agent` tool, to run a
-sub-task in an isolated context (so its detailed output — a full test log, a static-analysis report —
-doesn't clutter the main conversation) or to search the codebase without derailing the current flow:
+Several skills in this catalog spawn a sub-agent through the `Agent` tool, to run a sub-task in an isolated
+context (so its detailed output — a full test log, a static-analysis report, an entire nested skill run —
+doesn't clutter the main conversation) or to search the codebase without derailing the current flow. This
+repository defines three **custom** agents under `.claude/agents/` for its most-duplicated sub-agent shapes:
 
-* The **`Explore`** agent — a fast, read-only search agent — is used explicitly by the `explore` skill.
-* Every other sub-agent spawned from this catalog (by `code`, `issue`, and the tasks a `plan`-generated
-  `implementation_plan.md` describes) uses the **`general-purpose`** agent, Claude Code's default when no
-  specific agent type is named.
+* **`gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
+  headers, doc-comment audits, security scans, a full build), optionally diffs it against a baseline, and
+  reports back only a compact summary.
+* **`isolated-skill-executor`** — runs one named skill end to end in a completely fresh context so an earlier
+  exploration/planning transcript can't bias it, while the caller keeps running afterward.
+* **`change-summarizer`** — fans out over a git commit/tag range and returns only the user-facing changes.
 
-See xref:agents/overview.adoc[] for detail on where and why each is used.
+Skills that need ad hoc context isolation beyond those three shapes still use Claude Code's **built-in** agent
+types: the **`Explore`** agent (a fast, read-only search agent) is used explicitly by the `explore` skill, and
+the **`general-purpose`** agent (Claude Code's default when no specific type is named) covers one-off cases like
+bootstrapping the `antora-setup` skill mid-run.
+
+See xref:agents/overview.adoc[] (built-in types) and xref:agents/gate-runner.adoc[],
+xref:agents/isolated-skill-executor.adoc[], xref:agents/change-summarizer.adoc[] (custom agents) for detail on
+where and why each is used.
 
 === A CLAUDE.md file
 
@@ -107,7 +116,7 @@ when each is the better fit.
 features, and where the underlying models genuinely differ.
 |===
 
-== Skills and agents reference
+== Skills reference
 
 [cols="2,2,4,1", options="header"]
 |===
@@ -264,8 +273,28 @@ features, and where the underlying models genuinely differ.
 |xref:skills/update-docs.adoc[]
 |===
 
-This repository currently defines no custom agents; the built-in agent types it relies on are described in
-xref:agents/overview.adoc[].
+== Agents reference
+
+This repository defines three custom agents, all grouped under xref:index.adoc#group-agents[Sub-Agent
+Infrastructure]; the built-in agent types it also relies on (`Explore`, `general-purpose`) have no `SKILL.md`-style
+file of their own and are instead described together in xref:agents/overview.adoc[].
+
+[cols="2,4,1", options="header"]
+|===
+|Name |Purpose |Detail page
+
+|`change-summarizer`
+|Fan out over a git commit/tag range and return only the user-facing changes.
+|xref:agents/change-summarizer.adoc[]
+
+|`gate-runner`
+|Run a single verification/quality-gate skill and report back only a compact summary, optionally vs. a baseline.
+|xref:agents/gate-runner.adoc[]
+
+|`isolated-skill-executor`
+|Run one named skill end to end in a fresh context, so the caller can keep running afterward.
+|xref:agents/isolated-skill-executor.adoc[]
+|===
 
 == Purpose groups
 
@@ -446,6 +475,32 @@ adopted one of these skills would ever need to run.
 * xref:skills/generate-skill-docs.adoc[`generate-skill-docs`] — regenerates this
   documentation site itself from the current set of skills and agents on disk.
 
+[[group-agents]]
+=== Sub-Agent Infrastructure
+
+The custom agents this catalog's skills delegate to for its most-duplicated sub-agent shapes, cutting across
+every group above rather than belonging to any single workflow.
+
+[NOTE]
+====
+Not something invoked directly the way a skill is — an agent is only ever reached indirectly, through a
+skill's own instructions naming it in an `Agent()` call. See xref:guides/creating-skills-and-agents.adoc[] for
+how agents differ from skills in how they're triggered.
+====
+
+* xref:agents/gate-runner.adoc[`gate-runner`] — runs a single verification/quality-gate skill and reports back
+  only a compact summary, optionally diffed against a baseline. Used throughout `code`, `java-code-one-task`, and
+  `dotnet-code-one-task`.
+* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — runs one named skill end to end in a
+  fresh context so the caller can keep running afterward. Used by xref:skills/issue.adoc[`issue`] to delegate the
+  entire `code` run for a ticket, by xref:skills/code.adoc[`code`] itself to delegate each task to its
+  `<key>-code-one-task` skill, and by xref:skills/setup-java-library-repository.adoc[`setup-java-library-repository`]
+  to delegate each of the six bootstrap skills it orchestrates.
+* xref:agents/change-summarizer.adoc[`change-summarizer`] — fans out over a git commit/tag range and returns
+  only the user-facing changes. Used by xref:skills/setup-changelog.adoc[`setup-changelog`] to summarize one
+  release at a time when backfilling a long tag history, and by xref:skills/release.adoc[`release`] to summarize
+  the single range since the previous release.
+
 == Dependency graph
 
 An edge means "invokes" (a solid line, via the `Skill` tool) or "spawns" (a dotted line, via the `Agent`
@@ -509,12 +564,12 @@ flowchart LR
         GSD["generate-skill-docs"]
     end
 
-    SJLR --> SJL
-    SJLR --> AS
-    SJLR --> SJG
-    SJLR --> SJW
-    SJLR --> SC
-    SJLR --> SR
+    SJLR -.-> SJL
+    SJLR -.-> AS
+    SJLR -.-> SJG
+    SJLR -.-> SJW
+    SJLR -.-> SC
+    SJLR -.-> SR
 
     CGI --> EXPLORE
     CJT --> EXPLORE
@@ -527,8 +582,8 @@ flowchart LR
     PLAN --> EXPLORE
     PRR --> EXPLORE
 
-    CODE --> JCOT
-    CODE --> DCOT
+    CODE -.-> JCOT
+    CODE -.-> DCOT
     CODE -.-> JCQ
     CODE -.-> DCQ
     CODE -.-> CSEC
@@ -551,15 +606,23 @@ flowchart LR
     UD -.->|only if no Antora module yet| AS
 
     GSD -.->|only if no Antora module yet| AS
-    GSD -.spawns.-> AGT_GP
 
     PRR -.->|external, not in this catalog| CR[["code-review"]]
 
     EXPLORE -.uses.-> AGT_EXPLORE(("Explore\nagent"))
-    CODE -.spawns.-> AGT_GP(("general-purpose\nagent"))
-    ISSUE -.spawns.-> AGT_GP
-    JCOT -.spawns.-> AGT_GP
-    DCOT -.spawns.-> AGT_GP
+    AS -.uses.-> AGT_EXPLORE
+    SR -.uses.-> AGT_EXPLORE
+    CODE -.spawns.-> AGT_GATE(("gate-runner\nagent"))
+    JCOT -.spawns.-> AGT_GATE
+    DCOT -.spawns.-> AGT_GATE
+    ISSUE -.spawns.-> AGT_ISE(("isolated-skill-executor\nagent"))
+    CODE -.spawns.-> AGT_ISE
+    SJLR -.spawns.-> AGT_ISE
+    SC -.spawns.-> AGT_CS(("change-summarizer\nagent"))
+    REL -.spawns.-> AGT_CS
+    GSD -.spawns.-> AGT_GP(("general-purpose\nagent"))
+    UD -.spawns.-> AGT_GP
+    PRD -.spawns.-> AGT_GP
 ....
 
 == Common workflows

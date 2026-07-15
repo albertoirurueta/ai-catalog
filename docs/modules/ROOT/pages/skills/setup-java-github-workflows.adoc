@@ -40,10 +40,11 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |`args` (`key: value` lines)
 |No
 |Pre-resolved values for the six pipeline parameters — `integration-branch`, `java-version`,
-`publishing-server-id`, `extras-profile-id`, `sign-profile-id`, and `settings-file` — passed one per line, e.g.
-`integration-branch: develop`. When an orchestrating skill (such as `setup-java-library-repository`) supplies
-these, the corresponding fact-finding step in Step 1's survey is skipped entirely for that value instead of
-asking the user again.
+`publishing-server-id`, `extras-profile-id`, `sign-profile-id`, and `settings-file` — plus, optionally,
+`group-id`/`artifact-id` if the caller already has them, passed one per line, e.g. `integration-branch: develop`.
+When an orchestrating skill (such as `setup-java-library-repository`) supplies these, the corresponding
+fact-finding step in Step 1's survey is skipped entirely for that value instead of asking the user again (or, for
+`group-id`/`artifact-id`, instead of re-reading `pom.xml` for values the caller already collected).
 |None — if `args` is absent or doesn't match this `key: value` format, every parameter is instead resolved by
 surveying `pom.xml` and the repository (Maven coordinates, compiler version, publishing/signing/extras
 profiles, Sonar config, Antora setup, branch names, README/Antora version wording), asking the user directly
@@ -89,10 +90,11 @@ None — `setup-java-github-workflows` is a leaf skill; it does not call any oth
 
 === Invoked by
 
-* xref:skills/setup-java-library-repository.adoc[] — Step 6 runs `setup-java-github-workflows`, passing the
-  six pipeline parameters (integration branch, Java version, publishing server id, extras/sign profile ids,
-  settings file) through `args` as `key: value` lines so it isn't asked twice for facts already collected in
-  its own Step 2.
+* xref:skills/setup-java-library-repository.adoc[] — Step 6 runs `setup-java-github-workflows` (via the
+  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent), passing the six pipeline parameters
+  (integration branch, Java version, publishing server id, extras/sign profile ids, settings file) from its own
+  Step 2, plus `groupId`/`artifactId` from its own Step 1, through `args` as `key: value` lines so it isn't asked
+  — or made to re-read `pom.xml` — for facts the orchestrator already has.
 
 === Related agents
 
