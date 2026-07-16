@@ -43,17 +43,23 @@ a|
 * Fetches the ticket (GitHub issue or Jira ticket), auto-detecting which tracker it belongs to
 * Detects the codebase's language(s)/framework(s), whether an Antora documentation module exists, and which
   platform hosts the repository
+* If a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket
+  or codebase and folds anything relevant into the report as extra context
 * Builds a grounded, read-only understanding of the code relevant to the ticket — no files are changed
 
 |Prepare implementation plan
 |xref:skills/plan.adoc[`plan`]
 a|
+* If `implementation_plan.md` already exists, assesses whether it matches the requested task and asks the user
+  to skip planning (resume as-is), discard and regenerate, or update while preserving completed tasks
 * Reuses the exploration above rather than repeating it
 * Asks the user up to four focused questions only where something is genuinely ambiguous; otherwise picks a
   best-practice approach and states the rationale directly in the plan
-* Tags each task (and sub-task) with the language/framework key a later `<key>-code-one-task` skill should
+* Groups tasks into dependency-aware task groups, each marked whether its tasks can be implemented in parallel
+* Tags each task (and sub-task) with the language/framework key a later `<key>-code-one-task-group` skill should
   handle it with
-* Writes `implementation_plan.md` at the repository root, one checkbox per task/sub-task
+* Writes `implementation_plan.md` at the repository root, tasks/sub-tasks numbered `Task N`/`Task N.M`, one
+  checkbox per task/sub-task
 
 |_User reviews the implementation plan_
 |— (manual gate)
@@ -67,15 +73,20 @@ a|
 a|
 * Captures a project-wide code-quality baseline (`java-code-quality`/`dotnet-code-quality`) and a security
   baseline (`check-security`) before making any change
-* Works through `implementation_plan.md` task by task, dispatching each to
-  xref:skills/java-code-one-task.adoc[`java-code-one-task`] or
-  xref:skills/dotnet-code-one-task.adoc[`dotnet-code-one-task`] (or implementing it directly if no matching
-  skill applies), checking off boxes as it goes
-* Each task's implementation is paired with tests reaching at least 80% line coverage — verified against a real
-  coverage report, not estimated — plus license headers and language-appropriate doc comments
+* Works through `implementation_plan.md` one task group at a time, dispatching each to
+  xref:skills/code-one-task-group.adoc[`code-one-task-group`], which resolves each task's language and delegates
+  to xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`],
+  xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`], or (for database-tagged tasks)
+  xref:skills/database-code-one-task-group.adoc[`database-code-one-task-group`] (or implements it directly if
+  no matching skill applies), checking off boxes as it goes
+* Each task group's tasks are implemented in parallel when the plan allows it (database task groups are always
+  sequential instead), then paired with tests reaching at least 80% line coverage — verified against a real
+  coverage report, not estimated — plus license headers and language-appropriate doc comments, all validated
+  once per group rather than once per task
 * Re-checks the quality and security baselines at the end (a security regression is a hard stop, unlike a
   quality regression, which the user can accept or turn into follow-up tasks), runs a full local build, and
-  updates the Antora documentation via `update-docs`
+  updates the Antora documentation via `update-docs` (which also proposes matching updates to a connected
+  documentation MCP, if one exists, for the user to approve)
 * Archives `implementation_plan.md` to `.archive/` on success and asks for a review — `code` never commits,
   pushes, or opens a pull request itself
 

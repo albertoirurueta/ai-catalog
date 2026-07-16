@@ -2,21 +2,20 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Carry out a single task from a Java `implementation_plan.md`-style task list end to end: implement it, back it
-with JUnit tests that meet this repository's coverage bar, keep license headers and Javadoc current, verify
-nothing regressed, and report the outcome. This is the execution unit the `code` skill calls once per Java
-top-level task; it never reads or writes `implementation_plan.md` itself.
+Carry out a single task's implementation and tests against the real codebase — nothing else. This is the
+narrowest execution unit in the `code` pipeline: `java-code-one-task-group` calls it once per task in a bucket
+(potentially many at once, in parallel agents).
 
 == Purpose
 
-`java-code-one-task` is the Java-specific worker behind `code`'s per-task dispatch. Given one task's own text
-(what to build, the named file(s)/class(es)/method(s), the described behavior, and any sub-tasks), it re-checks
-the current code state, implements exactly what's specified, writes/updates JUnit tests, adds license headers via
-`check-license`, updates Javadoc via `java-javadoc`, runs the scoped tests and checks coverage via `java-test`/
-`java-coverage`, runs the full suite, and checks for new static-analysis issues via `java-code-quality` against a
-baseline it captures itself — all through sub-agents so the noisy report output from each stays out of its own
-context. It hands back only a short summary; all plan-file bookkeeping (checking boxes, tracking session tasks)
-is the caller's job, not this skill's.
+`java-code-one-task` is the Java-specific implementation worker `java-code-one-task-group` calls once per task.
+Given one task's own text (what to build, the named file(s)/class(es)/method(s), the described behavior, and any
+sub-tasks), it re-checks the current code state, implements exactly what's specified, and writes/updates JUnit
+tests — that's all. License headers, Javadoc, scoped tests, coverage, the full suite, and code-quality
+regression checks no longer happen here; they moved to `java-code-one-task-group`, which validates them once for
+the whole bucket of tasks instead of once per task, cutting the redundant tool invocations that used to happen
+here for every single task. It hands back only a short summary; it never reads or writes
+`implementation_plan.md`, captures a quality baseline, or runs any test/coverage/quality check itself.
 
 == Purpose group
 
@@ -39,7 +38,7 @@ xref:index.adoc#group-java[Java Development Tooling]
 |Yes
 |The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/class(es)/
 method(s), the described behavior, and any sub-tasks, plus any relevant "Current code state" context. Normally
-supplied by the `code` skill dispatching one plan task at a time.
+supplied by `java-code-one-task-group` dispatching one task in a bucket at a time.
 |None — this skill has nothing to do without a task description.
 |===
 
@@ -48,68 +47,44 @@ supplied by the `code` skill dispatching one plan task at a time.
 * Source and test files created/modified per the task, following this repository's conventions from `CLAUDE.md`
   (Java version, `final`/`var` type inference only where already used, full Javadoc, `IllegalArgumentException`
   for invalid arguments, no new runtime dependencies).
-* JUnit tests added/updated, achieving at least 80% line coverage for the changed/new classes, verified against
-  the actual `java-coverage` report rather than estimated.
-* License headers added to every file the task touched, via `check-license`.
-* Javadoc added/updated for every file the task touched, via `java-javadoc`, verified by a Javadoc build.
-* Confirmation that the scoped tests and the full suite both pass, and that no new `java-code-quality` issue was
-  introduced versus a pre-change, per-class baseline this skill captures itself.
-* A short summary handed back to the caller: file(s) touched, tests added/updated, coverage achieved, and the
-  code-quality outcome — including any new issue left in place as unavoidable and why, whether license-header
-  generation was skipped by the user, or whether the run stopped on a blocker.
-* `implementation_plan.md` is never read or written by this skill — checking off boxes is the caller's job.
+* JUnit tests added/updated covering the new/changed behavior — not run by this skill; the caller runs them once
+  for the whole bucket.
+* A short summary handed back to the caller: file(s) touched, tests added/updated, and whether the run stopped
+  on a blocker.
+* `implementation_plan.md` is never read or written by this skill — checking off boxes is the caller's job, as
+  is capturing any quality baseline or running any validation check.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /java-code-one-task\n(task description)"] --> B["Re-check current code state;\ncapture per-class pre-change\nquality baseline via sub-agent"]
-    B --> C["Implement exactly what\nthe task specifies"]
-    C --> D["Write/update JUnit tests"]
-    D --> E["Delegate: check-license\n(via sub-agent)"]
-    E --> F["Delegate: java-javadoc\n(via sub-agent)"]
-    F --> G["Delegate: run scoped tests\nvia java-test (via sub-agent)"]
-    G -- failing --> C
-    G -- pass --> H["Delegate: check coverage >= 80%\nvia java-coverage (via sub-agent)"]
-    H -- under 80% --> D
-    H -- pass --> I["Delegate: full mvn clean test\n(via sub-agent)"]
-    I -- regression --> C
-    I -- pass --> J["Delegate: java-code-quality,\ndiff vs. pre-change baseline\n(via sub-agent)"]
-    J -- new issue found --> C
-    J -- clean --> K["Report outcome to caller:\nfiles, tests, coverage, quality"]
-    G -- persistent failure,\napproach looks wrong --> L["Stop: report blocker\nto caller"]
+    A["Start /java-code-one-task\n(task description)"] --> B["Step 1: re-check current\ncode state from disk"]
+    B --> C["Step 2: implement exactly what\nthe task specifies"]
+    C --> D["Step 3: write/update JUnit tests\n(not run here)"]
+    D --> E{"Ambiguous, or approach\ninfeasible against real code?"}
+    E -- yes --> F["Step 4: stop; report blocker\nto caller"]
+    E -- no --> G["Step 5: report outcome\nto caller: files, tests"]
 ....
 
 == Dependencies
 
 === Invokes
 
-Each of the following is invoked via the xref:agents/gate-runner.adoc[`gate-runner`] agent rather than directly,
-so verbose report output stays out of this skill's own context window and only the distilled outcome comes back:
-
-* xref:skills/java-code-quality.adoc[] — Step 1, to capture a per-class pre-change quality baseline, and Step 9,
-  to diff the post-change result against it and surface only newly-introduced issues.
-* xref:skills/check-license.adoc[] — Step 4, to add/verify license headers on the file(s) this task touched.
-* xref:skills/java-javadoc.adoc[] — Step 5, to update Javadoc for the class(es) this task touched and confirm the
-  Javadoc build passes.
-* xref:skills/java-test.adoc[] — Step 6, to run the scoped tests for the affected class(es) (falling back to
-  `mvn test -Dtest=<TestClass>` directly if unavailable).
-* xref:skills/java-coverage.adoc[] — Step 7, to check line/branch coverage for the changed/new class(es) is at
-  least 80% (falling back to `mvn jacoco:prepare-agent test jacoco:report` directly if unavailable).
-* A full `mvn clean test` run (Step 8), run directly as a raw command rather than via a skill.
+None — `java-code-one-task` is a leaf skill; it does not call any other skill in this catalog. License headers,
+Javadoc, scoped tests, coverage, and quality checks all moved to `java-code-one-task-group`.
 
 === Invoked by
 
-* xref:skills/code.adoc[] — Step 4 invokes `java-code-one-task` once per top-level task tagged (or defaulted to)
-  the `java` language/framework key, passing that task's full text, then checks off its box in
-  `implementation_plan.md` on a clean report.
+* xref:skills/java-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a single
+  batch of `Agent` calls, when the group is marked `Parallelizable: yes`; one at a time otherwise), via the
+  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent, passing that task's full text. That
+  skill checks off the task's box in `implementation_plan.md` once the whole bucket's validation passes.
 
 === Related agents
 
-* xref:agents/gate-runner.adoc[`gate-runner`] — spawned repeatedly, once per delegated check (baseline capture,
-  license, Javadoc, scoped tests, coverage, full suite, quality diff), for the same reason `code` itself spawns
-  it per delegated check: keeping verbose report/build output out of this skill's own context.
+`java-code-one-task` itself does not spawn any Agent — it only reads and edits the code/test files the task
+names.
 
 == Source
 

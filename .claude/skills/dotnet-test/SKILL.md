@@ -1,6 +1,7 @@
 ---
 name: dotnet-test
 description: Run a .NET project or solution's test suite via the .NET CLI (`dotnet test`), optionally scoped to specific test classes, methods, namespaces, or trait/category filters, and optionally targeted at a specific project (`.csproj`) or solution (`.sln`) file. Invoke as `/dotnet-test` to run the full suite (auto-detecting the solution/project in the working directory), or `/dotnet-test <selector>` where `<selector>` names a class (`FooTests`), a class+method (`FooTests.TestSomething`), a wildcard/namespace pattern, a trait/category expression, or a project/solution path. Use whenever the user wants to run, re-run, or narrow down .NET unit tests instead of a full `dotnet test` across every project.
+model: haiku
 ---
 
 # .NET Test

@@ -1,6 +1,7 @@
 ---
 name: generate-skill-docs
 description: Analyze every Claude Code skill (`.claude/skills/*/SKILL.md`) and agent (custom definitions under `.claude/agents/*.md`, plus built-in agent types referenced from skills via the `Agent` tool) defined in this repository, and generate/update the Antora documentation describing them — a reference table and dependency graph in `index.adoc`, purpose-grouped sections for the catalog's recurring end-to-end workflows, and one detail page per skill/agent under `docs/modules/ROOT/pages/skills/` and `.../agents/` covering its purpose, inputs, outputs, execution flow, and dependencies. Invoke as `/generate-skill-docs`. Idempotent — safe to re-run whenever skills/agents are added, removed, or changed; it regenerates content from the current `SKILL.md`/agent definitions rather than hand-maintaining pages that drift from them. Use whenever this catalog's own documentation needs to reflect its actual current set of skills and agents, instead of manually writing or updating each page by hand.
+model: sonnet
 ---
 
 # Generate Skill Docs
@@ -16,7 +17,7 @@ the real, current set fresh each run so the generated docs never drift from what
 Find `antora.yml` (`find . -name antora.yml -not -path '*/node_modules/*'`).
 
 - **Not found**: there is no documentation module to write into yet. Ask the user whether to bootstrap one
-  now via the `antora-setup` skill (run as a sub-agent via the `Agent` tool, briefed that it's about to be
+  now via the `setup-antora` skill (run as a sub-agent via the `Agent` tool, briefed that it's about to be
   followed by this skill so its starter pages don't need to anticipate skill/agent documentation). If they
   decline, stop here — there's nothing for this skill to write into.
 - **Found**: read it for the component name and the `nav:` file(s) it declares, then read that `nav.adoc` to

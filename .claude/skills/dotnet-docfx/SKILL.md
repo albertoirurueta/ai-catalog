@@ -1,6 +1,7 @@
 ---
 name: dotnet-docfx
 description: Audit given C# class(es)/type(s) for complete XML doc-comment coverage — type-level `<summary>` (and `<typeparam>` for generics), every field/property/constant/event, every constructor/method (including private ones and any nested type or enum member) — generate any missing or incomplete XML doc comments grounded in the actual code and current changes, then attempt a best-effort documentation report via DocFX (https://dotnet.github.io/docfx/). Invoke as `/dotnet-docfx <TypeName1,TypeName2,...>` (or file paths), or `/dotnet-docfx` with no argument to scope to types touched by uncommitted changes plus commits on the current branch not yet on the base branch. Checks whether the `docfx` .NET tool is installed and attempts to install it (`dotnet tool install -g docfx`) if it isn't; if installation fails, documenting the code still proceeds, but no HTML documentation report is generated and the user is warned explicitly. Works against any .NET/C# project — it discovers the project's own doc-comment conventions rather than assuming a fixed style. Use whenever the user wants XML doc-comment completeness checked and filled in for specific types, instead of relying on a full DocFX site build to surface gaps.
+model: sonnet
 ---
 
 # .NET DocFX

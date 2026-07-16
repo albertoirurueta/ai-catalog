@@ -1,6 +1,7 @@
 ---
 name: create-github-issue
 description: Draft and file a new GitHub issue that is ready to be picked up by the `/issue`, `/plan`, `/code` flow. Runs the `explore` skill first to ground the issue in the actual codebase, then asks the user for the purpose of the task to be implemented, then asks for additional context (linked URLs, attached files/documents, related issues) and folds whatever is provided into the issue body. Classifies the issue as bug/feature/enhancement from the stated purpose and matches it against this repository's actual label set, drafts a title and body (Summary, Context, Acceptance criteria, References), and shows the draft for confirmation before filing it with `gh issue create` (or GitHub MCP tools if `gh` is unavailable). Invoke as `/create-github-issue` or `/create-github-issue <short description>`. Stops early if this repository isn't hosted on GitHub. Use when the user has an idea, bug report, or request that needs to become a well-formed, actionable GitHub issue before `/issue` or `/plan` can pick it up — not for issues that already exist (nothing to file) or repositories on Bitbucket/Azure DevOps/TFS/Jira (no issue-filing target this skill supports).
+model: sonnet
 ---
 
 # Create GitHub Issue

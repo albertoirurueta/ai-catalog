@@ -34,12 +34,15 @@ directory into that repository's `.claude/skills/` — skills must not assume th
 
 Skills compose into a few recurring pipelines rather than each standing alone:
 
-- **Issue-to-PR cycle**: `issue` → `explore` → `plan` → `code` → `pr-description` → `pr-review`. `code`
-  doesn't implement anything itself — it dispatches each `implementation_plan.md` task to the
-  language-specific `<key>-code-one-task` skill (`java-code-one-task`, `dotnet-code-one-task`) tagged by
-  `plan`, each of which fans out to its own language's test/coverage/quality/doc skills.
+- **Issue-to-PR cycle**: `issue` → `explore` → `plan` → `code` → `pr-description` → `pr-review`. `plan` groups
+  `implementation_plan.md`'s tasks into dependency-aware groups; `code` doesn't implement anything itself — it
+  dispatches each group, in order, to `code-one-task-group`, which resolves each task's language and delegates
+  to the matching `<key>-code-one-task-group` skill (`java-code-one-task-group`, `dotnet-code-one-task-group`).
+  That skill captures one quality baseline for the whole group, runs `<key>-code-one-task`
+  (`java-code-one-task`, `dotnet-code-one-task`) once per task — in parallel when the group allows it — and
+  validates the group once (tests/coverage/quality/doc/license), instead of once per task.
 - **Repository bootstrap**: `setup-java-library-repository` orchestrates `setup-java-library` →
-  `antora-setup` → `setup-java-gitignore` → `setup-java-github-workflows` → `setup-changelog` →
+  `setup-antora` → `setup-java-gitignore` → `setup-java-github-workflows` → `setup-changelog` →
   `setup-readme` in a fixed order for a brand-new Java library repo; each also runs standalone.
 - **Ticket intake**: `create-github-issue` / `create-jira-ticket` ground a draft in the codebase via
   `explore` before filing.
@@ -50,8 +53,9 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
 
 - **`gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
   headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
-  reports back only a compact summary. Used throughout `code`, `java-code-one-task`, and `dotnet-code-one-task`,
-  and recommended by `plan` for the scoped test-run step it writes into generated plans.
+  reports back only a compact summary. Used throughout `code`, `code-one-task-group`, `java-code-one-task-group`,
+  and `dotnet-code-one-task-group`, and recommended by `plan` for the scoped test-run step it writes into
+  generated plans.
 - **`isolated-skill-executor`** — runs one named skill end-to-end in a completely fresh context so an earlier
   exploration/planning transcript can't bias it, while the caller keeps running afterward. Used by `issue` to
   delegate the entire `code` run for a ticket.
@@ -60,7 +64,7 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
 
 Skills that need ad hoc context isolation beyond these three shapes still use Claude Code's *built-in* agent
 types via the `Agent` tool: `explore` uses the `Explore` agent explicitly; one-off cases like bootstrapping
-`antora-setup` mid-run (`generate-skill-docs`, `update-docs`) use `general-purpose`, the default.
+`setup-antora` mid-run (`generate-skill-docs`, `update-docs`) use `general-purpose`, the default.
 
 ### Documentation (`docs/`)
 

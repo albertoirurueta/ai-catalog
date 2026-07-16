@@ -2,23 +2,21 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Carry out a single task from a .NET `implementation_plan.md`-style task list end to end: implement it, back it
-with test-framework tests (xUnit/NUnit/MSTest, whichever the project uses), keep license headers and XML doc
-comments current, verify nothing regressed, and report the outcome. This is the .NET/C# counterpart to
-`java-code-one-task` — same shape, but built on `dotnet-code-quality`, `dotnet-test`, `dotnet-coverage`, and
-`dotnet-docfx` instead of the Maven/Java tool chain.
+Carry out a single task's implementation and tests against the real codebase — nothing else. This is the
+narrowest execution unit in the `code` pipeline: `dotnet-code-one-task-group` calls it once per task in a
+bucket (potentially many at once, in parallel agents). It is the .NET/C# counterpart to `java-code-one-task`.
 
 == Purpose
 
-`dotnet-code-one-task` is the .NET-specific worker behind a `code`-style skill's per-task dispatch. Given one
-task's own text (what to build, the named file(s)/type(s)/method(s), the described behavior, and any sub-tasks),
-it re-checks the current code state, implements exactly what's specified, writes/updates tests in whichever
-framework this project already uses, adds license headers via `check-license`, updates XML doc comments via
-`dotnet-docfx`, runs the scoped tests and checks coverage via `dotnet-test`/`dotnet-coverage`, runs the full
-suite, and checks for new static-analysis issues via `dotnet-code-quality` against a baseline it captures
-itself — all through sub-agents so the noisy report output from each stays out of its own context. It hands back
-only a short summary; all plan-file bookkeeping (checking boxes, tracking session tasks) is the caller's job, not
-this skill's.
+`dotnet-code-one-task` is the .NET-specific implementation worker `dotnet-code-one-task-group` calls once per
+task. Given one task's own text (what to build, the named file(s)/type(s)/method(s), the described behavior, and
+any sub-tasks), it re-checks the current code state, implements exactly what's specified, and writes/updates
+tests in whichever framework this project already uses — that's all. License headers, XML doc comments, scoped
+tests, coverage, the full suite, and code-quality regression checks no longer happen here; they moved to
+`dotnet-code-one-task-group`, which validates them once for the whole bucket of tasks instead of once per task,
+cutting the redundant tool invocations that used to happen here for every single task. It hands back only a
+short summary; it never reads or writes `implementation_plan.md`, captures a quality baseline, or runs any
+test/coverage/quality check itself.
 
 == Purpose group
 
@@ -41,7 +39,7 @@ xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Yes
 |The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/type(s)/
 method(s), the described behavior, and any sub-tasks, plus any relevant "Current code state" context. Normally
-supplied by a `code`-style skill dispatching one plan task at a time.
+supplied by `dotnet-code-one-task-group` dispatching one task in a bucket at a time.
 |None — this skill has nothing to do without a task description.
 |===
 
@@ -50,70 +48,45 @@ supplied by a `code`-style skill dispatching one plan task at a time.
 * Source and test files created/modified per the task, following this repository's conventions from `CLAUDE.md`
   (target framework/language version, `var`/nullable reference types only where already used, full XML doc
   comments, `ArgumentException`/`ArgumentNullException` for invalid arguments, no new NuGet dependencies).
-* Tests added/updated in this project's existing test framework, achieving at least 80% line coverage for the
-  changed/new classes, verified against the actual `dotnet-coverage` report rather than estimated.
-* License headers added to every file the task touched, via `check-license`.
-* XML doc comments added/updated for every file the task touched, via `dotnet-docfx`, verified by a DocFX build
-  where `docfx` is installed.
-* Confirmation that the scoped tests and the full suite both pass, and that no new `dotnet-code-quality` issue
-  was introduced versus a pre-change, per-type baseline this skill captures itself.
-* A short summary handed back to the caller: file(s) touched, tests added/updated, coverage achieved, and the
-  code-quality outcome — including any new issue left in place as unavoidable and why, whether license-header
-  generation was skipped by the user, or whether the run stopped on a blocker.
-* `implementation_plan.md` is never read or written by this skill — checking off boxes is the caller's job.
+* Tests added/updated in this project's existing test framework, covering the new/changed behavior — not run by
+  this skill; the caller runs them once for the whole bucket.
+* A short summary handed back to the caller: file(s) touched, tests added/updated, and whether the run stopped
+  on a blocker.
+* `implementation_plan.md` is never read or written by this skill — checking off boxes is the caller's job, as
+  is capturing any quality baseline or running any validation check.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /dotnet-code-one-task\n(task description)"] --> B["Re-check current code state;\ncapture per-type pre-change\nquality baseline via sub-agent"]
-    B --> C["Implement exactly what\nthe task specifies"]
-    C --> D["Write/update tests\n(xUnit/NUnit/MSTest)"]
-    D --> E["Delegate: check-license\n(via sub-agent)"]
-    E --> F["Delegate: dotnet-docfx\n(via sub-agent)"]
-    F --> G["Delegate: run scoped tests\nvia dotnet-test (via sub-agent)"]
-    G -- failing --> C
-    G -- pass --> H["Delegate: check coverage >= 80%\nvia dotnet-coverage (via sub-agent)"]
-    H -- under 80% --> D
-    H -- pass --> I["Delegate: full dotnet test\n(via sub-agent)"]
-    I -- regression --> C
-    I -- pass --> J["Delegate: dotnet-code-quality,\ndiff vs. pre-change baseline\n(via sub-agent)"]
-    J -- new issue found --> C
-    J -- clean --> K["Report outcome to caller:\nfiles, tests, coverage, quality"]
-    G -- persistent failure,\napproach looks wrong --> L["Stop: report blocker\nto caller"]
+    A["Start /dotnet-code-one-task\n(task description)"] --> B["Step 1: re-check current\ncode state from disk"]
+    B --> C["Step 2: implement exactly what\nthe task specifies"]
+    C --> D["Step 3: write/update tests\n(xUnit/NUnit/MSTest; not run here)"]
+    D --> E{"Ambiguous, or approach\ninfeasible against real code?"}
+    E -- yes --> F["Step 4: stop; report blocker\nto caller"]
+    E -- no --> G["Step 5: report outcome\nto caller: files, tests"]
 ....
 
 == Dependencies
 
 === Invokes
 
-Each of the following is invoked via the xref:agents/gate-runner.adoc[`gate-runner`] agent rather than directly,
-so verbose report output stays out of this skill's own context window and only the distilled outcome comes back:
-
-* xref:skills/dotnet-code-quality.adoc[] — Step 1, to capture a per-type pre-change quality baseline, and Step 9,
-  to diff the post-change result against it and surface only newly-introduced issues.
-* xref:skills/check-license.adoc[] — Step 4, to add/verify license headers on the file(s) this task touched.
-* xref:skills/dotnet-docfx.adoc[] — Step 5, to update XML doc comments for the type(s) this task touched and
-  confirm the DocFX build passes (or was skipped because `docfx` isn't installed).
-* xref:skills/dotnet-test.adoc[] — Step 6, to run the scoped tests for the affected type(s) (falling back to
-  `dotnet test --filter "FullyQualifiedName~<TestClass>"` directly if unavailable).
-* xref:skills/dotnet-coverage.adoc[] — Step 7, to check line/branch coverage for the changed/new class(es) is at
-  least 80% (falling back to `dotnet test --collect:"XPlat Code Coverage"` directly if unavailable).
-* A full `dotnet test` run (Step 8), run directly as a raw command rather than via a skill.
+None — `dotnet-code-one-task` is a leaf skill; it does not call any other skill in this catalog. License
+headers, XML doc comments, scoped tests, coverage, and quality checks all moved to
+`dotnet-code-one-task-group`.
 
 === Invoked by
 
-* xref:skills/code.adoc[] — Step 4 invokes `dotnet-code-one-task` once per top-level task tagged (or defaulted to)
-  the `dotnet` language/framework key, passing that task's full text, then checks off its box in
-  `implementation_plan.md` on a clean report.
+* xref:skills/dotnet-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a single
+  batch of `Agent` calls, when the group is marked `Parallelizable: yes`; one at a time otherwise), via the
+  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent, passing that task's full text. That
+  skill checks off the task's box in `implementation_plan.md` once the whole bucket's validation passes.
 
 === Related agents
 
-* xref:agents/gate-runner.adoc[`gate-runner`] — spawned repeatedly, once per delegated check (baseline capture,
-  license, doc comments, scoped tests, coverage, full suite, quality diff), for the same reason
-  `java-code-one-task` and `code` itself spawn it per delegated check: keeping verbose report/build output out of
-  this skill's own context.
+`dotnet-code-one-task` itself does not spawn any Agent — it only reads and edits the code/test files the task
+names.
 
 == Source
 

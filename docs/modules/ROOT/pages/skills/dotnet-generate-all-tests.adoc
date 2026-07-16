@@ -1,0 +1,100 @@
+= .NET Generate All Tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Bring an entire .NET/C# codebase's unit test coverage up to a minimum bar — 80% line coverage — in one pass:
+find every class with no test class at all or with measured coverage below the bar, then write or extend tests
+for each until it clears it. .NET/C# only; it does not run against, or fall back to, any other language.
+
+== Purpose
+
+`dotnet-generate-all-tests` answers "bring this whole codebase's test coverage up to a bar" rather than "write
+tests for this one class/task," which is what `dotnet-code-one-task` and the `code` pipeline already handle
+per task. It explores the whole codebase to build an inventory of testable classes, delegates to
+`dotnet-coverage` for the exact, measured percentage per class (never an estimate), and only writes or extends
+test code — it does not add license headers, doc comments, or run a code-quality pass, and it only touches
+production source code when a class is genuinely untestable as written (e.g. no seam to substitute a hard
+dependency), which it reports explicitly rather than silently redesigning the class.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/dotnet-generate-all-tests
+----
+
+== Inputs
+
+None — no arguments are accepted. It always scopes to the whole repository's .NET solution(s)/project(s).
+
+== Outputs
+
+* New or extended test files for every class found with no matching test class, or with line coverage below
+  80% — following this project's own existing test framework (xUnit/NUnit/MSTest), mocking library, and
+  naming/folder convention.
+* Occasionally, a minimal testability change to a class under test (e.g. extracting an interface, injecting a
+  dependency) — only when a class is genuinely untestable as written, and always called out explicitly rather
+  than folded silently into "tests added."
+* A report: total candidate classes found (and any excluded as having no testable logic), how many already met
+  the bar, before/after coverage per class touched, any class still below 80% after two extension attempts
+  (with its exact remaining uncovered lines), and the full-suite test result.
+* No license headers, doc comments, or code-quality fixes — those remain `check-license`, `dotnet-docfx`, and
+  `dotnet-code-quality`'s jobs.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /dotnet-generate-all-tests] --> B{".sln/.csproj found?"}
+    B -- no --> B1[Stop: .NET/C# only]
+    B -- yes --> C["Explore agent: inventory every\nmain-source class + existing test\nconvention + test project(s)"]
+    C --> D{"Any test project exists?"}
+    D -- no --> D1[Stop: ask user, this skill\nextends tests, doesn't scaffold a project]
+    D -- yes --> E["gate-runner: single dotnet-coverage run\nover every candidate class\n(batched if the list is large)"]
+    E --> F["Classify: missing tests /\nbelow 80% / already sufficient"]
+    F --> G["One agent per class (parallel batches):\nwrite new or extend existing tests"]
+    G --> H["Re-measure via dotnet-coverage,\nscoped to touched classes"]
+    H --> I{"Still below 80%?"}
+    I -- yes, attempts left --> G
+    I -- yes, 2 attempts used --> J[Report as residual gap\nwith exact uncovered lines]
+    I -- no --> K["gate-runner: run full suite\nonce (dotnet-test)"]
+    J --> K
+    K --> L{"Any failures?"}
+    L -- yes, caused by this run --> M[Fix regression; re-run full suite]
+    M --> K
+    L -- no / pre-existing --> N[Final report]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/dotnet-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated
+  through the `gate-runner` agent so its full `coverage.cobertura.xml`-derived report never lands directly in
+  this conversation, and so the whole suite runs once per batch rather than once per class.
+* xref:skills/dotnet-test.adoc[] — Step 7, once, to confirm the full suite still passes after every class's
+  tests have been written or extended; also delegated through `gate-runner`.
+
+=== Invoked by
+
+None — meant to be run directly by a person who wants coverage brought up across the whole codebase in one
+pass, independent of the `/code`/`/issue` pipeline (which handles per-task test-writing via
+`dotnet-code-one-task`).
+
+=== Related agents
+
+* xref:agents/overview.adoc[`Explore`] — Step 2, to build the class/test-file inventory across the whole
+  codebase without reading every source file directly.
+* xref:agents/gate-runner.adoc[`gate-runner`] — Steps 3, 6, and 7, to run `dotnet-coverage`/`dotnet-test` and
+  report back only a compact summary instead of a raw coverage/test log.
+* xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per class
+  needing new/extended tests, dispatched concurrently since each only touches its own test file.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/dotnet-generate-all-tests/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

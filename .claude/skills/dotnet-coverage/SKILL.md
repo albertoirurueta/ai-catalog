@@ -1,6 +1,7 @@
 ---
 name: dotnet-coverage
 description: Generate a code coverage report for a .NET project or solution via `dotnet test --collect:"XPlat Code Coverage"` (the Coverlet collector), scoped to the test selector given (same selector syntax as the `dotnet-test` skill), then read the generated `coverage.cobertura.xml` to report the exact line-coverage percentage for the specific class(es) touched — using that same file's per-line `hits` data to show which lines/branches are still uncovered. Invoke as `/dotnet-coverage <selector> [TargetClass1,TargetClass2,...]`, or `/dotnet-coverage` with no argument to run the full suite and report whole-solution coverage. Use whenever the user wants to check, or verify a coverage bar (e.g. "at least 80% line coverage") for a class or set of classes, instead of eyeballing `dotnet test` output.
+model: haiku
 ---
 
 # .NET Coverage

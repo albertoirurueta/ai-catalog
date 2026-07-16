@@ -39,7 +39,7 @@ it's documented, e.g. `/plan` or `/pr-review`.
 The catalog currently includes:
 
 - **🏗️ Repository bootstrap** — `setup-java-library-repository`, `setup-java-library`,
-  `setup-java-github-workflows`, `setup-java-gitignore`, `setup-readme`, `setup-changelog`, `antora-setup`.
+  `setup-java-github-workflows`, `setup-java-gitignore`, `setup-readme`, `setup-changelog`, `setup-antora`.
 - **☕ Java quality** — `java-test`, `java-coverage`, `java-code-quality`, `java-javadoc`.
 - **🔄 Issue-to-PR workflow** — `issue`, `explore`, `plan`, `code`.
 - **🔀 Pull request lifecycle** — `pr-description`, `pr-review`.

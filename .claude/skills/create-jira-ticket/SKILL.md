@@ -1,6 +1,7 @@
 ---
 name: create-jira-ticket
 description: Draft and file a new Jira ticket that is ready to be picked up by the `/issue`, `/plan`, `/code` flow. Runs the `explore` skill first to ground the ticket in the actual codebase, then asks the user for the purpose of the task to be implemented, then asks for additional context (linked URLs, attached files/documents, related tickets) and folds whatever is provided into the ticket description. Determines the target Jira project and issue type (Bug/Story/Task/etc.) from the stated purpose and this Jira instance's actual configuration, drafts a summary and description (Summary, Context, Acceptance criteria, References), and shows the draft for confirmation before filing it via connected Jira MCP tools. Invoke as `/create-jira-ticket` or `/create-jira-ticket <short description>`. Stops early if no Jira MCP tool is connected — there is no CLI fallback the way GitHub has `gh`. Use when the user has an idea, bug report, or request that needs to become a well-formed, actionable Jira ticket before `/issue` or `/plan` can pick it up — not for tickets that already exist (nothing to file) or when the work should be tracked as a GitHub issue instead (use `create-github-issue`).
+model: sonnet
 ---
 
 # Create Jira Ticket

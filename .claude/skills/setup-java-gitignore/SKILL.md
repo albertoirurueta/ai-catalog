@@ -10,6 +10,7 @@ description: Create or update the root `.gitignore` file for a Java project — 
   so its Hermes-specific paths don't leak into other repositories), reused across repositories. Use whenever a Java
   project needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this house template
   without touching it unless the user approves.
+model: haiku
 ---
 
 # Setup Java Gitignore
@@ -114,7 +115,7 @@ Don't guess; only add a section below when the thing it targets is actually pres
   ```
   If no such generated-file step exists, skip this entry entirely.
 
-- **Antora documentation build output**: if `docs/antora-playbook.yml` exists (see the `antora-setup` skill), add:
+- **Antora documentation build output**: if `docs/antora-playbook.yml` exists (see the `setup-antora` skill), add:
   ```gitignore
   /docs/build/
   ```

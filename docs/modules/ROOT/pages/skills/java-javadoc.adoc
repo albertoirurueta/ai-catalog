@@ -95,14 +95,15 @@ not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/java-code-one-task.adoc[] — Step 5, once per task, via its own `general-purpose` sub-agent, to
-  update Javadoc for the class(es) that task touched and confirm the Javadoc build passes.
+* xref:skills/java-code-one-task-group.adoc[] — Step 3, once per task group's bucket, via the
+  xref:agents/gate-runner.adoc[`gate-runner`] agent, to update Javadoc for every class the bucket touched and
+  confirm the Javadoc build passes.
 
 === Related agents
 
-None directly — but `java-code-one-task` (see xref:skills/java-code-one-task.adoc[] and
-xref:agents/overview.adoc[]) always invokes this skill from inside a `general-purpose` sub-agent it spawns, not
-inline.
+* xref:agents/gate-runner.adoc[`gate-runner`] — `java-code-one-task-group` (see
+  xref:skills/java-code-one-task-group.adoc[]) always invokes this skill from inside a `gate-runner` sub-agent
+  it spawns, not inline.
 
 == Source
 

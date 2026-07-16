@@ -1,4 +1,4 @@
-= Antora Setup
+= Setup Antora
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -8,7 +8,7 @@ starter pages, and confirm the site actually builds.
 
 == Purpose
 
-`antora-setup` gets a repository from "no documentation site" (or a partially set-up one) to a building Antora
+`setup-antora` gets a repository from "no documentation site" (or a partially set-up one) to a building Antora
 site with a minimal, useful `ROOT` module — without assuming any particular language or build system. It is
 additive: a repository that already has some or all of this in place (this repository, `ai-catalog`, already
 does) is left alone wherever it's already correct, and only genuine gaps are filled — no page, config entry, or
@@ -24,7 +24,7 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 
 [source]
 ----
-/antora-setup
+/setup-antora
 ----
 
 == Inputs
@@ -35,7 +35,7 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 
 |(none)
 |No
-|`antora-setup` takes no explicit arguments. It derives the Antora component `name`/`title`/`version`, and
+|`setup-antora` takes no explicit arguments. It derives the Antora component `name`/`title`/`version`, and
 whether Node.js/Antora/its extensions/the `ROOT` module/`nav.adoc` already exist, entirely by surveying the
 repository itself (README, project manifest such as `pom.xml`, git tags, GitHub releases, and the current
 `docs/` layout).
@@ -66,7 +66,7 @@ repository itself (README, project manifest such as `pom.xml`, git tags, GitHub 
 [mermaid]
 ....
 flowchart TD
-    A[Start /antora-setup] --> B{"Step 1: node -v / npm -v work?"}
+    A[Start /setup-antora] --> B{"Step 1: node -v / npm -v work?"}
     B -- no --> C["Show install instructions;\nstop and ask user to install Node.js"]
     B -- yes --> D["Step 2: Survey existing docs/,\nantora.yml, playbook, ROOT module,\nnav.adoc, package.json deps"]
     D --> E["Step 3: Install Antora + lunr/mermaid/\nmathjax extensions under docs/"]
@@ -88,11 +88,11 @@ flowchart TD
 
 === Invokes
 
-None — `antora-setup` is a leaf skill; it does not call any other skill in this catalog.
+None — `setup-antora` is a leaf skill; it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/setup-java-library-repository.adoc[] — Step 4 runs `antora-setup` with no `args`, deriving the
+* xref:skills/setup-java-library-repository.adoc[] — Step 4 runs `setup-antora` with no `args`, deriving the
   component name/title/version straight from the `pom.xml` that xref:skills/setup-java-library.adoc[] just wrote,
   and runs it before the CI-workflow step so that step's own survey finds the docs already in place.
 * xref:skills/update-docs.adoc[] — conditionally, only when no Antora module exists anywhere in the repository
@@ -105,9 +105,9 @@ None — `antora-setup` is a leaf skill; it does not call any other skill in thi
   and main public entry points before writing `index.adoc`'s overview, rather than reading the whole source tree
   directly — the same agent the `explore` skill itself uses for this kind of broad structural search.
 
-When xref:skills/update-docs.adoc[] invokes `antora-setup` conditionally, it does so through a sub-agent it
+When xref:skills/update-docs.adoc[] invokes `setup-antora` conditionally, it does so through a sub-agent it
 manages, not one this skill spawns itself.
 
 == Source
 
-https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/antora-setup/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/setup-antora/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

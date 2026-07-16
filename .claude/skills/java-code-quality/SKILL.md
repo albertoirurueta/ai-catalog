@@ -1,6 +1,7 @@
 ---
 name: java-code-quality
 description: Run this project's static-analysis Maven plugins — Checkstyle, PMD, and SpotBugs — via `mvn clean compile checkstyle:checkstyle pmd:pmd spotbugs:spotbugs`, then read the generated `target/checkstyle-result.xml`, `target/pmd.xml`, and `target/spotbugsXml.xml` reports to summarize every issue found (file, line, rule/check, message), grouped by tool. Invoke as `/java-code-quality` to check the whole project, or `/java-code-quality <path-or-class-name>` to scope the summary to a specific file/class — the underlying Maven run always analyzes the whole project (none of these plugins support a per-class selector), only the reported summary is filtered. Use whenever the user wants a lint/static-analysis pass called out separately from `java-test`/`java-coverage`, instead of running the full `mvn site` build.
+model: haiku
 ---
 
 # Java Code Quality

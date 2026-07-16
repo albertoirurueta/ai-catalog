@@ -1,6 +1,7 @@
 ---
 name: setup-readme
 description: Create or update the root `README.md` for a repository — a brief description, badges (CI status, SonarCloud/SonarQube, etc.), a project status table (language, versions, license, CI, quality tools), documentation links (Antora site, Maven site report, SonarCloud dashboard, CHANGELOG), installation instructions (Maven/Gradle/npm/etc. dependency snippets, matched to the project's actual build tool), and a short "how it works" section with a runnable example. Invoke as `/setup-readme`. Explores the repository's actual state (`pom.xml`/`build.gradle`/`package.json`, git remote, GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled with placeholders or invented content. If `README.md` already exists, warns the user and shows the proposed new content as a diff before writing anything, so they can accept or skip the changes. Use whenever a repository needs a README bootstrapped or refreshed from what's actually there, instead of hand-writing it.
+model: sonnet
 ---
 
 # Setup Readme

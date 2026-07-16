@@ -79,15 +79,17 @@ SpotBugs reports, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/code.adoc[] — Steps 3 and 7, once per run (not per task), via its own `general-purpose` sub-agent,
-  to capture and later re-check a project-wide quality baseline for the `java` language/framework key.
-* xref:skills/java-code-one-task.adoc[] — Steps 1 and 9, once per task, via its own `general-purpose` sub-agent,
-  to capture a per-class pre-change baseline and later diff the post-change result against it.
+* xref:skills/code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
+  xref:agents/gate-runner.adoc[`gate-runner`] agent, to capture and later re-check a project-wide quality
+  baseline for the `java` language/framework key.
+* xref:skills/java-code-one-task-group.adoc[] — Steps 1 and 3, once per task group's bucket, via the
+  xref:agents/gate-runner.adoc[`gate-runner`] agent, to capture a pre-change baseline covering every class the
+  bucket touches and later diff the post-change result against it.
 
 === Related agents
 
-None directly — but both callers above always invoke this skill from inside a `general-purpose` sub-agent they
-spawn (see xref:agents/overview.adoc[]), not inline.
+* xref:agents/gate-runner.adoc[`gate-runner`] — both callers above always invoke this skill from inside a
+  `gate-runner` sub-agent they spawn, not inline.
 
 == Source
 

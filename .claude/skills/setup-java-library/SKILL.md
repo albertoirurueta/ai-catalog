@@ -1,6 +1,7 @@
 ---
 name: setup-java-library
 description: Generate a `pom.xml` at the repository root for a new Java library — asks for groupId, artifactId, version (default `1.0.0-SNAPSHOT`), the library's base Java package, license, and developer name/email/organizationUrl, then infers repository name/URL/SCM/inception year from the current git repository — and scaffolds the standard Maven source layout (`src/main/java/<package>`, `src/main/resources/<package>`, `src/test/java/<package>`) for that package. Invoke as `/setup-java-library`. Ships with an explicit example `pom.xml` (derived from a real repository's pom, genericized) embedded in this skill file: test-only dependencies limited to junit-jupiter, junit-platform-launcher, mockito-core, and mockito-junit-jupiter, the same `sign`/`build-extras` profiles with the same plugins and versions, and a `groovy-maven-plugin` build-info step whose output path is rewired to the given library package. If `pom.xml` already exists, asks the user whether to stop or continue to regenerate it from the example. Accepts pre-resolved inputs via `args` (`key: value` lines) so an orchestrating skill like `setup-java-library-repository` can supply them without re-prompting. Use whenever a new Java/Maven library repository needs its `pom.xml` and base folder structure bootstrapped from this house template, instead of hand-writing it.
+model: haiku
 ---
 
 # Setup Java Library

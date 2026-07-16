@@ -1,0 +1,115 @@
+= .NET Code One Task Group
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of .NET/C# tasks from a plan's task group end to end: capture a single pre-change quality
+baseline, run `dotnet-code-one-task` once per task (in parallel when the group allows it), then validate the
+entire bucket once — license headers, XML doc comments, scoped tests, coverage, a full-suite run, and a
+code-quality regression check.
+
+== Purpose
+
+`dotnet-code-one-task-group` is the .NET/C# counterpart to `java-code-one-task-group` — same shape, built on
+`dotnet-code-quality`, `dotnet-test`, `dotnet-coverage`, and `dotnet-docfx` instead of the Maven/Java tool
+chain. It captures one pre-change quality baseline covering every type the bucket's tasks are expected to touch,
+then implements each task via `dotnet-code-one-task` (concurrently, in a single batch of `Agent` calls, when the
+plan marks the group `Parallelizable: yes`; one at a time otherwise), checking off each task's box in
+`implementation_plan.md` and notifying the user as its implementation lands — before group-wide validation runs.
+Once every task in the bucket has landed, it validates the whole bucket in one pass instead of once per task:
+license headers, XML doc comments, the affected test classes, coverage, the full suite, and a
+quality-regression check against its one baseline. A failure traced to a specific task sends that task back for
+a fix and a re-run of the affected checks, rather than re-validating the whole bucket.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/dotnet-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every .NET-tagged task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable`
+verdict and any relevant "Current code state" context.
+|None — this skill is always invoked with a specific bucket's text, by `code-one-task-group`.
+|===
+
+== Outputs
+
+* Source and test files created/modified per task, via `dotnet-code-one-task`.
+* License headers and XML doc comments kept current across every file/type the bucket touched, checked once for
+  the whole bucket rather than once per task.
+* Tests achieving at least 80% line coverage for the bucket's changed/new classes, verified against the real
+  coverage report.
+* `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note — first an
+  "implemented, group validation pending" note as each task lands, then replaced with the final coverage/quality
+  outcome once bucket-wide validation passes.
+* User-facing notifications at both phases: per task as its implementation lands, and once when group
+  validation completes.
+* A summary handed back to the caller (`code-one-task-group`): per task, files touched, tests added/updated,
+  coverage achieved, code-quality outcome, and any task that stopped on a blocker.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /dotnet-code-one-task-group] --> B["Step 1: capture one pre-change\nquality baseline for the whole bucket\n(dotnet-code-quality, via gate-runner)"]
+    B --> C{Bucket Parallelizable?}
+    C -- yes --> D["Step 2: invoke dotnet-code-one-task\nfor every task concurrently"]
+    C -- no --> E["Step 2: invoke dotnet-code-one-task\nfor each task, one at a time"]
+    D --> F["Check off each task's box +\nnote 'validation pending'; notify user"]
+    E --> F
+    F --> G["Step 3: validate the whole bucket once —\nlicense headers, XML doc comments,\nscoped tests, coverage, full suite,\nquality vs. baseline"]
+    G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
+    H --> G
+    G -- clean --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
+    I --> J["Step 5: report the bucket's\noutcome to the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/dotnet-code-one-task.adoc[] — Step 2, once per task in the bucket (concurrently or sequentially
+  per the group's `Parallelizable` verdict), via the
+  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent — that skill implements exactly what
+  the task specifies and writes/updates its tests, nothing more.
+
+Each of the following is invoked via the xref:agents/gate-runner.adoc[`gate-runner`] agent rather than directly,
+so verbose report output stays out of this skill's own context:
+
+* xref:skills/dotnet-code-quality.adoc[] — Step 1 (pre-change baseline for the bucket) and Step 3 (final
+  regression check against that baseline).
+* xref:skills/check-license.adoc[] — Step 3, license headers for every file the bucket touched.
+* xref:skills/dotnet-docfx.adoc[] — Step 3, XML doc comments for every type the bucket touched.
+* xref:skills/dotnet-test.adoc[] — Step 3, scoped tests for every type the bucket affected, plus a full-suite
+  run.
+* xref:skills/dotnet-coverage.adoc[] — Step 3, coverage for every changed/new class in the bucket.
+
+=== Invoked by
+
+* xref:skills/code-one-task-group.adoc[] — Step 2, once for the whole bucket of tasks tagged `dotnet`, via a
+  direct `Skill` call.
+
+=== Related agents
+
+* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — spawned once per task in the bucket
+  (Step 2), potentially many at once when the group is parallelizable, so each task's own implementation
+  transcript doesn't accumulate in this skill's context.
+* xref:agents/gate-runner.adoc[`gate-runner`] — spawned for the baseline capture (Step 1) and every validation
+  check (Step 3), keeping full reports out of this skill's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/dotnet-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

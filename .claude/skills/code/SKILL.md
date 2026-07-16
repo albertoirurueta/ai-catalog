@@ -1,17 +1,20 @@
 ---
 name: code
-description: Execute the tasks in implementation_plan.md at the repository root, one at a time — implement each task per the plan, add or update tests achieving at least 80% coverage for the changed code, run the full test suite, verify the task introduced no new static-analysis issues, and check off the task's checkbox directly in implementation_plan.md before moving to the next. Dispatches each task to the language/framework-specific `<key>-code-one-task` skill declared by the plan (e.g. `java-code-one-task`, `dotnet-code-one-task`) and checks code quality via the matching `<key>-code-quality` skill (e.g. `java-code-quality`'s Checkstyle/PMD/SpotBugs, `dotnet-code-quality`'s StyleCop/CA rules) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or GitHub issues if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/code` once implementation_plan.md exists (e.g. produced by the `plan` skill).
+description: Execute the tasks in implementation_plan.md at the repository root, one task group at a time — implement every task in a group (in parallel where the plan marks the group parallelizable), validate the whole group once (tests, coverage, code quality), and check off each task's checkbox directly in implementation_plan.md before moving to the next group. Dispatches each group to the `code-one-task-group` skill, which in turn resolves the language/framework-specific `<key>-code-one-task-group` skill declared by the plan (e.g. `java-code-one-task-group`, `dotnet-code-one-task-group`) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or GitHub issues if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/code` once implementation_plan.md exists (e.g. produced by the `plan` skill).
+model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(detect-secrets *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(date *) Bash(gh issue create *) TaskCreate TaskUpdate TaskList TaskGet Skill Agent
 ---
 
 # Implementation
 
-Execute `implementation_plan.md` end to end: implement each listed task against the real codebase, back it with
-tests that meet this repository's coverage bar, check it off in the plan file, and move on — with as little
-back-and-forth with the user as possible. This skill writes code; it is the execution counterpart to the `plan`
-skill. On successful completion it brings the project's documentation in line with everything the plan changed
-(Step 8) and archives the plan file (Step 9) so the root only ever holds the plan for work that is still
-outstanding.
+Execute `implementation_plan.md` end to end: implement every task group listed against the real codebase, back
+each group with a single consolidated validation pass, check tasks off in the plan file as they land, and move
+on — with as little back-and-forth with the user as possible. This skill writes code; it is the execution
+counterpart to the `plan` skill. It uses a medium model on purpose: the plan already carries the hard reasoning
+(task breakdown, dependency grouping, language/framework resolution) — this skill's job is to drive execution of
+that plan, not to re-derive it. On successful completion it brings the project's documentation in line with
+everything the plan changed (Step 8) and archives the plan file (Step 9) so the root only ever holds the plan for
+work that is still outstanding.
 
 ## Step 1 — Load the plan, and warn if one already exists
 
@@ -33,30 +36,36 @@ Read `implementation_plan.md` at the repository root.
   to execute/resume. If the plan's content clearly describes unrelated or stale work (not the task currently
   being asked about), stop and confirm with the user instead of assuming.
 - Otherwise, read the plan in full, including the "Task summary" and "Current code state" sections for context,
-  and the numbered "Implementation steps" for the actual work list.
+  and the numbered "Implementation steps" (organized into task groups) for the actual work list.
 
-## Step 2 — Verify checkbox placeholders
+## Step 2 — Verify checkbox placeholders and task groups
 
-The `plan` skill gives every top-level task and every sub-task its own empty markdown checkbox (`[ ]`). Track
-completion by checking those boxes — do not introduce a separate status tag or notation.
+The `plan` skill gives every top-level task and every sub-task its own empty markdown checkbox (`[ ]`), organized
+into task groups each marked `Parallelizable: yes`/`Parallelizable: no`. Track completion by checking those boxes
+— do not introduce a separate status tag or notation.
 
 - Confirm each task/sub-task line has a `[ ]`/`[x]` checkbox. If the plan predates this convention and is
   missing checkboxes on some lines, add `[ ]` to those lines now (don't guess completion state — treat anything
   without a checked box as not done) and save the file before continuing.
+- Confirm the plan organizes tasks into groups. If the plan predates the grouping convention and is a flat task
+  list instead, treat every remaining (unchecked) top-level task as belonging to its own single-task group with
+  `Parallelizable: yes` (a group of one is trivially parallelizable), preserving plan order — this keeps older
+  plans executable without requiring the user to regenerate them.
 - Treat any task or sub-task whose checkbox is already `[x]` (from a prior run of this skill) as already done —
-  this makes the skill resumable across interrupted runs.
+  this makes the skill resumable across interrupted runs. A group where every task is already `[x]` is itself
+  done; skip it entirely in Step 4.
 
 ## Step 3 — Track progress, and capture project-wide quality and security baselines
 
-Mirror the plan's top-level tasks into the session's task list (`TaskCreate`), one per pending task, so the user
-can see live progress. Mark each `TaskUpdate`d as completed as you finish it, in step with the plan-file update
-in Step 5. This is in addition to, not a replacement for, updating `implementation_plan.md` — the plan file is
-the durable record; the task list is the live view.
+Mirror the plan's task groups into the session's task list (`TaskCreate`), one per pending group, so the user
+can see live progress at the group level. Mark each `TaskUpdate`d as completed as you finish it, in step with the
+plan-file confirmation in Step 5. This is in addition to, not a replacement for, updating `implementation_plan.md`
+— the plan file is the durable record; the task list is the live view.
 
 Before implementing anything, determine which language/framework(s) this plan is in play for: read the "Task
 summary" section's **Language/framework** line if the plan declared one key for the whole plan, or the per-task
 tags in "Implementation steps" if it declared them per task instead (this is exactly what the `plan` skill's Step
-4/5 produce). Collect the distinct set of keys found across the whole plan — usually just one (e.g. `java` or
+5 produces). Collect the distinct set of keys found across the whole plan — usually just one (e.g. `java` or
 `dotnet`), occasionally more for a plan spanning several languages.
 
 For each distinct key, capture a project-wide quality baseline by delegating to the `gate-runner` agent rather
@@ -87,85 +96,72 @@ scanning is unavailable for this run, skip this and the corresponding Step 7 sec
 plainly in the Step 9 summary rather than silently omitting it. Skip this baseline capture outright if the
 `check-security` skill is unavailable in this repository.
 
-## Step 4 — Implement tasks one at a time, in plan order
+## Step 4 — Implement task groups one at a time, in plan order
 
-Process top-level tasks strictly in the order they appear (the `plan` skill orders them so each is buildable on
-top of the previous one). Skip any task whose checkbox is already checked (`[x]`). For each unchecked task,
-resolve which `<key>-code-one-task` skill it dispatches to before invoking anything:
-
-1. If the task's own line carries an explicit language/framework tag (e.g. `_(dotnet)_`, per the `plan` skill's
-   per-task tagging), use that key.
-2. Otherwise, if the plan declared one **Language/framework** key for the whole plan in its "Task summary"
-   section, use that key — it applies to every untagged task.
-3. Otherwise (no per-task tag and no plan-wide key), the task's language/framework is unknown or unsupported.
-   There is no `<key>-code-one-task` skill to delegate to — implement the task directly yourself instead,
-   following the same obligations a one-task skill would (implement exactly what's specified, write/update
-   tests, add license headers if this repository has a convention for them, keep documentation current, run the
-   relevant tests and check coverage, and check for new code-quality issues), using this repository's own
-   conventions from `CLAUDE.md`. Then continue to Step 5 for this task as usual.
-
-Once a key is resolved (steps 1 or 2 above) and a matching `<key>-code-one-task` skill exists in this repository
-(e.g. `java-code-one-task` for `java`, `dotnet-code-one-task` for `dotnet`), invoke it via the
-`isolated-skill-executor` agent rather than calling `Skill(...)` directly:
+Process task groups strictly in the order they appear in the plan (the `plan` skill orders them so each is
+buildable on top of the previous one). Skip any group that is already fully done per Step 2. For each remaining
+group, invoke the `code-one-task-group` skill via the `isolated-skill-executor` agent rather than calling
+`Skill(...)` directly:
 
 ```
 Agent({
-  description: "Implement task via <key>-code-one-task",
+  description: "Implement task group <N>",
   subagent_type: "isolated-skill-executor",
-  prompt: "Invoke Skill({skill: \"<key>-code-one-task\", args: \"<the task's full text from the plan, including
-    its sub-tasks and any relevant \\\"Current code state\\\" context>\"}). Report back: the files touched, tests
-    added/updated, coverage achieved, the code-quality outcome (including any issue left in place as unavoidable
-    and why), whether license-header generation was skipped, and whether the skill stopped on a blocker instead
-    of finishing.",
+  prompt: "Invoke Skill({skill: \"code-one-task-group\", args: \"<the full text of every task and sub-task in
+    this group from the plan, each with its own language/framework tag if the plan sets one, the group's
+    Parallelizable verdict, and any relevant \\\"Current code state\\\" context>\"}). Report back, per task in
+    the group: the files touched, tests added/updated, coverage achieved, the code-quality outcome (including any
+    issue left in place as unavoidable and why), whether license-header generation was skipped, and whether the
+    task stopped on a blocker instead of finishing.",
   run_in_background: false
 })
 ```
 
-The one-task skill always re-checks the current code state from disk itself (never trusting anything passed in)
-and hands back a fully self-contained summary — nothing this skill needs is lost by keeping that skill's own file
-reads/edits/reasoning out of `code`'s own context this way. This matters most on a plan with many tasks: without
-this, every task's full implementation transcript would accumulate in `code`'s context across the whole run,
-growing linearly with task count, instead of `code`'s context staying flat regardless of plan size. Wait for the
-agent to finish (`run_in_background: false` — Step 5 needs its outcome before checking the task's box and moving
-on) before proceeding. That skill implements the task, writes/updates its tests, adds license headers, updates
-documentation (Javadoc, XML doc comments, or whatever this language's equivalent is), runs the scoped tests,
-checks coverage, runs the full suite, and checks for new code-quality issues against a pre-change baseline it
-captures itself. If the resolved key has no matching `<key>-code-one-task` skill installed in this repository,
-fall back to implementing the task directly, same as case 3 above.
+`code-one-task-group` determines each task's language/framework, dispatches it to the matching
+`<key>-code-one-task-group` skill when one is installed (or implements it directly as a best effort otherwise),
+runs it in parallel across the group's tasks when the plan marked the group `Parallelizable: yes`, checks off
+each task/sub-task's box in `implementation_plan.md` as it completes, and notifies the user of that per-task/
+sub-task progress itself — none of that bookkeeping needs to happen again here. Running it via
+`isolated-skill-executor` keeps its own file reads/edits/reasoning out of `code`'s own context, the same way the
+one-task skills used to be invoked directly; this matters most on a plan with many groups, since without this
+every group's full implementation transcript would accumulate in `code`'s context across the whole run instead of
+staying flat regardless of plan size. Wait for the agent to finish (`run_in_background: false` — Step 5 needs its
+outcome before confirming the group's completion and moving on) before proceeding.
 
-If the invoked `<key>-code-one-task` skill reports that it stopped short on a blocker (a failing test that
-suggests the plan's approach itself is wrong, or an ambiguity only the user can resolve — see that skill's own
-interrupt step), treat it the same as if it happened here: don't check the task's box, surface the blocker to the
-user via `AskUserQuestion`, and stop rather than moving to the next task. If it reports the user chose to skip
-license-header generation, respect that choice for the rest of this run — don't ask again on later tasks.
+If the invoked `code-one-task-group` skill reports that one of the group's tasks stopped short on a blocker (a
+failing test that suggests the plan's approach itself is wrong, or an ambiguity only the user can resolve),
+treat it the same as if it happened here: don't treat the group as complete, surface the blocker to the user via
+`AskUserQuestion`, and stop rather than moving to the next group. If it reports the user chose to skip
+license-header generation for some task, respect that choice for the rest of this run — don't ask again on later
+groups.
 
-Once the sub-skill (or the direct implementation, for an unresolved key) reports a clean outcome, use its summary
-to proceed to Step 5 for this task, then continue to the next unchecked task.
+Once `code-one-task-group` reports every task in the group finished cleanly, proceed to Step 5 for this group,
+then continue to the next unchecked group.
 
-## Step 5 — Check the task's boxes in `implementation_plan.md`
+## Step 5 — Confirm the group's checkboxes and notify the user
 
-Immediately after a task clears Step 4 (don't batch this until the end — the file must reflect true progress at
-all times in case the run is interrupted):
+`code-one-task-group` already checks off each task/sub-task's own box in `implementation_plan.md` (and any
+progress note) as it completes them — this skill does not re-write those lines. Immediately after a group clears
+Step 4:
 
-- Check that task's own checkbox (`[ ]` → `[x]`), and the checkbox of every sub-task under it that was part of
-  the completed work.
-- Add a short note under the task (one or two lines) naming the files touched, the tests added/updated, the
-  coverage achieved, and the code-quality result, e.g. `- [x] **Add `Widget`** — tests in WidgetTest (94% line
-  coverage, no new Checkstyle/PMD/SpotBugs issues).` If `java-code-one-task`'s summary (its own Step 11) reported
-  a new issue left in place as unavoidable, name it and the reason here instead.
-- Save the file, then update the mirrored entry in the session task list (Step 3) to completed.
+- Re-read `implementation_plan.md` and confirm every task/sub-task in the group is now checked (`[x]`). If any
+  line in the group is still unchecked despite a clean report, treat that as inconsistent — re-invoke
+  `code-one-task-group` scoped to just the unfinished task(s) before moving on, rather than silently proceeding.
+- Notify the user that the group completed: name the group, the tasks it covered, the files touched overall, and
+  the aggregate coverage/code-quality outcome across the group's tasks — in addition to the plan file already
+  reflecting it. This progress notification happens after every group, not just at the end of the whole run.
+- Update the mirrored entry in the session task list (Step 3) to completed.
 
 ## Step 6 — When to interrupt the user
 
 Keep interruptions rare — by design, this skill should run start-to-finish unattended on a well-formed plan.
 Stop and use `AskUserQuestion` (or plain text if no real choice is being offered) only when:
 
-- The per-task `<key>-code-one-task` skill invoked in Step 4 (`java-code-one-task`, `dotnet-code-one-task`, or
-  whichever one matched the task's language/framework) reports it stopped on a blocker for the current task — a
-  test that keeps failing after a genuine fix attempt where the failure suggests the plan's described approach is
-  actually wrong or infeasible against the real code, or an ambiguity that changes correctness or scope and can't
-  be safely inferred (conflicting instructions, a choice only the user can make, a missing decision). Mirror the
-  bar used by the `plan` skill's Step 3: don't ask about things with an obvious best-practice answer.
+- The `code-one-task-group` skill invoked in Step 4 reports that one of the group's tasks stopped on a blocker —
+  a test that keeps failing after a genuine fix attempt where the failure suggests the plan's described approach
+  is actually wrong or infeasible against the real code, or an ambiguity that changes correctness or scope and
+  can't be safely inferred (conflicting instructions, a choice only the user can make, a missing decision).
+  Mirror the bar used by the `plan` skill's Step 4: don't ask about things with an obvious best-practice answer.
 - A tool call needs a permission outside this skill's `allowed-tools` list and the underlying action is risky or
   irreversible (e.g. anything beyond the scoped `mvn`/read-only `git` commands this skill is pre-approved for) —
   in this case the harness will already prompt; just make the case for why it's needed if asked.
@@ -206,8 +202,8 @@ key found in the plan:
    remains (counts and a short summary per tool, grouped by language/framework key if more than one is involved)
    and ask whether they want to:
    - add follow-up task(s) to `implementation_plan.md` to fix the remaining issues before this run archives it
-     (if chosen, add the task(s) with empty checkboxes and return to Step 4 to implement them — do not archive
-     yet), or
+     (if chosen, add the task(s) — as a new group — with empty checkboxes and return to Step 4 to implement them —
+     do not archive yet), or
    - file the remaining issues as new GitHub issues instead (`gh issue create`, one issue per distinct problem
      or logical group, with enough detail — file, line, tool, message — to act on later), or
    - leave it as-is and proceed to archive without further action.
@@ -251,9 +247,9 @@ Once Step 7 passes clean (healthy build, and the quality and security gates both
 Antora documentation in line with everything this run actually changed, by delegating to the `update-docs` skill:
 `Skill({skill: "update-docs"})`. Invoked with no argument, `update-docs` covers uncommitted changes plus any
 commits already made on the current branch that aren't on the base branch — which is exactly this run's surface,
-since Step 9 hasn't committed or archived anything yet. That means it picks up every task processed across all of
-Step 4's iterations, not just the last one, so the docs reflect the plan's full scope rather than only its final
-task.
+since Step 9 hasn't committed or archived anything yet. That means it picks up every group processed across all
+of Step 4's iterations, not just the last one, so the docs reflect the plan's full scope rather than only its
+final group.
 
 - If this repository has no Antora documentation site, `update-docs` should report that plainly rather than
   fail — treat that as nothing to do here and continue to Step 9.
@@ -277,9 +273,9 @@ resolved, and Step 8's documentation update done:
    to embed that identifier: `mv implementation_plan.md .archive/implementation_plan_<issue_id>.md` (e.g.
    `.archive/implementation_plan_42.md` or `.archive/implementation_plan_20260707153000.md`). The repository
    root must no longer have an `implementation_plan.md` once this step completes successfully.
-3. Summarize for the user: which tasks were completed, the files touched overall, the coverage achieved per
-   task/class, the final code-quality outcome (excellent / follow-up filed / issues left as-is per Step 7), the
-   final security outcome (clean / not run, since a resolved-but-triggered gate is otherwise indistinguishable
+3. Summarize for the user: which groups/tasks were completed, the files touched overall, the coverage achieved
+   per task/class, the final code-quality outcome (excellent / follow-up filed / issues left as-is per Step 7),
+   the final security outcome (clean / not run, since a resolved-but-triggered gate is otherwise indistinguishable
    from clean once Step 7 passes), what Step 8 updated in the documentation (or that there was no documentation
    site to update), and where the plan was archived to.
 4. Explicitly ask the user to review the code and documentation changes (e.g. `git diff` / `git status`) before

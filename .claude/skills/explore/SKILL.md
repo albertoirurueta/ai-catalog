@@ -1,6 +1,7 @@
 ---
 name: explore
-description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — both in the existing codebase and in the requested change — plus whether Antora documentation exists and where, and which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS). Invoke as `/explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" findings (languages/frameworks, Antora docs location, repository host) are meant to be reused by later skills in the same conversation (e.g. `plan`, `code`, `update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, and the right git-platform tooling.
+description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — both in the existing codebase and in the requested change — plus whether Antora documentation exists and where, and which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS). Invoke as `/explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools, and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" findings (languages/frameworks, Antora docs location, repository host) are meant to be reused by later skills in the same conversation (e.g. `plan`, `code`, `update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, and the right git-platform tooling.
+model: opus
 ---
 
 # Explore
@@ -191,7 +192,27 @@ detected:
 If there is no ticket, this sub-step is just the codebase stack detected above — there is no requested change to
 cross-reference yet.
 
-## Step 6 — Report findings
+## Step 6 — Check for a documentation MCP
+
+Before reporting, check whether any documentation/knowledge-base MCP tools are connected in this session (e.g.
+Confluence, Notion, or similar — search with `ToolSearch` using queries like "confluence", "notion",
+"documentation", "wiki"). These are optional, environment-specific connectors, not something every repository or
+user has configured.
+
+- **If one or more are found**, use them to search for pages relevant to:
+  - the ticket's title/keywords and any named components (if a ticket was fetched in Step 3), or
+  - the key components/domain areas identified in Step 4 (if there is no ticket).
+
+  Keep the search targeted — a handful of keyword queries against the ticket/codebase context, not a broad
+  crawl of the whole space. Fetch and skim any clearly relevant pages (specs, design docs, architecture decision
+  records, runbooks) that could sharpen a later implementation plan. Note what was found: page titles/links and
+  a one-line summary of the relevant content, so it can be folded into Step 7's report.
+- **If nothing relevant turns up** even though a documentation MCP is connected, say so briefly rather than
+  omitting the mention.
+- **If no documentation MCP is connected**, note that briefly and move on — this step is a best-effort
+  enrichment and must never block exploration when no such tool exists.
+
+## Step 7 — Report findings
 
 Summarize for the user in plain text (no file output unless asked):
 
@@ -210,6 +231,9 @@ Summarize for the user in plain text (no file output unless asked):
   introduces something new (per Step 5), say so explicitly here rather than folding it silently into the
   existing list. Always state the Antora docs and Repository host lines, even when the answer is "none found"/"no
   remote", so later skills like `update-docs` or ones creating branches/PRs don't need to re-check.
+- If Step 6 found a connected documentation MCP, include a **Related documentation** section listing each
+  relevant page found (title, link, one-line summary) — or a one-line note that none was relevant/connected.
+  This is what a later `plan` step should draw on for additional context beyond the codebase and ticket.
 - If a ticket was explored: restate the task in your own words, list the specific files/classes/methods
   relevant to it, explain how the current code behaves in the area the ticket touches, and flag anything
   ambiguous or missing from the ticket that would block implementation.

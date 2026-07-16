@@ -2,9 +2,8 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Execute `implementation_plan.md` end to end: dispatch each listed task to the language/framework-specific
-`<key>-code-one-task` skill the plan declares, capture and re-check project-wide quality and security baselines,
-check off the plan's checkboxes as tasks complete, update the project's documentation, and archive the plan. This
+Execute `implementation_plan.md` end to end, one task group at a time — implement every task in a group,
+validate the group once, check off its checkboxes in `implementation_plan.md`, and move to the next. This
 skill orchestrates the actual implementation work; it is the execution counterpart to the `plan` skill.
 
 == Purpose
@@ -13,14 +12,14 @@ skill orchestrates the actual implementation work; it is the execution counterpa
 which runs `plan` internally), it determines which language/framework key(s) are in play, captures a
 project-wide code-quality baseline (via `java-code-quality`, `dotnet-code-quality`, or whichever
 `<key>-code-quality` skill matches) and a project-wide security baseline (via `check-security`), then works
-through every task in plan order — dispatching each to its matching `<key>-code-one-task` skill (e.g.
-`java-code-one-task`, `dotnet-code-one-task`), which itself implements, tests, license-headers, and documents the
-task and hands back a short summary — checking off the plan's checkboxes as it goes so the run is resumable if
-interrupted. A task with no matching `<key>-code-one-task` skill installed (or no determinable language/
-framework) is implemented directly by `code` itself instead. On successful completion it runs a full local
-verification build, re-checks the quality and security baselines (the security gate is a hard stop on any
-increase, unlike the quality gate), updates the project's Antora documentation via `update-docs`, archives the
-plan to `.archive/`, and asks the user for a final review; it never commits, pushes, or opens a PR itself.
+through every task **group** in plan order — dispatching each group to `code-one-task-group`, which resolves
+each task's language and delegates to the matching `<key>-code-one-task-group` skill (implementing, testing,
+and validating the whole group once), checking off the plan's checkboxes and notifying the user as it goes so
+the run is resumable if interrupted and progress is visible group by group. On successful completion it runs a
+full local verification build, re-checks the quality and security baselines (the security gate is a hard stop
+on any increase, unlike the quality gate), updates the project's Antora documentation via `update-docs`,
+archives the plan to `.archive/`, and asks the user for a final review; it never commits, pushes, or opens a PR
+itself.
 
 == Purpose group
 
@@ -42,23 +41,26 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |(none)
 |—
 |`code` takes no arguments. It always reads `implementation_plan.md` from the repository root — the file
-produced by the `plan` skill (directly, or via `issue`) — including its plan-wide or per-task
-language/framework key(s).
+produced by the `plan` skill (directly, or via `issue`) — including its task groups, each with a
+`Parallelizable` verdict and its tasks' language/framework key(s).
 |Not applicable — if `implementation_plan.md` is missing or empty, the skill tells the user there is
 nothing to execute and suggests running `/plan` first, then stops.
 |===
 
 == Outputs
 
-* Source and test files created/modified per each task in `implementation_plan.md`, via the dispatched
-  `<key>-code-one-task` skill (or implemented directly when no key/matching skill applies), following this
-  repository's own conventions.
-* Tests added/updated per task achieving at least 80% line coverage for the changed/new classes, verified against
-  the real coverage report rather than estimated — the responsibility of the dispatched one-task skill.
-* License headers and language-appropriate documentation (Javadoc, XML doc comments, etc.) kept current per task,
-  also delegated to the one-task skill.
+* Source and test files created/modified per task, via `code-one-task-group` and the language-specific
+  `<key>-code-one-task-group` skill it dispatches to (or a best-effort direct implementation when no key/
+  matching skill applies).
+* Tests achieving at least 80% line coverage for the changed/new classes per group, verified against the real
+  coverage report — the responsibility of the dispatched group skill.
+* License headers and language-appropriate documentation (Javadoc, XML doc comments, etc.) kept current per
+  group, validated once for the whole group rather than once per task.
 * `implementation_plan.md` with each completed task's (and sub-task's) checkbox checked (`[ ]` → `[x]`) and a
-  short note naming the files touched, tests added, coverage achieved, and code-quality result.
+  progress note — updated live by `code-one-task-group` as each task lands, confirmed by `code` once the whole
+  group clears.
+* A user-facing progress notification after every completed group, in addition to the plan file already
+  reflecting it.
 * A project-wide quality baseline (Step 3) compared against the final state (Step 7) per language/framework key
   involved — if it regressed, the user is asked to add follow-up tasks, file GitHub issues, or accept it as-is
   before archiving.
@@ -69,8 +71,8 @@ nothing to execute and suggests running `/plan` first, then stops.
 * The project's Antora documentation brought up to date via `update-docs` (Step 8), covering everything this run
   changed — or a plain note that there's no Antora module to update.
 * On success: `implementation_plan.md` moved to `.archive/implementation_plan_<issue-id-or-timestamp>.md`, a
-  summary of tasks completed/files touched/coverage/quality/security outcome/documentation updates, and a request
-  for the user to review the code changes — no commit, push, or PR is ever made by this skill.
+  summary of groups/tasks completed/files touched/coverage/quality/security outcome/documentation updates, and a
+  request for the user to review the code changes — no commit, push, or PR is ever made by this skill.
 * On an unresolved blocker: the plan stays unchecked and at the repository root (not archived) so a later run can
   resume it.
 
@@ -82,23 +84,19 @@ flowchart TD
     A[Start /code] --> B{implementation_plan.md\npresent?}
     B -- missing/empty --> Z["Stop: suggest running /plan first"]
     B -- present --> C["Warn if plan already exists\n(fresh / resumed / all-checked)"]
-    C --> D["Verify every task/sub-task\nhas a [ ]/[x] checkbox"]
-    D --> E["Mirror pending tasks into\nsession task list (TaskCreate)"]
+    C --> D["Verify every task/sub-task has a\n[ ]/[x] checkbox and groups exist\n(flat plans treated as single-task groups)"]
+    D --> E["Mirror pending groups into\nsession task list (TaskCreate)"]
     E --> F["Determine language/framework key(s);\ncapture per-key quality baseline via\n&lt;key&gt;-code-quality + security\nbaseline via check-security (sub-agents)"]
-    F --> G{Next unchecked\ntop-level task?}
+    F --> G{Next unchecked\ntask group?}
     G -- none left --> P["Step 7: full build verification\n+ quality/security baseline comparison"]
-    G -- yes --> H["Resolve task's key: per-task tag,\nelse plan-wide key, else unresolved"]
-    H --> I{"Matching &lt;key&gt;-code-one-task\nskill installed?"}
-    I -- yes --> J["Invoke &lt;key&gt;-code-one-task\nvia isolated-skill-executor agent"]
-    I -- no --> K["Implement task directly,\nsame obligations as a one-task skill"]
-    J -- blocker reported --> L["Surface blocker to user and stop"]
-    J -- clean report --> M["Check off task/sub-task boxes\n+ notes in implementation_plan.md"]
-    K --> M
+    G -- yes --> H["Invoke code-one-task-group for\nthe whole group via isolated-skill-executor"]
+    H -- blocker reported --> L["Surface blocker to user and stop"]
+    H -- clean report --> M["Confirm group's boxes checked;\nnotify user of group completion"]
     M --> G
     P -- build fails --> P
     P -- build passes --> Q{"Quality regressed\nvs. baseline (any key)?"}
     Q -- yes --> R["Ask user: follow-up tasks,\nfile GitHub issues, or accept as-is"]
-    R -- follow-up tasks added --> G
+    R -- follow-up group added --> G
     Q -- no / resolved --> S{Security count\nincreased?}
     S -- yes --> T["Hard stop: ask user to\nremove/rotate or audit;\nre-check until resolved"]
     T --> S
@@ -110,13 +108,13 @@ flowchart TD
 
 === Invokes
 
-* xref:skills/java-code-one-task.adoc[] — Step 4, once per top-level task tagged (or defaulted to) the `java`
-  key, passing that task's full text and any relevant code-state context — invoked via the
-  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent rather than a direct `Skill` call, so
-  each task's own file re-reads/edits/reasoning stay out of `code`'s own context. That skill re-checks the code
-  state itself, implements, tests, and documents that one task and hands back a short, self-contained summary.
-* xref:skills/dotnet-code-one-task.adoc[] — the same role as `java-code-one-task`, for tasks tagged `dotnet`.
-* xref:skills/update-docs.adoc[] — Step 8, once per run (not per task), invoked directly via `Skill` once the
+* xref:skills/code-one-task-group.adoc[] — Step 4, once per plan group, in order, passing that group's full
+  text and any relevant code-state context — invoked via the
+  xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] agent rather than a direct `Skill` call,
+  so each group's own file re-reads/edits/reasoning stay out of `code`'s own context. That skill resolves each
+  task's language, dispatches it to the matching `<key>-code-one-task-group` skill, checks off boxes, and hands
+  back a short, self-contained summary.
+* xref:skills/update-docs.adoc[] — Step 8, once per run (not per group), invoked directly via `Skill` once the
   build, quality, and security gates all pass, so the project's documentation reflects everything the whole plan
   changed.
 
@@ -142,13 +140,13 @@ so verbose report output stays out of `code`'s own context window and only the d
 === Related agents
 
 * xref:agents/gate-runner.adoc[`gate-runner`] — spawned for each project-wide quality/security baseline capture
-  and comparison (Steps 3 and 7) and the final build verification. Unlike the previous version of this skill,
-  per-task delegation (license headers, Javadoc, scoped tests, coverage, per-task quality) is no longer spawned
-  directly by `code` — it happens one level down, inside whichever `<key>-code-one-task` skill handles each
-  task.
-* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — spawned once per top-level task (Step 4)
-  to invoke the matching `<key>-code-one-task` skill, so a plan with many tasks doesn't accumulate every task's
-  full implementation transcript in `code`'s own context.
+  and comparison (Steps 3 and 7) and the final build verification. Per-group implementation and validation
+  (license headers, doc comments, scoped tests, coverage, per-group quality) is no longer spawned directly by
+  `code` — it happens two levels down, inside whichever `<key>-code-one-task-group` skill handles each group's
+  bucket of tasks.
+* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — spawned once per task group (Step 4)
+  to invoke `code-one-task-group`, so a plan with many groups doesn't accumulate every group's full
+  implementation transcript in `code`'s own context.
 
 == Source
 

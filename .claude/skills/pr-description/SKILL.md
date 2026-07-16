@@ -1,6 +1,7 @@
 ---
 name: pr-description
 description: Check the current branch's code changes and draft a brief, concise pull request description (emojis and diagrams allowed where they genuinely clarify). Detects which platform hosts the repository — GitHub, Bitbucket, Azure DevOps, or TFS — and uses that platform's own tooling throughout instead of assuming `gh`/GitHub. If a pull request already exists for the current branch, offers to update its body with the draft; otherwise asks whether to commit the changes to a new branch and open a new pull request, prompting for branch name, destination branch, and PR title. Invoke as `/pr-description`. Use whenever the user wants a PR description generated from the actual diff instead of writing it by hand.
+model: sonnet
 ---
 
 # PR Description

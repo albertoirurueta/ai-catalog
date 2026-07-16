@@ -1,6 +1,7 @@
 ---
 name: setup-java-github-workflows
 description: Create or update the `develop.yml`, `main.yml`, and `sync.yml` GitHub Actions workflows for a Java/Maven library repository — build and test, run Checkstyle/PMD/SpotBugs static analysis, generate JaCoCo coverage and the Maven `site` report, send results to SonarQube/SonarCloud, build the Antora documentation site, publish both the Antora docs and the Maven site report to GitHub Pages, publish the release artifact to Maven Central, and — once a release is published — open a pull request that merges the released branch back into the integration branch and bumps the development snapshot version across `pom.xml`, `README.md`, and the Antora docs (via the companion `.github/scripts/sync_versions.py` script). Invoke as `/setup-java-github-workflows`. Ships with generic example templates (derived from a real repository's workflows, genericized so they don't name any specific repository) embedded in this skill file, reusable across repositories. Creates all three workflows (and the sync script) from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Accepts the six pipeline parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file) pre-resolved via `args` (`key: value` lines) so an orchestrating skill like `setup-java-library-repository` can supply them without re-prompting. Use whenever a Java/Maven repository needs this CI/CD release pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+model: haiku
 ---
 
 # Setup Java GitHub Workflows
@@ -79,7 +80,7 @@ a real answer, not guessed. If `pom.xml` is missing and the user chose to contin
   someone must supply `sonar.projectKey`/`sonar.organization`/`sonar.host.url` before it will run successfully —
   flag this and offer to create `sonar-project.properties` in Step 6 if the user can give you those values now.
 - **Antora docs**: check for `docs/antora.yml` and `docs/antora-playbook.yml`. If either is missing, the docs step
-  in Step 3 has nothing to build against — tell the user to run the `antora-setup` skill first, or confirm they'll
+  in Step 3 has nothing to build against — tell the user to run the `setup-antora` skill first, or confirm they'll
   do so before merging this workflow.
 - **Maven settings file used for deploy** (skip if `settings-file` supplied via `args`): check for an XML file
   referenced by a `--settings` flag in any existing deploy step, defaulting to `mvnsettings.xml` at the repository
@@ -509,7 +510,7 @@ Notes specific to this template:
   `<artifactId>` element immediately preceding the `<version>` to bump, so it never touches a dependency or plugin
   version elsewhere in `pom.xml`.
 - `update_antora_component_version` and `update_antora_pages` both no-op cleanly if `docs/antora.yml` or
-  `docs/modules/ROOT/pages` don't exist, so this script is safe to write even before the `antora-setup` skill has
+  `docs/modules/ROOT/pages` don't exist, so this script is safe to write even before the `setup-antora` skill has
   run — no need to gate its creation on Antora being present.
 - The Antora component version (`docs/antora.yml`) is intentionally set to the release version, not the next
   snapshot — matching the convention (used by this repository's own `/release`-style workflow, if present) that
@@ -525,7 +526,7 @@ open gap in Step 8's report instead of silently guessing.
 
 Before writing the workflows, make sure the files they depend on exist:
 
-- **`docs/antora.yml` / `docs/antora-playbook.yml` missing**: recommend running the `antora-setup` skill now; the
+- **`docs/antora.yml` / `docs/antora-playbook.yml` missing**: recommend running the `setup-antora` skill now; the
   Antora build step in the workflow will fail without them.
 - **`sonar-project.properties` missing**: ask the user for `sonar.organization` (if using SonarCloud),
   `sonar.projectKey`, and `sonar.host.url` (default `https://sonarcloud.io` unless they run self-hosted

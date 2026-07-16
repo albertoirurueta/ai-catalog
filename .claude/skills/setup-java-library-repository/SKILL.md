@@ -1,13 +1,14 @@
 ---
 name: setup-java-library-repository
-description: End-to-end bootstrap for a brand-new Java/Maven library repository — collects the project's identity (groupId, artifactId, base package, developer name/email/organizationUrl, license) and pipeline parameters (integration branch, Java version, publishing server id, sign/extras profile ids, Maven settings file) once, then orchestrates `setup-java-library` (pom.xml + source folders), `antora-setup` (documentation site), `setup-java-gitignore` (root `.gitignore`), `setup-java-github-workflows` (CI/CD workflows), `setup-changelog` (root CHANGELOG.md), and `setup-readme` (root README.md) in that order so nothing is asked twice. Invoke as `/setup-java-library-repository`. Each parameter has the same default as the skill it feeds (`develop`, `17`, `central`, `build-extras`, `sign`, `mvnsettings.xml`) and can be overridden. Use when starting a new Java library repository from nothing and you want the full pom/docs/gitignore/CI/changelog/README scaffold in one pass, instead of running the skills separately and re-answering the same questions each time.
+description: End-to-end bootstrap for a brand-new Java/Maven library repository — collects the project's identity (groupId, artifactId, base package, developer name/email/organizationUrl, license) and pipeline parameters (integration branch, Java version, publishing server id, sign/extras profile ids, Maven settings file) once, then orchestrates `setup-java-library` (pom.xml + source folders), `setup-antora` (documentation site), `setup-java-gitignore` (root `.gitignore`), `setup-java-github-workflows` (CI/CD workflows), `setup-changelog` (root CHANGELOG.md), and `setup-readme` (root README.md) in that order so nothing is asked twice. Invoke as `/setup-java-library-repository`. Each parameter has the same default as the skill it feeds (`develop`, `17`, `central`, `build-extras`, `sign`, `mvnsettings.xml`) and can be overridden. Use when starting a new Java library repository from nothing and you want the full pom/docs/gitignore/CI/changelog/README scaffold in one pass, instead of running the skills separately and re-answering the same questions each time.
+model: haiku
 ---
 
 # Setup Java Library Repository
 
 Bootstrap a brand-new Java/Maven library repository in one pass by orchestrating six existing skills:
 `setup-java-library` (writes `pom.xml` and the `src/main/java|resources`/`src/test/java` folders),
-`antora-setup` (scaffolds the Antora documentation site), `setup-java-gitignore` (writes or updates the root
+`setup-antora` (scaffolds the Antora documentation site), `setup-java-gitignore` (writes or updates the root
 `.gitignore`), `setup-java-github-workflows` (writes `develop.yml`/`main.yml`), `setup-changelog` (bootstraps a
 root `CHANGELOG.md`), and `setup-readme` (bootstraps a root `README.md`). This skill does not duplicate their
 logic — it collects the shared parameters once and passes each skill only what it needs, so the user isn't asked
@@ -80,15 +81,15 @@ same way whether invoked directly or from inside this sub-agent. If it reports t
 the user chose to stop, stop this skill here too — there's no coherent project identity to build Antora docs or
 CI workflows around yet.
 
-## Step 4 — Run `antora-setup`
+## Step 4 — Run `setup-antora`
 
-Invoke via `isolated-skill-executor`: `Agent({description: "Run antora-setup", subagent_type:
-"isolated-skill-executor", prompt: "Invoke Skill({skill: \"antora-setup\"}) with no args — it derives the Antora
+Invoke via `isolated-skill-executor`: `Agent({description: "Run setup-antora", subagent_type:
+"isolated-skill-executor", prompt: "Invoke Skill({skill: \"setup-antora\"}) with no args — it derives the Antora
 component name, title, and version straight from the repository's pom.xml, so nothing needs to be passed through.
 Report back: which files/pages were created vs. already present, and whether the site build succeeded.",
 run_in_background: false})`.
 
-Run this *before* Step 6, not after, even though the user described these two in the other order: `antora-setup`
+Run this *before* Step 6, not after, even though the user described these two in the other order: `setup-antora`
 is quick to detect as "already done" and `setup-java-github-workflows`'s own survey (Step 1 there) checks whether
 `docs/antora.yml`/`docs/antora-playbook.yml` already exist — running Antora setup first means that check finds
 everything in place instead of flagging a gap it would otherwise ask about.

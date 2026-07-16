@@ -9,12 +9,16 @@ source code; its only output artifact is the plan file itself.
 == Purpose
 
 `plan` turns a GitHub issue or a free-form task description into a reviewable, checkbox-driven list of
-implementation steps before any code changes begin. It grounds itself in the actual codebase (via
-`explore`), resolves only genuinely ambiguous decisions with the user, and determines which
-`<key>-code-one-task` skill (e.g. `java-code-one-task`, `dotnet-code-one-task`) each task belongs to — once for
-the whole plan if uniform, or per top-level task if the plan spans more than one language/framework — so the
-`code` skill that later executes it knows exactly which skill to dispatch each task to without re-inferring it.
-Everything is written to `implementation_plan.md` — the artifact `code` later executes task by task.
+implementation steps before any code changes begin. If `implementation_plan.md` already exists at the
+repository root, it determines whether that plan matches the requested task and asks the user whether to
+resume it as-is, discard and regenerate it, or update it while preserving already-completed work. It grounds
+itself in the actual codebase (via `explore`), resolves only genuinely ambiguous decisions with the user, groups
+tasks into dependency-aware task groups (each marked whether its tasks can be implemented in parallel), and
+determines which `<key>-code-one-task` skill (e.g. `java-code-one-task`, `dotnet-code-one-task`) each task
+belongs to — once for the whole plan if uniform, tagged per top-level task otherwise — so the `code` skill that
+later executes it, via `code-one-task-group`, knows exactly which language-specific group skill to dispatch
+each task group to without re-inferring it. Everything is written to `implementation_plan.md` — the artifact
+`code` later executes group by group.
 
 == Purpose group
 
@@ -52,22 +56,24 @@ task.
 
 == Outputs
 
-* `implementation_plan.md` at the repository root, overwriting any existing file at that path (with a
-  check-with-the-user safeguard if the existing file looks like in-progress work).
+* `implementation_plan.md` at the repository root — overwritten if the user chose to discard an existing plan,
+  merged into (preserving completed tasks) if the user chose to update one, or left completely untouched if the
+  user chose to skip planning and resume execution of the existing file as-is.
 * The plan is structured as: a task summary (including a plan-wide **Language/framework** line if every task
   shares one key), a summary of the current relevant code state (concrete file paths and class/method names),
-  and a numbered list of implementation steps — each task and sub-task carrying its own empty markdown checkbox
-  (`[ ]`) for `code` to check off later, and tagged with its own language/framework key inline if the plan spans
-  more than one.
+  and implementation steps organized into task groups — each group naming its `Parallelizable` verdict and
+  containing its tasks/sub-tasks, every one carrying its own empty markdown checkbox (`[ ]`) for `code` to check
+  off later, numbered continuously across the whole plan (`Task N` / `Task N.M`) and tagged with its own
+  language/framework key.
 * The distinct set of `<key>-code-one-task` keys involved, resolved against which such skills are actually
   installed in this repository (`find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`) — a task
   whose language/framework has no matching skill installed is still recorded accurately, just without a
   dispatchable tag.
-* Any decisions made on the user's behalf (per Step 3) are stated in the plan itself, with a one-line
-  rationale, rather than asked upfront.
+* Any decisions made on the user's behalf (per the ambiguity-resolution step) are stated in the plan itself,
+  with a one-line rationale, rather than asked upfront.
 * No source code, configuration, or documentation outside `implementation_plan.md` is ever modified.
-* A short summary in the conversation once the plan is written, asking the user to review it before
-  implementation starts.
+* A short summary in the conversation once the plan is written — including how many task groups were formed
+  and which, if any, are non-parallelizable and why — asking the user to review it before implementation starts.
 
 == Execution flow
 
@@ -77,26 +83,29 @@ flowchart TD
     A[Start /plan] --> B{Issue id or free-form\ntask given?}
     B -- neither --> C["Ask user: plan around an issue,\nor a manually described task?"]
     C --> B
-    B -- issue id --> D["Check conversation for prior\nexploration of this issue"]
-    B -- free-form task --> D
-    D -- already explored --> F[Skip re-exploration]
-    D -- not yet explored --> E["Invoke explore skill\n(scoped to issue id, if any)"]
-    E --> F
-    F --> G{Anything genuinely\nambiguous?}
-    G -- yes --> H["Ask user via AskUserQuestion\n(1-4 focused questions, defaults offered)"]
-    G -- no --> I["Choose best-practice approach\nand state rationale in the plan"]
-    H --> J["Find installed *-code-one-task skills;\ndetermine each task's language/framework key"]
-    I --> J
-    J --> K["Draft implementation_plan.md:\ntask summary (+ key), code state,\nchecklist tasks (+ per-task key tags)"]
-    K --> L["Ask user to review the plan\nbefore implementation starts"]
+    B -- given --> D{implementation_plan.md\nalready exists?}
+    D -- no --> F
+    D -- yes --> E["Assess whether it matches\nthe requested task; ask user:\nskip / discard / update-preserving-done"]
+    E -- skip --> Z["Stop: report existing progress,\ntell user to run /code directly"]
+    E -- discard or update --> F["Check conversation for prior\nexploration of this issue/task"]
+    F -- already explored --> H[Skip re-exploration]
+    F -- not yet explored --> G["Invoke explore skill\n(scoped to issue id, if any)"]
+    G --> H
+    H --> I{Anything genuinely\nambiguous?}
+    I -- yes --> J["Ask user via AskUserQuestion\n(1-4 focused questions, defaults offered)"]
+    I -- no --> K["Choose best-practice approach\nand state rationale in the plan"]
+    J --> L["Find installed *-code-one-task skills;\nresolve language key per task;\ngroup tasks by dependency +\nParallelizable verdict"]
+    K --> L
+    L --> M["Draft implementation_plan.md:\ntask summary (+ key), code state,\ntask groups with numbered\nchecklist tasks (+ key tags)\n(merging preserved completed\ntasks if updating)"]
+    M --> N["Ask user to review the plan\nbefore implementation starts"]
 ....
 
 == Dependencies
 
 === Invokes
 
-* xref:skills/explore.adoc[] — Step 2 runs `explore` (scoped to the issue id, if any) to ground the plan in
-  the real codebase, unless equivalent exploration already happened earlier in the conversation.
+* xref:skills/explore.adoc[] — grounds the plan in the real codebase (scoped to the issue id, if any), unless
+  equivalent exploration already happened earlier in the conversation.
 
 === Invoked by
 
@@ -108,11 +117,11 @@ flowchart TD
 
 `plan` itself does not spawn any Agent — it calls the `explore` skill directly and otherwise only reads the
 codebase and writes the plan file. However, the `implementation_plan.md` it writes explicitly instructs
-whoever executes that plan (normally the `code` skill, via the `<key>-code-one-task` skill it dispatches to) to
-delegate each task's test run to the xref:agents/gate-runner.adoc[`gate-runner`] agent, if installed, rather
-than running tests inline, so test output doesn't consume the executing agent's main context window. This is an
-instruction `plan` embeds in its output file for a later execution step to follow — not an `Agent()` call `plan`
-makes itself.
+whoever executes that plan (normally the `code` skill, via `code-one-task-group` and the language-specific
+`<key>-code-one-task-group` skill it dispatches to) to delegate each task's test run to the
+xref:agents/gate-runner.adoc[`gate-runner`] agent, if installed, rather than running tests inline, so test
+output doesn't consume the executing agent's main context window. This is an instruction `plan` embeds in its
+output file for a later execution step to follow — not an `Agent()` call `plan` makes itself.
 
 == Source
 

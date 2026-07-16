@@ -58,7 +58,7 @@ existing Antora module each time it runs.
 ....
 flowchart TD
     A[Start /generate-skill-docs] --> B{"antora.yml found?"}
-    B -- no --> C["Ask user: bootstrap via\nantora-setup, or stop?"]
+    B -- no --> C["Ask user: bootstrap via\nsetup-antora, or stop?"]
     C -- stop --> Z1[Stop]
     C -- bootstrap --> D
     B -- yes --> D["Discover every SKILL.md,\ncustom agent, and built-in\nagent type actually used"]
@@ -80,7 +80,7 @@ flowchart TD
 === Invokes
 
 None as a direct `Skill()` call. Conditionally, if Step 1 finds no Antora module at all, it asks the user
-whether to bootstrap one via xref:skills/antora-setup.adoc[] (run through a sub-agent so this skill can keep
+whether to bootstrap one via xref:skills/setup-antora.adoc[] (run through a sub-agent so this skill can keep
 running afterward) before continuing.
 
 === Invoked by
@@ -93,7 +93,7 @@ whenever the catalog's skill/agent set has changed.
 * `general-purpose` (see xref:agents/overview.adoc[]) — spawned once per skill and per documented agent in Step
   3 (each reading only its own file and returning a compact structured summary, rather than this skill's own
   conversation reading every `SKILL.md` in the catalog directly), and separately in the fallback path to run
-  xref:skills/antora-setup.adoc[] when no documentation module exists yet.
+  xref:skills/setup-antora.adoc[] when no documentation module exists yet.
 
 == Source
 

@@ -1,6 +1,7 @@
 ---
 name: java-test
 description: Run a Java project's JUnit test suite via the Maven Surefire plugin (`mvn test`), optionally scoped to specific test classes, methods, packages, or tags. Invoke as `/java-test` to run the full suite, or `/java-test <selector>` where `<selector>` names a class (`FooTest`), a class+method (`FooTest#testSomething`), a wildcard/package pattern, or a tag expression. Use whenever the user wants to run, re-run, or narrow down unit tests instead of a full `mvn clean test`.
+model: haiku
 ---
 
 # Java Test

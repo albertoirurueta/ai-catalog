@@ -1,6 +1,7 @@
 ---
 name: setup-changelog
 description: Bootstrap a root `CHANGELOG.md` for a repository that doesn't have one yet, by exploring its actual release history (git tags and, if hosted on GitHub, GitHub Releases) and backfilling one entry per past release in Keep a Changelog format. Invoke as `/setup-changelog`. Skips entirely — does nothing and reports why — if `CHANGELOG.md` already exists at the repository root; this is a one-time bootstrap, not an idempotent fill-gaps tool. Use whenever a repository has release history but no changelog file yet and the user wants one backfilled from that real history instead of started blank.
+model: sonnet
 ---
 
 # Setup Changelog

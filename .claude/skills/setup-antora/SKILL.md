@@ -1,6 +1,7 @@
 ---
-name: antora-setup
-description: Set up an Antora documentation site in a repository that doesn't have one yet — installs Node.js/Antora prerequisites, scaffolds `docs/antora.yml` and `docs/antora-playbook.yml`, and builds a minimal ROOT module with `index.adoc`, `installation.adoc`, and `reference.adoc` pages wired into `nav.adoc`. Invoke as `/antora-setup`. Idempotent: safe to re-run on a repository that already has some or all of this in place — it fills gaps without overwriting existing pages, config, or nav entries. Use whenever a repository needs Antora documentation bootstrapped from scratch, instead of hand-wiring `antora.yml`/`antora-playbook.yml`/the module skeleton one file at a time.
+name: setup-antora
+description: Set up an Antora documentation site in a repository that doesn't have one yet — installs Node.js/Antora prerequisites, scaffolds `docs/antora.yml` and `docs/antora-playbook.yml`, and builds a minimal ROOT module with `index.adoc`, `installation.adoc`, and `reference.adoc` pages wired into `nav.adoc`. Invoke as `/setup-antora`. Idempotent: safe to re-run on a repository that already has some or all of this in place — it fills gaps without overwriting existing pages, config, or nav entries. Use whenever a repository needs Antora documentation bootstrapped from scratch, instead of hand-wiring `antora.yml`/`antora-playbook.yml`/the module skeleton one file at a time.
+model: haiku
 ---
 
 # Antora Setup
@@ -21,7 +22,7 @@ Run `node -v` and `npm -v`.
   reported Node version is older, warn the user but let them decide whether to upgrade before continuing.
 - **Either command fails**: Node.js isn't installed. Show the user the install instructions below and stop —
   don't attempt to install Node.js yourself (it changes shell/global state outside this repository). Ask them to
-  install it and re-invoke `/antora-setup` once `node -v` and `npm -v` both work.
+  install it and re-invoke `/setup-antora` once `node -v` and `npm -v` both work.
 
   **macOS / Linux** (via `nvm`):
   ```bash

@@ -9,7 +9,8 @@ the result against a baseline, and reports back only a compact, structured summa
 == Purpose
 
 `gate-runner` exists to collapse a pattern that used to be hand-written, nearly identically, at more than a
-dozen call sites across `code`, `java-code-one-task`, and `dotnet-code-one-task`: invoke a verification skill,
+dozen call sites across `code`, `code-one-task-group`, `java-code-one-task-group`, and
+`dotnet-code-one-task-group`: invoke a verification skill,
 diff it against a baseline if one is given, and return only the distilled outcome — never the raw
 Surefire/JaCoCo/Checkstyle/PMD/SpotBugs/StyleCop/CA/SARIF/detect-secrets output or a full build log. Before this
 agent existed, every one of those call sites repeated the same "report back only X, not the full report"
@@ -29,9 +30,12 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
 
 * xref:skills/code.adoc[] — Step 3 (project-wide quality and security baseline capture) and Step 7 (full local
   build verification, plus the final quality/security baseline comparison).
-* xref:skills/java-code-one-task.adoc[] and xref:skills/dotnet-code-one-task.adoc[] — every delegated check
-  while implementing one task: pre-change quality baseline, license headers, Javadoc/XML doc comments, scoped
-  test run, coverage check, full test suite, and the post-change quality diff.
+* xref:skills/code-one-task-group.adoc[] — the best-effort fallback path (Step 3), for a task whose
+  language/framework has no matching `<key>-code-one-task-group` skill installed.
+* xref:skills/java-code-one-task-group.adoc[] and xref:skills/dotnet-code-one-task-group.adoc[] — every
+  delegated check while validating one task group's bucket: pre-change quality baseline, license headers,
+  Javadoc/XML doc comments, scoped test run, coverage check, full test suite, and the post-change quality diff —
+  all run once per bucket rather than once per task.
 * xref:skills/plan.adoc[] — recommended (when installed) for the scoped test-run step a generated
   `implementation_plan.md` instructs its executor to delegate to a sub-agent, in place of a generic,
   repository-specific sub-agent prompt.

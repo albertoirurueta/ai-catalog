@@ -46,7 +46,7 @@ repository defines three **custom** agents under `.claude/agents/` for its most-
 Skills that need ad hoc context isolation beyond those three shapes still use Claude Code's **built-in** agent
 types: the **`Explore`** agent (a fast, read-only search agent) is used explicitly by the `explore` skill, and
 the **`general-purpose`** agent (Claude Code's default when no specific type is named) covers one-off cases like
-bootstrapping the `antora-setup` skill mid-run.
+bootstrapping the `setup-antora` skill mid-run.
 
 See xref:agents/overview.adoc[] (built-in types) and xref:agents/gate-runner.adoc[],
 xref:agents/isolated-skill-executor.adoc[], xref:agents/change-summarizer.adoc[] (custom agents) for detail on
@@ -122,10 +122,10 @@ features, and where the underlying models genuinely differ.
 |===
 |Name |Group |Purpose |Detail page
 
-|`antora-setup`
-|xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
-|xref:skills/antora-setup.adoc[]
+|`build-docs`
+|xref:index.adoc#group-maintenance[Repository Maintenance]
+|Build the existing Antora documentation site as-is, scaffolding it first via `setup-antora` if needed.
+|xref:skills/build-docs.adoc[]
 
 |`check-license`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
@@ -139,8 +139,13 @@ features, and where the underlying models genuinely differ.
 
 |`code`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Execute `implementation_plan.md` end to end, dispatching each task to its language's `<key>-code-one-task` skill.
+|Execute `implementation_plan.md` end to end, one task group at a time, dispatching each to `code-one-task-group`.
 |xref:skills/code.adoc[]
+
+|`code-one-task-group`
+|xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+|Implement one plan task group, dispatching each task to its language's `<key>-code-one-task-group` skill.
+|xref:skills/code-one-task-group.adoc[]
 
 |`create-github-issue`
 |xref:index.adoc#group-intake[Ticket Intake]
@@ -152,10 +157,25 @@ features, and where the underlying models genuinely differ.
 |Draft and file a new Jira ticket via connected Jira MCP tools, the Jira counterpart to `create-github-issue`.
 |xref:skills/create-jira-ticket.adoc[]
 
+|`database-code-one-task`
+|xref:index.adoc#group-database[Database Development Tooling]
+|Generate (and, if a matching MCP allows it, execute) the queries a single database plan task calls for.
+|xref:skills/database-code-one-task.adoc[]
+
+|`database-code-one-task-group`
+|xref:index.adoc#group-database[Database Development Tooling]
+|Implement a bucket of database tasks sequentially, one task at a time — no baseline or bucket-wide validation.
+|xref:skills/database-code-one-task-group.adoc[]
+
 |`dotnet-code-one-task`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
-|Implement one .NET plan task end to end: code, tests, license headers, XML doc comments, coverage, quality.
+|Implement a single .NET plan task's code and tests only — validation is handled by `dotnet-code-one-task-group`.
 |xref:skills/dotnet-code-one-task.adoc[]
+
+|`dotnet-code-one-task-group`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Implement a bucket of .NET tasks (in parallel where safe) and validate the whole bucket once.
+|xref:skills/dotnet-code-one-task-group.adoc[]
 
 |`dotnet-code-quality`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -171,6 +191,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Audit and complete XML doc-comment coverage for given types, then attempt a DocFX build.
 |xref:skills/dotnet-docfx.adoc[]
+
+|`dotnet-generate-all-tests`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Find every .NET class with no tests or under 80% coverage and generate/extend tests until it clears the bar.
+|xref:skills/dotnet-generate-all-tests.adoc[]
 
 |`dotnet-test`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -194,8 +219,13 @@ features, and where the underlying models genuinely differ.
 
 |`java-code-one-task`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Implement one Java plan task end to end: code, tests, license headers, Javadoc, coverage, quality.
+|Implement a single Java plan task's code and tests only — validation is handled by `java-code-one-task-group`.
 |xref:skills/java-code-one-task.adoc[]
+
+|`java-code-one-task-group`
+|xref:index.adoc#group-java[Java Development Tooling]
+|Implement a bucket of Java tasks (in parallel where safe) and validate the whole bucket once.
+|xref:skills/java-code-one-task-group.adoc[]
 
 |`java-code-quality`
 |xref:index.adoc#group-java[Java Development Tooling]
@@ -206,6 +236,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-java[Java Development Tooling]
 |Run JaCoCo and report the exact measured coverage percentage for target class(es).
 |xref:skills/java-coverage.adoc[]
+
+|`java-generate-all-tests`
+|xref:index.adoc#group-java[Java Development Tooling]
+|Find every Java class with no tests or under 80% coverage and generate/extend tests until it clears the bar.
+|xref:skills/java-generate-all-tests.adoc[]
 
 |`java-javadoc`
 |xref:index.adoc#group-java[Java Development Tooling]
@@ -236,6 +271,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Cut a release branch, bump versions, draft release notes/changelog, and open the release PR.
 |xref:skills/release.adoc[]
+
+|`setup-antora`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
+|xref:skills/setup-antora.adoc[]
 
 |`setup-changelog`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
@@ -309,14 +349,14 @@ library starts out matching the same conventions as every other repository in th
 Reach for this group when standing up a **brand-new repository** — a one-time pass, not something you'd run
 again once the repository already exists. `setup-java-library-repository` is the single entry point that
 runs the rest in order; each one also works standalone to fill a single gap in a repository that already has
-some of this in place (e.g. just `/antora-setup` to add docs to a repository that already has a `pom.xml`).
+some of this in place (e.g. just `/setup-antora` to add docs to a repository that already has a `pom.xml`).
 ====
 
 * xref:skills/setup-java-library-repository.adoc[`setup-java-library-repository`] — orchestrator: bootstraps
   a brand-new Java library repository end to end in one pass.
 * xref:skills/setup-java-library.adoc[`setup-java-library`] — generates `pom.xml` and the standard Maven
   source layout.
-* xref:skills/antora-setup.adoc[`antora-setup`] — scaffolds the Antora documentation site.
+* xref:skills/setup-antora.adoc[`setup-antora`] — scaffolds the Antora documentation site.
 * xref:skills/setup-java-gitignore.adoc[`setup-java-gitignore`] — creates or refreshes the root `.gitignore`.
 * xref:skills/setup-java-github-workflows.adoc[`setup-java-github-workflows`] — scaffolds/updates the CI/CD
   GitHub Actions pipeline.
@@ -354,20 +394,28 @@ This is the group to reach for on a **day-to-day basis**: picking up a ticket or
 it through branch creation, research, planning, and implementation without re-explaining that process each
 time. `issue` is the single entry point for the full pipeline; `explore` and `plan` are also commonly run
 individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow. `code` itself doesn't
-implement anything directly — for each task it dispatches to whichever xref:index.adoc#group-java[Java] or
-xref:index.adoc#group-dotnet[.NET] Development Tooling skill matches that task's language/framework, and
-brackets the whole run with quality and security baselines (xref:index.adoc#group-maintenance[Repository
-Maintenance]).
+implement anything directly — it dispatches each of `plan`'s dependency-aware task groups, in order, to
+`code-one-task-group`, which resolves each task's language and delegates to whichever
+xref:index.adoc#group-java[Java], xref:index.adoc#group-dotnet[.NET], or xref:index.adoc#group-database[
+Database] Development Tooling group skill matches, and brackets the whole run with quality and security
+baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
 ====
 
 * xref:skills/issue.adoc[`issue`] — orchestrator: branch, explore, plan, implement, open PR, review — for a
   tracked ticket.
 * xref:skills/explore.adoc[`explore`] — read-only research pass over the codebase, optionally grounded in a
   GitHub issue or Jira ticket.
-* xref:skills/plan.adoc[`plan`] — writes a concrete, reviewable `implementation_plan.md`, tagging each task
-  with the language/framework key a downstream `<key>-code-one-task` skill should handle it with.
-* xref:skills/code.adoc[`code`] — executes `implementation_plan.md` end to end, dispatching each task to its
-  matching `<key>-code-one-task` skill and gating completion on quality/security baselines.
+* xref:skills/plan.adoc[`plan`] — writes a concrete, reviewable `implementation_plan.md`, grouping tasks by
+  dependency and tagging each with the language/framework key a downstream `<key>-code-one-task-group` skill
+  should handle it with.
+* xref:skills/code.adoc[`code`] — executes `implementation_plan.md` end to end, one task group at a time, via
+  `code-one-task-group`, and gates completion on quality/security baselines.
+* xref:skills/code-one-task-group.adoc[`code-one-task-group`] — implements one task group, resolving each
+  task's language and dispatching to its matching `<key>-code-one-task-group` skill (e.g.
+  xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`],
+  xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`],
+  xref:skills/database-code-one-task-group.adoc[`database-code-one-task-group`]) — or a best-effort direct
+  implementation if none matches.
 
 [[group-java]]
 === Java Development Tooling
@@ -378,20 +426,28 @@ rather than an estimate.
 
 [TIP]
 ====
-`code` dispatches every task tagged (or defaulted to) `java` to `java-code-one-task`, which itself fans out to
-the other four skills in this group. Reach for those four directly, any time, while **iterating on code day to
-day** — before committing, before opening a PR, or just to check where a class currently stands. You rarely
-need to invoke any of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
+`code-one-task-group` dispatches every task-group bucket tagged (or defaulted to) `java` to
+`java-code-one-task-group`, which captures one quality baseline for the bucket, runs `java-code-one-task` once
+per task (in parallel when the group allows it), then validates the whole bucket once via the other four skills
+in this group. Reach for those four directly, any time, while **iterating on code day to day** — before
+committing, before opening a PR, or just to check where a class currently stands. You rarely need to invoke any
+of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
 
-* xref:skills/java-code-one-task.adoc[`java-code-one-task`] — implements one plan task end to end: code,
-  tests, license headers, Javadoc, scoped tests, coverage, and a quality regression check.
+* xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`] — implements a bucket of Java tasks
+  (in parallel where safe) and validates the whole bucket once: license headers, Javadoc, tests, coverage, and
+  a quality regression check.
+* xref:skills/java-code-one-task.adoc[`java-code-one-task`] — implements a single task's code and tests only;
+  called once per task by `java-code-one-task-group`.
 * xref:skills/java-test.adoc[`java-test`] — runs the JUnit suite via Surefire, scoped to a
   class/method/package/tag selector.
 * xref:skills/java-coverage.adoc[`java-coverage`] — runs JaCoCo and reports the exact measured coverage
   percentage for target class(es).
 * xref:skills/java-code-quality.adoc[`java-code-quality`] — runs Checkstyle/PMD/SpotBugs and summarizes every
   issue found, grouped by tool.
+* xref:skills/java-generate-all-tests.adoc[`java-generate-all-tests`] — finds every class with no test class or
+  under 80% line coverage (via `java-coverage`) and generates/extends tests until it clears the bar, across the
+  whole codebase in one pass.
 * xref:skills/java-javadoc.adoc[`java-javadoc`] — audits and completes Javadoc coverage for given classes,
   then verifies it builds cleanly.
 
@@ -404,14 +460,18 @@ against a .NET project.
 
 [TIP]
 ====
-Same shape as the Java group, one tool chain over: `code` dispatches every task tagged `dotnet` to
-`dotnet-code-one-task`, which fans out to the other four skills here. Reach for those four directly any time
-while iterating day to day; `code` rarely needs them invoked directly during the
-xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
+Same shape as the Java group, one tool chain over: `code-one-task-group` dispatches every task-group bucket
+tagged `dotnet` to `dotnet-code-one-task-group`, which captures one quality baseline for the bucket, runs
+`dotnet-code-one-task` once per task (in parallel when the group allows it), then validates the whole bucket
+once via the other four skills here. Reach for those four directly any time while iterating day to day; `code`
+rarely needs them invoked directly during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
 
-* xref:skills/dotnet-code-one-task.adoc[`dotnet-code-one-task`] — implements one plan task end to end: code,
-  tests, license headers, XML doc comments, scoped tests, coverage, and a quality regression check.
+* xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`] — implements a bucket of .NET tasks
+  (in parallel where safe) and validates the whole bucket once: license headers, XML doc comments, tests,
+  coverage, and a quality regression check.
+* xref:skills/dotnet-code-one-task.adoc[`dotnet-code-one-task`] — implements a single task's code and tests
+  only; called once per task by `dotnet-code-one-task-group`.
 * xref:skills/dotnet-test.adoc[`dotnet-test`] — runs the test suite via `dotnet test`, scoped to a
   class/method/namespace/trait selector.
 * xref:skills/dotnet-coverage.adoc[`dotnet-coverage`] — runs Coverlet via `dotnet test` and reports the exact
@@ -420,6 +480,35 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
   a SARIF-logged build and summarizes every issue found.
 * xref:skills/dotnet-docfx.adoc[`dotnet-docfx`] — audits and completes XML doc-comment coverage for given
   types, then attempts a DocFX build.
+* xref:skills/dotnet-generate-all-tests.adoc[`dotnet-generate-all-tests`] — finds every class with no test class
+  or under 80% line coverage (via `dotnet-coverage`) and generates/extends tests until it clears the bar, across
+  the whole codebase in one pass.
+
+[[group-database]]
+=== Database Development Tooling
+
+The database counterpart to xref:index.adoc#group-java[Java Development Tooling] and
+xref:index.adoc#group-dotnet[.NET Development Tooling] — implementing a bucket of database tasks (schema
+migrations, seed data, index changes) from a plan.
+
+[TIP]
+====
+`code-one-task-group` dispatches every task-group bucket tagged `database` to `database-code-one-task-group`,
+which calls `database-code-one-task` once per task. Unlike its Java/.NET counterparts, this pairing is
+deliberately simpler: tasks are always implemented one at a time, in the plan's order, regardless of the
+bucket's `Parallelizable` verdict (database changes commonly carry a real ordering dependency even when a plan
+doesn't flag one explicitly), and there is no pre-change quality baseline or bucket-wide validation pass — each
+task is trusted to handle its own correctness. `database-code-one-task` generates the queries a task calls for
+(grounded in the real schema via `explore`), executes only the read-only/idempotent ones when a matching
+database MCP is connected, and records everything in `database-report.md`.
+====
+
+* xref:skills/database-code-one-task-group.adoc[`database-code-one-task-group`] — implements a bucket of
+  database tasks sequentially, one at a time, then checks off completed tasks and notifies the user — no
+  quality baseline or bucket-wide validation pass.
+* xref:skills/database-code-one-task.adoc[`database-code-one-task`] — generates the queries a single task
+  calls for, executes the read-only ones via a connected database MCP if one exists, and records both in
+  `database-report.md`; called once per task by `database-code-one-task-group`.
 
 [[group-pr]]
 === Pull Request Lifecycle
@@ -455,6 +544,8 @@ and scanning for accidentally committed secrets.
   notes/changelog, and opens the release PR.
 * xref:skills/update-docs.adoc[`update-docs`] — brings the Antora documentation module up to date with
   changes already made to the code.
+* xref:skills/build-docs.adoc[`build-docs`] — builds the existing Antora documentation site as-is (no content
+  edits), scaffolding it first via `setup-antora` if it doesn't exist yet.
 * xref:skills/check-license.adoc[`check-license`] — verifies (and backfills) license headers against the
   repository's actual license.
 * xref:skills/check-security.adoc[`check-security`] — scans for accidentally committed secrets via
@@ -489,13 +580,16 @@ how agents differ from skills in how they're triggered.
 ====
 
 * xref:agents/gate-runner.adoc[`gate-runner`] — runs a single verification/quality-gate skill and reports back
-  only a compact summary, optionally diffed against a baseline. Used throughout `code`, `java-code-one-task`, and
-  `dotnet-code-one-task`.
+  only a compact summary, optionally diffed against a baseline. Used throughout `code`, `code-one-task-group`,
+  `java-code-one-task-group`, and `dotnet-code-one-task-group`.
 * xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — runs one named skill end to end in a
   fresh context so the caller can keep running afterward. Used by xref:skills/issue.adoc[`issue`] to delegate the
-  entire `code` run for a ticket, by xref:skills/code.adoc[`code`] itself to delegate each task to its
-  `<key>-code-one-task` skill, and by xref:skills/setup-java-library-repository.adoc[`setup-java-library-repository`]
-  to delegate each of the six bootstrap skills it orchestrates.
+  entire `code` run for a ticket, by xref:skills/code.adoc[`code`] itself to delegate each task group to
+  `code-one-task-group`, by xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`] and
+  xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`] to delegate each task in a bucket
+  to `java-code-one-task`/`dotnet-code-one-task`, and by
+  xref:skills/setup-java-library-repository.adoc[`setup-java-library-repository`] to delegate each of the six
+  bootstrap skills it orchestrates.
 * xref:agents/change-summarizer.adoc[`change-summarizer`] — fans out over a git commit/tag range and returns
   only the user-facing changes. Used by xref:skills/setup-changelog.adoc[`setup-changelog`] to summarize one
   release at a time when backfilling a long tag history, and by xref:skills/release.adoc[`release`] to summarize
@@ -513,7 +607,7 @@ flowchart LR
     subgraph Bootstrap["Repository Bootstrap"]
         SJLR["setup-java-library-repository"]
         SJL["setup-java-library"]
-        AS["antora-setup"]
+        AS["setup-antora"]
         SJG["setup-java-gitignore"]
         SJW["setup-java-github-workflows"]
         SC["setup-changelog"]
@@ -530,22 +624,32 @@ flowchart LR
         EXPLORE["explore"]
         PLAN["plan"]
         CODE["code"]
+        COTG["code-one-task-group"]
     end
 
     subgraph Java["Java Development Tooling"]
+        JCOTG["java-code-one-task-group"]
         JCOT["java-code-one-task"]
         JT["java-test"]
         JC["java-coverage"]
         JCQ["java-code-quality"]
         JJ["java-javadoc"]
+        JGAT["java-generate-all-tests"]
     end
 
     subgraph Dotnet[".NET Development Tooling"]
+        DCOTG["dotnet-code-one-task-group"]
         DCOT["dotnet-code-one-task"]
         DT["dotnet-test"]
         DC["dotnet-coverage"]
         DCQ["dotnet-code-quality"]
         DDF["dotnet-docfx"]
+        DGAT["dotnet-generate-all-tests"]
+    end
+
+    subgraph Database["Database Development Tooling"]
+        DBCOTG["database-code-one-task-group"]
+        DBCOT["database-code-one-task"]
     end
 
     subgraph PRLife["Pull Request Lifecycle"]
@@ -556,6 +660,7 @@ flowchart LR
     subgraph Maintenance["Repository Maintenance"]
         REL["release"]
         UD["update-docs"]
+        BD["build-docs"]
         CL["check-license"]
         CSEC["check-security"]
     end
@@ -582,28 +687,43 @@ flowchart LR
     PLAN --> EXPLORE
     PRR --> EXPLORE
 
-    CODE -.-> JCOT
-    CODE -.-> DCOT
+    CODE -.-> COTG
     CODE -.-> JCQ
     CODE -.-> DCQ
     CODE -.-> CSEC
     CODE --> UD
 
-    JCOT -.-> JCQ
-    JCOT -.-> CL
-    JCOT -.-> JJ
-    JCOT -.-> JT
-    JCOT -.-> JC
+    COTG --> JCOTG
+    COTG --> DCOTG
+    COTG --> DBCOTG
 
-    DCOT -.-> DCQ
-    DCOT -.-> CL
-    DCOT -.-> DDF
-    DCOT -.-> DT
-    DCOT -.-> DC
+    DBCOTG --> DBCOT
+    DBCOT --> EXPLORE
+
+    JCOTG -.-> JCOT
+    JCOTG -.-> JCQ
+    JCOTG -.-> CL
+    JCOTG -.-> JJ
+    JCOTG -.-> JT
+    JCOTG -.-> JC
+
+    JGAT --> JC
+    JGAT --> JT
+
+    DCOTG -.-> DCOT
+    DCOTG -.-> DCQ
+    DCOTG -.-> CL
+    DCOTG -.-> DDF
+    DCOTG -.-> DT
+    DCOTG -.-> DC
+
+    DGAT --> DC
+    DGAT --> DT
 
     REL --> SR
     REL --> PRD
     UD -.->|only if no Antora module yet| AS
+    BD -.->|only if no Antora module yet| AS
 
     GSD -.->|only if no Antora module yet| AS
 
@@ -612,17 +732,26 @@ flowchart LR
     EXPLORE -.uses.-> AGT_EXPLORE(("Explore\nagent"))
     AS -.uses.-> AGT_EXPLORE
     SR -.uses.-> AGT_EXPLORE
+    JGAT -.uses.-> AGT_EXPLORE
+    DGAT -.uses.-> AGT_EXPLORE
     CODE -.spawns.-> AGT_GATE(("gate-runner\nagent"))
-    JCOT -.spawns.-> AGT_GATE
-    DCOT -.spawns.-> AGT_GATE
+    COTG -.spawns.-> AGT_GATE
+    JCOTG -.spawns.-> AGT_GATE
+    DCOTG -.spawns.-> AGT_GATE
+    JGAT -.spawns.-> AGT_GATE
+    DGAT -.spawns.-> AGT_GATE
     ISSUE -.spawns.-> AGT_ISE(("isolated-skill-executor\nagent"))
     CODE -.spawns.-> AGT_ISE
+    JCOTG -.spawns.-> AGT_ISE
+    DCOTG -.spawns.-> AGT_ISE
     SJLR -.spawns.-> AGT_ISE
     SC -.spawns.-> AGT_CS(("change-summarizer\nagent"))
     REL -.spawns.-> AGT_CS
     GSD -.spawns.-> AGT_GP(("general-purpose\nagent"))
     UD -.spawns.-> AGT_GP
     PRD -.spawns.-> AGT_GP
+    JGAT -.spawns.-> AGT_GP
+    DGAT -.spawns.-> AGT_GP
 ....
 
 == Common workflows
@@ -641,7 +770,7 @@ orchestrates six other skills in a fixed order so nothing is asked twice:
 ....
 flowchart TD
     A["/setup-java-library-repository"] --> B["setup-java-library\n(pom.xml + source layout)"]
-    B --> C["antora-setup\n(docs site)"]
+    B --> C["setup-antora\n(docs site)"]
     C --> D["setup-java-gitignore\n(.gitignore)"]
     D --> E["setup-java-github-workflows\n(CI/CD)"]
     E --> F["setup-changelog\n(CHANGELOG.md)"]
@@ -649,7 +778,7 @@ flowchart TD
 ....
 
 Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
-`/antora-setup` to add docs to a repository that already has a `pom.xml`).
+`/setup-antora` to add docs to a repository that already has a `pom.xml`).
 
 === Filing a ticket before work begins
 
@@ -680,22 +809,27 @@ walkthrough — this is the main workflow for day-to-day work in this catalog.
 ....
 flowchart LR
     A["/issue &lt;ticket-id&gt;"] --> B["explore\n(understand the ticket)"]
-    B --> C["plan\n(write implementation_plan.md,\ntag each task's language/framework)"]
+    B --> C["plan\n(write implementation_plan.md,\ngroup tasks by dependency,\ntag each with a language/framework)"]
     C --> D{Hand off to /code?}
-    D -- yes --> E["code\n(dispatch each task to its\n&lt;key&gt;-code-one-task skill,\nvia a sub-agent)"]
+    D -- yes --> E["code\n(dispatch each task group to\ncode-one-task-group, via a sub-agent)"]
     D -- no --> H[Stop for manual review]
     E --> F["pr-description\n(open PR as a draft)"]
     F --> G["pr-review\n(review the new PR)"]
 ....
 
-`code` itself doesn't implement anything directly: for every task it dispatches to whichever
-xref:skills/java-code-one-task.adoc[`java-code-one-task`] or xref:skills/dotnet-code-one-task.adoc[
-`dotnet-code-one-task`] skill matches that task's language/framework — each of which fans out to its own
-group's tests/coverage/quality/doc skills via a sub-agent — and brackets the whole run with project-wide
-quality (`java-code-quality`/`dotnet-code-quality`) and security (`check-security`) baselines, updating
-documentation via `update-docs` once both pass (see xref:skills/code.adoc[]). `explore` and `plan` can also be
-run individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow, and either a GitHub
-issue or a Jira ticket works the same way throughout.
+`code` itself doesn't implement anything directly: for every task group it dispatches to
+xref:skills/code-one-task-group.adoc[`code-one-task-group`], which resolves each task's language and delegates
+to whichever xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`] or
+xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`] skill matches — each of which captures
+one quality baseline for the whole bucket, implements its tasks (in parallel when the group allows it), and
+validates the bucket once via its own group's tests/coverage/quality/doc skills, instead of once per task. A
+bucket tagged `database` instead goes to xref:skills/database-code-one-task-group.adoc[
+`database-code-one-task-group`], which is deliberately simpler — always sequential, with no baseline or
+bucket-wide validation of its own. The whole run is bracketed with project-wide quality
+(`java-code-quality`/`dotnet-code-quality`) and security (`check-security`) baselines, updating documentation
+via `update-docs` once both pass (see xref:skills/code.adoc[]). `explore` and `plan` can also be run
+individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow, and either a GitHub issue or
+a Jira ticket works the same way throughout.
 
 === Generating a release
 
@@ -726,7 +860,7 @@ flowchart TD
     Code --> RM["setup-readme\n(README.md, if it already exists: proposes a diff)"]
     Code --> CLI["check-license\n(license headers on touched files)"]
     Code --> CSEC["check-security\n(scan for secrets before committing)"]
-    UD -.->|only if no Antora module exists yet| AS["antora-setup"]
+    UD -.->|only if no Antora module exists yet| AS["setup-antora"]
 ....
 
 `setup-changelog` is deliberately **not** part of this flow: it only bootstraps a changelog that doesn't

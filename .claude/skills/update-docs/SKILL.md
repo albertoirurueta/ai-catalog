@@ -1,6 +1,7 @@
 ---
 name: update-docs
-description: Update a repository's Antora AsciiDoc documentation to reflect changes already made to the codebase (new/changed APIs, types, behavior, or conventions). Invoke as `/update-docs` to cover uncommitted changes plus commits on the current branch not yet on the base branch, or `/update-docs <git-ref-or-range>` to scope it to a specific ref/range (e.g. a commit, `main..HEAD`, a tag). Diagrams use Mermaid (`[mermaid]` blocks) and equations use MathJax (raw `\( \)` / `\[ \]` LaTeX) where they clarify behavior and the docs pipeline already supports them. Use whenever source changes should be reflected in the docs site instead of leaving pages stale.
+description: Update a repository's Antora AsciiDoc documentation to reflect changes already made to the codebase (new/changed APIs, types, behavior, or conventions). Invoke as `/update-docs` to cover uncommitted changes plus commits on the current branch not yet on the base branch, or `/update-docs <git-ref-or-range>` to scope it to a specific ref/range (e.g. a commit, `main..HEAD`, a tag). Diagrams use Mermaid (`[mermaid]` blocks) and equations use MathJax (raw `\( \)` / `\[ \]` LaTeX) where they clarify behavior and the docs pipeline already supports them. If a documentation MCP (e.g. Confluence, Notion) is connected, also finds the relevant existing page(s) there and proposes matching updates — showing the exact change for the user to approve before anything is sent. Use whenever source changes should be reflected in the docs site instead of leaving pages stale.
+model: sonnet
 ---
 
 # Update Docs
@@ -33,8 +34,8 @@ Don't assume a fixed docs path. Find the Antora module(s) actually present, typi
 file(s) in the repository (`find . -name antora.yml -not -path '*/node_modules/*'`).
 
 - **No `antora.yml` found anywhere**: there is no documentation module yet to update. Ask the user whether Antora
-  documentation should be set up now (via the `antora-setup` skill) before continuing — don't assume either way.
-  - **User agrees**: delegate scaffolding to the `antora-setup` skill, run as a sub-agent via the Agent tool.
+  documentation should be set up now (via the `setup-antora` skill) before continuing — don't assume either way.
+  - **User agrees**: delegate scaffolding to the `setup-antora` skill, run as a sub-agent via the Agent tool.
     Brief that sub-agent with the actual context (what changed, per Step 1/3) so its starter pages aren't generic
     boilerplate disconnected from this update. After it finishes, re-run the `find . -name antora.yml ...` search
     to pick up the newly created module and proceed with the rest of this step as normal. If the sub-agent
@@ -102,7 +103,35 @@ When editing:
 - Preserve any existing disclaimers/notices (e.g. an AI-generated-content notice) already present on a page
   unless the change specifically concerns them.
 
-## Step 5 — Verify the site still builds
+## Step 5 — Update external documentation via a documentation MCP, if connected
+
+Search for connected documentation/knowledge-base MCP tools (e.g. Confluence, Notion — `ToolSearch` with queries
+like "confluence", "notion", "documentation", "wiki"). These are optional, environment-specific connectors, not
+something every session has available.
+
+- **If none is connected**: skip this step entirely and note that briefly in Step 7's report — there is nothing
+  to do here.
+- **If one or more are found**:
+  1. **Find the relevant existing page(s) first.** Search the connected space using keywords drawn from Step 3's
+     findings (the changed classes/behaviors/commands) and the topics already touched in Step 4, so any update
+     is grounded in that system's actual current content and structure rather than guessed at. Read the found
+     page(s) in full — title, current structure/sections, and content — before drafting anything. If nothing
+     relevant exists, say so rather than inventing a page to update.
+  2. **Draft the proposed update** against that real content: what would change on each affected page (or, only
+     if genuinely nothing relevant exists yet and a new page is clearly warranted, propose creating one) —
+     grounded in the same diff-driven understanding from Step 3, never inventing behavior the code doesn't
+     actually have.
+  3. **Show the user the proposed change before sending anything.** Identify the page being targeted (title/
+     link) and show a clear before/after (or diff-style listing) of exactly what would be written. Ask via
+     `AskUserQuestion` whether to send it, skip it, or revise it further.
+  4. **Only on explicit approval**, call the MCP tool to apply the update (update the existing page, or create
+     the new one if that's what was proposed and approved). If the user declines or asks for changes, do not
+     call the MCP write tool — revise the draft and re-confirm, or drop it if they'd rather skip external docs
+     this round.
+- This is a best-effort enrichment layered on top of the Antora updates from Step 4 — it never blocks, replaces,
+  or substitutes for keeping the Antora pages themselves in sync.
+
+## Step 6 — Verify the site still builds
 
 If a working Node.js toolchain is available and the playbook found in Step 2 is an Antora playbook:
 
@@ -116,11 +145,13 @@ Report any Antora/Asciidoctor errors (broken `xref:`, malformed tables, bad Merm
 before finishing. If Node isn't available or the build can't be run, say so explicitly and note the pages were
 updated but not locally verified against a real build.
 
-## Step 6 — Report
+## Step 7 — Report
 
 Summarize, per page touched: what changed in the source that drove the edit, and what was updated in the docs.
 Explicitly call out pages you considered but left unchanged because the diff didn't affect their content, and
-any doc gaps you noticed but didn't fix because they were outside the scope of the diff being documented.
+any doc gaps you noticed but didn't fix because they were outside the scope of the diff being documented. If
+Step 5 found a connected documentation MCP, also report what was sent (page, link), what was proposed but
+declined/skipped by the user, and if none was connected, say so briefly.
 
 End the report by reminding the user to check the generated documentation themselves before trusting it — point
 them at the built site's start page under the module's build output directory (from Step 5, if the build ran),

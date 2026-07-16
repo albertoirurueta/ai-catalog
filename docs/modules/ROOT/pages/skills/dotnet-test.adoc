@@ -131,15 +131,16 @@ other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/dotnet-code-one-task.adoc[] — Step 6, once per task, via its own `general-purpose` sub-agent, to
-  run the scoped tests for the affected type(s) (falling back to `dotnet test --filter
-  "FullyQualifiedName~<TestClass>"` directly if this skill is unavailable).
+* xref:skills/dotnet-code-one-task-group.adoc[] — Step 3, once per task group's bucket, via the
+  xref:agents/gate-runner.adoc[`gate-runner`] agent, to run the scoped tests for every type the bucket affected
+  (falling back to `dotnet test --filter "FullyQualifiedName~<TestClass>"` directly if this skill is
+  unavailable), plus a full-suite run.
 
 === Related agents
 
-None directly — but `dotnet-code-one-task` (see xref:skills/dotnet-code-one-task.adoc[] and
-xref:agents/overview.adoc[]) always invokes this skill from inside a `general-purpose` sub-agent it spawns, not
-inline.
+* xref:agents/gate-runner.adoc[`gate-runner`] — `dotnet-code-one-task-group` (see
+  xref:skills/dotnet-code-one-task-group.adoc[]) always invokes this skill from inside a `gate-runner` sub-agent
+  it spawns, not inline.
 
 == Source
 

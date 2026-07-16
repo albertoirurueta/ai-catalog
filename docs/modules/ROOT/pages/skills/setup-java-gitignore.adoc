@@ -79,7 +79,7 @@ None — `setup-java-gitignore` is a leaf skill; it does not call any other skil
 === Invoked by
 
 * xref:skills/setup-java-library-repository.adoc[] — Step 5 runs `setup-java-gitignore` after
-  `setup-java-library` and `antora-setup` have run, so it can detect their generated files (the Maven
+  `setup-java-library` and `setup-antora` have run, so it can detect their generated files (the Maven
   `pom.xml`/source layout and the Antora docs build output) already in place. It's invoked with no `args` — it
   derives everything by exploring the repository directly.
 

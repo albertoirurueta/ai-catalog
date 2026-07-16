@@ -13,7 +13,9 @@ just file names, cross-checks every class/method/endpoint it plans to mention ag
 and only touches the specific pages that diff actually concerns — leaving the rest of the site untouched. It
 makes no assumption about a fixed docs path or a fixed set of page names; it discovers the real Antora module(s)
 present and their real page map fresh each run, which is why it works the same way regardless of which
-repository it's invoked in.
+repository it's invoked in. If a documentation MCP (e.g. Confluence, Notion) is connected, it extends the same
+diff-driven understanding to that external system too — finding the relevant existing page(s) there first, then
+showing the user the exact proposed change for approval before anything is written.
 
 == Purpose group
 
@@ -50,9 +52,12 @@ branch (`git diff <base-branch>...HEAD` plus `git diff`).
   matching extension wired in, and only where they genuinely clarify a decision process, data flow, or formal
   definition better than prose.
 * If no `antora.yml` existed anywhere in the repository and the user agreed to bootstrap one: a newly scaffolded
-  Antora module (via `antora-setup`), then the rest of the run proceeds against it.
+  Antora module (via `setup-antora`), then the rest of the run proceeds against it.
+* If a documentation MCP (e.g. Confluence, Notion) is connected: a proposed update to the relevant existing
+  external page(s), sent only after the user reviews and approves the exact change shown to them.
 * A report naming, per page: what changed in the source that drove the edit and what was updated in the docs —
-  plus pages deliberately left unchanged and any doc gap noticed but left out of scope.
+  plus pages deliberately left unchanged, any doc gap noticed but left out of scope, and what was sent (or
+  proposed-but-declined) to a connected documentation MCP.
 * No source code is ever modified.
 
 == Execution flow
@@ -70,15 +75,23 @@ flowchart TD
     F --> G{Any antora.yml found?}
     G -- no --> H[Ask user whether to\nbootstrap docs now]
     H -- declines --> H1[Stop: nothing to update]
-    H -- agrees --> I["Run antora-setup via sub-agent,\nbriefed with the actual diff context"]
+    H -- agrees --> I["Run setup-antora via sub-agent,\nbriefed with the actual diff context"]
     I --> F
     G -- yes --> J["Read antora.yml + nav.adoc to build a live\npage map; check playbook for Mermaid/MathJax extensions"]
     J --> K["Understand changes in code terms: new/removed\nAPIs, behavior changes, new variants"]
     K --> L["Map changes to affected pages only;\nedit them, verifying every named symbol against real source"]
-    L --> M{Node.js + Antora playbook available?}
-    M -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors]
-    M -- no --> O[Note build was not locally verified]
-    N --> P[Report per-page changes,\nunchanged pages, and noted doc gaps]
+    L --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
+    M -- no --> M1[Skip external doc update]
+    M -- yes --> M2["Search MCP for relevant existing page(s);\nread current content/structure"]
+    M2 --> M3["Draft proposed update from\nStep 3's diff-driven understanding"]
+    M3 --> M4["Show user exact proposed change;\nAskUserQuestion: send / skip / revise"]
+    M4 -- approved --> M5[Call MCP tool to\nupdate/create the page]
+    M4 -- declined --> M1
+    M5 --> Q{Node.js + Antora playbook available?}
+    M1 --> Q
+    Q -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors]
+    Q -- no --> O[Note build was not locally verified]
+    N --> P["Report per-page changes, unchanged pages,\nnoted doc gaps, and MCP doc outcome"]
     O --> P
 ....
 
@@ -86,7 +99,7 @@ flowchart TD
 
 === Invokes
 
-* xref:skills/antora-setup.adoc[] — Step 2, conditionally: only when no `antora.yml` is found anywhere in the
+* xref:skills/setup-antora.adoc[] — Step 2, conditionally: only when no `antora.yml` is found anywhere in the
   repository, and only after asking the user whether to bootstrap Antora documentation now. Run via a sub-agent
   (the Agent tool) briefed with the actual code-change context, so `update-docs` itself can resume once
   scaffolding finishes and continue with the rest of its run against the newly created module.
@@ -101,7 +114,7 @@ flowchart TD
 
 === Related agents
 
-None directly — `update-docs` delegates the conditional `antora-setup` call in Step 2 to a sub-agent (see
+None directly — `update-docs` delegates the conditional `setup-antora` call in Step 2 to a sub-agent (see
 xref:agents/overview.adoc[]), but that is calling a skill through a sub-agent wrapper rather than relying on an
 agent's own unique capability, so no agent is listed as a direct dependency here.
 

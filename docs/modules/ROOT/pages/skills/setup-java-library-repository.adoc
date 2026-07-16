@@ -77,7 +77,7 @@ name and URL directly).
 
 * `pom.xml` and the `src/main/java`/`src/main/resources`/`src/test/java` source folders for the base package
   (via `setup-java-library`).
-* A scaffolded Antora documentation site under `docs/` (via `antora-setup`).
+* A scaffolded Antora documentation site under `docs/` (via `setup-antora`).
 * A root `.gitignore` covering the build tool, IDE files, and the Antora build output (via
   `setup-java-gitignore`).
 * `develop.yml`/`main.yml`/`sync.yml` GitHub Actions workflows and the `.github/scripts/sync_versions.py` script
@@ -98,7 +98,7 @@ flowchart TD
     B --> C["Step 2: Collect pipeline parameters\n(branch, Java version, server/profile ids,\nsettings file)"]
     C --> D["Step 3: Run setup-java-library\n(pom.xml + source folders, via sub-agent)"]
     D -- pom.xml existed and user chose stop --> E[Stop entire pipeline; report]
-    D -- ok --> F["Step 4: Run antora-setup\n(documentation site, via sub-agent)"]
+    D -- ok --> F["Step 4: Run setup-antora\n(documentation site, via sub-agent)"]
     F --> G["Step 5: Run setup-java-gitignore\n(root .gitignore, via sub-agent)"]
     G --> H["Step 6: Run setup-java-github-workflows\n(CI/CD workflows, via sub-agent)"]
     H --> I["Step 7: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
@@ -118,7 +118,7 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
 * xref:skills/setup-java-library.adoc[] — Step 3, first: writes `pom.xml` and the source folders, passing
   Step 1's answers (groupId, artifactId, package, developer name/email/organizationUrl, license) as `args`
   `key: value` lines so `setup-java-library` doesn't ask for them again.
-* xref:skills/antora-setup.adoc[] — Step 4: scaffolds the Antora documentation site, invoked with no `args`
+* xref:skills/setup-antora.adoc[] — Step 4: scaffolds the Antora documentation site, invoked with no `args`
   since it derives the component name/title/version directly from the `pom.xml` Step 3 just wrote.
 * xref:skills/setup-java-gitignore.adoc[] — Step 5: writes or updates the root `.gitignore`, invoked with no
   `args` since it explores the repository directly (including what Steps 3–4 just wrote).

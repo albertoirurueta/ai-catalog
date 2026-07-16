@@ -1,6 +1,7 @@
 ---
 name: dotnet-code-quality
 description: Run this .NET/C# project or solution's Roslyn analyzers — StyleCop.Analyzers for style/formatting (the .NET equivalent of Checkstyle) and Microsoft.CodeAnalysis.NetAnalyzers' CA rules for code-quality/design/reliability/security bug detection (the .NET equivalent of PMD + SpotBugs combined) — via a clean `dotnet build` with a SARIF diagnostic log, then read the generated `.sarif` file to summarize every issue found (file, line, rule, message), grouped by tool. Invoke as `/dotnet-code-quality` to check the whole solution, or `/dotnet-code-quality <path-or-class-name>` to scope the summary to a specific project/file/class — the underlying build always analyzes the whole targeted solution/project (Roslyn analyzers have no per-class selector), only the reported summary is filtered. Use whenever the user wants a lint/static-analysis pass called out separately from `dotnet-test`/`dotnet-coverage`, instead of eyeballing raw build warnings.
+model: haiku
 ---
 
 # .NET Quality

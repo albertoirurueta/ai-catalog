@@ -1,6 +1,7 @@
 ---
 name: release
 description: Convert the current SNAPSHOT version into a final release. Must be run from the `develop` branch (gitflow) — warns and stops otherwise. Asks the user for the release version (current SNAPSHOT stripped, a patch bump, or a major bump) and the next upcoming SNAPSHOT version, creates a `release_x.y.z` branch off `develop`, updates the version in `pom.xml`, README.md, `docs/antora.yml`, and any Antora page showing dependency snippets, creates/updates `docs/modules/ROOT/pages/whats-new.adoc` and the root `CHANGELOG.md` with a summary of changes since the previous release, opens a pull request for the release branch with a `release` label attached, and uses the `pr-description` skill to fill in its description. Invoke as `/release`. Use whenever the user wants to cut a new release of this library.
+model: sonnet
 ---
 
 # Release

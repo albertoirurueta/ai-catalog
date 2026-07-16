@@ -32,9 +32,14 @@ might be asked to run.
 * xref:skills/issue.adoc[] — Step 6, when the user chooses automatic implementation over manual review, hands
   off the entire `code` skill run so implementation starts from a clean context; `issue` itself keeps running
   afterward to push the branch and open the pull request once this agent reports back.
-* xref:skills/code.adoc[] — Step 4, once per top-level task, to invoke the matching `<key>-code-one-task` skill —
-  since that skill always re-checks the current code state from disk itself and hands back a self-contained
-  summary, isolating it keeps `code`'s own context flat regardless of how many tasks the plan has.
+* xref:skills/code.adoc[] — Step 4, once per plan task group, to invoke `code-one-task-group` — since that
+  skill hands back a self-contained summary, isolating it keeps `code`'s own context flat regardless of how many
+  groups the plan has.
+* xref:skills/java-code-one-task-group.adoc[] and xref:skills/dotnet-code-one-task-group.adoc[] — once per task
+  in a bucket (potentially many at once, in parallel, when the group is marked parallelizable), to invoke the
+  matching `<key>-code-one-task` skill — since that skill always re-checks the current code state from disk
+  itself and hands back a self-contained summary, isolating it keeps the caller's own context flat regardless of
+  how many tasks the bucket has.
 * xref:skills/setup-java-library-repository.adoc[] — Steps 3–8, once per each of the six bootstrap skills it
   orchestrates, since every one of them re-derives what it needs from the filesystem rather than from anything
   said earlier in the conversation.

@@ -1,6 +1,7 @@
 ---
 name: java-coverage
 description: Generate a JaCoCo code coverage report via `mvn clean jacoco:prepare-agent test jacoco:report`, scoped to the test selector given (same selector syntax as the `java-test` skill), then read the generated `target/site/jacoco/jacoco.csv` to report the exact line-coverage percentage for the specific class(es) touched — falling back to the per-class `target/site/jacoco/**/<ClassName>.html` report to show which lines/branches are still uncovered. Invoke as `/java-coverage <selector> [TargetClass1,TargetClass2,...]`, or `/java-coverage` with no argument to run the full suite and report whole-project coverage. Use whenever the user wants to check, or verify a coverage bar (e.g. "at least 80% line coverage") for a class or set of classes, instead of eyeballing Surefire output.
+model: haiku
 ---
 
 # Java Coverage
