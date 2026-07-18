@@ -1,6 +1,6 @@
 ---
 name: iru-explore
-description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — both in the existing codebase and in the requested change — plus whether Antora documentation exists and where, and which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS). Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools, and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" findings (languages/frameworks, Antora docs location, repository host) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, and the right git-platform tooling.
+description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — both in the existing codebase and in the requested change — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools, and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -114,6 +114,17 @@ with the project. Start from first principles each time:
   confirm the actual path rather than assuming) and, alongside it, an `antora-playbook.yml` and a
   `modules/ROOT/pages` (or other module) tree. Record the docs root path if found — later skills (e.g.
   `iru-update-docs`) need this location, and its content is itself a language/framework signal (see Step 5).
+- Check for a `.archive/` directory at the repository root and give it special attention: the `iru-code` skill
+  archives every completed `implementation_plan.md` there (typically as
+  `implementation_plan_<ticket-or-timestamp-id>.md`) once its task groups are done, so it's a library of
+  previously resolved tasks. If it exists, list its contents (`ls .archive`) and skim each archived plan's
+  title/summary for one whose topic, named files/classes, or task area overlaps with the current ticket (or,
+  with no ticket, the general topic of this exploration) — matching on keywords rather than reading every file
+  in full. Read the most relevant one or two in full: a matching archived plan shows how a similar task was
+  previously scoped, broken into dependency-aware task groups, and what its "Current code state" notes
+  captured — treat it as a concrete example to ground the current task's own plan against, not as a template
+  to copy verbatim, since the current change is never identical. If `.archive/` doesn't exist, or nothing in it
+  is relevant, note that explicitly rather than silently skipping the check.
 - Use the `Explore` agent (or direct `Read`/`grep` for small, targeted lookups) to build a picture of the
   most significant parts of the code structure: how the project is organized into modules/packages, the core
   abstractions and how they relate (inheritance, composition, key interfaces), where the main control flow or
@@ -234,6 +245,10 @@ Summarize for the user in plain text (no file output unless asked):
 - If Step 6 found a connected documentation MCP, include a **Related documentation** section listing each
   relevant page found (title, link, one-line summary) — or a one-line note that none was relevant/connected.
   This is what a later `iru-plan` step should draw on for additional context beyond the codebase and ticket.
+- Include a **Related past implementation plans** section covering the `.archive/` check from Step 4: name any
+  archived plan(s) used as precedent (file name, its original topic, and what carries over — task breakdown,
+  granularity, or approach), or state explicitly that `.archive/` doesn't exist or nothing in it was relevant.
+  This is what a later `iru-plan` step should draw on to ground a new plan's structure in a proven prior one.
 - If a ticket was explored: restate the task in your own words, list the specific files/classes/methods
   relevant to it, explain how the current code behaves in the area the ticket touches, and flag anything
   ambiguous or missing from the ticket that would block implementation.

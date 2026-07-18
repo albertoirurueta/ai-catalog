@@ -14,10 +14,13 @@ ticket implicates; given none, it does a general architectural tour of the repos
 platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS) and the language(s)/framework(s) in play
 — both in the existing codebase and in whatever change is being requested — so its "Tech stack" report can be
 reused directly by later skills (`iru-plan`, `iru-code`, `iru-update-docs`, PR/branch creation) instead of each re-detecting
-the same facts. If a documentation MCP (e.g. Confluence, Notion) is connected, it also does a targeted search
-for pages relevant to the ticket or codebase, folding anything relevant into the report as extra context for a
-later plan. Either way it never edits a file, and it never proposes an implementation — that is `iru-plan`'s job,
-run as a separate, explicit step.
+the same facts. It also checks for a `.archive/` directory — where `iru-code` archives every completed
+`implementation_plan.md` — and, if it holds a plan whose topic overlaps with the current task, reads it as
+concrete precedent for how a similar task was previously scoped and broken into task groups, rather than
+planning from a cold start. If a documentation MCP (e.g. Confluence, Notion) is connected, it also does a
+targeted search for pages relevant to the ticket or codebase, folding anything relevant into the report as
+extra context for a later plan. Either way it never edits a file, and it never proposes an implementation —
+that is `iru-plan`'s job, run as a separate, explicit step.
 
 == Purpose group
 
@@ -55,6 +58,9 @@ general codebase tour.
   skills in the same conversation can read it directly instead of re-detecting it.
 * If a documentation MCP (e.g. Confluence, Notion) is connected: a **Related documentation** section listing
   relevant pages found (title, link, one-line summary), or a note that none was relevant/connected.
+* A **Related past implementation plans** section: any archived plan(s) in `.archive/` used as precedent (file
+  name, its original topic, what carries over — task breakdown, granularity, or approach), or a note that
+  `.archive/` doesn't exist or nothing in it was relevant.
 * If a ticket was explored: the task restated in plain language, the specific files/classes/methods relevant to
   it, how the current code behaves in that area, and anything ambiguous or missing that would block
   implementation.
@@ -76,11 +82,12 @@ flowchart TD
     G --> H["Narrow exploration to files/classes/\nerror messages the ticket names,\nplus their closest structural neighbors"]
     H --> I["Check existing tests covering that area"]
     E --> J["General orientation pass:\narchitecture, modules, recent git history"]
-    I --> K["Detect tech stack: codebase\nlanguages/frameworks + Antora docs"]
-    J --> K
+    I --> O["Check .archive/ for a plan whose\ntopic overlaps the current task"]
+    J --> O
+    O --> K["Detect tech stack: codebase\nlanguages/frameworks + Antora docs"]
     K --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- yes --> N["Search it for pages relevant\nto the ticket/codebase"]
-    M -- no --> L[Report findings + Tech stack section]
+    M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ Related documentation)"]
     N --> L
 ....
 
