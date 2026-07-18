@@ -6,7 +6,7 @@ AI Catalog is a collection of https://docs.claude.com/en/docs/claude-code/skills
 reusable, version-controlled playbooks for common software engineering workflows. Instead of re-explaining
 the same process to Claude in every project (how this team bootstraps a Java library, how a pull request
 should be reviewed, how release notes get written), each workflow is captured once as a `SKILL.md` file and
-invoked on demand with a slash command such as `/plan` or `/pr-review`.
+invoked on demand with a slash command such as `/iru-plan` or `/iru-pr-review`.
 
 == Why this exists
 
@@ -26,7 +26,7 @@ Each skill lives in its own directory under `.claude/skills/` and contains a sin
 * Step-by-step instructions written for an agent to follow, including what to survey before acting, what
   to leave untouched, and how to report back.
 
-Skills in this catalog range from small, single-purpose checks (`check-license`, `java-test`) to
+Skills in this catalog range from small, single-purpose checks (`iru-check-license`, `iru-java-test`) to
 orchestrators that call other skills in sequence.
 
 === An agent
@@ -36,20 +36,20 @@ context (so its detailed output — a full test log, a static-analysis report, a
 doesn't clutter the main conversation) or to search the codebase without derailing the current flow. This
 repository defines three **custom** agents under `.claude/agents/` for its most-duplicated sub-agent shapes:
 
-* **`gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
+* **`iru-gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
   headers, doc-comment audits, security scans, a full build), optionally diffs it against a baseline, and
   reports back only a compact summary.
-* **`isolated-skill-executor`** — runs one named skill end to end in a completely fresh context so an earlier
+* **`iru-isolated-skill-executor`** — runs one named skill end to end in a completely fresh context so an earlier
   exploration/planning transcript can't bias it, while the caller keeps running afterward.
-* **`change-summarizer`** — fans out over a git commit/tag range and returns only the user-facing changes.
+* **`iru-change-summarizer`** — fans out over a git commit/tag range and returns only the user-facing changes.
 
 Skills that need ad hoc context isolation beyond those three shapes still use Claude Code's **built-in** agent
-types: the **`Explore`** agent (a fast, read-only search agent) is used explicitly by the `explore` skill, and
+types: the **`Explore`** agent (a fast, read-only search agent) is used explicitly by the `iru-explore` skill, and
 the **`general-purpose`** agent (Claude Code's default when no specific type is named) covers one-off cases like
-bootstrapping the `setup-antora` skill mid-run.
+bootstrapping the `iru-setup-antora` skill mid-run.
 
-See xref:agents/overview.adoc[] (built-in types) and xref:agents/gate-runner.adoc[],
-xref:agents/isolated-skill-executor.adoc[], xref:agents/change-summarizer.adoc[] (custom agents) for detail on
+See xref:agents/overview.adoc[] (built-in types) and xref:agents/iru-gate-runner.adoc[],
+xref:agents/iru-isolated-skill-executor.adoc[], xref:agents/iru-change-summarizer.adoc[] (custom agents) for detail on
 where and why each is used.
 
 === A CLAUDE.md file
@@ -99,6 +99,11 @@ one on this page.
 |Where skills and agents live, when to reach for one versus the other, and the fastest reliable way to draft
 a new one — asking Claude Code itself, grounded in existing examples.
 
+|xref:guides/extending-the-catalog.adoc[]
+|Where this catalog's pipelines are already built to grow by convention (the `iru-code` pipeline's
+language/framework registry) versus where a single skill still hardcodes one stack (release generation,
+repository bootstrap) — and what's involved in adding a new language, stack, tracker, or quality gate to each.
+
 |xref:guides/plugins.adoc[]
 |What a plugin bundles, its manifest/directory layout, and how marketplaces (private or public) distribute
 one across repositories.
@@ -122,195 +127,195 @@ features, and where the underlying models genuinely differ.
 |===
 |Name |Group |Purpose |Detail page
 
-|`build-docs`
+|`iru-build-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
-|Build the existing Antora documentation site as-is, scaffolding it first via `setup-antora` if needed.
-|xref:skills/build-docs.adoc[]
+|Build the existing Antora documentation site as-is, scaffolding it first via `iru-setup-antora` if needed.
+|xref:skills/iru-build-docs.adoc[]
 
-|`check-license`
+|`iru-check-license`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Verify (and backfill) license headers on source/test files against the repository's actual license.
-|xref:skills/check-license.adoc[]
+|xref:skills/iru-check-license.adoc[]
 
-|`check-security`
+|`iru-check-security`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Scan for accidentally committed secrets via `detect-secrets`, maintaining a `.secrets.baseline`.
-|xref:skills/check-security.adoc[]
+|xref:skills/iru-check-security.adoc[]
 
-|`code`
+|`iru-code`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Execute `implementation_plan.md` end to end, one task group at a time, dispatching each to `code-one-task-group`.
-|xref:skills/code.adoc[]
+|Execute `implementation_plan.md` end to end, one task group at a time, dispatching each to `iru-code-one-task-group`.
+|xref:skills/iru-code.adoc[]
 
-|`code-one-task-group`
+|`iru-code-one-task-group`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Implement one plan task group, dispatching each task to its language's `<key>-code-one-task-group` skill.
-|xref:skills/code-one-task-group.adoc[]
+|xref:skills/iru-code-one-task-group.adoc[]
 
-|`create-github-issue`
+|`iru-create-github-issue`
 |xref:index.adoc#group-intake[Ticket Intake]
 |Draft and file a new GitHub issue, grounded in the codebase and confirmed with the user before creation.
-|xref:skills/create-github-issue.adoc[]
+|xref:skills/iru-create-github-issue.adoc[]
 
-|`create-jira-ticket`
+|`iru-create-jira-ticket`
 |xref:index.adoc#group-intake[Ticket Intake]
-|Draft and file a new Jira ticket via connected Jira MCP tools, the Jira counterpart to `create-github-issue`.
-|xref:skills/create-jira-ticket.adoc[]
+|Draft and file a new Jira ticket via connected Jira MCP tools, the Jira counterpart to `iru-create-github-issue`.
+|xref:skills/iru-create-jira-ticket.adoc[]
 
-|`database-code-one-task`
+|`iru-database-code-one-task`
 |xref:index.adoc#group-database[Database Development Tooling]
 |Generate (and, if a matching MCP allows it, execute) the queries a single database plan task calls for.
-|xref:skills/database-code-one-task.adoc[]
+|xref:skills/iru-database-code-one-task.adoc[]
 
-|`database-code-one-task-group`
+|`iru-database-code-one-task-group`
 |xref:index.adoc#group-database[Database Development Tooling]
 |Implement a bucket of database tasks sequentially, one task at a time — no baseline or bucket-wide validation.
-|xref:skills/database-code-one-task-group.adoc[]
+|xref:skills/iru-database-code-one-task-group.adoc[]
 
-|`dotnet-code-one-task`
+|`iru-dotnet-code-one-task`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
-|Implement a single .NET plan task's code and tests only — validation is handled by `dotnet-code-one-task-group`.
-|xref:skills/dotnet-code-one-task.adoc[]
+|Implement a single .NET plan task's code and tests only — validation is handled by `iru-dotnet-code-one-task-group`.
+|xref:skills/iru-dotnet-code-one-task.adoc[]
 
-|`dotnet-code-one-task-group`
+|`iru-dotnet-code-one-task-group`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Implement a bucket of .NET tasks (in parallel where safe) and validate the whole bucket once.
-|xref:skills/dotnet-code-one-task-group.adoc[]
+|xref:skills/iru-dotnet-code-one-task-group.adoc[]
 
-|`dotnet-code-quality`
+|`iru-dotnet-code-quality`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Run StyleCop.Analyzers/CA Roslyn analyzers via a SARIF-logged build and summarize every issue found.
-|xref:skills/dotnet-code-quality.adoc[]
+|xref:skills/iru-dotnet-code-quality.adoc[]
 
-|`dotnet-coverage`
+|`iru-dotnet-coverage`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Run Coverlet via `dotnet test` and report the exact measured coverage percentage for target class(es).
-|xref:skills/dotnet-coverage.adoc[]
+|xref:skills/iru-dotnet-coverage.adoc[]
 
-|`dotnet-docfx`
+|`iru-dotnet-docfx`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Audit and complete XML doc-comment coverage for given types, then attempt a DocFX build.
-|xref:skills/dotnet-docfx.adoc[]
+|xref:skills/iru-dotnet-docfx.adoc[]
 
-|`dotnet-generate-all-tests`
+|`iru-dotnet-generate-all-tests`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Find every .NET class with no tests or under 80% coverage and generate/extend tests until it clears the bar.
-|xref:skills/dotnet-generate-all-tests.adoc[]
+|xref:skills/iru-dotnet-generate-all-tests.adoc[]
 
-|`dotnet-test`
+|`iru-dotnet-test`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Run the .NET test suite via `dotnet test`, scoped to a class/method/namespace/trait selector.
-|xref:skills/dotnet-test.adoc[]
+|xref:skills/iru-dotnet-test.adoc[]
 
-|`explore`
+|`iru-explore`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket.
-|xref:skills/explore.adoc[]
+|xref:skills/iru-explore.adoc[]
 
-|`generate-skill-docs`
+|`iru-generate-skill-docs`
 |xref:index.adoc#group-tooling[Catalog Tooling]
 |Regenerate this documentation site itself from the current set of skills and agents on disk.
-|xref:skills/generate-skill-docs.adoc[]
+|xref:skills/iru-generate-skill-docs.adoc[]
 
-|`issue`
+|`iru-issue`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |End-to-end kickoff for a tracked ticket: branch, explore, plan, implement, open PR, review.
-|xref:skills/issue.adoc[]
+|xref:skills/iru-issue.adoc[]
 
-|`java-code-one-task`
+|`iru-java-code-one-task`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Implement a single Java plan task's code and tests only — validation is handled by `java-code-one-task-group`.
-|xref:skills/java-code-one-task.adoc[]
+|Implement a single Java plan task's code and tests only — validation is handled by `iru-java-code-one-task-group`.
+|xref:skills/iru-java-code-one-task.adoc[]
 
-|`java-code-one-task-group`
+|`iru-java-code-one-task-group`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Implement a bucket of Java tasks (in parallel where safe) and validate the whole bucket once.
-|xref:skills/java-code-one-task-group.adoc[]
+|xref:skills/iru-java-code-one-task-group.adoc[]
 
-|`java-code-quality`
+|`iru-java-code-quality`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Run Checkstyle/PMD/SpotBugs and summarize every issue found, grouped by tool.
-|xref:skills/java-code-quality.adoc[]
+|xref:skills/iru-java-code-quality.adoc[]
 
-|`java-coverage`
+|`iru-java-coverage`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Run JaCoCo and report the exact measured coverage percentage for target class(es).
-|xref:skills/java-coverage.adoc[]
+|xref:skills/iru-java-coverage.adoc[]
 
-|`java-generate-all-tests`
+|`iru-java-generate-all-tests`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Find every Java class with no tests or under 80% coverage and generate/extend tests until it clears the bar.
-|xref:skills/java-generate-all-tests.adoc[]
+|xref:skills/iru-java-generate-all-tests.adoc[]
 
-|`java-javadoc`
+|`iru-java-javadoc`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Audit and complete Javadoc coverage for given classes, then verify it builds cleanly.
-|xref:skills/java-javadoc.adoc[]
+|xref:skills/iru-java-javadoc.adoc[]
 
-|`java-test`
+|`iru-java-test`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.
-|xref:skills/java-test.adoc[]
+|xref:skills/iru-java-test.adoc[]
 
-|`plan`
+|`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Write a concrete, reviewable `implementation_plan.md`, tagging each task's language/framework.
-|xref:skills/plan.adoc[]
+|xref:skills/iru-plan.adoc[]
 
-|`pr-description`
+|`iru-pr-description`
 |xref:index.adoc#group-pr[Pull Request Lifecycle]
 |Draft a PR description from the real diff, and optionally open/update the pull request.
-|xref:skills/pr-description.adoc[]
+|xref:skills/iru-pr-description.adoc[]
 
-|`pr-review`
+|`iru-pr-review`
 |xref:index.adoc#group-pr[Pull Request Lifecycle]
 |Review an open pull request against the linked ticket's intent and this codebase's conventions.
-|xref:skills/pr-review.adoc[]
+|xref:skills/iru-pr-review.adoc[]
 
-|`release`
+|`iru-release`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Cut a release branch, bump versions, draft release notes/changelog, and open the release PR.
-|xref:skills/release.adoc[]
+|xref:skills/iru-release.adoc[]
 
-|`setup-antora`
+|`iru-setup-antora`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
-|xref:skills/setup-antora.adoc[]
+|xref:skills/iru-setup-antora.adoc[]
 
-|`setup-changelog`
+|`iru-setup-changelog`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |One-time bootstrap of `CHANGELOG.md`, backfilled from git tags/GitHub Releases.
-|xref:skills/setup-changelog.adoc[]
+|xref:skills/iru-setup-changelog.adoc[]
 
-|`setup-java-github-workflows`
+|`iru-setup-java-github-workflows`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Scaffold/update the `develop.yml`/`main.yml`/`sync.yml` GitHub Actions CI/CD pipeline.
-|xref:skills/setup-java-github-workflows.adoc[]
+|xref:skills/iru-setup-java-github-workflows.adoc[]
 
-|`setup-java-gitignore`
+|`iru-setup-java-gitignore`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Create or refresh the root `.gitignore` for a Java project.
-|xref:skills/setup-java-gitignore.adoc[]
+|xref:skills/iru-setup-java-gitignore.adoc[]
 
-|`setup-java-library`
+|`iru-setup-java-library`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Generate `pom.xml` and the standard Maven source layout for a new Java library.
-|xref:skills/setup-java-library.adoc[]
+|xref:skills/iru-setup-java-library.adoc[]
 
-|`setup-java-library-repository`
+|`iru-setup-java-library-repository`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Orchestrator: bootstrap a brand-new Java library repository end to end in one pass.
-|xref:skills/setup-java-library-repository.adoc[]
+|xref:skills/iru-setup-java-library-repository.adoc[]
 
-|`setup-readme`
+|`iru-setup-readme`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Create or refresh the root `README.md` from what actually exists in the repository.
-|xref:skills/setup-readme.adoc[]
+|xref:skills/iru-setup-readme.adoc[]
 
-|`update-docs`
+|`iru-update-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Bring the Antora documentation module up to date with changes already made to the code.
-|xref:skills/update-docs.adoc[]
+|xref:skills/iru-update-docs.adoc[]
 |===
 
 == Agents reference
@@ -323,17 +328,17 @@ file of their own and are instead described together in xref:agents/overview.ado
 |===
 |Name |Purpose |Detail page
 
-|`change-summarizer`
+|`iru-change-summarizer`
 |Fan out over a git commit/tag range and return only the user-facing changes.
-|xref:agents/change-summarizer.adoc[]
+|xref:agents/iru-change-summarizer.adoc[]
 
-|`gate-runner`
+|`iru-gate-runner`
 |Run a single verification/quality-gate skill and report back only a compact summary, optionally vs. a baseline.
-|xref:agents/gate-runner.adoc[]
+|xref:agents/iru-gate-runner.adoc[]
 
-|`isolated-skill-executor`
+|`iru-isolated-skill-executor`
 |Run one named skill end to end in a fresh context, so the caller can keep running afterward.
-|xref:agents/isolated-skill-executor.adoc[]
+|xref:agents/iru-isolated-skill-executor.adoc[]
 |===
 
 == Purpose groups
@@ -347,21 +352,21 @@ library starts out matching the same conventions as every other repository in th
 [TIP]
 ====
 Reach for this group when standing up a **brand-new repository** — a one-time pass, not something you'd run
-again once the repository already exists. `setup-java-library-repository` is the single entry point that
+again once the repository already exists. `iru-setup-java-library-repository` is the single entry point that
 runs the rest in order; each one also works standalone to fill a single gap in a repository that already has
-some of this in place (e.g. just `/setup-antora` to add docs to a repository that already has a `pom.xml`).
+some of this in place (e.g. just `/iru-setup-antora` to add docs to a repository that already has a `pom.xml`).
 ====
 
-* xref:skills/setup-java-library-repository.adoc[`setup-java-library-repository`] — orchestrator: bootstraps
+* xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
   a brand-new Java library repository end to end in one pass.
-* xref:skills/setup-java-library.adoc[`setup-java-library`] — generates `pom.xml` and the standard Maven
+* xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
   source layout.
-* xref:skills/setup-antora.adoc[`setup-antora`] — scaffolds the Antora documentation site.
-* xref:skills/setup-java-gitignore.adoc[`setup-java-gitignore`] — creates or refreshes the root `.gitignore`.
-* xref:skills/setup-java-github-workflows.adoc[`setup-java-github-workflows`] — scaffolds/updates the CI/CD
+* xref:skills/iru-setup-antora.adoc[`iru-setup-antora`] — scaffolds the Antora documentation site.
+* xref:skills/iru-setup-java-gitignore.adoc[`iru-setup-java-gitignore`] — creates or refreshes the root `.gitignore`.
+* xref:skills/iru-setup-java-github-workflows.adoc[`iru-setup-java-github-workflows`] — scaffolds/updates the CI/CD
   GitHub Actions pipeline.
-* xref:skills/setup-changelog.adoc[`setup-changelog`] — one-time bootstrap of `CHANGELOG.md`.
-* xref:skills/setup-readme.adoc[`setup-readme`] — creates or refreshes the root `README.md`.
+* xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] — one-time bootstrap of `CHANGELOG.md`.
+* xref:skills/iru-setup-readme.adoc[`iru-setup-readme`] — creates or refreshes the root `README.md`.
 
 [[group-intake]]
 === Ticket Intake
@@ -372,14 +377,14 @@ ticket — before the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 [TIP]
 ====
 Reach for one of these when the work doesn't have a ticket yet. Neither is required — a ticket can always be
-filed by hand, or `/issue`/`/plan` can work from a free-form description instead — but both skills ground the
-draft in the actual codebase (via `explore`) and ask for the same context (purpose, links, files, related
+filed by hand, or `/iru-issue`/`/iru-plan` can work from a free-form description instead — but both skills ground the
+draft in the actual codebase (via `iru-explore`) and ask for the same context (purpose, links, files, related
 tickets) so what lands in the tracker is immediately actionable.
 ====
 
-* xref:skills/create-github-issue.adoc[`create-github-issue`] — drafts and files a GitHub issue via `gh issue
+* xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] — drafts and files a GitHub issue via `gh issue
   create`, matched against this repository's actual label set.
-* xref:skills/create-jira-ticket.adoc[`create-jira-ticket`] — drafts and files a Jira ticket via connected Jira
+* xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`] — drafts and files a Jira ticket via connected Jira
   MCP tools, resolving the target project and issue type against the real Jira configuration.
 
 [[group-cycle]]
@@ -392,29 +397,29 @@ describe yourself — to an implemented, open pull request.
 ====
 This is the group to reach for on a **day-to-day basis**: picking up a ticket or an ad hoc task and carrying
 it through branch creation, research, planning, and implementation without re-explaining that process each
-time. `issue` is the single entry point for the full pipeline; `explore` and `plan` are also commonly run
-individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow. `code` itself doesn't
-implement anything directly — it dispatches each of `plan`'s dependency-aware task groups, in order, to
-`code-one-task-group`, which resolves each task's language and delegates to whichever
+time. `iru-issue` is the single entry point for the full pipeline; `iru-explore` and `iru-plan` are also commonly run
+individually (`/iru-explore`, `/iru-plan`) ahead of, or instead of, the full `/iru-issue` flow. `iru-code` itself doesn't
+implement anything directly — it dispatches each of `iru-plan`'s dependency-aware task groups, in order, to
+`iru-code-one-task-group`, which resolves each task's language and delegates to whichever
 xref:index.adoc#group-java[Java], xref:index.adoc#group-dotnet[.NET], or xref:index.adoc#group-database[
 Database] Development Tooling group skill matches, and brackets the whole run with quality and security
 baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
 ====
 
-* xref:skills/issue.adoc[`issue`] — orchestrator: branch, explore, plan, implement, open PR, review — for a
+* xref:skills/iru-issue.adoc[`iru-issue`] — orchestrator: branch, explore, plan, implement, open PR, review — for a
   tracked ticket.
-* xref:skills/explore.adoc[`explore`] — read-only research pass over the codebase, optionally grounded in a
+* xref:skills/iru-explore.adoc[`iru-explore`] — read-only research pass over the codebase, optionally grounded in a
   GitHub issue or Jira ticket.
-* xref:skills/plan.adoc[`plan`] — writes a concrete, reviewable `implementation_plan.md`, grouping tasks by
+* xref:skills/iru-plan.adoc[`iru-plan`] — writes a concrete, reviewable `implementation_plan.md`, grouping tasks by
   dependency and tagging each with the language/framework key a downstream `<key>-code-one-task-group` skill
   should handle it with.
-* xref:skills/code.adoc[`code`] — executes `implementation_plan.md` end to end, one task group at a time, via
-  `code-one-task-group`, and gates completion on quality/security baselines.
-* xref:skills/code-one-task-group.adoc[`code-one-task-group`] — implements one task group, resolving each
+* xref:skills/iru-code.adoc[`iru-code`] — executes `implementation_plan.md` end to end, one task group at a time, via
+  `iru-code-one-task-group`, and gates completion on quality/security baselines.
+* xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`] — implements one task group, resolving each
   task's language and dispatching to its matching `<key>-code-one-task-group` skill (e.g.
-  xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`],
-  xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`],
-  xref:skills/database-code-one-task-group.adoc[`database-code-one-task-group`]) — or a best-effort direct
+  xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
+  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
+  xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`]) — or a best-effort direct
   implementation if none matches.
 
 [[group-java]]
@@ -426,29 +431,29 @@ rather than an estimate.
 
 [TIP]
 ====
-`code-one-task-group` dispatches every task-group bucket tagged (or defaulted to) `java` to
-`java-code-one-task-group`, which captures one quality baseline for the bucket, runs `java-code-one-task` once
+`iru-code-one-task-group` dispatches every task-group bucket tagged (or defaulted to) `java` to
+`iru-java-code-one-task-group`, which captures one quality baseline for the bucket, runs `iru-java-code-one-task` once
 per task (in parallel when the group allows it), then validates the whole bucket once via the other four skills
 in this group. Reach for those four directly, any time, while **iterating on code day to day** — before
 committing, before opening a PR, or just to check where a class currently stands. You rarely need to invoke any
 of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
 
-* xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`] — implements a bucket of Java tasks
+* xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`] — implements a bucket of Java tasks
   (in parallel where safe) and validates the whole bucket once: license headers, Javadoc, tests, coverage, and
   a quality regression check.
-* xref:skills/java-code-one-task.adoc[`java-code-one-task`] — implements a single task's code and tests only;
-  called once per task by `java-code-one-task-group`.
-* xref:skills/java-test.adoc[`java-test`] — runs the JUnit suite via Surefire, scoped to a
+* xref:skills/iru-java-code-one-task.adoc[`iru-java-code-one-task`] — implements a single task's code and tests only;
+  called once per task by `iru-java-code-one-task-group`.
+* xref:skills/iru-java-test.adoc[`iru-java-test`] — runs the JUnit suite via Surefire, scoped to a
   class/method/package/tag selector.
-* xref:skills/java-coverage.adoc[`java-coverage`] — runs JaCoCo and reports the exact measured coverage
+* xref:skills/iru-java-coverage.adoc[`iru-java-coverage`] — runs JaCoCo and reports the exact measured coverage
   percentage for target class(es).
-* xref:skills/java-code-quality.adoc[`java-code-quality`] — runs Checkstyle/PMD/SpotBugs and summarizes every
+* xref:skills/iru-java-code-quality.adoc[`iru-java-code-quality`] — runs Checkstyle/PMD/SpotBugs and summarizes every
   issue found, grouped by tool.
-* xref:skills/java-generate-all-tests.adoc[`java-generate-all-tests`] — finds every class with no test class or
-  under 80% line coverage (via `java-coverage`) and generates/extends tests until it clears the bar, across the
+* xref:skills/iru-java-generate-all-tests.adoc[`iru-java-generate-all-tests`] — finds every class with no test class or
+  under 80% line coverage (via `iru-java-coverage`) and generates/extends tests until it clears the bar, across the
   whole codebase in one pass.
-* xref:skills/java-javadoc.adoc[`java-javadoc`] — audits and completes Javadoc coverage for given classes,
+* xref:skills/iru-java-javadoc.adoc[`iru-java-javadoc`] — audits and completes Javadoc coverage for given classes,
   then verifies it builds cleanly.
 
 [[group-dotnet]]
@@ -460,28 +465,28 @@ against a .NET project.
 
 [TIP]
 ====
-Same shape as the Java group, one tool chain over: `code-one-task-group` dispatches every task-group bucket
-tagged `dotnet` to `dotnet-code-one-task-group`, which captures one quality baseline for the bucket, runs
-`dotnet-code-one-task` once per task (in parallel when the group allows it), then validates the whole bucket
-once via the other four skills here. Reach for those four directly any time while iterating day to day; `code`
+Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every task-group bucket
+tagged `dotnet` to `iru-dotnet-code-one-task-group`, which captures one quality baseline for the bucket, runs
+`iru-dotnet-code-one-task` once per task (in parallel when the group allows it), then validates the whole bucket
+once via the other four skills here. Reach for those four directly any time while iterating day to day; `iru-code`
 rarely needs them invoked directly during the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
 
-* xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`] — implements a bucket of .NET tasks
+* xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`] — implements a bucket of .NET tasks
   (in parallel where safe) and validates the whole bucket once: license headers, XML doc comments, tests,
   coverage, and a quality regression check.
-* xref:skills/dotnet-code-one-task.adoc[`dotnet-code-one-task`] — implements a single task's code and tests
-  only; called once per task by `dotnet-code-one-task-group`.
-* xref:skills/dotnet-test.adoc[`dotnet-test`] — runs the test suite via `dotnet test`, scoped to a
+* xref:skills/iru-dotnet-code-one-task.adoc[`iru-dotnet-code-one-task`] — implements a single task's code and tests
+  only; called once per task by `iru-dotnet-code-one-task-group`.
+* xref:skills/iru-dotnet-test.adoc[`iru-dotnet-test`] — runs the test suite via `dotnet test`, scoped to a
   class/method/namespace/trait selector.
-* xref:skills/dotnet-coverage.adoc[`dotnet-coverage`] — runs Coverlet via `dotnet test` and reports the exact
+* xref:skills/iru-dotnet-coverage.adoc[`iru-dotnet-coverage`] — runs Coverlet via `dotnet test` and reports the exact
   measured coverage percentage for target class(es).
-* xref:skills/dotnet-code-quality.adoc[`dotnet-code-quality`] — runs StyleCop.Analyzers/CA Roslyn analyzers via
+* xref:skills/iru-dotnet-code-quality.adoc[`iru-dotnet-code-quality`] — runs StyleCop.Analyzers/CA Roslyn analyzers via
   a SARIF-logged build and summarizes every issue found.
-* xref:skills/dotnet-docfx.adoc[`dotnet-docfx`] — audits and completes XML doc-comment coverage for given
+* xref:skills/iru-dotnet-docfx.adoc[`iru-dotnet-docfx`] — audits and completes XML doc-comment coverage for given
   types, then attempts a DocFX build.
-* xref:skills/dotnet-generate-all-tests.adoc[`dotnet-generate-all-tests`] — finds every class with no test class
-  or under 80% line coverage (via `dotnet-coverage`) and generates/extends tests until it clears the bar, across
+* xref:skills/iru-dotnet-generate-all-tests.adoc[`iru-dotnet-generate-all-tests`] — finds every class with no test class
+  or under 80% line coverage (via `iru-dotnet-coverage`) and generates/extends tests until it clears the bar, across
   the whole codebase in one pass.
 
 [[group-database]]
@@ -493,22 +498,22 @@ migrations, seed data, index changes) from a plan.
 
 [TIP]
 ====
-`code-one-task-group` dispatches every task-group bucket tagged `database` to `database-code-one-task-group`,
-which calls `database-code-one-task` once per task. Unlike its Java/.NET counterparts, this pairing is
+`iru-code-one-task-group` dispatches every task-group bucket tagged `database` to `iru-database-code-one-task-group`,
+which calls `iru-database-code-one-task` once per task. Unlike its Java/.NET counterparts, this pairing is
 deliberately simpler: tasks are always implemented one at a time, in the plan's order, regardless of the
 bucket's `Parallelizable` verdict (database changes commonly carry a real ordering dependency even when a plan
 doesn't flag one explicitly), and there is no pre-change quality baseline or bucket-wide validation pass — each
-task is trusted to handle its own correctness. `database-code-one-task` generates the queries a task calls for
-(grounded in the real schema via `explore`), executes only the read-only/idempotent ones when a matching
+task is trusted to handle its own correctness. `iru-database-code-one-task` generates the queries a task calls for
+(grounded in the real schema via `iru-explore`), executes only the read-only/idempotent ones when a matching
 database MCP is connected, and records everything in `database-report.md`.
 ====
 
-* xref:skills/database-code-one-task-group.adoc[`database-code-one-task-group`] — implements a bucket of
+* xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`] — implements a bucket of
   database tasks sequentially, one at a time, then checks off completed tasks and notifies the user — no
   quality baseline or bucket-wide validation pass.
-* xref:skills/database-code-one-task.adoc[`database-code-one-task`] — generates the queries a single task
+* xref:skills/iru-database-code-one-task.adoc[`iru-database-code-one-task`] — generates the queries a single task
   calls for, executes the read-only ones via a connected database MCP if one exists, and records both in
-  `database-report.md`; called once per task by `database-code-one-task-group`.
+  `database-report.md`; called once per task by `iru-database-code-one-task-group`.
 
 [[group-pr]]
 === Pull Request Lifecycle
@@ -518,14 +523,14 @@ whichever platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS
 
 [NOTE]
 ====
-Used automatically as the last leg of `issue`'s pipeline once `code` finishes, but just as useful standalone
-— e.g. after making changes outside the `/issue` flow and wanting a PR description drafted, or a second,
+Used automatically as the last leg of `iru-issue`'s pipeline once `iru-code` finishes, but just as useful standalone
+— e.g. after making changes outside the `/iru-issue` flow and wanting a PR description drafted, or a second,
 convention-aware review pass before asking a teammate for one.
 ====
 
-* xref:skills/pr-description.adoc[`pr-description`] — drafts a PR description from the real diff, and
+* xref:skills/iru-pr-description.adoc[`iru-pr-description`] — drafts a PR description from the real diff, and
   optionally opens/updates the pull request.
-* xref:skills/pr-review.adoc[`pr-review`] — reviews an open pull request against the linked ticket's intent
+* xref:skills/iru-pr-review.adoc[`iru-pr-review`] — reviews an open pull request against the linked ticket's intent
   and this codebase's conventions.
 
 [[group-maintenance]]
@@ -540,15 +545,15 @@ releases, keeping docs from drifting after unrelated code changes, periodically 
 and scanning for accidentally committed secrets.
 ====
 
-* xref:skills/release.adoc[`release`] — cuts a release branch, bumps versions, drafts release
+* xref:skills/iru-release.adoc[`iru-release`] — cuts a release branch, bumps versions, drafts release
   notes/changelog, and opens the release PR.
-* xref:skills/update-docs.adoc[`update-docs`] — brings the Antora documentation module up to date with
+* xref:skills/iru-update-docs.adoc[`iru-update-docs`] — brings the Antora documentation module up to date with
   changes already made to the code.
-* xref:skills/build-docs.adoc[`build-docs`] — builds the existing Antora documentation site as-is (no content
-  edits), scaffolding it first via `setup-antora` if it doesn't exist yet.
-* xref:skills/check-license.adoc[`check-license`] — verifies (and backfills) license headers against the
+* xref:skills/iru-build-docs.adoc[`iru-build-docs`] — builds the existing Antora documentation site as-is (no content
+  edits), scaffolding it first via `iru-setup-antora` if it doesn't exist yet.
+* xref:skills/iru-check-license.adoc[`iru-check-license`] — verifies (and backfills) license headers against the
   repository's actual license.
-* xref:skills/check-security.adoc[`check-security`] — scans for accidentally committed secrets via
+* xref:skills/iru-check-security.adoc[`iru-check-security`] — scans for accidentally committed secrets via
   `detect-secrets`, maintaining a `.secrets.baseline` so repeat runs surface only what's new.
 
 [[group-tooling]]
@@ -563,7 +568,7 @@ current after a skill or agent is added, removed, or changed — not something a
 adopted one of these skills would ever need to run.
 ====
 
-* xref:skills/generate-skill-docs.adoc[`generate-skill-docs`] — regenerates this
+* xref:skills/iru-generate-skill-docs.adoc[`iru-generate-skill-docs`] — regenerates this
   documentation site itself from the current set of skills and agents on disk.
 
 [[group-agents]]
@@ -579,94 +584,94 @@ skill's own instructions naming it in an `Agent()` call. See xref:guides/creatin
 how agents differ from skills in how they're triggered.
 ====
 
-* xref:agents/gate-runner.adoc[`gate-runner`] — runs a single verification/quality-gate skill and reports back
-  only a compact summary, optionally diffed against a baseline. Used throughout `code`, `code-one-task-group`,
-  `java-code-one-task-group`, and `dotnet-code-one-task-group`.
-* xref:agents/isolated-skill-executor.adoc[`isolated-skill-executor`] — runs one named skill end to end in a
-  fresh context so the caller can keep running afterward. Used by xref:skills/issue.adoc[`issue`] to delegate the
-  entire `code` run for a ticket, by xref:skills/code.adoc[`code`] itself to delegate each task group to
-  `code-one-task-group`, by xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`] and
-  xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`] to delegate each task in a bucket
-  to `java-code-one-task`/`dotnet-code-one-task`, and by
-  xref:skills/setup-java-library-repository.adoc[`setup-java-library-repository`] to delegate each of the six
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs a single verification/quality-gate skill and reports back
+  only a compact summary, optionally diffed against a baseline. Used throughout `iru-code`, `iru-code-one-task-group`,
+  `iru-java-code-one-task-group`, and `iru-dotnet-code-one-task-group`.
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs one named skill end to end in a
+  fresh context so the caller can keep running afterward. Used by xref:skills/iru-issue.adoc[`iru-issue`] to delegate the
+  entire `iru-code` run for a ticket, by xref:skills/iru-code.adoc[`iru-code`] itself to delegate each task group to
+  `iru-code-one-task-group`, by xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`] and
+  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`] to delegate each task in a bucket
+  to `iru-java-code-one-task`/`iru-dotnet-code-one-task`, and by
+  xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] to delegate each of the six
   bootstrap skills it orchestrates.
-* xref:agents/change-summarizer.adoc[`change-summarizer`] — fans out over a git commit/tag range and returns
-  only the user-facing changes. Used by xref:skills/setup-changelog.adoc[`setup-changelog`] to summarize one
-  release at a time when backfilling a long tag history, and by xref:skills/release.adoc[`release`] to summarize
+* xref:agents/iru-change-summarizer.adoc[`iru-change-summarizer`] — fans out over a git commit/tag range and returns
+  only the user-facing changes. Used by xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] to summarize one
+  release at a time when backfilling a long tag history, and by xref:skills/iru-release.adoc[`iru-release`] to summarize
   the single range since the previous release.
 
 == Dependency graph
 
 An edge means "invokes" (a solid line, via the `Skill` tool) or "spawns" (a dotted line, via the `Agent`
-tool). `code-review` is an external skill this catalog does not define — `pr-review` uses it only when it
+tool). `code-review` is an external skill this catalog does not define — `iru-pr-review` uses it only when it
 happens to be available in the current session.
 
 [mermaid]
 ....
 flowchart LR
     subgraph Bootstrap["Repository Bootstrap"]
-        SJLR["setup-java-library-repository"]
-        SJL["setup-java-library"]
-        AS["setup-antora"]
-        SJG["setup-java-gitignore"]
-        SJW["setup-java-github-workflows"]
-        SC["setup-changelog"]
-        SR["setup-readme"]
+        SJLR["iru-setup-java-library-repository"]
+        SJL["iru-setup-java-library"]
+        AS["iru-setup-antora"]
+        SJG["iru-setup-java-gitignore"]
+        SJW["iru-setup-java-github-workflows"]
+        SC["iru-setup-changelog"]
+        SR["iru-setup-readme"]
     end
 
     subgraph Intake["Ticket Intake"]
-        CGI["create-github-issue"]
-        CJT["create-jira-ticket"]
+        CGI["iru-create-github-issue"]
+        CJT["iru-create-jira-ticket"]
     end
 
     subgraph Cycle["Issue-to-PR Development Cycle"]
-        ISSUE["issue"]
-        EXPLORE["explore"]
-        PLAN["plan"]
-        CODE["code"]
-        COTG["code-one-task-group"]
+        ISSUE["iru-issue"]
+        EXPLORE["iru-explore"]
+        PLAN["iru-plan"]
+        CODE["iru-code"]
+        COTG["iru-code-one-task-group"]
     end
 
     subgraph Java["Java Development Tooling"]
-        JCOTG["java-code-one-task-group"]
-        JCOT["java-code-one-task"]
-        JT["java-test"]
-        JC["java-coverage"]
-        JCQ["java-code-quality"]
-        JJ["java-javadoc"]
-        JGAT["java-generate-all-tests"]
+        JCOTG["iru-java-code-one-task-group"]
+        JCOT["iru-java-code-one-task"]
+        JT["iru-java-test"]
+        JC["iru-java-coverage"]
+        JCQ["iru-java-code-quality"]
+        JJ["iru-java-javadoc"]
+        JGAT["iru-java-generate-all-tests"]
     end
 
     subgraph Dotnet[".NET Development Tooling"]
-        DCOTG["dotnet-code-one-task-group"]
-        DCOT["dotnet-code-one-task"]
-        DT["dotnet-test"]
-        DC["dotnet-coverage"]
-        DCQ["dotnet-code-quality"]
-        DDF["dotnet-docfx"]
-        DGAT["dotnet-generate-all-tests"]
+        DCOTG["iru-dotnet-code-one-task-group"]
+        DCOT["iru-dotnet-code-one-task"]
+        DT["iru-dotnet-test"]
+        DC["iru-dotnet-coverage"]
+        DCQ["iru-dotnet-code-quality"]
+        DDF["iru-dotnet-docfx"]
+        DGAT["iru-dotnet-generate-all-tests"]
     end
 
     subgraph Database["Database Development Tooling"]
-        DBCOTG["database-code-one-task-group"]
-        DBCOT["database-code-one-task"]
+        DBCOTG["iru-database-code-one-task-group"]
+        DBCOT["iru-database-code-one-task"]
     end
 
     subgraph PRLife["Pull Request Lifecycle"]
-        PRD["pr-description"]
-        PRR["pr-review"]
+        PRD["iru-pr-description"]
+        PRR["iru-pr-review"]
     end
 
     subgraph Maintenance["Repository Maintenance"]
-        REL["release"]
-        UD["update-docs"]
-        BD["build-docs"]
-        CL["check-license"]
-        CSEC["check-security"]
+        REL["iru-release"]
+        UD["iru-update-docs"]
+        BD["iru-build-docs"]
+        CL["iru-check-license"]
+        CSEC["iru-check-security"]
     end
 
     subgraph Tooling["Catalog Tooling"]
-        GSD["generate-skill-docs"]
+        GSD["iru-generate-skill-docs"]
     end
 
     SJLR -.-> SJL
@@ -734,18 +739,18 @@ flowchart LR
     SR -.uses.-> AGT_EXPLORE
     JGAT -.uses.-> AGT_EXPLORE
     DGAT -.uses.-> AGT_EXPLORE
-    CODE -.spawns.-> AGT_GATE(("gate-runner\nagent"))
+    CODE -.spawns.-> AGT_GATE(("iru-gate-runner\nagent"))
     COTG -.spawns.-> AGT_GATE
     JCOTG -.spawns.-> AGT_GATE
     DCOTG -.spawns.-> AGT_GATE
     JGAT -.spawns.-> AGT_GATE
     DGAT -.spawns.-> AGT_GATE
-    ISSUE -.spawns.-> AGT_ISE(("isolated-skill-executor\nagent"))
+    ISSUE -.spawns.-> AGT_ISE(("iru-isolated-skill-executor\nagent"))
     CODE -.spawns.-> AGT_ISE
     JCOTG -.spawns.-> AGT_ISE
     DCOTG -.spawns.-> AGT_ISE
     SJLR -.spawns.-> AGT_ISE
-    SC -.spawns.-> AGT_CS(("change-summarizer\nagent"))
+    SC -.spawns.-> AGT_CS(("iru-change-summarizer\nagent"))
     REL -.spawns.-> AGT_CS
     GSD -.spawns.-> AGT_GP(("general-purpose\nagent"))
     UD -.spawns.-> AGT_GP
@@ -759,93 +764,93 @@ flowchart LR
 These sections walk through how the catalog's skills compose for a few recurring jobs. Each is a real,
 supported path through the graph above — not every skill in the catalog appears in one, since some
 (the xref:index.adoc#group-java[Java] and xref:index.adoc#group-dotnet[.NET] Development Tooling skills,
-`check-license`) are more often invoked as building blocks of a larger flow than run standalone by a person.
+`iru-check-license`) are more often invoked as building blocks of a larger flow than run standalone by a person.
 
 === Setting up a new repository
 
-`setup-java-library-repository` collects the project's identity and CI/CD parameters once, then
+`iru-setup-java-library-repository` collects the project's identity and CI/CD parameters once, then
 orchestrates six other skills in a fixed order so nothing is asked twice:
 
 [mermaid]
 ....
 flowchart TD
-    A["/setup-java-library-repository"] --> B["setup-java-library\n(pom.xml + source layout)"]
-    B --> C["setup-antora\n(docs site)"]
-    C --> D["setup-java-gitignore\n(.gitignore)"]
-    D --> E["setup-java-github-workflows\n(CI/CD)"]
-    E --> F["setup-changelog\n(CHANGELOG.md)"]
-    F --> G["setup-readme\n(README.md, last — sees everything above)"]
+    A["/iru-setup-java-library-repository"] --> B["iru-setup-java-library\n(pom.xml + source layout)"]
+    B --> C["iru-setup-antora\n(docs site)"]
+    C --> D["iru-setup-java-gitignore\n(.gitignore)"]
+    D --> E["iru-setup-java-github-workflows\n(CI/CD)"]
+    E --> F["iru-setup-changelog\n(CHANGELOG.md)"]
+    F --> G["iru-setup-readme\n(README.md, last — sees everything above)"]
 ....
 
 Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
-`/setup-antora` to add docs to a repository that already has a `pom.xml`).
+`/iru-setup-antora` to add docs to a repository that already has a `pom.xml`).
 
 === Filing a ticket before work begins
 
-`create-github-issue` and `create-jira-ticket` turn a rough idea into a tracked, actionable ticket, ready for a
-later, separate `/issue` invocation. See xref:guides/common-workflows.adoc#filing-a-ticket[] for a more detailed
+`iru-create-github-issue` and `iru-create-jira-ticket` turn a rough idea into a tracked, actionable ticket, ready for a
+later, separate `/iru-issue` invocation. See xref:guides/common-workflows.adoc#filing-a-ticket[] for a more detailed
 walkthrough.
 
 [mermaid]
 ....
 flowchart LR
-    A["/create-github-issue\nor /create-jira-ticket"] --> B["explore\n(ground the draft in the codebase)"]
+    A["/iru-create-github-issue\nor /iru-create-jira-ticket"] --> B["iru-explore\n(ground the draft in the codebase)"]
     B --> C["Ask purpose + additional context\n(URLs, files, related tickets)"]
     C --> D["Draft + confirm + file\n(gh issue create /\nJira MCP tools)"]
-    D --> E(["/issue &lt;id-or-key&gt;\n(separate, later invocation)"])
+    D --> E(["/iru-issue &lt;id-or-key&gt;\n(separate, later invocation)"])
 ....
 
 Both skills work the same way up to filing; which one to use depends on which tracker the repository/team
-uses. Neither is required — `/issue` and `/plan` work fine against a ticket filed by hand, or against no ticket
+uses. Neither is required — `/iru-issue` and `/iru-plan` work fine against a ticket filed by hand, or against no ticket
 at all (a free-form description).
 
 === Typical development cycle, starting from a ticket
 
-`issue` is the single entry point for taking a tracked ticket — a GitHub issue or a Jira ticket — to an open,
+`iru-issue` is the single entry point for taking a tracked ticket — a GitHub issue or a Jira ticket — to an open,
 reviewed pull request. See xref:guides/common-workflows.adoc#typical-development-cycle[] for a more detailed
 walkthrough — this is the main workflow for day-to-day work in this catalog.
 
 [mermaid]
 ....
 flowchart LR
-    A["/issue &lt;ticket-id&gt;"] --> B["explore\n(understand the ticket)"]
-    B --> C["plan\n(write implementation_plan.md,\ngroup tasks by dependency,\ntag each with a language/framework)"]
-    C --> D{Hand off to /code?}
-    D -- yes --> E["code\n(dispatch each task group to\ncode-one-task-group, via a sub-agent)"]
+    A["/iru-issue &lt;ticket-id&gt;"] --> B["iru-explore\n(understand the ticket)"]
+    B --> C["iru-plan\n(write implementation_plan.md,\ngroup tasks by dependency,\ntag each with a language/framework)"]
+    C --> D{Hand off to /iru-code?}
+    D -- yes --> E["iru-code\n(dispatch each task group to\niru-code-one-task-group, via a sub-agent)"]
     D -- no --> H[Stop for manual review]
-    E --> F["pr-description\n(open PR as a draft)"]
-    F --> G["pr-review\n(review the new PR)"]
+    E --> F["iru-pr-description\n(open PR as a draft)"]
+    F --> G["iru-pr-review\n(review the new PR)"]
 ....
 
-`code` itself doesn't implement anything directly: for every task group it dispatches to
-xref:skills/code-one-task-group.adoc[`code-one-task-group`], which resolves each task's language and delegates
-to whichever xref:skills/java-code-one-task-group.adoc[`java-code-one-task-group`] or
-xref:skills/dotnet-code-one-task-group.adoc[`dotnet-code-one-task-group`] skill matches — each of which captures
+`iru-code` itself doesn't implement anything directly: for every task group it dispatches to
+xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`], which resolves each task's language and delegates
+to whichever xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`] or
+xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`] skill matches — each of which captures
 one quality baseline for the whole bucket, implements its tasks (in parallel when the group allows it), and
 validates the bucket once via its own group's tests/coverage/quality/doc skills, instead of once per task. A
-bucket tagged `database` instead goes to xref:skills/database-code-one-task-group.adoc[
-`database-code-one-task-group`], which is deliberately simpler — always sequential, with no baseline or
+bucket tagged `database` instead goes to xref:skills/iru-database-code-one-task-group.adoc[
+`iru-database-code-one-task-group`], which is deliberately simpler — always sequential, with no baseline or
 bucket-wide validation of its own. The whole run is bracketed with project-wide quality
-(`java-code-quality`/`dotnet-code-quality`) and security (`check-security`) baselines, updating documentation
-via `update-docs` once both pass (see xref:skills/code.adoc[]). `explore` and `plan` can also be run
-individually (`/explore`, `/plan`) ahead of, or instead of, the full `/issue` flow, and either a GitHub issue or
+(`iru-java-code-quality`/`iru-dotnet-code-quality`) and security (`iru-check-security`) baselines, updating documentation
+via `iru-update-docs` once both pass (see xref:skills/iru-code.adoc[]). `iru-explore` and `iru-plan` can also be run
+individually (`/iru-explore`, `/iru-plan`) ahead of, or instead of, the full `/iru-issue` flow, and either a GitHub issue or
 a Jira ticket works the same way throughout.
 
 === Generating a release
 
-`release` must be run from `develop` and drives the whole version bump itself, delegating only the README
+`iru-release` must be run from `develop` and drives the whole version bump itself, delegating only the README
 and PR description. See xref:guides/common-workflows.adoc#generating-a-release[] for a more detailed
 walkthrough.
 
 [mermaid]
 ....
 flowchart LR
-    A["/release"] --> B["Pick release + next SNAPSHOT version"]
+    A["/iru-release"] --> B["Pick release + next SNAPSHOT version"]
     B --> C["Bump pom.xml, docs/antora.yml, Antora version snippets"]
-    C --> D["setup-readme\n(refresh README.md)"]
+    C --> D["iru-setup-readme\n(refresh README.md)"]
     D --> E["Write whats-new.adoc + CHANGELOG.md"]
     E --> F["Commit, push release_x.y.z"]
-    F --> G["pr-description\n(fill in the release PR)"]
+    F --> G["iru-pr-description\n(fill in the release PR)"]
 ....
 
 === Updating an existing repository with new functionality
@@ -856,16 +861,16 @@ run after code has already changed:
 [mermaid]
 ....
 flowchart TD
-    Code["Code change already made\n(uncommitted or on a branch)"] --> UD["update-docs\n(Antora pages)"]
-    Code --> RM["setup-readme\n(README.md, if it already exists: proposes a diff)"]
-    Code --> CLI["check-license\n(license headers on touched files)"]
-    Code --> CSEC["check-security\n(scan for secrets before committing)"]
-    UD -.->|only if no Antora module exists yet| AS["setup-antora"]
+    Code["Code change already made\n(uncommitted or on a branch)"] --> UD["iru-update-docs\n(Antora pages)"]
+    Code --> RM["iru-setup-readme\n(README.md, if it already exists: proposes a diff)"]
+    Code --> CLI["iru-check-license\n(license headers on touched files)"]
+    Code --> CSEC["iru-check-security\n(scan for secrets before committing)"]
+    UD -.->|only if no Antora module exists yet| AS["iru-setup-antora"]
 ....
 
-`setup-changelog` is deliberately **not** part of this flow: it only bootstraps a changelog that doesn't
-exist yet and stops immediately if `CHANGELOG.md` is already present (see xref:skills/setup-changelog.adoc[]).
-Keeping an existing changelog current on each release is `release`'s job, not a standalone update skill's.
+`iru-setup-changelog` is deliberately **not** part of this flow: it only bootstraps a changelog that doesn't
+exist yet and stops immediately if `CHANGELOG.md` is already present (see xref:skills/iru-setup-changelog.adoc[]).
+Keeping an existing changelog current on each release is `iru-release`'s job, not a standalone update skill's.
 
 == Keeping this documentation current
 
@@ -873,7 +878,7 @@ Keeping an existing changelog current on each release is `release`'s job, not a 
 ====
 This documentation site can be created or updated in two ways:
 
-* **Preferred — run the `generate-skill-docs` skill** (`/generate-skill-docs`).
+* **Preferred — run the `iru-generate-skill-docs` skill** (`/iru-generate-skill-docs`).
 It (re)generates this page — the reference table, purpose groups, dependency graph, and common
 workflows above — plus one detail page per skill/agent under `skills/` and `agents/`, directly from
 whatever `.claude/skills/*/SKILL.md` files and agent definitions actually exist in the repository.
@@ -886,19 +891,19 @@ go through the skill above — hand-written content there will be overwritten th
 ====
 
 This page and every detail page under xref:index.adoc#group-tooling[Catalog Tooling] are themselves
-generated — by `generate-skill-docs`, from whatever skills/agents actually exist under
+generated — by `iru-generate-skill-docs`, from whatever skills/agents actually exist under
 `.claude/skills/` (and `.claude/agents/`, if any) at the time it runs:
 
 [mermaid]
 ....
 flowchart LR
-    A["/generate-skill-docs"] --> B["Discover every SKILL.md\n+ agent usage on disk"]
+    A["/iru-generate-skill-docs"] --> B["Discover every SKILL.md\n+ agent usage on disk"]
     B --> C["Build the dependency graph\n+ purpose groups + workflows"]
     C --> D["Write index.adoc, skills/*.adoc,\nagents/*.adoc, nav.adoc"]
     D --> E["npx antora — verify the\nsite still builds"]
 ....
 
-Re-run it (`/generate-skill-docs`) after adding, removing, or materially changing a skill or
+Re-run it (`/iru-generate-skill-docs`) after adding, removing, or materially changing a skill or
 agent, so this page and the detail pages it links to don't drift from what's actually on disk.
 
 Each skill's own detail page (linked from the table above) covers its exact inputs, outputs, and execution

@@ -28,8 +28,8 @@ A one-off prompt can be just as explicit about *which* skill or agent should han
 is about its own sub-steps — and doing so is itself an application of "direct, not vague" rather than a
 separate rule:
 
-* To invoke a specific **skill**, either type its slash command directly (`/plan 42`) or name it in prose
-  ("run the `plan` skill for issue 42"). Either is unambiguous about which skill you mean. A purely
+* To invoke a specific **skill**, either type its slash command directly (`/iru-plan 42`) or name it in prose
+  ("run the `iru-plan` skill for issue 42"). Either is unambiguous about which skill you mean. A purely
   descriptive request instead ("write me a plan for issue 42") leaves Claude to match your wording against
   every skill's `description` on its own — usually fine, but a second source of run-to-run variation you
   remove by naming the skill yourself.
@@ -51,7 +51,7 @@ drift, the same motivation behind every other piece of guidance on this page.
 
 An agent following a `SKILL.md` executes it closer to a runbook than to a suggestion — ambiguity that a
 human would resolve by intuition, the agent will resolve inconsistently across runs. This catalog's existing
-skills (e.g. `.claude/skills/plan/SKILL.md`, documented at xref:skills/plan.adoc[]) follow a consistent shape
+skills (e.g. `.claude/skills/iru-plan/SKILL.md`, documented at xref:skills/iru-plan.adoc[]) follow a consistent shape
 worth reusing elsewhere:
 
 * **Numbered steps, one decision per step.** `## Step 1 — Locate the Antora documentation module`, not a
@@ -70,7 +70,7 @@ worth reusing elsewhere:
   without confirming what actually happened).
 * **Avoid hedged, discretionary language** ("consider doing X if it seems appropriate") in the parts of an
   instruction that are meant to run the same way every time. Reserve genuine judgment calls for an explicit
-  "ask the user" branch (see `plan`'s Step 3, xref:skills/plan.adoc[]) rather than leaving them implicit in
+  "ask the user" branch (see `iru-plan`'s Step 3, xref:skills/iru-plan.adoc[]) rather than leaving them implicit in
   vague phrasing.
 
 The same applies to `CLAUDE.md` (a rule stated as "run `mvn test` before considering a change done", not
@@ -94,7 +94,7 @@ Concretely:
 * **Isolate noisy sub-tasks in a sub-agent.** A full test run, a broad codebase search, or an entire delegated
   implementation pass produces far more output than its result — spawning it via the `Agent` tool and asking
   it to report back only a short summary keeps that noise out of the calling skill's own context. This
-  catalog's `code` skill does exactly this for every quality check it runs per task (see
+  catalog's `iru-code` skill does exactly this for every quality check it runs per task (see
   xref:agents/overview.adoc[]).
 * **Collapse repetition in a skill's own instructions.** A step that repeats structurally ("for each task:
   implement, test, document, quality-check") should be written once as a loop, not unrolled per task — both
@@ -129,7 +129,7 @@ There are two ways to attach one, and both are legitimate:
   artifact (a past PR, a well-formed existing skill) rather than something worth retyping. This catalog
   already relies on this technique: xref:guides/creating-skills-and-agents.adoc[]'s advice to "ground a new
   skill in an existing example" is exactly this, applied to writing a `SKILL.md` itself, and several of this
-  catalog's own bootstrap skills (`setup-java-library`, `setup-java-github-workflows`) embed a full example
+  catalog's own bootstrap skills (`iru-setup-java-library`, `iru-setup-java-github-workflows`) embed a full example
   file for the same reason rather than describing its shape in prose.
 
 Which form to use is mostly a xref:#context-window[context-window] tradeoff: inline a short example every

@@ -2,7 +2,8 @@
 
 AI Catalog is a collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) —
 reusable, version-controlled playbooks for common software engineering workflows, invoked on demand with a
-slash command such as `/plan` or `/pr-review`.
+slash command such as `/iru-plan` or `/iru-pr-review`. Every skill and agent in this catalog carries an
+`iru-` prefix to avoid colliding with skills installed from other marketplaces.
 
 ## 📊 Project Status
 
@@ -21,30 +22,30 @@ Each skill lives in its own directory under `.claude/skills/` and contains a sin
 short description (used by Claude Code to decide when the skill is relevant) and step-by-step instructions
 written for an agent to follow.
 
-Skills range from small, single-purpose checks (`check-license`, `java-test`) to orchestrators that call
-other skills in sequence — `issue`, for example, chains `explore` → `plan` → `code` → `pr-description` →
-`pr-review` into one end-to-end, issue-to-PR flow.
+Skills range from small, single-purpose checks (`iru-check-license`, `iru-java-test`) to orchestrators that call
+other skills in sequence — `iru-issue`, for example, chains `iru-explore` → `iru-plan` → `iru-code` → `iru-pr-description` →
+`iru-pr-review` into one end-to-end, issue-to-PR flow.
 
 To adopt a skill in another repository, copy its directory into that repository's `.claude/skills/`:
 
 ```bash
 mkdir -p .claude/skills
-cp -R ai-catalog/.claude/skills/plan .claude/skills/
-cp -R ai-catalog/.claude/skills/pr-review .claude/skills/
+cp -R ai-catalog/.claude/skills/iru-plan .claude/skills/
+cp -R ai-catalog/.claude/skills/iru-pr-review .claude/skills/
 ```
 
 Claude Code picks up any skill under `.claude/skills/<name>/SKILL.md` automatically — invoke it the same way
-it's documented, e.g. `/plan` or `/pr-review`.
+it's documented, e.g. `/iru-plan` or `/iru-pr-review`.
 
 The catalog currently includes:
 
-- **🏗️ Repository bootstrap** — `setup-java-library-repository`, `setup-java-library`,
-  `setup-java-github-workflows`, `setup-java-gitignore`, `setup-readme`, `setup-changelog`, `setup-antora`.
-- **☕ Java quality** — `java-test`, `java-coverage`, `java-code-quality`, `java-javadoc`.
-- **🔄 Issue-to-PR workflow** — `issue`, `explore`, `plan`, `code`.
-- **🔀 Pull request lifecycle** — `pr-description`, `pr-review`.
-- **🛠️ Maintenance** — `release`, `update-docs`, `check-license`.
-- **🧰 Catalog tooling** — `generate-skill-docs`, which regenerates this catalog's own
+- **🏗️ Repository bootstrap** — `iru-setup-java-library-repository`, `iru-setup-java-library`,
+  `iru-setup-java-github-workflows`, `iru-setup-java-gitignore`, `iru-setup-readme`, `iru-setup-changelog`, `iru-setup-antora`.
+- **☕ Java quality** — `iru-java-test`, `iru-java-coverage`, `iru-java-code-quality`, `iru-java-javadoc`.
+- **🔄 Issue-to-PR workflow** — `iru-issue`, `iru-explore`, `iru-plan`, `iru-code`.
+- **🔀 Pull request lifecycle** — `iru-pr-description`, `iru-pr-review`.
+- **🛠️ Maintenance** — `iru-release`, `iru-update-docs`, `iru-check-license`.
+- **🧰 Catalog tooling** — `iru-generate-skill-docs`, which regenerates this catalog's own
   documentation from the skills and agents actually defined on disk.
 
 ## 📄 License

@@ -1,0 +1,96 @@
+= Java Code Quality
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run this project's static-analysis Maven plugins — Checkstyle, PMD, and SpotBugs — directly via
+`mvn clean compile checkstyle:checkstyle pmd:pmd spotbugs:spotbugs`, then read the three generated XML reports to
+summarize every issue found, grouped by tool. This is a read-only reporting skill: it runs static analysis and
+reports results, it does not fix issues unless asked to as an explicit follow-up.
+
+== Purpose
+
+`iru-java-code-quality` gives a fast, focused lint pass without paying for a full `mvn site` build (which also
+regenerates javadoc, JXR, and Surefire-report output this skill doesn't need). It runs the three analysis goals
+directly, parses their XML reports itself rather than relying on console output — which only shows progress, not
+the full issue list — and can scope its summary to a single file/class even though the underlying Maven run
+always analyzes the whole project.
+
+== Purpose group
+
+xref:index.adoc#group-java[Java Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-java-code-quality
+/iru-java-code-quality <path-or-class-name>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`path-or-class-name`
+|No
+|Scopes the *reported summary* to matches in a specific file/class: Checkstyle/PMD entries whose `<file name>`
+ends in `/<Name>.java`, and SpotBugs entries whose `<Class classname>` equals `<Name>`, ends in `.<Name>`, or is
+nested under it (e.g. `Foo$Inner` for `Foo`). The underlying Maven run still analyzes the whole project regardless
+— none of the three plugins expose a per-file CLI selector like Surefire's `-Dtest`.
+|None — omitting it summarizes every issue across the whole project.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Findings grouped by tool (Checkstyle, PMD, SpotBugs), then by file.
+* Per issue: file:line, the rule/check name, and the message.
+* A total issue count per tool at the top and an overall total; a tool with zero issues in the requested scope is
+  called out as clean rather than omitted silently.
+* No source, Checkstyle, PMD, or SpotBugs configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /java-code-quality\n(optional path-or-class-name)"] --> B["Run mvn clean compile checkstyle:checkstyle\npmd:pmd spotbugs:spotbugs"]
+    B --> C{Build succeeded?}
+    C -- no --> D["Report failure, stop\n(reports not freshly regenerated)"]
+    C -- yes --> E["Read target/checkstyle-result.xml"]
+    E --> F["Read target/pmd.xml"]
+    F --> G["Read target/spotbugsXml.xml"]
+    G --> H{Scope argument given?}
+    H -- yes --> I["Filter each report's entries\nto the matching file/class"]
+    H -- no --> J["Keep full project-wide results"]
+    I --> K
+    J --> K["Group findings by tool, then by file"]
+    K --> L["Report file:line, rule/check, message,\nplus totals per tool and overall"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-java-code-quality` is a leaf skill; it only runs Maven commands and reads the generated Checkstyle/PMD/
+SpotBugs reports, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
+  baseline for the `java` language/framework key.
+* xref:skills/iru-java-code-one-task-group.adoc[] — Steps 1 and 3, once per task group's bucket, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every class the
+  bucket touches and later diff the post-change result against it.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both callers above always invoke this skill from inside a
+  `iru-gate-runner` sub-agent they spawn, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

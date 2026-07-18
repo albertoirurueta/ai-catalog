@@ -1,0 +1,189 @@
+= Extending the skills and agents catalog
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+This guide is about growing the *catalog itself* — adding support for a new language, stack, tracker, or
+tool to the pipelines already documented in xref:index.adoc[] and xref:guides/common-workflows.adoc[]. For
+the mechanics of authoring any single skill or agent from scratch, see
+xref:guides/creating-skills-and-agents.adoc[]; this page instead maps out the specific places in the
+*existing* pipelines that were built to be extended, what convention each one relies on, and what's involved
+in adding a new one.
+
+== Two different kinds of "not supported yet"
+
+Reading through `.claude/skills/`, a gap falls into one of two shapes, and they call for different work:
+
+* **A registry the pipeline already discovers by convention** — the orchestrator skill never hardcodes the
+  list of languages/frameworks it supports; it looks at what's installed under `.claude/skills/` at run time
+  and dispatches to whatever matches. Adding a new entry means creating a skill that follows the naming
+  convention — no change to the orchestrator itself. xref:_language_framework_backends_for_the_code_pipeline[]
+  below is this catalog's clearest example.
+* **A single skill that hardcodes one stack's specifics** because that's the only one this catalog has
+  needed so far. Extending it means either generalizing that skill to detect and branch on the stack (the way
+  `iru-explore` already does for language/framework/host detection), or forking it into a stack-specific sibling
+  that a thin front door dispatches to — the same shape as the first bullet, just not built out yet.
+  xref:_release_generation_for_other_ecosystems[] and xref:_repository_bootstrap_for_other_stacks[] below are
+  both this second shape today.
+
+Knowing which one you're looking at changes the size of the task: the first is "write one new skill that
+matches an existing contract," the second is "decide whether to generalize or fork, then do either the
+detection work or the forking."
+
+== Language/framework backends for the `iru-code` pipeline
+
+This is the catalog's most fully-built extension point, and the template to copy for any similar registry.
+
+`iru-plan` (xref:skills/iru-plan.adoc[]) tags every task with a language/framework **key** by checking which
+`*-code-one-task` skills are actually installed: `find .claude/skills -maxdepth 1 -type d -name
+"*-code-one-task"` — the directory name minus its `iru-` prefix and the suffix is the key
+(`iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task` → `dotnet`, `iru-database-code-one-task` →
+`database`); the `iru-` prefix is only this catalog's marketplace-collision namespace, not part of the key
+itself. `iru-code-one-task-group`
+(xref:skills/iru-code-one-task-group.adoc[]) does the same lookup for `*-code-one-task-group` at execution time,
+partitions a plan group's tasks into buckets by key, and dispatches each bucket to its `iru-<key>-code-one-task-group`
+skill. Neither orchestrator names `java`, `dotnet`, or `database` anywhere in its own instructions — they are
+just whatever happens to be installed.
+
+To add a new backend (say, `python` or `typescript`), create — carrying the `iru-` prefix every skill and
+agent in this catalog uses (see xref:guides/creating-skills-and-agents.adoc[]) to avoid colliding with
+same-named skills installed from other marketplaces:
+
+* **`iru-<key>-code-one-task`** — implements one task's code and tests only, nothing else (mirrors
+  xref:skills/iru-java-code-one-task.adoc[] / xref:skills/iru-dotnet-code-one-task.adoc[]).
+* **`iru-<key>-code-one-task-group`** — captures one pre-change quality baseline for a whole bucket, runs
+  `iru-<key>-code-one-task` once per task (in parallel when the group is marked parallelizable), then validates
+  the bucket once: license headers, doc-comments, tests, coverage, and a quality-regression check against the
+  baseline (mirrors xref:skills/iru-java-code-one-task-group.adoc[] / xref:skills/iru-dotnet-code-one-task-group.adoc[]).
+  It is *not* required to shape its validation exactly like the Java/.NET ones — `iru-database-code-one-task-group`
+  (xref:skills/iru-database-code-one-task-group.adoc[]) deliberately runs no baseline/quality pass at all and always
+  executes its tasks sequentially, because schema/query changes carry ordering dependencies the other two
+  stacks don't have. Match the new stack's own real constraints, not the Java/.NET template for its own sake.
+
+Whatever test/coverage/quality/doc-comment skills the new `iru-<key>-code-one-task-group` calls internally
+(`iru-java-test`/`iru-java-coverage`/`iru-java-code-quality`/`iru-java-javadoc`, `iru-dotnet-test`/`iru-dotnet-coverage`/
+`iru-dotnet-code-quality`/`iru-dotnet-docfx`) are **not** part of the registry contract and aren't looked up
+generically by name — they're plain internal implementation detail of that one group skill, so name them
+however fits the new stack's own tooling (there's no requirement to call the doc-comment one `iru-<key>-javadoc`,
+for instance — `iru-dotnet-docfx` already breaks that pattern). Route each through the `iru-gate-runner` agent
+(xref:agents/iru-gate-runner.adoc[]) the same way the existing ones do, so their raw report output stays out of
+the calling context.
+
+Once both skills exist, `iru-plan` and `iru-code-one-task-group` pick the new key up automatically on their next run —
+nothing else in the pipeline needs to change.
+
+== Repository bootstrap for other stacks
+
+`iru-setup-java-library-repository` (xref:skills/iru-setup-java-library-repository.adoc[]) is a fixed, six-step
+orchestration — `iru-setup-java-library` → `iru-setup-antora` → `iru-setup-java-gitignore` →
+`iru-setup-java-github-workflows` → `iru-setup-changelog` → `iru-setup-readme` — built specifically for a brand-new
+Java/Maven repository. Three of those six (`iru-setup-antora`, `iru-setup-changelog`, `iru-setup-readme`) already derive
+everything from whatever's on disk and aren't Java-specific in principle; the other three
+(`iru-setup-java-library`, `iru-setup-java-gitignore`, `iru-setup-java-github-workflows`) are.
+
+To support bootstrapping a different stack (an npm library, a Python package, a .NET library), the two
+options this catalog's own architecture points at:
+
+* **Add a parallel orchestrator.** Write `iru-setup-<stack>-library` (the manifest/source-folder scaffold),
+  reuse `iru-setup-antora`/`iru-setup-changelog`/`iru-setup-readme` unchanged, and write
+  `iru-setup-<stack>-gitignore` / `iru-setup-<stack>-<ci-provider>-workflows` as needed, then an
+  `iru-setup-<stack>-library-repository` that chains them in the equivalent order — same shape as the Java
+  one, new stack.
+* **Add a front door that asks first.** A single `iru-setup-library-repository` that opens with
+  `AskUserQuestion` ("which stack is this?" — Java/Maven, Node/npm, .NET, Python, …) and then delegates to
+  whichever `iru-setup-<stack>-library-repository` matches, the way `iru-plan`/`iru-code-one-task-group` dispatch on a
+  language key rather than assuming one. This is worth building once at least a second stack-specific
+  orchestrator exists — before that, there's nothing to choose between.
+
+Either way, `iru-setup-antora`, `iru-setup-changelog`, and `iru-setup-readme` are the parts of this pipeline already
+generalized — don't fork those; extend the stack-specific three (or their equivalents for the new stack).
+
+== Release generation for other ecosystems
+
+`iru-release` (xref:skills/iru-release.adoc[]) is, today, entirely Maven/gitflow-shaped: it reads and writes a
+`<version>` element in `pom.xml`, assumes a `develop` integration branch and a `release_x.y.z` branch name,
+and hands `README.md`/Antora version-snippet updates off to `iru-setup-readme`. The parts of it that are already
+stack-agnostic — determining the PR base branch by checking what actually exists on the remote rather than
+assuming `main`, delegating the changelog summary to the `iru-change-summarizer` agent
+(xref:agents/iru-change-summarizer.adoc[]), drafting the PR description via `iru-pr-description`
+(xref:skills/iru-pr-description.adoc[]) — don't need to change for a new ecosystem.
+
+What would need to generalize is narrowly the version-bump mechanics: which file carries the version
+(`pom.xml` vs `package.json` vs `<Project>/Directory.Build.props`/`.csproj` vs `pyproject.toml`), what
+"current pre-release" looks like in that ecosystem (`-SNAPSHOT` vs a pre-release semver tag vs a dev version
+marker), and what command (if any) applies the bump for that tool. Rather than teaching one `iru-release` skill
+every ecosystem's version file, the same registry shape as
+xref:_language_framework_backends_for_the_code_pipeline[] applies cleanly here: detect the project's
+language/build tool (`iru-explore`'s own Step 3 already does this), then look for and delegate to an
+`iru-<key>-bump-version`-style skill if one is installed, falling back to asking the user which file to edit by
+hand if none is. That keeps `iru-release`'s own branch/PR/label/changelog steps — the genuinely reusable
+majority of the skill — untouched while making the one Maven-specific step pluggable per ecosystem.
+
+== Ticket trackers and git hosts
+
+Two detections already exist inside `iru-explore` (xref:skills/iru-explore.adoc[]) and are reused by `iru-issue`,
+`iru-pr-description`, and `iru-pr-review`, and are worth knowing about before assuming they need building from
+scratch:
+
+* **Ticket system** — GitHub issue vs. Jira ticket, auto-detected from the id's shape (`42` vs. `PROJ-123`).
+  `iru-create-github-issue` and `iru-create-jira-ticket` (xref:skills/iru-create-github-issue.adoc[],
+  xref:skills/iru-create-jira-ticket.adoc[]) are the two filing skills this detection currently dispatches to.
+* **Repository host** — GitHub, Bitbucket, Azure DevOps, or TFS, detected from the git remote URL, with the
+  user asked directly (never guessed) when a self-hosted or mirrored URL doesn't clearly match any of them.
+
+Adding a third tracker (Azure Boards, Linear, …) or confirming support for a host this catalog doesn't yet
+name means extending `iru-explore`'s two detection steps with the new pattern, then — for a new tracker — adding
+an `iru-create-<tracker>-ticket` skill mirroring the two that exist. Because `iru-issue`, `iru-pr-description`, and
+`iru-pr-review` all read `iru-explore`'s detection result rather than re-implementing their own, a new host only needs
+wiring into `iru-explore` once and the tooling calls (branch/PR/merge-request creation, comment posting) inside
+those three downstream skills — not into every skill that touches git hosting individually.
+
+== Quality gates
+
+`iru-check-license`, `iru-check-security`, and the per-language `iru-<key>-code-quality` skills are all invoked the same
+way — through the `iru-gate-runner` agent (xref:agents/iru-gate-runner.adoc[]), which runs one gate, optionally
+diffs it against a baseline, and reports back a compact summary instead of the raw tool report. Adding a new
+gate (a dependency-vulnerability scan, an accessibility check, a performance budget) means writing one skill
+in that same shape — a single scan/check with a clear pass/fail and issue list — and then wiring a
+`iru-gate-runner` call for it into whichever `iru-<key>-code-one-task-group` skill(s) should run it as part of their
+per-bucket validation pass (xref:skills/iru-java-code-one-task-group.adoc[] Step 1/4 and
+xref:skills/iru-dotnet-code-one-task-group.adoc[]'s equivalent are the two current call sites). The new gate
+doesn't need to touch `iru-gate-runner` itself — that agent already runs "whatever skill name it's told to run."
+
+== Custom agent shapes
+
+xref:agents/overview.adoc[] documents the three custom agents this catalog has needed so far
+(`iru-gate-runner`, `iru-isolated-skill-executor`, `iru-change-summarizer`) and, more usefully for extension, the test it
+applies before adding a fourth: only when a built-in agent type's tool access or system prompt genuinely
+doesn't fit a *recurring* sub-agent shape used by more than one skill. A one-off isolation need (as several
+skills already handle by calling the built-in `general-purpose` or `Explore` types directly via `Agent`)
+doesn't warrant a new custom agent definition; a shape that starts showing up identically in a third or
+fourth skill probably does.
+
+== Documentation tooling
+
+`iru-setup-antora`, `iru-build-docs`, `iru-update-docs`, and `iru-generate-skill-docs` are all built specifically around
+Antora — the toolchain this catalog itself uses for `docs/`. Supporting a repository that documents itself
+with something else (MkDocs, Docusaurus, plain GitHub wiki pages) would mean paralleling this same quartet
+for that tool rather than trying to generalize Antora-specific logic (playbook/component config, AsciiDoc
+xref syntax, the nav.adoc format) in place — there's currently no signal in this catalog that more than one
+doc toolchain needs supporting at once, so building that generalization ahead of a second real use case would
+be speculative.
+
+== After adding a new extension
+
+Once a new skill following one of the shapes above is in place:
+
+* Re-run `iru-generate-skill-docs` (xref:skills/iru-generate-skill-docs.adoc[]) so the reference table, dependency
+  graph, and the new skill's own detail page are generated from it — don't hand-write that page.
+* If it introduces a new key used by `iru-plan`/`iru-code-one-task-group` (or a new stack/tracker/host), sanity-check
+  it end to end: run `/iru-plan` against a task that should resolve to the new key and confirm it's tagged
+  correctly, rather than only reading the new skill's own instructions back.
+* If a hand-maintained guide page (this one included) describes the gap you just filled, update it — this
+  page is prose, not generated, and will drift the same way any hand-maintained doc does.
+
+== See also
+
+* xref:guides/creating-skills-and-agents.adoc[]
+* xref:guides/common-workflows.adoc[]
+* xref:agents/overview.adoc[]
+* xref:index.adoc[]

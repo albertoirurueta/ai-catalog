@@ -1,0 +1,118 @@
+= PR Review
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Review a specific, already-open pull request and leave the findings as review comments on it — this skill never
+edits code itself. It is grounded in this repository's actual architecture, conventions, and detected tech stack,
+learned fresh via the `iru-explore` skill, plus the originating ticket's intent when the PR links one (a GitHub issue
+or a Jira ticket). It works the same way regardless of which platform hosts the repository, using that platform's
+own tooling instead of assuming GitHub/`gh`.
+
+== Purpose
+
+`iru-pr-review` fetches a pull request's metadata, diff, and existing comments by id (via the tool matching the
+detected repository host), resolves any linked ticket (explicitly passed, or detected from a `Closes #N`-style
+reference or a bare Jira key in the PR title/body), and runs `iru-explore` (scoped to that ticket when there is one)
+so the review is grounded in how the codebase is actually structured — including its detected language(s)/
+framework(s) and the architectural style appropriate to that stack (hexagonal/DDD for a backend, MVC/MVVM for a
+UI layer, unidirectional data flow for SwiftUI/Compose) — rather than the diff in isolation. Where the external
+`code-review` skill happens to be available in the current session, `iru-pr-review` prefers delegating
+correctness/reuse/simplification/efficiency analysis to it — checking out the PR locally and invoking it with
+`--comment` — rather than reimplementing that logic, and focuses its own review on what `code-review` has no way
+to know: whether the change matches the linked ticket's intent and whether it follows this codebase's own
+conventions. If `code-review` isn't available, `iru-pr-review` covers the full scope itself. Findings are always
+drafted first and only posted as inline review comments after the user's explicit confirmation.
+
+== Purpose group
+
+xref:index.adoc#group-pr[Pull Request Lifecycle]
+
+== Invocation
+
+[source]
+----
+/iru-pr-review <pr-id>
+/iru-pr-review <pr-id> <ticket-id>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`pr-id`
+|Yes
+|The pull request number to review. There is nothing to review without it — if omitted, the skill
+asks for it via `AskUserQuestion` and stops entirely if the user declines or gives none.
+|None — must be provided or supplied interactively.
+
+|`ticket-id`
+|No
+|The GitHub issue id or Jira key linked to the PR. When given explicitly (e.g. by the `iru-issue` skill, which
+already knows the relationship with certainty), Step 4's own detection is skipped and this id is used directly.
+|None — if omitted, the skill looks for a `Closes #N`/`Fixes #N`/`Resolves #N`/bare `#N` reference, or a bare
+Jira key, in the PR title or body; if none is found, the review proceeds without ticket-intent context.
+|===
+
+== Outputs
+
+* A drafted set of review findings in the conversation, grouped by file, each with its line, a one-sentence
+  summary, and a concrete suggested fix, plus a short overall summary.
+* If the user confirms posting: review comments submitted via the tool matching the detected host — a single
+  bundled pull request review (`event: "COMMENT"`, never `REQUEST_CHANGES`/`APPROVE`) for GitHub; individual
+  inline comments plus one summary comment for Bitbucket or Azure DevOps/TFS — with its URL reported.
+* If `code-review` was available and the user confirmed delegating to it, its own findings are posted
+  directly to the PR as part of Step 6 (separately from, and before, this skill's own review in Step 7).
+* If the user declines to post: no PR state is changed — the drafted findings are the deliverable.
+* This skill never edits code and never approves or requests changes on a PR.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-pr-review pr-id ticket-id?] --> B["Step 1: Resolve PR id (required)\nand ticket id (optional)"]
+    B --> C["Step 2: Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
+    C --> D["Step 3: Fetch PR metadata, diff,\nand existing comments via host's tool"]
+    D --> E{PR merged or closed?}
+    E -- yes --> F["Ask user whether to\ncontinue anyway or stop"]
+    E -- no --> G["Step 4: Find linked ticket\n(explicit id, Closes #N, or Jira key),\nfetch via gh/Jira MCP tools"]
+    F -- continue --> G
+    G --> H["Step 5: Invoke explore skill\n(scoped to ticket if found)"]
+    H --> I{code-review skill\navailable this session?}
+    I -- yes --> J["Step 6: Confirm, checkout PR locally,\ninvoke code-review --comment,\nrestore original branch"]
+    I -- no --> K["Step 7: Cover correctness, security,\ntest coverage, simplification\nyourself, plus ticket-intent\nand convention checks"]
+    J --> L["Step 7: Review for ticket-intent\nmismatch and convention drift"]
+    K --> M["Step 8: Present findings,\nask to post via AskUserQuestion"]
+    L --> M
+    M -- decline --> N[Stop - draft is the deliverable]
+    M -- accept --> O["Step 9: Post via host-matching tool\n(bundled review or per-comment threads)"]
+    O --> P["Step 10: Report outcome"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-explore.adoc[] — Step 5 runs `iru-explore` (scoped to the linked ticket when one was found in Step
+  4) to learn the codebase's architecture, conventions, and detected tech stack before judging the diff against
+  them.
+* `code-review` — an external skill, **not part of this catalog**. Step 6 checks whether it happens to be
+  available in the current session and, if so, checks out the PR locally and delegates
+  correctness/reuse/simplification/efficiency findings to it via its `--comment` flag (which posts those
+  findings directly to the PR). If it isn't available, `iru-pr-review` covers that scope itself in Step 7.
+
+=== Invoked by
+
+* xref:skills/iru-issue.adoc[] — Step 7 runs `iru-pr-review`, passing both the new PR's id and the ticket id
+  explicitly, since `iru-issue` already knows the relationship between them with certainty.
+
+=== Related agents
+
+None directly — `iru-pr-review` does not spawn any agent itself (the `iru-explore` skill it invokes in Step 5 is
+the one that uses the built-in `Explore` agent).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-pr-review/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

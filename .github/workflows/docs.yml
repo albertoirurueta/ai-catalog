@@ -2,7 +2,7 @@ name: Docs
 
 # Builds the Antora documentation site under docs/ and publishes it to GitHub Pages (the gh-pages branch)
 # on every push to main. Adapted from the Antora-build/GitHub-Pages-publish stages of the Java/Maven
-# develop.yml/main.yml template in the setup-java-github-workflows skill, minus everything Java/Maven-
+# develop.yml/main.yml template in the iru-setup-java-github-workflows skill, minus everything Java/Maven-
 # specific (JDK setup, static analysis, SonarQube, the Maven site report, Maven Central publish) since this
 # repository has no pom.xml — it's a skills catalog, not a Java library.
 on:

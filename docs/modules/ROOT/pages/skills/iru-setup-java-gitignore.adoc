@@ -1,0 +1,92 @@
+= Setup Java Gitignore
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or refresh the root `.gitignore` for a Java project, using this repository's own `.gitignore` as the
+concrete reference template — never overwriting an existing file without showing the user exactly what would
+change and getting explicit approval first.
+
+== Purpose
+
+`iru-setup-java-gitignore` composes a Java-appropriate `.gitignore`: a universal base (compiled classes, logs,
+packaged artifacts, JVM crash logs) plus conditionally-detected sections for the actual build tool (Maven
+`/target/` or Gradle `build/`/`.gradle/`), IDE files (IntelliJ, VS Code, Eclipse), a generated build-info
+properties file if a Groovy/Maven plugin writes one, and Antora documentation build output. It never invents
+entries for things that aren't actually present in the target repository. If `.gitignore` already exists, it
+is treated as sensitive: the skill reads it, merges rather than duplicates, and shows the user a diff before
+writing anything.
+
+== Purpose group
+
+xref:index.adoc#group-bootstrap[Repository Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-gitignore
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|(none)
+|No
+|This skill takes no arguments — it derives everything it needs by exploring the target repository directly
+(presence of `pom.xml`/`build.gradle`, `.idea/`/`.vscode`/Eclipse files, a build-info-writing plugin step, and
+`docs/antora-playbook.yml`).
+|Not applicable.
+|===
+
+== Outputs
+
+* A `.gitignore` file at the repository root — newly created, or updated after explicit user approval.
+* If `.gitignore` didn't previously exist: it is written directly, no approval step needed.
+* If `.gitignore` already existed: a diff of the proposed content is shown first, and the file is only
+  overwritten if the user explicitly accepts.
+* A closing report naming which conditional sections (build tool, IDE, build-info file, Antora build output)
+  were included versus skipped, and why.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-java-gitignore] --> B{".gitignore already\nexists at root?"}
+    B -- no --> C["Compose universal base template\n(classes, logs, jars, crash logs)"]
+    B -- yes --> D["Read existing content\n(warn user changes will be proposed)"]
+    D --> C
+    C --> E["Detect project-specific additions:\nMaven/Gradle output dir, IDE files,\nbuild-info file, Antora build output"]
+    E --> F["Compose proposed content\n(merge with existing lines if any)"]
+    F --> G{"Did .gitignore\nalready exist?"}
+    G -- no --> H["Write .gitignore directly"]
+    G -- yes --> I["Show diff, ask user:\naccept or skip"]
+    I -- accept --> H
+    I -- skip --> J["Leave existing .gitignore untouched"]
+    H --> K[Report]
+    J --> K
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-java-gitignore` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-library-repository.adoc[] — Step 5 runs `iru-setup-java-gitignore` after
+  `iru-setup-java-library` and `iru-setup-antora` have run, so it can detect their generated files (the Maven
+  `pom.xml`/source layout and the Antora docs build output) already in place. It's invoked with no `args` — it
+  derives everything by exploring the repository directly.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

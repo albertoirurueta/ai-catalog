@@ -1,0 +1,98 @@
+= Create GitHub Issue
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Draft and file a new GitHub issue that is ready to be picked up by the `/iru-issue`, `/iru-plan`, `/iru-code` flow. This
+skill only files an issue; it does not branch, plan, or write code.
+
+== Purpose
+
+`iru-create-github-issue` turns a rough idea, bug report, or request into a well-formed GitHub issue — grounded in
+the real codebase via `iru-explore`, with a clear purpose statement asked of the user, and whatever supporting
+context they have (linked URLs, attached files/documents, related issues) folded into the issue body. It
+classifies the issue as bug vs. feature/enhancement from the stated purpose and matches it against this
+repository's actual label set (never inventing a label that doesn't exist), drafts a title and a structured body
+(Summary, Context, Acceptance criteria, References), and always shows the draft for explicit confirmation before
+filing it — the same confirm-before-visible-action discipline `iru-pr-description` and `iru-pr-review` use. It is the
+GitHub counterpart to `iru-create-jira-ticket`.
+
+== Purpose group
+
+xref:index.adoc#group-intake[Ticket Intake]
+
+== Invocation
+
+[source]
+----
+/iru-create-github-issue
+/iru-create-github-issue <short description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`short description`
+|No
+|A starting point for the issue's purpose. When given, the skill only asks the user for what it leaves unclear
+(the "why," or what "done" looks like) rather than re-asking from scratch.
+|None — if omitted, the skill asks the user directly, in plain conversational text, what the issue's purpose is.
+|===
+
+== Outputs
+
+* No file or code changes — this skill's only durable side effect is the filed GitHub issue itself.
+* A drafted issue title and body (Summary, Context, Acceptance criteria, References) shown to the user before any
+  action is taken.
+* If the user confirms creation: a new GitHub issue filed via `gh issue create` (or GitHub MCP tools if `gh` is
+  unavailable), with a label attached when Step 5 found one matching this repository's actual label set.
+* If the user declines, or edits the draft first: no issue is filed until they explicitly confirm; the draft
+  itself remains the deliverable.
+* A final report with the issue number and URL, and a pointer to `/iru-issue <number>` or `/iru-plan <number>` as the
+  next step.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /create-github-issue\n(optional short description)"] --> B{Repository hosted\non GitHub?}
+    B -- no / no remote --> Z["Stop: this skill only\nfiles GitHub issues"]
+    B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
+    C --> D["Ask user: purpose of the task\n(plain conversational question)"]
+    D --> E["Ask user: additional context?\n(URLs, files/documents, related issues)"]
+    E --> F["Fetch URLs via WebFetch;\nRead attached files;\nconfirm related issues via gh issue view"]
+    F --> G["Classify bug vs. feature;\nmatch against this repo's\nactual gh label list"]
+    G -- ambiguous / no match --> H["Ask user to pick a label\nfrom the real list"]
+    G -- clear match --> I
+    H --> I["Draft title + body:\nSummary, Context, Acceptance\ncriteria, References"]
+    I --> J["Show draft to user"]
+    J --> K{User choice}
+    K -- edit first --> I
+    K -- don't create --> L["Stop: draft is\nthe deliverable"]
+    K -- create now --> M["gh issue create --title --body-file\n--label (or GitHub MCP tools)"]
+    M --> N["Report issue number/URL;\nsuggest /iru-issue or /plan"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-explore.adoc[] — Step 2 runs `iru-explore` with no argument (general codebase orientation, since there
+  is no ticket yet) so the drafted issue's Context section is grounded in the real architecture rather than a
+  vague description.
+
+=== Invoked by
+
+None — `iru-create-github-issue` is a top-level entry point, run directly by a person before a tracked issue exists
+for `/iru-issue`/`/iru-plan` to pick up.
+
+=== Related agents
+
+None — `iru-create-github-issue` does not spawn any agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-create-github-issue/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

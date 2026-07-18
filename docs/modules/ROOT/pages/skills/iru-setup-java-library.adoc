@@ -1,0 +1,124 @@
+= Setup Java Library
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate `pom.xml` at the repository root for a new Java library from an explicit, genericized example template,
+and scaffold the standard Maven source layout for the library's base package.
+
+== Purpose
+
+`iru-setup-java-library` bootstraps a new Java/Maven library's `pom.xml` from a house template embedded in the skill
+itself — the same test dependencies (junit-jupiter, junit-platform-launcher, mockito-core,
+mockito-junit-jupiter), the same `sign`/`build-extras` profiles, and the same build/reporting plugins, with only
+the project-identity fields filled in per repository. It also creates the `src/main/java/<package>`,
+`src/main/resources/<package>`, and `src/test/java/<package>` folders for the library's base package.
+
+== Purpose group
+
+xref:index.adoc#group-bootstrap[Repository Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-library
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-java-library-repository.adoc[])
+as newline-separated `key: value` lines — `groupId`, `artifactId`, `package`, `developer-name`,
+`developer-email`, `organization-url`, and `license` — parsed in Step 0 so this skill doesn't ask about any
+field already resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|groupId
+|Yes (unless supplied via `args`)
+|Maven groupId, e.g. `com.example`.
+|None
+
+|artifactId
+|Yes (unless supplied via `args`)
+|Maven artifactId, e.g. `my-library`.
+|None
+
+|version
+|No
+|Project version.
+|`1.0.0-SNAPSHOT`
+
+|Library package
+|Yes (unless supplied via `args`)
+|Base Java package for the library's main source (need not equal groupId), used for the
+`src/main/java/<package>` layout and the build-info write path.
+|None
+
+|Developer name / email / organizationUrl
+|Yes (unless supplied via `args`)
+|Populates the `<developers>` block.
+|None
+
+|License
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: Apache License 2.0, MIT License, No license, or Other (asked for a display name
+and URL directly).
+|None — user must choose
+|===
+
+== Outputs
+
+* `pom.xml` at the repository root, generated fresh or entirely replaced if one already existed and the user
+  chose to continue.
+* `src/main/java/<package>`, `src/main/resources/<package>`, and `src/test/java/<package>` created if not
+  already present (empty directories won't show up in `git status` until they contain a file).
+* A report of the resolved groupId/artifactId/version, the license chosen (or "none"), the inferred repository
+  information, and which source folders were created versus already present — plus an explicit warning to review
+  the generated `pom.xml` before building or committing.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-java-library] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E{"Step 1: pom.xml already exists?"}
+    D --> E
+    E -- yes --> F["Warn user; AskUserQuestion:\nstop or continue?"]
+    F -- stop --> G[Report pom.xml untouched; end]
+    F -- continue --> H["Read existing pom.xml values\nas defaults for unresolved fields"]
+    E -- no --> I["Step 2: Collect remaining inputs\n(groupId, artifactId, version, package,\ndeveloper info, license)"]
+    H --> I
+    I --> J["Step 3: Infer repository info\n(owner/repo/host, description,\ninception year) from git/gh"]
+    J --> K["Step 4-5: Fill pom.xml template\nwith resolved values"]
+    K --> L["Step 6: Write pom.xml"]
+    L --> M["Step 7: Scaffold src/main/java,\nsrc/main/resources, src/test/java folders"]
+    M --> N["Step 8: Report + warn:\nreview before building"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-java-library` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-library-repository.adoc[] — Step 3 runs `iru-setup-java-library` first, passing the
+  pre-resolved groupId, artifactId, package, developer name/email/organizationUrl, and license via `args` as
+  `key: value` lines so this skill's own Step 2 questions are skipped and the user isn't asked twice.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-library/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

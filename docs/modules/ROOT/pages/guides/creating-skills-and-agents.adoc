@@ -16,7 +16,7 @@ reference table], and xref:agents/overview.adoc[].
 |Skill
 |`.claude/skills/<name>/SKILL.md` — the directory name is the skill's canonical name and doubles as its
 slash command (`/`+`<name>`). A skill directory may also hold supporting files (scripts, templates)
-alongside `SKILL.md`.
+alongside `SKILL.md`. In this catalog, `<name>` always starts with the `iru-` prefix (below).
 
 |Custom agent
 |`.claude/agents/<name>.md` — YAML frontmatter (system prompt, allowed tools, model) plus the agent's
@@ -26,6 +26,28 @@ persona/instructions in the body.
 |The same `skills/` and `agents/` layout, but rooted under a plugin directory's `.claude-plugin/` sibling
 folders instead of the repository's own `.claude/` — see xref:guides/plugins.adoc[].
 |===
+
+== Naming: avoiding marketplace collisions
+
+Every skill and agent this catalog ships carries an `iru-` prefix — the directory name under
+`.claude/skills/`, the frontmatter `name` field, the agent filename under `.claude/agents/`, and every
+cross-reference to it from another skill's own instructions or this documentation. A repository can install
+skills from more than one source at once (this catalog, a plugin marketplace, another team's hand-copied
+skills) into the same `.claude/skills/` directory, and slash commands are matched by directory name alone —
+two differently-sourced skills both named `plan` or `code` would silently shadow one another. The prefix is
+this catalog's namespace, so `/iru-plan` never collides with an unrelated `/plan` a consuming repository
+picked up elsewhere.
+
+Any new skill or agent added to this catalog must follow the same convention from the start — name the
+directory/file `iru-<name>` (not a bare `<name>` renamed later), and match this catalog's existing style for
+the prefix itself (lowercase, hyphen-joined, no separate delimiter between `iru` and the rest of the name).
+Adopting a single skill from this catalog into another repository that doesn't use this convention is free to
+drop the prefix — it exists to keep this catalog's own skills from colliding with each other and with
+other sources once several are installed side by side, not as a requirement for every consumer.
+
+See xref:guides/extending-the-catalog.adoc[] for how this convention interacts with the language/framework
+key registry the `iru-code` pipeline uses — the `iru-` prefix is stripped back off before that key is
+derived, since it isn't part of the semantic key itself.
 
 == How each one is actually invoked
 
@@ -37,7 +59,7 @@ each avoids the common mistake of expecting one to behave like the other.
 A skill is reachable through two channels, and both are open by default:
 
 * **Explicit slash command** — a user (or an orchestrating skill) types `/<name>`, optionally with
-  arguments, e.g. `/plan 42`. This is the precise, reproducible way to invoke exactly the skill you mean.
+  arguments, e.g. `/iru-plan 42`. This is the precise, reproducible way to invoke exactly the skill you mean.
 * **Autonomous invocation by Claude** — a user just describes the task in plain language ("write me an
   implementation plan for issue 42"), and Claude, matching the request against the skill's frontmatter
   `description`, decides on its own to run it — no slash command typed at all.
@@ -63,7 +85,7 @@ There is no `/agent-name` command that directly spawns a specific agent by name 
 skill — typing that would not do anything special. An agent is only ever reached indirectly, through Claude
 itself deciding to call the `Agent`/Task tool with a given `subagent_type`:
 
-* **An active skill's own instructions** cause the delegation — e.g. `code` (xref:skills/code.adoc[])
+* **An active skill's own instructions** cause the delegation — e.g. `iru-code` (xref:skills/iru-code.adoc[])
   spawning a `general-purpose` sub-agent to isolate a noisy quality check, per its own step list.
 * **A user asks for it in natural language** — "use the Explore agent to find X", "spawn a sub-agent to
   review this" — which Claude translates into that same `Agent` tool call. The user is requesting a
@@ -111,7 +133,7 @@ error-prone than it needs to be. In practice:
    case and fix whatever it gets wrong or asks about that it shouldn't have to — a skill's instructions are
    only as good as what actually happens when an agent follows them literally.
 4. Once it's right, if this repository documents its own catalog (as this one does via
-   `generate-skill-docs`), re-run that skill so the reference table, dependency graph, and the
+   `iru-generate-skill-docs`), re-run that skill so the reference table, dependency graph, and the
    new skill/agent's own detail page pick it up — don't hand-maintain that documentation separately.
 
 == How to phrase what you write

@@ -8,8 +8,8 @@ verbose report, an entire multi-step skill run, a batch of independent summariza
 result lands back in the calling skill's own context.
 
 This repository defines three custom agents under `.claude/agents/`, each with its own detail page —
-xref:agents/gate-runner.adoc[], xref:agents/isolated-skill-executor.adoc[], and
-xref:agents/change-summarizer.adoc[] — for shapes that recurred often enough across this catalog's skills to be
+xref:agents/iru-gate-runner.adoc[], xref:agents/iru-isolated-skill-executor.adoc[], and
+xref:agents/iru-change-summarizer.adoc[] — for shapes that recurred often enough across this catalog's skills to be
 worth centralizing. This page instead documents the two **built-in** agent types this catalog still relies on
 for everything that doesn't fit one of those three shapes.
 
@@ -20,17 +20,17 @@ answering "where is X defined". It cannot edit files.
 
 === Used by
 
-* xref:skills/explore.adoc[] — Step 3 uses it to build a picture of the codebase's structure (module layout,
+* xref:skills/iru-explore.adoc[] — Step 3 uses it to build a picture of the codebase's structure (module layout,
   core abstractions, control flow) before reporting findings, in place of manually reading every file.
-* xref:skills/setup-antora.adoc[] — Step 7 uses it to locate the top-level source layout and main public entry
+* xref:skills/iru-setup-antora.adoc[] — Step 7 uses it to locate the top-level source layout and main public entry
   points before writing `index.adoc`'s repository overview, instead of reading the whole source tree directly.
-* xref:skills/setup-readme.adoc[] — Step 7 uses it the same way, to locate the main source entry points before
+* xref:skills/iru-setup-readme.adoc[] — Step 7 uses it the same way, to locate the main source entry points before
   writing the README's "how it works" example.
 
 === Why this one specifically
 
-Each of these is read-only research over a codebase whose size and shape aren't known in advance — `explore`'s
-whole job, and a narrower, bounded version of the same need in `setup-antora`/`setup-readme`'s own Step 7. The
+Each of these is read-only research over a codebase whose size and shape aren't known in advance — `iru-explore`'s
+whole job, and a narrower, bounded version of the same need in `iru-setup-antora`/`iru-setup-readme`'s own Step 7. The
 `Explore` agent is purpose-built for exactly that: broad, targeted search that stays out of the main
 conversation's context window, without the ability to accidentally make an edit during what's meant to be a
 non-destructive pass.
@@ -42,13 +42,13 @@ naming a specific type. It has the same tool access as the main conversation.
 
 === Used by
 
-* xref:skills/generate-skill-docs.adoc[] — Step 3 spawns one per skill and per documented agent found, each
+* xref:skills/iru-generate-skill-docs.adoc[] — Step 3 spawns one per skill and per documented agent found, each
   reading only its own file and returning a compact structured summary (purpose, inputs, outputs, steps,
   invokes/spawns edges) instead of this skill's own conversation reading every `SKILL.md` in the catalog
-  directly; separately, it also spawns one (as does xref:skills/update-docs.adoc[]) only when no Antora
-  documentation module exists yet, to run the `setup-antora` skill (briefed with the context of what's about to
+  directly; separately, it also spawns one (as does xref:skills/iru-update-docs.adoc[]) only when no Antora
+  documentation module exists yet, to run the `iru-setup-antora` skill (briefed with the context of what's about to
   follow) before continuing with the rest of their own work.
-* xref:skills/pr-description.adoc[] — Step 2 spawns one, given the branch/base-branch names, to read the full
+* xref:skills/iru-pr-description.adoc[] — Step 2 spawns one, given the branch/base-branch names, to read the full
   diff and recent commit messages and draft the PR description, so the raw diff stays out of this skill's own
   context and only the drafted text comes back.
 
@@ -57,13 +57,13 @@ naming a specific type. It has the same tool access as the main conversation.
 Bootstrapping a documentation module mid-run, extracting one skill's metadata, and drafting a description from a
 diff are each one-off, occasional delegations — not a shape common enough across the catalog to justify a
 dedicated custom agent definition the way
-xref:agents/gate-runner.adoc[], xref:agents/isolated-skill-executor.adoc[], and
-xref:agents/change-summarizer.adoc[] were. The plain default is the right choice here: nothing about the
+xref:agents/iru-gate-runner.adoc[], xref:agents/iru-isolated-skill-executor.adoc[], and
+xref:agents/iru-change-summarizer.adoc[] were. The plain default is the right choice here: nothing about the
 delegation needs restricted tool access or a specialized system prompt.
 
 == Adding a custom agent to this catalog
 
 If a future need doesn't fit either built-in type above or one of this catalog's three custom agents, define it
 under `.claude/agents/<name>.md` following the same frontmatter convention Claude Code uses for agent
-definitions, then re-run the `generate-skill-docs` skill so this page and xref:index.adoc[]'s dependency graph
+definitions, then re-run the `iru-generate-skill-docs` skill so this page and xref:index.adoc[]'s dependency graph
 pick it up.

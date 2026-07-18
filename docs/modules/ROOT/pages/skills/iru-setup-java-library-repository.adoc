@@ -1,0 +1,146 @@
+= Setup Java Library Repository
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a brand-new Java/Maven library repository. It collects the project's identity and
+pipeline parameters once, then orchestrates six other skills in a fixed order so nothing is asked twice.
+
+== Purpose
+
+`iru-setup-java-library-repository` is the top-level entry point for starting a Java/Maven library repository from
+nothing. Rather than duplicating the logic of `pom.xml` generation, documentation scaffolding, `.gitignore`
+setup, CI/CD workflows, changelog bootstrapping, and README generation, it gathers the shared inputs — project
+identity (groupId, artifactId, base package, developer name/email/organizationUrl, license) and pipeline
+parameters (integration branch, Java version, publishing server id, sign/extras profile ids, Maven settings
+file) — once, and passes each downstream skill only what it needs.
+
+== Purpose group
+
+xref:index.adoc#group-bootstrap[Repository Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-library-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|groupId, artifactId, base package, developer name/email/organizationUrl
+|Yes
+|Free-text project-identity fields, asked directly in plain conversation in Step 1.
+|None
+
+|License
+|Yes
+|Resolved once via `AskUserQuestion`: Apache License 2.0, MIT License, No license, or Other (asked for a display
+name and URL directly).
+|None — user must choose
+
+|Integration branch
+|No
+|Branch that CI treats as the integration branch, fed to `iru-setup-java-github-workflows`.
+|`develop`
+
+|Java version
+|No
+|Java version the CI pipeline builds against.
+|`17`
+
+|Publishing server id
+|No
+|Maven Central (or equivalent) publishing server id.
+|`central`
+
+|Extras profile id
+|No
+|Maven profile id for building extra artifacts (sources/javadoc jars).
+|`build-extras`
+
+|Sign profile id
+|No
+|Maven profile id for GPG-signing artifacts.
+|`sign`
+
+|Maven settings file
+|No
+|Settings file used by the CI workflows for authentication.
+|`mvnsettings.xml`
+|===
+
+== Outputs
+
+* `pom.xml` and the `src/main/java`/`src/main/resources`/`src/test/java` source folders for the base package
+  (via `iru-setup-java-library`).
+* A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
+* A root `.gitignore` covering the build tool, IDE files, and the Antora build output (via
+  `iru-setup-java-gitignore`).
+* `develop.yml`/`main.yml`/`sync.yml` GitHub Actions workflows and the `.github/scripts/sync_versions.py` script
+  (via `iru-setup-java-github-workflows`).
+* A root `CHANGELOG.md` backfilled from git/GitHub release history (via `iru-setup-changelog`).
+* A root `README.md` with badges, a project-status table, documentation links, and installation instructions
+  (via `iru-setup-readme`).
+* A final report summarizing the resolved identity/license/pipeline parameters, which files were created versus
+  left untouched (because a downstream skill's own approval step chose to stop), the required GitHub secrets, and
+  an explicit warning to review every generated file before building, committing, or relying on CI.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-java-library-repository] --> B["Step 1: Collect project identity\n(groupId, artifactId, package,\ndeveloper info, license)"]
+    B --> C["Step 2: Collect pipeline parameters\n(branch, Java version, server/profile ids,\nsettings file)"]
+    C --> D["Step 3: Run setup-java-library\n(pom.xml + source folders, via sub-agent)"]
+    D -- pom.xml existed and user chose stop --> E[Stop entire pipeline; report]
+    D -- ok --> F["Step 4: Run setup-antora\n(documentation site, via sub-agent)"]
+    F --> G["Step 5: Run setup-java-gitignore\n(root .gitignore, via sub-agent)"]
+    G --> H["Step 6: Run setup-java-github-workflows\n(CI/CD workflows, via sub-agent)"]
+    H --> I["Step 7: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
+    I --> J["Step 8: Run setup-readme\n(root README.md, via sub-agent)"]
+    J --> K["Step 9: Report combined outcome\nand review warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent rather than a direct `Skill` call — every sub-skill re-derives what it needs straight from the filesystem
+this orchestrator has just written to, so only a short completion summary needs to come back, keeping each
+sub-skill's own exploration/file reads out of this orchestrator's own context:
+
+* xref:skills/iru-setup-java-library.adoc[] — Step 3, first: writes `pom.xml` and the source folders, passing
+  Step 1's answers (groupId, artifactId, package, developer name/email/organizationUrl, license) as `args`
+  `key: value` lines so `iru-setup-java-library` doesn't ask for them again.
+* xref:skills/iru-setup-antora.adoc[] — Step 4: scaffolds the Antora documentation site, invoked with no `args`
+  since it derives the component name/title/version directly from the `pom.xml` Step 3 just wrote.
+* xref:skills/iru-setup-java-gitignore.adoc[] — Step 5: writes or updates the root `.gitignore`, invoked with no
+  `args` since it explores the repository directly (including what Steps 3–4 just wrote).
+* xref:skills/iru-setup-java-github-workflows.adoc[] — Step 6: writes the CI/CD workflows, passing Step 2's pipeline
+  parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file)
+  plus Step 1's already-collected `groupId`/`artifactId` as `args` `key: value` lines, so that skill's own survey
+  doesn't need to re-read them from `pom.xml`.
+* xref:skills/iru-setup-changelog.adoc[] — Step 7: bootstraps the root `CHANGELOG.md`, invoked with no `args` since
+  it works from the repository's own git tag/GitHub Release history.
+* xref:skills/iru-setup-readme.adoc[] — Step 8, last: bootstraps the root `README.md`, invoked with no `args` since
+  it explores the finished state left by every earlier step.
+
+=== Invoked by
+
+None — `iru-setup-java-library-repository` is a top-level entry point; no other skill in this catalog invokes it.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per sub-skill (Steps 3–8),
+  so all six sub-skills' own exploration/file-read transcripts don't accumulate in this orchestrator's context
+  over the course of a single bootstrap run.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-library-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

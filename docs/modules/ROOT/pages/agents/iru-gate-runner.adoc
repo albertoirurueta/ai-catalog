@@ -1,0 +1,54 @@
+= Gate Runner
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+A custom agent that runs a single verification/quality-gate skill — tests, coverage, code-quality/lint, license
+headers, doc-comment audits, security scans, or a full project build — in an isolated context, optionally diffs
+the result against a baseline, and reports back only a compact, structured summary.
+
+== Purpose
+
+`iru-gate-runner` exists to collapse a pattern that used to be hand-written, nearly identically, at more than a
+dozen call sites across `iru-code`, `iru-code-one-task-group`, `iru-java-code-one-task-group`, and
+`iru-dotnet-code-one-task-group`: invoke a verification skill,
+diff it against a baseline if one is given, and return only the distilled outcome — never the raw
+Surefire/JaCoCo/Checkstyle/PMD/SpotBugs/StyleCop/CA/SARIF/detect-secrets output or a full build log. Before this
+agent existed, every one of those call sites repeated the same "report back only X, not the full report"
+instruction in its own `Agent()` prompt; centralizing it in one agent definition means that convention only has
+to be stated — and changed, if it ever needs to be — once.
+
+It always prefers invoking the matching Claude Code skill (e.g. `iru-java-test`, `iru-dotnet-coverage`,
+`iru-java-code-quality`, `iru-check-license`, `iru-check-security`) over a raw command, falling back to the equivalent raw
+build-tool command only when the prompt says no matching skill is installed.
+
+== Tools
+
+`Skill`, `Bash`, `Read` — enough to invoke a skill (or fall back to a raw command) and read whatever report file
+it produces; no `Edit`/`Write` access, since this agent only runs and reports, it never modifies files itself.
+
+== Used by
+
+* xref:skills/iru-code.adoc[] — Step 3 (project-wide quality and security baseline capture) and Step 7 (full local
+  build verification, plus the final quality/security baseline comparison).
+* xref:skills/iru-code-one-task-group.adoc[] — the best-effort fallback path (Step 3), for a task whose
+  language/framework has no matching `<key>-code-one-task-group` skill installed.
+* xref:skills/iru-java-code-one-task-group.adoc[] and xref:skills/iru-dotnet-code-one-task-group.adoc[] — every
+  delegated check while validating one task group's bucket: pre-change quality baseline, license headers,
+  Javadoc/XML doc comments, scoped test run, coverage check, full test suite, and the post-change quality diff —
+  all run once per bucket rather than once per task.
+* xref:skills/iru-plan.adoc[] — recommended (when installed) for the scoped test-run step a generated
+  `implementation_plan.md` instructs its executor to delegate to a sub-agent, in place of a generic,
+  repository-specific sub-agent prompt.
+
+== Why this one specifically
+
+Every one of these delegations exists to keep something noisy (a report, a build log) out of the calling
+skill's own context window, and to diff against a baseline so only newly-introduced issues are ever reported —
+not to use any capability unique to a broadly-scoped agent. A narrow, purpose-built agent with `Skill`/`Bash`/
+`Read`-only tool access is a tighter fit than the default `general-purpose` type, and lets every caller state the
+delegation in one line ("run X, diff against this baseline, report Y") instead of re-explaining the
+summarize-don't-dump convention every time.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/agents/iru-gate-runner.md[`gate-runner.md` on GitHub] — the file this page was generated from.
