@@ -10,17 +10,25 @@ research: its output is a report, not a diff.
 
 `iru-explore` gets an agent (or a human) oriented before any decision or code change is made. Given a ticket id, it
 auto-detects whether it's a GitHub issue or a Jira key and narrows the investigation to only the areas that
-ticket implicates; given none, it does a general architectural tour of the repository. It also detects which
-platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS) and the language(s)/framework(s) in play
-— both in the existing codebase and in whatever change is being requested — so its "Tech stack" report can be
-reused directly by later skills (`iru-plan`, `iru-code`, `iru-update-docs`, PR/branch creation) instead of each re-detecting
-the same facts. It also checks for a `.archive/` directory — where `iru-code` archives every completed
-`implementation_plan.md` — and, if it holds a plan whose topic overlaps with the current task, reads it as
-concrete precedent for how a similar task was previously scoped and broken into task groups, rather than
-planning from a cold start. If a documentation MCP (e.g. Confluence, Notion) is connected, it also does a
-targeted search for pages relevant to the ticket or codebase, folding anything relevant into the report as
-extra context for a later plan. Either way it never edits a file, and it never proposes an implementation —
-that is `iru-plan`'s job, run as a separate, explicit step.
+ticket implicates; given none, it does a general architectural tour of the repository. For a Jira ticket, it also
+fetches the ticket's epic and any linked/related tickets one hop out (since an epic or a linked ticket often
+carries context — a shared constraint, what a "blocks"/"relates to" link actually means — that the leaf ticket's
+own fields omit), and downloads and reads any `implementation_plan_*.md` file attached to the ticket, its epic, or
+its linked tickets: exactly the naming convention `iru-code` archives completed plans under and `iru-issue`
+attaches back onto a resolved ticket, so a match here is a previously-completed plan for similar or related work
+travelling with the ticket itself. It also detects which platform hosts the repository (GitHub, Bitbucket, Azure
+DevOps, or TFS) and the language(s)/framework(s) in play — both in the existing codebase and in whatever change is
+being requested — so its "Tech stack" report can be reused directly by later skills (`iru-plan`, `iru-code`,
+`iru-update-docs`, PR/branch creation) instead of each re-detecting the same facts. This works even when the current
+working directory isn't a git repository at all: it warns the user once, records that explicitly, and keeps going
+with whatever sources don't need git (a Jira ticket, a documentation MCP, and any files actually present) — a
+GitHub issue lookup in that case falls back to asking the user for the target `owner/repo` explicitly. It also
+checks for a `.archive/` directory — where `iru-code` archives every completed `implementation_plan.md` — and, if
+it holds a plan whose topic overlaps with the current task, reads it as concrete precedent for how a similar task
+was previously scoped and broken into task groups, rather than planning from a cold start. If a documentation MCP
+(e.g. Confluence, Notion) is connected, it also does a targeted search for pages relevant to the ticket or
+codebase, folding anything relevant into the report as extra context for a later plan. Either way it never edits
+a file, and it never proposes an implementation — that is `iru-plan`'s job, run as a separate, explicit step.
 
 == Purpose group
 
@@ -54,17 +62,23 @@ general codebase tour.
 * A plain-text report in the conversation — never a written file.
 * Always a **Tech stack** section: codebase languages/frameworks (per module, if more than one), the
   languages/frameworks implicated by the requested change, the Antora docs location (or "none found"), and the
-  detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, or "no remote configured") — structured so later
-  skills in the same conversation can read it directly instead of re-detecting it.
+  detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, "no remote configured", or "none — not a git
+  repository") — structured so later skills in the same conversation can read it directly instead of
+  re-detecting it.
 * If a documentation MCP (e.g. Confluence, Notion) is connected: a **Related documentation** section listing
   relevant pages found (title, link, one-line summary), or a note that none was relevant/connected.
-* A **Related past implementation plans** section: any archived plan(s) in `.archive/` used as precedent (file
-  name, its original topic, what carries over — task breakdown, granularity, or approach), or a note that
-  `.archive/` doesn't exist or nothing in it was relevant.
+* A **Related past implementation plans** section covering both the local `.archive/` check and, for a Jira
+  ticket, any `implementation_plan_*.md` downloaded from the ticket/epic/linked tickets: name and source (local
+  vs. downloaded) of any plan(s) used as precedent, its original topic, and what carries over — or a note that
+  neither source had anything relevant.
 * If a ticket was explored: the task restated in plain language, the specific files/classes/methods relevant to
   it, how the current code behaves in that area, and anything ambiguous or missing that would block
-  implementation.
+  implementation. For a Jira ticket, also its epic (if any) and any linked/related tickets, each with a one-line
+  summary of what it adds.
 * If codebase-only: a summary of the architecture areas covered and anything notable found.
+* If the working directory isn't a git repository: an explicit warning stating what that disabled (git-remote-
+  dependent tooling, `git log` history) versus what still ran normally (Jira, a documentation MCP, file-based
+  codebase checks).
 * No code, configuration, or documentation is ever modified.
 
 == Execution flow
@@ -76,18 +90,27 @@ flowchart TD
     B -- yes --> C["Detect type: Jira key pattern\nvs. bare number/#N (GitHub)"]
     B -- no --> D["Ask user: explore a ticket,\nor just the codebase?"]
     D -- ticket id given --> C
-    D -- declined / none --> E["Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
-    C --> F["Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
-    F --> G["Fetch ticket: gh issue view\n(GitHub) or Jira MCP tools (Jira)"]
-    G --> H["Narrow exploration to files/classes/\nerror messages the ticket names,\nplus their closest structural neighbors"]
+    D -- declined / none --> E0{Is cwd a git\nrepository?}
+    C --> F0{Is cwd a git\nrepository?}
+    F0 -- no --> F1["Warn user; record\n'not a git repository'"]
+    F0 -- yes --> F["Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
+    F1 --> G
+    F --> G["Fetch ticket: gh issue view\n(GitHub, or ask for owner/repo\nif not a git repo) or Jira MCP tools (Jira)"]
+    G --> G1{Jira ticket?}
+    G1 -- yes --> G2["Fetch epic + linked tickets\n(one hop out); download/read any\nattached implementation_plan_*.md"]
+    G1 -- no --> H
+    G2 --> H["Narrow exploration to files/classes/\nerror messages the ticket names,\nplus their closest structural neighbors"]
     H --> I["Check existing tests covering that area"]
-    E --> J["General orientation pass:\narchitecture, modules, recent git history"]
+    E0 -- no --> F1B["Warn user; record\n'not a git repository'"]
+    E0 -- yes --> E["Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
+    F1B --> J
+    E --> J["General orientation pass:\narchitecture, modules, recent git\nhistory (skipped if not a git repo)"]
     I --> O["Check .archive/ for a plan whose\ntopic overlaps the current task"]
     J --> O
     O --> K["Detect tech stack: codebase\nlanguages/frameworks + Antora docs"]
     K --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- yes --> N["Search it for pages relevant\nto the ticket/codebase"]
-    M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ Related documentation)"]
+    M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ epic/linked tickets,\n+ Related documentation)"]
     N --> L
 ....
 

@@ -137,6 +137,24 @@ an `iru-create-<tracker>-ticket` skill mirroring the two that exist. Because `ir
 wiring into `iru-explore` once and the tooling calls (branch/PR/merge-request creation, comment posting) inside
 those three downstream skills — not into every skill that touches git hosting individually.
 
+== Customizing Jira ticket creation
+
+`iru-create-jira-ticket` (xref:skills/iru-create-jira-ticket.adoc[]) already asks for the context every ticket
+needs regardless of organization — purpose, related tickets, an optional epic, a due date, an importance level.
+Many organizations need more than that before a ticket is genuinely ready to file: a required custom field,
+team/component ownership, a customer/account, an affected environment, a compliance or security classification.
+Rather than growing `iru-create-jira-ticket` itself with organization-specific questions that wouldn't apply to
+every installation of this catalog, that skill delegates to `iru-jira-custom-context`
+(xref:skills/iru-jira-custom-context.adoc[]) during its own context-gathering step.
+
+Out of the box, `iru-jira-custom-context` asks a single generic, optional catch-all question and returns
+whatever the user provides — it defines no organization-specific questions of its own. Extending it is a
+one-file customization, unlike the registry-shaped extension points above: there's no naming convention to
+match or a new skill to register, just this one skill's own Step 2, edited in place, with whichever questions or
+lookups a given Jira workflow actually needs — a fixed-choice `AskUserQuestion` when the answer is a known,
+bounded set, an open-ended question when it's free-form, or an automated lookup (via a connected MCP tool) when
+the context can be derived rather than asked.
+
 == Quality gates
 
 `iru-check-license`, `iru-check-security`, and the per-language `iru-<key>-code-quality` skills are all invoked the same
@@ -185,5 +203,6 @@ Once a new skill following one of the shapes above is in place:
 
 * xref:guides/creating-skills-and-agents.adoc[]
 * xref:guides/common-workflows.adoc[]
+* xref:skills/iru-jira-custom-context.adoc[]
 * xref:agents/overview.adoc[]
 * xref:index.adoc[]

@@ -1,0 +1,222 @@
+= Creating GitHub issues and Jira tickets
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+xref:guides/common-workflows.adoc#filing-a-ticket[Filing a ticket before work begins] introduces
+xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] and
+xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`] as the two entry points that turn a rough idea
+into a tracked, actionable ticket. This page goes one level deeper: exactly what information each one asks for,
+how the drafted ticket is structured, and which skills actually run behind the scenes to produce it.
+
+Both skills exist so a ticket is immediately actionable by
+xref:guides/common-workflows.adoc#typical-development-cycle[the typical development cycle] once filed — grounded
+in the real codebase rather than a guess, and carrying the same structured information every time regardless of
+who's filing it or how much detail they thought to include.
+
+== What you provide
+
+Neither skill asks everything up front in one long form — each question is asked only when the previous answer
+still leaves something unresolved, and every question beyond the task's purpose is optional.
+
+[cols="2,1,1,4", options="header"]
+|===
+|Information |Required |Tracker |Notes
+
+|Purpose (what problem this solves, or what capability it adds)
+|Yes
+|Both
+|Free text. Can be given upfront as a short description argument
+(`/iru-create-github-issue <short description>` / `/iru-create-jira-ticket <short description>`) — the skill
+then asks only for whatever that description leaves unclear, instead of re-asking from scratch.
+
+|Acceptance criteria
+|No
+|Both
+|Folded into the purpose answer if the user already has any in mind; never invented if they don't.
+
+|Linked URL(s)
+|No
+|Both
+|Design docs, discussions, prior art. Each is fetched (`WebFetch`) and its key points are folded into the draft
+rather than linked blind.
+
+|Attached file(s)/document(s)
+|No
+|Both
+|Local paths — screenshots, logs, specs, mockups. Read directly (including images and PDFs) and summarized.
+
+|Related ticket(s)/issue(s)
+|No
+|Both
+|Confirmed against the real tracker (`gh issue view` / Jira MCP tools) before being referenced, rather than
+trusted on the user's word alone.
+
+|Epic
+|No
+|Jira only
+|Confirmed by key, then explored the same way `iru-explore` explores an epic — its description and, where
+listable, its child tickets — since an epic often carries a shared goal or constraint no single ticket repeats.
+Assigned to the new ticket as its parent/epic link on creation.
+
+|Organization-specific context
+|No
+|Jira only
+|Gathered by delegating to xref:skills/iru-jira-custom-context.adoc[`iru-jira-custom-context`] — an explicit
+extension point (see xref:guides/extending-the-catalog.adoc#_customizing_jira_ticket_creation[Customizing Jira
+ticket creation]) that, out of the box, asks one generic optional question and is meant to be extended per
+organization with whatever a given Jira workflow actually needs (a required custom field, team ownership, a
+customer/account, an environment, a compliance classification).
+
+|Due date
+|No
+|Both
+|Free text, normalized to an absolute date (e.g. "next Friday" → the actual date).
+
+|Importance
+|A level is always recorded
+|Both
+|One of **trivial**, **minor**, **important**, **blocking**, asked as a fixed choice. Defaults to **minor** for
+an ordinary task, or **blocking** when the purpose reads as a bug or incident actively affecting production —
+either way, the user confirms or overrides rather than it being assigned silently.
+
+|Label (GitHub) / Project + issue type (Jira)
+|Resolved automatically
+|Both
+|Classified from the stated purpose (bug vs. feature/enhancement signal words) and matched against this
+repository's real label set, or this Jira instance's real project/issue-type configuration — never an invented
+label or issue type. The user is only asked to pick when the match is genuinely ambiguous or can't be listed.
+|===
+
+== How the ticket is structured
+
+Whatever was gathered above is drafted into a consistent shape before anything is filed — shown to the user in
+full for confirmation, never filed silently:
+
+[cols="1,4"]
+|===
+|Section |Content
+
+|Title / Summary
+|A concise, imperative one-liner (e.g. "Add retry support to the HTTP client").
+
+|Summary
+|The purpose and motivation, in the user's own terms.
+
+|Context
+|Grounded in `iru-explore`'s own codebase orientation — the relevant existing files/modules/classes and how
+they behave today, so whoever picks the ticket up (including a later `iru-explore`/`iru-plan` run) starts
+oriented instead of cold.
+
+|Acceptance criteria
+|A short bulleted list, only if the user gave any or they can be reasonably inferred — omitted entirely rather
+than invented.
+
+|Task details
+|Due date (if given), importance, and an **estimated difficulty** — the skill's own assessment of how hard the
+task is to implement, grounded in everything gathered: how much of the codebase it touches, whether it needs
+new abstractions or unfamiliar dependencies, and the scope described in the purpose/context. One of **very
+easy**, **easy**, **medium**, **hard**, **very hard**, **extreme**, or **impossible**, plus a one-line rationale
+(e.g. "medium — touches two existing classes with clear precedent elsewhere in the codebase, no new
+dependencies"). `impossible` is reserved for something that genuinely contradicts a hard technical constraint
+found during exploration, not just something difficult.
+
+|References
+|Summarized URLs/file contents, confirmed related-ticket links, and — for Jira — the epic (if any) and whatever
+`iru-jira-custom-context` returned.
+|===
+
+== Skills executed
+
+[mermaid]
+....
+flowchart TD
+    A["/iru-create-github-issue\nor /iru-create-jira-ticket\n(optional short description)"] --> B["iru-explore\n(ground the draft in the codebase,\ngeneral orientation — no ticket yet)"]
+    B --> C["Ask: purpose of the task"]
+    C --> D["Ask: additional context\n(URLs, files, related tickets)"]
+    D --> E{Jira ticket?}
+    E -- yes --> F["Ask + explore: optional epic"]
+    F --> G["iru-jira-custom-context\n(organization-specific context)"]
+    E -- no --> H
+    G --> H["Ask: due date (optional) +\nimportance (trivial/minor/\nimportant/blocking)"]
+    H --> I{Jira ticket?}
+    I -- yes --> J["Resolve Jira project + issue type\n(matched against real configuration)"]
+    I -- no --> K["Classify bug vs. feature;\nmatch a real GitHub label"]
+    J --> L
+    K --> L["Draft title/summary + structured body\n(Summary, Context, Acceptance criteria,\nTask details incl. estimated difficulty,\nReferences)"]
+    L --> M["Show full draft to user"]
+    M --> N{User choice}
+    N -- edit --> L
+    N -- decline --> O["Stop: draft kept, nothing filed"]
+    N -- confirm --> P["File: gh issue create\n(or GitHub MCP tools)\nor Jira MCP tools"]
+    P --> Q(["/iru-issue &lt;id-or-key&gt;\nor /iru-plan &lt;id-or-key&gt;\n(separate, later invocation)"])
+....
+
+[cols="2,2,5", options="header"]
+|===
+|Diagram block |Skill(s) |What happens
+
+|`iru-explore` (ground the draft)
+|xref:skills/iru-explore.adoc[`iru-explore`]
+a|
+* Run with no argument — there is no ticket yet, so this is a general codebase orientation rather than one
+  scoped to a specific area
+* Detects the codebase's language(s)/framework(s) so the drafted Context section can name real files/modules
+* Skipped if equivalent exploration already happened earlier in the same conversation
+
+|Ask purpose / additional context / due date / importance
+|xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] or
+xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`]
+a|
+* Asks the purpose directly, in plain conversational text — not a fixed choice, since the answer is open-ended
+* Asks for optional context (URLs, files, related tickets, and — Jira only — an epic), fetching/reading/
+  confirming whatever is actually provided
+* Asks for due date (optional) and importance (fixed choice, with a purpose-aware recommended default)
+
+|`iru-jira-custom-context` (Jira only)
+|xref:skills/iru-jira-custom-context.adoc[`iru-jira-custom-context`]
+a|
+* Delegated to during additional-context gathering, passed the task's stated purpose
+* Out of the box, asks one generic optional question; extended per organization to ask for whatever else that
+  Jira workflow requires
+* A "nothing provided" response is never a blocker — the caller proceeds with just its own context in that case
+
+|Resolve project + issue type (Jira) / Classify + label (GitHub)
+|xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] or
+xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`]
+a|
+* GitHub: classifies bug vs. feature/enhancement from the stated purpose's signal words, then matches it
+  against this repository's actual `gh label list` — never inventing a label
+* Jira: resolves the target project (reusing one already established in the conversation, listing accessible
+  ones, or asking) and the issue type (matched against this project's real configured types)
+* Either way, the user is only asked to pick when the match is genuinely ambiguous or can't be listed
+
+|Draft + confirm + file
+|xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] or
+xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`]
+a|
+* Composes the structured title/summary and body described above and shows it in full
+* Waits for explicit confirmation — **create now**, **edit the draft first**, or **don't create it** — before
+  any visible action is taken
+* On confirmation, files via `gh issue create` (or GitHub MCP tools) for a GitHub issue, or the connected Jira
+  MCP tool(s) for a Jira ticket, including the epic link/parent field if one was assigned
+|===
+
+== Where this fits
+
+Filing a ticket this way is entirely optional — nothing in
+xref:guides/common-workflows.adoc#typical-development-cycle[the typical development cycle] requires going
+through either skill first. `/iru-issue <ticket-id>` and `/iru-plan <ticket-id>` work exactly the same way
+against a ticket filed by hand, or even against no ticket at all (a free-form description). What these two
+skills add is consistency: every draft is grounded in the real codebase and asks for the same structured
+information, rather than depending on whoever's filing it to remember what a well-formed ticket needs.
+
+== See also
+
+* xref:guides/common-workflows.adoc#filing-a-ticket[Filing a ticket before work begins] — the shorter,
+  one-diagram version of this same workflow, alongside the catalog's other common workflows.
+* xref:guides/extending-the-catalog.adoc#_customizing_jira_ticket_creation[Customizing Jira ticket creation] —
+  how to extend `iru-jira-custom-context` with organization-specific questions.
+* xref:index.adoc#group-intake[Ticket Intake] — the purpose group these two skills belong to.
+* xref:skills/iru-create-github-issue.adoc[], xref:skills/iru-create-jira-ticket.adoc[],
+  xref:skills/iru-jira-custom-context.adoc[], xref:skills/iru-explore.adoc[] — detail pages for every skill this
+  workflow runs.

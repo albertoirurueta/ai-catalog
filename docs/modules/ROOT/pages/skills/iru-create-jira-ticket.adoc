@@ -10,11 +10,16 @@ skill only files a ticket; it does not branch, plan, or write code.
 `iru-create-jira-ticket` is the Jira counterpart to `iru-create-github-issue` — same shape, but sourced through connected
 Jira MCP tools instead of the `gh` CLI, and with Jira's project/issue-type model instead of GitHub labels. It runs
 `iru-explore` for general codebase orientation, asks the user directly for the task's purpose and any additional
-context (linked URLs, attached files/documents, related tickets), resolves the target Jira project and issue type
-against this Jira instance's actual configuration rather than inventing one, drafts a summary and a structured
-description (Summary, Context, Acceptance criteria, References), and always shows the draft for explicit
-confirmation before filing it. Unlike GitHub, there is no ubiquitous Jira CLI fallback — this skill stops early if
-no Jira MCP tool is connected at all.
+context (linked URLs, attached files/documents, related tickets, and an optional epic — which, if given, is
+itself explored for extra context and assigned to the new ticket as its parent/epic link on creation), and
+delegates to the `iru-jira-custom-context` skill for whatever organization-specific context that extension point
+has been set up to gather. It also asks for the task's due date (optional) and importance (trivial/minor/
+important/blocking — defaulting to minor, or to blocking when the purpose reads as a bug/incident affecting
+production). It resolves the target Jira project and issue type against this Jira instance's actual configuration
+rather than inventing one, drafts a summary and a structured description (Summary, Context, Acceptance criteria,
+Task details — due date, importance, and an agent-assessed estimated difficulty from very easy to impossible —
+References), and always shows the draft for explicit confirmation before filing it. Unlike GitHub, there is no
+ubiquitous Jira CLI fallback — this skill stops early if no Jira MCP tool is connected at all.
 
 == Purpose group
 
@@ -44,10 +49,13 @@ xref:index.adoc#group-intake[Ticket Intake]
 == Outputs
 
 * No file or code changes — this skill's only durable side effect is the filed Jira ticket itself.
-* A drafted ticket summary, description (Summary, Context, Acceptance criteria, References), project, and issue
-  type shown to the user before any action is taken.
+* A drafted ticket summary, description (Summary, Context, Acceptance criteria, Task details, References),
+  project, issue type, and — if one was given — the epic it will be assigned to, shown to the user before any
+  action is taken. Task details combines the due date/importance answers with an estimated-difficulty assessment
+  (very easy/easy/medium/hard/very hard/extreme/impossible, plus a one-line rationale).
 * If the user confirms creation: a new Jira ticket filed via the connected Jira MCP tool(s), with the resolved
-  project, issue type, and any matched labels/components.
+  project, issue type, any matched labels/components, and the epic link/parent field set if an epic was
+  confirmed.
 * If the user declines, or edits the draft first: no ticket is filed until they explicitly confirm; the draft
   itself remains the deliverable.
 * If no Jira MCP tool is connected at all, or ticket creation fails on a required field: the skill stops and
@@ -63,18 +71,21 @@ flowchart TD
     B -- no --> Z["Stop: no fallback without Jira MCP;\nsuggest create-github-issue instead"]
     B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
     C --> D["Ask user: purpose of the task\n(plain conversational question)"]
-    D --> E["Ask user: additional context?\n(URLs, files/documents, related tickets)"]
-    E --> F["Fetch URLs via WebFetch;\nRead attached files;\nconfirm related tickets via Jira MCP tools"]
-    F --> G["Resolve target project\n(reuse from conversation, list via MCP,\nor ask user)"]
+    D --> E["Ask user: additional context?\n(URLs, files/documents, related\ntickets, optional epic)"]
+    E --> E2["Confirm + explore epic if given\n(description, child tickets)"]
+    E2 --> E3["Delegate to iru-jira-custom-context\nfor org-specific context"]
+    E3 --> F["Fetch URLs via WebFetch;\nRead attached files;\nconfirm related tickets via Jira MCP tools"]
+    F --> F2["Ask due date (optional) +\nimportance (trivial/minor/important/\nblocking — default minor, or blocking\nfor a production bug/incident)"]
+    F2 --> G["Resolve target project\n(reuse from conversation, list via MCP,\nor ask user)"]
     G --> H["Resolve issue type:\nBug vs. Story/Task/New Feature,\nmatched against this project's real types"]
     H -- ambiguous / can't list --> I["Ask user to pick"]
     H -- clear match --> J
-    I --> J["Draft summary + description:\nSummary, Context, Acceptance\ncriteria, References"]
-    J --> K["Show draft, project,\nissue type to user"]
+    I --> J["Draft summary + description:\nSummary, Context, Acceptance\ncriteria, Task details (due date,\nimportance, estimated difficulty),\nReferences (incl. epic)"]
+    J --> K["Show draft, project, issue type,\nepic assignment to user"]
     K --> L{User choice}
     L -- edit first --> J
     L -- don't create --> M["Stop: draft is\nthe deliverable"]
-    L -- create now --> N["Create via connected\nJira MCP tool(s)"]
+    L -- create now --> N["Create via connected Jira MCP\ntool(s), incl. epic link if given"]
     N -- creation fails --> O["Surface exact error;\nask how to proceed"]
     N -- succeeds --> P["Report ticket key/URL;\nsuggest /iru-issue or /plan"]
 ....
@@ -86,11 +97,18 @@ flowchart TD
 * xref:skills/iru-explore.adoc[] — Step 2 runs `iru-explore` with no argument (general codebase orientation, since there
   is no ticket yet) so the drafted ticket's Context section is grounded in the real architecture rather than a
   vague description.
+* xref:skills/iru-jira-custom-context.adoc[] — Step 4, during additional-context gathering, passing the task's
+  stated purpose so this extension-point skill can gather whatever organization-specific context it's been set
+  up to ask for. A "nothing provided" response is never a blocker.
 
 === Invoked by
 
-None — `iru-create-jira-ticket` is a top-level entry point, run directly by a person before a tracked ticket exists
-for `/iru-issue`/`/iru-plan` to pick up.
+* xref:skills/iru-code.adoc[] — Step 7, conditionally: when a project-wide quality check regresses against
+  baseline, the plan being executed originated from a Jira ticket (per its `Source:` line), and the user chooses
+  to file the remaining issues as new tickets rather than adding a follow-up task group or accepting them as-is.
+
+Otherwise `iru-create-jira-ticket` is a top-level entry point, run directly by a person before a tracked ticket
+exists for `/iru-issue`/`/iru-plan` to pick up.
 
 === Related agents
 

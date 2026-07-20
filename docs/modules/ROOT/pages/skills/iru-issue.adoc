@@ -13,12 +13,17 @@ ticket triage, and PR creation.
 GitHub issue or a Jira key the same way `iru-explore` does. Unlike `iru-explore` and `iru-plan`, it requires a ticket id and
 stops immediately if none is given. It fetches the ticket, classifies it as a feature or a hotfix, creates the
 matching branch, runs `iru-explore` and `iru-plan` to produce a reviewable `implementation_plan.md`, then — depending on
-the user's choice — either stops for manual review or hands implementation off to `iru-code` inside a sub-agent,
-before pushing the branch, opening the pull request (as a draft, using whichever tooling matches the detected
-repository host), drafting its description with `iru-pr-description`, and leaving an initial review on it with
+the user's choice — either stops for manual review or hands implementation off to `iru-code` inside a sub-agent.
+Once implementation finishes successfully, it attaches the archived implementation plan back onto the original
+ticket — as a GitHub issue comment (via `gh issue comment`, since GitHub's API has no generic file-attachment
+endpoint) or a Jira attachment/comment (via connected Jira MCP tools) — so a future exploration of that same
+ticket has the full plan as precedent, skipping this step entirely if `iru-code` never actually archived a plan.
+It then pushes the branch, opens the pull request (as a draft, using whichever tooling matches the detected
+repository host), drafts its description with `iru-pr-description`, and leaves an initial review on it with
 `iru-pr-review`. If `iru-code`'s security gate (backed by `iru-check-security`) ever fires during implementation — even if
 `iru-code` goes on to resolve it and finish cleanly — this skill treats that as a hard stop distinct from an ordinary
-blocker: it warns the user with the specifics and never pushes the branch or opens a PR for that run.
+blocker: it warns the user with the specifics and never attaches anything to the ticket, pushes the branch, or
+opens a PR for that run.
 
 == Purpose group
 
@@ -52,14 +57,15 @@ rather than falling back to a codebase-only mode.
 * `implementation_plan.md` at the repository root (produced by `iru-plan`), ready for manual review, or already
   executed by `iru-code` if the user chose automatic implementation.
 * If implementation proceeded automatically and completed successfully, with `iru-code`'s security gate never
-  firing: the branch pushed to `origin`, a pull request opened **as a draft** back to the base branch (title
-  `"<ticket-title> (#<ticket-id>)"` or `"(<ticket-id>)"` for Jira, body linking the ticket via the convention
-  matching the detected host), its description filled in by `iru-pr-description`, and an initial review left on it
-  by `iru-pr-review`.
+  firing: the archived plan attached back onto the ticket (a GitHub comment or a Jira attachment/comment), or
+  skipped with no error if `iru-code` never archived one; the branch pushed to `origin`, a pull request opened
+  **as a draft** back to the base branch (title `"<ticket-title> (#<ticket-id>)"` or `"(<ticket-id>)"` for Jira,
+  body linking the ticket via the convention matching the detected host), its description filled in by
+  `iru-pr-description`, and an initial review left on it by `iru-pr-review`.
 * If the user chose manual review instead, `iru-code` reports a blocker, or `iru-code`'s security gate ever fired during
-  the run, the skill stops short of pushing or opening a PR and reports exactly where it stopped — for the
-  security-gate case, with an explicit warning naming what was flagged and reminding the user to verify the
-  resolution themselves before pushing anything.
+  the run, the skill stops short of attaching anything, pushing, or opening a PR, and reports exactly where it
+  stopped — for the security-gate case, with an explicit warning naming what was flagged and reminding the user
+  to verify the resolution themselves before pushing anything.
 * A final summary: ticket id/title, classification and why, the branch and its base, and one of: manual review
   pending, the security gate fired (with the sub-agent's implementation summary and what was flagged), or the
   full implementation/PR/review outcome — always noting the PR is a draft still needing the user's own review.
@@ -83,8 +89,11 @@ flowchart TD
     J -- manual review --> K["Stop: implementation_plan.md\nready for user to run /iru-code later"]
     J -- automatic --> L["Delegate full code skill run\nto isolated-skill-executor agent"]
     L -- blocker reported --> M["Surface blocker to user and stop"]
-    L -- security gate fired --> N["Hard stop: warn user what was\nflagged; do NOT push or open PR"]
-    L -- clean success --> O["Confirm with user, then\npush branch"]
+    L -- security gate fired --> N["Hard stop: warn user what was\nflagged; do NOT attach, push,\nor open PR"]
+    L -- clean success --> AP{"Did iru-code archive\na plan (per its Step 9)?"}
+    AP -- no --> O
+    AP -- yes --> AP2["Attach archived plan to ticket:\ngh issue comment (GitHub) or\nJira attachment/comment"]
+    AP2 --> O["Confirm with user, then\npush branch"]
     O --> P["Open pull request as draft\n(placeholder body, host-appropriate\nticket reference)"]
     P --> Q["Invoke pr-description skill"]
     Q --> R["Re-confirm ticket reference\nstill in PR body"]

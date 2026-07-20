@@ -8,17 +8,20 @@ source code; its only output artifact is the plan file itself.
 
 == Purpose
 
-`iru-plan` turns a GitHub issue or a free-form task description into a reviewable, checkbox-driven list of
-implementation steps before any code changes begin. If `implementation_plan.md` already exists at the
-repository root, it determines whether that plan matches the requested task and asks the user whether to
-resume it as-is, discard and regenerate it, or update it while preserving already-completed work. It grounds
-itself in the actual codebase (via `iru-explore`), resolves only genuinely ambiguous decisions with the user, groups
-tasks into dependency-aware task groups (each marked whether its tasks can be implemented in parallel), and
-determines which `<key>-code-one-task` skill (e.g. `iru-java-code-one-task`, `iru-dotnet-code-one-task`) each task
-belongs to — once for the whole plan if uniform, tagged per top-level task otherwise — so the `iru-code` skill that
-later executes it, via `iru-code-one-task-group`, knows exactly which language-specific group skill to dispatch
-each task group to without re-inferring it. Everything is written to `implementation_plan.md` — the artifact
-`iru-code` later executes group by group.
+`iru-plan` turns a tracked ticket (a GitHub issue or a Jira ticket, auto-detected like `iru-explore`) or a
+free-form task description into a reviewable, checkbox-driven list of implementation steps before any code
+changes begin. If `implementation_plan.md` already exists at the repository root, it determines whether that
+plan matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or
+update it while preserving already-completed work. It grounds itself in the actual codebase (via `iru-explore`),
+resolves only genuinely ambiguous decisions with the user, groups tasks into dependency-aware task groups (each
+marked whether its tasks can be implemented in parallel), and determines which `<key>-code-one-task` skill (e.g.
+`iru-java-code-one-task`, `iru-dotnet-code-one-task`) each task belongs to — once for the whole plan if uniform,
+tagged per top-level task otherwise — so the `iru-code` skill that later executes it, via
+`iru-code-one-task-group`, knows exactly which language-specific group skill to dispatch each task group to
+without re-inferring it. When a tracked ticket is involved, the plan's Task summary records an explicit `Source:`
+line (e.g. `Source: GitHub issue #42` or `Source: Jira PROJ-123`) so `iru-code`'s own archiving step can name the
+archived plan after the exact ticket it resolved, rather than falling back to a timestamp. Everything is written
+to `implementation_plan.md` — the artifact `iru-code` later executes group by group.
 
 == Purpose group
 
@@ -29,7 +32,7 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 [source]
 ----
 /iru-plan
-/iru-plan <issue-id>
+/iru-plan <ticket-id>
 /iru-plan <free-form task description>
 ----
 
@@ -39,18 +42,19 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |===
 |Argument |Required |Description |Default
 
-|`issue-id`
+|`ticket-id`
 |No
-|A GitHub issue number to plan around. When given, `iru-explore` is run scoped to that issue and the plan's
-"Task summary" is drawn from it.
-|None — if neither an issue id nor a free-form description is provided, the skill asks the user which one
+|A GitHub issue number or a Jira key (e.g. `PROJ-123`) to plan around, auto-detected by pattern. When given,
+`iru-explore` is run scoped to that ticket and the plan's "Task summary" is drawn from it, including an explicit
+`Source:` line naming the ticket.
+|None — if neither a ticket id nor a free-form description is provided, the skill asks the user which one
 they want to plan around.
 
 |Free-form task description
 |No
 |A manually described piece of work (given in the invocation or immediately preceding messages) to plan
-instead of an issue.
-|None — mutually exclusive with `issue-id`; if neither is given, the user is asked to briefly describe the
+instead of a ticket.
+|None — mutually exclusive with `ticket-id`; if neither is given, the user is asked to briefly describe the
 task.
 |===
 
@@ -59,12 +63,12 @@ task.
 * `implementation_plan.md` at the repository root — overwritten if the user chose to discard an existing plan,
   merged into (preserving completed tasks) if the user chose to update one, or left completely untouched if the
   user chose to skip planning and resume execution of the existing file as-is.
-* The plan is structured as: a task summary (including a plan-wide **Language/framework** line if every task
-  shares one key), a summary of the current relevant code state (concrete file paths and class/method names),
-  and implementation steps organized into task groups — each group naming its `Parallelizable` verdict and
-  containing its tasks/sub-tasks, every one carrying its own empty markdown checkbox (`[ ]`) for `iru-code` to check
-  off later, numbered continuously across the whole plan (`Task N` / `Task N.M`) and tagged with its own
-  language/framework key.
+* The plan is structured as: a task summary (including a `Source:` line naming the originating GitHub issue or
+  Jira ticket, if any, and a plan-wide **Language/framework** line if every task shares one key), a summary of the
+  current relevant code state (concrete file paths and class/method names), and implementation steps organized
+  into task groups — each group naming its `Parallelizable` verdict and containing its tasks/sub-tasks, every one
+  carrying its own empty markdown checkbox (`[ ]`) for `iru-code` to check off later, numbered continuously across
+  the whole plan (`Task N` / `Task N.M`) and tagged with its own language/framework key.
 * The distinct set of `<key>-code-one-task` keys involved, resolved against which such skills are actually
   installed in this repository (`find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`) — a task
   whose language/framework has no matching skill installed is still recorded accurately, just without a
@@ -80,23 +84,23 @@ task.
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-plan] --> B{Issue id or free-form\ntask given?}
-    B -- neither --> C["Ask user: plan around an issue,\nor a manually described task?"]
+    A[Start /iru-plan] --> B{Ticket id or free-form\ntask given?}
+    B -- neither --> C["Ask user: plan around a GitHub\nissue/Jira ticket, or a manually\ndescribed task?"]
     C --> B
     B -- given --> D{implementation_plan.md\nalready exists?}
     D -- no --> F
     D -- yes --> E["Assess whether it matches\nthe requested task; ask user:\nskip / discard / update-preserving-done"]
     E -- skip --> Z["Stop: report existing progress,\ntell user to run /iru-code directly"]
-    E -- discard or update --> F["Check conversation for prior\nexploration of this issue/task"]
+    E -- discard or update --> F["Check conversation for prior\nexploration of this ticket/task"]
     F -- already explored --> H[Skip re-exploration]
-    F -- not yet explored --> G["Invoke explore skill\n(scoped to issue id, if any)"]
+    F -- not yet explored --> G["Invoke explore skill\n(scoped to ticket id, if any)"]
     G --> H
     H --> I{Anything genuinely\nambiguous?}
     I -- yes --> J["Ask user via AskUserQuestion\n(1-4 focused questions, defaults offered)"]
     I -- no --> K["Choose best-practice approach\nand state rationale in the plan"]
     J --> L["Find installed *-code-one-task skills;\nresolve language key per task;\ngroup tasks by dependency +\nParallelizable verdict"]
     K --> L
-    L --> M["Draft implementation_plan.md:\ntask summary (+ key), code state,\ntask groups with numbered\nchecklist tasks (+ key tags)\n(merging preserved completed\ntasks if updating)"]
+    L --> M["Draft implementation_plan.md:\ntask summary (+ Source: ticket,\n+ language key), code state,\ntask groups with numbered\nchecklist tasks (+ key tags)\n(merging preserved completed\ntasks if updating)"]
     M --> N["Ask user to review the plan\nbefore implementation starts"]
 ....
 

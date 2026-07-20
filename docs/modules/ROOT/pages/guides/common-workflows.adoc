@@ -116,11 +116,13 @@ xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`] let AI assist 
 straight into the xref:guides/common-workflows.adoc#typical-development-cycle[typical development cycle] above.
 
 Either skill runs `iru-explore` first — a previous analysis of the current codebase — then asks the user the same
-handful of questions every time: what the purpose of the task is, and what additional context exists (linked
-URLs, attached files, related tickets). From that, it classifies the ticket (bug vs. feature/enhancement, or the
-matching Jira issue type), drafts a structured title and body, and matches it against the repository's actual
-label set or Jira project configuration rather than inventing one. The draft is always shown for confirmation
-before anything is filed.
+handful of questions every time: what the purpose of the task is, what additional context exists (linked URLs,
+attached files, related tickets, and — Jira only — an optional epic), and the task's due date and importance.
+From that, it classifies the ticket (bug vs. feature/enhancement, or the matching Jira issue type), drafts a
+structured title and body — including an agent-assessed estimated difficulty — and matches it against the
+repository's actual label set or Jira project configuration rather than inventing one. The draft is always shown
+for confirmation before anything is filed. See xref:guides/creating-tickets.adoc[] for the full breakdown of
+what's asked, how the draft is structured, and every skill involved.
 
 Tickets can still be created manually — directly in GitHub or Jira, with no AI involvement at all — and nothing
 in the xref:guides/common-workflows.adoc#typical-development-cycle[typical development cycle] requires going through
@@ -133,7 +135,7 @@ well-formed ticket needs.
 ....
 flowchart LR
     A["/iru-create-github-issue\nor /iru-create-jira-ticket"] --> B["iru-explore\n(analyze current codebase)"]
-    B --> C["Ask purpose +\nadditional context"]
+    B --> C["Ask purpose + additional context\n(+ due date, importance)"]
     C --> D["Classify bug vs. feature;\ndraft title + structured body"]
     D --> E{"User confirms?"}
     E -- edits --> D
@@ -177,6 +179,8 @@ PR merges.
 * xref:index.adoc#_common_workflows[Common workflows] on the top-level page — the shorter, one-diagram version
   of these same three workflows, alongside the catalog's other supported flows (bootstrapping a new repository,
   updating an existing one after unrelated changes).
+* xref:guides/creating-tickets.adoc[] — a full breakdown of the "Filing a ticket" workflow above: every piece of
+  information asked for, how the drafted ticket is structured, and every skill involved.
 * xref:index.adoc#group-cycle[Issue-to-PR Development Cycle] and xref:index.adoc#group-intake[Ticket Intake] —
   the purpose groups these workflows draw their skills from.
 * xref:skills/iru-issue.adoc[], xref:skills/iru-plan.adoc[], xref:skills/iru-code.adoc[] — detail pages for the typical

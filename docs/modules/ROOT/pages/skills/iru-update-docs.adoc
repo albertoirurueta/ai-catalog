@@ -15,7 +15,10 @@ makes no assumption about a fixed docs path or a fixed set of page names; it dis
 present and their real page map fresh each run, which is why it works the same way regardless of which
 repository it's invoked in. If a documentation MCP (e.g. Confluence, Notion) is connected, it extends the same
 diff-driven understanding to that external system too — finding the relevant existing page(s) there first, then
-showing the user the exact proposed change for approval before anything is written.
+showing the user the exact proposed change for approval before anything is written. Before drafting anything
+against that connector, it checks what its own tools actually expose: if the connector is read-only (search/read
+only, no create-page/update-page tool), it warns the user by name and skips the external-docs enrichment
+entirely instead of drafting an update it could never send.
 
 == Purpose group
 
@@ -53,8 +56,11 @@ branch (`git diff <base-branch>...HEAD` plus `git diff`).
   definition better than prose.
 * If no `antora.yml` existed anywhere in the repository and the user agreed to bootstrap one: a newly scaffolded
   Antora module (via `iru-setup-antora`), then the rest of the run proceeds against it.
-* If a documentation MCP (e.g. Confluence, Notion) is connected: a proposed update to the relevant existing
-  external page(s), sent only after the user reviews and approves the exact change shown to them.
+* If a documentation MCP (e.g. Confluence, Notion) is connected and exposes a write (create/update-page) tool: a
+  proposed update to the relevant existing external page(s), sent only after the user reviews and approves the
+  exact change shown to them.
+* If a documentation MCP is connected but only exposes read tools: an explicit warning naming the connector, and
+  the external-docs enrichment skipped entirely for this run — never a drafted change that couldn't be sent.
 * A report naming, per page: what changed in the source that drove the edit and what was updated in the docs —
   plus pages deliberately left unchanged, any doc gap noticed but left out of scope, and what was sent (or
   proposed-but-declined) to a connected documentation MCP.
@@ -82,13 +88,16 @@ flowchart TD
     K --> L["Map changes to affected pages only;\nedit them, verifying every named symbol against real source"]
     L --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- no --> M1[Skip external doc update]
-    M -- yes --> M2["Search MCP for relevant existing page(s);\nread current content/structure"]
+    M -- yes --> M1B{Connector exposes\na write tool?}
+    M1B -- read-only only --> M1C["Warn user by name;\nskip external-docs enrichment"]
+    M1B -- write tool available --> M2["Search MCP for relevant existing page(s);\nread current content/structure"]
     M2 --> M3["Draft proposed update from\nStep 3's diff-driven understanding"]
     M3 --> M4["Show user exact proposed change;\nAskUserQuestion: send / skip / revise"]
     M4 -- approved --> M5[Call MCP tool to\nupdate/create the page]
     M4 -- declined --> M1
     M5 --> Q{Node.js + Antora playbook available?}
     M1 --> Q
+    M1C --> Q
     Q -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors]
     Q -- no --> O[Note build was not locally verified]
     N --> P["Report per-page changes, unchanged pages,\nnoted doc gaps, and MCP doc outcome"]

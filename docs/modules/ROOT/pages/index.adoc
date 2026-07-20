@@ -99,6 +99,10 @@ one on this page.
 |Where skills and agents live, when to reach for one versus the other, and the fastest reliable way to draft
 a new one — asking Claude Code itself, grounded in existing examples.
 
+|xref:guides/creating-tickets.adoc[]
+|What information `iru-create-github-issue`/`iru-create-jira-ticket` ask for, how the drafted ticket is
+structured (including the estimated-difficulty assessment), and which skills run behind the scenes to produce it.
+
 |xref:guides/extending-the-catalog.adoc[]
 |Where this catalog's pipelines are already built to grow by convention (the `iru-code` pipeline's
 language/framework registry) versus where a single skill still hardcodes one stack (release generation,
@@ -257,6 +261,11 @@ features, and where the underlying models genuinely differ.
 |Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.
 |xref:skills/iru-java-test.adoc[]
 
+|`iru-jira-custom-context`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Extension point: gather organization-specific context for a Jira ticket, called by `iru-create-jira-ticket`.
+|xref:skills/iru-jira-custom-context.adoc[]
+
 |`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Write a concrete, reviewable `implementation_plan.md`, tagging each task's language/framework.
@@ -379,13 +388,20 @@ ticket — before the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 Reach for one of these when the work doesn't have a ticket yet. Neither is required — a ticket can always be
 filed by hand, or `/iru-issue`/`/iru-plan` can work from a free-form description instead — but both skills ground the
 draft in the actual codebase (via `iru-explore`) and ask for the same context (purpose, links, files, related
-tickets) so what lands in the tracker is immediately actionable.
+tickets, due date, importance) so what lands in the tracker is immediately actionable, plus an agent-assessed
+estimated difficulty folded into the draft.
 ====
 
 * xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] — drafts and files a GitHub issue via `gh issue
   create`, matched against this repository's actual label set.
 * xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`] — drafts and files a Jira ticket via connected Jira
-  MCP tools, resolving the target project and issue type against the real Jira configuration.
+  MCP tools, resolving the target project and issue type against the real Jira configuration; supports an
+  optional epic assignment and delegates to `iru-jira-custom-context` for organization-specific context.
+* xref:skills/iru-jira-custom-context.adoc[`iru-jira-custom-context`] — extension point called by
+  `iru-create-jira-ticket` to gather whatever organization-specific context (a required custom field, team
+  ownership, customer/account, environment, compliance classification) a given Jira workflow needs, beyond the
+  universal questions the caller already asks. Not useful standalone — it exists to be edited in place and
+  invoked by that caller.
 
 [[group-cycle]]
 === Issue-to-PR Development Cycle
@@ -622,6 +638,7 @@ flowchart LR
     subgraph Intake["Ticket Intake"]
         CGI["iru-create-github-issue"]
         CJT["iru-create-jira-ticket"]
+        CJCC["iru-jira-custom-context"]
     end
 
     subgraph Cycle["Issue-to-PR Development Cycle"]
@@ -683,6 +700,7 @@ flowchart LR
 
     CGI --> EXPLORE
     CJT --> EXPLORE
+    CJT --> CJCC
 
     ISSUE --> EXPLORE
     ISSUE --> PLAN
@@ -697,6 +715,7 @@ flowchart LR
     CODE -.-> DCQ
     CODE -.-> CSEC
     CODE --> UD
+    CODE -->|"quality regressed,\nJira-origin plan,\nuser opts to file"| CJT
 
     COTG --> JCOTG
     COTG --> DCOTG
@@ -795,14 +814,17 @@ walkthrough.
 ....
 flowchart LR
     A["/iru-create-github-issue\nor /iru-create-jira-ticket"] --> B["iru-explore\n(ground the draft in the codebase)"]
-    B --> C["Ask purpose + additional context\n(URLs, files, related tickets)"]
-    C --> D["Draft + confirm + file\n(gh issue create /\nJira MCP tools)"]
+    B --> C["Ask purpose + additional context\n(URLs, files, related tickets,\nepic — Jira only — due date, importance)"]
+    C --> C2["iru-jira-custom-context\n(Jira only: org-specific context)"]
+    C2 --> D["Draft (+ estimated difficulty)\n+ confirm + file\n(gh issue create /\nJira MCP tools)"]
     D --> E(["/iru-issue &lt;id-or-key&gt;\n(separate, later invocation)"])
 ....
 
 Both skills work the same way up to filing; which one to use depends on which tracker the repository/team
 uses. Neither is required — `/iru-issue` and `/iru-plan` work fine against a ticket filed by hand, or against no ticket
-at all (a free-form description).
+at all (a free-form description). Only `iru-create-jira-ticket` supports an epic assignment and delegates to
+xref:skills/iru-jira-custom-context.adoc[`iru-jira-custom-context`] for organization-specific context — there is
+no GitHub equivalent for either.
 
 === Typical development cycle, starting from a ticket
 
@@ -818,7 +840,8 @@ flowchart LR
     C --> D{Hand off to /iru-code?}
     D -- yes --> E["iru-code\n(dispatch each task group to\niru-code-one-task-group, via a sub-agent)"]
     D -- no --> H[Stop for manual review]
-    E --> F["iru-pr-description\n(open PR as a draft)"]
+    E --> EA["Attach archived plan\nback onto the ticket\n(GitHub comment / Jira attachment)"]
+    EA --> F["iru-pr-description\n(open PR as a draft)"]
     F --> G["iru-pr-review\n(review the new PR)"]
 ....
 
@@ -831,10 +854,15 @@ validates the bucket once via its own group's tests/coverage/quality/doc skills,
 bucket tagged `database` instead goes to xref:skills/iru-database-code-one-task-group.adoc[
 `iru-database-code-one-task-group`], which is deliberately simpler — always sequential, with no baseline or
 bucket-wide validation of its own. The whole run is bracketed with project-wide quality
-(`iru-java-code-quality`/`iru-dotnet-code-quality`) and security (`iru-check-security`) baselines, updating documentation
-via `iru-update-docs` once both pass (see xref:skills/iru-code.adoc[]). `iru-explore` and `iru-plan` can also be run
+(`iru-java-code-quality`/`iru-dotnet-code-quality`) and security (`iru-check-security`) baselines — if quality regresses,
+follow-up issues can be filed on whichever tracker the plan itself originated from (GitHub via `gh issue create`,
+or Jira via xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`]) — updating documentation via
+`iru-update-docs` once both pass, and archiving the plan under a filename that embeds the originating ticket id
+(see xref:skills/iru-code.adoc[]). `iru-issue` then attaches that archived plan back onto the ticket before opening
+the PR, so a later `iru-explore` of the same ticket finds it as precedent. `iru-explore` and `iru-plan` can also be run
 individually (`/iru-explore`, `/iru-plan`) ahead of, or instead of, the full `/iru-issue` flow, and either a GitHub issue or
-a Jira ticket works the same way throughout.
+a Jira ticket works the same way throughout — for a Jira ticket, `iru-explore` also pulls in its epic, linked
+tickets, and any attached prior implementation plans for extra context.
 
 === Generating a release
 

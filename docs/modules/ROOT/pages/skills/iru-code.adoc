@@ -17,9 +17,12 @@ each task's language and delegates to the matching `<key>-code-one-task-group` s
 and validating the whole group once), checking off the plan's checkboxes and notifying the user as it goes so
 the run is resumable if interrupted and progress is visible group by group. On successful completion it runs a
 full local verification build, re-checks the quality and security baselines (the security gate is a hard stop
-on any increase, unlike the quality gate), updates the project's Antora documentation via `iru-update-docs`,
-archives the plan to `.archive/`, and asks the user for a final review; it never commits, pushes, or opens a PR
-itself.
+on any increase, unlike the quality gate) — if quality regressed, the user can choose to file the remaining
+issues as new tickets on whichever tracker the plan itself originated from (a GitHub issue via `gh issue create`,
+or a Jira ticket via the `iru-create-jira-ticket` skill, detected from the plan's own `Source:` line) — updates
+the project's Antora documentation via `iru-update-docs`, archives the plan to `.archive/` under a filename that
+embeds the originating GitHub issue number or Jira key (falling back to a timestamp with no identifiable
+ticket), and asks the user for a final review; it never commits, pushes, or opens a PR itself.
 
 == Purpose group
 
@@ -62,15 +65,17 @@ nothing to execute and suggests running `/iru-plan` first, then stops.
 * A user-facing progress notification after every completed group, in addition to the plan file already
   reflecting it.
 * A project-wide quality baseline (Step 3) compared against the final state (Step 7) per language/framework key
-  involved — if it regressed, the user is asked to add follow-up tasks, file GitHub issues, or accept it as-is
-  before archiving.
+  involved — if it regressed, the user is asked to add follow-up tasks, file new tickets on whichever tracker the
+  plan originated from (GitHub via `gh issue create`, or Jira via the `iru-create-jira-ticket` skill), or accept
+  it as-is before archiving.
 * A project-wide security baseline (Step 3, via `iru-check-security`) compared against the final state (Step 7) — any
   increase is a hard stop: the user must resolve it (remove/rotate the secret, or audit a false positive
   themselves) before the run can proceed to archiving.
 * A full local verification build confirmed healthy before archiving.
 * The project's Antora documentation brought up to date via `iru-update-docs` (Step 8), covering everything this run
   changed — or a plain note that there's no Antora module to update.
-* On success: `implementation_plan.md` moved to `.archive/implementation_plan_<issue-id-or-timestamp>.md`, a
+* On success: `implementation_plan.md` moved to `.archive/implementation_plan_<ticket-id-or-timestamp>.md` — the
+  bare GitHub issue number, the Jira key as-is (e.g. `PROJ-123`), or a timestamp with no identifiable ticket — a
   summary of groups/tasks completed/files touched/coverage/quality/security outcome/documentation updates, and a
   request for the user to review the code changes — no commit, push, or PR is ever made by this skill.
 * On an unresolved blocker: the plan stays unchecked and at the repository root (not archived) so a later run can
@@ -95,7 +100,7 @@ flowchart TD
     M --> G
     P -- build fails --> P
     P -- build passes --> Q{"Quality regressed\nvs. baseline (any key)?"}
-    Q -- yes --> R["Ask user: follow-up tasks,\nfile GitHub issues, or accept as-is"]
+    Q -- yes --> R["Ask user: follow-up tasks,\nfile new tickets (GitHub or Jira,\nper plan origin), or accept as-is"]
     R -- follow-up group added --> G
     Q -- no / resolved --> S{Security count\nincreased?}
     S -- yes --> T["Hard stop: ask user to\nremove/rotate or audit;\nre-check until resolved"]
@@ -117,6 +122,12 @@ flowchart TD
 * xref:skills/iru-update-docs.adoc[] — Step 8, once per run (not per group), invoked directly via `Skill` once the
   build, quality, and security gates all pass, so the project's documentation reflects everything the whole plan
   changed.
+* xref:skills/iru-create-jira-ticket.adoc[] — Step 7, conditionally: only when the final quality check regresses
+  against baseline, the plan's own `Source:` line identifies it as Jira-originated, and the user chooses to file
+  the remaining issues as new tickets rather than adding a follow-up task group or accepting them as-is. Invoked
+  directly via `Skill`, passing each issue's file/line/tool/message detail so the drafted ticket doesn't need to
+  re-ask the user for context already known. The GitHub equivalent uses `gh issue create` directly rather than
+  the xref:skills/iru-create-github-issue.adoc[] skill.
 
 Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than directly,
 so verbose report output stays out of `iru-code`'s own context window and only the distilled outcome comes back:
