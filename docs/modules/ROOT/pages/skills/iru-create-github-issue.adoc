@@ -9,14 +9,21 @@ skill only files an issue; it does not branch, plan, or write code.
 
 `iru-create-github-issue` turns a rough idea, bug report, or request into a well-formed GitHub issue — grounded in
 the real codebase via `iru-explore`, with a clear purpose statement asked of the user, and whatever supporting
-context they have (linked URLs, attached files/documents, related issues) folded into the issue body. It also
-asks for the task's due date (optional, free text) and its importance — trivial, minor, important, or blocking,
-via a fixed choice. It classifies the issue as bug vs. feature/enhancement from the stated purpose and matches it
-against this repository's actual label set (never inventing a label that doesn't exist), drafts a title and a
-structured body (Summary, Context, Acceptance criteria, Task details — due date, importance, and an agent-assessed
-estimated difficulty from very easy to impossible, grounded in everything gathered — References), and always
-shows the draft for explicit confirmation before filing it — the same confirm-before-visible-action discipline
-`iru-pr-description` and `iru-pr-review` use. It is the GitHub counterpart to `iru-create-jira-ticket`.
+context they have (linked URLs, attached files/documents, related issues) folded into the issue body. Provided
+files/documents aren't just read for context and summarized — since GitHub's REST API and `gh` CLI have no
+endpoint to attach an arbitrary file to an issue the way the web UI's drag-and-drop does (a known, long-standing
+gap — `cli/cli#12960`), the skill actually gets each file's content into the issue itself: small text-based files
+(logs, `.md`/`.txt`, config, diffs, short specs) are embedded inline in a collapsible block, while everything else
+(images, PDFs, screenshots, large or binary files) is uploaded as an asset on a dedicated `issue-attachments`
+release — created once, with the user's explicit confirmation, and reused by every later run — and linked from
+the issue body. It also asks for the task's due date (optional, free text) and its importance — trivial, minor,
+important, or blocking, via a fixed choice. It classifies the issue as bug vs. feature/enhancement from the stated
+purpose and matches it against this repository's actual label set (never inventing a label that doesn't exist),
+drafts a title and a structured body (Summary, Context, Acceptance criteria, Task details — due date, importance,
+and an agent-assessed estimated difficulty from very easy to impossible, grounded in everything gathered —
+References), and always shows the draft for explicit confirmation before filing it — the same
+confirm-before-visible-action discipline `iru-pr-description` and `iru-pr-review` use. It is the GitHub
+counterpart to `iru-create-jira-ticket`.
 
 == Purpose group
 
@@ -45,17 +52,20 @@ xref:index.adoc#group-intake[Ticket Intake]
 
 == Outputs
 
-* No file or code changes — this skill's only durable side effect is the filed GitHub issue itself.
+* No repository source/code changes — this skill's durable side effects are the filed GitHub issue itself and,
+  when binary/large files are attached, a shared `issue-attachments` GitHub release holding their uploaded
+  assets (created once, with explicit user confirmation, and reused on later runs rather than recreated).
 * A drafted issue title and body (Summary, Context, Acceptance criteria, Task details, References) shown to the
   user before any action is taken. Task details combines the user's due date/importance answers with the
   skill's own estimated-difficulty assessment (very easy/easy/medium/hard/very hard/extreme/impossible, plus a
-  one-line rationale grounded in the codebase exploration and stated scope).
+  one-line rationale grounded in the codebase exploration and stated scope). References embeds small text-based
+  attachments inline and links image/binary attachments uploaded to the `issue-attachments` release.
 * If the user confirms creation: a new GitHub issue filed via `gh issue create` (or GitHub MCP tools if `gh` is
   unavailable), with a label attached when Step 5 found one matching this repository's actual label set.
 * If the user declines, or edits the draft first: no issue is filed until they explicitly confirm; the draft
   itself remains the deliverable.
-* A final report with the issue number and URL, and a pointer to `/iru-issue <number>` or `/iru-plan <number>` as the
-  next step.
+* A final report with the issue number and URL, a pointer to `/iru-issue <number>` or `/iru-plan <number>` as the
+  next step, and a note about the `issue-attachments` release if this run created it.
 
 == Execution flow
 
@@ -67,8 +77,18 @@ flowchart TD
     B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
     C --> D["Ask user: purpose of the task\n(plain conversational question)"]
     D --> E["Ask user: additional context?\n(URLs, files/documents, related issues)"]
-    E --> F["Fetch URLs via WebFetch;\nRead attached files;\nconfirm related issues via gh issue view"]
-    F --> F2["Ask due date (optional) +\nimportance (trivial/minor/\nimportant/blocking)"]
+    E --> F["Fetch URLs via WebFetch;\nRead attached files for context;\nconfirm related issues via gh issue view"]
+    F --> F1{Attached file type?}
+    F1 -- small text file --> F1a["Embed full content inline\n(collapsible block)"]
+    F1 -- image/PDF/binary/large --> F1b{issue-attachments\nrelease exists?}
+    F1b -- no --> F1c["Ask user to confirm\ncreating the release"]
+    F1c -- declines --> F1d["Describe file only,\nno upload"]
+    F1c -- confirms --> F1e["gh release create\nissue-attachments"]
+    F1b -- yes --> F1f["gh release upload\nissue-attachments, per file"]
+    F1e --> F1f
+    F1a --> F2["Ask due date (optional) +\nimportance (trivial/minor/\nimportant/blocking)"]
+    F1f --> F2
+    F1d --> F2
     F2 --> G["Classify bug vs. feature;\nmatch against this repo's\nactual gh label list"]
     G -- ambiguous / no match --> H["Ask user to pick a label\nfrom the real list"]
     G -- clear match --> I

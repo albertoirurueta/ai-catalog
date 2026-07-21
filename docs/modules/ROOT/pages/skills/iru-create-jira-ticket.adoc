@@ -13,7 +13,12 @@ Jira MCP tools instead of the `gh` CLI, and with Jira's project/issue-type model
 context (linked URLs, attached files/documents, related tickets, and an optional epic — which, if given, is
 itself explored for extra context and assigned to the new ticket as its parent/epic link on creation), and
 delegates to the `iru-jira-custom-context` skill for whatever organization-specific context that extension point
-has been set up to gather. It also asks for the task's due date (optional) and importance (trivial/minor/
+has been set up to gather. Provided files/documents aren't just read for context and summarized: since Jira's own
+REST API has a native attachment endpoint (`issue/\{key}/attachments`) that accepts any file type — unlike
+GitHub's issue API — every file is uploaded straight to the newly created ticket once a connected Jira MCP tool
+exposes that capability. If no attachment-capable tool is available, it falls back to `iru-create-github-issue`'s
+own workaround: small text-based files are embedded inline in the description, and everything else is just
+described without being attached. It also asks for the task's due date (optional) and importance (trivial/minor/
 important/blocking — defaulting to minor, or to blocking when the purpose reads as a bug/incident affecting
 production). It resolves the target Jira project and issue type against this Jira instance's actual configuration
 rather than inventing one, drafts a summary and a structured description (Summary, Context, Acceptance criteria,
@@ -48,19 +53,24 @@ xref:index.adoc#group-intake[Ticket Intake]
 
 == Outputs
 
-* No file or code changes — this skill's only durable side effect is the filed Jira ticket itself.
+* No repository source/code changes — this skill's durable side effects are the filed Jira ticket itself and,
+  for every file the connected Jira MCP tooling could actually upload, a real attachment on that ticket.
 * A drafted ticket summary, description (Summary, Context, Acceptance criteria, Task details, References),
   project, issue type, and — if one was given — the epic it will be assigned to, shown to the user before any
-  action is taken. Task details combines the due date/importance answers with an estimated-difficulty assessment
-  (very easy/easy/medium/hard/very hard/extreme/impossible, plus a one-line rationale).
+  action is taken, including the list of files about to be attached. Task details combines the due date/
+  importance answers with an estimated-difficulty assessment (very easy/easy/medium/hard/very hard/extreme/
+  impossible, plus a one-line rationale). References carries a placeholder per real attachment (the actual
+  upload happens after creation), or the inline/described fallback content for files handled that way.
 * If the user confirms creation: a new Jira ticket filed via the connected Jira MCP tool(s), with the resolved
   project, issue type, any matched labels/components, and the epic link/parent field set if an epic was
-  confirmed.
+  confirmed — followed by one attachment upload per flagged file, each attempted independently so one failure
+  doesn't block the rest.
 * If the user declines, or edits the draft first: no ticket is filed until they explicitly confirm; the draft
   itself remains the deliverable.
 * If no Jira MCP tool is connected at all, or ticket creation fails on a required field: the skill stops and
   surfaces the exact situation rather than guessing or retrying blindly.
-* A final report with the ticket key and URL, and a pointer to `/iru-issue <key>` or `/iru-plan <key>` as the next step.
+* A final report with the ticket key and URL, a pointer to `/iru-issue <key>` or `/iru-plan <key>` as the next
+  step, and any per-file attachment failures called out explicitly.
 
 == Execution flow
 
@@ -74,8 +84,15 @@ flowchart TD
     D --> E["Ask user: additional context?\n(URLs, files/documents, related\ntickets, optional epic)"]
     E --> E2["Confirm + explore epic if given\n(description, child tickets)"]
     E2 --> E3["Delegate to iru-jira-custom-context\nfor org-specific context"]
-    E3 --> F["Fetch URLs via WebFetch;\nRead attached files;\nconfirm related tickets via Jira MCP tools"]
-    F --> F2["Ask due date (optional) +\nimportance (trivial/minor/important/\nblocking — default minor, or blocking\nfor a production bug/incident)"]
+    E3 --> F["Fetch URLs via WebFetch;\nRead attached files for context;\nconfirm related tickets via Jira MCP tools"]
+    F --> F1{Attachment-capable\nJira MCP tool found\nin Step 1?}
+    F1 -- yes --> F1a["Flag each file for real\nupload after ticket creation"]
+    F1 -- no --> F1b{File type?}
+    F1b -- small text file --> F1c["Embed full content inline\n(collapsible block)"]
+    F1b -- image/PDF/binary/large --> F1d["Describe file only,\nno upload possible"]
+    F1a --> F2["Ask due date (optional) +\nimportance (trivial/minor/important/\nblocking — default minor, or blocking\nfor a production bug/incident)"]
+    F1c --> F2
+    F1d --> F2
     F2 --> G["Resolve target project\n(reuse from conversation, list via MCP,\nor ask user)"]
     G --> H["Resolve issue type:\nBug vs. Story/Task/New Feature,\nmatched against this project's real types"]
     H -- ambiguous / can't list --> I["Ask user to pick"]
@@ -87,7 +104,8 @@ flowchart TD
     L -- don't create --> M["Stop: draft is\nthe deliverable"]
     L -- create now --> N["Create via connected Jira MCP\ntool(s), incl. epic link if given"]
     N -- creation fails --> O["Surface exact error;\nask how to proceed"]
-    N -- succeeds --> P["Report ticket key/URL;\nsuggest /iru-issue or /plan"]
+    N -- succeeds --> P["Upload each flagged file\nas a real attachment via Jira MCP\n(one at a time; failures noted,\ndon't block the rest)"]
+    P --> Q["Report ticket key/URL,\nany attachment failures;\nsuggest /iru-issue or /plan"]
 ....
 
 == Dependencies
