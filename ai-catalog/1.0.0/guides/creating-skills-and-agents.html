@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Creating and updating skills and agents :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="creating-skills-and-agents.html">Creating and updating skills and agents</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/creating-skills-and-agents.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Creating and updating skills and agents</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This guide is about authoring skills and agents in general — the mechanics and workflow for creating one in
+any repository. For the skills and agents this specific catalog already ships, see
+<a href="../index.html#_skills_reference" class="xref page">the skills reference table</a>, <a href="../index.html#_agents_reference" class="xref page">the agents
+reference table</a>, and <a href="../agents/overview.html" class="xref page">Agents</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_where_each_one_lives"><a class="anchor" href="#_where_each_one_lives"></a>Where each one lives</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Artifact</th>
+<th class="tableblock halign-left valign-top">Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.claude/skills/&lt;name&gt;/SKILL.md</code> — the directory name is the skill&#8217;s canonical name and doubles as its
+slash command (<code>/</code>+<code>&lt;name&gt;</code>). A skill directory may also hold supporting files (scripts, templates)
+alongside <code>SKILL.md</code>. In this catalog, <code>&lt;name&gt;</code> always starts with the <code>iru-</code> prefix (below).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom agent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.claude/agents/&lt;name&gt;.md</code> — YAML frontmatter (system prompt, allowed tools, model) plus the agent&#8217;s
+persona/instructions in the body.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Plugin-bundled skill/agent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The same <code>skills/</code> and <code>agents/</code> layout, but rooted under a plugin directory&#8217;s <code>.claude-plugin/</code> sibling
+folders instead of the repository&#8217;s own <code>.claude/</code> — see <a href="plugins.html" class="xref page">Plugins</a>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_naming_avoiding_marketplace_collisions"><a class="anchor" href="#_naming_avoiding_marketplace_collisions"></a>Naming: avoiding marketplace collisions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Every skill and agent this catalog ships carries an <code>iru-</code> prefix — the directory name under
+<code>.claude/skills/</code>, the frontmatter <code>name</code> field, the agent filename under <code>.claude/agents/</code>, and every
+cross-reference to it from another skill&#8217;s own instructions or this documentation. A repository can install
+skills from more than one source at once (this catalog, a plugin marketplace, another team&#8217;s hand-copied
+skills) into the same <code>.claude/skills/</code> directory, and slash commands are matched by directory name alone —
+two differently-sourced skills both named <code>plan</code> or <code>code</code> would silently shadow one another. The prefix is
+this catalog&#8217;s namespace, so <code>/iru-plan</code> never collides with an unrelated <code>/plan</code> a consuming repository
+picked up elsewhere.</p>
+</div>
+<div class="paragraph">
+<p>Any new skill or agent added to this catalog must follow the same convention from the start — name the
+directory/file <code>iru-&lt;name&gt;</code> (not a bare <code>&lt;name&gt;</code> renamed later), and match this catalog&#8217;s existing style for
+the prefix itself (lowercase, hyphen-joined, no separate delimiter between <code>iru</code> and the rest of the name).
+Adopting a single skill from this catalog into another repository that doesn&#8217;t use this convention is free to
+drop the prefix — it exists to keep this catalog&#8217;s own skills from colliding with each other and with
+other sources once several are installed side by side, not as a requirement for every consumer.</p>
+</div>
+<div class="paragraph">
+<p>See <a href="extending-the-catalog.html" class="xref page">Extending the skills and agents catalog</a> for how this convention interacts with the language/framework
+key registry the <code>iru-code</code> pipeline uses — the <code>iru-</code> prefix is stripped back off before that key is
+derived, since it isn&#8217;t part of the semantic key itself.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_each_one_is_actually_invoked"><a class="anchor" href="#_how_each_one_is_actually_invoked"></a>How each one is actually invoked</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Skills and agents are triggered in genuinely different ways — knowing which is the "proper" channel for
+each avoids the common mistake of expecting one to behave like the other.</p>
+</div>
+<div class="sect2">
+<h3 id="_skills_slash_command_or_natural_language_or_both"><a class="anchor" href="#_skills_slash_command_or_natural_language_or_both"></a>Skills — slash command, or natural language, or both</h3>
+<div class="paragraph">
+<p>A skill is reachable through two channels, and both are open by default:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Explicit slash command</strong> — a user (or an orchestrating skill) types <code>/&lt;name&gt;</code>, optionally with
+arguments, e.g. <code>/iru-plan 42</code>. This is the precise, reproducible way to invoke exactly the skill you mean.</p>
+</li>
+<li>
+<p><strong>Autonomous invocation by Claude</strong> — a user just describes the task in plain language ("write me an
+implementation plan for issue 42"), and Claude, matching the request against the skill&#8217;s frontmatter
+<code>description</code>, decides on its own to run it — no slash command typed at all.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Two frontmatter fields narrow this default:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>disable-model-invocation: true</code> restricts a skill to explicit slash-command invocation only — Claude will
+never trigger it on its own, and its description isn&#8217;t kept loaded in context waiting to be matched. Worth
+setting on a skill whose effect is disruptive if it runs by surprise (e.g. one that opens a PR).</p>
+</li>
+<li>
+<p><code>user-invocable: false</code> is the inverse — the skill can only be triggered by Claude&#8217;s own autonomous
+matching; a user typing <code>/&lt;name&gt;</code> directly does nothing. Suited to a skill that&#8217;s really background
+knowledge for Claude to draw on, not something meant to be run on demand.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Absent either field, <strong>the proper way to invoke a skill is whichever channel fits the moment</strong>: type the
+slash command when you already know which skill you want and what arguments to give it, or describe the
+task in natural language and let Claude pick the matching skill when you&#8217;d rather not remember its exact
+name — reliable in proportion to how distinctive that skill&#8217;s <code>description</code> is (see
+<a href="authoring-effective-instructions.html" class="xref page">Authoring effective instructions</a> for writing one that matches correctly).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_agents_never_a_slash_command_always_a_delegation"><a class="anchor" href="#_agents_never_a_slash_command_always_a_delegation"></a>Agents — never a slash command; always a delegation</h3>
+<div class="paragraph">
+<p>There is no <code>/agent-name</code> command that directly spawns a specific agent by name the way <code>/&lt;name&gt;</code> invokes a
+skill — typing that would not do anything special. An agent is only ever reached indirectly, through Claude
+itself deciding to call the <code>Agent</code>/Task tool with a given <code>subagent_type</code>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>An active skill&#8217;s own instructions</strong> cause the delegation — e.g. <code>iru-code</code> (<a href="../skills/iru-code.html" class="xref page">Code</a>)
+spawning a <code>general-purpose</code> sub-agent to isolate a noisy quality check, per its own step list.</p>
+</li>
+<li>
+<p><strong>A user asks for it in natural language</strong> — "use the Explore agent to find X", "spawn a sub-agent to
+review this" — which Claude translates into that same <code>Agent</code> tool call. The user is requesting a
+delegation, not invoking the agent directly.</p>
+</li>
+<li>
+<p><strong><code>@</code>-mentioning an agent by name</strong> in the conversation prompts Claude to run that turn through it.</p>
+</li>
+<li>
+<p><strong>Setting an agent as the session-wide default</strong> (e.g. <code>claude --agent &lt;name&gt;</code>, or an <code>agent:</code> setting)
+makes the whole session inherit that agent&#8217;s system prompt, rather than it being spawned mid-task.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>So <strong>the proper way to get an agent involved is to ask for it</strong> — by name, in natural language, or via
+<code>@mention</code> — and let Claude make the actual tool call; there is no direct, user-typed equivalent to a
+skill&#8217;s slash command. (Don&#8217;t confuse this with a <code>/agents</code> management command some Claude Code versions
+ship, which opens agent configuration/editing — it doesn&#8217;t invoke any specific agent by name either.)</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_skill_or_agent_which_one"><a class="anchor" href="#_skill_or_agent_which_one"></a>Skill or agent — which one?</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Reach for a <strong>skill</strong> when the thing you want repeated is a <strong>procedure</strong>: a sequence of steps a person (or
+an orchestrating skill) invokes deliberately, on demand, via a slash command — "review this PR", "cut a
+release", "bootstrap a new repo".</p>
+</li>
+<li>
+<p>Reach for a <strong>custom agent</strong> when what you actually need is a <strong>persona with a narrower tool/context
+footprint</strong> than the main conversation — something spawned mid-task to isolate a noisy sub-task (a full test
+log, a broad codebase search) or to run with restricted tool access, rather than something a person invokes
+directly. Claude Code&#8217;s built-in <code>general-purpose</code> and <code>Explore</code> agent types already cover most of this
+without a custom definition — only add a custom <code>.claude/agents/&lt;name&gt;.md</code> when a built-in type&#8217;s tool
+access or system prompt genuinely doesn&#8217;t fit (see <a href="../agents/overview.html" class="xref page">Agents</a> for how this catalog
+currently makes that call).</p>
+</li>
+<li>
+<p>Reach for <strong><code>CLAUDE.md</code></strong> instead of either when the thing isn&#8217;t a procedure at all but a standing fact or
+rule that should be true in <strong>every</strong> session, invoked or not — see <a href="claude-md.html" class="xref page">The CLAUDE.md file</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_fastest_reliable_way_to_draft_one"><a class="anchor" href="#_the_fastest_reliable_way_to_draft_one"></a>The fastest reliable way to draft one</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Hand-writing a <code>SKILL.md</code> or agent definition&#8217;s frontmatter and prose from a blank file is slower and more
+error-prone than it needs to be. In practice:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Ask Claude Code itself to draft it.</strong> Describe the procedure you want repeated (what to check first,
+what decisions to make automatically versus ask the user about, what "done" looks like, what it should
+report back) and ask it to write the <code>SKILL.md</code> — Claude already knows the frontmatter schema and the
+conventions your other skills use. This is dramatically faster than writing YAML frontmatter and step
+structure from memory, and it&#8217;s easy to review before saving.</p>
+</li>
+<li>
+<p><strong>Ground it in an existing example.</strong> Point it at a similar skill already in <code>.claude/skills/</code> (or, for an
+agent, at <code>.claude/agents/</code> if this repository has any, or <code><a href="../agents/overview.html" class="xref page">Agents</a>&#8217;s description of
+the built-in types) and ask it to follow the same shape — numbered `## Step N</code> headings, an explicit
+"Report" step, the same tone. Consistency across skills matters more than any one skill&#8217;s internal
+elegance, because a person (or an orchestrator skill) reads several of them together.</p>
+</li>
+<li>
+<p><strong>Iterate by running it</strong>, not just by reading it. Invoke the draft skill/agent against a real, low-stakes
+case and fix whatever it gets wrong or asks about that it shouldn&#8217;t have to — a skill&#8217;s instructions are
+only as good as what actually happens when an agent follows them literally.</p>
+</li>
+<li>
+<p>Once it&#8217;s right, if this repository documents its own catalog (as this one does via
+<code>iru-generate-skill-docs</code>), re-run that skill so the reference table, dependency graph, and the
+new skill/agent&#8217;s own detail page pick it up — don&#8217;t hand-maintain that documentation separately.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_to_phrase_what_you_write"><a class="anchor" href="#_how_to_phrase_what_you_write"></a>How to phrase what you write</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Covered in full, with concrete before/after examples, in
+<a href="authoring-effective-instructions.html" class="xref page">Authoring effective instructions</a> — the short version: direct imperative steps, one
+decision per step, explicit stopping/branch conditions, and no more context loaded into the step than that
+step actually needs.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_packaging_and_sharing_what_you_create"><a class="anchor" href="#_packaging_and_sharing_what_you_create"></a>Packaging and sharing what you create</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A skill or agent that&#8217;s useful in one repository is often useful in several. See
+<a href="packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a> for the tradeoff between copying the directory into each
+repository&#8217;s <code>.claude/</code> versus bundling it into a plugin distributed via a marketplace.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="claude-md.html" class="xref page">The CLAUDE.md file</a></p>
+</li>
+<li>
+<p><a href="plugins.html" class="xref page">Plugins</a></p>
+</li>
+<li>
+<p><a href="authoring-effective-instructions.html" class="xref page">Authoring effective instructions</a></p>
+</li>
+<li>
+<p><a href="../agents/overview.html" class="xref page">Agents</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

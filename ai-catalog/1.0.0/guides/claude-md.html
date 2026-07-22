@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>The CLAUDE.md file :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="claude-md.html">The CLAUDE.md file</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/claude-md.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">The CLAUDE.md file</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><code>CLAUDE.md</code> is a plain markdown file Claude Code reads automatically at the start of every session — the
+one artifact in this catalog&#8217;s vocabulary that is never explicitly invoked. Everything else (a skill, an
+agent) only acts when called on; <code>CLAUDE.md</code> is always in context, which is exactly what makes it powerful
+and easy to misuse.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Without it, every session starts from zero: Claude has to rediscover the build command, the test runner
+invocation, which directories are generated versus hand-written, and any project-specific convention or
+gotcha, by exploring the repository itself. <code>CLAUDE.md</code> exists to short-circuit that rediscovery — a small,
+durable set of facts that would otherwise need re-explaining in every conversation:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Commands: how to build, run tests, lint, start a dev server.</p>
+</li>
+<li>
+<p>Conventions: naming, file layout, where new code of a given kind belongs.</p>
+</li>
+<li>
+<p>Warnings: known footguns, generated files not to hand-edit, a flaky test to ignore.</p>
+</li>
+<li>
+<p>Personal preferences (in a user-level or local file — see below): how <strong>you</strong> like to work, independent of
+the project.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>It is memory, not instruction-on-demand — see <a href="../index.html#core-concepts" class="xref page">Core concepts</a> for how that
+contrasts with a skill or an agent.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_locations_and_precedence"><a class="anchor" href="#_locations_and_precedence"></a>Locations and precedence</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Claude Code loads <code>CLAUDE.md</code> from several places at once and <strong>concatenates</strong> them — it does not pick one
+and discard the rest. From broadest to most specific:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 37.5%;">
+<col style="width: 37.5%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Location</th>
+<th class="tableblock halign-left valign-top">Scope</th>
+<th class="tableblock halign-left valign-top">Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enterprise-managed policy file (e.g. <code>/Library/Application Support/ClaudeCode/CLAUDE.md</code> on macOS,
+<code>/etc/claude-code/CLAUDE.md</code> on Linux/WSL, an equivalent path on Windows)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Every user in an organization</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Org-wide policy that individual projects/users shouldn&#8217;t be able to override.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>~/.claude/CLAUDE.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Every project a given person works in</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Personal preferences that have nothing to do with any one repository (e.g. "explain reasoning before large
+refactors").</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>./CLAUDE.md</code> at the repository root</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Everyone working in this repository</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checked into git — the project&#8217;s own shared conventions. This is the file most repositories mean when they
+say "our CLAUDE.md".</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>./CLAUDE.local.md</code> at the repository root</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">One person, in this repository, not shared</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gitignored personal overrides for this specific repository (e.g. a local port number, a personal shortcut)
+that shouldn&#8217;t land in every teammate&#8217;s session.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.claude/CLAUDE.md</code> in a subdirectory</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Only work touching that subtree</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Loaded on demand when Claude reads/edits files under that directory — useful for a monorepo module with its
+own conventions that would be noise everywhere else.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Within a directory tree, files load root-down toward the working directory, so instructions closer to the
+current work appear later (more locally relevant) in context. Nothing here overrides anything else outright
+— if two files disagree, both are visible to Claude, so keep genuinely conflicting rules out of the picture
+rather than relying on one silently winning.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_path_import"><a class="anchor" href="#_the_path_import"></a>The <code>@path</code> import</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A <code>CLAUDE.md</code> can pull in another file with <code>@path/to/file</code> (relative or absolute). Imports nest up to a
+handful of levels deep. This is useful to split a large file by topic (<code>@docs/testing-conventions.md</code>,
+<code>@docs/deploy-runbook.md</code>) without every reader scrolling through all of it at once in the raw file — but be
+aware that <strong>an import is expanded in full at session start regardless of whether that session touches the
+topic it covers</strong>. Splitting a file into imports organizes it for humans; it does not, by itself, reduce what
+Claude loads. See <a href="authoring-effective-instructions.html#context-window" class="xref page">the context window section</a> of
+the authoring guide for how to actually keep this lean.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_creating_or_updating_one"><a class="anchor" href="#_creating_or_updating_one"></a>Creating or updating one</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The easiest way to bootstrap a <code>CLAUDE.md</code> is to ask Claude Code to write it: run <code>/init</code> inside the target
+repository. It scans the codebase (manifest/build files, existing docs, directory layout) and drafts a
+starting <code>CLAUDE.md</code> grounded in what it actually finds, rather than a generic template.</p>
+</div>
+<div class="paragraph">
+<p>From there, treat it like any other file under version control:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Update it directly with an edit whenever a convention changes, a command is renamed, or a recurring
+mistake shows up in review — the same way you&#8217;d fix a stale line in a README.</p>
+</li>
+<li>
+<p>Prefer asking Claude Code itself to draft the addition/edit and review the diff, rather than hand-writing
+prose — it&#8217;s faster and it already knows the tone that reads well back to itself as an instruction (see
+<a href="authoring-effective-instructions.html" class="xref page">Authoring effective instructions</a>).</p>
+</li>
+<li>
+<p>Periodically re-read the whole file and cut anything that&#8217;s stopped being true or stopped mattering. A
+<code>CLAUDE.md</code> that only ever grows degrades the same way an overlong prompt does.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_keep_it_short"><a class="anchor" href="#_keep_it_short"></a>Keep it short</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The file is injected into <strong>every</strong> session&#8217;s context whether or not that session needs any of it. A large,
+sprawling <code>CLAUDE.md</code> competes with the actual task for Claude&#8217;s attention and measurably degrades
+adherence. As a rule of thumb, keep a single <code>CLAUDE.md</code> well under a couple hundred lines; when a project
+genuinely needs more than that, split by concern using nested subdirectory files (which only load when that
+subtree is touched) rather than one ever-growing root file. See
+<a href="authoring-effective-instructions.html#context-window" class="xref page">Treating the context window as scarce</a> for the
+underlying reasoning and more techniques that apply equally to skills and agents.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="authoring-effective-instructions.html" class="xref page">Authoring effective instructions</a> — how to phrase what goes in a <code>CLAUDE.md</code> and how to
+budget context across it, skills, and agents together.</p>
+</li>
+<li>
+<p><a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a> — when a recurring instruction belongs in <code>CLAUDE.md</code>
+(always relevant) versus a skill (invoked on demand) instead.</p>
+</li>
+<li>
+<p><a href="provider-comparison.html" class="xref page">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a> — how <code>CLAUDE.md</code> compares to GitHub Copilot&#8217;s and OpenAI Codex&#8217;s
+equivalent memory files.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

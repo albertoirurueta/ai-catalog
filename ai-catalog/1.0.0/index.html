@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>AI Catalog :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../.."><img src="../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs" autofocus>
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="skills/iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link is-current"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">AI Catalog</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/index.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">AI Catalog</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>AI Catalog is a collection of <a href="https://docs.claude.com/en/docs/claude-code/skills">Claude Code Skills</a> —
+reusable, version-controlled playbooks for common software engineering workflows. Instead of re-explaining
+the same process to Claude in every project (how this team bootstraps a Java library, how a pull request
+should be reviewed, how release notes get written), each workflow is captured once as a <code>SKILL.md</code> file and
+invoked on demand with a slash command such as <code>/iru-plan</code> or <code>/iru-pr-review</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_why_this_exists"><a class="anchor" href="#_why_this_exists"></a>Why this exists</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Prompting an AI assistant to repeat a multi-step process consistently is hard: the steps drift between
+sessions, edge cases get forgotten, and every teammate ends up with a slightly different mental model of
+"how we do X". A skill fixes that by writing the procedure down once — what to check first, what to skip,
+what "done" looks like — so any repository that adopts it gets the same behavior every time it&#8217;s invoked.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="core-concepts"><a class="anchor" href="#core-concepts"></a>Core concepts</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_a_skill"><a class="anchor" href="#_a_skill"></a>A skill</h3>
+<div class="paragraph">
+<p>Each skill lives in its own directory under <code>.claude/skills/</code> and contains a single <code>SKILL.md</code> file with:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A short <strong>description</strong> used by Claude Code to decide when the skill is relevant.</p>
+</li>
+<li>
+<p>Step-by-step instructions written for an agent to follow, including what to survey before acting, what
+to leave untouched, and how to report back.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Skills in this catalog range from small, single-purpose checks (<code>iru-check-license</code>, <code>iru-java-test</code>) to
+orchestrators that call other skills in sequence.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_an_agent"><a class="anchor" href="#_an_agent"></a>An agent</h3>
+<div class="paragraph">
+<p>Several skills in this catalog spawn a sub-agent through the <code>Agent</code> tool, to run a sub-task in an isolated
+context (so its detailed output — a full test log, a static-analysis report, an entire nested skill run —
+doesn&#8217;t clutter the main conversation) or to search the codebase without derailing the current flow. This
+repository defines three <strong>custom</strong> agents under <code>.claude/agents/</code> for its most-duplicated sub-agent shapes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong><code>iru-gate-runner</code></strong> — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
+headers, doc-comment audits, security scans, a full build), optionally diffs it against a baseline, and
+reports back only a compact summary.</p>
+</li>
+<li>
+<p><strong><code>iru-isolated-skill-executor</code></strong> — runs one named skill end to end in a completely fresh context so an earlier
+exploration/planning transcript can&#8217;t bias it, while the caller keeps running afterward.</p>
+</li>
+<li>
+<p><strong><code>iru-change-summarizer</code></strong> — fans out over a git commit/tag range and returns only the user-facing changes.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Skills that need ad hoc context isolation beyond those three shapes still use Claude Code&#8217;s <strong>built-in</strong> agent
+types: the <strong><code>Explore</code></strong> agent (a fast, read-only search agent) is used explicitly by the <code>iru-explore</code> skill, and
+the <strong><code>general-purpose</code></strong> agent (Claude Code&#8217;s default when no specific type is named) covers one-off cases like
+bootstrapping the <code>iru-setup-antora</code> skill mid-run.</p>
+</div>
+<div class="paragraph">
+<p>See <a href="agents/overview.html" class="xref page">Agents</a> (built-in types) and <a href="agents/iru-gate-runner.html" class="xref page">Gate Runner</a>,
+<a href="agents/iru-isolated-skill-executor.html" class="xref page">Isolated Skill Executor</a>, <a href="agents/iru-change-summarizer.html" class="xref page">Change Summarizer</a> (custom agents) for detail on
+where and why each is used.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_a_claude_md_file"><a class="anchor" href="#_a_claude_md_file"></a>A CLAUDE.md file</h3>
+<div class="paragraph">
+<p><code>CLAUDE.md</code> is a plain markdown file that Claude Code loads automatically, without being invoked, at the
+start of every session — unlike a skill or agent, which only act when called on. It holds the persistent
+facts Claude would otherwise need re-explaining every session: build/test commands, coding conventions,
+architectural notes, and "always/never do X" rules specific to a project or a person.</p>
+</div>
+<div class="paragraph">
+<p>Claude Code reads it from several locations at once (project root, a personal <code>~/.claude/CLAUDE.md</code>, nested
+subdirectory files, and an enterprise-managed policy file, if any) and concatenates them rather than picking
+one — see <a href="guides/claude-md.html" class="xref page">The CLAUDE.md file</a> for exact locations, precedence, and how to create or update one
+without letting it bloat the context window.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_a_plugin"><a class="anchor" href="#_a_plugin"></a>A plugin</h3>
+<div class="paragraph">
+<p>A <strong>plugin</strong> is not a new kind of artifact alongside skills, agents, and CLAUDE.md — it&#8217;s a packaging and
+distribution mechanism for them. A plugin is a directory (with a <code>.claude-plugin/plugin.json</code> manifest) that
+can bundle any combination of skills, custom agents, slash commands, hooks, and MCP server configs into one
+installable, versioned unit, published to a marketplace (a private, organization-internal one or a public
+one) and installed into a repository with <code>/plugin install</code> instead of copying files by hand.</p>
+</div>
+<div class="paragraph">
+<p>This repository does not currently package itself as a plugin — its skills are adopted by copying the
+<code>.claude/skills/&lt;name&gt;/</code> directories directly — but <a href="guides/plugins.html" class="xref page">Plugins</a> and
+<a href="guides/packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a> cover when a plugin is worth the extra packaging step instead.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_further_guides"><a class="anchor" href="#_further_guides"></a>Further guides</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Beyond this catalog&#8217;s own skills, the following pages cover the underlying artifacts (CLAUDE.md, skills,
+agents, plugins) more generally: how to create or update each one, how to write instructions for them that
+get good, consistent results without wasting context, and how they differ across AI coding assistants.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Guide</th>
+<th class="tableblock halign-left valign-top">Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/claude-md.html" class="xref page">The CLAUDE.md file</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">What <code>CLAUDE.md</code> is for, every location Claude Code loads one from, precedence between them, and how to
+create or update one (including <code>/init</code>) without bloating context.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/common-workflows.html" class="xref page">Common workflows</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A closer look at the three workflows a person runs most often — the typical development cycle starting from
+a ticket, filing a ticket before work begins, and generating a release — each with a fuller diagram than the
+one on this page.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Where skills and agents live, when to reach for one versus the other, and the fastest reliable way to draft
+a new one — asking Claude Code itself, grounded in existing examples.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/creating-tickets.html" class="xref page">Creating GitHub issues and Jira tickets</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">What information <code>iru-create-github-issue</code>/<code>iru-create-jira-ticket</code> ask for, how the drafted ticket is
+structured (including the estimated-difficulty assessment), and which skills run behind the scenes to produce it.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/extending-the-catalog.html" class="xref page">Extending the skills and agents catalog</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Where this catalog&#8217;s pipelines are already built to grow by convention (the <code>iru-code</code> pipeline&#8217;s
+language/framework registry) versus where a single skill still hardcodes one stack (release generation,
+repository bootstrap) — and what&#8217;s involved in adding a new language, stack, tracker, or quality gate to each.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/plugins.html" class="xref page">Plugins</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">What a plugin bundles, its manifest/directory layout, and how marketplaces (private or public) distribute
+one across repositories.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/authoring-effective-instructions.html" class="xref page">Authoring effective instructions</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">How to phrase instructions in a <code>SKILL.md</code>, agent definition, or <code>CLAUDE.md</code> — direct, concise, step
+structured — and how to keep the context window from filling with information that degrades results.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Copying files into <code>.claude/</code> versus packaging as a plugin distributed via a marketplace: the tradeoffs and
+when each is the better fit.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="guides/provider-comparison.html" class="xref page">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">How CLAUDE.md, skills, agents, and plugins map onto GitHub Copilot&#8217;s and OpenAI Codex&#8217;s equivalent files and
+features, and where the underlying models genuinely differ.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_skills_reference"><a class="anchor" href="#_skills_reference"></a>Skills reference</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 22.2222%;">
+<col style="width: 22.2222%;">
+<col style="width: 44.4444%;">
+<col style="width: 11.1112%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Group</th>
+<th class="tableblock halign-left valign-top">Purpose</th>
+<th class="tableblock halign-left valign-top">Detail page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-build-docs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-maintenance">Repository Maintenance</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build the existing Antora documentation site as-is, scaffolding it first via <code>iru-setup-antora</code> if needed.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-build-docs.html" class="xref page">Build Docs</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-check-license</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-maintenance">Repository Maintenance</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Verify (and backfill) license headers on source/test files against the repository&#8217;s actual license.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-check-license.html" class="xref page">Check License</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-check-security</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-maintenance">Repository Maintenance</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Scan for accidentally committed secrets via <code>detect-secrets</code>, maintaining a <code>.secrets.baseline</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-check-security.html" class="xref page">Check Security</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-code</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-cycle">Issue-to-PR Development Cycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Execute <code>implementation_plan.md</code> end to end, one task group at a time, dispatching each to <code>iru-code-one-task-group</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-code.html" class="xref page">Code</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-code-one-task-group</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-cycle">Issue-to-PR Development Cycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implement one plan task group, dispatching each task to its language&#8217;s <code>&lt;key&gt;-code-one-task-group</code> skill.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-code-one-task-group.html" class="xref page">Code One Task Group</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-create-github-issue</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-intake">Ticket Intake</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Draft and file a new GitHub issue, grounded in the codebase and confirmed with the user before creation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-create-github-issue.html" class="xref page">Create GitHub Issue</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-create-jira-ticket</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-intake">Ticket Intake</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Draft and file a new Jira ticket via connected Jira MCP tools, the Jira counterpart to <code>iru-create-github-issue</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-create-jira-ticket.html" class="xref page">Create Jira Ticket</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-database-code-one-task</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-database">Database Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generate (and, if a matching MCP allows it, execute) the queries a single database plan task calls for.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-database-code-one-task.html" class="xref page">Database Code One Task</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-database-code-one-task-group</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-database">Database Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implement a bucket of database tasks sequentially, one task at a time — no baseline or bucket-wide validation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-database-code-one-task-group.html" class="xref page">Database Code One Task Group</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-code-one-task</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implement a single .NET plan task&#8217;s code and tests only — validation is handled by <code>iru-dotnet-code-one-task-group</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-code-one-task.html" class="xref page">.NET Code One Task</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-code-one-task-group</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implement a bucket of .NET tasks (in parallel where safe) and validate the whole bucket once.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-code-one-task-group.html" class="xref page">.NET Code One Task Group</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-code-quality</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run StyleCop.Analyzers/CA Roslyn analyzers via a SARIF-logged build and summarize every issue found.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-code-quality.html" class="xref page">.NET Code Quality</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-coverage</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run Coverlet via <code>dotnet test</code> and report the exact measured coverage percentage for target class(es).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-coverage.html" class="xref page">.NET Coverage</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-docfx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Audit and complete XML doc-comment coverage for given types, then attempt a DocFX build.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-docfx.html" class="xref page">.NET DocFX</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-generate-all-tests</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Find every .NET class with no tests or under 80% coverage and generate/extend tests until it clears the bar.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-generate-all-tests.html" class="xref page">.NET Generate All Tests</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-dotnet-test</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-dotnet">.NET Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run the .NET test suite via <code>dotnet test</code>, scoped to a class/method/namespace/trait selector.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-dotnet-test.html" class="xref page">.NET Test</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-explore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-cycle">Issue-to-PR Development Cycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-explore.html" class="xref page">Explore</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-generate-skill-docs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-tooling">Catalog Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Regenerate this documentation site itself from the current set of skills and agents on disk.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-generate-skill-docs.html" class="xref page">Generate Skill Docs</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-issue</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-cycle">Issue-to-PR Development Cycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">End-to-end kickoff for a tracked ticket: branch, explore, plan, implement, open PR, review.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-issue.html" class="xref page">Issue</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-code-one-task</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implement a single Java plan task&#8217;s code and tests only — validation is handled by <code>iru-java-code-one-task-group</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-code-one-task.html" class="xref page">Java Code One Task</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-code-one-task-group</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Implement a bucket of Java tasks (in parallel where safe) and validate the whole bucket once.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-code-one-task-group.html" class="xref page">Java Code One Task Group</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-code-quality</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run Checkstyle/PMD/SpotBugs and summarize every issue found, grouped by tool.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-code-quality.html" class="xref page">Java Code Quality</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-coverage</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run JaCoCo and report the exact measured coverage percentage for target class(es).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-coverage.html" class="xref page">Java Coverage</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-generate-all-tests</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Find every Java class with no tests or under 80% coverage and generate/extend tests until it clears the bar.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-generate-all-tests.html" class="xref page">Java Generate All Tests</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-javadoc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Audit and complete Javadoc coverage for given classes, then verify it builds cleanly.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-javadoc.html" class="xref page">Java Javadoc</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-java-test</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-java">Java Development Tooling</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-java-test.html" class="xref page">Java Test</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-jira-custom-context</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-intake">Ticket Intake</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extension point: gather organization-specific context for a Jira ticket, called by <code>iru-create-jira-ticket</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-jira-custom-context.html" class="xref page">Jira Custom Context</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-plan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-cycle">Issue-to-PR Development Cycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Write a concrete, reviewable <code>implementation_plan.md</code>, tagging each task&#8217;s language/framework.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-plan.html" class="xref page">Plan</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-pr-description</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-pr">Pull Request Lifecycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Draft a PR description from the real diff, and optionally open/update the pull request.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-pr-description.html" class="xref page">PR Description</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-pr-review</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-pr">Pull Request Lifecycle</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Review an open pull request against the linked ticket&#8217;s intent and this codebase&#8217;s conventions.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-pr-review.html" class="xref page">PR Review</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-release</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-maintenance">Repository Maintenance</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cut a release branch, bump versions, draft release notes/changelog, and open the release PR.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-release.html" class="xref page">Release</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-antora</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Scaffold a new Antora documentation site (<code>antora.yml</code>, playbook, starter pages) or fill gaps in an existing one.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-antora.html" class="xref page">Setup Antora</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-changelog</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">One-time bootstrap of <code>CHANGELOG.md</code>, backfilled from git tags/GitHub Releases.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-changelog.html" class="xref page">Setup Changelog</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-java-github-workflows</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Scaffold/update the <code>develop.yml</code>/<code>main.yml</code>/<code>sync.yml</code> GitHub Actions CI/CD pipeline.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-java-github-workflows.html" class="xref page">Setup Java GitHub Workflows</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-java-gitignore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create or refresh the root <code>.gitignore</code> for a Java project.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-java-gitignore.html" class="xref page">Setup Java Gitignore</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-java-library</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generate <code>pom.xml</code> and the standard Maven source layout for a new Java library.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-java-library.html" class="xref page">Setup Java Library</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-java-library-repository</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Orchestrator: bootstrap a brand-new Java library repository end to end in one pass.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-java-library-repository.html" class="xref page">Setup Java Library Repository</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-setup-readme</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-bootstrap">Repository Bootstrap</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create or refresh the root <code>README.md</code> from what actually exists in the repository.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-setup-readme.html" class="xref page">Setup Readme</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-update-docs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#group-maintenance">Repository Maintenance</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bring the Antora documentation module up to date with changes already made to the code.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="skills/iru-update-docs.html" class="xref page">Update Docs</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_agents_reference"><a class="anchor" href="#_agents_reference"></a>Agents reference</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This repository defines three custom agents, all grouped under <a href="#group-agents">Sub-Agent
+Infrastructure</a>; the built-in agent types it also relies on (<code>Explore</code>, <code>general-purpose</code>) have no <code>SKILL.md</code>-style
+file of their own and are instead described together in <a href="agents/overview.html" class="xref page">Agents</a>.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 28.5714%;">
+<col style="width: 57.1428%;">
+<col style="width: 14.2858%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Purpose</th>
+<th class="tableblock halign-left valign-top">Detail page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-change-summarizer</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Fan out over a git commit/tag range and return only the user-facing changes.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="agents/iru-change-summarizer.html" class="xref page">Change Summarizer</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-gate-runner</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run a single verification/quality-gate skill and report back only a compact summary, optionally vs. a baseline.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="agents/iru-gate-runner.html" class="xref page">Gate Runner</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-isolated-skill-executor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run one named skill end to end in a fresh context, so the caller can keep running afterward.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="agents/iru-isolated-skill-executor.html" class="xref page">Isolated Skill Executor</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_groups"><a class="anchor" href="#_purpose_groups"></a>Purpose groups</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="group-bootstrap"><a class="anchor" href="#group-bootstrap"></a>Repository Bootstrap</h3>
+<div class="paragraph">
+<p>Scaffolding a brand-new repository&#8217;s build, docs, CI/CD, and top-level files from nothing, so a new Java
+library starts out matching the same conventions as every other repository in the catalog.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Reach for this group when standing up a <strong>brand-new repository</strong> — a one-time pass, not something you&#8217;d run
+again once the repository already exists. <code>iru-setup-java-library-repository</code> is the single entry point that
+runs the rest in order; each one also works standalone to fill a single gap in a repository that already has
+some of this in place (e.g. just <code>/iru-setup-antora</code> to add docs to a repository that already has a <code>pom.xml</code>).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-setup-java-library-repository.html" class="xref page"><code>iru-setup-java-library-repository</code></a> — orchestrator: bootstraps
+a brand-new Java library repository end to end in one pass.</p>
+</li>
+<li>
+<p><a href="skills/iru-setup-java-library.html" class="xref page"><code>iru-setup-java-library</code></a> — generates <code>pom.xml</code> and the standard Maven
+source layout.</p>
+</li>
+<li>
+<p><a href="skills/iru-setup-antora.html" class="xref page"><code>iru-setup-antora</code></a> — scaffolds the Antora documentation site.</p>
+</li>
+<li>
+<p><a href="skills/iru-setup-java-gitignore.html" class="xref page"><code>iru-setup-java-gitignore</code></a> — creates or refreshes the root <code>.gitignore</code>.</p>
+</li>
+<li>
+<p><a href="skills/iru-setup-java-github-workflows.html" class="xref page"><code>iru-setup-java-github-workflows</code></a> — scaffolds/updates the CI/CD
+GitHub Actions pipeline.</p>
+</li>
+<li>
+<p><a href="skills/iru-setup-changelog.html" class="xref page"><code>iru-setup-changelog</code></a> — one-time bootstrap of <code>CHANGELOG.md</code>.</p>
+</li>
+<li>
+<p><a href="skills/iru-setup-readme.html" class="xref page"><code>iru-setup-readme</code></a> — creates or refreshes the root <code>README.md</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-intake"><a class="anchor" href="#group-intake"></a>Ticket Intake</h3>
+<div class="paragraph">
+<p>Turning a rough idea, bug report, or request into a well-formed, tracked ticket — a GitHub issue or a Jira
+ticket — before the <a href="#group-cycle">Issue-to-PR Development Cycle</a> picks it up.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Reach for one of these when the work doesn&#8217;t have a ticket yet. Neither is required — a ticket can always be
+filed by hand, or <code>/iru-issue</code>/<code>/iru-plan</code> can work from a free-form description instead — but both skills ground the
+draft in the actual codebase (via <code>iru-explore</code>) and ask for the same context (purpose, links, files, related
+tickets, due date, importance) so what lands in the tracker is immediately actionable, plus an agent-assessed
+estimated difficulty folded into the draft.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-create-github-issue.html" class="xref page"><code>iru-create-github-issue</code></a> — drafts and files a GitHub issue via <code>gh issue
+create</code>, matched against this repository&#8217;s actual label set.</p>
+</li>
+<li>
+<p><a href="skills/iru-create-jira-ticket.html" class="xref page"><code>iru-create-jira-ticket</code></a> — drafts and files a Jira ticket via connected Jira
+MCP tools, resolving the target project and issue type against the real Jira configuration; supports an
+optional epic assignment and delegates to <code>iru-jira-custom-context</code> for organization-specific context.</p>
+</li>
+<li>
+<p><a href="skills/iru-jira-custom-context.html" class="xref page"><code>iru-jira-custom-context</code></a> — extension point called by
+<code>iru-create-jira-ticket</code> to gather whatever organization-specific context (a required custom field, team
+ownership, customer/account, environment, compliance classification) a given Jira workflow needs, beyond the
+universal questions the caller already asks. Not useful standalone — it exists to be edited in place and
+invoked by that caller.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-cycle"><a class="anchor" href="#group-cycle"></a>Issue-to-PR Development Cycle</h3>
+<div class="paragraph">
+<p>Taking a piece of work from "described" — a tracked ticket (a GitHub issue or a Jira ticket), or a task you
+describe yourself — to an implemented, open pull request.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This is the group to reach for on a <strong>day-to-day basis</strong>: picking up a ticket or an ad hoc task and carrying
+it through branch creation, research, planning, and implementation without re-explaining that process each
+time. <code>iru-issue</code> is the single entry point for the full pipeline; <code>iru-explore</code> and <code>iru-plan</code> are also commonly run
+individually (<code>/iru-explore</code>, <code>/iru-plan</code>) ahead of, or instead of, the full <code>/iru-issue</code> flow. <code>iru-code</code> itself doesn&#8217;t
+implement anything directly — it dispatches each of <code>iru-plan&#8217;s dependency-aware task groups, in order, to
+`iru-code-one-task-group</code>, which resolves each task&#8217;s language and delegates to whichever
+<a href="#group-java">Java</a>, <a href="#group-dotnet">.NET</a>, or <a href="#group-database">
+Database</a> Development Tooling group skill matches, and brackets the whole run with quality and security
+baselines (<a href="#group-maintenance">Repository Maintenance</a>).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-issue.html" class="xref page"><code>iru-issue</code></a> — orchestrator: branch, explore, plan, implement, open PR, review — for a
+tracked ticket.</p>
+</li>
+<li>
+<p><a href="skills/iru-explore.html" class="xref page"><code>iru-explore</code></a> — read-only research pass over the codebase, optionally grounded in a
+GitHub issue or Jira ticket.</p>
+</li>
+<li>
+<p><a href="skills/iru-plan.html" class="xref page"><code>iru-plan</code></a> — writes a concrete, reviewable <code>implementation_plan.md</code>, grouping tasks by
+dependency and tagging each with the language/framework key a downstream <code>&lt;key&gt;-code-one-task-group</code> skill
+should handle it with.</p>
+</li>
+<li>
+<p><a href="skills/iru-code.html" class="xref page"><code>iru-code</code></a> — executes <code>implementation_plan.md</code> end to end, one task group at a time, via
+<code>iru-code-one-task-group</code>, and gates completion on quality/security baselines.</p>
+</li>
+<li>
+<p><a href="skills/iru-code-one-task-group.html" class="xref page"><code>iru-code-one-task-group</code></a> — implements one task group, resolving each
+task&#8217;s language and dispatching to its matching <code>&lt;key&gt;-code-one-task-group</code> skill (e.g.
+<a href="skills/iru-java-code-one-task-group.html" class="xref page"><code>iru-java-code-one-task-group</code></a>,
+<a href="skills/iru-dotnet-code-one-task-group.html" class="xref page"><code>iru-dotnet-code-one-task-group</code></a>,
+<a href="skills/iru-database-code-one-task-group.html" class="xref page"><code>iru-database-code-one-task-group</code></a>) — or a best-effort direct
+implementation if none matches.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-java"><a class="anchor" href="#group-java"></a>Java Development Tooling</h3>
+<div class="paragraph">
+<p>Implementing a single plan task end to end, plus the point-in-time checks (tests, coverage, lint, Javadoc) a
+person or another skill can run against a Maven/Java project any time — each reporting real, measured results
+rather than an estimate.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p><code>iru-code-one-task-group</code> dispatches every task-group bucket tagged (or defaulted to) <code>java</code> to
+<code>iru-java-code-one-task-group</code>, which captures one quality baseline for the bucket, runs <code>iru-java-code-one-task</code> once
+per task (in parallel when the group allows it), then validates the whole bucket once via the other four skills
+in this group. Reach for those four directly, any time, while <strong>iterating on code day to day</strong> — before
+committing, before opening a PR, or just to check where a class currently stands. You rarely need to invoke any
+of them yourself during the <a href="#group-cycle">Issue-to-PR Development Cycle</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-java-code-one-task-group.html" class="xref page"><code>iru-java-code-one-task-group</code></a> — implements a bucket of Java tasks
+(in parallel where safe) and validates the whole bucket once: license headers, Javadoc, tests, coverage, and
+a quality regression check.</p>
+</li>
+<li>
+<p><a href="skills/iru-java-code-one-task.html" class="xref page"><code>iru-java-code-one-task</code></a> — implements a single task&#8217;s code and tests only;
+called once per task by <code>iru-java-code-one-task-group</code>.</p>
+</li>
+<li>
+<p><a href="skills/iru-java-test.html" class="xref page"><code>iru-java-test</code></a> — runs the JUnit suite via Surefire, scoped to a
+class/method/package/tag selector.</p>
+</li>
+<li>
+<p><a href="skills/iru-java-coverage.html" class="xref page"><code>iru-java-coverage</code></a> — runs JaCoCo and reports the exact measured coverage
+percentage for target class(es).</p>
+</li>
+<li>
+<p><a href="skills/iru-java-code-quality.html" class="xref page"><code>iru-java-code-quality</code></a> — runs Checkstyle/PMD/SpotBugs and summarizes every
+issue found, grouped by tool.</p>
+</li>
+<li>
+<p><a href="skills/iru-java-generate-all-tests.html" class="xref page"><code>iru-java-generate-all-tests</code></a> — finds every class with no test class or
+under 80% line coverage (via <code>iru-java-coverage</code>) and generates/extends tests until it clears the bar, across the
+whole codebase in one pass.</p>
+</li>
+<li>
+<p><a href="skills/iru-java-javadoc.html" class="xref page"><code>iru-java-javadoc</code></a> — audits and completes Javadoc coverage for given classes,
+then verifies it builds cleanly.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-dotnet"><a class="anchor" href="#group-dotnet"></a>.NET Development Tooling</h3>
+<div class="paragraph">
+<p>The .NET/C# counterpart to <a href="#group-java">Java Development Tooling</a> — implementing a single plan
+task end to end, plus the equivalent point-in-time checks (tests, coverage, Roslyn analyzers, XML doc comments)
+against a .NET project.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Same shape as the Java group, one tool chain over: <code>iru-code-one-task-group</code> dispatches every task-group bucket
+tagged <code>dotnet</code> to <code>iru-dotnet-code-one-task-group</code>, which captures one quality baseline for the bucket, runs
+<code>iru-dotnet-code-one-task</code> once per task (in parallel when the group allows it), then validates the whole bucket
+once via the other four skills here. Reach for those four directly any time while iterating day to day; <code>iru-code</code>
+rarely needs them invoked directly during the <a href="#group-cycle">Issue-to-PR Development Cycle</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-dotnet-code-one-task-group.html" class="xref page"><code>iru-dotnet-code-one-task-group</code></a> — implements a bucket of .NET tasks
+(in parallel where safe) and validates the whole bucket once: license headers, XML doc comments, tests,
+coverage, and a quality regression check.</p>
+</li>
+<li>
+<p><a href="skills/iru-dotnet-code-one-task.html" class="xref page"><code>iru-dotnet-code-one-task</code></a> — implements a single task&#8217;s code and tests
+only; called once per task by <code>iru-dotnet-code-one-task-group</code>.</p>
+</li>
+<li>
+<p><a href="skills/iru-dotnet-test.html" class="xref page"><code>iru-dotnet-test</code></a> — runs the test suite via <code>dotnet test</code>, scoped to a
+class/method/namespace/trait selector.</p>
+</li>
+<li>
+<p><a href="skills/iru-dotnet-coverage.html" class="xref page"><code>iru-dotnet-coverage</code></a> — runs Coverlet via <code>dotnet test</code> and reports the exact
+measured coverage percentage for target class(es).</p>
+</li>
+<li>
+<p><a href="skills/iru-dotnet-code-quality.html" class="xref page"><code>iru-dotnet-code-quality</code></a> — runs StyleCop.Analyzers/CA Roslyn analyzers via
+a SARIF-logged build and summarizes every issue found.</p>
+</li>
+<li>
+<p><a href="skills/iru-dotnet-docfx.html" class="xref page"><code>iru-dotnet-docfx</code></a> — audits and completes XML doc-comment coverage for given
+types, then attempts a DocFX build.</p>
+</li>
+<li>
+<p><a href="skills/iru-dotnet-generate-all-tests.html" class="xref page"><code>iru-dotnet-generate-all-tests</code></a> — finds every class with no test class
+or under 80% line coverage (via <code>iru-dotnet-coverage</code>) and generates/extends tests until it clears the bar, across
+the whole codebase in one pass.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-database"><a class="anchor" href="#group-database"></a>Database Development Tooling</h3>
+<div class="paragraph">
+<p>The database counterpart to <a href="#group-java">Java Development Tooling</a> and
+<a href="#group-dotnet">.NET Development Tooling</a> — implementing a bucket of database tasks (schema
+migrations, seed data, index changes) from a plan.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p><code>iru-code-one-task-group</code> dispatches every task-group bucket tagged <code>database</code> to <code>iru-database-code-one-task-group</code>,
+which calls <code>iru-database-code-one-task</code> once per task. Unlike its Java/.NET counterparts, this pairing is
+deliberately simpler: tasks are always implemented one at a time, in the plan&#8217;s order, regardless of the
+bucket&#8217;s <code>Parallelizable</code> verdict (database changes commonly carry a real ordering dependency even when a plan
+doesn&#8217;t flag one explicitly), and there is no pre-change quality baseline or bucket-wide validation pass — each
+task is trusted to handle its own correctness. <code>iru-database-code-one-task</code> generates the queries a task calls for
+(grounded in the real schema via <code>iru-explore</code>), executes only the read-only/idempotent ones when a matching
+database MCP is connected, and records everything in <code>database-report.md</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-database-code-one-task-group.html" class="xref page"><code>iru-database-code-one-task-group</code></a> — implements a bucket of
+database tasks sequentially, one at a time, then checks off completed tasks and notifies the user — no
+quality baseline or bucket-wide validation pass.</p>
+</li>
+<li>
+<p><a href="skills/iru-database-code-one-task.html" class="xref page"><code>iru-database-code-one-task</code></a> — generates the queries a single task
+calls for, executes the read-only ones via a connected database MCP if one exists, and records both in
+<code>database-report.md</code>; called once per task by <code>iru-database-code-one-task-group</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-pr"><a class="anchor" href="#group-pr"></a>Pull Request Lifecycle</h3>
+<div class="paragraph">
+<p>Everything after code exists but before it&#8217;s merged: describing the change and getting it reviewed, on
+whichever platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Used automatically as the last leg of <code>iru-issue&#8217;s pipeline once `iru-code</code> finishes, but just as useful standalone
+— e.g. after making changes outside the <code>/iru-issue</code> flow and wanting a PR description drafted, or a second,
+convention-aware review pass before asking a teammate for one.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-pr-description.html" class="xref page"><code>iru-pr-description</code></a> — drafts a PR description from the real diff, and
+optionally opens/updates the pull request.</p>
+</li>
+<li>
+<p><a href="skills/iru-pr-review.html" class="xref page"><code>iru-pr-review</code></a> — reviews an open pull request against the linked ticket&#8217;s intent
+and this codebase&#8217;s conventions.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-maintenance"><a class="anchor" href="#group-maintenance"></a>Repository Maintenance</h3>
+<div class="paragraph">
+<p>Keeping an already-bootstrapped repository correct and current, well after its initial setup.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Intended for whoever <strong>maintains the repository over time</strong> rather than someone mid-feature: cutting
+releases, keeping docs from drifting after unrelated code changes, periodically verifying license headers,
+and scanning for accidentally committed secrets.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-release.html" class="xref page"><code>iru-release</code></a> — cuts a release branch, bumps versions, drafts release
+notes/changelog, and opens the release PR.</p>
+</li>
+<li>
+<p><a href="skills/iru-update-docs.html" class="xref page"><code>iru-update-docs</code></a> — brings the Antora documentation module up to date with
+changes already made to the code.</p>
+</li>
+<li>
+<p><a href="skills/iru-build-docs.html" class="xref page"><code>iru-build-docs</code></a> — builds the existing Antora documentation site as-is (no content
+edits), scaffolding it first via <code>iru-setup-antora</code> if it doesn&#8217;t exist yet.</p>
+</li>
+<li>
+<p><a href="skills/iru-check-license.html" class="xref page"><code>iru-check-license</code></a> — verifies (and backfills) license headers against the
+repository&#8217;s actual license.</p>
+</li>
+<li>
+<p><a href="skills/iru-check-security.html" class="xref page"><code>iru-check-security</code></a> — scans for accidentally committed secrets via
+<code>detect-secrets</code>, maintaining a <code>.secrets.baseline</code> so repeat runs surface only what&#8217;s new.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-tooling"><a class="anchor" href="#group-tooling"></a>Catalog Tooling</h3>
+<div class="paragraph">
+<p>Maintaining this catalog&#8217;s own documentation rather than a consumer repository&#8217;s.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Only relevant if you&#8217;re working <strong>in this <code>ai-catalog</code> repository itself</strong>, to keep its generated pages
+current after a skill or agent is added, removed, or changed — not something a repository that merely
+adopted one of these skills would ever need to run.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="skills/iru-generate-skill-docs.html" class="xref page"><code>iru-generate-skill-docs</code></a> — regenerates this
+documentation site itself from the current set of skills and agents on disk.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="group-agents"><a class="anchor" href="#group-agents"></a>Sub-Agent Infrastructure</h3>
+<div class="paragraph">
+<p>The custom agents this catalog&#8217;s skills delegate to for its most-duplicated sub-agent shapes, cutting across
+every group above rather than belonging to any single workflow.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Not something invoked directly the way a skill is — an agent is only ever reached indirectly, through a
+skill&#8217;s own instructions naming it in an <code>Agent()</code> call. See <a href="guides/creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a> for
+how agents differ from skills in how they&#8217;re triggered.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — runs a single verification/quality-gate skill and reports back
+only a compact summary, optionally diffed against a baseline. Used throughout <code>iru-code</code>, <code>iru-code-one-task-group</code>,
+<code>iru-java-code-one-task-group</code>, and <code>iru-dotnet-code-one-task-group</code>.</p>
+</li>
+<li>
+<p><a href="agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> — runs one named skill end to end in a
+fresh context so the caller can keep running afterward. Used by <a href="skills/iru-issue.html" class="xref page"><code>iru-issue</code></a> to delegate the
+entire <code>iru-code</code> run for a ticket, by <a href="skills/iru-code.html" class="xref page"><code>iru-code</code></a> itself to delegate each task group to
+<code>iru-code-one-task-group</code>, by <a href="skills/iru-java-code-one-task-group.html" class="xref page"><code>iru-java-code-one-task-group</code></a> and
+<a href="skills/iru-dotnet-code-one-task-group.html" class="xref page"><code>iru-dotnet-code-one-task-group</code></a> to delegate each task in a bucket
+to <code>iru-java-code-one-task</code>/<code>iru-dotnet-code-one-task</code>, and by
+<a href="skills/iru-setup-java-library-repository.html" class="xref page"><code>iru-setup-java-library-repository</code></a> to delegate each of the six
+bootstrap skills it orchestrates.</p>
+</li>
+<li>
+<p><a href="agents/iru-change-summarizer.html" class="xref page"><code>iru-change-summarizer</code></a> — fans out over a git commit/tag range and returns
+only the user-facing changes. Used by <a href="skills/iru-setup-changelog.html" class="xref page"><code>iru-setup-changelog</code></a> to summarize one
+release at a time when backfilling a long tag history, and by <a href="skills/iru-release.html" class="xref page"><code>iru-release</code></a> to summarize
+the single range since the previous release.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependency_graph"><a class="anchor" href="#_dependency_graph"></a>Dependency graph</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>An edge means "invokes" (a solid line, via the <code>Skill</code> tool) or "spawns" (a dotted line, via the <code>Agent</code>
+tool). <code>code-review</code> is an external skill this catalog does not define — <code>iru-pr-review</code> uses it only when it
+happens to be available in the current session.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    subgraph Bootstrap["Repository Bootstrap"]
+        SJLR["iru-setup-java-library-repository"]
+        SJL["iru-setup-java-library"]
+        AS["iru-setup-antora"]
+        SJG["iru-setup-java-gitignore"]
+        SJW["iru-setup-java-github-workflows"]
+        SC["iru-setup-changelog"]
+        SR["iru-setup-readme"]
+    end
+
+    subgraph Intake["Ticket Intake"]
+        CGI["iru-create-github-issue"]
+        CJT["iru-create-jira-ticket"]
+        CJCC["iru-jira-custom-context"]
+    end
+
+    subgraph Cycle["Issue-to-PR Development Cycle"]
+        ISSUE["iru-issue"]
+        EXPLORE["iru-explore"]
+        PLAN["iru-plan"]
+        CODE["iru-code"]
+        COTG["iru-code-one-task-group"]
+    end
+
+    subgraph Java["Java Development Tooling"]
+        JCOTG["iru-java-code-one-task-group"]
+        JCOT["iru-java-code-one-task"]
+        JT["iru-java-test"]
+        JC["iru-java-coverage"]
+        JCQ["iru-java-code-quality"]
+        JJ["iru-java-javadoc"]
+        JGAT["iru-java-generate-all-tests"]
+    end
+
+    subgraph Dotnet[".NET Development Tooling"]
+        DCOTG["iru-dotnet-code-one-task-group"]
+        DCOT["iru-dotnet-code-one-task"]
+        DT["iru-dotnet-test"]
+        DC["iru-dotnet-coverage"]
+        DCQ["iru-dotnet-code-quality"]
+        DDF["iru-dotnet-docfx"]
+        DGAT["iru-dotnet-generate-all-tests"]
+    end
+
+    subgraph Database["Database Development Tooling"]
+        DBCOTG["iru-database-code-one-task-group"]
+        DBCOT["iru-database-code-one-task"]
+    end
+
+    subgraph PRLife["Pull Request Lifecycle"]
+        PRD["iru-pr-description"]
+        PRR["iru-pr-review"]
+    end
+
+    subgraph Maintenance["Repository Maintenance"]
+        REL["iru-release"]
+        UD["iru-update-docs"]
+        BD["iru-build-docs"]
+        CL["iru-check-license"]
+        CSEC["iru-check-security"]
+    end
+
+    subgraph Tooling["Catalog Tooling"]
+        GSD["iru-generate-skill-docs"]
+    end
+
+    SJLR -.-> SJL
+    SJLR -.-> AS
+    SJLR -.-> SJG
+    SJLR -.-> SJW
+    SJLR -.-> SC
+    SJLR -.-> SR
+
+    CGI --> EXPLORE
+    CJT --> EXPLORE
+    CJT --> CJCC
+
+    ISSUE --> EXPLORE
+    ISSUE --> PLAN
+    ISSUE -.-> CODE
+    ISSUE --> PRD
+    ISSUE --> PRR
+    PLAN --> EXPLORE
+    PRR --> EXPLORE
+
+    CODE -.-> COTG
+    CODE -.-> JCQ
+    CODE -.-> DCQ
+    CODE -.-> CSEC
+    CODE --> UD
+    CODE -->|"quality regressed,\nJira-origin plan,\nuser opts to file"| CJT
+
+    COTG --> JCOTG
+    COTG --> DCOTG
+    COTG --> DBCOTG
+
+    DBCOTG --> DBCOT
+    DBCOT --> EXPLORE
+
+    JCOTG -.-> JCOT
+    JCOTG -.-> JCQ
+    JCOTG -.-> CL
+    JCOTG -.-> JJ
+    JCOTG -.-> JT
+    JCOTG -.-> JC
+
+    JGAT --> JC
+    JGAT --> JT
+
+    DCOTG -.-> DCOT
+    DCOTG -.-> DCQ
+    DCOTG -.-> CL
+    DCOTG -.-> DDF
+    DCOTG -.-> DT
+    DCOTG -.-> DC
+
+    DGAT --> DC
+    DGAT --> DT
+
+    REL --> SR
+    REL --> PRD
+    UD -.->|only if no Antora module yet| AS
+    BD -.->|only if no Antora module yet| AS
+
+    GSD -.->|only if no Antora module yet| AS
+
+    PRR -.->|external, not in this catalog| CR[["code-review"]]
+
+    EXPLORE -.uses.-> AGT_EXPLORE(("Explore\nagent"))
+    AS -.uses.-> AGT_EXPLORE
+    SR -.uses.-> AGT_EXPLORE
+    JGAT -.uses.-> AGT_EXPLORE
+    DGAT -.uses.-> AGT_EXPLORE
+    CODE -.spawns.-> AGT_GATE(("iru-gate-runner\nagent"))
+    COTG -.spawns.-> AGT_GATE
+    JCOTG -.spawns.-> AGT_GATE
+    DCOTG -.spawns.-> AGT_GATE
+    JGAT -.spawns.-> AGT_GATE
+    DGAT -.spawns.-> AGT_GATE
+    ISSUE -.spawns.-> AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    CODE -.spawns.-> AGT_ISE
+    JCOTG -.spawns.-> AGT_ISE
+    DCOTG -.spawns.-> AGT_ISE
+    SJLR -.spawns.-> AGT_ISE
+    SC -.spawns.-> AGT_CS(("iru-change-summarizer\nagent"))
+    REL -.spawns.-> AGT_CS
+    GSD -.spawns.-> AGT_GP(("general-purpose\nagent"))
+    UD -.spawns.-> AGT_GP
+    PRD -.spawns.-> AGT_GP
+    JGAT -.spawns.-> AGT_GP
+    DGAT -.spawns.-> AGT_GP</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_common_workflows"><a class="anchor" href="#_common_workflows"></a>Common workflows</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>These sections walk through how the catalog&#8217;s skills compose for a few recurring jobs. Each is a real,
+supported path through the graph above — not every skill in the catalog appears in one, since some
+(the <a href="#group-java">Java</a> and <a href="#group-dotnet">.NET</a> Development Tooling skills,
+<code>iru-check-license</code>) are more often invoked as building blocks of a larger flow than run standalone by a person.</p>
+</div>
+<div class="sect2">
+<h3 id="_setting_up_a_new_repository"><a class="anchor" href="#_setting_up_a_new_repository"></a>Setting up a new repository</h3>
+<div class="paragraph">
+<p><code>iru-setup-java-library-repository</code> collects the project&#8217;s identity and CI/CD parameters once, then
+orchestrates six other skills in a fixed order so nothing is asked twice:</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["/iru-setup-java-library-repository"] --> B["iru-setup-java-library\n(pom.xml + source layout)"]
+    B --> C["iru-setup-antora\n(docs site)"]
+    C --> D["iru-setup-java-gitignore\n(.gitignore)"]
+    D --> E["iru-setup-java-github-workflows\n(CI/CD)"]
+    E --> F["iru-setup-changelog\n(CHANGELOG.md)"]
+    F --> G["iru-setup-readme\n(README.md, last — sees everything above)"]</div></div>
+<div class="paragraph">
+<p>Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
+<code>/iru-setup-antora</code> to add docs to a repository that already has a <code>pom.xml</code>).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_filing_a_ticket_before_work_begins"><a class="anchor" href="#_filing_a_ticket_before_work_begins"></a>Filing a ticket before work begins</h3>
+<div class="paragraph">
+<p><code>iru-create-github-issue</code> and <code>iru-create-jira-ticket</code> turn a rough idea into a tracked, actionable ticket, ready for a
+later, separate <code>/iru-issue</code> invocation. See <a href="guides/common-workflows.html#filing-a-ticket" class="xref page">guides/common-workflows.adoc#filing-a-ticket</a> for a more detailed
+walkthrough.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    A["/iru-create-github-issue\nor /iru-create-jira-ticket"] --> B["iru-explore\n(ground the draft in the codebase)"]
+    B --> C["Ask purpose + additional context\n(URLs, files, related tickets,\nepic — Jira only — due date, importance)"]
+    C --> C2["iru-jira-custom-context\n(Jira only: org-specific context)"]
+    C2 --> D["Draft (+ estimated difficulty)\n+ confirm + file\n(gh issue create /\nJira MCP tools)"]
+    D --> E(["/iru-issue &lt;id-or-key&gt;\n(separate, later invocation)"])</div></div>
+<div class="paragraph">
+<p>Both skills work the same way up to filing; which one to use depends on which tracker the repository/team
+uses. Neither is required — <code>/iru-issue</code> and <code>/iru-plan</code> work fine against a ticket filed by hand, or against no ticket
+at all (a free-form description). Only <code>iru-create-jira-ticket</code> supports an epic assignment and delegates to
+<a href="skills/iru-jira-custom-context.html" class="xref page"><code>iru-jira-custom-context</code></a> for organization-specific context — there is
+no GitHub equivalent for either.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_typical_development_cycle_starting_from_a_ticket"><a class="anchor" href="#_typical_development_cycle_starting_from_a_ticket"></a>Typical development cycle, starting from a ticket</h3>
+<div class="paragraph">
+<p><code>iru-issue</code> is the single entry point for taking a tracked ticket — a GitHub issue or a Jira ticket — to an open,
+reviewed pull request. See <a href="guides/common-workflows.html#typical-development-cycle" class="xref page">guides/common-workflows.adoc#typical-development-cycle</a> for a more detailed
+walkthrough — this is the main workflow for day-to-day work in this catalog.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    A["/iru-issue &lt;ticket-id&gt;"] --> B["iru-explore\n(understand the ticket)"]
+    B --> C["iru-plan\n(write implementation_plan.md,\ngroup tasks by dependency,\ntag each with a language/framework)"]
+    C --> D{Hand off to /iru-code?}
+    D -- yes --> E["iru-code\n(dispatch each task group to\niru-code-one-task-group, via a sub-agent)"]
+    D -- no --> H[Stop for manual review]
+    E --> EA["Attach archived plan\nback onto the ticket\n(GitHub comment / Jira attachment)"]
+    EA --> F["iru-pr-description\n(open PR as a draft)"]
+    F --> G["iru-pr-review\n(review the new PR)"]</div></div>
+<div class="paragraph">
+<p><code>iru-code</code> itself doesn&#8217;t implement anything directly: for every task group it dispatches to
+<a href="skills/iru-code-one-task-group.html" class="xref page"><code>iru-code-one-task-group</code></a>, which resolves each task&#8217;s language and delegates
+to whichever <a href="skills/iru-java-code-one-task-group.html" class="xref page"><code>iru-java-code-one-task-group</code></a> or
+<a href="skills/iru-dotnet-code-one-task-group.html" class="xref page"><code>iru-dotnet-code-one-task-group</code></a> skill matches — each of which captures
+one quality baseline for the whole bucket, implements its tasks (in parallel when the group allows it), and
+validates the bucket once via its own group&#8217;s tests/coverage/quality/doc skills, instead of once per task. A
+bucket tagged <code>database</code> instead goes to <a href="skills/iru-database-code-one-task-group.html" class="xref page">
+<code>iru-database-code-one-task-group</code></a>, which is deliberately simpler — always sequential, with no baseline or
+bucket-wide validation of its own. The whole run is bracketed with project-wide quality
+(<code>iru-java-code-quality</code>/<code>iru-dotnet-code-quality</code>) and security (<code>iru-check-security</code>) baselines — if quality regresses,
+follow-up issues can be filed on whichever tracker the plan itself originated from (GitHub via <code>gh issue create</code>,
+or Jira via <a href="skills/iru-create-jira-ticket.html" class="xref page"><code>iru-create-jira-ticket</code></a>) — updating documentation via
+<code>iru-update-docs</code> once both pass, and archiving the plan under a filename that embeds the originating ticket id
+(see <a href="skills/iru-code.html" class="xref page">Code</a>). <code>iru-issue</code> then attaches that archived plan back onto the ticket before opening
+the PR, so a later <code>iru-explore</code> of the same ticket finds it as precedent. <code>iru-explore</code> and <code>iru-plan</code> can also be run
+individually (<code>/iru-explore</code>, <code>/iru-plan</code>) ahead of, or instead of, the full <code>/iru-issue</code> flow, and either a GitHub issue or
+a Jira ticket works the same way throughout — for a Jira ticket, <code>iru-explore</code> also pulls in its epic, linked
+tickets, and any attached prior implementation plans for extra context.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_generating_a_release"><a class="anchor" href="#_generating_a_release"></a>Generating a release</h3>
+<div class="paragraph">
+<p><code>iru-release</code> must be run from <code>develop</code> and drives the whole version bump itself, delegating only the README
+and PR description. See <a href="guides/common-workflows.html#generating-a-release" class="xref page">guides/common-workflows.adoc#generating-a-release</a> for a more detailed
+walkthrough.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    A["/iru-release"] --> B["Pick release + next SNAPSHOT version"]
+    B --> C["Bump pom.xml, docs/antora.yml, Antora version snippets"]
+    C --> D["iru-setup-readme\n(refresh README.md)"]
+    D --> E["Write whats-new.adoc + CHANGELOG.md"]
+    E --> F["Commit, push release_x.y.z"]
+    F --> G["iru-pr-description\n(fill in the release PR)"]</div></div>
+</div>
+<div class="sect2">
+<h3 id="_updating_an_existing_repository_with_new_functionality"><a class="anchor" href="#_updating_an_existing_repository_with_new_functionality"></a>Updating an existing repository with new functionality</h3>
+<div class="paragraph">
+<p>There is no single orchestrator for this — it&#8217;s a set of independent skills, each scoped to one artifact,
+run after code has already changed:</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    Code["Code change already made\n(uncommitted or on a branch)"] --> UD["iru-update-docs\n(Antora pages)"]
+    Code --> RM["iru-setup-readme\n(README.md, if it already exists: proposes a diff)"]
+    Code --> CLI["iru-check-license\n(license headers on touched files)"]
+    Code --> CSEC["iru-check-security\n(scan for secrets before committing)"]
+    UD -.->|only if no Antora module exists yet| AS["iru-setup-antora"]</div></div>
+<div class="paragraph">
+<p><code>iru-setup-changelog</code> is deliberately <strong>not</strong> part of this flow: it only bootstraps a changelog that doesn&#8217;t
+exist yet and stops immediately if <code>CHANGELOG.md</code> is already present (see <a href="skills/iru-setup-changelog.html" class="xref page">Setup Changelog</a>).
+Keeping an existing changelog current on each release is `iru-release&#8217;s job, not a standalone update skill&#8217;s.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_keeping_this_documentation_current"><a class="anchor" href="#_keeping_this_documentation_current"></a>Keeping this documentation current</h2>
+<div class="sectionbody">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This documentation site can be created or updated in two ways:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Preferred — run the <code>iru-generate-skill-docs</code> skill</strong> (<code>/iru-generate-skill-docs</code>).
+It (re)generates this page — the reference table, purpose groups, dependency graph, and common
+workflows above — plus one detail page per skill/agent under <code>skills/</code> and <code>agents/</code>, directly from
+whatever <code>.claude/skills/*/SKILL.md</code> files and agent definitions actually exist in the repository.
+It&#8217;s idempotent, so it&#8217;s safe to re-run any time a skill or agent is added, removed, or changed; see
+<a href="#_keeping_this_documentation_current">Keeping this documentation current</a> above.</p>
+</li>
+<li>
+<p><strong>Manual edits.</strong> This page and the detail pages are plain AsciiDoc files under
+<code>docs/modules/ROOT/pages/</code>, and can be edited directly like any other Antora content. This is fine for
+wording or structural fixes, but anything describing what a skill or agent actually does should instead
+go through the skill above — hand-written content there will be overwritten the next time it runs.</p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This page and every detail page under <a href="#group-tooling">Catalog Tooling</a> are themselves
+generated — by <code>iru-generate-skill-docs</code>, from whatever skills/agents actually exist under
+<code>.claude/skills/</code> (and <code>.claude/agents/</code>, if any) at the time it runs:</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    A["/iru-generate-skill-docs"] --> B["Discover every SKILL.md\n+ agent usage on disk"]
+    B --> C["Build the dependency graph\n+ purpose groups + workflows"]
+    C --> D["Write index.adoc, skills/*.adoc,\nagents/*.adoc, nav.adoc"]
+    D --> E["npx antora — verify the\nsite still builds"]</div></div>
+<div class="paragraph">
+<p>Re-run it (<code>/iru-generate-skill-docs</code>) after adding, removing, or materially changing a skill or
+agent, so this page and the detail pages it links to don&#8217;t drift from what&#8217;s actually on disk.</p>
+</div>
+<div class="paragraph">
+<p>Each skill&#8217;s own detail page (linked from the table above) covers its exact inputs, outputs, and execution
+flow. Each skill is also self-contained under its own <code>.claude/skills/&lt;name&gt;/SKILL.md</code> — copy the ones you
+need into another repository&#8217;s <code>.claude/skills/</code> directory to adopt them there.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+  </body>
+</html>

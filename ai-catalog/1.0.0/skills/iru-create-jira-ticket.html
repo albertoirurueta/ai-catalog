@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Create Jira Ticket :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-create-jira-ticket.html">Create Jira Ticket</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-create-jira-ticket.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Create Jira Ticket</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Draft and file a new Jira ticket that is ready to be picked up by the <code>/iru-issue</code>, <code>/iru-plan</code>, <code>/iru-code</code> flow. This
+skill only files a ticket; it does not branch, plan, or write code.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-create-jira-ticket</code> is the Jira counterpart to <code>iru-create-github-issue</code> — same shape, but sourced through connected
+Jira MCP tools instead of the <code>gh</code> CLI, and with Jira&#8217;s project/issue-type model instead of GitHub labels. It runs
+<code>iru-explore</code> for general codebase orientation, asks the user directly for the task&#8217;s purpose and any additional
+context (linked URLs, attached files/documents, related tickets, and an optional epic — which, if given, is
+itself explored for extra context and assigned to the new ticket as its parent/epic link on creation), and
+delegates to the <code>iru-jira-custom-context</code> skill for whatever organization-specific context that extension point
+has been set up to gather. Provided files/documents aren&#8217;t just read for context and summarized: since Jira&#8217;s own
+REST API has a native attachment endpoint (<code>issue/{key}/attachments</code>) that accepts any file type — unlike
+GitHub&#8217;s issue API — every file is uploaded straight to the newly created ticket once a connected Jira MCP tool
+exposes that capability. If no attachment-capable tool is available, it falls back to `iru-create-github-issue&#8217;s
+own workaround: small text-based files are embedded inline in the description, and everything else is just
+described without being attached. It also asks for the task&#8217;s due date (optional) and importance (trivial/minor/
+important/blocking — defaulting to minor, or to blocking when the purpose reads as a bug/incident affecting
+production). It resolves the target Jira project and issue type against this Jira instance&#8217;s actual configuration
+rather than inventing one, drafts a summary and a structured description (Summary, Context, Acceptance criteria,
+Task details — due date, importance, and an agent-assessed estimated difficulty from very easy to impossible —
+References), and always shows the draft for explicit confirmation before filing it. Unlike GitHub, there is no
+ubiquitous Jira CLI fallback — this skill stops early if no Jira MCP tool is connected at all.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-intake" class="xref page">Ticket Intake</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-create-jira-ticket
+/iru-create-jira-ticket &lt;short description&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>short description</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A starting point for the ticket&#8217;s purpose. When given, the skill only asks the user for what it leaves unclear
+(the "why," or what "done" looks like) rather than re-asking from scratch.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — if omitted, the skill asks the user directly, in plain conversational text, what the ticket&#8217;s purpose is.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>No repository source/code changes — this skill&#8217;s durable side effects are the filed Jira ticket itself and,
+for every file the connected Jira MCP tooling could actually upload, a real attachment on that ticket.</p>
+</li>
+<li>
+<p>A drafted ticket summary, description (Summary, Context, Acceptance criteria, Task details, References),
+project, issue type, and — if one was given — the epic it will be assigned to, shown to the user before any
+action is taken, including the list of files about to be attached. Task details combines the due date/
+importance answers with an estimated-difficulty assessment (very easy/easy/medium/hard/very hard/extreme/
+impossible, plus a one-line rationale). References carries a placeholder per real attachment (the actual
+upload happens after creation), or the inline/described fallback content for files handled that way.</p>
+</li>
+<li>
+<p>If the user confirms creation: a new Jira ticket filed via the connected Jira MCP tool(s), with the resolved
+project, issue type, any matched labels/components, and the epic link/parent field set if an epic was
+confirmed — followed by one attachment upload per flagged file, each attempted independently so one failure
+doesn&#8217;t block the rest.</p>
+</li>
+<li>
+<p>If the user declines, or edits the draft first: no ticket is filed until they explicitly confirm; the draft
+itself remains the deliverable.</p>
+</li>
+<li>
+<p>If no Jira MCP tool is connected at all, or ticket creation fails on a required field: the skill stops and
+surfaces the exact situation rather than guessing or retrying blindly.</p>
+</li>
+<li>
+<p>A final report with the ticket key and URL, a pointer to <code>/iru-issue &lt;key&gt;</code> or <code>/iru-plan &lt;key&gt;</code> as the next
+step, and any per-file attachment failures called out explicitly.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /create-jira-ticket\n(optional short description)"] --> B{Jira MCP tool\nconnected?}
+    B -- no --> Z["Stop: no fallback without Jira MCP;\nsuggest create-github-issue instead"]
+    B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
+    C --> D["Ask user: purpose of the task\n(plain conversational question)"]
+    D --> E["Ask user: additional context?\n(URLs, files/documents, related\ntickets, optional epic)"]
+    E --> E2["Confirm + explore epic if given\n(description, child tickets)"]
+    E2 --> E3["Delegate to iru-jira-custom-context\nfor org-specific context"]
+    E3 --> F["Fetch URLs via WebFetch;\nRead attached files for context;\nconfirm related tickets via Jira MCP tools"]
+    F --> F1{Attachment-capable\nJira MCP tool found\nin Step 1?}
+    F1 -- yes --> F1a["Flag each file for real\nupload after ticket creation"]
+    F1 -- no --> F1b{File type?}
+    F1b -- small text file --> F1c["Embed full content inline\n(collapsible block)"]
+    F1b -- image/PDF/binary/large --> F1d["Describe file only,\nno upload possible"]
+    F1a --> F2["Ask due date (optional) +\nimportance (trivial/minor/important/\nblocking — default minor, or blocking\nfor a production bug/incident)"]
+    F1c --> F2
+    F1d --> F2
+    F2 --> G["Resolve target project\n(reuse from conversation, list via MCP,\nor ask user)"]
+    G --> H["Resolve issue type:\nBug vs. Story/Task/New Feature,\nmatched against this project's real types"]
+    H -- ambiguous / can't list --> I["Ask user to pick"]
+    H -- clear match --> J
+    I --> J["Draft summary + description:\nSummary, Context, Acceptance\ncriteria, Task details (due date,\nimportance, estimated difficulty),\nReferences (incl. epic)"]
+    J --> K["Show draft, project, issue type,\nepic assignment to user"]
+    K --> L{User choice}
+    L -- edit first --> J
+    L -- don't create --> M["Stop: draft is\nthe deliverable"]
+    L -- create now --> N["Create via connected Jira MCP\ntool(s), incl. epic link if given"]
+    N -- creation fails --> O["Surface exact error;\nask how to proceed"]
+    N -- succeeds --> P["Upload each flagged file\nas a real attachment via Jira MCP\n(one at a time; failures noted,\ndon't block the rest)"]
+    P --> Q["Report ticket key/URL,\nany attachment failures;\nsuggest /iru-issue or /plan"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-explore.html" class="xref page">Explore</a> — Step 2 runs <code>iru-explore</code> with no argument (general codebase orientation, since there
+is no ticket yet) so the drafted ticket&#8217;s Context section is grounded in the real architecture rather than a
+vague description.</p>
+</li>
+<li>
+<p><a href="iru-jira-custom-context.html" class="xref page">Jira Custom Context</a> — Step 4, during additional-context gathering, passing the task&#8217;s
+stated purpose so this extension-point skill can gather whatever organization-specific context it&#8217;s been set
+up to ask for. A "nothing provided" response is never a blocker.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-code.html" class="xref page">Code</a> — Step 7, conditionally: when a project-wide quality check regresses against
+baseline, the plan being executed originated from a Jira ticket (per its <code>Source:</code> line), and the user chooses
+to file the remaining issues as new tickets rather than adding a follow-up task group or accepting them as-is.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Otherwise <code>iru-create-jira-ticket</code> is a top-level entry point, run directly by a person before a tracked ticket
+exists for <code>/iru-issue</code>/<code>/iru-plan</code> to pick up.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="paragraph">
+<p>None — <code>iru-create-jira-ticket</code> does not spawn any agent.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-create-jira-ticket/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

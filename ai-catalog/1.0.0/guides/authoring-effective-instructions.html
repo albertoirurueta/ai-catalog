@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Authoring effective instructions :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="authoring-effective-instructions.html">Authoring effective instructions</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/authoring-effective-instructions.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Authoring effective instructions</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><code>CLAUDE.md</code>, a <code>SKILL.md</code>, an agent definition, and a plugin&#8217;s bundled instructions are all, mechanically,
+the same thing: text an AI agent reads and is expected to act on faithfully. The quality of the results they
+produce is mostly a function of two things — how the instructions are phrased, and how much of the context
+window they (and everything they cause to happen) consume. This page is the shared guidance the other
+authoring guides (<a href="claude-md.html" class="xref page">The CLAUDE.md file</a>, <a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a>,
+<a href="plugins.html" class="xref page">Plugins</a>) point back to, rather than repeating it four times. Together, a well-written
+<code>CLAUDE.md</code> plus a well-scoped set of skills and agents is what turns "an AI assistant" into a <strong>harness</strong> —
+a system that produces the same good behavior every time, instead of depending on how well any one session
+happens to be prompted.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This guidance applies to <strong>all four</strong> of <code>CLAUDE.md</code>, a <code>SKILL.md</code>, an agent&#8217;s system prompt, and a
+plugin&#8217;s bundled instructions — and just as much to a single, ad hoc <strong>prompt you type into a session
+yourself</strong>. A skill is really just a prompt saved for reuse across many runs; the same discipline that makes
+a saved prompt reliable the tenth time also makes a one-off prompt more likely to get the right answer the
+first time. Nothing below is specific to writing files — read "instruction" throughout as "anything you
+give Claude to act on," whichever of the five forms it takes.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_naming_a_skill_or_agent_within_a_prompt"><a class="anchor" href="#_naming_a_skill_or_agent_within_a_prompt"></a>Naming a skill or agent within a prompt</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A one-off prompt can be just as explicit about <strong>which</strong> skill or agent should handle it as a <code>SKILL.md</code> step
+is about its own sub-steps — and doing so is itself an application of "direct, not vague" rather than a
+separate rule:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>To invoke a specific <strong>skill</strong>, either type its slash command directly (<code>/iru-plan 42</code>) or name it in prose
+("run the <code>iru-plan</code> skill for issue 42"). Either is unambiguous about which skill you mean. A purely
+descriptive request instead ("write me a plan for issue 42") leaves Claude to match your wording against
+every skill&#8217;s <code>description</code> on its own — usually fine, but a second source of run-to-run variation you
+remove by naming the skill yourself.</p>
+</li>
+<li>
+<p>To involve a specific <strong>agent</strong>, name it and ask for the delegation explicitly ("use the <code>Explore</code> agent
+to find every caller of `X`", "spawn a sub-agent to run the full test suite") rather than leaving Claude to
+decide whether and how to isolate the sub-task. There is no slash-command equivalent for an agent, so
+naming it in the prompt is the only precise, repeatable way to request one.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>See <a href="creating-skills-and-agents.html#_how_each_one_is_actually_invoked" class="xref page">How each one is actually
+invoked</a> for the full mechanics behind both of these — the frontmatter fields that change what&#8217;s even
+possible for a given skill (<code>disable-model-invocation</code>, <code>user-invocable</code>), and the other channels an agent
+can be reached through (<code>@</code>-mention, a session-wide default).</p>
+</div>
+<div class="paragraph">
+<p>This matters most for a prompt meant to run the same way every time — one embedded in another skill&#8217;s
+instructions, or one you expect to reuse — where naming the skill or agent removes one more source of
+drift, the same motivation behind every other piece of guidance on this page.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_write_direct_concise_step_structured_instructions"><a class="anchor" href="#_write_direct_concise_step_structured_instructions"></a>Write direct, concise, step-structured instructions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>An agent following a <code>SKILL.md</code> executes it closer to a runbook than to a suggestion — ambiguity that a
+human would resolve by intuition, the agent will resolve inconsistently across runs. This catalog&#8217;s existing
+skills (e.g. <code>.claude/skills/iru-plan/SKILL.md</code>, documented at <a href="../skills/iru-plan.html" class="xref page">Plan</a>) follow a consistent shape
+worth reusing elsewhere:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Numbered steps, one decision per step.</strong> <code>## Step 1 — Locate the Antora documentation module</code>, not a
+wall of prose covering discovery, validation, and generation together. A step an agent can point to by
+number is also a step you can debug ("it went wrong at Step 3") and a step another skill can invoke
+precisely (a Step number reference in a dependency section).</p>
+</li>
+<li>
+<p><strong>Imperative, not descriptive.</strong> "Find every <code>SKILL.md</code> under `.claude/skills`" reads as an instruction to
+execute; "This step is about finding skills" reads as a description of intent an agent then has to
+translate into action itself, and translations vary. Prefer the former.</p>
+</li>
+<li>
+<p><strong>State branches and stopping conditions explicitly.</strong> "Not found: ask the user whether to bootstrap one.
+Found: read it for the component name" is unambiguous about what happens in each case. A step that only
+describes the happy path leaves the agent to invent behavior for every other case, which is precisely the
+inconsistency a skill exists to remove.</p>
+</li>
+<li>
+<p><strong>Say what "done" looks like and what to report.</strong> A skill without an explicit final "Report" step tends to
+either report too much (dumping intermediate detail nobody asked for) or too little (silently stopping
+without confirming what actually happened).</p>
+</li>
+<li>
+<p><strong>Avoid hedged, discretionary language</strong> ("consider doing X if it seems appropriate") in the parts of an
+instruction that are meant to run the same way every time. Reserve genuine judgment calls for an explicit
+"ask the user" branch (see `iru-plan&#8217;s Step 3, <a href="../skills/iru-plan.html" class="xref page">Plan</a>) rather than leaving them implicit in
+vague phrasing.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The same applies to <code>CLAUDE.md</code> (a rule stated as "run <code>mvn test</code> before considering a change done", not
+"tests should probably be run") and to an agent&#8217;s system prompt (a narrow, explicit description of what it&#8217;s
+for and what tools it needs, not an open-ended personality sketch).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="context-window"><a class="anchor" href="#context-window"></a>Treat the context window as scarce</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Everything loaded into a session — <code>CLAUDE.md</code>, the active skill&#8217;s instructions, prior tool output, a
+sub-agent&#8217;s full transcript — competes for the same finite context window, and a model&#8217;s attention degrades
+as that window fills with content irrelevant to the current step. Writing good instructions is only half the
+job; the other half is not loading more of them than the current step actually needs.</p>
+</div>
+<div class="paragraph">
+<p>Concretely:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Keep <code>CLAUDE.md</code> short and current.</strong> It loads in <strong>every</strong> session whether or not that session needs it —
+see <a href="claude-md.html" class="xref page">The CLAUDE.md file</a>'s "Keep it short" section. An import (<code>@path</code>) organizes a large file for
+human readers; it does not reduce what actually gets loaded, since imported content is still expanded in
+full at session start.</p>
+</li>
+<li>
+<p><strong>Isolate noisy sub-tasks in a sub-agent.</strong> A full test run, a broad codebase search, or an entire delegated
+implementation pass produces far more output than its result — spawning it via the <code>Agent</code> tool and asking
+it to report back only a short summary keeps that noise out of the calling skill&#8217;s own context. This
+catalog&#8217;s <code>iru-code</code> skill does exactly this for every quality check it runs per task (see
+<a href="../agents/overview.html" class="xref page">Agents</a>).</p>
+</li>
+<li>
+<p><strong>Collapse repetition in a skill&#8217;s own instructions.</strong> A step that repeats structurally ("for each task:
+implement, test, document, quality-check") should be written once as a loop, not unrolled per task — both
+because it&#8217;s shorter and because an agent re-reading the same instruction shape for the fifth time is
+reading, not thinking.</p>
+</li>
+<li>
+<p><strong>Prefer a reference over an inline copy.</strong> An <code>xref:</code> to another page, or an instruction to "read
+<code>docs/testing-conventions.md</code> before writing tests" pulls in detail only when it&#8217;s relevant, rather than
+inlining that whole document into every skill that might conceivably need it.</p>
+</li>
+<li>
+<p><strong>Ask for a report, not a transcript.</strong> When one skill invokes another, or a skill spawns an agent, specify
+what should come back ("a pass/fail plus the list of new issues", not "everything you saw") — the caller
+usually needs a conclusion, not the evidence trail that produced it.</p>
+</li>
+<li>
+<p><strong>Prune, don&#8217;t just append.</strong> A <code>CLAUDE.md</code> or <code>SKILL.md</code> that only ever grows accumulates instructions
+that stopped being true or stopped mattering; a periodic pass to delete stale content is as valuable as the
+writing that added it in the first place.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_give_examples_not_just_rules"><a class="anchor" href="#_give_examples_not_just_rules"></a>Give examples, not just rules</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Claude reasons from a concrete example unusually well — often more reliably than from an abstract rule
+stated on its own. Where a rule is genuinely hard to state completely and precisely in prose (a report
+format, a commit-message style, an edge case that&#8217;s easier to show than describe), attaching a worked
+example alongside the rule tends to produce closer, more consistent behavior than the rule by itself,
+because an example doesn&#8217;t leave room for accidental misinterpretation the way a description can.</p>
+</div>
+<div class="paragraph">
+<p>There are two ways to attach one, and both are legitimate:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Inline</strong> — paste the example directly into the instruction (the <code>SKILL.md</code> step, the <code>CLAUDE.md</code> rule,
+or the message itself), when it&#8217;s short enough not to be worth splitting out. For instance: "Follow this
+commit message shape: <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt;</code> — e.g.
+<code>fix(auth): reject expired refresh tokens before issuing a new one</code>."</p>
+</li>
+<li>
+<p><strong>By reference</strong> — point at a file already in the repository, or a URL, and instruct Claude to read it
+before proceeding, when the example is long, is one of several to pick from, or already exists as a real
+artifact (a past PR, a well-formed existing skill) rather than something worth retyping. This catalog
+already relies on this technique: <a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a>'s advice to "ground a new
+skill in an existing example" is exactly this, applied to writing a <code>SKILL.md</code> itself, and several of this
+catalog&#8217;s own bootstrap skills (<code>iru-setup-java-library</code>, <code>iru-setup-java-github-workflows</code>) embed a full example
+file for the same reason rather than describing its shape in prose.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Which form to use is mostly a <a href="#context-window">context-window</a> tradeoff: inline a short example every
+time it&#8217;s needed; reference a long or only-occasionally-needed one so it loads only when actually relevant
+— the same reasoning that keeps a <code>CLAUDE.md</code> itself lean rather than inlining everything it might ever need.</p>
+</div>
+<div class="paragraph">
+<p>This applies at every level this page covers — a one-off prompt ("format the output like this: &#8230;&#8203;"), a
+<code>SKILL.md</code> step ("write the summary in this shape: &#8230;&#8203;"), a <code>CLAUDE.md</code> rule ("commits follow the format
+shown in `docs/commit-style.md`"), and an agent&#8217;s system prompt (a sample of the kind of response it should
+produce). The worked example later on this page is itself an instance of the same idea: showing what a
+precise prompt looks like, not just describing the properties it should have.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The same contrast — vague versus precise, unstructured versus step-based — holds regardless of whether the
+text ends up in a one-off message, a <code>SKILL.md</code> step, a <code>CLAUDE.md</code> rule, or an agent&#8217;s system prompt. The
+worked example below deliberately picks a task with several interacting rules and no single "obvious"
+number, since that&#8217;s where the gap between a vague prompt and a precise one shows up most.</p>
+</div>
+<div class="sect2">
+<h3 id="_a_complex_worked_example_calculating_a_tax_liability"><a class="anchor" href="#_a_complex_worked_example_calculating_a_tax_liability"></a>A complex worked example: calculating a tax liability</h3>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+The figures and rules below are illustrative only, chosen to show what a precise prompt looks like
+— they are not current tax guidance. Verify against the actual current-year rules before using anything
+like this for a real filing.
+</td>
+</tr>
+</table>
+</div>
+<div class="exampleblock">
+<div class="title">Example 1. Vague prompt</div>
+<div class="content">
+<div class="paragraph">
+<p>Help me figure out my taxes for this year. I have some freelance income and stock stuff too.</p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>This asks for a real conclusion but supplies almost nothing an agent could compute from: no tax year, no
+jurisdiction, no filing status, no actual numbers for the "freelance income" or "stock stuff," and no
+indication of what "figure out" should produce (a dollar amount? a list of forms? both?). Two runs of this
+same prompt can reasonably produce two different sets of assumptions and two different answers — which is
+exactly the inconsistency direct, structured instructions exist to remove.</p>
+</div>
+<div class="exampleblock">
+<div class="title">Example 2. Precise, direct, structured prompt</div>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">Calculate my 2025 US federal income tax liability. Facts:
+- Filing status: single
+- W-2 wages: $95,000 (federal withholding already paid: $14,200)
+- Schedule C freelance income: $32,000 gross, $4,500 deductible business expenses
+- Schedule D stock sales: $3,000 short-term gain, $12,000 long-term gain
+- Traditional IRA contribution: $6,500 (fully deductible; no other above-the-line items)
+- No itemizable deductions — use the standard deduction
+
+Steps:
+1. Net Schedule C income = $32,000 - $4,500.
+2. Self-employment tax = 15.3% of 92.35% of net Schedule C income; half of this amount is an
+   above-the-line deduction.
+3. Total income = wages + net Schedule C income + short-term gain + long-term gain.
+4. AGI = total income - IRA deduction - deductible half of self-employment tax (step 2).
+5. QBI deduction = 20% of net Schedule C income (no phase-out applies at this income level).
+6. Taxable ordinary income = AGI - QBI deduction - 2025 single standard deduction - long-term gain (taxed
+   separately in step 7, not at ordinary rates).
+7. Apply the 2025 single ordinary-income brackets to taxable ordinary income (this includes the short-term
+   gain, which is taxed at ordinary rates, not the long-term gain).
+8. Apply the 2025 preferential long-term capital gains rates to the $12,000 long-term gain, stacked on top
+   of ordinary income for bracket purposes.
+9. Federal tax owed = step 7 + step 8 + self-employment tax (step 2) - withholding ($14,200).
+
+Report each step's numeric result, then a single closing line: "You owe / are refunded $X." Explicitly flag
+any assumption you had to make rather than silently choosing one.</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>What makes the second version work isn&#8217;t length, it&#8217;s what each part of it removes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Every fact the calculation needs is given as a number, not a category ("some freelance income" becomes an
+exact gross figure and an exact expense figure).</p>
+</li>
+<li>
+<p>The two different tax-rate schedules that apply here (ordinary rates for wages/short-term gain, preferential
+rates for long-term gain) are named explicitly, rather than left for the agent to notice or miss.</p>
+</li>
+<li>
+<p>The one genuinely open question a real preparer would ask (standard vs. itemized) is resolved up front,
+instead of left as "whichever is better."</p>
+</li>
+<li>
+<p>The output shape is specified ("each step&#8217;s numeric result, then one closing line"), so the response is
+checkable step by step instead of a single unverifiable number.</p>
+</li>
+<li>
+<p>It asks for assumptions to be surfaced instead of silently made — the difference between an answer you can
+audit and one you have to trust blind.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_dos_and_donts_at_a_glance"><a class="anchor" href="#_dos_and_donts_at_a_glance"></a>Do&#8217;s and don&#8217;ts at a glance</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Dimension</th>
+<th class="tableblock halign-left valign-top">Don&#8217;t — vague, general, or incorrect</th>
+<th class="tableblock halign-left valign-top">Do — precise, direct, structured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Facts and scope</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Help me figure out my taxes, I have some freelance income and stock stuff."</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Calculate my 2025 US federal tax liability for: single filer, $95,000 W-2 wages, $32,000 Schedule C
+income minus $4,500 expenses, $3,000 short-term and $12,000 long-term gains, a $6,500 IRA deduction."</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Steps</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Figure out what I owe."</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"1. Net Schedule C income&#8230;&#8203; 2. Self-employment tax&#8230;&#8203; 3. Total income&#8230;&#8203; [numbered through to the final
+figure]."</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resolving ambiguity</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Use whichever deduction is better, I guess — you decide."</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"No itemizable deductions — use the standard deduction. State this explicitly in the output."</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Correctness of the premise itself</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Assume all my capital gains are taxed at my ordinary marginal rate, that&#8217;s how it works, right?" — stated
+as fact, but wrong: long-term gains have their own preferential brackets, and treating this as true produces
+a confidently wrong answer no matter how well-structured the rest of the prompt is.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Apply the 2025 preferential long-term capital gains rates to the $12,000 long-term gain, separately from
+the ordinary-rate brackets applied to wages and the short-term gain."</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output shape</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Just tell me the number."</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"Report each step&#8217;s numeric result, then one closing line: 'You owe / are refunded $X.' Flag any assumption
+made rather than silently choosing one."</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Verifiability</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Accepting a single final figure with no visible working, so an error partway through is invisible.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asking for the intermediate result at each step, so a wrong figure can be traced to the exact step that
+produced it.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>A <strong>don&#8217;t</strong> isn&#8217;t always merely vague — as the "correctness of the premise" row shows, a confidently
+<strong>wrong</strong> instruction produces a confidently wrong result regardless of how well-structured the rest of the
+prompt is. Precision in phrasing and correctness of the underlying facts are two separate requirements, and
+a well-structured prompt built on a false premise is still a bad prompt.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_why_this_matters_more_than_it_looks_like_it_should"><a class="anchor" href="#_why_this_matters_more_than_it_looks_like_it_should"></a>Why this matters more than it looks like it should</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A harness built from directly-phrased, step-structured instructions that only load what each moment needs
+behaves the same way on the tenth run as the first. One built from vague, sprawling instructions that dump
+everything into context every time will <strong>look</strong> similar in a quick demo but drift, contradict itself, and
+degrade under real, larger tasks — precisely the problem <a href="../index.html#_why_this_exists" class="xref page">this catalog&#8217;s own
+premise</a> describes for undocumented, repeat-explained procedures.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="claude-md.html" class="xref page">The CLAUDE.md file</a></p>
+</li>
+<li>
+<p><a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a></p>
+</li>
+<li>
+<p><a href="plugins.html" class="xref page">Plugins</a></p>
+</li>
+<li>
+<p><a href="packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

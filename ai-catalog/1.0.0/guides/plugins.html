@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Plugins :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="plugins.html">Plugins</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/plugins.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Plugins</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>A plugin is not a fourth kind of instruction alongside <code>CLAUDE.md</code>, skills, and agents — it&#8217;s how any
+combination of those (plus slash commands, hooks, and MCP server configs) gets packaged, versioned, and
+installed as one unit, instead of copied file by file into each repository&#8217;s <code>.claude/</code> directory.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_a_plugin_bundles"><a class="anchor" href="#_what_a_plugin_bundles"></a>What a plugin bundles</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A single plugin directory can carry:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Skills</strong> (<code>skills/&lt;name&gt;/SKILL.md</code>, same shape as <a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a> describes)</p>
+</li>
+<li>
+<p><strong>Custom agents</strong> (<code>agents/&lt;name&gt;.md</code>)</p>
+</li>
+<li>
+<p><strong>Slash commands</strong> and <strong>hooks</strong> (<code>hooks/hooks.json</code> — event handlers that react to Claude Code lifecycle
+events)</p>
+</li>
+<li>
+<p><strong>MCP and LSP server configuration</strong> (<code>.mcp.json</code>, <code>.lsp.json</code>)</p>
+</li>
+<li>
+<p><strong>Background monitors</strong>, default <strong>settings</strong>, and executables added to <code>PATH</code> (<code>bin/</code>)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Everything the plugin contributes is namespaced under its own name (e.g. a skill from a <code>my-org-tools</code>
+plugin is invoked as <code>/my-org-tools:some-skill</code>), so installing several plugins can&#8217;t silently collide on a
+shared skill/agent/command name the way copy-pasting loose files could.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_directory_layout"><a class="anchor" href="#_directory_layout"></a>Directory layout</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">my-plugin/
+├── .claude-plugin/
+│   └── plugin.json        # manifest: name, version, author, description
+├── skills/
+│   └── some-skill/
+│       └── SKILL.md
+├── agents/
+│   └── some-agent.md
+├── hooks/
+│   └── hooks.json
+├── .mcp.json
+├── .lsp.json
+├── monitors/
+│   └── monitors.json
+├── bin/
+└── settings.json</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Only <code>plugin.json</code> belongs inside <code>.claude-plugin/</code> — <code>skills/</code>, <code>agents/</code>, <code>hooks/</code>, etc. are siblings of
+<code>.claude-plugin/</code>, not nested inside it.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_marketplaces"><a class="anchor" href="#_marketplaces"></a>Marketplaces</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A <strong>marketplace</strong> is a catalog of installable plugins — a <code>marketplace.json</code> served from a git repository,
+another remote URL, or a local path. Two commands drive it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/plugin marketplace add &lt;owner/repo, git URL, or path to marketplace.json&gt;
+/plugin install &lt;plugin-name&gt;@&lt;marketplace-name&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Both public and private marketplaces work the same way:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Public</strong> — Anthropic curates an official marketplace, and a separate community marketplace accepts
+public submissions. Useful for generally-applicable skills/agents not specific to any one organization.</p>
+</li>
+<li>
+<p><strong>Private/internal</strong> — an organization can host its own marketplace in a private git repository and point
+<code>/plugin marketplace add</code> at it, giving every repository in the org the same install command without that
+repository needing public visibility. This is the natural home for the kind of skill this catalog defines
+(release process, PR review conventions) once it needs to reach more than one repository — see
+<a href="packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a> for when that step is actually worth taking.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_getting_updates_when_a_new_release_is_published"><a class="anchor" href="#_getting_updates_when_a_new_release_is_published"></a>Getting updates when a new release is published</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Installing a plugin is not a one-time copy — it stays linked to the marketplace it came from, and that
+marketplace is how updates reach it once its author publishes a new version:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Official Anthropic marketplaces auto-update by default</strong>: Claude Code refreshes the marketplace catalog
+and updates any installed plugin to its latest version at startup, with no action needed. A
+<strong>third-party or local-development marketplace has auto-update disabled by default</strong> — check for and pull
+new versions explicitly with:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/plugin marketplace update &lt;marketplace-name&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This is the same command whether the marketplace lives in a public repository or a private,
+organization-internal one (<a href="packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a>) — there&#8217;s no separate per-plugin
+update command, since an update is a marketplace-wide refresh rather than a single plugin&#8217;s action.</p>
+</div>
+</li>
+<li>
+<p><strong>Updates apply silently, then prompt you to activate them.</strong> Neither the auto-update path nor
+<code>/plugin marketplace update</code> shows a changelog or diff before replacing the installed files. Once a plugin
+has actually changed, Claude Code shows a notification prompting you to run:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/reload-plugins</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>to pick up the new version within your current session — until that&#8217;s run, the session keeps using whatever
+version was already loaded.</p>
+</div>
+</li>
+<li>
+<p><strong>Check what&#8217;s installed</strong> with <code>/plugin</code> (the interactive manager&#8217;s "Installed" tab, which shows each
+plugin&#8217;s scope and last-updated date) or <code>/plugin list</code> / <code>claude plugin list</code> from the shell. There is no
+separate command to preview whether a newer version exists without applying it — running
+<code>/plugin marketplace update</code> both checks and applies in one step.</p>
+</li>
+<li>
+<p><strong>Pinning a specific version isn&#8217;t a per-user control.</strong> Installing/updating tracks whatever the
+marketplace currently points to; the closest thing to a pin is the marketplace being added against a fixed
+git ref (<code>/plugin marketplace add &lt;url&gt;#&lt;tag-or-branch&gt;</code>), which is an administrator decision about the
+marketplace, not something each installer chooses individually. If a team needs every repository to
+advance to a new plugin version deliberately rather than picking it up automatically, host the marketplace
+privately with auto-update off and treat <code>/plugin marketplace update</code> as the explicit "take the new
+release now" action — the same rollout discipline as bumping a dependency version, rather than letting it
+drift silently across machines.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_creating_one"><a class="anchor" href="#_creating_one"></a>Creating one</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Scaffold a new plugin with:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">claude plugin init &lt;name&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>which creates the <code>.claude-plugin/plugin.json</code> manifest and a starter skill directory. During development,
+test it in place without publishing or installing it via:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">claude --plugin-dir ./my-plugin</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As with skills and agents (<a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a>), the fastest way to fill in the
+actual skill/agent content once the plugin shell exists is to ask Claude Code to draft it, grounded in
+whatever similar skill or agent already exists — either elsewhere in the plugin or in a repository adopting
+it.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a> — authoring the skills/agents a plugin bundles.</p>
+</li>
+<li>
+<p><a href="packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a> — deciding between copying files and packaging as a plugin.</p>
+</li>
+<li>
+<p><a href="provider-comparison.html" class="xref page">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a> — where other providers do and don&#8217;t have an equivalent.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

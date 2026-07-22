@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Extending the skills and agents catalog :: AI Catalog</title>
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="extending-the-catalog.html">Extending the skills and agents catalog</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/extending-the-catalog.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Extending the skills and agents catalog</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This guide is about growing the <strong>catalog itself</strong> — adding support for a new language, stack, tracker, or
+tool to the pipelines already documented in <a href="../index.html" class="xref page">AI Catalog</a> and <a href="common-workflows.html" class="xref page">Common workflows</a>. For
+the mechanics of authoring any single skill or agent from scratch, see
+<a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a>; this page instead maps out the specific places in the
+<strong>existing</strong> pipelines that were built to be extended, what convention each one relies on, and what&#8217;s involved
+in adding a new one.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_two_different_kinds_of_not_supported_yet"><a class="anchor" href="#_two_different_kinds_of_not_supported_yet"></a>Two different kinds of "not supported yet"</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Reading through <code>.claude/skills/</code>, a gap falls into one of two shapes, and they call for different work:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>A registry the pipeline already discovers by convention</strong> — the orchestrator skill never hardcodes the
+list of languages/frameworks it supports; it looks at what&#8217;s installed under <code>.claude/skills/</code> at run time
+and dispatches to whatever matches. Adding a new entry means creating a skill that follows the naming
+convention — no change to the orchestrator itself. <a href="#_language_framework_backends_for_the_code_pipeline">[_language_framework_backends_for_the_code_pipeline]</a>
+below is this catalog&#8217;s clearest example.</p>
+</li>
+<li>
+<p><strong>A single skill that hardcodes one stack&#8217;s specifics</strong> because that&#8217;s the only one this catalog has
+needed so far. Extending it means either generalizing that skill to detect and branch on the stack (the way
+<code>iru-explore</code> already does for language/framework/host detection), or forking it into a stack-specific sibling
+that a thin front door dispatches to — the same shape as the first bullet, just not built out yet.
+<a href="#_release_generation_for_other_ecosystems">Release generation for other ecosystems</a> and <a href="#_repository_bootstrap_for_other_stacks">Repository bootstrap for other stacks</a> below are
+both this second shape today.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Knowing which one you&#8217;re looking at changes the size of the task: the first is "write one new skill that
+matches an existing contract," the second is "decide whether to generalize or fork, then do either the
+detection work or the forking."</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_languageframework_backends_for_the_iru_code_pipeline"><a class="anchor" href="#_languageframework_backends_for_the_iru_code_pipeline"></a>Language/framework backends for the <code>iru-code</code> pipeline</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This is the catalog&#8217;s most fully-built extension point, and the template to copy for any similar registry.</p>
+</div>
+<div class="paragraph">
+<p><code>iru-plan</code> (<a href="../skills/iru-plan.html" class="xref page">Plan</a>) tags every task with a language/framework <strong>key</strong> by checking which
+<code><strong>-code-one-task</code> skills are actually installed: <code>find .claude/skills -maxdepth 1 -type d -name
+"</strong>-code-one-task"</code> — the directory name minus its <code>iru-</code> prefix and the suffix is the key
+(<code>iru-java-code-one-task</code> → <code>java</code>, <code>iru-dotnet-code-one-task</code> → <code>dotnet</code>, <code>iru-database-code-one-task</code> →
+<code>database</code>); the <code>iru-</code> prefix is only this catalog&#8217;s marketplace-collision namespace, not part of the key
+itself. <code>iru-code-one-task-group</code>
+(<a href="../skills/iru-code-one-task-group.html" class="xref page">Code One Task Group</a>) does the same lookup for <code>*-code-one-task-group</code> at execution time,
+partitions a plan group&#8217;s tasks into buckets by key, and dispatches each bucket to its <code>iru-&lt;key&gt;-code-one-task-group</code>
+skill. Neither orchestrator names <code>java</code>, <code>dotnet</code>, or <code>database</code> anywhere in its own instructions — they are
+just whatever happens to be installed.</p>
+</div>
+<div class="paragraph">
+<p>To add a new backend (say, <code>python</code> or <code>typescript</code>), create — carrying the <code>iru-</code> prefix every skill and
+agent in this catalog uses (see <a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a>) to avoid colliding with
+same-named skills installed from other marketplaces:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong><code>iru-&lt;key&gt;-code-one-task</code></strong> — implements one task&#8217;s code and tests only, nothing else (mirrors
+<a href="../skills/iru-java-code-one-task.html" class="xref page">Java Code One Task</a> / <a href="../skills/iru-dotnet-code-one-task.html" class="xref page">.NET Code One Task</a>).</p>
+</li>
+<li>
+<p><strong><code>iru-&lt;key&gt;-code-one-task-group</code></strong> — captures one pre-change quality baseline for a whole bucket, runs
+<code>iru-&lt;key&gt;-code-one-task</code> once per task (in parallel when the group is marked parallelizable), then validates
+the bucket once: license headers, doc-comments, tests, coverage, and a quality-regression check against the
+baseline (mirrors <a href="../skills/iru-java-code-one-task-group.html" class="xref page">Java Code One Task Group</a> / <a href="../skills/iru-dotnet-code-one-task-group.html" class="xref page">.NET Code One Task Group</a>).
+It is <strong>not</strong> required to shape its validation exactly like the Java/.NET ones — <code>iru-database-code-one-task-group</code>
+(<a href="../skills/iru-database-code-one-task-group.html" class="xref page">Database Code One Task Group</a>) deliberately runs no baseline/quality pass at all and always
+executes its tasks sequentially, because schema/query changes carry ordering dependencies the other two
+stacks don&#8217;t have. Match the new stack&#8217;s own real constraints, not the Java/.NET template for its own sake.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Whatever test/coverage/quality/doc-comment skills the new <code>iru-&lt;key&gt;-code-one-task-group</code> calls internally
+(<code>iru-java-test</code>/<code>iru-java-coverage</code>/<code>iru-java-code-quality</code>/<code>iru-java-javadoc</code>, <code>iru-dotnet-test</code>/<code>iru-dotnet-coverage</code>/
+<code>iru-dotnet-code-quality</code>/<code>iru-dotnet-docfx</code>) are <strong>not</strong> part of the registry contract and aren&#8217;t looked up
+generically by name — they&#8217;re plain internal implementation detail of that one group skill, so name them
+however fits the new stack&#8217;s own tooling (there&#8217;s no requirement to call the doc-comment one <code>iru-&lt;key&gt;-javadoc</code>,
+for instance — <code>iru-dotnet-docfx</code> already breaks that pattern). Route each through the <code>iru-gate-runner</code> agent
+(<a href="../agents/iru-gate-runner.html" class="xref page">Gate Runner</a>) the same way the existing ones do, so their raw report output stays out of
+the calling context.</p>
+</div>
+<div class="paragraph">
+<p>Once both skills exist, <code>iru-plan</code> and <code>iru-code-one-task-group</code> pick the new key up automatically on their next run —
+nothing else in the pipeline needs to change.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_repository_bootstrap_for_other_stacks"><a class="anchor" href="#_repository_bootstrap_for_other_stacks"></a>Repository bootstrap for other stacks</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-java-library-repository</code> (<a href="../skills/iru-setup-java-library-repository.html" class="xref page">Setup Java Library Repository</a>) is a fixed, six-step
+orchestration — <code>iru-setup-java-library</code> → <code>iru-setup-antora</code> → <code>iru-setup-java-gitignore</code> →
+<code>iru-setup-java-github-workflows</code> → <code>iru-setup-changelog</code> → <code>iru-setup-readme</code> — built specifically for a brand-new
+Java/Maven repository. Three of those six (<code>iru-setup-antora</code>, <code>iru-setup-changelog</code>, <code>iru-setup-readme</code>) already derive
+everything from whatever&#8217;s on disk and aren&#8217;t Java-specific in principle; the other three
+(<code>iru-setup-java-library</code>, <code>iru-setup-java-gitignore</code>, <code>iru-setup-java-github-workflows</code>) are.</p>
+</div>
+<div class="paragraph">
+<p>To support bootstrapping a different stack (an npm library, a Python package, a .NET library), the two
+options this catalog&#8217;s own architecture points at:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Add a parallel orchestrator.</strong> Write <code>iru-setup-&lt;stack&gt;-library</code> (the manifest/source-folder scaffold),
+reuse <code>iru-setup-antora</code>/<code>iru-setup-changelog</code>/<code>iru-setup-readme</code> unchanged, and write
+<code>iru-setup-&lt;stack&gt;-gitignore</code> / <code>iru-setup-&lt;stack&gt;-&lt;ci-provider&gt;-workflows</code> as needed, then an
+<code>iru-setup-&lt;stack&gt;-library-repository</code> that chains them in the equivalent order — same shape as the Java
+one, new stack.</p>
+</li>
+<li>
+<p><strong>Add a front door that asks first.</strong> A single <code>iru-setup-library-repository</code> that opens with
+<code>AskUserQuestion</code> ("which stack is this?" — Java/Maven, Node/npm, .NET, Python, …) and then delegates to
+whichever <code>iru-setup-&lt;stack&gt;-library-repository</code> matches, the way <code>iru-plan</code>/<code>iru-code-one-task-group</code> dispatch on a
+language key rather than assuming one. This is worth building once at least a second stack-specific
+orchestrator exists — before that, there&#8217;s nothing to choose between.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Either way, <code>iru-setup-antora</code>, <code>iru-setup-changelog</code>, and <code>iru-setup-readme</code> are the parts of this pipeline already
+generalized — don&#8217;t fork those; extend the stack-specific three (or their equivalents for the new stack).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_release_generation_for_other_ecosystems"><a class="anchor" href="#_release_generation_for_other_ecosystems"></a>Release generation for other ecosystems</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-release</code> (<a href="../skills/iru-release.html" class="xref page">Release</a>) is, today, entirely Maven/gitflow-shaped: it reads and writes a
+<code>&lt;version&gt;</code> element in <code>pom.xml</code>, assumes a <code>develop</code> integration branch and a <code>release_x.y.z</code> branch name,
+and hands <code>README.md</code>/Antora version-snippet updates off to <code>iru-setup-readme</code>. The parts of it that are already
+stack-agnostic — determining the PR base branch by checking what actually exists on the remote rather than
+assuming <code>main</code>, delegating the changelog summary to the <code>iru-change-summarizer</code> agent
+(<a href="../agents/iru-change-summarizer.html" class="xref page">Change Summarizer</a>), drafting the PR description via <code>iru-pr-description</code>
+(<a href="../skills/iru-pr-description.html" class="xref page">PR Description</a>) — don&#8217;t need to change for a new ecosystem.</p>
+</div>
+<div class="paragraph">
+<p>What would need to generalize is narrowly the version-bump mechanics: which file carries the version
+(<code>pom.xml</code> vs <code>package.json</code> vs <code>&lt;Project&gt;/Directory.Build.props</code>/<code>.csproj</code> vs <code>pyproject.toml</code>), what
+"current pre-release" looks like in that ecosystem (<code>-SNAPSHOT</code> vs a pre-release semver tag vs a dev version
+marker), and what command (if any) applies the bump for that tool. Rather than teaching one <code>iru-release</code> skill
+every ecosystem&#8217;s version file, the same registry shape as
+<a href="#_language_framework_backends_for_the_code_pipeline">[_language_framework_backends_for_the_code_pipeline]</a> applies cleanly here: detect the project&#8217;s
+language/build tool (<code>iru-explore&#8217;s own Step 3 already does this), then look for and delegate to an
+`iru-&lt;key&gt;-bump-version</code>-style skill if one is installed, falling back to asking the user which file to edit by
+hand if none is. That keeps `iru-release&#8217;s own branch/PR/label/changelog steps — the genuinely reusable
+majority of the skill — untouched while making the one Maven-specific step pluggable per ecosystem.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ticket_trackers_and_git_hosts"><a class="anchor" href="#_ticket_trackers_and_git_hosts"></a>Ticket trackers and git hosts</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Two detections already exist inside <code>iru-explore</code> (<a href="../skills/iru-explore.html" class="xref page">Explore</a>) and are reused by <code>iru-issue</code>,
+<code>iru-pr-description</code>, and <code>iru-pr-review</code>, and are worth knowing about before assuming they need building from
+scratch:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Ticket system</strong> — GitHub issue vs. Jira ticket, auto-detected from the id&#8217;s shape (<code>42</code> vs. <code>PROJ-123</code>).
+<code>iru-create-github-issue</code> and <code>iru-create-jira-ticket</code> (<a href="../skills/iru-create-github-issue.html" class="xref page">Create GitHub Issue</a>,
+<a href="../skills/iru-create-jira-ticket.html" class="xref page">Create Jira Ticket</a>) are the two filing skills this detection currently dispatches to.</p>
+</li>
+<li>
+<p><strong>Repository host</strong> — GitHub, Bitbucket, Azure DevOps, or TFS, detected from the git remote URL, with the
+user asked directly (never guessed) when a self-hosted or mirrored URL doesn&#8217;t clearly match any of them.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Adding a third tracker (Azure Boards, Linear, …) or confirming support for a host this catalog doesn&#8217;t yet
+name means extending <code>iru-explore&#8217;s two detection steps with the new pattern, then — for a new tracker — adding
+an `iru-create-&lt;tracker&gt;-ticket</code> skill mirroring the two that exist. Because <code>iru-issue</code>, <code>iru-pr-description</code>, and
+<code>iru-pr-review</code> all read <code>iru-explore&#8217;s detection result rather than re-implementing their own, a new host only needs
+wiring into `iru-explore</code> once and the tooling calls (branch/PR/merge-request creation, comment posting) inside
+those three downstream skills — not into every skill that touches git hosting individually.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_customizing_jira_ticket_creation"><a class="anchor" href="#_customizing_jira_ticket_creation"></a>Customizing Jira ticket creation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-create-jira-ticket</code> (<a href="../skills/iru-create-jira-ticket.html" class="xref page">Create Jira Ticket</a>) already asks for the context every ticket
+needs regardless of organization — purpose, related tickets, an optional epic, a due date, an importance level.
+Many organizations need more than that before a ticket is genuinely ready to file: a required custom field,
+team/component ownership, a customer/account, an affected environment, a compliance or security classification.
+Rather than growing <code>iru-create-jira-ticket</code> itself with organization-specific questions that wouldn&#8217;t apply to
+every installation of this catalog, that skill delegates to <code>iru-jira-custom-context</code>
+(<a href="../skills/iru-jira-custom-context.html" class="xref page">Jira Custom Context</a>) during its own context-gathering step.</p>
+</div>
+<div class="paragraph">
+<p>Out of the box, <code>iru-jira-custom-context</code> asks a single generic, optional catch-all question and returns
+whatever the user provides — it defines no organization-specific questions of its own. Extending it is a
+one-file customization, unlike the registry-shaped extension points above: there&#8217;s no naming convention to
+match or a new skill to register, just this one skill&#8217;s own Step 2, edited in place, with whichever questions or
+lookups a given Jira workflow actually needs — a fixed-choice <code>AskUserQuestion</code> when the answer is a known,
+bounded set, an open-ended question when it&#8217;s free-form, or an automated lookup (via a connected MCP tool) when
+the context can be derived rather than asked.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_quality_gates"><a class="anchor" href="#_quality_gates"></a>Quality gates</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-check-license</code>, <code>iru-check-security</code>, and the per-language <code>iru-&lt;key&gt;-code-quality</code> skills are all invoked the same
+way — through the <code>iru-gate-runner</code> agent (<a href="../agents/iru-gate-runner.html" class="xref page">Gate Runner</a>), which runs one gate, optionally
+diffs it against a baseline, and reports back a compact summary instead of the raw tool report. Adding a new
+gate (a dependency-vulnerability scan, an accessibility check, a performance budget) means writing one skill
+in that same shape — a single scan/check with a clear pass/fail and issue list — and then wiring a
+<code>iru-gate-runner</code> call for it into whichever <code>iru-&lt;key&gt;-code-one-task-group</code> skill(s) should run it as part of their
+per-bucket validation pass (<a href="../skills/iru-java-code-one-task-group.html" class="xref page">Java Code One Task Group</a> Step 1/4 and
+<a href="../skills/iru-dotnet-code-one-task-group.html" class="xref page">.NET Code One Task Group</a>'s equivalent are the two current call sites). The new gate
+doesn&#8217;t need to touch <code>iru-gate-runner</code> itself — that agent already runs "whatever skill name it&#8217;s told to run."</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_custom_agent_shapes"><a class="anchor" href="#_custom_agent_shapes"></a>Custom agent shapes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../agents/overview.html" class="xref page">Agents</a> documents the three custom agents this catalog has needed so far
+(<code>iru-gate-runner</code>, <code>iru-isolated-skill-executor</code>, <code>iru-change-summarizer</code>) and, more usefully for extension, the test it
+applies before adding a fourth: only when a built-in agent type&#8217;s tool access or system prompt genuinely
+doesn&#8217;t fit a <strong>recurring</strong> sub-agent shape used by more than one skill. A one-off isolation need (as several
+skills already handle by calling the built-in <code>general-purpose</code> or <code>Explore</code> types directly via <code>Agent</code>)
+doesn&#8217;t warrant a new custom agent definition; a shape that starts showing up identically in a third or
+fourth skill probably does.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_documentation_tooling"><a class="anchor" href="#_documentation_tooling"></a>Documentation tooling</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-antora</code>, <code>iru-build-docs</code>, <code>iru-update-docs</code>, and <code>iru-generate-skill-docs</code> are all built specifically around
+Antora — the toolchain this catalog itself uses for <code>docs/</code>. Supporting a repository that documents itself
+with something else (MkDocs, Docusaurus, plain GitHub wiki pages) would mean paralleling this same quartet
+for that tool rather than trying to generalize Antora-specific logic (playbook/component config, AsciiDoc
+xref syntax, the nav.adoc format) in place — there&#8217;s currently no signal in this catalog that more than one
+doc toolchain needs supporting at once, so building that generalization ahead of a second real use case would
+be speculative.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_after_adding_a_new_extension"><a class="anchor" href="#_after_adding_a_new_extension"></a>After adding a new extension</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Once a new skill following one of the shapes above is in place:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Re-run <code>iru-generate-skill-docs</code> (<a href="../skills/iru-generate-skill-docs.html" class="xref page">Generate Skill Docs</a>) so the reference table, dependency
+graph, and the new skill&#8217;s own detail page are generated from it — don&#8217;t hand-write that page.</p>
+</li>
+<li>
+<p>If it introduces a new key used by <code>iru-plan</code>/<code>iru-code-one-task-group</code> (or a new stack/tracker/host), sanity-check
+it end to end: run <code>/iru-plan</code> against a task that should resolve to the new key and confirm it&#8217;s tagged
+correctly, rather than only reading the new skill&#8217;s own instructions back.</p>
+</li>
+<li>
+<p>If a hand-maintained guide page (this one included) describes the gap you just filled, update it — this
+page is prose, not generated, and will drift the same way any hand-maintained doc does.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="creating-skills-and-agents.html" class="xref page">Creating and updating skills and agents</a></p>
+</li>
+<li>
+<p><a href="common-workflows.html" class="xref page">Common workflows</a></p>
+</li>
+<li>
+<p><a href="../skills/iru-jira-custom-context.html" class="xref page">Jira Custom Context</a></p>
+</li>
+<li>
+<p><a href="../agents/overview.html" class="xref page">Agents</a></p>
+</li>
+<li>
+<p><a href="../index.html" class="xref page">AI Catalog</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
