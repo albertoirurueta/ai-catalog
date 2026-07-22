@@ -34,7 +34,7 @@ lines, one per line, e.g.:
 
 ```
 integration-branch: develop
-java-version: 17
+java-version: 21
 publishing-server-id: central
 extras-profile-id: build-extras
 sign-profile-id: sign
@@ -242,7 +242,7 @@ jobs:
 Notes on placeholders that are genuinely project-specific and must come from Step 1, not from these templates:
 
 - `<integration-branch>`: the branch `develop.yml` triggers on (e.g. `develop`).
-- `<java-version>`: e.g. `17`.
+- `<java-version>`: e.g. `21`.
 - `<publishing-server-id>`: the id shared by the Central/Nexus plugin config and the settings file's `<server>`.
 - `<sign-profile-id>` / `<extras-profile-id>`: the two profile ids found in Step 1.
 - `<settings-file>`: the Maven settings XML path used for the deploy step (Step 6 creates it if absent).
