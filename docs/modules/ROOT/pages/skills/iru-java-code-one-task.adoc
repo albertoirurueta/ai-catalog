@@ -2,20 +2,24 @@
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Carry out a single task's implementation and tests against the real codebase — nothing else. This is the
-narrowest execution unit in the `iru-code` pipeline: `iru-java-code-one-task-group` calls it once per task in a bucket
-(potentially many at once, in parallel agents).
+Carry out a single task's implementation, tests, and checkbox update against the real codebase — nothing else.
+This is the narrowest execution unit in the `iru-code` pipeline: `iru-java-code-one-task-group` calls it once per
+task in a bucket (potentially many at once, in parallel agents).
 
 == Purpose
 
 `iru-java-code-one-task` is the Java-specific implementation worker `iru-java-code-one-task-group` calls once per task.
-Given one task's own text (what to build, the named file(s)/class(es)/method(s), the described behavior, and any
-sub-tasks), it re-checks the current code state, implements exactly what's specified, and writes/updates JUnit
-tests — that's all. License headers, Javadoc, scoped tests, coverage, the full suite, and code-quality
-regression checks no longer happen here; they moved to `iru-java-code-one-task-group`, which validates them once for
-the whole bucket of tasks instead of once per task, cutting the redundant tool invocations that used to happen
-here for every single task. It hands back only a short summary; it never reads or writes
-`implementation_plan.md`, captures a quality baseline, or runs any test/coverage/quality check itself.
+Given one task's own text (what to build, the named file(s)/class(es)/method(s), the described behavior, its
+exact `implementation_plan.md` checkbox line(s), and any sub-tasks), it re-checks the current code state,
+implements exactly what's specified, and writes/updates JUnit tests. If the task didn't stop on a blocker, it
+then immediately checks off that task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a
+"group validation pending" note, before reporting back — so an interrupted run doesn't re-attempt work that
+already landed, even if the interruption happens before the group's own validation runs. License headers,
+Javadoc, scoped tests, coverage, the full suite, code-quality regression checks, and replacing the pending note
+with the final validation outcome no longer happen here; they moved to `iru-java-code-one-task-group`, which
+validates them once for the whole bucket of tasks instead of once per task, cutting the redundant tool
+invocations that used to happen here for every single task. It hands back only a short summary; it never
+captures a quality baseline or runs any test/coverage/quality check itself.
 
 == Purpose group
 
@@ -37,8 +41,9 @@ xref:index.adoc#group-java[Java Development Tooling]
 |`task description`
 |Yes
 |The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/class(es)/
-method(s), the described behavior, and any sub-tasks, plus any relevant "Current code state" context. Normally
-supplied by `iru-java-code-one-task-group` dispatching one task in a bucket at a time.
+method(s), the described behavior, its exact `implementation_plan.md` checkbox line(s) for itself and its
+sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. Normally supplied by
+`iru-java-code-one-task-group` dispatching one task in a bucket at a time.
 |None — this skill has nothing to do without a task description.
 |===
 
@@ -49,10 +54,11 @@ supplied by `iru-java-code-one-task-group` dispatching one task in a bucket at a
   for invalid arguments, no new runtime dependencies).
 * JUnit tests added/updated covering the new/changed behavior — not run by this skill; the caller runs them once
   for the whole bucket.
+* `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
+  pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
+  the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
 * A short summary handed back to the caller: file(s) touched, tests added/updated, and whether the run stopped
   on a blocker.
-* `implementation_plan.md` is never read or written by this skill — checking off boxes is the caller's job, as
-  is capturing any quality baseline or running any validation check.
 
 == Execution flow
 
@@ -63,8 +69,9 @@ flowchart TD
     B --> C["Step 2: implement exactly what\nthe task specifies"]
     C --> D["Step 3: write/update JUnit tests\n(not run here)"]
     D --> E{"Ambiguous, or approach\ninfeasible against real code?"}
-    E -- yes --> F["Step 4: stop; report blocker\nto caller"]
-    E -- no --> G["Step 5: report outcome\nto caller: files, tests"]
+    E -- yes --> F["Step 4: stop; leave checkbox\nunchecked; report blocker to caller"]
+    E -- no --> G["Step 5: check off this task's\ncheckbox + 'validation pending' note"]
+    G --> H["Step 6: report outcome\nto caller: files, tests"]
 ....
 
 == Dependencies
@@ -78,8 +85,10 @@ Javadoc, scoped tests, coverage, and quality checks all moved to `iru-java-code-
 
 * xref:skills/iru-java-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a single
   batch of `Agent` calls, when the group is marked `Parallelizable: yes`; one at a time otherwise), via the
-  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's full text. That
-  skill checks off the task's box in `implementation_plan.md` once the whole bucket's validation passes.
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's full text
+  including its exact checkbox line(s). That caller re-reads `implementation_plan.md` afterward to confirm the
+  checkbox this skill already flipped landed, backfilling it only if a rare concurrent-write race clobbered it,
+  then replaces the "pending" note with the final validation outcome once the whole bucket's validation passes.
 
 === Related agents
 

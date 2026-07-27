@@ -12,13 +12,15 @@ regression check.
 `iru-java-code-one-task-group` is where this catalog's per-task validation cost was consolidated to once per group.
 It captures one pre-change quality baseline covering every class the bucket's tasks are expected to touch, then
 implements each task via `iru-java-code-one-task` (concurrently, in a single batch of `Agent` calls, when the plan
-marks the group `Parallelizable: yes`; one at a time otherwise), checking off each task's box in
-`implementation_plan.md` and notifying the user as its implementation lands — before group-wide validation runs.
-Once every task in the bucket has landed, it validates the whole bucket in one pass instead of once per task: license
-headers, Javadoc, the affected test classes, coverage, the full suite, and a quality-regression check against
-its one baseline. A failure traced to a specific task sends that task back for a fix and a re-run of the
-affected checks, rather than re-validating the whole bucket. It is the Java/Maven counterpart to
-`iru-dotnet-code-one-task-group`.
+marks the group `Parallelizable: yes`; one at a time otherwise). `iru-java-code-one-task` itself checks off each
+task's box in `implementation_plan.md` the moment that task finishes cleanly, with a "group validation pending"
+note — this skill just re-reads the file as each task's agent reports back to confirm the box landed, backfilling
+it only if a rare concurrent-write race (two parallel tasks finishing at nearly the same moment) clobbered it,
+and notifies the user that implementation landed — before group-wide validation runs. Once every task in the
+bucket has landed, it validates the whole bucket in one pass instead of once per task: license headers, Javadoc,
+the affected test classes, coverage, the full suite, and a quality-regression check against its one baseline. A
+failure traced to a specific task sends that task back for a fix and a re-run of the affected checks, rather than
+re-validating the whole bucket. It is the Java/Maven counterpart to `iru-dotnet-code-one-task-group`.
 
 == Purpose group
 
@@ -52,7 +54,8 @@ verdict and any relevant "Current code state" context.
 * Tests achieving at least 80% line coverage for the bucket's changed/new classes, verified against the real
   coverage report.
 * `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note — first an
-  "implemented, group validation pending" note as each task lands, then replaced with the final coverage/quality
+  "implemented, group validation pending" note written by `iru-java-code-one-task` itself as each task lands
+  (backfilled here only if a rare concurrent-write race dropped it), then replaced with the final coverage/quality
   outcome once bucket-wide validation passes.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group
   validation completes.
@@ -68,7 +71,7 @@ flowchart TD
     B --> C{Bucket Parallelizable?}
     C -- yes --> D["Step 2: invoke java-code-one-task\nfor every task concurrently"]
     C -- no --> E["Step 2: invoke java-code-one-task\nfor each task, one at a time"]
-    D --> F["Check off each task's box +\nnote 'validation pending'; notify user"]
+    D --> F["Confirm/backfill each task's box\n(set by java-code-one-task itself); notify user"]
     E --> F
     F --> G["Step 3: validate the whole bucket once —\nlicense headers, Javadoc, scoped tests,\ncoverage, full suite, quality vs. baseline"]
     G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
@@ -83,7 +86,8 @@ flowchart TD
 
 * xref:skills/iru-java-code-one-task.adoc[] — Step 2, once per task in the bucket (concurrently or sequentially per
   the group's `Parallelizable` verdict), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
-  agent — that skill implements exactly what the task specifies and writes/updates its tests, nothing more.
+  agent — that skill implements exactly what the task specifies, writes/updates its tests, and checks off its own
+  checkbox in `implementation_plan.md` with a "group validation pending" note before reporting back.
 
 Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than directly,
 so verbose report output stays out of this skill's own context:
