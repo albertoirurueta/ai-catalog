@@ -54,3 +54,4 @@
 ** xref:agents/iru-gate-runner.adoc[]
 ** xref:agents/iru-isolated-skill-executor.adoc[]
 ** xref:agents/iru-change-summarizer.adoc[]
+* xref:reference.adoc[]
