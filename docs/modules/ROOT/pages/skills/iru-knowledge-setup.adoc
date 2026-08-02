@@ -1,0 +1,76 @@
+= Knowledge Setup
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create the `knowledge/` directory at the repository root, with the five subdirectories the rest of the
+knowledge-base skills depend on, each seeded with a `.gitkeep` so git tracks it while it's still empty.
+
+== Purpose
+
+`iru-knowledge-setup` bootstraps the folder structure `iru-knowledge-process-inbox` and `iru-knowledge-complete` rely
+on: `knowledge/inbox` (raw material waiting to be processed), `knowledge/meetings` (one directory per processed
+meeting), `knowledge/people` (one file per person who has spoken in a processed meeting), `knowledge/agreements`
+(one file per meeting's tracked agreements), and `knowledge/pending` (one file per still-open agreement item).
+It's idempotent — re-running it only fills in whatever directory or `.gitkeep` is still missing, and never
+touches existing content.
+
+== Purpose group
+
+xref:index.adoc#group-knowledge[Knowledge Base Management]
+
+== Invocation
+
+[source]
+----
+/iru-knowledge-setup
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|(none)
+|No
+|This skill takes no arguments — it only checks the repository's current `knowledge/` state and fills gaps.
+|Not applicable.
+|===
+
+== Outputs
+
+* `knowledge/inbox/`, `knowledge/meetings/`, `knowledge/people/`, `knowledge/agreements/`, `knowledge/pending/`
+  at the repository root — created if missing.
+* A `.gitkeep` file in each of the five directories, so an otherwise-empty directory is still committed.
+* A closing report listing each directory's status (created / already existed) and whether a `.gitkeep` was
+  added.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-knowledge-setup] --> B["Check which of the 5 directories\nalready exist under knowledge/"]
+    B --> C["Create any missing directory\n(inbox, meetings, people, agreements, pending)"]
+    C --> D["Add .gitkeep to any directory\nthat has no other files yet"]
+    D --> E[Report status per directory]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-knowledge-setup` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+None — it's a top-level entry point, run directly by a person once before the rest of the knowledge-base
+skills are used for the first time in a repository.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in or custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-knowledge-setup/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

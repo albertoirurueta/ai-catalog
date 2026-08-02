@@ -1,0 +1,103 @@
+= Knowledge Process Inbox
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Turn every meeting transcription (and its supporting documents) sitting in `knowledge/inbox` into a filed
+meeting summary, updated people profiles, tracked agreements, and open pending tasks.
+
+== Purpose
+
+`iru-knowledge-process-inbox` files whatever has landed in `knowledge/inbox` — one or more meetings' worth of
+transcriptions plus attachments — into the rest of the `knowledge/` structure. It copes with transcriptions
+that vary along two independent axes (timestamped or not, diarized or not), groups inbox files by which
+meeting they belong to (defaulting to treating the whole inbox as one meeting unless there's clear evidence of
+more than one), and for each meeting produces: a `knowledge/meetings/meeting-<timestamp>/meeting.md` with a
+Summary and a verbatim Full transcription section, plus its copied attachments; a
+`knowledge/people/<name>.md` per speaker when the transcription is diarized (created or merged into if the
+person already has a file); a `knowledge/agreements/agreement-<timestamp>.md` listing every agreement as a
+numbered, unchecked markdown checkbox; and one `knowledge/pending/pending-<timestamp>-<n>.md` per agreement
+item. Once a meeting's files are safely filed, their originals are removed from `knowledge/inbox` so a re-run
+doesn't refile them into a duplicate meeting entry. `<timestamp>` throughout is a filesystem-safe ISO 8601
+value (`YYYY-MM-DDTHH-MM-SSZ`).
+
+== Purpose group
+
+xref:index.adoc#group-knowledge[Knowledge Base Management]
+
+== Invocation
+
+[source]
+----
+/iru-knowledge-process-inbox
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|(none)
+|No
+|This skill takes no arguments — it processes whatever is currently sitting in `knowledge/inbox`. If the
+inbox is empty, it reports that and stops.
+|Not applicable.
+|===
+
+== Outputs
+
+* One `knowledge/meetings/meeting-<timestamp>/` directory per meeting found, each containing `meeting.md`
+  (Summary + Full transcription) and a copy of every other file from that meeting's inbox group.
+* A `knowledge/people/<name>.md` file created or updated per speaker, but only for meetings whose
+  transcription was diarized.
+* A `knowledge/agreements/agreement-<timestamp>.md` per meeting that had agreements, listing them as numbered
+  unchecked checkboxes.
+* One `knowledge/pending/pending-<timestamp>-<n>.md` per agreement item.
+* The processed files removed from `knowledge/inbox`.
+* A closing report per meeting group (what was created, how many people files, how many agreements/pending
+  files) plus a list of any inbox files left behind because processing had to stop on an unresolved question.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-knowledge-process-inbox] --> B{"knowledge/inbox\nempty?"}
+    B -- yes --> Z[Report nothing to process, stop]
+    B -- no --> C["Group inbox files into meetings\n(default: one group; split only on\nclear multi-meeting evidence;\nask user if ambiguous)"]
+    C --> D["For each meeting group:\nread transcription + every other\nreadable file for context"]
+    D --> E["Determine meeting timestamp\n(content date, else filename date,\nelse file timestamp, else ask user)"]
+    E --> F["Detect diarization + timestamps\nin the transcription"]
+    F --> G["Create meeting-&lt;timestamp&gt;/meeting.md\n(Summary + Full transcription)\n+ copy other files in"]
+    G --> H{Diarized?}
+    H -- yes --> I["Create/update knowledge/people/&lt;name&gt;.md\nper speaker"]
+    H -- no --> J["Skip people files"]
+    I --> K
+    J --> K["Extract agreements"]
+    K --> L{"Any agreements\nfound?"}
+    L -- yes --> M["Write agreement-&lt;timestamp&gt;.md\n(numbered, unchecked checkboxes)"]
+    M --> N["Write pending-&lt;timestamp&gt;-&lt;n&gt;.md\nper agreement item"]
+    L -- no --> O["Skip agreements/pending files"]
+    N --> P
+    O --> P["Delete this group's files\nfrom knowledge/inbox"]
+    P --> Q[Report per-group outcome]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-knowledge-process-inbox` does not call any other skill in this catalog.
+
+=== Invoked by
+
+None — it's a top-level entry point, run directly by a person whenever new material has landed in
+`knowledge/inbox`. It assumes the `knowledge/` structure `iru-knowledge-setup` creates already exists.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in or custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-knowledge-process-inbox/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

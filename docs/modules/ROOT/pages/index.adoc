@@ -266,6 +266,21 @@ features, and where the underlying models genuinely differ.
 |Extension point: gather organization-specific context for a Jira ticket, called by `iru-create-jira-ticket`.
 |xref:skills/iru-jira-custom-context.adoc[]
 
+|`iru-knowledge-complete`
+|xref:index.adoc#group-knowledge[Knowledge Base Management]
+|Mark one pending agreement/task completed: check off its agreement item and delete its pending file.
+|xref:skills/iru-knowledge-complete.adoc[]
+
+|`iru-knowledge-process-inbox`
+|xref:index.adoc#group-knowledge[Knowledge Base Management]
+|File `knowledge/inbox` transcriptions into meetings, people profiles, agreements, and pending tasks.
+|xref:skills/iru-knowledge-process-inbox.adoc[]
+
+|`iru-knowledge-setup`
+|xref:index.adoc#group-knowledge[Knowledge Base Management]
+|Bootstrap the `knowledge/` directory structure (`inbox`, `meetings`, `people`, `agreements`, `pending`).
+|xref:skills/iru-knowledge-setup.adoc[]
+
 |`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Write a concrete, reviewable `implementation_plan.md`, tagging each task's language/framework.
@@ -572,6 +587,29 @@ and scanning for accidentally committed secrets.
 * xref:skills/iru-check-security.adoc[`iru-check-security`] — scans for accidentally committed secrets via
   `detect-secrets`, maintaining a `.secrets.baseline` so repeat runs surface only what's new.
 
+[[group-knowledge]]
+=== Knowledge Base Management
+
+Turning meeting transcriptions and their attached documents into a durable, queryable knowledge base at
+`knowledge/` — filed meeting summaries, per-person profiles, tracked agreements, and open pending tasks — and
+closing the loop as those tasks get done.
+
+[TIP]
+====
+Reach for this group in a repository used to track meetings and decisions rather than just code.
+`iru-knowledge-setup` is a one-time bootstrap; `iru-knowledge-process-inbox` is run every time new
+transcriptions/documents land in `knowledge/inbox`; `iru-knowledge-complete` is run whenever a tracked
+agreement item actually gets done. None of the three invoke each other directly — each is a standalone entry
+point run at a different point in the knowledge base's lifecycle.
+====
+
+* xref:skills/iru-knowledge-setup.adoc[`iru-knowledge-setup`] — creates the `knowledge/` directory and its five
+  subdirectories (`inbox`, `meetings`, `people`, `agreements`, `pending`), each seeded with a `.gitkeep`.
+* xref:skills/iru-knowledge-process-inbox.adoc[`iru-knowledge-process-inbox`] — files every transcription/document in
+  `knowledge/inbox` into a per-meeting summary, updated people profiles, and tracked agreements/pending tasks.
+* xref:skills/iru-knowledge-complete.adoc[`iru-knowledge-complete`] — checks off a completed agreement item and
+  removes its pending file, given the task's id.
+
 [[group-tooling]]
 === Catalog Tooling
 
@@ -689,6 +727,12 @@ flowchart LR
 
     subgraph Tooling["Catalog Tooling"]
         GSD["iru-generate-skill-docs"]
+    end
+
+    subgraph Knowledge["Knowledge Base Management"]
+        KS["iru-knowledge-setup"]
+        KPI["iru-knowledge-process-inbox"]
+        KC["iru-knowledge-complete"]
     end
 
     SJLR -.-> SJL
@@ -899,6 +943,26 @@ flowchart TD
 `iru-setup-changelog` is deliberately **not** part of this flow: it only bootstraps a changelog that doesn't
 exist yet and stops immediately if `CHANGELOG.md` is already present (see xref:skills/iru-setup-changelog.adoc[]).
 Keeping an existing changelog current on each release is `iru-release`'s job, not a standalone update skill's.
+
+=== Managing a knowledge base of meetings
+
+A separate, standalone lifecycle from the code-focused workflows above: turning meeting transcriptions into a
+durable record and closing the loop as tracked agreements get done. `iru-knowledge-setup` runs once;
+`iru-knowledge-process-inbox` and `iru-knowledge-complete` each run repeatedly, on their own schedule, and don't
+invoke each other or any other skill in this catalog:
+
+[mermaid]
+....
+flowchart TD
+    A["/iru-knowledge-setup\n(once, before first use)"] --> B["knowledge/inbox, meetings,\npeople, agreements, pending"]
+    B --> C["New transcriptions/documents\nland in knowledge/inbox"]
+    C --> D["/iru-knowledge-process-inbox\n(run repeatedly)"]
+    D --> E["knowledge/meetings/meeting-<timestamp>/\n+ knowledge/people/*.md\n+ knowledge/agreements/*.md\n+ knowledge/pending/*.md"]
+    E --> F{"Pending task\nactually completed?"}
+    F -- yes --> G["/iru-knowledge-complete <task-id>\n(run repeatedly)"]
+    G --> H["Agreement item checked off,\npending file removed"]
+    F -- not yet --> E
+....
 
 == Keeping this documentation current
 

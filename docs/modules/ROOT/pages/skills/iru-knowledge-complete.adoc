@@ -1,0 +1,89 @@
+= Knowledge Complete
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Mark a single pending agreement/task as completed: remove its `knowledge/pending/pending-<task-id>.md` file
+and check off the matching numbered item in its meeting's agreement file.
+
+== Purpose
+
+`iru-knowledge-complete` closes the loop `iru-knowledge-process-inbox` opens: given a task id (the
+`<timestamp>-<n>` portion of a `knowledge/pending/pending-<task-id>.md` filename), it locates that pending
+file, uses it to identify the originating `knowledge/agreements/agreement-<timestamp>.md` and item number
+(falling back to deriving both from the task id itself if the pending file doesn't state them clearly),
+flips that item's checkbox from `[ ]` to `[x]`, and deletes the pending file. It stops without deleting
+anything if the pending file, the agreement file, or the numbered item can't be found consistently — an
+inconsistency here is left for a person to look at rather than resolved by guessing.
+
+== Purpose group
+
+xref:index.adoc#group-knowledge[Knowledge Base Management]
+
+== Invocation
+
+[source]
+----
+/iru-knowledge-complete <task-id>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<task-id>`
+|No
+|The task id to complete — the part of a `knowledge/pending/pending-<task-id>.md` filename between the
+`pending-` prefix and the `.md` suffix (e.g. `2026-08-01T10-00-00Z-3`).
+|If omitted, the skill asks the user for it via `AskUserQuestion` (or a plain question).
+|===
+
+== Outputs
+
+* The matching `knowledge/pending/pending-<task-id>.md` file deleted.
+* The corresponding numbered item in `knowledge/agreements/agreement-<timestamp>.md` checked off (`[ ]` →
+  `[x]`) — every other item in that file left untouched.
+* A closing report naming the task id completed, the agreement file and item number checked off, and
+  confirming the pending file's removal.
+* If no matching pending file exists, or the agreement file/item is missing or already checked: nothing is
+  deleted or modified, and the report explains what's inconsistent (listing the task ids that do exist, in
+  the not-found case).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-knowledge-complete] --> B{"task id given\nas argument?"}
+    B -- no --> C[Ask the user for the task id]
+    B -- yes --> D
+    C --> D["Look for knowledge/pending/pending-&lt;task-id&gt;.md"]
+    D --> E{Found?}
+    E -- no --> F["List existing task ids, stop"]
+    E -- yes --> G["Read it to find its\nagreement file + item number\n(or derive from the task id)"]
+    G --> H{"Agreement file + item\nfound and still unchecked?"}
+    H -- no --> I["Report the inconsistency, stop\n(nothing deleted)"]
+    H -- yes --> J["Check off the item as done\nin the agreement file"]
+    J --> K["Delete the pending file"]
+    K --> L[Report completion]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-knowledge-complete` does not call any other skill in this catalog.
+
+=== Invoked by
+
+None — it's a top-level entry point, run directly by a person whenever a task tracked in
+`knowledge/pending` has actually been completed. It operates on files `iru-knowledge-process-inbox` produces.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in or custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-knowledge-complete/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
