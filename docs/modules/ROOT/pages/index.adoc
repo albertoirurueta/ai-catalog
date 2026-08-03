@@ -266,6 +266,11 @@ features, and where the underlying models genuinely differ.
 |Extension point: gather organization-specific context for a Jira ticket, called by `iru-create-jira-ticket`.
 |xref:skills/iru-jira-custom-context.adoc[]
 
+|`iru-knowledge-briefing`
+|xref:index.adoc#group-knowledge[Knowledge Base Management]
+|Summarize the most relevant agreements/pending tasks about a subject, scoped by person/meeting if given.
+|xref:skills/iru-knowledge-briefing.adoc[]
+
 |`iru-knowledge-complete`
 |xref:index.adoc#group-knowledge[Knowledge Base Management]
 |Mark one pending agreement/task completed: check off its agreement item and delete its pending file.
@@ -280,6 +285,16 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-knowledge[Knowledge Base Management]
 |Bootstrap the `knowledge/` directory structure (`inbox`, `meetings`, `people`, `agreements`, `pending`).
 |xref:skills/iru-knowledge-setup.adoc[]
+
+|`iru-knowledge-to-issue`
+|xref:index.adoc#group-knowledge[Knowledge Base Management]
+|Convert a pending/not-completed agreement into a GitHub issue via `iru-explore` + `iru-create-github-issue`.
+|xref:skills/iru-knowledge-to-issue.adoc[]
+
+|`iru-knowledge-to-jira`
+|xref:index.adoc#group-knowledge[Knowledge Base Management]
+|Convert a pending/not-completed agreement into a Jira ticket via `iru-explore` + `iru-create-jira-ticket`.
+|xref:skills/iru-knowledge-to-jira.adoc[]
 
 |`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
@@ -599,16 +614,33 @@ closing the loop as those tasks get done.
 Reach for this group in a repository used to track meetings and decisions rather than just code.
 `iru-knowledge-setup` is a one-time bootstrap; `iru-knowledge-process-inbox` is run every time new
 transcriptions/documents land in `knowledge/inbox`; `iru-knowledge-complete` is run whenever a tracked
-agreement item actually gets done. None of the three invoke each other directly — each is a standalone entry
-point run at a different point in the knowledge base's lifecycle.
+agreement item actually gets done; `iru-knowledge-briefing` is run any time someone needs to catch up on a
+subject. `iru-knowledge-setup`, `iru-knowledge-process-inbox`, `iru-knowledge-complete`, and
+`iru-knowledge-briefing` don't invoke each other or anything else in this catalog — each is a standalone
+entry point run at a different point in the knowledge base's lifecycle (`iru-knowledge-briefing` is read-only,
+never editing what the other three produce). `iru-knowledge-to-issue` and `iru-knowledge-to-jira` are the
+exception: run whenever a pending/not-completed agreement needs to become tracked work, each reaches out to
+xref:index.adoc#group-cycle[`iru-explore`] plus xref:index.adoc#group-intake[`iru-create-github-issue`] or
+xref:index.adoc#group-intake[`iru-create-jira-ticket`] respectively to ground and file the resulting issue/
+ticket, then annotates (but doesn't complete) the agreement it came from — pick whichever matches the tracker
+the work should land on.
 ====
 
 * xref:skills/iru-knowledge-setup.adoc[`iru-knowledge-setup`] — creates the `knowledge/` directory and its five
   subdirectories (`inbox`, `meetings`, `people`, `agreements`, `pending`), each seeded with a `.gitkeep`.
 * xref:skills/iru-knowledge-process-inbox.adoc[`iru-knowledge-process-inbox`] — files every transcription/document in
   `knowledge/inbox` into a per-meeting summary, updated people profiles, and tracked agreements/pending tasks.
+* xref:skills/iru-knowledge-briefing.adoc[`iru-knowledge-briefing`] — read-only: searches
+  `knowledge/people`/`meetings`/`agreements`/`pending` for a given subject (optionally scoped by person or
+  meeting) and reports back a summary — no file in `knowledge/` is edited.
 * xref:skills/iru-knowledge-complete.adoc[`iru-knowledge-complete`] — checks off a completed agreement item and
   removes its pending file, given the task's id.
+* xref:skills/iru-knowledge-to-issue.adoc[`iru-knowledge-to-issue`] — resolves a pending/not-completed agreement,
+  gathers its meeting and codebase context, then hands it to `iru-create-github-issue` to draft and file a
+  GitHub issue for it.
+* xref:skills/iru-knowledge-to-jira.adoc[`iru-knowledge-to-jira`] — the Jira counterpart: resolves a
+  pending/not-completed agreement, gathers its meeting and codebase context, then hands it to
+  `iru-create-jira-ticket` to draft and file a Jira ticket for it.
 
 [[group-tooling]]
 === Catalog Tooling
@@ -732,7 +764,10 @@ flowchart LR
     subgraph Knowledge["Knowledge Base Management"]
         KS["iru-knowledge-setup"]
         KPI["iru-knowledge-process-inbox"]
+        KB["iru-knowledge-briefing"]
         KC["iru-knowledge-complete"]
+        KTI["iru-knowledge-to-issue"]
+        KTJ["iru-knowledge-to-jira"]
     end
 
     SJLR -.-> SJL
@@ -753,6 +788,11 @@ flowchart LR
     ISSUE --> PRR
     PLAN --> EXPLORE
     PRR --> EXPLORE
+
+    KTI --> EXPLORE
+    KTI --> CGI
+    KTJ --> EXPLORE
+    KTJ --> CJT
 
     CODE -.-> COTG
     CODE -.-> JCQ
@@ -948,8 +988,12 @@ Keeping an existing changelog current on each release is `iru-release`'s job, no
 
 A separate, standalone lifecycle from the code-focused workflows above: turning meeting transcriptions into a
 durable record and closing the loop as tracked agreements get done. `iru-knowledge-setup` runs once;
-`iru-knowledge-process-inbox` and `iru-knowledge-complete` each run repeatedly, on their own schedule, and don't
-invoke each other or any other skill in this catalog:
+`iru-knowledge-process-inbox`, `iru-knowledge-briefing`, and `iru-knowledge-complete` each run repeatedly, on
+their own schedule, and don't invoke each other or any other skill in this catalog. `iru-knowledge-to-issue` and
+`iru-knowledge-to-jira` also run repeatedly, but — unlike the other three — reach into the
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle] and xref:index.adoc#group-intake[Ticket Intake] groups
+(via `iru-explore` plus `iru-create-github-issue`/`iru-create-jira-ticket` respectively) to turn a pending
+agreement into tracked work on whichever tracker fits, without itself completing that agreement:
 
 [mermaid]
 ....
@@ -958,10 +1002,18 @@ flowchart TD
     B --> C["New transcriptions/documents\nland in knowledge/inbox"]
     C --> D["/iru-knowledge-process-inbox\n(run repeatedly)"]
     D --> E["knowledge/meetings/meeting-<timestamp>/\n+ knowledge/people/*.md\n+ knowledge/agreements/*.md\n+ knowledge/pending/*.md"]
+    E -.-> Br["/iru-knowledge-briefing <subject>\n(run any time, read-only,\nno effect on E)"]
     E --> F{"Pending task\nactually completed?"}
     F -- yes --> G["/iru-knowledge-complete <task-id>\n(run repeatedly)"]
     G --> H["Agreement item checked off,\npending file removed"]
-    F -- not yet --> E
+    F -- not yet --> I{"Needs to become\ntracked work?"}
+    I -- GitHub --> J["/iru-knowledge-to-issue\n(iru-explore + iru-create-github-issue)"]
+    I -- Jira --> J2["/iru-knowledge-to-jira\n(iru-explore + iru-create-jira-ticket)"]
+    J --> K["Issue URL appended to the\npending file + agreement item\n(agreement stays unchecked)"]
+    J2 --> K2["Ticket key/URL appended to the\npending file + agreement item\n(agreement stays unchecked)"]
+    K --> E
+    K2 --> E
+    I -- no --> E
 ....
 
 == Keeping this documentation current

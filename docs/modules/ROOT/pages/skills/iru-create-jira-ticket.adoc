@@ -124,6 +124,9 @@ flowchart TD
 * xref:skills/iru-code.adoc[] — Step 7, conditionally: when a project-wide quality check regresses against
   baseline, the plan being executed originated from a Jira ticket (per its `Source:` line), and the user chooses
   to file the remaining issues as new tickets rather than adding a follow-up task group or accepting them as-is.
+* xref:skills/iru-knowledge-to-jira.adoc[] — hands off a synthesized purpose statement, plus the resolved
+  agreement's meeting transcription/attachments, once a `knowledge/` agreement has been resolved and confirmed
+  with the user.
 
 Otherwise `iru-create-jira-ticket` is a top-level entry point, run directly by a person before a tracked ticket
 exists for `/iru-issue`/`/iru-plan` to pick up.

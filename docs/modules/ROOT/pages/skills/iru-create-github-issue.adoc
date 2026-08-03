@@ -111,8 +111,12 @@ flowchart TD
 
 === Invoked by
 
-None — `iru-create-github-issue` is a top-level entry point, run directly by a person before a tracked issue exists
-for `/iru-issue`/`/iru-plan` to pick up.
+* xref:skills/iru-knowledge-to-issue.adoc[] — hands off a synthesized purpose statement, plus the resolved
+  agreement's meeting transcription/attachments, once a `knowledge/` agreement has been resolved and
+  confirmed with the user.
+
+Otherwise a top-level entry point, run directly by a person before a tracked issue exists for
+`/iru-issue`/`/iru-plan` to pick up.
 
 === Related agents
 

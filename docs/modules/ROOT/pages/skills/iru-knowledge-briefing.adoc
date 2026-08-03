@@ -1,0 +1,96 @@
+= Knowledge Briefing
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Summarize the most relevant agreements and pending tasks recorded in `knowledge/` for a given subject —
+optionally scoped to a specific person or meeting — without requiring anyone to hand-read every meeting file.
+
+== Purpose
+
+`iru-knowledge-briefing` is the read-only counterpart to the rest of the
+xref:index.adoc#group-knowledge[Knowledge Base Management] group: instead of filing, completing, or converting
+anything, it searches `knowledge/people`, `knowledge/meetings`, `knowledge/agreements`, and `knowledge/pending`
+for material relevant to a subject the user names, then reports back a structured summary. Scoping context is
+optional and composable — a named person is resolved against `knowledge/people/*.md` (falling back to asking
+which existing person file was meant if the derived filename doesn't match), a meeting reference ("last
+meeting", a date, or a topic keyword) is resolved against `knowledge/meetings/meeting-*/meeting.md`, and either
+narrows the search before the subject's own keywords are matched against meetings, agreements (both open and
+already checked off, so recent history shows even where nothing remains to act on), and pending files. It never
+edits anything in `knowledge/` — its only output is the conversational report itself.
+
+== Purpose group
+
+xref:index.adoc#group-knowledge[Knowledge Base Management]
+
+== Invocation
+
+[source]
+----
+/iru-knowledge-briefing
+/iru-knowledge-briefing <subject-or-context>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<subject-or-context>`
+|No
+|Free text combining the subject/topic to brief on with any scoping context (a person's name, a meeting
+reference such as "last meeting", a date, or a topic keyword).
+|If omitted, the skill asks the user for the subject and any optional person/meeting scope.
+|===
+
+== Outputs
+
+* A conversational briefing only — no file in `knowledge/` (or anywhere else) is created or modified.
+* Structured as: the resolved scope, relevant meetings (one line each), agreements grouped by still-open vs.
+  already-done (each open item's pending task id included, ready for `iru-knowledge-complete`/
+  `iru-knowledge-to-issue`), and any other people involved.
+* If nothing matches the given subject/scope, a plain statement of what was searched and that nothing was
+  found — no padded-out or invented content.
+* If a very large number of items matched, a note of how many older/less-relevant matches were left out.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-knowledge-briefing] --> B{"knowledge/ exists\n+ has content?"}
+    B -- no --> C["Tell the user what's missing, stop"]
+    B -- yes --> D{"Subject/context\ngiven as argument?"}
+    D -- no --> E["Ask for subject +\noptional person/meeting scope"]
+    D -- yes --> F
+    E --> F{"Person named?"}
+    F -- yes --> G["Resolve knowledge/people/&lt;name&gt;.md\n(ask if no exact match)"]
+    F -- no --> H
+    G --> H{"Meeting referenced?"}
+    H -- yes --> I["Resolve 'last meeting' / date /\ntopic against knowledge/meetings/"]
+    H -- no --> J
+    I --> J["Search meetings, agreements,\npending for the subject\nwithin whatever scope resolved"]
+    J --> K{Any matches?}
+    K -- no --> L["Report nothing found, stop"]
+    K -- yes --> M["Read every matched file in full"]
+    M --> N["Compose the briefing:\nscope, meetings, agreements\n(open vs. done), people involved"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-knowledge-briefing` does not call any other skill in this catalog.
+
+=== Invoked by
+
+None — it's a top-level entry point, run directly by a person whenever they need to catch up on a subject
+tracked in `knowledge/`.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in or custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-knowledge-briefing/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

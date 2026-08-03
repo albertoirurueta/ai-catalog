@@ -130,6 +130,11 @@ None — `iru-explore` is a leaf skill; it does not call any other skill in this
   before judging a pull request's diff against them.
 * xref:skills/iru-create-github-issue.adoc[] and xref:skills/iru-create-jira-ticket.adoc[] — each runs `iru-explore` with no
   argument (general orientation, since no ticket exists yet) to ground the ticket they draft in the real codebase.
+* xref:skills/iru-knowledge-to-issue.adoc[] — runs `iru-explore` with no argument to ground the purpose statement it
+  synthesizes for a converted agreement in the real codebase, reused as-is when it then runs
+  `iru-create-github-issue`.
+* xref:skills/iru-knowledge-to-jira.adoc[] — the Jira counterpart: same use of `iru-explore` with no argument to
+  ground the purpose statement it synthesizes, reused as-is when it then runs `iru-create-jira-ticket`.
 
 === Related agents
 

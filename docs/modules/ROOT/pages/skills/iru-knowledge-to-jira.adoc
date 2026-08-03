@@ -1,0 +1,114 @@
+= Knowledge to Jira
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Convert one or more pending/not-completed agreements from the `knowledge/` base into a Jira ticket — resolving
+which agreement, gathering why it matters, and handing that off to `iru-create-jira-ticket` to actually draft
+and file it.
+
+== Purpose
+
+`iru-knowledge-to-jira` is the Jira counterpart to xref:skills/iru-knowledge-to-issue.adoc[`iru-knowledge-to-issue`]
+— same shape, sourced through Jira MCP tools instead of `gh`. It asks the user which pending or not-completed
+agreement(s) to convert — accepting a pending task id, a `knowledge/pending/pending-*.md` filename, a
+`knowledge/agreements/agreement-*.md` filename/id (with an item number when it has more than one open item), or
+a plain natural-language description searched by content across both directories. Once an agreement is
+resolved, it reads the originating meeting's full transcription and attachments (via its
+`knowledge/meetings/meeting-<timestamp>/` reference) and runs `iru-explore` against the current codebase,
+synthesizes a purpose statement from both, confirms it with the user, then hands that purpose — plus the
+meeting transcription/attachments, either linked (if already committed and pushed) or attached via Jira's
+native attachment endpoint — to `iru-create-jira-ticket` to draft and file the actual ticket. It never marks the
+source agreement complete: filing a ticket means the work is now tracked, not done, so it only appends the
+created ticket's key/URL back onto the pending file and a note on the agreement item, leaving
+`iru-knowledge-complete` as the deliberate, later step that closes it out for real.
+
+== Purpose group
+
+xref:index.adoc#group-knowledge[Knowledge Base Management]
+
+== Invocation
+
+[source]
+----
+/iru-knowledge-to-jira
+/iru-knowledge-to-jira <id-filename-or-description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<id-filename-or-description>`
+|No
+|A pending task id/filename, an agreement id/filename (optionally with an item number), or a plain
+natural-language description of the agreement to convert.
+|If omitted, the skill asks the user which agreement(s) to convert.
+|===
+
+== Outputs
+
+* A new Jira ticket, drafted and filed by `iru-create-jira-ticket`, grounded in the agreement's meeting
+  context and the current codebase.
+* A `- Jira ticket: <key> (<url>)` line appended to the matching `knowledge/pending/pending-<task-id>.md` file
+  (if one exists) and a short trailing note on the matching numbered item in its
+  `knowledge/agreements/agreement-<timestamp>.md` file — the checkbox itself stays unchecked.
+* A closing report per agreement processed: what it resolved to, which context sources were used, the
+  created ticket's key/URL (or why filing was skipped/declined), any file that failed to attach, and a
+  reminder that `iru-knowledge-complete` is still the step that closes the agreement out once the linked work
+  is done.
+* Nothing at all if `knowledge/` doesn't exist yet, no Jira MCP tool is connected, or the user declines at the
+  draft-confirmation step inside `iru-create-jira-ticket`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-knowledge-to-jira] --> B{"knowledge/ exists\n+ Jira MCP connected?"}
+    B -- no --> C["Tell the user what's missing, stop"]
+    B -- yes --> D{"Identifier given\nas argument?"}
+    D -- no --> E["Ask which agreement(s) to convert"]
+    D -- yes --> F
+    E --> F["Resolve each identifier:\npending id/filename,\nagreement id/filename + item,\nor content search"]
+    F --> G{"Already completed,\nor already has a ticket?"}
+    G -- yes --> H["Confirm via AskUserQuestion\nbefore continuing"]
+    G -- no --> I
+    H --> I["Read the meeting's full\ntranscription + attachments"]
+    I --> J["iru-explore\n(ground in the current codebase)"]
+    J --> K["Synthesize + confirm\nthe purpose statement"]
+    K --> L["Decide per file:\nlink (tracked + pushed)\nvs. actual attachment"]
+    L --> M["iru-create-jira-ticket\n(purpose + files/links as context)"]
+    M --> N{Ticket created?}
+    N -- yes --> O["Append ticket key/URL to the\npending file + agreement item"]
+    N -- no --> P[Report skipped, no changes]
+    O --> Q["Report per agreement processed"]
+    P --> Q
+    Q --> R{More identifiers?}
+    R -- yes --> F
+    R -- no --> S[Done]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-explore.adoc[] — grounds the synthesized purpose in the current codebase (no ticket
+  argument, since none exists yet), reused as-is by `iru-create-jira-ticket`'s own exploration step.
+* xref:skills/iru-create-jira-ticket.adoc[] — drafts and files the actual ticket from the synthesized purpose,
+  the meeting transcription/attachments, and the codebase context above.
+
+=== Invoked by
+
+None — it's a top-level entry point, run directly by a person whenever an agreement recorded in
+`knowledge/pending`/`knowledge/agreements` needs to become tracked work on Jira.
+
+=== Related agents
+
+None directly — the skills it invokes (`iru-explore`) may spawn their own agents, but this skill spawns none
+itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-knowledge-to-jira/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
