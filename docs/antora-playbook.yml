@@ -27,6 +27,6 @@ antora:
 asciidoc:
   attributes:
     mathjax-tex-tags: ams
-    mathjax-tex-packages: ams
+    mathjax-tex-packages: ams boldsymbol
   extensions:
     - '@djencks/asciidoctor-mathjax'
