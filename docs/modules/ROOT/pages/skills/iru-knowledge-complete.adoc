@@ -58,7 +58,7 @@ flowchart TD
     A[Start /iru-knowledge-complete] --> B{"task id given\nas argument?"}
     B -- no --> C[Ask the user for the task id]
     B -- yes --> D
-    C --> D["Look for knowledge/pending/pending-&lt;task-id&gt;.md"]
+    C --> D["Look for knowledge/pending/pending-&amp;lt;task-id&amp;gt;.md"]
     D --> E{Found?}
     E -- no --> F["List existing task ids, stop"]
     E -- yes --> G["Read it to find its\nagreement file + item number\n(or derive from the task id)"]
@@ -77,8 +77,12 @@ None — `iru-knowledge-complete` does not call any other skill in this catalog.
 
 === Invoked by
 
-None — it's a top-level entry point, run directly by a person whenever a task tracked in
-`knowledge/pending` has actually been completed. It operates on files `iru-knowledge-process-inbox` produces.
+* xref:skills/iru-knowledge-compact.adoc[`iru-knowledge-compact`] — once per item it finds already closed as
+  completed on its tracker that still has a pending file, passing the task id. If this skill stops on an
+  inconsistency, `iru-knowledge-compact` reports that message rather than editing the files by hand.
+
+It is also a top-level entry point, run directly by a person whenever a task tracked in `knowledge/pending` has
+actually been completed. It operates on files `iru-knowledge-process-inbox` produces.
 
 === Related agents
 

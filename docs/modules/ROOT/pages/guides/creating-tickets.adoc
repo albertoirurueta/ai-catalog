@@ -148,7 +148,7 @@ flowchart TD
     N -- edit --> L
     N -- decline --> O["Stop: draft kept, nothing filed"]
     N -- confirm --> P["File: gh issue create\n(or GitHub MCP tools)\nor Jira MCP tools"]
-    P --> Q(["/iru-issue &lt;id-or-key&gt;\nor /iru-plan &lt;id-or-key&gt;\n(separate, later invocation)"])
+    P --> Q(["/iru-issue &amp;lt;id-or-key&amp;gt;\nor /iru-plan &amp;lt;id-or-key&amp;gt;\n(separate, later invocation)"])
 ....
 
 [cols="2,2,5", options="header"]

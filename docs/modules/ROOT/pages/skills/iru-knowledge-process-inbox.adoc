@@ -20,6 +20,14 @@ item. Once a meeting's files are safely filed, their originals are removed from 
 doesn't refile them into a duplicate meeting entry. `<timestamp>` throughout is a filesystem-safe ISO 8601
 value (`YYYY-MM-DDTHH-MM-SSZ`).
 
+Filing deliberately judges each meeting on its own: an item a later meeting re-raises gets its own pending task
+rather than being silently folded into an existing one. Reconciling those across meetings is a separate concern,
+so once every group in the run has been filed, this skill invokes
+xref:skills/iru-knowledge-compact.adoc[`iru-knowledge-compact`] once over the whole knowledge base — collapsing
+duplicate pending tasks and checking off agreements whose tracked issue is already closed as completed. That
+step asks the user before it deletes or edits anything, and a compaction that can't run (no tracker reachable,
+or the skill not installed) never invalidates the filing work that precedes it.
+
 == Purpose group
 
 xref:index.adoc#group-knowledge[Knowledge Base Management]
@@ -54,8 +62,12 @@ inbox is empty, it reports that and stops.
   unchecked checkboxes.
 * One `knowledge/pending/pending-<timestamp>-<n>.md` per agreement item.
 * The processed files removed from `knowledge/inbox`.
+* Whatever `iru-knowledge-compact` then applies with the user's approval — duplicate pending files collapsed
+  into a surviving task, agreement items checked off from their tracked issue's state.
 * A closing report per meeting group (what was created, how many people files, how many agreements/pending
-  files) plus a list of any inbox files left behind because processing had to stop on an unresolved question.
+  files) plus a list of any inbox files left behind because processing had to stop on an unresolved question,
+  and — as its own section — the compaction outcome (or why it was skipped), kept separate so it stays clear
+  which pending files this run created and which ones compaction then removed.
 
 == Execution flow
 
@@ -68,26 +80,37 @@ flowchart TD
     C --> D["For each meeting group:\nread transcription + every other\nreadable file for context"]
     D --> E["Determine meeting timestamp\n(content date, else filename date,\nelse file timestamp, else ask user)"]
     E --> F["Detect diarization + timestamps\nin the transcription"]
-    F --> G["Create meeting-&lt;timestamp&gt;/meeting.md\n(Summary + Full transcription)\n+ copy other files in"]
+    F --> G["Create meeting-&amp;lt;timestamp&amp;gt;/meeting.md\n(Summary + Full transcription)\n+ copy other files in"]
     G --> H{Diarized?}
-    H -- yes --> I["Create/update knowledge/people/&lt;name&gt;.md\nper speaker"]
+    H -- yes --> I["Create/update knowledge/people/&amp;lt;name&amp;gt;.md\nper speaker"]
     H -- no --> J["Skip people files"]
     I --> K
     J --> K["Extract agreements"]
     K --> L{"Any agreements\nfound?"}
-    L -- yes --> M["Write agreement-&lt;timestamp&gt;.md\n(numbered, unchecked checkboxes)"]
-    M --> N["Write pending-&lt;timestamp&gt;-&lt;n&gt;.md\nper agreement item"]
+    L -- yes --> M["Write agreement-&amp;lt;timestamp&amp;gt;.md\n(numbered, unchecked checkboxes)"]
+    M --> N["Write pending-&amp;lt;timestamp&amp;gt;-&amp;lt;n&amp;gt;.md\nper agreement item"]
     L -- no --> O["Skip agreements/pending files"]
     N --> P
-    O --> P["Delete this group's files\nfrom knowledge/inbox"]
-    P --> Q[Report per-group outcome]
+    O --> P["Delete this group's files\nfrom knowledge/inbox\n(kept if a step had to stop)"]
+    P --> R{"More meeting groups\nto process?"}
+    R -- yes --> D
+    R -- no --> S{"Did this run create any\nagreement/pending file?"}
+    S -- no --> Q
+    S -- yes --> T{"iru-knowledge-compact\ninstalled?"}
+    T -- no --> Q
+    T -- yes --> U["Invoke iru-knowledge-compact once\nfor the whole run; pass its plan\nto the user for confirmation"]
+    U --> Q["Report per-group filing outcome\n+ compaction outcome as its own section"]
 ....
 
 == Dependencies
 
 === Invokes
 
-None — `iru-knowledge-process-inbox` does not call any other skill in this catalog.
+* xref:skills/iru-knowledge-compact.adoc[`iru-knowledge-compact`] — Step 11, once for the whole run after every
+  meeting group has been filed, to collapse pending tasks that restate work an earlier meeting already produced
+  and check off agreements whose tracked issue is already closed as completed. Skipped (and reported as such) if
+  the run created no agreements at all, or if the skill isn't installed in this repository — this catalog's
+  skills are adopted individually, so its dedup/completion logic is never hand-rolled here as a fallback.
 
 === Invoked by
 

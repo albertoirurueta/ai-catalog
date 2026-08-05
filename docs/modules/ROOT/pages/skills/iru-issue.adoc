@@ -82,7 +82,7 @@ flowchart TD
     B -- yes --> D["Detect type: Jira key vs.\nbare number/#N (GitHub)"]
     D --> E["Fetch ticket via gh issue view\nor Jira MCP tools"]
     E --> F["Classify as feature or hotfix\n(labels/iru-issue type, then title/body content,\nthen ask user if still ambiguous)"]
-    F --> G["Create feature/&lt;id&gt; or hotfix/&lt;id&gt;\nbranch off current branch"]
+    F --> G["Create feature/&amp;lt;id&amp;gt; or hotfix/&amp;lt;id&amp;gt;\nbranch off current branch"]
     G --> H["Invoke explore skill\n(scoped to ticket id)"]
     H --> I["Invoke plan skill\n(scoped to ticket id)"]
     I --> J{"Ask user: proceed\nautomatically with code,\nor review manually?"}

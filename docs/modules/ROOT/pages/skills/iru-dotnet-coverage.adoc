@@ -78,7 +78,7 @@ flowchart TD
     H --> I{Test run succeeded?}
     I -- no --> J["Report failure, stop\n(don't read a stale report)"]
     I -- yes --> K["Find and read the generated\ncoverage.cobertura.xml"]
-    K --> L["Compute line / branch coverage %\nper target class from &lt;line&gt; elements"]
+    K --> L["Compute line / branch coverage %\nper target class from &amp;lt;line&amp;gt; elements"]
     L --> M{Class found in the XML?}
     M -- no --> N["Report 0% (not an error)"]
     M -- yes --> O["Report exact %; state pass/fail\nvs. any given bar"]

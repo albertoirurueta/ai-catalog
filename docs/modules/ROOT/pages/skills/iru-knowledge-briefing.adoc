@@ -64,7 +64,7 @@ flowchart TD
     D -- no --> E["Ask for subject +\noptional person/meeting scope"]
     D -- yes --> F
     E --> F{"Person named?"}
-    F -- yes --> G["Resolve knowledge/people/&lt;name&gt;.md\n(ask if no exact match)"]
+    F -- yes --> G["Resolve knowledge/people/&amp;lt;name&amp;gt;.md\n(ask if no exact match)"]
     F -- no --> H
     G --> H{"Meeting referenced?"}
     H -- yes --> I["Resolve 'last meeting' / date /\ntopic against knowledge/meetings/"]

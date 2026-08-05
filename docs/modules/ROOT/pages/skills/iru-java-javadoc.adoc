@@ -71,7 +71,7 @@ flowchart TD
     D --> E
     E -- yes --> F["Tell user: nothing to document, stop"]
     E -- no --> G["Derive distinct packages\nfrom in-scope files"]
-    G --> H["Discover this project's Javadoc bar:\ncontributor guide, Checkstyle config,\njavadoc-plugin &lt;show&gt;, or observed practice"]
+    G --> H["Discover this project's Javadoc bar:\ncontributor guide, Checkstyle config,\njavadoc-plugin &amp;lt;show&amp;gt;, or observed practice"]
     H --> I["Skim existing documented classes\nfor phrasing conventions"]
     I --> J["Audit each in-scope class: type, fields,\nconstructors, methods, enum constants,\nnested types"]
     J --> K["Record every gap: member,\nwhat's missing, visibility"]

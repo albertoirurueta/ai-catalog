@@ -78,7 +78,7 @@ flowchart TD
     C -- all fail --> D["Warn user with real error;\nask: stop or continue without scanning?"]
     D --> Z
     C -- succeeds --> E{Argument given?}
-    E -- yes --> F["Scoped ad hoc scan:\ndetect-secrets scan &lt;path&gt; --all-files"]
+    E -- yes --> F["Scoped ad hoc scan:\ndetect-secrets scan &amp;lt;path&amp;gt; --all-files"]
     E -- no --> G{.secrets.baseline exists?}
     G -- no --> H["Create it:\ndetect-secrets scan &gt; .secrets.baseline\n(every finding is new)"]
     G -- yes --> I["Keep old contents; rescan with\ndetect-secrets scan --baseline ...;\ndiff old vs. new"]

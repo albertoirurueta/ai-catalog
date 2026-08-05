@@ -203,6 +203,33 @@ if any agent pages exist, an "Agents" heading (matching whatever nesting style `
 elsewhere in this module). Preserve the order and content of existing entries; remove entries only for pages
 Step 8 determined no longer exist.
 
+## Step 9b — Angle brackets in Mermaid labels
+
+Applies to every `[mermaid]` block written in Steps 7 and 8. Placeholder names are written `<timestamp>`,
+`<task-id>`, `<key>` and so on throughout this catalog's prose — but inside a Mermaid **node or edge label**
+that spelling is silently destroyed, and the failure is invisible in the build:
+
+- An AsciiDoc literal block (`....`) escapes `<` to `&lt;` in the HTML, and Asciidoctor passes an entity
+  reference already in the source (`&lt;`) straight through unchanged. Both spellings therefore reach the
+  browser as `&lt;…&gt;`, and `textContent` hands Mermaid a literal `<timestamp>`.
+- Mermaid renders labels as HTML (`htmlLabels`, on by default), so `<timestamp>` is parsed as an unknown tag
+  and **dropped from the diagram entirely** — `meeting-<timestamp>/meeting.md` renders as
+  `meeting-/meeting.md`. Setting `htmlLabels: false` does not help; the text is lost either way.
+
+So write the placeholder **double-escaped** in the AsciiDoc source — `&amp;lt;timestamp&amp;gt;` — which
+reaches Mermaid as `&lt;timestamp&gt;` and renders as the intended `<timestamp>`:
+
+```
+F --> G["Create meeting-&amp;lt;timestamp&amp;gt;/meeting.md\n(Summary + Full transcription)"]
+```
+
+Do **not** use Mermaid's `#60;`/`#62;` entity codes for this. They work in `["…"]` and `{"…"}` nodes but throw
+`Invalid character` in the stadium (`(["…"])`) and subroutine (`[["…"]]`) shapes this catalog's diagrams use,
+which kills the whole diagram. Rewording the label to avoid angle brackets altogether is also fine.
+
+Only label *text* is affected. Never touch link syntax — `-->`, `-.->`, `==>`, `<-->` are Mermaid operators and
+must stay literal. `\n` inside a label is fine and does produce a line break.
+
 ## Step 10 — Verify the site builds
 
 From the docs module directory:
@@ -214,6 +241,11 @@ npx antora <playbook-file>
 Fix any broken `xref:` (a typo'd skill/agent name, a page created under the wrong path), malformed table, or
 invalid Mermaid syntax before finishing — don't report success against a build that actually failed or
 warned about content this skill just wrote.
+
+A clean Antora build proves nothing about the diagrams: the extension emits the block as a `<div class="mermaid">`
+and the browser renders it, so a diagram that throws a syntax error or quietly drops a swallowed label still
+builds without a single warning. Check the diagrams themselves — grep the `[mermaid]` blocks just written for
+raw `<…>` placeholders per Step 9b, and confirm each one still says what it should.
 
 ## Step 11 — Report
 

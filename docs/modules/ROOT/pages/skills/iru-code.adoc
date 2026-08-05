@@ -91,7 +91,7 @@ flowchart TD
     B -- present --> C["Warn if plan already exists\n(fresh / resumed / all-checked)"]
     C --> D["Verify every task/sub-task has a\n[ ]/[x] checkbox and groups exist\n(flat plans treated as single-task groups)"]
     D --> E["Mirror pending groups into\nsession task list (TaskCreate)"]
-    E --> F["Determine language/framework key(s);\ncapture per-key quality baseline via\n&lt;key&gt;-code-quality + security\nbaseline via check-security (sub-agents)"]
+    E --> F["Determine language/framework key(s);\ncapture per-key quality baseline via\n&amp;lt;key&amp;gt;-code-quality + security\nbaseline via check-security (sub-agents)"]
     F --> G{Next unchecked\ntask group?}
     G -- none left --> P["Step 7: full build verification\n+ quality/security baseline comparison"]
     G -- yes --> H["Invoke code-one-task-group for\nthe whole group via isolated-skill-executor"]

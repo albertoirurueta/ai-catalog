@@ -6,9 +6,14 @@ description: Process every file in `knowledge/inbox` — meeting transcriptions 
   attachments copied alongside it, a `knowledge/people/<name>.md` file created or updated per speaker when the
   transcription is diarized, a `knowledge/agreements/agreement-<timestamp>.md` listing every agreement reached as
   numbered, unchecked markdown checkboxes, and one `knowledge/pending/pending-<timestamp>-<n>.md` file per
-  agreement item. Invoke as `/iru-knowledge-process-inbox`. Requires the `knowledge/` structure from
-  `iru-knowledge-setup` to already exist. Use whenever new meeting transcriptions/documents have landed in
-  `knowledge/inbox` and need to be filed, summarized, and turned into tracked agreements and pending tasks.
+  agreement item. Once every meeting in the inbox has been filed, runs the `iru-knowledge-compact` skill over the
+  whole knowledge base so the newly created pending tasks are deduplicated against the ones earlier meetings
+  already produced, and any agreement whose linked GitHub issue/Jira ticket is already closed as completed gets
+  checked off — `iru-knowledge-compact` asks for confirmation before it deletes or edits anything. Invoke as
+  `/iru-knowledge-process-inbox`. Requires the `knowledge/` structure from `iru-knowledge-setup` to already
+  exist. Use whenever new meeting transcriptions/documents have landed in `knowledge/inbox` and need to be filed,
+  summarized, and turned into tracked agreements and pending tasks.
+model: sonnet
 ---
 
 # Knowledge Process Inbox
@@ -148,7 +153,10 @@ For every numbered item in the agreement file, create `knowledge/pending/pending
 ```
 
 Every agreement extracted in Step 8 gets a pending file — there's no such thing as an agreement that's already
-complete at the moment it's extracted from a meeting that just happened.
+complete at the moment it's extracted from a meeting that just happened. Don't skip an item here because an
+earlier meeting already produced a task that looks like it, either: this meeting genuinely re-raised it, and
+collapsing the two is Step 11's job, made with the whole knowledge base in view rather than from this one
+group.
 
 ## Step 10 — Clear this group's files from the inbox
 
@@ -158,10 +166,57 @@ re-run of this skill shouldn't reprocess them into a second, duplicate meeting e
 6-9 for this group have actually completed — leave a group's inbox files in place if any step for it had to
 stop on an unresolved question, so nothing is lost.
 
-## Step 11 — Report
+## Step 11 — Compact the knowledge base
+
+Run this **once for the whole run**, after every group from Step 2 has been through Steps 3-10 — not once per
+group. Compaction is only meaningful with all of this run's new agreements and pending tasks already on disk,
+since what it's looking for spans meetings.
+
+Skip it, and say so in Step 12, if this run created no agreement or pending files at all (every group hit
+Step 8's "none found" case, or the inbox turned out to be empty) — there is nothing new for it to reconcile.
+Otherwise run:
+
+```
+Skill({skill: "iru-knowledge-compact"})
+```
+
+What it does for this run, and what to keep in mind while it runs:
+
+- **Duplicates.** A meeting very often re-raises an action item an earlier meeting already agreed — Step 9
+  deliberately files that as its own pending task rather than judging it in isolation. `iru-knowledge-compact`
+  is what then groups those tasks, keeps the one that already carries a tracker issue (or the earliest, if none
+  do), merges the newer task's extra context into it, and removes the rest. This is the main reason this step
+  exists, and why it runs over the whole knowledge base rather than just this run's files.
+- **Completed agreements.** For any pending task or open agreement item carrying a `- GitHub issue:`/`- Jira
+  ticket:` line (added by `iru-knowledge-to-issue`/`iru-knowledge-to-jira`), it reads the issue's current
+  state and checks off the ones already closed as completed. A meeting frequently restates work that shipped
+  weeks ago; this is what stops that from re-entering the base as an open item.
+- **It asks before changing anything.** `iru-knowledge-compact` presents its full plan of deletions/edits for
+  confirmation. Pass that plan to the user as it comes and let them answer — do not approve it on their behalf,
+  and do not pre-empt it by deleting or checking off anything here yourself.
+- **It only ever removes.** It never creates or rewords an agreement, and it never touches `knowledge/meetings`
+  or `knowledge/people` — the meeting records this skill just wrote are safe from it.
+
+Two cases to handle rather than treat as errors:
+
+- **`iru-knowledge-compact` isn't installed** in this repository's `.claude/skills/` (this catalog's skills are
+  adopted individually, so it may not have been copied in): skip this step and note it in Step 12, pointing the
+  user at the skill as an optional add-on. Never hand-roll its dedup/completion logic here.
+- **It stops early or reports inconsistencies** (no tracker reachable, an issue lookup that failed, an item it
+  declined to touch): that's its own reporting to make. Carry its outcome into Step 12 unchanged; this skill's
+  filing work in Steps 3-10 is already complete and correct either way, so a compaction that couldn't run is
+  never a reason to undo any of it.
+
+## Step 12 — Report
 
 Per meeting group processed: the meeting directory created, whether it was diarized (and how many people files
 were created vs. updated, with names), how many agreements were found (or none), and how many pending files
 were created. List any inbox files left behind because processing stopped on an unresolved question, and why.
+
+Then report Step 11's compaction outcome as its own section — duplicates collapsed, agreements closed out from
+their issue status, anything it left for a human decision — or why it was skipped. Keep this separate from the
+filing summary above, so it stays clear which pending files this run created and which ones compaction then
+removed.
+
 Remind the user that `iru-knowledge-complete` is what later marks an agreement item done and removes its
-pending file.
+pending file, for work whose completion no tracker issue can prove.

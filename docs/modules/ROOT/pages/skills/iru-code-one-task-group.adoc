@@ -61,7 +61,7 @@ plan sets one, the group's `Parallelizable` verdict, and any relevant "Current c
 flowchart TD
     A[Start /iru-code-one-task-group] --> B["Step 1: resolve each task's\nlanguage/framework key; find installed\n*-code-one-task-group skills"]
     B --> C["Partition tasks into per-key buckets\n+ a remaining/unresolved bucket"]
-    C --> D{Bucket has a matching\n&lt;key&gt;-code-one-task-group skill?}
+    C --> D{Bucket has a matching\n&amp;lt;key&amp;gt;-code-one-task-group skill?}
     D -- yes --> E["Step 2: invoke it once for\nthe whole bucket via Skill()"]
     D -- no --> F["Step 3: implement each task directly,\nbest effort (impl, tests, license,\ndocs, tests, coverage, quality)"]
     E -- blocker reported --> G["Record blocker for this task"]

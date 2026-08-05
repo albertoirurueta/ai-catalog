@@ -1,0 +1,138 @@
+= Knowledge Compact
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Keep `knowledge/pending` and `knowledge/agreements` honest: one pending file per distinct piece of outstanding
+work, and nothing still marked open once its tracked issue says it's done.
+
+== Purpose
+
+`iru-knowledge-compact` compacts the knowledge base that xref:skills/iru-knowledge-process-inbox.adoc[`iru-knowledge-process-inbox`]
+builds up meeting after meeting. Two kinds of cruft accumulate there naturally, and neither is a bug in how the
+base was filed: the same action item gets re-raised in a later meeting and is deliberately filed as its own
+pending task rather than judged in isolation, and work that has actually shipped stays marked open because
+nothing was watching its tracker issue. This skill sweeps both.
+
+It groups pending tasks that describe *the same piece of work* — not merely the same words — and for each group
+keeps a single survivor: the one member that already carries a tracker issue, or the earliest task id when none
+do, folding whatever extra context the removed members carried (a deadline, a named owner, a narrowed scope, an
+extra meeting that re-raised it) into the survivor before deleting them. A group where *more than one* member
+has a tracker issue is deliberately left untouched and reported for a human decision, since collapsing it would
+orphan a tracked issue. It then reads the current state of every GitHub issue / Jira ticket recorded on a
+pending task or agreement item by xref:skills/iru-knowledge-to-issue.adoc[`iru-knowledge-to-issue`] /
+xref:skills/iru-knowledge-to-jira.adoc[`iru-knowledge-to-jira`], and closes out the ones already closed as
+completed — delegating each to xref:skills/iru-knowledge-complete.adoc[`iru-knowledge-complete`] where a
+pending file still exists. An issue closed as *not planned* is treated as not completed and put to the user,
+never checked off as if it shipped. Finally it repairs drift between the two directories.
+
+The skill only ever *reduces* the base. It never creates or rewords an agreement, never touches
+`knowledge/meetings` or `knowledge/people` (a meeting record is history), and never closes, reopens, or
+comments on a tracker issue — it reads issue state, it doesn't drive it. Every deletion and edit is presented
+for confirmation first, because the duplicate judgement is the skill's own reading of the text rather than
+something the files state outright.
+
+== Purpose group
+
+xref:index.adoc#group-knowledge[Knowledge Base Management]
+
+== Invocation
+
+[source]
+----
+/iru-knowledge-compact
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|(none)
+|No
+|This skill takes no arguments — it sweeps the whole of `knowledge/pending` and `knowledge/agreements`. It
+stops early if `knowledge/` doesn't exist yet (run xref:skills/iru-knowledge-setup.adoc[`iru-knowledge-setup`]
+and then xref:skills/iru-knowledge-process-inbox.adoc[`iru-knowledge-process-inbox`] first), and reports there
+is nothing to compact if both directories hold nothing beyond `.gitkeep`.
+|Not applicable.
+|===
+
+Tracker access is checked but never required: `gh` (authenticated, on a GitHub-hosted repository) for
+`- GitHub issue:` references, and a connected Jira MCP tool for `- Jira ticket:` references. If neither is
+reachable the run continues with duplicate detection and drift repair, skipping the completion checks rather
+than guessing whether anything is done.
+
+== Outputs
+
+* Duplicate pending files deleted, with the extra context they carried appended to the surviving
+  `knowledge/pending/pending-<timestamp>-<n>.md` along with a `- Supersedes: <task-id>` note. The removed
+  members' agreement items stay unchecked and gain a `_(superseded by task <survivor-id>)_` note — a duplicate
+  is still outstanding work, just tracked elsewhere.
+* Completed items closed out: the pending file removed and its numbered agreement item checked off (via
+  `iru-knowledge-complete`), or the item's `[ ]` flipped to `[x]` directly where no pending file remained.
+* Approved drift repairs: a pending file whose agreement item is already `[x]` deleted.
+* Approved closed-as-not-planned items handled as the user chose — annotated `_(not planned — <issue url>)_`
+  with the checkbox left `[ ]`, since the work was abandoned rather than delivered.
+* A grouped report: duplicates collapsed (and those deliberately left alone, plus borderline pairs it declined
+  to merge), items closed out and the issue that proved each one, closed-as-not-planned items, drift repairs,
+  untracked open agreement items, and everything skipped with its reason — closing with pending/open-item
+  counts before and after.
+* Nothing at all, if the user cancels at the confirmation step.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-knowledge-compact] --> B{"knowledge/ exists\nwith content?"}
+    B -- no --> Z1["Report: run iru-knowledge-setup +\niru-knowledge-process-inbox first, stop"]
+    B -- "only .gitkeep" --> Z2[Report nothing to compact, stop]
+    B -- yes --> C["Check tracker reachability\n(gh / Jira MCP) — never a hard stop"]
+    C --> D["Build inventory: every pending file\n(task id, agreement + meeting refs,\ntracker line, extra context)\nand every numbered agreement item"]
+    D --> E["Cross-reference the two directories"]
+    E --> F["Group duplicates by same work;\npick survivor: the tracked one, else\nthe earliest task id"]
+    F --> G{"More than one member\nhas a tracker issue?"}
+    G -- yes --> H["Remove nothing from this group —\nreport for a human decision"]
+    G -- no --> I["Work out the merge text\nthe survivor is missing"]
+    H --> J
+    I --> J{"Tracker\nreachable?"}
+    J -- no --> K["Skip completion checks,\nsay so in the report"]
+    J -- yes --> L["Look up each tracked item's state:\ncompleted / not planned /\nstill open / lookup failed"]
+    K --> M
+    L --> M["Add drift repairs found in the\ncross-reference"]
+    M --> N["Present the full plan\n(AskUserQuestion)"]
+    N -- cancel --> R
+    N -- "apply some" --> O
+    N -- "apply everything" --> O["Merge context into survivors first,\nthen delete duplicates, then close out\ncompleted items, then drift repairs,\nthen not-planned decisions"]
+    O --> P{"Completed item has\na pending file?"}
+    P -- yes --> Q["Invoke iru-knowledge-complete\nwith the task id"]
+    P -- no --> Q2["Check off the agreement item\ndirectly"]
+    Q --> R
+    Q2 --> R["Report, grouped, with before/after counts"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-knowledge-complete.adoc[`iru-knowledge-complete`] — Step 6, once per completed item that still
+  has a pending file, to delete that file and check off its agreement item. If it stops on an inconsistency (a
+  missing agreement file, an item not found, an item already checked), `iru-knowledge-compact` records the
+  message and carries it into its report rather than working around it by hand.
+
+=== Invoked by
+
+* xref:skills/iru-knowledge-process-inbox.adoc[`iru-knowledge-process-inbox`] — as its Step 11, once for the
+  whole run after every meeting group has been filed, so the newly created pending tasks are reconciled against
+  what earlier meetings already produced. Skipped there if the run created no agreements at all, or if this
+  skill isn't installed in the repository (the catalog's skills are adopted individually).
+
+It is also a top-level entry point, run directly by a person as periodic housekeeping.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in or custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-knowledge-compact/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

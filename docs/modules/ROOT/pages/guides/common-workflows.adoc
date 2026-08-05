@@ -141,7 +141,7 @@ flowchart LR
     E -- edits --> D
     E -- declines --> F["Stop: draft kept,\nnothing filed"]
     E -- confirmed --> G["File via gh issue create\nor Jira MCP tools"]
-    G --> H(["/iru-issue &lt;id&gt; or /iru-plan &lt;id&gt;\n(separate, later invocation)"])
+    G --> H(["/iru-issue &amp;lt;id&amp;gt; or /iru-plan &amp;lt;id&amp;gt;\n(separate, later invocation)"])
 ....
 
 [[generating-a-release]]

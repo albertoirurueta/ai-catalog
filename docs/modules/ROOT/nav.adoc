@@ -38,6 +38,7 @@
 ** xref:skills/iru-java-test.adoc[]
 ** xref:skills/iru-jira-custom-context.adoc[]
 ** xref:skills/iru-knowledge-briefing.adoc[]
+** xref:skills/iru-knowledge-compact.adoc[]
 ** xref:skills/iru-knowledge-complete.adoc[]
 ** xref:skills/iru-knowledge-process-inbox.adoc[]
 ** xref:skills/iru-knowledge-setup.adoc[]

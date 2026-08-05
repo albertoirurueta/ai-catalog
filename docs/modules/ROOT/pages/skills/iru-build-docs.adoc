@@ -56,7 +56,7 @@ flowchart TD
     C -- yes --> G["Locate playbook file;\nconfirm Node.js/npm usable"]
     G --> H{Node.js usable?}
     H -- no --> H1[Stop; point at setup-antora's\ninstall instructions]
-    H -- yes --> I["npm ci (or npm install\nif no lockfile) && npx antora &lt;playbook&gt;"]
+    H -- yes --> I["npm ci (or npm install\nif no lockfile) && npx antora &amp;lt;playbook&amp;gt;"]
     I --> J{Build succeeds?}
     J -- yes --> K[Report built index.html path]
     J -- no --> L[Report Antora/Asciidoctor error verbatim;\nno content fix attempted]

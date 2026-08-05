@@ -71,7 +71,7 @@ flowchart TD
     D --> E{Target classes given?}
     E -- yes --> F["Use given class list"]
     E -- no --> G["Infer from test selector\n(FooTest -> Foo), or defer to\nevery class touched by the run"]
-    F --> H["Run mvn clean jacoco:prepare-agent\ntest jacoco:report -Dtest=&lt;selector&gt;"]
+    F --> H["Run mvn clean jacoco:prepare-agent\ntest jacoco:report -Dtest=&amp;lt;selector&amp;gt;"]
     G --> H
     H --> I{Build succeeded?}
     I -- no --> J["Report failure, stop\n(don't read a stale report)"]
