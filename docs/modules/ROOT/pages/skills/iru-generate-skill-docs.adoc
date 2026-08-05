@@ -1,4 +1,6 @@
 = Generate Skill Docs
+:description: Regenerates this catalog's Antora documentation site, the skill reference table, dependency graph, and per-skill pages, from the actual SKILL.md files.
+:keywords: iru-generate-skill-docs, claude code skill, antora, asciidoc, documentation generation, skill catalog, dependency graph
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

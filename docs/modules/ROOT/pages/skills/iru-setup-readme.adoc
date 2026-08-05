@@ -1,4 +1,6 @@
 = Setup Readme
+:description: Creates or refreshes a repository's root README.md with badges, a status table, doc links, and install instructions drawn from what actually exists.
+:keywords: iru-setup-readme, claude code skill, readme, badges, ci, sonarqube, maven, documentation, installation instructions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

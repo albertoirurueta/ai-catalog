@@ -1,4 +1,6 @@
 = Plugins
+:description: Explains what a Claude Code plugin bundles, its directory layout, marketplaces, installing and updating plugins, and how to scaffold a new one.
+:keywords: claude code, plugins, plugin marketplace, plugin.json, installing plugins, updating plugins, plugin scaffolding
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

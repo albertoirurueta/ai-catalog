@@ -1,4 +1,6 @@
 = PR Review
+:description: Reviews an open pull request against codebase conventions and linked ticket intent, posting findings as comments without editing code.
+:keywords: iru-pr-review, claude code skill, github, bitbucket, azure devops, jira, code review, review comments, pull request review, ticket intent
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

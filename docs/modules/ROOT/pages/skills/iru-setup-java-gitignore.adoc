@@ -1,4 +1,6 @@
 = Setup Java Gitignore
+:description: Creates or refreshes a Java project's root .gitignore with build-tool, IDE, and Antora build-output entries, showing a diff before overwriting.
+:keywords: iru-setup-java-gitignore, claude code skill, java, maven, gradle, gitignore, intellij, antora, build artifacts
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

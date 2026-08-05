@@ -1,4 +1,6 @@
 = Plan
+:description: Produces a dependency-aware, checkbox-driven implementation plan for a GitHub issue, Jira ticket, or free-form task, grounded in the codebase's real state.
+:keywords: iru-plan, claude code skill, implementation plan, github issue, jira ticket, task groups, checkbox plan
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

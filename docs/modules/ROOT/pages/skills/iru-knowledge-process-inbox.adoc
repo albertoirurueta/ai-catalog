@@ -1,4 +1,6 @@
 = Knowledge Process Inbox
+:description: Files meeting transcriptions from the knowledge inbox into meeting summaries, people profiles, tracked agreements, and open pending tasks for follow-up.
+:keywords: iru-knowledge-process-inbox, claude code skill, knowledge base, meeting transcription, people profiles, agreements, pending tasks, inbox processing
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

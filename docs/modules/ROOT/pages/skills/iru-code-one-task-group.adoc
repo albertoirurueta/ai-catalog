@@ -1,4 +1,6 @@
 = Code One Task Group
+:description: Implements every task in one plan group by dispatching each task's language to a matching skill and checks off its implementation_plan.md boxes.
+:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, dotnet, database, code generation, checklist update
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

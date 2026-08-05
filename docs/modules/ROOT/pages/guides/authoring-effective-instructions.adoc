@@ -1,4 +1,6 @@
 = Authoring effective instructions
+:description: Shared guidance for phrasing CLAUDE.md rules, SKILL.md steps, and agent prompts: direct wording, step structure, context budgeting, and examples.
+:keywords: claude code, claude.md, skill authoring, agent design, prompt engineering, context window, step-structured instructions, writing effective prompts
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

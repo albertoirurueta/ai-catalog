@@ -1,4 +1,6 @@
 = Java Generate All Tests
+:description: Scans a Java/Maven codebase for classes with no tests or below 80% line coverage, then writes or extends JUnit tests until each class clears that bar.
+:keywords: iru-java-generate-all-tests, claude code skill, java, maven, junit, line coverage, generate unit tests, code coverage report
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

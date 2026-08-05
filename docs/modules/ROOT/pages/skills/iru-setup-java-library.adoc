@@ -1,4 +1,6 @@
 = Setup Java Library
+:description: Generates pom.xml for a new Java library from a house template with JUnit/Mockito deps and sign profiles, scaffolding Maven source folders.
+:keywords: iru-setup-java-library, claude code skill, java, maven, pom.xml, junit, mockito, source layout, license
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

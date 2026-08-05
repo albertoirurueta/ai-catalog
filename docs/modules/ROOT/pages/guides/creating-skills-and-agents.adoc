@@ -1,4 +1,6 @@
 = Creating and updating skills and agents
+:description: Covers how to author and invoke Claude Code skills and agents: file locations, naming conventions, slash commands versus delegation, and drafting tips.
+:keywords: claude code, skill authoring, agent design, slash commands, skill.md, custom agents, naming conventions, invoking skills
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

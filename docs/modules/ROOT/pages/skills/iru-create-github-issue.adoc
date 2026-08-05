@@ -1,4 +1,6 @@
 = Create GitHub Issue
+:description: Drafts and files a well-formed GitHub issue grounded in the codebase, attaching provided files, and asking for due date and importance before filing.
+:keywords: iru-create-github-issue, claude code skill, github issue, gh cli, ticket intake, bug report, feature request, issue attachments, labels
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

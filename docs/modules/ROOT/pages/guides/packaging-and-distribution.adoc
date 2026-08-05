@@ -1,4 +1,6 @@
 = Packaging and distributing skills, agents, and CLAUDE.md
+:description: Compares copying skill and agent files directly into a repository against packaging them as a versioned plugin distributed through a marketplace.
+:keywords: claude code, plugin packaging, marketplace distribution, skill distribution, claude.md sharing, versioning skills, copying skills
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

@@ -157,6 +157,18 @@ order:
 Match the AsciiDoc conventions already used on this page (table `[cols=...]` syntax, `xref:` link style,
 any existing AI-generated-content disclaimer note — keep it on every page you touch or create).
 
+Give the page (or refresh it, if already present) SEO document attributes right after the `= AI Catalog`
+title line, with **no blank line between the title and the attributes** — a blank line ends the AsciiDoc
+document header, and Antora's default UI only reads `:description:`/`:keywords:` into the page's
+`<meta name="description">`/`<meta name="keywords">` tags when they're real header attributes, not body
+text:
+- `:description:` — a single plain-text line (no markup, no xrefs), 120-155 characters, summarizing what
+  this catalog actually is right now (grounded in Step 1's opening paragraph and the current skill/agent
+  count from Step 2).
+- `:keywords:` — 6-10 lowercase comma-separated terms grounded in the actual current catalog: "claude code
+  skills", "claude code agents", the purpose-group names from Step 5, and the languages/platforms this
+  catalog's skills actually cover (e.g. java, dotnet, github, jira — only ones truly present).
+
 ## Step 8 — Write one detail page per skill and per documented agent
 
 Create (or update, if re-running after a skill/agent changed) `docs/modules/ROOT/pages/skills/<name>.adoc`
@@ -164,8 +176,17 @@ for every skill, and `docs/modules/ROOT/pages/agents/<name>.adoc` for every cust
 `docs/modules/ROOT/pages/agents/overview.adoc` covering all built-in agent types together, if there is no
 `.claude/agents/` directory to give each one its own natural page. Give every page this shape:
 
-1. `= <Title>` heading, then the repository's existing AI-generated-content disclaimer note if one is used
-   elsewhere in this docs module.
+1. `= <Title>` heading, immediately followed — **no blank line in between**, since a blank line ends the
+   AsciiDoc document header and Antora's default UI only picks up `:description:`/`:keywords:` as page
+   metadata (`<meta name="description">`/`<meta name="keywords">`) when they're real header attributes — by:
+   - `:description:` — a single plain-text line (no markup, no backticks, no xrefs), 120-155 characters,
+     a concrete summary of what this specific skill/agent does, grounded in Step 3's expanded purpose.
+     Distinct per page; never reused boilerplate.
+   - `:keywords:` — 6-10 lowercase comma-separated terms grounded in this page's actual content: the
+     skill/agent's own name, "claude code skill" or "claude code agent", the specific technology/domain it
+     actually mentions, and 2-3 action-oriented phrases describing what it does.
+   Then the repository's existing AI-generated-content disclaimer note if one is used elsewhere in this
+   docs module.
 2. A short intro paragraph (the expanded purpose from Step 3).
 3. `== Purpose` — the fuller explanation of what problem this skill/agent solves and how it fits the catalog.
 4. `== Purpose group` — an `xref:index.adoc#group-<slug>[]` link to its Step 5 group (skills only).

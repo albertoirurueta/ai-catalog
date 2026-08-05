@@ -1,4 +1,6 @@
 = .NET Test
+:description: Runs a .NET project's or solution's test suite via dotnet test, scoped to a class, method, namespace pattern, or trait, and reports pass/fail results.
+:keywords: iru-dotnet-test, claude code skill, dotnet, csharp, unit testing, xunit, nunit, mstest, run unit tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

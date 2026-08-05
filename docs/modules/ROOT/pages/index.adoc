@@ -1,4 +1,6 @@
 = AI Catalog
+:description: AI Catalog is a collection of Claude Code Skills and agents — reusable playbooks for issue-to-PR, Java/.NET coding, and repository bootstrap workflows.
+:keywords: claude code skills, claude code agents, ai catalog, slash commands, software engineering playbooks, issue to pr workflow, java development, dotnet development, skill catalog
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

@@ -1,4 +1,6 @@
 = .NET Code One Task
+:description: Implements a single .NET/C# task's code and tests from a plan, then checks off its implementation_plan.md checkbox with a group-validation-pending note.
+:keywords: iru-dotnet-code-one-task, claude code skill, dotnet, csharp, xunit, nunit, mstest, implementation plan, unit tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

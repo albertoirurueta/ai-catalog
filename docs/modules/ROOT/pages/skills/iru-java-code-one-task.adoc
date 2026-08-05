@@ -1,4 +1,6 @@
 = Java Code One Task
+:description: Implements a single Java task from an implementation plan, writing the code and JUnit tests, then checking off its checkbox, nothing else here.
+:keywords: iru-java-code-one-task, claude code skill, java, junit, implementation plan, task implementation, unit testing
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

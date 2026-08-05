@@ -1,4 +1,6 @@
 = Check License
+:description: Verifies source and test files carry a license header matching the repository's license and adds or fixes headers that are missing or incorrect.
+:keywords: iru-check-license, claude code skill, license headers, license compliance, source code audit, add license header, copyright header
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

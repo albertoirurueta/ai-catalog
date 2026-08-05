@@ -1,4 +1,6 @@
 = Java Test
+:description: Runs a Java project's JUnit suite via Maven Surefire, scoped to a class, method, package pattern, or tag expression, then reports a pass/fail summary.
+:keywords: iru-java-test, claude code skill, java, maven, junit, surefire, run unit tests, test selector
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

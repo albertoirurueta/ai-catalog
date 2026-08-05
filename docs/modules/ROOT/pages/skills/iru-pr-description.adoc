@@ -1,4 +1,6 @@
 = PR Description
+:description: Drafts a pull request description from the real code diff and opens or updates a PR on GitHub, Bitbucket, or Azure DevOps.
+:keywords: iru-pr-description, claude code skill, github, bitbucket, azure devops, pull request, draft pr description, git diff analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

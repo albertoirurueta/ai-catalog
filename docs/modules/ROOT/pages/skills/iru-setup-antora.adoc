@@ -1,4 +1,6 @@
 = Setup Antora
+:description: Bootstraps a working Antora documentation site: installs Node.js/Antora, scaffolds antora.yml and starter pages, and verifies the build.
+:keywords: iru-setup-antora, claude code skill, antora, asciidoc, nodejs, documentation site, nav.adoc, static site build
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

@@ -1,4 +1,6 @@
 = Isolated Skill Executor
+:description: Claude Code agent that runs one named skill end-to-end in a fresh context, isolated from prior conversation, then reports a concise outcome to the caller.
+:keywords: iru-isolated-skill-executor, claude code agent, isolate sub-agent context, fresh context execution, skill delegation, run implementation plan, hard-stop gate tracking, prevent context contamination
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

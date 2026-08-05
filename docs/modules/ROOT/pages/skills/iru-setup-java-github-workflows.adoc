@@ -1,4 +1,6 @@
 = Setup Java GitHub Workflows
+:description: Scaffolds develop.yml, main.yml, and sync.yml GitHub Actions workflows for a Java/Maven CI/CD pipeline covering build, test, and publishing.
+:keywords: iru-setup-java-github-workflows, claude code skill, java, maven, github actions, ci/cd, jacoco coverage, sonarqube, maven central, checkstyle
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

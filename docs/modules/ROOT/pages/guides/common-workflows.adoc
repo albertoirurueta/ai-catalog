@@ -1,4 +1,6 @@
 = Common workflows
+:description: Walks through the day-to-day ticket-to-PR development cycle, filing a ticket with AI assistance, and cutting a release using this catalog's skills.
+:keywords: claude code, development workflow, ticket to pull request, iru-issue, iru-plan, iru-code, release process, skill orchestration
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

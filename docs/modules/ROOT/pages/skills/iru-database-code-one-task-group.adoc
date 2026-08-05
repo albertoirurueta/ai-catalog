@@ -1,4 +1,6 @@
 = Database Code One Task Group
+:description: Implements every task in a database-tagged plan bucket in order, generating and executing queries, then updates the plan and database-report.md.
+:keywords: iru-database-code-one-task-group, claude code skill, database, sql, migrations, queries, implementation plan, database-report.md
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

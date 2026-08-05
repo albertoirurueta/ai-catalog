@@ -1,4 +1,6 @@
 = Knowledge Setup
+:description: Bootstraps the knowledge directory structure at the repository root, creating inbox, meetings, people, agreements, and pending subdirectories idempotently.
+:keywords: iru-knowledge-setup, claude code skill, knowledge base, directory bootstrap, repository setup, idempotent setup
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

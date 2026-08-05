@@ -1,4 +1,6 @@
 = Creating GitHub issues and Jira tickets
+:description: Details what information iru-create-github-issue and iru-create-jira-ticket gather, how they structure a drafted ticket, and which skills run behind it.
+:keywords: claude code, github issue, jira ticket, ticket creation, iru-create-github-issue, iru-create-jira-ticket, ai-assisted ticket drafting
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

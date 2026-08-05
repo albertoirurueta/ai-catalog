@@ -1,4 +1,6 @@
 = The CLAUDE.md file
+:description: Explains what CLAUDE.md is, where Claude Code loads it from, its precedence and @path imports, and how to create, update, and keep it short.
+:keywords: claude code, claude.md, project memory, claude.md imports, claude.md precedence, writing claude.md, agent context
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

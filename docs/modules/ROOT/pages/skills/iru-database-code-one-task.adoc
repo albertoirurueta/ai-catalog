@@ -1,4 +1,6 @@
 = Database Code One Task
+:description: Generates the queries a single database task requires, executes the safe read-only ones via a connected MCP, and logs everything in database-report.md.
+:keywords: iru-database-code-one-task, claude code skill, database, sql, mongodb, queries, read-only queries, database-report.md, schema
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

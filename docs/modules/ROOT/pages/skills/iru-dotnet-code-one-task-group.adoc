@@ -1,4 +1,6 @@
 = .NET Code One Task Group
+:description: Implements one bucket of .NET tasks via iru-dotnet-code-one-task per task, then validates the bucket once for license headers, doc comments, and tests.
+:keywords: iru-dotnet-code-one-task-group, claude code skill, dotnet, csharp, code coverage, license headers, xml doc comments, quality baseline, full test suite
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

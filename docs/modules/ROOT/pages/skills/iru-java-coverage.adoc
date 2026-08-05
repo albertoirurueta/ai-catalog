@@ -1,4 +1,6 @@
 = Java Coverage
+:description: Runs JaCoCo via Maven and reads the generated coverage report to give exact line coverage percentages for specific Java classes against a target bar.
+:keywords: iru-java-coverage, claude code skill, java, maven, jacoco, code coverage report, unit testing
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

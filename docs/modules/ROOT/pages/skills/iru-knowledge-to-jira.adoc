@@ -1,4 +1,6 @@
 = Knowledge to Jira
+:description: Converts a pending or not-completed knowledge-base agreement into a Jira ticket, grounding the drafted purpose in meeting context and the current codebase.
+:keywords: iru-knowledge-to-jira, claude code skill, jira ticket, knowledge base, agreements, convert agreement to ticket, meeting context
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

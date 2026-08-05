@@ -1,4 +1,6 @@
 = Knowledge Compact
+:description: Deduplicates knowledge-base pending tasks describing the same work and closes out agreements whose linked GitHub issue or Jira ticket is already completed.
+:keywords: iru-knowledge-compact, claude code skill, knowledge base, github issues, jira tickets, deduplicate pending tasks, close completed agreements, cleanup
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

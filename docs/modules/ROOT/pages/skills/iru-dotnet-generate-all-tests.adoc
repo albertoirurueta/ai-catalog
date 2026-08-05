@@ -1,4 +1,6 @@
 = .NET Generate All Tests
+:description: Scans an entire .NET codebase for classes lacking tests or below 80% coverage and writes or extends unit tests until every class clears the bar.
+:keywords: iru-dotnet-generate-all-tests, claude code skill, dotnet, csharp, unit testing, code coverage, xunit, nunit, mstest, generate tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

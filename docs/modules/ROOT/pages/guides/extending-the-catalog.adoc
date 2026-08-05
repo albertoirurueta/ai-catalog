@@ -1,4 +1,6 @@
 = Extending the skills and agents catalog
+:description: Maps out where this skills catalog is built to be extended: new language backends, ticket trackers, git hosts, quality gates, and custom agent shapes.
+:keywords: claude code, extending skills, language backend, quality gates, iru-code pipeline, custom agents, plugin extension points
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

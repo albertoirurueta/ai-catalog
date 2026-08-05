@@ -1,5 +1,6 @@
 = Reference
-:description: Links to sources
+:description: Reference page linking to the AI Catalog GitHub repository, the source of every Claude Code skill and agent documented on this site.
+:keywords: ai catalog, github repository, claude code skills, claude code agents, reference links, source code
 
 
 [cols="1,3", options="header"]

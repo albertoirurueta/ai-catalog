@@ -1,4 +1,6 @@
 = Release
+:description: Cuts a release branch from develop, bumps the SNAPSHOT version everywhere it appears, drafts release notes, and opens a pull request into main.
+:keywords: iru-release, claude code skill, maven, gitflow, changelog, release notes, version bump, pull request, github
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

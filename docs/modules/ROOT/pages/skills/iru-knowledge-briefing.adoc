@@ -1,4 +1,6 @@
 = Knowledge Briefing
+:description: Summarizes agreements and pending tasks recorded in the knowledge base for a chosen subject, optionally scoped to a person or meeting, read-only.
+:keywords: iru-knowledge-briefing, claude code skill, knowledge base, meetings, agreements, pending tasks, briefing summary, read-only report
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

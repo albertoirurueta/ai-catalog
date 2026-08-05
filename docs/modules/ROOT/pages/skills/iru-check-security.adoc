@@ -1,4 +1,6 @@
 = Check Security
+:description: Scans the repository for committed secrets like API keys and passwords using detect-secrets, tracking a baseline so only new findings are reported.
+:keywords: iru-check-security, claude code skill, detect-secrets, secret scanning, security, credentials, api keys, baseline, leaked secrets
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

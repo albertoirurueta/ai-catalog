@@ -1,4 +1,6 @@
 = Jira Custom Context
+:description: Gathers organization-specific context for a Jira ticket drafted by iru-create-jira-ticket, meant to be extended per organization with custom questions.
+:keywords: iru-jira-custom-context, claude code skill, jira, jira ticket, custom context, iru-create-jira-ticket, organization-specific, extensibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

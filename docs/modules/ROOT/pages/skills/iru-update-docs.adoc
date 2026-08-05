@@ -1,4 +1,6 @@
 = Update Docs
+:description: Updates an Antora module's AsciiDoc pages to reflect actual code changes from a git diff, editing only the affected pages and never source code.
+:keywords: iru-update-docs, claude code skill, antora, asciidoc, documentation, git diff, confluence, mermaid diagrams, code-to-docs sync
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

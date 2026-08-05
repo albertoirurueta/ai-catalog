@@ -1,4 +1,6 @@
 = Agents
+:description: Overview of the built-in Explore and general-purpose Claude Code agent types this catalog uses for read-only codebase search and one-off skill delegation.
+:keywords: claude code agent, explore agent, general-purpose agent, built-in agent types, read-only codebase search, isolate sub-agent context, skill delegation, drafting pr descriptions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

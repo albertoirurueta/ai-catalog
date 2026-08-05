@@ -1,4 +1,6 @@
 = Java Code One Task Group
+:description: Implements every Java task in one plan bucket, then validates the whole group once for license headers, javadoc, tests, coverage, and code quality.
+:keywords: iru-java-code-one-task-group, claude code skill, java, maven, junit, jacoco, javadoc, license headers, code quality, implementation plan
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

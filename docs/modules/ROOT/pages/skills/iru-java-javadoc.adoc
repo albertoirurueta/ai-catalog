@@ -1,4 +1,6 @@
 = Java Javadoc
+:description: Audits Java classes and packages for missing Javadoc, generates the missing comments and package-info files, then verifies the Javadoc build succeeds.
+:keywords: iru-java-javadoc, claude code skill, java, javadoc, maven, checkstyle, package-info, generate documentation
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 

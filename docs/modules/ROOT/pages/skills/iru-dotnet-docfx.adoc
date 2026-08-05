@@ -1,4 +1,6 @@
 = .NET DocFX
+:description: Audits C# types for missing XML doc comments, generates the missing ones, and validates the result by building a DocFX documentation site.
+:keywords: iru-dotnet-docfx, claude code skill, dotnet, docfx, xml doc comments, csharp, generate documentation, code documentation
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
