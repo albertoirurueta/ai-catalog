@@ -1,0 +1,133 @@
+= Setup Java Spring Boot Poms
+:description: Generates the Maven reactor for a hexagonal Spring Boot service: a root pom holding every version, one pom per module, and the full quality plugin set.
+:keywords: iru-setup-java-springboot-pom, claude code skill, maven multi-module, pom.xml, dependency management, maven enforcer, jacoco, checkstyle, spotbugs, java 21
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generates the whole Maven reactor for a DDD/hexagonal Spring Boot service: the root `pom.xml` that holds every
+dependency and plugin version, one `pom.xml` per module, and the shared static-analysis configuration those poms
+reference.
+
+== Purpose
+
+`iru-setup-java-springboot-pom` exists to make the hexagonal architecture enforceable by the build rather than by
+convention. Two rules govern everything it writes:
+
+* **Every version lives in the root `pom.xml`.** Module poms declare `groupId`/`artifactId` only, resolving
+  through the root's `dependencyManagement` and `pluginManagement`. A `<version>` in a module pom is treated as a
+  defect, and the skill's own verification step greps `mvn dependency:tree` output for exactly that.
+* **Starter and driver artifact names come from the Spring Initializr reference pom, never from memory**, because
+  they change across Boot major versions.
+
+It enforces Java 21 through `maven.compiler.release`, `java.version`, and a `maven-enforcer-plugin`
+`requireJavaVersion [21,)` rule, and enforces the module dependency direction through a per-module
+`bannedDependencies` rule — `domain` may not see Spring or any outer module, `application` may not see
+`infrastructure` or `api`, no `infrastructure` module may see a sibling, and `api` may not see `infrastructure`.
+`boot` is the composition root and bans nothing.
+
+The full report/quality plugin set is wired with generated sources excluded from every analysis: Javadoc,
+Checkstyle, PMD, SpotBugs, Surefire (unit, `*Test`), Failsafe (integration, `*IT`), JaCoCo per module plus a
+`report-aggregate` in a dedicated `coverage` module, JXR for cross-referenced source, Maven Site as the
+aggregator, `groovy-maven-plugin` writing `build-info.properties` into `boot`, and `sonar-maven-plugin`.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-pom
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the path to the manifest written by `iru-setup-java-springboot`. Read in full for
+the project identity, concurrency model, and technology list. If the file doesn't exist the skill stops and points
+the user at `/iru-setup-java-springboot` — it deliberately does not re-interview.
+|`springboot-stack.yml` at the repository root
+
+|`initializr-pom`
+|No
+|`args` `key: value` line giving the path to the reference pom fetched from Spring Initializr. If absent, the skill
+fetches it itself from the manifest's `initializr.dependencies` and confirms the response is XML rather than a
+plain-text error.
+|Fetched fresh from `https://start.spring.io/pom.xml`
+
+|Existing root `pom.xml` handling
+|No
+|If a root `pom.xml` already exists, `AskUserQuestion` asks whether to stop or regenerate. On regenerate, anything
+the existing pom has that the template doesn't is preserved and listed in the report.
+|None — user must choose
+|===
+
+== Outputs
+
+* Root `pom.xml` — the Spring Boot parent, the module list, all version properties, every BOM import copied from
+  the reference pom, `dependencyManagement` for the project's own modules, project-wide dependencies, and the
+  full build/reporting plugin configuration.
+* One `pom.xml` per module named in the manifest, plus the intermediate aggregator poms
+  (`infrastructure/`, `infrastructure/database/`, `infrastructure/clients/`, `api/`). Each
+  `infrastructure/clients/<name>` additionally carries, at `test` scope, the Testcontainers module for whichever
+  API mock `stack.apiMock` names, so that module's own `*IT` can start just the mock instead of the whole compose
+  stack.
+* `coverage/pom.xml` — JaCoCo `report-aggregate` across every module, declared last in the reactor so every
+  module's execution data already exists when it runs.
+* `boot/pom.xml` — additionally carrying `spring-boot-maven-plugin` and the `groovy-maven-plugin` build-info step.
+* `checkstyle.xml` and `spotbugs-exclude.xml` at the repository root, if absent.
+* A report listing the reactor's build order, every version pinned (separating those copied from the reference pom
+  from those looked up on Maven Central), which module each significant dependency landed in, anything that
+  couldn't be placed, and any hexagon violation found.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-pom"] --> B["Step 0: Read the manifest;\nfetch or read the Initializr reference pom"]
+    B -- manifest missing --> STOP["Stop — run /iru-setup-java-springboot first"]
+    B --> C["Classify every extracted dependency\nto its owning module"]
+    C -- root pom exists --> D{"Stop or regenerate?"}
+    D -- stop --> STOP2[Stop; report]
+    D -- regenerate --> E
+    C -- no root pom --> E["Step 1: Write the root pom\n(all versions, all plugins, enforcer, Sonar)"]
+    E --> F["Steps 2-3: Place dependencies per module;\nwrite each module pom with no versions\nand its bannedDependencies rule"]
+    F --> G["Step 4: Write every pom to disk"]
+    G --> H["Step 5: Write checkstyle.xml\nand spotbugs-exclude.xml"]
+    H --> I["Step 6: Verify via iru-gate-runner —\nvalidate, reactor validate, dependency:tree"]
+    I -->|"version in a module pom,\nor unmanaged conflict"| J["Move/pin it in the root pom"]
+    J --> I
+    I --> K["Step 7: Sanity-check the hexagon\nby reading the written poms"]
+    K --> L["Step 8: Report versions, placements,\nand any deliberate violation"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None directly. It reads `springboot-stack.yml` and the Spring Initializr API, and writes poms.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, first of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent. It is the one sub-skill whose failure stops the whole bootstrap: without a
+  root pom there is no reactor for anything else to attach to.
+
+Also runs standalone (`/iru-setup-java-springboot-pom`) to regenerate the reactor from an updated manifest.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for Step 6's Maven verification, since a
+  multi-module `validate` plus a full `dependency:tree` is exactly the kind of output that shouldn't land in the
+  caller's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-pom/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

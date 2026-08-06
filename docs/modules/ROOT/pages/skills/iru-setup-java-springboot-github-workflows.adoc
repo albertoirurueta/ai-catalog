@@ -1,0 +1,150 @@
+= Setup Java Spring Boot GitHub Workflows
+:description: Creates the build, deploy, and undeploy GitHub Actions workflows for a Spring Boot service, with keyless OIDC cloud auth and guarded teardown.
+:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, buildpacks
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Creates the three GitHub Actions workflows a Spring Boot service needs: one that builds, tests, analyses, and
+publishes documentation; one that deploys; and one that stops or destroys an environment.
+
+== Purpose
+
+`iru-setup-java-springboot-github-workflows` is the service-shaped counterpart to
+xref:skills/iru-setup-java-github-workflows.adoc[]. A service is not published to Maven Central and is not
+GPG-signed — it is built into a container image and deployed — so the publish, sign, and version-sync stages are
+replaced by image build, OpenTofu apply, and teardown. The shared stages (test, analyse, Sonar, Antora, GitHub
+Pages) follow the same house pattern, so the two remain recognisably related.
+
+[cols="1,2,3", options="header"]
+|===
+|Workflow |Trigger |Does
+
+|`build.yml`
+|Push to the integration/main branch, and every pull request
+|Build, unit tests (Surefire), Testcontainers integration tests (Failsafe), static analysis, aggregated coverage,
+Sonar, and — on the main branch only — the Antora site plus the generated OpenAPI/protobuf HTML, published to
+GitHub Pages
+
+|`deploy.yml`
+|`workflow_dispatch` with an environment input, optionally on release published
+|Build and push the container image, authenticate via keyless OIDC, `tofu plan` then apply *that plan file*, then a
+smoke check that fails the deploy if the service never becomes healthy
+
+|`undeploy.yml`
+|`workflow_dispatch` only
+|Scale to zero (the reversible default) or destroy an environment, behind a typed-confirmation check and a protected
+GitHub Environment
+|===
+
+No credential is ever written into a workflow file: cloud access is keyless via OIDC, and everything else is a
+repository or environment secret referenced by name. Where the registry supports it, even the registry credential is
+derived from the OIDC session (`amazon-ecr-login`, `gcloud auth configure-docker`) rather than stored.
+
+The guards on `undeploy.yml` are the feature rather than ceremony: `stop` is the default and is reversible, data-bearing
+resources are expected to carry deletion protection so `destroy` *fails* on them rather than silently deleting a
+production database, and the skill recommends restricting `prod` to required reviewers plus a deployment branch rule
+— and considering omitting `prod` from the destroy path entirely.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-github-workflows
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the manifest path. Read for the cloud, the Java version, and the technologies in
+play.
+|`springboot-stack.yml` at the repository root
+
+|`integration-branch`, `main-branch`
+|No
+|`args` `key: value` lines. Otherwise confirmed against `git branch -a` rather than assumed to be gitflow.
+|`develop`, `main`
+
+|On-disk survey
+|Yes
+|The workflows must match reality, so the skill reads: the reactor's modules and the `boot` directory, where
+`report-aggregate` writes, whether the Sonar plugin and properties exist, the Antora config and which extensions
+`docs/package.json` lists, where the API doc generators write, which `infra/envs/<env>` directories exist, whether
+GitHub Environments exist, and how heavy the compose stack is.
+|None — derived
+
+|Existing workflow files
+|No
+|If any exists, `AskUserQuestion` asks whether to stop or update it, preserving steps this skill doesn't own (a Slack
+notification, an extra matrix leg).
+|None — user must choose
+|===
+
+== Outputs
+
+* `.github/workflows/build.yml` — a `build` job (checkout with full history for Sonar blame, JDK with Maven cache,
+  `mvn clean verify`, the site report, the Sonar scan skipped on fork pull requests, and test reports uploaded even
+  on failure) plus a `docs` job gated to main-branch pushes.
+* `.github/workflows/deploy.yml` — with `id-token: write`, a concurrency group per environment that never cancels
+  in progress, the GitHub Environment as the approval gate, buildpack image build and push, and `tofu apply` of the
+  previously produced plan file.
+* `.github/workflows/undeploy.yml` — with the typed-confirmation check, the same concurrency group as `deploy.yml`
+  so the two can never run at once, and separate `stop` and `destroy` paths.
+* A report including the full table of required repository secrets, environment secrets, environment variables, and
+  GitHub Environments — plus the two settings that are easy to miss: GitHub Pages served from `gh-pages`, and an
+  OIDC trust policy scoped to the repository *and* the environment.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-github-workflows"] --> B["Step 0: Read the manifest; survey the reactor,\nSonar config, Antora setup, infra/envs,\nGitHub Environments, compose stack weight"]
+    B -- compose stack too heavy for a standard runner --> C["Flag now; offer a larger runner\nor a per-module IT matrix"]
+    B -- a workflow already exists --> D{"Stop or update?"}
+    D -- stop --> STOP[Report which exist; stop]
+    D -- update --> E
+    B --> E["Step 1: Write build.yml\n(build job + main-branch-only docs job)"]
+    C --> E
+    E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check)"]
+    F --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy)"]
+    G --> H["Step 4: Assemble the secrets,\nvariables, and environments table"]
+    H --> I["Step 5: Validate — YAML parses,\naction versions current, secret names consistent;\nMaven commands verified locally via iru-gate-runner"]
+    I --> J["Step 6: Report files, gaps,\nand review warnings"]
+....
+
+`deploy.yml` and `undeploy.yml` are deliberately never triggered as a test. The skill instead recommends a dry run of
+`build.yml` on a throwaway branch, and a first `deploy.yml` run against `dev` only, watched to completion.
+
+== Dependencies
+
+=== Invokes
+
+None. It reads `springboot-stack.yml` and surveys the repository, then writes workflow YAML. It may offer to add the
+`sonar-maven-plugin` and `sonar.*` properties to the root `pom.xml` if the survey finds them missing.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, sixth of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent. Runs late because it surveys what is actually on disk — the reactor, the
+  Antora setup, and the `infra/envs/` directories from
+  xref:skills/iru-setup-java-springboot-platform.adoc[].
+
+Also runs standalone (`/iru-setup-java-springboot-github-workflows`).
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned in Step 5 to run the workflow's Maven commands
+  locally first, on the principle that a workflow whose commands were never run locally is a guess.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

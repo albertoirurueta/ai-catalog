@@ -38,9 +38,24 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
   delegated check while validating one task group's bucket: pre-change quality baseline, license headers,
   Javadoc/XML doc comments, scoped test run, coverage check, full test suite, and the post-change quality diff —
   all run once per bucket rather than once per task.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — every check in its baseline and bucket-validation
+  passes: the quality baseline and its later regression diff, license headers, Javadoc, the module-boundary checks
+  (`maven-enforcer-plugin` plus the ArchUnit test), scoped unit tests, coverage read from the JaCoCo aggregate, the
+  reactor-wide unit suite, and — the clearest case for this agent anywhere in the catalog — the Testcontainers-backed
+  integration run, where a multi-container Failsafe log is enormous and all the caller needs back is a pass/fail plus
+  whether a failure was an assertion or an environment problem.
 * xref:skills/iru-plan.adoc[] — recommended (when installed) for the scoped test-run step a generated
   `implementation_plan.md` instructs its executor to delegate to a sub-agent, in place of a generic,
   repository-specific sub-agent prompt.
+* xref:skills/iru-setup-java-springboot.adoc[] and its sub-skills — every Maven verification a Spring Boot
+  bootstrap run performs, since each one is a multi-module log that would otherwise flood the caller's context:
+  the orchestrator's three final builds; xref:skills/iru-setup-java-springboot-pom.adoc[]'s reactor `validate`
+  plus `dependency:tree`; xref:skills/iru-setup-java-springboot-modules.adoc[]'s `clean test` (including the
+  ArchUnit architecture test); xref:skills/iru-setup-java-springboot-apis.adoc[]'s `generate-sources` and
+  `compile`; xref:skills/iru-setup-java-springboot-testcontainers.adoc[]'s `compose config`, `test`, and the full
+  `verify` against the container stack; and
+  xref:skills/iru-setup-java-springboot-github-workflows.adoc[]'s local dry run of the commands it is about to
+  write into a workflow.
 
 == Why this one specifically
 

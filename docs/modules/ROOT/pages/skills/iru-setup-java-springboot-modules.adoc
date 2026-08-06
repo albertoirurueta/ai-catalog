@@ -1,0 +1,139 @@
+= Setup Java Spring Boot Modules
+:description: Scaffolds the hexagonal source tree of a Spring Boot service: domain ports, adapters, use cases, profiles, migrations, and an ArchUnit architecture test.
+:keywords: iru-setup-java-springboot-modules, claude code skill, ports and adapters, hexagonal architecture, mapstruct, archunit, refreshscope, spring profiles, database migrations
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Turns a reactor of empty modules into a Spring Boot service skeleton that compiles, starts, and demonstrates the
+hexagonal pattern well enough that the first real feature has an obvious shape to follow.
+
+== Purpose
+
+`iru-setup-java-springboot-modules` writes **one worked example per adapter kind**, not a set of empty files: a
+single aggregate, its repository port, one adapter implementing that port against the chosen database, one use
+case, one endpoint. The reasoning is explicit in the skill — a developer's first task is to rename or delete the
+example, and both are easier than inventing the layering from an empty tree.
+
+The module it treats as load-bearing is `domain`. Because `domain` is the one module every other module may depend
+on, every capability an outer module provides is declared there as an interface (a port): repository ports, an
+event publisher, one client port per downstream service, a metrics publisher, a configuration provider, and a
+small domain-exception hierarchy that the API modules map to HTTP or gRPC status codes. `domain` carries no Spring
+annotations at all — the enforcer rule from `iru-setup-java-springboot-pom` makes that a build failure.
+
+It also writes the runtime configuration: `application.yml` plus `local`/`dev`/`prod` profiles, with structured JSON
+logging for deployed profiles, actuator probes and Prometheus exposure on a separate management port, graceful
+shutdown, and virtual threads enabled when the stack is blocking on Java 21+. Every deployed profile uses
+placeholders only — no credential, host, or token is written into a committed file, and no default that would
+accidentally work against something real.
+
+Finally it writes an ArchUnit test in `boot`'s test sources. The enforcer rules catch violations at *module*
+granularity; ArchUnit catches them at *package* granularity, which is where they actually creep in.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-modules
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the manifest path. Read in full: the base package, the concurrency model (which
+decides every method signature — plain values, or `Mono`/`Flux`), and which modules exist.
+|`springboot-stack.yml` at the repository root
+
+|An existing reactor
+|Yes
+|A root `pom.xml` plus a `pom.xml` in every module the manifest names. If they're missing the skill stops and points
+the user at `/iru-setup-java-springboot-pom` — it writes sources into modules, it doesn't create modules.
+|None — a precondition, not a default
+
+|Existing hand-written sources
+|No
+|Any `.java` file already containing code the skill didn't generate is skipped, never overwritten, and reported.
+|Skip and report
+|===
+
+== Outputs
+
+* The package layout under `src/main/java`, `src/main/resources`, and `src/test/java` for every module.
+* `domain` — the aggregate, value objects, every port interface with Javadoc describing its contract, and the
+  domain-exception hierarchy.
+* `application` — one use case class per use case, with a Mockito unit test that mocks every port.
+* `infrastructure/database/<engine>` — persistence entity, Spring Data repository, MapStruct mapper, the port
+  adapter, the migration/changelog directory for that engine's tooling (Mongock change unit, Liquibase changelog
+  including a `pgvector` extension changeset where relevant, or a Flyway script), and an integration test.
+* `infrastructure/configuration` — validated `@ConfigurationProperties` beans annotated `@RefreshScope`, the
+  configuration port adapter, and the wiring for the dynamic-configuration mechanism the manifest names.
+* `infrastructure/clients/<name>` — a port adapter over the generated client, with MapStruct mapping, transport
+  failures translated to domain exceptions, explicit connect/read timeouts, and its base URL bound from
+  `clients.<name>.base-url` with no default in any deployed profile. That binding is what lets the integration
+  harness redirect the client to the compose stack's API mock; an adapter that hardcodes a host cannot be tested
+  against anything and will reach a real downstream service from CI.
+* `infrastructure/producers` and `api/consumers` — the Kafka publisher adapter and consumer beans, AVRO mappers,
+  bindings, consumer group, and a dead-letter topic with a bounded retry policy.
+* `infrastructure/metrics` — the metrics port implemented over Micrometer, with a constants class for every metric
+  name and tag key, and bounded tag cardinality documented in the Javadoc.
+* `api/rest-server` / `api/grpc-server` — controllers or services implementing the generated interfaces, mappers,
+  the exception-to-status advice (RFC 9457 `ProblemDetail` for REST), and the security filter chain if enabled.
+* `boot` — the `@SpringBootApplication` class, `application.yml` and the three profile files, composition-root
+  `@Configuration`, a context smoke test, and the ArchUnit architecture test.
+* A report that includes the configuration-property list, the metrics list, and the exception-to-status mapping
+  formatted for pasting into the documentation tables.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-modules"] --> B["Step 0: Read the manifest;\nverify the reactor exists"]
+    B -- no reactor --> STOP["Stop — run /iru-setup-java-springboot-pom first"]
+    B --> C["Step 1: Create the package layout\nfor every module"]
+    C --> D["Step 2: domain — model, ports, exceptions\n(written first; no Spring annotations)"]
+    D --> E["Step 3: application — use cases\nplus a mocked unit test"]
+    E --> F["Steps 4-9: one adapter per infrastructure/api module\n(database + migrations, configuration, clients,\nKafka producers/consumers, metrics, REST/gRPC)"]
+    F --> G["Step 10: boot — application class,\napplication.yml and local/dev/prod profiles,\ncomposition-root config, smoke test"]
+    G --> H["Step 11: ArchUnit test enforcing\nthe package-level dependency direction"]
+    H --> I["Step 12: mvn clean test via iru-gate-runner"]
+    I -- ArchUnit fails --> J["Fix the code, not the rule\n(unless the rule is wrong for this project)"]
+    J --> I
+    I --> K["Step 13: Report ports, config properties,\nmetrics, status mapping, and warnings"]
+....
+
+`mvn verify` is deliberately not run here: the `*IT` tests need the Testcontainers harness that
+xref:skills/iru-setup-java-springboot-testcontainers.adoc[] sets up in the next step, so integration tests failing
+at this point is expected rather than a defect.
+
+== Dependencies
+
+=== Invokes
+
+None. It reads `springboot-stack.yml` and the existing poms, and writes sources and configuration.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, second of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent. Runs after xref:skills/iru-setup-java-springboot-pom.adoc[] because it needs
+  modules to write into, and before xref:skills/iru-setup-java-springboot-apis.adoc[], whose generated code the
+  adapters written here consume.
+
+Also runs standalone (`/iru-setup-java-springboot-modules`) against an existing reactor.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for Step 12's `mvn clean test`, so a multi-module
+  compile-and-test log is summarized rather than dumped into the caller's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-modules/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

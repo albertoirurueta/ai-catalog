@@ -1,0 +1,192 @@
+= Java Spring Boot Performance Tests
+:description: Generates an Apache JMeter suite for a Spring Boot service that correlates response time, CPU, and memory against the number of concurrent users.
+:keywords: iru-java-springboot-performance-tests, claude code skill, apache jmeter, load testing, spring boot, concurrency, actuator metrics, response time percentiles
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Produces an Apache JMeter performance suite for a Spring Boot service, covering only the happy paths of its main
+use cases, in three concurrency scenarios.
+
+== Purpose
+
+The suite exists to answer one question: **as the number of concurrent users rises, what happens to response time,
+CPU, and memory?** A load test that reports only response times says the service got slower without saying whether
+it ran out of heap, saturated a core, or spent the run in garbage collection — so this skill collects all three and
+correlates them against the live concurrency at each moment.
+
+Three rules shape everything it writes:
+
+* **Happy paths of the main use cases only.** Error paths and rarely-used admin endpoints belong in the functional
+  suite; here they dilute the signal and inflate the maintenance cost of a suite that is already expensive to keep
+  truthful.
+* **The suite lives outside the Maven reactor.** `performance/` has its own `pom.xml` and is never listed as a
+  `<module>` of the service's root pom, because a load test that runs during `mvn verify` is a load test that gets
+  disabled within a week.
+* **One test plan, three scenario profiles.** The plan is parameterized entirely through JMeter properties
+  (`${__P(name,default)}`); a scenario is a `.properties` file, never a copy of the plan, since three copies of a
+  JMX file drift apart on the first endpoint change.
+
+The use cases are discovered rather than asked for — from the OpenAPI contracts in `apis/rest-server/`, the
+protobuf definitions in `apis/grpc-server/`, the hand-written `api/*` adapters, the `application/` use-case
+classes, and whatever `infrastructure/metrics/` already counts — then shortlisted to 3–7 and confirmed with the
+user before any file is written. Fewer than three doesn't represent the service; more than seven spreads each
+scenario's concurrency too thin to say anything.
+
+== Purpose group
+
+xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-java-springboot-performance-tests
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the manifest path. Read for the service's shape — artifactId, base package,
+whether it has a REST or gRPC server, security, messaging, and metrics. When absent, the same facts are detected
+from the root `pom.xml`, `apis/`, and the module tree, so the skill works on a service this catalog never
+scaffolded.
+|`springboot-stack.yml` at the repository root
+
+|Use case shortlist
+|Yes
+|Discovered from the contracts and application layer, then confirmed, dropped, added to, or re-weighted by the
+user. Nothing is written before this confirmation.
+|Discovered, then confirmed interactively
+
+|Workload numbers
+|No
+|Concurrency, ramp, and duration per scenario, asked via `AskUserQuestion` and explicitly labelled as placeholders
+that must be justified against expected production traffic.
+|10 / 200 / stepped users
+
+|Target environment
+|No
+|`target.host`, `target.port`, `target.protocol` — a local compose stack, a deployed test environment, or
+(needing explicit approval) something closer to production. Never hardcoded into the plan.
+|Asked, no default host
+|===
+
+== Outputs
+
+A standalone `performance/` project at the repository root:
+
+* `pom.xml` driving `jmeter-maven-plugin` with a pinned JMeter version and the `kg.apc:jmeter-plugins-casutg`
+  extension resolved from Maven, so no local JMeter install or Plugins Manager step is needed.
+* `src/test/jmeter/<artifactId>-performance.jmx` — one plan holding a `setUp` group (auth and warm-up), one thread
+  group per use case built from transaction controllers with think time, assertions and correlation, a
+  `METRICS-server` polling group, and a `tearDown` cleanup group.
+* `src/test/jmeter/user.properties` — the result-writer settings, of which `thread_counts=true` is load-bearing:
+  without it the JTL has no record of how many users were active per sample and the whole concurrency correlation
+  becomes impossible to reconstruct.
+* `profiles/low-load.properties`, `profiles/high-load.properties`, `profiles/scale-up-down.properties`.
+* `src/test/resources/data/<use-case>.csv` data sets, `thresholds.properties`, and `scripts/summarize.py`.
+* `README.md` with the runnable commands, the think-time assumptions, and the response-time budgets.
+* Root `.gitignore` entries for `performance/results/` and `performance/target/`.
+
+== The three scenarios
+
+[cols="1,2,2", options="header"]
+|===
+|Scenario |Purpose |Default shape
+
+|`low-load`
+|The baseline. Reference response times with no contention, cheap enough to run often.
+|10 concurrent users, 1 min ramp, 5 min steady.
+
+|`high-load`
+|Sustained saturation — whether the service holds a target concurrency for a realistic period without degrading,
+leaking, or throwing. The long ramp matters: arriving at 200 users instantly measures cold start, not steady state.
+|200 concurrent users, 5 min ramp, 15 min steady.
+
+|`scale-up-down`
+|The shaped run, using an Ultimate Thread Group. Produces the response-time/CPU/memory curve against concurrency,
+exercises autoscaling, and exposes leaks — the ramp-down uses the same step size and hold time as the ramp-up, so
+comparing 100 users on the way up against 100 on the way down distinguishes a service that recovers from one that
+has degraded.
+|4 steps up, 3 min hold each, then the same 4 steps down.
+|===
+
+== How CPU and memory are captured
+
+JMeter measures the client's view only. A dedicated `METRICS-server` thread group — one thread, a 5-second timer —
+scrapes `/actuator/prometheus` (falling back to individual `/actuator/metrics/<name>` calls) for process and system
+CPU, heap used/committed/max, GC pause, live threads, and `http.server.requests`. A JSR223 post-processor appends
+each reading to a CSV **stamped with the live active-thread count**, which is what makes those readings answer
+"based on amount of concurrent users" rather than being an undated list.
+
+Samplers in that group are prefixed `METRICS-` and filtered out of JMeter's HTML dashboard, so a 5-second poll
+taking 3 ms doesn't flatter every percentile. Where the service runs in a container, a `docker stats` sampler
+collects cgroup-level figures too, since the JVM's view and the container limit are different numbers and it is the
+container limit that gets the process OOM-killed.
+
+`scripts/summarize.py` then buckets every JTL sample by concurrency, joins the server metrics on the nearest
+timestamp, and emits a per-level table (p50–p99, throughput, error rate, heap and CPU average/max, GC pause) plus a
+non-zero exit code when a threshold is breached — with the up and down legs side by side for the shaped run.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-java-springboot-performance-tests"] --> B["Step 0: Resolve the manifest or detect\nthe service; check mvn/java/python3,\nActuator reachability, Docker"]
+    B -- performance/ already exists --> C["Treat as a gaps-to-fill pass;\nnever overwrite a hand-tuned JMX"]
+    C --> D
+    B --> D["Step 1: Discover use cases from apis/,\nthe api/* adapters, application/,\nand infrastructure/metrics"]
+    D --> E["Shortlist 3-7 with journey,\nvarying data, weight, and p95 budget"]
+    E --> F{"User confirms,\ndrops, adds, re-weights?"}
+    F -- corrections --> D
+    F -- confirmed --> G["Step 2: Agree the workload model,\ntarget environment, and auth"]
+    G --> H["Step 3-4: Write the standalone project\nand the single parameterized plan"]
+    H --> I["Step 5: Add the METRICS-server group\nscraping Actuator, stamped with\nthe active thread count"]
+    I --> J["Step 6: Write the three scenario profiles"]
+    J --> K["Step 7-8: summarize.py, thresholds,\nand performance/README.md"]
+    K --> L["Step 9: Verify via iru-gate-runner —\n1-user parse run, short low-load run,\nsummarizer with thresholds"]
+    L -- service cannot be started --> M["Report the suite as unverified;\nnever claim a smoke run that didn't happen"]
+    L -- failures --> N["Iterate: extractor paths, auth,\nsample_filter, empty allThreads column"]
+    N --> L
+    L --> O["Step 10: Report and give the\ncopy-pasteable run instructions"]
+    M --> O
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-explore.adoc[] — Step 1, to survey a large service for its candidate use cases, so the caller
+  gets the candidate list rather than the file contents.
+
+=== Invoked by
+
+None. This is a top-level entry point, run directly by a person once a service has real endpoints. It is
+deliberately **not** part of the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle] and is never reached
+through `iru-code`: a load test is too slow and too environment-dependent to belong in a per-task or per-group
+validation pass.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for each of Step 9's verification commands, since a
+  load-test log is enormous.
+* xref:agents/overview.adoc[`Explore`] — the alternative to the `iru-explore` skill for Step 1's survey.
+
+== Relationship to the mocked downstream services
+
+If the service has REST or gRPC clients, the local stack answers them with the API mock that
+xref:skills/iru-setup-java-springboot-testcontainers.adoc[] adds to `compose.yaml` (Microcks or WireMock). A run
+against a mock measures this service in isolation — often the preferable thing to measure — but the mock answers in
+single-digit milliseconds, so any use case whose real latency is dominated by a downstream call will look far
+faster than production. The skill calls for a fixed response delay set to the downstream's real p95 where that
+matters, and for watching that the mock itself doesn't saturate before the service does.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-springboot-performance-tests/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

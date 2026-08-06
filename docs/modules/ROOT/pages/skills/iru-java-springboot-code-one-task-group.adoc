@@ -1,0 +1,209 @@
+= Java Spring Boot Code One Task Group
+:description: Implements one bucket of Spring Boot plan tasks and validates it once, gating on unit-test coverage and static analysis before the Testcontainers integration tests.
+:keywords: iru-java-springboot-code-one-task-group, claude code skill, spring boot, integration tests, testcontainers, archunit, jacoco coverage, checkstyle pmd spotbugs, maven reactor
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implements every Spring Boot task in one plan-group bucket end to end: one quality baseline up front, each task
+implemented (in parallel where safe), then the whole bucket validated once instead of once per task.
+
+== Purpose
+
+`iru-java-springboot-code-one-task-group` is the bucket-level half of the `java-springboot` language/framework
+backend, the hexagonal-reactor counterpart to xref:skills/iru-java-code-one-task-group.adoc[]. It is built on the
+same four language-level skills as that one — xref:skills/iru-java-code-quality.adoc[] for Checkstyle/PMD/SpotBugs
+static analysis, xref:skills/iru-java-test.adoc[] for Surefire runs, xref:skills/iru-java-coverage.adoc[] for
+JaCoCo, and xref:skills/iru-java-javadoc.adoc[] — each invoked through an
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent so its report never reaches the caller's context, and each
+preferred over a hand-written `mvn` command because it already knows how to scope the run and read the report.
+A raw `mvn` invocation is the fallback for when a skill isn't installed in the consuming repository.
+
+Four differences from the plain-Java group skill follow from the architecture rather than from preference, and they
+shape the whole validation order:
+
+* **It owns integration testing.** xref:skills/iru-java-springboot-code-one-task.adoc[] runs unit tests only, on
+  purpose — a task-level integration run would start the same Testcontainers stack once per task, which is exactly
+  the redundancy group-level validation exists to remove. The container-backed pass happens here, once for the
+  bucket.
+* **Structural and static checks come first, containers last.** A module-boundary violation is caught by the
+  `maven-enforcer-plugin` banned-dependencies rules and the ArchUnit test in seconds, and a Checkstyle/PMD/SpotBugs
+  defect in barely longer; discovering either *after* a multi-container integration run costs minutes and yields no
+  extra information. So the order is license/Javadoc → boundaries → unit tests → unit coverage → full suite →
+  static analysis → integration tests → aggregate coverage.
+* **The coverage gate is measured from unit tests alone.** See below — this is the property that decides where
+  most of the other stages sit.
+* **Every check is module-scoped.** In a reactor of a dozen modules an unscoped `mvn` per bucket dominates the wall
+  clock, so each stage runs with `-pl <module list> -am` built from the modules the bucket actually touched. The
+  full-suite stage is the deliberate exception — it is reactor-wide precisely to catch a bucket's change breaking
+  an unrelated module.
+
+=== Why coverage is gated on unit tests only
+
+The 80% gate is measured by xref:skills/iru-java-coverage.adoc[] over a Surefire-only run (`-DskipITs`, no
+Failsafe, no `*IT`, nothing container-backed), never over the aggregated report in `coverage/`. Integration tests
+will raise a class's aggregate above what its unit tests earned, and that is welcome — but it never satisfies the
+gate, for three reasons:
+
+* Unit coverage is the number the bucket's own tasks control and can act on.
+* It is available whether or not Docker is, so the verdict never becomes unreliable at exactly the moment the
+  integration stage is unverified. A bucket can be validated end to end on a machine with no Docker at all; the
+  only things lost are the integration result and the aggregate figure.
+* A class whose coverage arrives only through a container-backed test has no fast feedback loop — a finding worth
+  surfacing, not a pass to hide behind an aggregate.
+
+So an integration test never closes a coverage gap. If a class sits under 80% and the argument for accepting it is
+that an `*IT` exercises it, that is precisely the case the gate exists to surface: either the logic gets
+unit-tested — which usually means the adapter is doing work that belongs in `domain` or `application`, where it
+would be trivially testable — or the exception is recorded in the report with that reasoning. The aggregate is
+still read afterwards, but only to compute the delta per class: a small one means the class is genuinely
+unit-tested, and a large one names code that can only be verified with containers running, which predicts where
+the next change will be slow and hard to debug.
+
+Two honesty properties are stated explicitly in its instructions. If Docker is unavailable, or an integration run
+fails for an environment reason (image pull, port conflict, container timeout, memory), the stage is reported as
+**unverified** rather than silently skipped or counted as a pass — and the phrase "unverified" must never read as
+"passed", including in the `implementation_plan.md` note. And a module-boundary violation is fixed by moving the
+code or introducing the missing port, **never** by relaxing the rule, unless the rule is genuinely wrong for the
+project — in which case that decision is escalated in the report, since a relaxed architecture rule is something
+the whole service inherits.
+
+It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
+
+== Purpose group
+
+xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-java-springboot-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<bucket text>`
+|Yes
+|Every task and sub-task in the bucket, each with its own full text (including its exact `implementation_plan.md`
+checkbox lines), the group's `Parallelizable` verdict, and any relevant "Current code state" context.
+|None
+
+|`Parallelizable` verdict
+|Yes
+|Read from the bucket text. `yes` fans every task out concurrently; `no` runs them one at a time in the plan's
+order. Overridden per-pair when a port/adapter ordering dependency is detected — see the execution flow.
+|None — supplied by the plan
+
+|Docker availability
+|No
+|Probed with `docker info` in Step 1. Absence doesn't stop the run; it makes the integration stage report as
+unverified.
+|Probed
+|===
+
+== Outputs
+
+* Every task in the bucket implemented, with its unit tests, by delegating to
+  xref:skills/iru-java-springboot-code-one-task.adoc[].
+* One consolidated validation pass over the bucket, in cheapest-first order — license headers, Javadoc,
+  `maven-enforcer-plugin` + ArchUnit module boundaries, scoped unit tests, the 80% unit-only coverage gate, a
+  reactor-wide unit suite, and a Checkstyle/PMD/SpotBugs diff against the Step 1 baseline — followed by the
+  Failsafe integration tests against the Testcontainers stack and, last, the aggregated JaCoCo figure read for
+  information. Stages 3.1–3.7 are the gates; 3.8 and 3.9 add information on top of them.
+* Each task's `implementation_plan.md` note finalized — module, **unit-only coverage with the aggregate quoted
+  separately**, integration-test status, boundary and quality outcome — replacing the "group validation pending"
+  placeholder, with per-task user notifications as each phase completes rather than only at the end. A single
+  unattributed coverage percentage is explicitly avoided: it reads as the gate while including coverage the gate
+  never counted.
+* A bucket report escalating: the module-boundary result and any rule deliberately relaxed, the static-analysis
+  result (new findings introduced and fixed, or that no static analysis ran at all), any class whose aggregate far
+  exceeds its unit coverage, any coverage exception accepted and why, the integration-test status (passed /
+  failed-and-fixed / unverified with the reason), **any integration failure that unit tests missed** (a signal
+  about where this service's coverage is thin), misconfigured generated-source exclusions, any port/adapter
+  ordering deviation applied, and any blocked task.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-java-springboot-code-one-task-group"] --> B["Step 1: One pre-change quality baseline\nfor the bucket; probe docker info"]
+    B --> C{"Parallelizable?"}
+    C -- yes --> D["Fan out all tasks concurrently\n(port/adapter pairs still sequenced, port first)"]
+    C -- no --> E["One task at a time, in plan order"]
+    D --> F["Step 2: confirm each checkbox landed;\nbackfill on a concurrent-write race;\nnotify per task"]
+    E --> F
+    F -- a task blocked --> G["Record it; exclude its code\nfrom validation"]
+    G --> H
+    F --> H["Step 3.1-3.2: license headers, Javadoc"]
+    H --> I["Step 3.3: module boundaries —\nenforcer rules + ArchUnit"]
+    I -- violation --> J["Move the code or add the missing port.\nRelax a rule only if it is wrong; escalate it"]
+    J --> I
+    I --> K["Step 3.4: scoped unit tests (Surefire, -DskipITs)"]
+    K -- red --> L["Fix the owning task; re-run"]
+    L --> K
+    K --> Q["Step 3.5: unit-only coverage gate\n(iru-java-coverage, Surefire with -DskipITs)"]
+    Q -- under 80% --> R["Add UNIT tests via the owning task;\nan *IT never closes the gap"]
+    R --> K
+    Q --> S["Step 3.6: full reactor unit suite"]
+    S --> T["Step 3.7: Checkstyle/PMD/SpotBugs diff\nvs the Step 1 baseline"]
+    T -- new issue --> U["Fix and re-confirm 3.4 and 3.6"]
+    U --> T
+    T --> M{"Docker available,\nand any *IT in the reactor?"}
+    M -- no --> N["Report integration stage as UNVERIFIED;\nnever as passed. Coverage verdict stands"]
+    M -- yes --> O["Step 3.8: mvn verify — Failsafe against\nthe Testcontainers stack, behind the lock"]
+    O -- environment failure --> N
+    O -- assertion failure --> P["Trace to the owning task, fix, re-run;\nreport it even once fixed"]
+    P --> O
+    O --> X["Step 3.9: read the JaCoCo aggregate —\ndelta vs unit coverage, informational only"]
+    N --> V
+    X --> V["Step 4: finalize each plan note;\nnotify the user"]
+    V --> W["Step 5: report, escalating boundary,\nstatic-analysis and integration outcomes"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-java-springboot-code-one-task.adoc[] — Step 2, once per task in the bucket, via the
+  `iru-isolated-skill-executor` agent.
+* xref:skills/iru-java-code-quality.adoc[] — Steps 1 and 3.7, for the Checkstyle/PMD/SpotBugs baseline and the
+  regression diff against it, via `iru-gate-runner`. Skipped if not installed — and that skip is itself reported,
+  since a bucket validated with no static analysis at all is worth knowing about. SpotBugs findings are treated
+  more seriously than the rest: unlike most Checkstyle rules they describe real defects rather than style.
+* xref:skills/iru-check-license.adoc[] — Step 3.1, via `iru-gate-runner`. Skipped if not installed.
+* xref:skills/iru-java-javadoc.adoc[] — Step 3.2, via `iru-gate-runner`. Skipped if not installed. Mostly confirms
+  rather than backfills, since the per-task skill already requires full Javadoc — a lot of missing Javadoc here
+  means that skill was bypassed.
+* xref:skills/iru-java-test.adoc[] — Steps 3.4 and 3.6, via `iru-gate-runner`, told the module scope for the
+  scoped run and given no selector for the reactor-wide one. Falls back to `mvn test -DskipITs` only if the skill
+  isn't installed.
+* xref:skills/iru-java-coverage.adoc[] — Step 3.5, via `iru-gate-runner`, measuring the 80% gate over a
+  Surefire-only run. Falls back to `mvn clean jacoco:prepare-agent test jacoco:report -DskipITs` plus each module's
+  own `jacoco.csv` — never the aggregate, which mixes in integration execution data.
+
+Two stages have no catalog skill behind them and run as `mvn` commands through `iru-gate-runner`: the
+module-boundary check (Step 3.3, the enforcer rules plus the ArchUnit test) and the Failsafe integration run
+(Step 3.8), along with the plain file read of the aggregated JaCoCo report in Step 3.9.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — once per plan group, for that group's `java-springboot`-tagged
+  tasks. The key is discovered from this skill's directory name, so no orchestrator names Spring Boot anywhere in
+  its own instructions.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — Step 2, once per task (many at once
+  for a parallelizable bucket), so each task's own file reads and reasoning stay out of this skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — every check in Steps 1 and 3. The integration stage is the
+  clearest case for it in this catalog: a multi-container Failsafe run produces an enormous log, and what this
+  skill needs back is a pass/fail plus the distinction between an assertion failure and an environment failure.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-springboot-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
