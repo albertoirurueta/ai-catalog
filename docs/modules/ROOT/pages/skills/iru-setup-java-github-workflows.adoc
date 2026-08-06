@@ -50,7 +50,8 @@ fact-finding step in Step 1's survey is skipped entirely for that value instead 
 |None — if `args` is absent or doesn't match this `key: value` format, every parameter is instead resolved by
 surveying `pom.xml` and the repository (Maven coordinates, compiler version, publishing/signing/extras
 profiles, Sonar config, Antora setup, branch names, README/Antora version wording), asking the user directly
-for anything that can't be inferred.
+for anything that can't be inferred — the Java version falls back to a question defaulting to `21` when
+`pom.xml` declares no `maven.compiler.source`/`target`/`release`.
 |===
 
 == Outputs

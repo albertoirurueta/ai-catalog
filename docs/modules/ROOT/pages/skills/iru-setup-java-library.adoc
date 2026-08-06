@@ -36,8 +36,8 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |No
 |Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-java-library-repository.adoc[])
 as newline-separated `key: value` lines — `groupId`, `artifactId`, `package`, `developer-name`,
-`developer-email`, `organization-url`, and `license` — parsed in Step 0 so this skill doesn't ask about any
-field already resolved this way.
+`developer-email`, `organization-url`, `license`, and `java-version` — parsed in Step 0 so this skill doesn't ask
+about any field already resolved this way.
 |None — if absent or unrecognized, every field is asked interactively.
 
 |groupId
@@ -54,6 +54,11 @@ field already resolved this way.
 |No
 |Project version.
 |`1.0.0-SNAPSHOT`
+
+|Java version
+|No
+|Java language level the library targets, written to `maven.compiler.source`/`maven.compiler.target`.
+|`21`
 
 |Library package
 |Yes (unless supplied via `args`)

@@ -51,8 +51,9 @@ name and URL directly).
 
 |Java version
 |No
-|Java version the CI pipeline builds against.
-|`17`
+|Java version the CI pipeline builds against, and the `maven.compiler.source`/`maven.compiler.target` level
+`iru-setup-java-library` writes into the generated `pom.xml`.
+|`21`
 
 |Publishing server id
 |No
@@ -118,8 +119,9 @@ this orchestrator has just written to, so only a short completion summary needs 
 sub-skill's own exploration/file reads out of this orchestrator's own context:
 
 * xref:skills/iru-setup-java-library.adoc[] — Step 3, first: writes `pom.xml` and the source folders, passing
-  Step 1's answers (groupId, artifactId, package, developer name/email/organizationUrl, license) as `args`
-  `key: value` lines so `iru-setup-java-library` doesn't ask for them again.
+  Step 1's answers (groupId, artifactId, package, developer name/email/organizationUrl, license) plus Step 2's
+  Java version as `args` `key: value` lines so `iru-setup-java-library` doesn't ask for them again — and so the
+  `pom.xml` compiler level matches the JDK the workflows in Step 6 set up.
 * xref:skills/iru-setup-antora.adoc[] — Step 4: scaffolds the Antora documentation site, invoked with no `args`
   since it derives the component name/title/version directly from the `pom.xml` Step 3 just wrote.
 * xref:skills/iru-setup-java-gitignore.adoc[] — Step 5: writes or updates the root `.gitignore`, invoked with no
