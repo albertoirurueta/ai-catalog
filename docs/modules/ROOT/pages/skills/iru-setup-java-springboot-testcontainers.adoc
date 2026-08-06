@@ -1,0 +1,195 @@
+= Setup Java Spring Boot Testcontainers
+:description: Writes one compose.yaml for a Spring Boot service, an API mock for its downstream clients, and a Testcontainers harness launching both, so local runs and integration tests cannot drift.
+:keywords: iru-setup-java-springboot-testcontainers, claude code skill, testcontainers, docker compose, integration tests, api mocking, microcks, wiremock, maven failsafe, healthcheck
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Gives a Spring Boot service one definition of its runtime dependencies, used by both `mvn verify` and a developer
+running the application locally.
+
+== Purpose
+
+The single most valuable property of this setup is that the two paths **cannot drift**: the integration tests start
+the same `compose.yaml` a developer starts, so "works on my machine" and "passes in CI" converge by construction.
+`iru-setup-java-springboot-testcontainers` writes that compose file, the Testcontainers `ComposeContainer` harness
+that launches it, and the Failsafe/JaCoCo wiring that runs the tests against it.
+
+Two details it treats as non-negotiable, both because they are the usual causes of flaky integration suites:
+
+* **Every image tag is pinned** — never `latest`. An unpinned tag turns a passing suite into a time bomb that fails
+  on an unrelated day for an unrelated reason. Resolved tags are written back into `springboot-stack.yml` so the
+  compose file, the tests, and the OpenTofu engine versions all agree on one number.
+* **Every service has a real `healthcheck`**, not a sleep. Both `ComposeContainer` and Spring's own compose support
+  wait for health, so a service without one is considered ready the instant its container starts — and tests then
+  fail intermittently against a database that hasn't finished initialising.
+
+It also wires Spring Boot's `spring-boot-docker-compose` support for the `local` profile, with
+`skip.in-tests: true` so that support and `ComposeContainer` don't both try to manage the same stack and fight over
+ports. Prometheus and Grafana sit behind a compose `profiles:` key so integration tests don't pay to start them,
+while `docker compose --profile observability up` gives a developer the full local stack with the datasource
+already provisioned.
+
+=== The API mock for downstream clients
+
+Whenever the service has REST or gRPC clients, the same compose stack gains an API mocking service, because an
+integration test that calls a real downstream service is not an integration test of this service: it is slow, it
+fails when someone else deploys, and it cannot reproduce the error responses the adapter is supposed to handle.
+
+The mock is **driven by the contracts already in `apis/rest-client/<name>/` and `apis/grpc-client/<name>/`** — the
+same files each client is generated from. A parallel set of hand-written fixtures is never created, because two
+descriptions of one contract diverge, and the day they do, the client compiles against one and passes its tests
+against the other. Unlike Prometheus and Grafana, the mock sits behind no compose profile: tests need it, and so
+does a developer running the service locally.
+
+[cols="1,1,3", options="header"]
+|===
+|Situation |Default |Why
+
+|Any gRPC client, alone or with REST clients
+|**Microcks**
+|Mocks gRPC and REST from the same contracts in one container, consuming the `.proto` and the OpenAPI spec
+directly with no descriptor build step, and can later verify the real downstream service against those same
+contracts. One tool covering both protocols outweighs any per-protocol advantage.
+
+|REST clients only, no gRPC expected
+|**WireMock**
+|Far lighter and faster to start, with a finer-grained stub DSL for responses, delays, and faults. A
+`wiremock-grpc-extension` exists, so the choice is not a dead end if gRPC arrives later — it just adds a
+`protoc --descriptor_set_out` build step at that point.
+|===
+
+Both options are always offered, so a team already running Microcks for contract testing elsewhere keeps using it
+even for a REST-only service. The answer is written back to the manifest as `stack.apiMock` so a re-run and every
+later reader agree on one choice. With WireMock, the contract is wired in from both ends: stub mappings are
+generated from each spec's `examples`, and the OpenAPI validation extension makes a request or response that
+violates the contract fail the test — which is what buys back most of the contract fidelity Microcks gets for
+free.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-testcontainers
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the manifest path. Read to build the service list: one container per database
+engine, Redis if cached, Kafka plus a Confluent Schema Registry if messaging is enabled, and Prometheus/Grafana if
+metrics are enabled. Caffeine needs no container and its absence is reported so it doesn't look like an omission.
+|`springboot-stack.yml` at the repository root
+
+|`stack.apiMock`
+|No
+|Which API mocking tool backs the service's REST/gRPC clients. Used without re-asking when the manifest records
+it; otherwise chosen via `AskUserQuestion` with the default set by whether any gRPC client exists, and written
+back to the manifest. Ignored entirely when the service has no clients.
+|Microcks with gRPC clients, WireMock for REST-only
+
+|Client contracts
+|No
+|`apis/rest-client/<name>/` and `apis/grpc-client/<name>/`, mounted into the mock container and used to build every
+mocked response. A REST contract with no `examples` imports cleanly and then has nothing to serve — the most
+common mock failure.
+|Read from the repository
+
+|Image tags
+|No
+|Taken from the manifest if recorded there; otherwise the current stable release is looked up and written back into
+the manifest.
+|Looked up, then persisted
+
+|Docker
+|No
+|`docker info` must succeed for the verification step. If Docker isn't running, every file is still written — they
+are correct regardless — but verification is skipped and the setup is explicitly reported as unverified.
+|Verification skipped if unavailable
+|===
+
+== Outputs
+
+* `compose.yaml` at the repository root — one pinned service per technology, each with a real readiness probe,
+  `depends_on: condition: service_healthy` where ordering genuinely matters, obviously-fake development-only
+  credentials, named volumes only where local state is worth keeping, and bounded resource settings (notably
+  Elasticsearch's single-node mode and heap cap).
+* `observability/prometheus/prometheus.yml` and
+  `observability/grafana/provisioning/datasources/prometheus.yaml`, if metrics are enabled.
+* The mock service, if the service has any client — with the client contracts mounted read-only, plus (for
+  WireMock) generated stub mappings under `wiremock/mappings/<name>/`, each carrying a header comment naming the
+  contract and operation it came from so the next person edits the spec rather than the mapping, and a descriptor
+  set under `wiremock/grpc/` when the gRPC extension is in play.
+* `stack.apiMock` written back into `springboot-stack.yml`.
+* The integration-test base class(es) — a shared `ComposeContainer`-based one for full-context tests, plus narrower
+  per-adapter base classes that start only the one container that module needs, using `@ServiceConnection` where a
+  single container suffices and `@DynamicPropertySource` for the compose-based one. Each client's
+  `clients.<name>.base-url` is bound to the mock's randomly-assigned host port; a client-adapter `*IT` instead uses
+  the tool's own Testcontainers module (`MicrocksContainer` / `WireMockContainer`), which starts in seconds against
+  the same contract rather than bringing up the whole stack.
+* Test-profile configuration per module, with the module's own migration tooling left enabled so a broken migration
+  fails a test rather than a deploy.
+* A report covering every service and its pinned tag, which containers each base class starts, whether migrations
+  run in tests, and the result of each verification command.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-testcontainers"] --> B["Step 0: Read the manifest;\nbuild the service list; resolve and\npersist image tags; check docker info"]
+    B --> B2{"Any REST or\ngRPC client?"}
+    B2 -- no --> C["Step 1: Write compose.yaml —\npinned images, healthchecks, depends_on,\nfake dev credentials, observability profile"]
+    B2 -- yes --> B3["Resolve stack.apiMock, or ask:\nMicrocks (default with gRPC) vs\nWireMock (default REST-only)"]
+    B3 --> B4["Add the mock service, mounting\napis/rest-client and apis/grpc-client;\ngenerate WireMock mappings from examples"]
+    B4 --> C
+    C --> D["Step 2: Write the integration-test base class(es)\n(ComposeContainer, wait strategies,\nstarted once per JVM, client base URLs\nbound to the mock)"]
+    D --> E["Step 3: Wire spring-boot-docker-compose\nfor the local profile (skip.in-tests)"]
+    E --> F["Step 4: Ensure migrations and test\nfixtures run against the containers;\nmock responses live in the contract"]
+    F --> G["Step 5: Verify Failsafe/Surefire split\nand coverage wiring"]
+    G -- mvn test needs Docker --> H["An IT is misnamed as *Test — fix the name"]
+    H --> G
+    G --> I["Step 6: Verify via iru-gate-runner —\ncompose config, mvn test, mvn verify,\nlocal stack up/down, and that the mock\nimported its contracts and was really called"]
+    I -->|"compose path, Kafka listeners,\nor Elasticsearch memory"| J["Iterate on the usual suspects"]
+    J --> I
+    I -- Docker unavailable --> K["Report as unverified"]
+    I --> L["Step 7: Report services, base classes,\npersisted tags, and warnings"]
+    K --> L
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It reads `springboot-stack.yml`, writes the compose file and test harness, and updates the manifest's image
+tags and `stack.apiMock`.
+
+It does depend on xref:skills/iru-setup-java-springboot-apis.adoc[]'s output rather than invoking it: the client
+contracts that skill writes under `apis/rest-client/` and `apis/grpc-client/` are what the mock serves, and the
+`examples` it puts in them are what become the mocked responses.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, fourth of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent. Runs after xref:skills/iru-setup-java-springboot-apis.adoc[] because the
+  compose stack must know whether a schema registry is needed, and it completes the harness that the `*IT` tests
+  written by xref:skills/iru-setup-java-springboot-modules.adoc[] depend on.
+
+Also runs standalone (`/iru-setup-java-springboot-testcontainers`) to add a container to an existing service.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for each of Step 6's verification commands, since a
+  full `mvn verify` against a container stack produces a very large log.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-testcontainers/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

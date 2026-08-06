@@ -28,6 +28,9 @@ answering "where is X defined". It cannot edit files.
   points before writing `index.adoc`'s repository overview, instead of reading the whole source tree directly.
 * xref:skills/iru-setup-readme.adoc[] — Step 7 uses it the same way, to locate the main source entry points before
   writing the README's "how it works" example.
+* xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 0 uses it for the broad structural sweeps a
+  service's documentation is derived from (the module tree, the use-case classes, the persistence entities and
+  migration files, the Micrometer calls), so only the specific files it identifies get read directly.
 
 === Why this one specifically
 
@@ -53,6 +56,9 @@ naming a specific type. It has the same tool access as the main conversation.
 * xref:skills/iru-pr-description.adoc[] — Step 2 spawns one, given the branch/base-branch names, to read the full
   diff and recent commit messages and draft the PR description, so the raw diff stays out of this skill's own
   context and only the drafted text comes back.
+* xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, the same one-off case as above: only when a
+  Spring Boot service has no Antora module yet, to run `iru-setup-antora` before this skill adds the Kroki
+  extension and the service page set on top.
 
 === Why this one specifically
 

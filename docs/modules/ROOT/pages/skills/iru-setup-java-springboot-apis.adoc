@@ -1,0 +1,138 @@
+= Setup Java Spring Boot APIs
+:description: Sets up a Spring Boot service's contract-first API layer: the apis/ spec tree plus OpenAPI, protobuf, and AVRO code generation wired per module.
+:keywords: iru-setup-java-springboot-apis, claude code skill, contract first, openapi generator, protobuf, avro, grpc, schema registry, code generation, api versioning
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Sets up the contract-first API layer of a Spring Boot service: a single `apis/` directory at the repository root
+holding every contract the service exposes or consumes, and the code-generation plugin executions wired into
+whichever module consumes each contract.
+
+== Purpose
+
+`iru-setup-java-springboot-apis` enforces two invariants:
+
+* **Every contract lives under `apis/` at the repository root**, never inside a module's `src/`. One directory is
+  where a reviewer looks to see everything the service exposes and consumes, and it keeps a contract from being
+  coupled to the module that happens to implement it today. `apis/` is not a Maven module.
+* **Generated code is never committed and never hand-edited.** It lands in each module's
+  `target/generated-sources/`, is git-ignored, and is excluded from Checkstyle, PMD, SpotBugs, JaCoCo, and Sonar.
+  If the generated code is wrong, the fix is in the spec or the generator configuration.
+
+The setting that makes the REST generator safe to re-run is `interfaceOnly=true`: the generator owns the interfaces
+and DTOs, and the hand-written `@RestController` implements them, so `mvn generate-sources` can never overwrite
+real logic. Without it the generator emits controllers and every regeneration becomes a merge conflict.
+
+Contracts are versioned in the filename and in the path inside the contract — an OpenAPI spec's paths carry
+`/v1/...`, a protobuf file declares `package <service>.v1`, an AVRO namespace ends in `.v1` — so a breaking change
+means a new `v2` file alongside the `v1` one, with both generating and both served until `v1` is retired.
+
+HTML documentation is generated alongside the code (the OpenAPI `html2` generator, and `protoc-gen-doc` for
+protobuf) into `target/generated-docs/`, where the build workflow publishes it to GitHub Pages next to the Antora
+site — so the documentation pages link to it rather than duplicating the endpoint list by hand.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-apis
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the manifest path. Read to determine which contracts are needed: `restServer`,
+`grpcServer`, each entry in `restClients`/`grpcClients`, and `messaging.enabled`. If none apply the skill reports
+that and stops.
+|`springboot-stack.yml` at the repository root
+
+|Target module directories
+|Yes
+|Each contract generates into a specific module. A missing module is reported and its contract skipped — this skill
+never creates a module.
+|None — a precondition
+
+|Root `pom.xml` `pluginManagement`
+|Yes
+|The generator plugin versions must already be managed there. If one is missing it is added to the root pom, never
+inline in a module pom.
+|None — a precondition
+|===
+
+== Outputs
+
+* `apis/README.md` explaining the layout, which module each directory generates into, that generated code is never
+  committed, how to regenerate, and the versioning convention.
+* `apis/rest-server/<service>-api-v1.yaml` — an OpenAPI 3.1 starter spec with per-field descriptions, constraints,
+  a documented error schema with `4xx`/`5xx` responses, and a `securitySchemes` entry if security is enabled.
+* `apis/grpc-server/<service>_v1.proto` — a starter protobuf file with a unary and a server-streaming RPC, every
+  message, field, and RPC commented, plus the field-numbering and `reserved` discipline stated in-file.
+* `apis/rest-client/<name>/` and `apis/grpc-client/<name>/` — placeholder contracts per downstream service, each
+  prominently marked as someone else's contract to be replaced with the real published spec. These have two
+  consumers, not one: the client generator, and the API mock in the compose stack that
+  xref:skills/iru-setup-java-springboot-testcontainers.adoc[] builds from the very same file. Because it is the
+  `examples` and not the schemas that become the mocked responses, every client operation gets at least one
+  request/response example pair — named after the case it represents (`found`, `not-found`, `rate-limited`) and
+  covering the error responses, since the adapter's exception translation is what most needs testing. A spec with
+  complete schemas and no examples generates a perfectly good client and a mock with nothing to say. gRPC
+  contracts carry their examples in a companion artifact in the same directory, since protobuf has no `examples`
+  section.
+* `apis/messaging/<event>-v1.avsc` — AVRO schemas with a `doc` on the record and every field, and a default on
+  every optional field, since a field added without one is a backward-incompatible change the registry rejects.
+* Generator executions added to `api/rest-server`, `api/grpc-server`, `infrastructure/clients/<name>`,
+  `infrastructure/producers`, and `api/consumers` — including the HTML documentation executions.
+* Contract linting recommendations or wiring: Spectral/`oasdiff` for OpenAPI, `buf lint`/`buf breaking` for
+  protobuf, and the Confluent schema-registry Maven plugin's `test-compatibility` for AVRO.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-apis"] --> B["Step 0: Read the manifest;\nmap each needed contract to its module"]
+    B -- no contracts needed --> STOP["Report and stop"]
+    B -- a target module is missing --> SKIP["Skip that contract; report it"]
+    B --> C["Step 1: Create the apis/ tree\nand apis/README.md"]
+    C --> D["Steps 2-3: REST server spec + Spring generator\n(interfaceOnly) and html2 docs;\ngRPC proto + protobuf plugin and protoc-gen-doc"]
+    D --> E["Steps 4-5: one client contract and generator\nper REST/gRPC client"]
+    E --> F["Step 6: AVRO schemas + avro-maven-plugin\nin producers and/or consumers"]
+    F --> G["Step 7: Verify via iru-gate-runner —\ngenerate-sources, then compile"]
+    G -->|"generator produced nothing,\nor wrong package"| H["Fix inputSpec / sourceDirectory\nor the configuration schema"]
+    H --> G
+    G --> I["Step 8: Confirm generated output is\ngit-ignored and excluded from analysis"]
+    I --> J["Step 9: Add or recommend contract linting"]
+    J --> K["Step 10: Report contracts, generators,\nand placeholder-spec warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It reads `springboot-stack.yml` and the module poms, and writes contracts and generator configuration.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, third of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent. Runs after xref:skills/iru-setup-java-springboot-modules.adoc[] (generated
+  sources need a module to land in, and the adapters written there consume the generated code) and before
+  xref:skills/iru-setup-java-springboot-testcontainers.adoc[] (the compose stack must know whether a schema
+  registry is needed).
+
+Also runs standalone (`/iru-setup-java-springboot-apis`) to add a contract to an existing service.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for Step 7's `generate-sources` and `compile` runs.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-apis/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

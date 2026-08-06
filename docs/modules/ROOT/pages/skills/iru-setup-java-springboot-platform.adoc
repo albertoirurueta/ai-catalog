@@ -1,0 +1,168 @@
+= Setup Java Spring Boot Platform
+:description: Generates OpenTofu infrastructure-as-code deploying a Spring Boot service to AWS or Google Cloud, preferring managed services and writing no secrets.
+:keywords: iru-setup-java-springboot-platform, claude code skill, opentofu, terraform, aws, google cloud, github oidc, managed services, secret manager, infrastructure as code
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generates the OpenTofu (Terraform-compatible) configuration that deploys a Spring Boot service, derived from the
+technologies the service actually uses and the cloud recorded in its stack manifest.
+
+== Purpose
+
+`iru-setup-java-springboot-platform` is governed by five rules, each of which shapes what it writes:
+
+* **Managed services over self-packaged containers.** The compose stack from
+  xref:skills/iru-setup-java-springboot-testcontainers.adoc[] exists for local development and integration tests;
+  deployed environments use the provider's managed offering, because backups, failover, patching, and
+  encryption-at-rest are the actual work and running them yourself is a permanent cost.
+* **No secret in any file** — not in a `.tf`, not in a `.tfvars`, not in a default. Secrets are created *empty* in
+  the provider's secret manager, with `lifecycle { ignore_changes }` on the value so a later apply never reverts a
+  rotated secret, and populated out-of-band.
+* **Remote, encrypted, locked state**, because state contains resource attributes that are effectively secrets.
+* **Keyless CI authentication** via GitHub OIDC, with the trust policy scoped to the repository *and* the
+  environment — a wildcard subject would let any branch deploy to production.
+* **Nothing is applied.** The skill writes configuration and runs `validate` (and `plan` only on request), because
+  every apply costs money.
+
+A substantial part of its value is the compatibility caveats it raises rather than papering over: DocumentDB is not
+MongoDB enough for Spring Data plus Mongock, Neptune is not Neo4j, Amazon OpenSearch has diverged from
+Elasticsearch, Cloud SQL for MySQL is not a true MariaDB, MSK ships no managed schema registry (so AVRO needs Glue
+Schema Registry or Confluent Cloud), gRPC needs the load balancer's protocol set to HTTP/2, and a Cloud Run service
+cannot reach a private Cloud SQL or Memorystore instance without a Serverless VPC Access connector. Where the
+right answer is a third-party managed service (MongoDB Atlas, Couchbase Capella, Neo4j Aura, Qdrant Cloud, Elastic
+or Confluent Cloud), it says so and notes that each needs its own account, billing, and provider credential.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-platform
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line giving the manifest path. Read for the target cloud, the database engines, caches,
+messaging, observability, dynamic configuration, and which API surfaces the service exposes — that determines what
+infrastructure is needed.
+|`springboot-stack.yml` at the repository root
+
+|Environments
+|Yes
+|Which to generate. Each gets its own directory and its own state file, so a `dev` mistake can't reach `prod`.
+|`dev`, `staging`, `prod` offered as the common set
+
+|Region, and multi-AZ for production
+|Yes
+|Per environment. Multi-AZ roughly doubles managed-database cost, so it is asked rather than assumed.
+|None
+
+|Sizing per environment
+|Yes
+|Replica min/max, CPU, and memory, plus the intended JVM heap — container memory must exceed heap plus metaspace
+plus native overhead, or the container gets OOM-killed.
+|Starting points offered (1 vCPU / 1–2 GiB, 2 replicas for `prod`)
+
+|Compute runtime
+|Yes
+|`AskUserQuestion`: ECS Fargate or EKS on AWS; Cloud Run or GKE Autopilot on Google Cloud. If the manifest's dynamic
+configuration is `kubernetes` and a non-Kubernetes runtime is picked, the contradiction is flagged for the user to
+resolve.
+|Fargate / Cloud Run recommended
+
+|Existing versus new infrastructure
+|Yes
+|Asked per database, cache, and Kafka cluster: create it here, or reference an existing one via a `data` source and
+an identifier variable. Teams commonly share one cluster across services.
+|None
+
+|Public exposure, domain, DNS zone
+|Yes
+|Whether the service is internet-facing; if so the domain name and whether the zone already exists. TLS comes from
+ACM or Google-managed certificates.
+|None
+
+|State backend
+|Yes
+|The S3 + DynamoDB or GCS backend to use. If none exists, a separate `infra/bootstrap/` configuration is generated
+to create just the backend — the one chicken-and-egg step.
+|None
+
+|Cost acknowledgement
+|Yes
+|Explicit confirmation, after naming the resources that bill continuously regardless of traffic (managed databases,
+NAT gateways, load balancers, Kafka clusters, provisioned OpenSearch).
+|None — must be confirmed
+|===
+
+== Outputs
+
+* `infra/README.md` — the bootstrap order, what every variable means and its blast radius, how to destroy an
+  environment safely, what has deletion protection on purpose, and **every step OpenTofu cannot perform** with
+  concrete instructions: domain registration or subdomain delegation, populating each secret's value, the
+  third-party accounts and provider credentials needed, the schema registry's compatibility mode, quota increases,
+  and SSO/OAuth provider configuration.
+* `infra/modules/` — reusable modules for network, the service runtime, one per database engine, cache, Kafka,
+  observability, and DNS, with no environment-specific literals.
+* `infra/envs/<env>/` — thin per-environment directories (provider, backend, module calls, values) with one state
+  file each, `outputs.tf` exposing endpoints and secret names, and documented `.tfvars.example` files.
+* `infra/bootstrap/` — only when the state backend must be created.
+* The OIDC deployment role or service account, container registry with an immutable-tag policy and untagged-image
+  expiry, the compute service with actuator-matching health probes and graceful-shutdown period, empty secrets with
+  scoped IAM, log groups with an explicit retention period, and the managed metrics target.
+* Pinned `required_version` and `required_providers` constraints, with `.terraform.lock.hcl` committed.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-platform"] --> B["Step 0: Read the manifest;\ncheck for tofu and an existing infra/"]
+    B -- infra/ exists --> C["Treat as gap-filling; never overwrite\na .tf managing live resources"]
+    B --> D["Step 1: Ask what cannot be inferred —\nenvironments, region, sizing, runtime,\nnew vs existing, exposure, state backend"]
+    C --> D
+    D -- kubernetes config + non-Kubernetes runtime --> E["Flag the contradiction;\nuser resolves it"]
+    E --> D
+    D --> F["Cost acknowledgement"]
+    F --> G["Step 2: Scaffold infra/ —\nmodules/ and one envs/ dir per environment"]
+    G --> H["Step 3: Generate per cloud, preferring\nmanaged services; raise every\ncompatibility caveat"]
+    H --> I["Step 4: Wire the service to its dependencies —\nendpoints, secret references, network path, IAM"]
+    I --> J["Step 5: Write infra/README.md\nincluding every manual step"]
+    J --> K["Step 6: tofu init -backend=false,\nvalidate, fmt — never apply"]
+    K -- schema error --> L["Fix against the provider docs"]
+    L --> K
+    K --> M["Step 7: Report resources, caveats,\nsecrets to populate, manual steps"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It reads `springboot-stack.yml` and the Spring profile files (so generated environment-variable names match
+the placeholders already referenced there), and writes OpenTofu configuration.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, fifth of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent. Its output is what
+  xref:skills/iru-setup-java-springboot-github-workflows.adoc[] surveys to build the deploy and undeploy workflows;
+  that skill still generates them if `infra/` is absent, but marks the OpenTofu steps as requiring this skill first.
+
+Also runs standalone (`/iru-setup-java-springboot-platform`).
+
+=== Related agents
+
+None — this skill runs its own `tofu` validation directly rather than delegating, since `validate` output is short.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-platform/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

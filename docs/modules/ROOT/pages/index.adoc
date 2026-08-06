@@ -1,6 +1,6 @@
 = AI Catalog
-:description: AI Catalog is a collection of Claude Code Skills and agents — reusable playbooks for issue-to-PR, Java/.NET coding, and repository bootstrap workflows.
-:keywords: claude code skills, claude code agents, ai catalog, slash commands, software engineering playbooks, issue to pr workflow, java development, dotnet development, skill catalog
+:description: AI Catalog is a collection of Claude Code Skills and agents — reusable playbooks for issue-to-PR, Java/.NET coding, Spring Boot services, and repository bootstrap.
+:keywords: claude code skills, claude code agents, ai catalog, slash commands, software engineering playbooks, issue to pr workflow, java development, spring boot service bootstrap, dotnet development, skill catalog
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -258,6 +258,21 @@ features, and where the underlying models genuinely differ.
 |Audit and complete Javadoc coverage for given classes, then verify it builds cleanly.
 |xref:skills/iru-java-javadoc.adoc[]
 
+|`iru-java-springboot-code-one-task`
+|xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+|Implement one Spring Boot plan task — module resolved first, bundled best-practice reference, unit tests only.
+|xref:skills/iru-java-springboot-code-one-task.adoc[]
+
+|`iru-java-springboot-code-one-task-group`
+|xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+|Implement a bucket of Spring Boot tasks and validate it once — owns module boundaries and integration tests.
+|xref:skills/iru-java-springboot-code-one-task-group.adoc[]
+
+|`iru-java-springboot-performance-tests`
+|xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+|Generate JMeter load tests for a service's main happy paths, correlating response time, CPU, and memory against concurrency.
+|xref:skills/iru-java-springboot-performance-tests.adoc[]
+
 |`iru-java-test`
 |xref:index.adoc#group-java[Java Development Tooling]
 |Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.
@@ -353,6 +368,41 @@ features, and where the underlying models genuinely differ.
 |Orchestrator: bootstrap a brand-new Java library repository end to end in one pass.
 |xref:skills/iru-setup-java-library-repository.adoc[]
 
+|`iru-setup-java-springboot`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Orchestrator: bootstrap a brand-new hexagonal Spring Boot service repository end to end in one pass.
+|xref:skills/iru-setup-java-springboot.adoc[]
+
+|`iru-setup-java-springboot-apis`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Set up the `apis/` contract tree and the OpenAPI/protobuf/AVRO code generators that read it.
+|xref:skills/iru-setup-java-springboot-apis.adoc[]
+
+|`iru-setup-java-springboot-github-workflows`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Scaffold the `build.yml`/`deploy.yml`/`undeploy.yml` workflows, with keyless OIDC cloud authentication.
+|xref:skills/iru-setup-java-springboot-github-workflows.adoc[]
+
+|`iru-setup-java-springboot-modules`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Scaffold the hexagonal source tree: domain ports, adapters, use cases, profiles, and an ArchUnit test.
+|xref:skills/iru-setup-java-springboot-modules.adoc[]
+
+|`iru-setup-java-springboot-platform`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Generate the OpenTofu infrastructure-as-code deploying the service to AWS or Google Cloud.
+|xref:skills/iru-setup-java-springboot-platform.adoc[]
+
+|`iru-setup-java-springboot-pom`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Generate the multi-module Maven reactor — a root pom holding every version, plus one pom per module.
+|xref:skills/iru-setup-java-springboot-pom.adoc[]
+
+|`iru-setup-java-springboot-testcontainers`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Write one `compose.yaml` and the Testcontainers harness that launches it, shared by local runs and CI.
+|xref:skills/iru-setup-java-springboot-testcontainers.adoc[]
+
 |`iru-setup-readme`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Create or refresh the root `README.md` from what actually exists in the repository.
@@ -362,6 +412,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Bring the Antora documentation module up to date with changes already made to the code.
 |xref:skills/iru-update-docs.adoc[]
+
+|`iru-update-java-springboot-documentation`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Create or refresh a Spring Boot service's own documentation pages, derived from its actual code.
+|xref:skills/iru-update-java-springboot-documentation.adoc[]
 |===
 
 == Agents reference
@@ -413,6 +468,54 @@ some of this in place (e.g. just `/iru-setup-antora` to add docs to a repository
   GitHub Actions pipeline.
 * xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] — one-time bootstrap of `CHANGELOG.md`.
 * xref:skills/iru-setup-readme.adoc[`iru-setup-readme`] — creates or refreshes the root `README.md`.
+
+[[group-service-bootstrap]]
+=== Spring Boot Service Bootstrap
+
+Standing up a brand-new Spring Boot **service** — as opposed to a library — with Domain-Driven Design and
+hexagonal (ports and adapters) architecture imposed from the first commit: a Maven multi-module reactor, a
+contract-first API layer, reproducible integration tests, infrastructure-as-code, CI/CD, and a documentation
+page set derived from the code.
+
+[TIP]
+====
+Reach for this group when starting a **deployable microservice**, and reach for
+xref:index.adoc#group-bootstrap[Repository Bootstrap] instead when starting a **publishable library** — the two
+differ in more than scale. A library is signed and published to Maven Central; a service is built into a
+container image, deployed to a cloud with OpenTofu, and can be torn down again.
+
+`iru-setup-java-springboot` is the single entry point and the only member that asks the user anything: it
+interviews once, writes the answers to a `springboot-stack.yml` manifest, and every other member reads that
+manifest back. Each also runs standalone against an existing service to fill one gap — adding a database
+adapter, a new API contract, or another deployment environment.
+====
+
+The architecture this group imposes is deliberately not configurable. Dependencies point inward only —
+`domain` depends on nothing, `application` sees only `domain`, each `infrastructure` and `api` adapter sees
+only `domain` (plus `application` for the inbound side), and `boot` is the composition root that wires
+everything. That direction is enforced twice over: by `maven-enforcer-plugin` `bannedDependencies` rules at
+module granularity, and by an ArchUnit test at package granularity. Every dependency version is declared in
+the root `pom.xml` and nowhere else, and Java 21 is the enforced minimum.
+
+* xref:skills/iru-setup-java-springboot.adoc[`iru-setup-java-springboot`] — orchestrator: interviews the user,
+  resolves the stack against the live Spring Initializr API, and runs the six sub-skills below plus the
+  documentation skill in order.
+* xref:skills/iru-setup-java-springboot-pom.adoc[`iru-setup-java-springboot-pom`] — generates the reactor: the
+  root pom holding every version and the full quality plugin set, plus one pom per module.
+* xref:skills/iru-setup-java-springboot-modules.adoc[`iru-setup-java-springboot-modules`] — scaffolds the source
+  tree: domain ports, one worked adapter per kind, use cases, profiles, migrations, and the ArchUnit test.
+* xref:skills/iru-setup-java-springboot-apis.adoc[`iru-setup-java-springboot-apis`] — sets up the `apis/`
+  contract tree and the OpenAPI/protobuf/AVRO generators, including their HTML documentation.
+* xref:skills/iru-setup-java-springboot-testcontainers.adoc[`iru-setup-java-springboot-testcontainers`] — writes
+  one `compose.yaml` and the Testcontainers harness that launches it, so local runs and CI cannot drift apart.
+* xref:skills/iru-setup-java-springboot-platform.adoc[`iru-setup-java-springboot-platform`] — generates the
+  OpenTofu configuration for AWS or Google Cloud, preferring managed services and writing no secret anywhere.
+* xref:skills/iru-setup-java-springboot-github-workflows.adoc[`iru-setup-java-springboot-github-workflows`] —
+  scaffolds the build, deploy, and undeploy workflows.
+* xref:skills/iru-update-java-springboot-documentation.adoc[`iru-update-java-springboot-documentation`] — creates
+  and then keeps current the service's own documentation pages. Unlike the rest of this group, it is meant to be
+  re-run continuously, in the same spirit as
+  xref:skills/iru-update-docs.adoc[`iru-update-docs`] in xref:index.adoc#group-maintenance[Repository Maintenance].
 
 [[group-intake]]
 === Ticket Intake
@@ -508,6 +611,48 @@ of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development 
   whole codebase in one pass.
 * xref:skills/iru-java-javadoc.adoc[`iru-java-javadoc`] — audits and completes Javadoc coverage for given classes,
   then verifies it builds cleanly.
+
+[[group-springboot]]
+=== Spring Boot Development Tooling
+
+The `java-springboot` language/framework backend for the `iru-code` pipeline — the pair of skills that implement
+plan tasks in a DDD/hexagonal Spring Boot service, as opposed to the plain Java/Maven backend above — plus the
+standalone Spring Boot checks a person runs on demand against such a service. Registered by
+convention — xref:skills/iru-plan.adoc[] derives the `java-springboot` key from the `*-code-one-task` directory
+name, and xref:skills/iru-code-one-task-group.adoc[] dispatches that key's tasks to the group skill — so no
+orchestrator mentions Spring Boot anywhere in its own instructions.
+
+[TIP]
+====
+This group pairs with xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]: that group creates
+the service, this one implements work in it. Both assume the same module layout, and the split of responsibility
+between the two skills here exists for one concrete reason — **integration tests run once per task group, never
+once per task**, because a task-level run would start the same Testcontainers stack repeatedly.
+
+You rarely invoke either directly; the xref:index.adoc#group-cycle[Issue-to-PR Development Cycle] reaches them
+through `iru-code`.
+====
+
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[`iru-java-springboot-code-one-task-group`] — implements a
+  bucket of Spring Boot tasks (in parallel where safe) and validates the whole bucket once, reusing the same
+  language-level skills as the plain-Java group skill (`iru-java-test`, `iru-java-coverage`,
+  `iru-java-code-quality`, `iru-java-javadoc`). It owns the two stages the per-task skill deliberately omits: the
+  module-boundary checks (`maven-enforcer-plugin` banned-dependencies plus the ArchUnit test, run early because
+  they fail in seconds) and the Testcontainers-backed integration tests (run last, because they cost minutes). Its
+  80% coverage gate is measured from **unit tests alone** — integration tests raise the aggregate afterwards and
+  that delta is reported, but it never satisfies the gate, so the coverage verdict holds even on a machine with no
+  Docker.
+* xref:skills/iru-java-springboot-code-one-task.adoc[`iru-java-springboot-code-one-task`] — implements a single
+  task's code and **unit tests only**, resolving which hexagonal module the code belongs in before writing
+  anything. It is the only skill in this catalog that ships its own `reference/` library — hexagonal architecture
+  and module boundaries, DDD tactical patterns, SOLID, the distributed patterns (CQRS, transactional outbox, saga,
+  eventual consistency, listen-to-yourself), and this catalog's Java code style — read by progressive disclosure so
+  a small task doesn't pay for all of it.
+* xref:skills/iru-java-springboot-performance-tests.adoc[`iru-java-springboot-performance-tests`] — generates an
+  Apache JMeter suite under `performance/` covering only the happy paths of the service's main use cases, in three
+  scenarios (low flat concurrency, high flat concurrency, and a symmetric scale-up/scale-down ramp). Unlike the two
+  skills above it is never reached through `iru-code`: it is run by a person, after real endpoints exist, and it
+  deliberately sits outside the Maven reactor so `mvn verify` never triggers a load test.
 
 [[group-dotnet]]
 === .NET Development Tooling
@@ -721,6 +866,17 @@ flowchart LR
         SR["iru-setup-readme"]
     end
 
+    subgraph SBoot["Spring Boot Service Bootstrap"]
+        SB["iru-setup-java-springboot"]
+        SBP["iru-setup-java-springboot-pom"]
+        SBM["iru-setup-java-springboot-modules"]
+        SBA["iru-setup-java-springboot-apis"]
+        SBT["iru-setup-java-springboot-testcontainers"]
+        SBPL["iru-setup-java-springboot-platform"]
+        SBW["iru-setup-java-springboot-github-workflows"]
+        SBD["iru-update-java-springboot-documentation"]
+    end
+
     subgraph Intake["Ticket Intake"]
         CGI["iru-create-github-issue"]
         CJT["iru-create-jira-ticket"]
@@ -743,6 +899,12 @@ flowchart LR
         JCQ["iru-java-code-quality"]
         JJ["iru-java-javadoc"]
         JGAT["iru-java-generate-all-tests"]
+    end
+
+    subgraph SBootDev["Spring Boot Development Tooling"]
+        SBCOTG["iru-java-springboot-code-one-task-group"]
+        SBCOT["iru-java-springboot-code-one-task"]
+        SBPERF["iru-java-springboot-performance-tests"]
     end
 
     subgraph Dotnet[".NET Development Tooling"]
@@ -794,6 +956,18 @@ flowchart LR
     SJLR -.-> SC
     SJLR -.-> SR
 
+    SB -.-> SBP
+    SB -.-> SBM
+    SB -.-> SBA
+    SB -.-> SBT
+    SB -.-> SBPL
+    SB -.-> SBW
+    SB -.-> SBD
+    SB --> SJG
+    SB --> SC
+    SB --> SR
+    SBD -.->|only if no Antora module yet| AS
+
     CGI --> EXPLORE
     CJT --> EXPLORE
     CJT --> CJCC
@@ -822,8 +996,18 @@ flowchart LR
     CODE -->|"quality regressed,\nJira-origin plan,\nuser opts to file"| CJT
 
     COTG --> JCOTG
+    COTG --> SBCOTG
     COTG --> DCOTG
     COTG --> DBCOTG
+
+    SBPERF -->|"to find the service's\nmain use cases"| EXPLORE
+
+    SBCOTG -.-> SBCOT
+    SBCOTG -.-> JCQ
+    SBCOTG -.-> CL
+    SBCOTG -.-> JJ
+    SBCOTG -.-> JT
+    SBCOTG -.-> JC
 
     DBCOTG --> DBCOT
     DBCOT --> EXPLORE
@@ -862,17 +1046,29 @@ flowchart LR
     SR -.uses.-> AGT_EXPLORE
     JGAT -.uses.-> AGT_EXPLORE
     DGAT -.uses.-> AGT_EXPLORE
+    SBD -.uses.-> AGT_EXPLORE
     CODE -.spawns.-> AGT_GATE(("iru-gate-runner\nagent"))
     COTG -.spawns.-> AGT_GATE
     JCOTG -.spawns.-> AGT_GATE
     DCOTG -.spawns.-> AGT_GATE
     JGAT -.spawns.-> AGT_GATE
     DGAT -.spawns.-> AGT_GATE
+    SB -.spawns.-> AGT_GATE
+    SBP -.spawns.-> AGT_GATE
+    SBM -.spawns.-> AGT_GATE
+    SBA -.spawns.-> AGT_GATE
+    SBT -.spawns.-> AGT_GATE
+    SBW -.spawns.-> AGT_GATE
+    SBCOTG -.spawns.-> AGT_GATE
+    SBPERF -.spawns.-> AGT_GATE
+    SBPERF -.uses.-> AGT_EXPLORE
     ISSUE -.spawns.-> AGT_ISE(("iru-isolated-skill-executor\nagent"))
     CODE -.spawns.-> AGT_ISE
     JCOTG -.spawns.-> AGT_ISE
     DCOTG -.spawns.-> AGT_ISE
     SJLR -.spawns.-> AGT_ISE
+    SB -.spawns.-> AGT_ISE
+    SBCOTG -.spawns.-> AGT_ISE
     SC -.spawns.-> AGT_CS(("iru-change-summarizer\nagent"))
     REL -.spawns.-> AGT_CS
     GSD -.spawns.-> AGT_GP(("general-purpose\nagent"))
@@ -880,6 +1076,7 @@ flowchart LR
     PRD -.spawns.-> AGT_GP
     JGAT -.spawns.-> AGT_GP
     DGAT -.spawns.-> AGT_GP
+    SBD -.spawns.-> AGT_GP
 ....
 
 == Common workflows
@@ -907,6 +1104,39 @@ flowchart TD
 
 Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
 `/iru-setup-antora` to add docs to a repository that already has a `pom.xml`).
+
+=== Setting up a new Spring Boot service
+
+`iru-setup-java-springboot` is the service-shaped counterpart to the flow above. It interviews the user once —
+project identity, target cloud, reactive or blocking, and every technology choice — resolving versions and
+dependency ids against the live Spring Initializr API, records everything in `springboot-stack.yml`, and then runs
+seven sub-skills in a fixed order that each read that manifest back:
+
+[mermaid]
+....
+flowchart TD
+    A["/iru-setup-java-springboot"] --> B["Interview + Initializr API\n(versions, dependency ids, reference pom)"]
+    B --> C["springboot-stack.yml\n(the manifest every sub-skill reads)"]
+    C --> D["iru-setup-java-springboot-pom\n(reactor: root pom holds every version)"]
+    D -- root pom not written --> STOP["Stop — no reactor to attach to"]
+    D --> E["iru-setup-java-springboot-modules\n(ports, adapters, profiles, ArchUnit)"]
+    E --> F["iru-setup-java-springboot-apis\n(apis/ contracts + code generation)"]
+    F --> G["iru-setup-java-springboot-testcontainers\n(compose.yaml + integration-test harness)"]
+    G --> H["iru-setup-java-springboot-platform\n(OpenTofu for AWS or Google Cloud)"]
+    H --> I["iru-setup-java-springboot-github-workflows\n(build, deploy, undeploy)"]
+    I --> J["iru-update-java-springboot-documentation\n(Antora site, last — derives from finished code)"]
+....
+
+The order carries real constraints rather than being a preference: poms before modules (a module needs its parent),
+modules before APIs (generated sources need somewhere to land), APIs before the container stack (it must know
+whether a schema registry is needed), and everything before the workflows and documentation, both of which survey
+what is actually on disk. Only the first step is fatal if it stops — every later sub-skill that stops is recorded
+in the final report and the run continues.
+
+Two decision points are worth knowing about before starting. The **concurrency model** (blocking, reactive, or
+both) is asked early because it decides which starter every other technology resolves to, and "both" is flagged as
+the hardest to reason about. The **deployment platform** (AWS or Google Cloud) determines the whole OpenTofu layout
+and the recommended dynamic-configuration mechanism, so it can't be deferred either.
 
 === Filing a ticket before work begins
 

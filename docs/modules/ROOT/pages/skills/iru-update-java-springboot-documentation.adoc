@@ -1,0 +1,149 @@
+= Update Java Spring Boot Documentation
+:description: Creates and keeps current a Spring Boot service's Antora docs: architecture, use cases, database model, APIs, configuration and metrics, derived from code.
+:keywords: iru-update-java-springboot-documentation, claude code skill, antora, kroki, mermaid, service documentation, api documentation, configuration table, metrics table
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Creates or refreshes the Antora documentation site for a DDD/hexagonal Spring Boot service, deriving every page from
+the contracts, entities, configuration classes, and Micrometer calls that are actually in the repository.
+
+== Purpose
+
+`iru-update-java-springboot-documentation` does double duty on purpose: the first run scaffolds the page set, and
+every later run updates it from the code — which is the only way documentation of this depth survives contact with
+an evolving service.
+
+Its governing rule is that **everything on these pages is derived from something in the repository**. Where
+something genuinely cannot be derived — why a technology was chosen, what a use case is *for*, a business
+constraint — the skill writes an explicit `TODO:` marker naming what's needed and from whom, and never writes
+plausible-sounding prose in its place. The stated reasoning: a confidently wrong architecture page is worse than an
+obviously incomplete one, because nobody re-checks it. The consolidated list of `TODO:` markers is the most useful
+part of its report.
+
+It treats `springboot-stack.yml` as *intent* and the code as truth, so a database in the manifest with no adapter
+module — or an adapter for something the manifest doesn't list — is reported as a finding about the repository
+rather than quietly reconciled.
+
+The same discipline surfaces genuine defects as a side effect of documenting: an endpoint whose spec security
+doesn't match its filter chain, an exception the code can throw but the spec doesn't document, a property that looks
+dynamic but isn't `@RefreshScope`d, a metric with unbounded tag cardinality, an index no query uses.
+
+Unlike xref:skills/iru-setup-antora.adoc[], which installs Mermaid only, this skill also wires **Kroki** — Mermaid
+handles flows and sequences, while Kroki adds PlantUML, C4, and ERD, which is what the architecture and
+database-model pages need. It flags that with the public Kroki server every diagram's source text is sent to a
+third-party service at build time, and that a sensitive model warrants self-hosting.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+Although grouped with the Spring Boot bootstrap family — it is the seventh sub-skill that orchestrator runs — this
+is the one member of that family intended to be re-run continuously, in the same spirit as
+xref:skills/iru-update-docs.adoc[] in xref:index.adoc#group-maintenance[Repository Maintenance].
+
+== Invocation
+
+[source]
+----
+/iru-update-java-springboot-documentation
+/iru-update-java-springboot-documentation <page-or-area>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<page-or-area>`
+|No
+|Positional argument naming a single page or area to refresh: `overview`, `architecture`, `use-cases`,
+`database-model`, `apis/rest`, `apis/grpc`, `apis/messaging`, `configuration`, or `metrics`.
+|Absent means every page
+
+|`springboot-stack.yml`
+|No
+|Read for the declared stack, as intent to be checked against the code rather than as truth.
+|`springboot-stack.yml` at the repository root
+
+|The codebase
+|Yes
+|The real source: `apis/` contracts, `application.usecase` classes, persistence entities and migration files, the
+exception-mapping advice, the Stream bindings, every `@ConfigurationProperties` class and which carry
+`@RefreshScope`, and the Micrometer calls in `infrastructure/metrics`.
+|None — derived
+|===
+
+== Outputs
+
+* An Antora site with Kroki installed alongside Mermaid and the playbook amended (`kroki-fetch-diagram`,
+  `kroki-server-url`).
+* `index.adoc` — the service overview: purpose, capabilities, dependencies, and pointers onward.
+* `architecture.adoc` — the module table and the two mechanisms enforcing it (the enforcer rules and the named
+  ArchUnit test), the concurrency model and its consequences, a per-technology section, a Mermaid dependency
+  diagram, a Kroki module-dependency diagram, and the cross-cutting concerns. Each downstream client's section
+  also names the contract it is generated from and records that the same contract drives the API mock standing in
+  for that service in integration tests and local runs, so a reader knows where to add a response instead of
+  inventing a fixture.
+* `use-cases.adoc` — one section per use case: what it does, its trigger, its ordered steps, the ports and hence
+  adapters it touches, every exception it can raise and what the caller sees, and a Mermaid sequence diagram
+  including the failure branch.
+* `database-model.adoc` — per collection/table/label: a field table (name, type, mandatory, indexed, constraints,
+  default, description), the indexes and which query each serves, relationships, and a per-engine diagram. Read from
+  the entities *and* the migrations, since indexes and constraints usually live in the latter.
+* `apis/rest.adoc`, `apis/grpc.adoc`, `apis/messaging.adoc` — version summaries, entity/message field tables with
+  descriptions, constraints and deprecations, endpoint documentation including authorization and every error
+  response, and links to the generated HTML on GitHub Pages.
+* `configuration.adoc` — the property table with default, "dynamically changeable" (Yes / restart required /
+  redeploy required, derived from the annotations), a criticality flag marking the performance and availability
+  levers usable as a fast mitigation during a degradation, and a legend.
+* `metrics.adoc` — the metric table with type, every tag key and its possible values, cardinality risk flagged, and
+  where to scrape and view them locally.
+* `nav.adoc` entries for every page created.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-update-java-springboot-documentation"] --> B["Step 0: Resolve scope; read the manifest\nas intent; gather facts via the Explore agent"]
+    B --> C["Step 1: Ensure the site exists"]
+    C -- no docs/antora.yml --> D["Bootstrap via iru-setup-antora"]
+    D --> E
+    C --> E["Install Kroki; amend the playbook\nalongside Mermaid"]
+    E --> F["Step 2: Create or update the page set\nand nav.adoc, preserving hand-written prose"]
+    F --> G["Steps 3-11: derive each page —\noverview, architecture, use cases, database model,\nREST/gRPC/messaging APIs, configuration, metrics"]
+    G -- fact not derivable --> H["Write an explicit TODO: marker;\nnever invent prose"]
+    H --> G
+    G --> I["Step 12: Build the site;\nfix broken xrefs, tables, diagram syntax"]
+    I --> J["Verify every Mermaid and Kroki diagram\nactually rendered — a bad Kroki block\nbuilds without warning"]
+    J --> K["Step 13: Report pages, all TODOs by page,\nand every code/spec discrepancy found"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-setup-antora.adoc[] — Step 1, only if `docs/antora.yml` is absent, to get the toolchain, playbook,
+  and ROOT module in place before this skill adds Kroki and the service page set.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, last of seven sub-skills, via the
+  `iru-isolated-skill-executor` agent, so the pages are derived from the finished codebase rather than an
+  in-progress one.
+
+Also — and mainly — run standalone after any change to a contract, an entity, a configuration property, a metric, or
+a use case, since the pages are derived and go stale the moment the code moves.
+
+=== Related agents
+
+* **`Explore`** (built-in) — used in Step 0 for the broad structural sweeps over the module tree, use cases,
+  entities, and metrics, so only the specific files it identifies are read directly. See
+  xref:agents/overview.adoc[].
+* **`general-purpose`** (built-in, Claude Code's default) — one-off use in Step 1 to run
+  xref:skills/iru-setup-antora.adoc[] mid-run when no Antora module exists yet.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-update-java-springboot-documentation/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
