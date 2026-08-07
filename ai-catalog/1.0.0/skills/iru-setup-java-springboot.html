@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup Java Spring Boot :: AI Catalog</title>
+    <meta name="description" content="Bootstraps a new Spring Boot service repository with DDD and hexagonal architecture as a Maven multi-module reactor, CI/CD, OpenTofu, and docs.">
+    <meta name="keywords" content="iru-setup-java-springboot, claude code skill, spring boot, hexagonal architecture, domain driven design, maven multi-module, spring initializr, java 21, microservice bootstrap">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-setup-java-springboot.html">Setup Java Spring Boot</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-setup-java-springboot.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup Java Spring Boot</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>End-to-end bootstrap for a brand-new Spring Boot service repository built on Domain-Driven Design and hexagonal
+(ports and adapters) architecture, realised as a Maven multi-module reactor. It interviews the user once, resolves
+every Spring Boot version and dependency id against the live Spring Initializr API, records the answers in a
+<code>springboot-stack.yml</code> manifest, and then delegates all file generation to seven sub-skills.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-java-springboot</code> is the top-level entry point for starting a Spring Boot microservice from nothing. It
+is the <strong>interviewer and orchestrator</strong> of the Spring Boot family: no other skill in that family asks the user
+anything about the stack, because this one asks everything exactly once and writes the answers to a manifest the
+others read back.</p>
+</div>
+<div class="paragraph">
+<p>Three things distinguish it from <code>iru-setup-java-library-repository</code>, the catalog&#8217;s other bootstrap orchestrator:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>It imposes an architecture.</strong> The module layout (<code>domain</code>, <code>application</code>, <code>infrastructure/<strong></code>, <code>api/</strong></code>, <code>boot</code>,
+<code>coverage</code>), the direction dependencies may point, and the rule that every dependency version lives only in the
+root <code>pom.xml</code> are not options — they are what the skill exists to enforce.</p>
+</li>
+<li>
+<p><strong>It resolves the stack from a live API rather than from memory.</strong> Spring Boot renames starter artifacts across
+major versions (in Boot 4.x <code>spring-boot-starter-web</code> became <code>spring-boot-starter-webmvc</code>, the Testcontainers
+modules became <code>testcontainers-&lt;engine&gt;</code>, and every starter gained a <code>spring-boot-starter-&lt;x&gt;-test</code> companion),
+so the skill reads <code><a href="https://start.spring.io/metadata/client" class="bare">https://start.spring.io/metadata/client</a></code> for the current version list and dependency
+catalogue, and fetches a reference <code>pom.xml</code> from <code><a href="https://start.spring.io/pom.xml" class="bare">https://start.spring.io/pom.xml</a></code> for the exact artifact names.
+If that API is unreachable it stops rather than guessing.</p>
+</li>
+<li>
+<p><strong>It produces a deployable service, not a publishable library.</strong> There is no Maven Central publishing or GPG
+signing; instead there is a container image, OpenTofu infrastructure-as-code for AWS or Google Cloud, and deploy
+and undeploy workflows.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Java 21 is the enforced minimum, in <code>maven.compiler.release</code>, <code>java.version</code>, and a <code>maven-enforcer-plugin</code>
+<code>requireJavaVersion</code> rule — even though Spring Initializr&#8217;s own default <code>javaVersion</code> is currently lower.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-service-bootstrap" class="xref page">Spring Boot Service Bootstrap</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-setup-java-springboot</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>All inputs are collected interactively; nothing is passed in via <code>args</code>. The skill is the top of the chain.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">groupId, artifactId, version, base Java package, service description, developer name/email/organizationUrl</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Free-text project-identity fields asked in plain conversation in Step 2. The <code>artifactId</code> becomes the prefix of
+every module&#8217;s own artifactId; the base package roots every module&#8217;s package.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code> defaults to <code>0.0.1-SNAPSHOT</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spring Boot version</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Confirmed via <code>AskUserQuestion</code> from the live Initializr catalogue, offering the current GA release as the
+recommendation. Pre-release entries are never offered as the default.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>bootVersion.default</code> from the API</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Java version</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Confirmed via <code>AskUserQuestion</code>, filtered to versions the Initializr accepts. Anything below 21 is refused.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>21</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deployment platform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AskUserQuestion</code>: Amazon Web Services or Google Cloud. Drives the OpenTofu layout, the dynamic-configuration
+recommendation, and the deploy workflows.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — user must choose</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Concurrency model</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AskUserQuestion</code>: non-reactive/blocking (Spring MVC), reactive (WebFlux/Netty), or both. Decides which starter
+every other technology resolves to, so it is settled before any technology choice.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Blocking is presented as the recommendation</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Databases</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Multi-select from MongoDB, Couchbase, relational (PostgreSQL or MariaDB), Elasticsearch, Neo4j, and Qdrant, each
+presented with the workload shape it suits. Every engine chosen also requires an index/migration tool
+(Mongock, Liquibase and its MongoDB/Couchbase/Neo4j extensions, or Flyway).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Caches</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Multi-select: Caffeine (local, per-node) and/or Redis (shared across replicas).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spring Security</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes/no, plus whether the service validates incoming JWTs (<code>oauth2-resource-server</code>), initiates login flows
+(<code>oauth2-client</code>), or both.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spring Cloud Stream / Kafka</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes/no, plus the directions needed (produce, consume, or both). AVRO is the message format, and an AsyncAPI
+specification alongside the schemas documents the topics carrying them.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">REST server, gRPC server, GraphQL server</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes/no each. All three are contract-first: specs live in <code>apis/</code> and code is generated from them. GraphQL
+additionally needs a web transport starter alongside <code>spring-boot-starter-graphql</code>, which carries none of its own.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">REST clients, gRPC clients, GraphQL clients</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A name per downstream service; each becomes an <code>infrastructure/clients/&lt;name&gt;</code> module and an <code>apis/</code> spec
+directory. One module per <strong>service</strong>, with a generator execution per protocol, when a service is reached over more
+than one.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API mocking tool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Only if a client was named</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Which mock stands in for the downstream services in integration tests and local runs — <strong>Microcks</strong> whenever any
+gRPC or GraphQL client exists (it mocks all three protocols from the same contracts in one container), <strong>WireMock</strong>
+for a REST-only service (lighter, with a <code>wiremock-grpc-extension</code> available if gRPC arrives later). Recorded as
+<code>stack.apiMock</code> and acted on by <a href="iru-setup-java-springboot-testcontainers.html" class="xref page">Setup Java Spring Boot Testcontainers</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Microcks with gRPC or GraphQL, WireMock for REST-only</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logging, metrics, tracing</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked individually; all three recommended. Metrics adds Prometheus/Grafana containers for local development.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Recommended on</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spring AI</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes/no. If yes: the LLM providers (offered from the live catalogue), an optional vector store, and optional MCP
+server/client support. The user is warned first that this requires a paid provider subscription.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Dynamic configuration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AskUserQuestion</code>: Kubernetes ConfigMaps/Secrets, AWS Secrets Manager, Spring Cloud Config Server, or none. The
+recommendation follows from the deployment platform.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Derived from the platform choice</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Other Initializr dependencies</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Anything else from the live catalogue, by id or name, with a warning that entries outside the groups above are
+typically less relevant and some actively conflict with the contract-first hexagonal shape.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><code>springboot-stack.yml</code> at the repository root — the manifest recording the resolved identity and every
+technology choice, with container image tags pinned. Meant to be committed; read by every sub-skill and later
+by <code>iru-update-java-springboot-documentation</code>.</p>
+</li>
+<li>
+<p>The full Maven reactor: root <code>pom.xml</code> plus one pom per module (via <code>iru-setup-java-springboot-pom</code>).</p>
+</li>
+<li>
+<p>The hexagonal source tree — ports, adapters, use cases, the <code>@SpringBootApplication</code> class, per-profile
+configuration, migration changelogs, and an ArchUnit test enforcing the dependency direction (via
+<code>iru-setup-java-springboot-modules</code>).</p>
+</li>
+<li>
+<p>The <code>apis/</code> contract tree, the OpenAPI/protobuf/GraphQL-SDL/AVRO generator wiring, and the AsyncAPI
+specification and documentation generators for messaging (via <code>iru-setup-java-springboot-apis</code>).</p>
+</li>
+<li>
+<p><code>compose.yaml</code> and the Testcontainers integration-test harness (via
+<code>iru-setup-java-springboot-testcontainers</code>).</p>
+</li>
+<li>
+<p>An <code>infra/</code> OpenTofu configuration for the chosen cloud (via <code>iru-setup-java-springboot-platform</code>).</p>
+</li>
+<li>
+<p><code>build.yml</code>, <code>deploy.yml</code>, and <code>undeploy.yml</code> GitHub Actions workflows (via
+<code>iru-setup-java-springboot-github-workflows</code>).</p>
+</li>
+<li>
+<p>An Antora documentation site with Mermaid and Kroki and the full service page set (via
+<code>iru-update-java-springboot-documentation</code>).</p>
+</li>
+<li>
+<p>Repository-level supporting files: <code>.gitignore</code>, <code>README.md</code>, <code>CHANGELOG.md</code>, <code>checkstyle.xml</code>, and optionally
+<code>LICENSE</code>.</p>
+</li>
+<li>
+<p>A final report consolidating every secret and variable that must be supplied out-of-band, every open gap, and
+the result of the three verification builds.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-setup-java-springboot"] --> B["Step 0: Check pom.xml / springboot-stack.yml\nand verify prerequisites"]
+    B -- pom.xml exists, user chooses stop --> STOP[Stop; report]
+    B -- ok --> C["Step 1: Fetch Initializr metadata;\nconfirm Boot version and Java version (21 minimum)"]
+    C -- API unreachable --> STOP2["Stop — never fall back\nto hardcoded versions"]
+    C --> D["Step 2: Collect project identity;\ninfer repository info from git"]
+    D --> E["Step 3: Deployment platform (AWS/GCP)\nand concurrency model"]
+    E --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
+    F --> G["Step 5: Confirm the whole plan"]
+    G -- corrections --> F
+    G -- confirmed --> H["Step 6: Write springboot-stack.yml"]
+    H --> I["Step 7: Fetch the reference pom from Initializr"]
+    I -- invalid id / incompatible version --> F
+    I --> J["Step 8: Delegate to 7 sub-skills in order,\neach via iru-isolated-skill-executor"]
+    J -- pom sub-skill did not write the root pom --> STOP3["Stop — no reactor to attach to"]
+    J --> K["Step 9: Supporting files\n(.gitignore, README, CHANGELOG, checkstyle.xml)"]
+    K --> L["Step 10: Verify — clean verify -DskipTests,\ntest, verify (via iru-gate-runner)"]
+    L --> M["Step 11: Report, secrets table,\nand review warnings"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>Each of the following is invoked via the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a>
+agent rather than a direct <code>Skill</code> call, in this order — every sub-skill reads <code>springboot-stack.yml</code> and the
+filesystem directly, so only a short completion summary needs to come back:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-java-springboot-pom.html" class="xref page">Setup Java Spring Boot Poms</a> — Step 8, first: the root reactor pom and every module pom.
+Also receives the path to the Initializr reference pom saved in Step 7. If this reports that the root pom was
+not written, the whole run stops.</p>
+</li>
+<li>
+<p><a href="iru-setup-java-springboot-modules.html" class="xref page">Setup Java Spring Boot Modules</a> — Step 8: the source tree, ports, adapters, profiles, and
+the ArchUnit test. Runs after the poms because it writes sources into modules rather than creating them.</p>
+</li>
+<li>
+<p><a href="iru-setup-java-springboot-apis.html" class="xref page">Setup Java Spring Boot APIs</a> — Step 8: the <code>apis/</code> contracts, the code generators, and the
+AsyncAPI documentation generators. Runs after the modules because generated sources need a module to land in.</p>
+</li>
+<li>
+<p><a href="iru-setup-java-springboot-testcontainers.html" class="xref page">Setup Java Spring Boot Testcontainers</a> — Step 8: <code>compose.yaml</code> and the integration-test
+harness. Runs after the APIs because the compose stack must know whether a schema registry is needed.</p>
+</li>
+<li>
+<p><a href="iru-setup-java-springboot-platform.html" class="xref page">Setup Java Spring Boot Platform</a> — Step 8: the OpenTofu configuration.</p>
+</li>
+<li>
+<p><a href="iru-setup-java-springboot-github-workflows.html" class="xref page">Setup Java Spring Boot GitHub Workflows</a> — Step 8: the build, deploy, and undeploy
+workflows. Runs late because it surveys what is actually on disk.</p>
+</li>
+<li>
+<p><a href="iru-update-java-springboot-documentation.html" class="xref page">Update Java Spring Boot Documentation</a> — Step 8, last: the Antora site and the service
+page set, derived from the finished codebase.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>In Step 9 it also invokes, if available, <a href="iru-setup-java-gitignore.html" class="xref page">Setup Java Gitignore</a>,
+<a href="iru-setup-readme.html" class="xref page">Setup Readme</a>, and <a href="iru-setup-changelog.html" class="xref page">Setup Changelog</a> for the repository-level files the
+Spring Boot sub-skills don&#8217;t own. It additionally recommends — but does not invoke —
+<a href="iru-check-license.html" class="xref page">Check License</a> for license headers and <a href="iru-check-security.html" class="xref page">Check Security</a> for secret
+scanning, the latter specifically if an LLM API token may ever have been committed.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="paragraph">
+<p>None — <code>iru-setup-java-springboot</code> is a top-level entry point; no other skill in this catalog invokes it.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> — spawned once per sub-skill in Step
+8, so seven sub-skills' template expansion, file reads, and build output don&#8217;t accumulate in this
+orchestrator&#8217;s context over a single bootstrap run.</p>
+</li>
+<li>
+<p><a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — spawned for each of Step 10&#8217;s three Maven verification
+runs, so a multi-module Maven log never lands in this conversation.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup Java Spring Boot Modules :: AI Catalog</title>
+    <meta name="description" content="Scaffolds the hexagonal source tree of a Spring Boot service: domain ports, adapters, use cases, profiles, migrations, and an ArchUnit architecture test.">
+    <meta name="keywords" content="iru-setup-java-springboot-modules, claude code skill, ports and adapters, hexagonal architecture, mapstruct, archunit, refreshscope, spring profiles, database migrations">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-setup-java-springboot-modules.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup Java Spring Boot Modules</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Turns a reactor of empty modules into a Spring Boot service skeleton that compiles, starts, and demonstrates the
+hexagonal pattern well enough that the first real feature has an obvious shape to follow.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-java-springboot-modules</code> writes <strong>one worked example per adapter kind</strong>, not a set of empty files: a
+single aggregate, its repository port, one adapter implementing that port against the chosen database, one use
+case, one endpoint. The reasoning is explicit in the skill — a developer&#8217;s first task is to rename or delete the
+example, and both are easier than inventing the layering from an empty tree.</p>
+</div>
+<div class="paragraph">
+<p>The module it treats as load-bearing is <code>domain</code>. Because <code>domain</code> is the one module every other module may depend
+on, every capability an outer module provides is declared there as an interface (a port): repository ports, an
+event publisher, one client port per downstream service, a metrics publisher, a configuration provider, and a
+small domain-exception hierarchy that the API modules map to HTTP or gRPC status codes. <code>domain</code> carries no Spring
+annotations at all — the enforcer rule from <code>iru-setup-java-springboot-pom</code> makes that a build failure.</p>
+</div>
+<div class="paragraph">
+<p>It also writes the runtime configuration: <code>application.yml</code> plus <code>local</code>/<code>dev</code>/<code>prod</code> profiles, with structured JSON
+logging for deployed profiles, actuator probes and Prometheus exposure on a separate management port, graceful
+shutdown, and virtual threads enabled when the stack is blocking on Java 21+. Every deployed profile uses
+placeholders only — no credential, host, or token is written into a committed file, and no default that would
+accidentally work against something real.</p>
+</div>
+<div class="paragraph">
+<p>Finally it writes an ArchUnit test in `boot&#8217;s test sources. The enforcer rules catch violations at <strong>module</strong>
+granularity; ArchUnit catches them at <strong>package</strong> granularity, which is where they actually creep in.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-service-bootstrap" class="xref page">Spring Boot Service Bootstrap</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-setup-java-springboot-modules</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stack-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> line giving the manifest path. Read in full: the base package, the concurrency model (which
+decides every method signature — plain values, or <code>Mono</code>/<code>Flux</code>), and which modules exist.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>springboot-stack.yml</code> at the repository root</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An existing reactor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A root <code>pom.xml</code> plus a <code>pom.xml</code> in every module the manifest names. If they&#8217;re missing the skill stops and points
+the user at <code>/iru-setup-java-springboot-pom</code> — it writes sources into modules, it doesn&#8217;t create modules.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — a precondition, not a default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Existing hand-written sources</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Any <code>.java</code> file already containing code the skill didn&#8217;t generate is skipped, never overwritten, and reported.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skip and report</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>The package layout under <code>src/main/java</code>, <code>src/main/resources</code>, and <code>src/test/java</code> for every module.</p>
+</li>
+<li>
+<p><code>domain</code> — the aggregate, value objects, every port interface with Javadoc describing its contract, and the
+domain-exception hierarchy.</p>
+</li>
+<li>
+<p><code>application</code> — one use case class per use case, with a Mockito unit test that mocks every port.</p>
+</li>
+<li>
+<p><code>infrastructure/database/&lt;engine&gt;</code> — persistence entity, Spring Data repository, MapStruct mapper, the port
+adapter, the migration/changelog directory for that engine&#8217;s tooling (Mongock change unit, Liquibase changelog
+including a <code>pgvector</code> extension changeset where relevant, or a Flyway script), and an integration test.</p>
+</li>
+<li>
+<p><code>infrastructure/configuration</code> — validated <code>@ConfigurationProperties</code> beans annotated <code>@RefreshScope</code>, the
+configuration port adapter, and the wiring for the dynamic-configuration mechanism the manifest names.</p>
+</li>
+<li>
+<p><code>infrastructure/clients/&lt;name&gt;</code> — a port adapter over the generated client, with MapStruct mapping, transport
+failures translated to domain exceptions, explicit connect/read timeouts, and its base URL bound from
+<code>clients.&lt;name&gt;.base-url</code> with no default in any deployed profile. That binding is what lets the integration
+harness redirect the client to the compose stack&#8217;s API mock; an adapter that hardcodes a host cannot be tested
+against anything and will reach a real downstream service from CI.</p>
+</li>
+<li>
+<p><code>infrastructure/producers</code> and <code>api/consumers</code> — the Kafka publisher adapter and consumer beans, AVRO mappers,
+bindings, consumer group, and a dead-letter topic with a bounded retry policy. Every <code>destination</code> and <code>group</code>
+chosen here is reported so it can be reconciled with the AsyncAPI specification
+<a href="iru-setup-java-springboot-apis.html" class="xref page">Setup Java Spring Boot APIs</a> writes in <code>apis/messaging/</code>: a binding whose topic appears as no
+AsyncAPI channel is a topic nobody outside the repository can discover.</p>
+</li>
+<li>
+<p><code>infrastructure/metrics</code> — the metrics port implemented over Micrometer, with a constants class for every metric
+name and tag key, and bounded tag cardinality documented in the Javadoc.</p>
+</li>
+<li>
+<p><code>api/graphql-server</code> — <code>@Controller</code> classes implementing the generated resolver interfaces, mappers, a
+<code>DataFetcherExceptionResolver</code> (GraphQL answers <code>200 OK</code> with an <code>errors</code> array, so exception mapping is entirely
+the application&#8217;s job), and query depth/complexity limits — without which one deeply nested query can exhaust the
+service. The worked field resolver is written batched (<code>@BatchMapping</code>/<code>DataLoader</code>) rather than N+1, because the
+scaffolded shape is the one that gets copied.</p>
+</li>
+<li>
+<p><code>api/rest-server</code> / <code>api/grpc-server</code> — controllers or services implementing the generated interfaces, mappers,
+the exception-to-status advice (RFC 9457 <code>ProblemDetail</code> for REST), and the security filter chain if enabled.</p>
+</li>
+<li>
+<p><code>boot</code> — the <code>@SpringBootApplication</code> class, <code>application.yml</code> and the three profile files, composition-root
+<code>@Configuration</code>, a context smoke test, and the ArchUnit architecture test.</p>
+</li>
+<li>
+<p>A report that includes the configuration-property list, the metrics list, and the exception-to-status mapping
+formatted for pasting into the documentation tables.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-setup-java-springboot-modules"] --> B["Step 0: Read the manifest;\nverify the reactor exists"]
+    B -- no reactor --> STOP["Stop — run /iru-setup-java-springboot-pom first"]
+    B --> C["Step 1: Create the package layout\nfor every module"]
+    C --> D["Step 2: domain — model, ports, exceptions\n(written first; no Spring annotations)"]
+    D --> E["Step 3: application — use cases\nplus a mocked unit test"]
+    E --> F["Steps 4-9: one adapter per infrastructure/api module\n(database + migrations, configuration, clients,\nKafka producers/consumers, metrics, REST/gRPC/GraphQL)"]
+    F --> G["Step 10: boot — application class,\napplication.yml and local/dev/prod profiles,\ncomposition-root config, smoke test"]
+    G --> H["Step 11: ArchUnit test enforcing\nthe package-level dependency direction"]
+    H --> I["Step 12: mvn clean test via iru-gate-runner"]
+    I -- ArchUnit fails --> J["Fix the code, not the rule\n(unless the rule is wrong for this project)"]
+    J --> I
+    I --> K["Step 13: Report ports, config properties,\nmetrics, status mapping, and warnings"]</div></div>
+<div class="paragraph">
+<p><code>mvn verify</code> is deliberately not run here: the <code>*IT</code> tests need the Testcontainers harness that
+<a href="iru-setup-java-springboot-testcontainers.html" class="xref page">Setup Java Spring Boot Testcontainers</a> sets up in the next step, so integration tests failing
+at this point is expected rather than a defect.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>None. It reads <code>springboot-stack.yml</code> and the existing poms, and writes sources and configuration.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-java-springboot.html" class="xref page">Setup Java Spring Boot</a> — Step 8, second of seven sub-skills, via the
+<code>iru-isolated-skill-executor</code> agent. Runs after <a href="iru-setup-java-springboot-pom.html" class="xref page">Setup Java Spring Boot Poms</a> because it needs
+modules to write into, and before <a href="iru-setup-java-springboot-apis.html" class="xref page">Setup Java Spring Boot APIs</a>, whose generated code the
+adapters written here consume.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also runs standalone (<code>/iru-setup-java-springboot-modules</code>) against an existing reactor.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — spawned for Step 12&#8217;s <code>mvn clean test</code>, so a multi-module
+compile-and-test log is summarized rather than dumped into the caller&#8217;s context.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-modules/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

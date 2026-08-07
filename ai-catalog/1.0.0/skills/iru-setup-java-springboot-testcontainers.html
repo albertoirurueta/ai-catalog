@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup Java Spring Boot Testcontainers :: AI Catalog</title>
+    <meta name="description" content="Writes one compose.yaml for a Spring Boot service, an API mock for its downstream REST/gRPC/GraphQL clients, and a Testcontainers harness launching both.">
+    <meta name="keywords" content="iru-setup-java-springboot-testcontainers, claude code skill, testcontainers, docker compose, integration tests, api mocking, microcks, wiremock, maven failsafe, healthcheck">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-setup-java-springboot-testcontainers.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup Java Spring Boot Testcontainers</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Gives a Spring Boot service one definition of its runtime dependencies, used by both <code>mvn verify</code> and a developer
+running the application locally.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The single most valuable property of this setup is that the two paths <strong>cannot drift</strong>: the integration tests start
+the same <code>compose.yaml</code> a developer starts, so "works on my machine" and "passes in CI" converge by construction.
+<code>iru-setup-java-springboot-testcontainers</code> writes that compose file, the Testcontainers <code>ComposeContainer</code> harness
+that launches it, and the Failsafe/JaCoCo wiring that runs the tests against it.</p>
+</div>
+<div class="paragraph">
+<p>Two details it treats as non-negotiable, both because they are the usual causes of flaky integration suites:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Every image tag is pinned</strong> — never <code>latest</code>. An unpinned tag turns a passing suite into a time bomb that fails
+on an unrelated day for an unrelated reason. Resolved tags are written back into <code>springboot-stack.yml</code> so the
+compose file, the tests, and the OpenTofu engine versions all agree on one number.</p>
+</li>
+<li>
+<p><strong>Every service has a real <code>healthcheck</code></strong>, not a sleep. Both <code>ComposeContainer</code> and Spring&#8217;s own compose support
+wait for health, so a service without one is considered ready the instant its container starts — and tests then
+fail intermittently against a database that hasn&#8217;t finished initialising.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>It also wires Spring Boot&#8217;s <code>spring-boot-docker-compose</code> support for the <code>local</code> profile, with
+<code>skip.in-tests: true</code> so that support and <code>ComposeContainer</code> don&#8217;t both try to manage the same stack and fight over
+ports. Prometheus and Grafana sit behind a compose <code>profiles:</code> key so integration tests don&#8217;t pay to start them,
+while <code>docker compose --profile observability up</code> gives a developer the full local stack with the datasource
+already provisioned.</p>
+</div>
+<div class="sect2">
+<h3 id="_the_api_mock_for_downstream_clients"><a class="anchor" href="#_the_api_mock_for_downstream_clients"></a>The API mock for downstream clients</h3>
+<div class="paragraph">
+<p>Whenever the service has REST, gRPC or GraphQL clients, the same compose stack gains an API mocking service, because an
+integration test that calls a real downstream service is not an integration test of this service: it is slow, it
+fails when someone else deploys, and it cannot reproduce the error responses the adapter is supposed to handle.</p>
+</div>
+<div class="paragraph">
+<p>The mock is <strong>driven by the contracts already in <code>apis/rest-client/&lt;name&gt;/</code>, <code>apis/grpc-client/&lt;name&gt;/</code> and
+<code>apis/graphql-client/&lt;name&gt;/</code></strong> — the
+same files each client is generated from. A parallel set of hand-written fixtures is never created, because two
+descriptions of one contract diverge, and the day they do, the client compiles against one and passes its tests
+against the other. Unlike Prometheus and Grafana, the mock sits behind no compose profile: tests need it, and so
+does a developer running the service locally.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Situation</th>
+<th class="tableblock halign-left valign-top">Default</th>
+<th class="tableblock halign-left valign-top">Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Any gRPC or GraphQL client, alone or alongside REST clients</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Microcks</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Mocks REST, gRPC and GraphQL from the same contracts in one container, consuming the OpenAPI spec, the <code>.proto</code>
+and the SDL directly with no descriptor build step, and can later verify the real downstream service against those
+same contracts. One tool covering every protocol outweighs any per-protocol advantage.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">REST clients only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>WireMock</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Far lighter and faster to start, with a finer-grained stub DSL for responses, delays, and faults. A
+<code>wiremock-grpc-extension</code> exists, so the choice is not a dead end if gRPC arrives later — it just adds a
+<code>protoc --descriptor_set_out</code> build step at that point. GraphQL is the weaker case: every operation is one
+<code>POST /graphql</code>, so stubs match on request body rather than path and the SDL is never read by the mock at all,
+leaving contract and mock free to drift.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Both options are always offered, so a team already running Microcks for contract testing elsewhere keeps using it
+even for a REST-only service. The answer is written back to the manifest as <code>stack.apiMock</code> so a re-run and every
+later reader agree on one choice. With WireMock, the contract is wired in from both ends: stub mappings are
+generated from each spec&#8217;s <code>examples</code>, and the OpenAPI validation extension makes a request or response that
+violates the contract fail the test — which is what buys back most of the contract fidelity Microcks gets for
+free.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-service-bootstrap" class="xref page">Spring Boot Service Bootstrap</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-setup-java-springboot-testcontainers</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stack-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> line giving the manifest path. Read to build the service list: one container per database
+engine, Redis if cached, Kafka plus a Confluent Schema Registry if messaging is enabled, and Prometheus/Grafana if
+metrics are enabled. Caffeine needs no container and its absence is reported so it doesn&#8217;t look like an omission.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>springboot-stack.yml</code> at the repository root</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stack.apiMock</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Which API mocking tool backs the service&#8217;s REST/gRPC/GraphQL clients. Used without re-asking when the manifest
+records it; otherwise chosen via <code>AskUserQuestion</code> with the default set by whether any gRPC or GraphQL client
+exists, and written back to the manifest. Ignored entirely when the service has no clients.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Microcks with gRPC or GraphQL clients, WireMock for REST-only</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Client contracts</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apis/rest-client/&lt;name&gt;/</code> and <code>apis/grpc-client/&lt;name&gt;/</code>, mounted into the mock container and used to build every
+mocked response. A REST contract with no <code>examples</code> imports cleanly and then has nothing to serve — the most
+common mock failure.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read from the repository</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Image tags</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Taken from the manifest if recorded there; otherwise the current stable release is looked up and written back into
+the manifest.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Looked up, then persisted</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Docker</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>docker info</code> must succeed for the verification step. If Docker isn&#8217;t running, every file is still written — they
+are correct regardless — but verification is skipped and the setup is explicitly reported as unverified.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Verification skipped if unavailable</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><code>compose.yaml</code> at the repository root — one pinned service per technology, each with a real readiness probe,
+<code>depends_on: condition: service_healthy</code> where ordering genuinely matters, obviously-fake development-only
+credentials, named volumes only where local state is worth keeping, and bounded resource settings (notably
+Elasticsearch&#8217;s single-node mode and heap cap).</p>
+</li>
+<li>
+<p><code>observability/prometheus/prometheus.yml</code> and
+<code>observability/grafana/provisioning/datasources/prometheus.yaml</code>, if metrics are enabled.</p>
+</li>
+<li>
+<p>The mock service, if the service has any client — with the client contracts mounted read-only, plus (for
+WireMock) generated stub mappings under <code>wiremock/mappings/&lt;name&gt;/</code>, each carrying a header comment naming the
+contract and operation it came from so the next person edits the spec rather than the mapping, and a descriptor
+set under <code>wiremock/grpc/</code> when the gRPC extension is in play.</p>
+</li>
+<li>
+<p><code>stack.apiMock</code> written back into <code>springboot-stack.yml</code>.</p>
+</li>
+<li>
+<p>The integration-test base class(es) — a shared <code>ComposeContainer</code>-based one for full-context tests, plus narrower
+per-adapter base classes that start only the one container that module needs, using <code>@ServiceConnection</code> where a
+single container suffices and <code>@DynamicPropertySource</code> for the compose-based one. Each client&#8217;s
+<code>clients.&lt;name&gt;.base-url</code> is bound to the mock&#8217;s randomly-assigned host port; a client-adapter <code>*IT</code> instead uses
+the tool&#8217;s own Testcontainers module (<code>MicrocksContainer</code> / <code>WireMockContainer</code>), which starts in seconds against
+the same contract rather than bringing up the whole stack.</p>
+</li>
+<li>
+<p>Test-profile configuration per module, with the module&#8217;s own migration tooling left enabled so a broken migration
+fails a test rather than a deploy.</p>
+</li>
+<li>
+<p>A report covering every service and its pinned tag, which containers each base class starts, whether migrations
+run in tests, and the result of each verification command.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-setup-java-springboot-testcontainers"] --> B["Step 0: Read the manifest;\nbuild the service list; resolve and\npersist image tags; check docker info"]
+    B --> B2{"Any REST or\ngRPC client?"}
+    B2 -- no --> C["Step 1: Write compose.yaml —\npinned images, healthchecks, depends_on,\nfake dev credentials, observability profile"]
+    B2 -- yes --> B3["Resolve stack.apiMock, or ask:\nMicrocks (default with gRPC) vs\nWireMock (default REST-only)"]
+    B3 --> B4["Add the mock service, mounting\napis/rest-client and apis/grpc-client;\ngenerate WireMock mappings from examples"]
+    B4 --> C
+    C --> D["Step 2: Write the integration-test base class(es)\n(ComposeContainer, wait strategies,\nstarted once per JVM, client base URLs\nbound to the mock)"]
+    D --> E["Step 3: Wire spring-boot-docker-compose\nfor the local profile (skip.in-tests)"]
+    E --> F["Step 4: Ensure migrations and test\nfixtures run against the containers;\nmock responses live in the contract"]
+    F --> G["Step 5: Verify Failsafe/Surefire split\nand coverage wiring"]
+    G -- mvn test needs Docker --> H["An IT is misnamed as *Test — fix the name"]
+    H --> G
+    G --> I["Step 6: Verify via iru-gate-runner —\ncompose config, mvn test, mvn verify,\nlocal stack up/down, and that the mock\nimported its contracts and was really called"]
+    I -->|"compose path, Kafka listeners,\nor Elasticsearch memory"| J["Iterate on the usual suspects"]
+    J --> I
+    I -- Docker unavailable --> K["Report as unverified"]
+    I --> L["Step 7: Report services, base classes,\npersisted tags, and warnings"]
+    K --> L</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>None. It reads <code>springboot-stack.yml</code>, writes the compose file and test harness, and updates the manifest&#8217;s image
+tags and <code>stack.apiMock</code>.</p>
+</div>
+<div class="paragraph">
+<p>It does depend on <a href="iru-setup-java-springboot-apis.html" class="xref page">Setup Java Spring Boot APIs</a>'s output rather than invoking it: the client
+contracts that skill writes under <code>apis/rest-client/</code> and <code>apis/grpc-client/</code> are what the mock serves, and the
+<code>examples</code> it puts in them are what become the mocked responses.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-java-springboot.html" class="xref page">Setup Java Spring Boot</a> — Step 8, fourth of seven sub-skills, via the
+<code>iru-isolated-skill-executor</code> agent. Runs after <a href="iru-setup-java-springboot-apis.html" class="xref page">Setup Java Spring Boot APIs</a> because the
+compose stack must know whether a schema registry is needed, and it completes the harness that the <code>*IT</code> tests
+written by <a href="iru-setup-java-springboot-modules.html" class="xref page">Setup Java Spring Boot Modules</a> depend on.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also runs standalone (<code>/iru-setup-java-springboot-testcontainers</code>) to add a container to an existing service.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — spawned for each of Step 6&#8217;s verification commands, since a
+full <code>mvn verify</code> against a container stack produces a very large log.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-testcontainers/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
