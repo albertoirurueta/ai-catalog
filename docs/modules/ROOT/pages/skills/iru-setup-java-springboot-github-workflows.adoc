@@ -1,6 +1,6 @@
 = Setup Java Spring Boot GitHub Workflows
 :description: Creates the build, deploy, and undeploy GitHub Actions workflows for a Spring Boot service, with keyless OIDC cloud auth and guarded teardown.
-:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, buildpacks
+:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -22,8 +22,8 @@ Pages) follow the same house pattern, so the two remain recognisably related.
 |`build.yml`
 |Push to the integration/main branch, and every pull request
 |Build, unit tests (Surefire), Testcontainers integration tests (Failsafe), static analysis, aggregated coverage,
-Sonar, and — on the main branch only — the Antora site plus the generated OpenAPI/protobuf HTML, published to
-GitHub Pages
+Sonar, and — on the main branch only — the Antora site plus the generated OpenAPI, protobuf, GraphQL and AsyncAPI
+HTML, published to GitHub Pages
 
 |`deploy.yml`
 |`workflow_dispatch` with an environment input, optionally on release published
@@ -77,7 +77,9 @@ play.
 |Yes
 |The workflows must match reality, so the skill reads: the reactor's modules and the `boot` directory, where
 `report-aggregate` writes, whether the Sonar plugin and properties exist, the Antora config and which extensions
-`docs/package.json` lists, where the API doc generators write, which `infra/envs/<env>` directories exist, whether
+`docs/package.json` lists, where the API doc generators write, whether `apis/messaging/` and
+`apis/graphql-server/` hold their contracts and committed `docs/package-lock.json` toolchains (and whether the
+GraphQL one pins `graphql-voyager` as well as `spectaql`), which `infra/envs/<env>` directories exist, whether
 GitHub Environments exist, and how heavy the compose stack is.
 |None — derived
 
@@ -92,7 +94,23 @@ notification, an extra matrix leg).
 
 * `.github/workflows/build.yml` — a `build` job (checkout with full history for Sonar blame, JDK with Maven cache,
   `mvn clean verify`, the site report, the Sonar scan skipped on fork pull requests, and test reports uploaded even
-  on failure) plus a `docs` job gated to main-branch pushes.
+  on failure) plus a `docs` job gated to main-branch pushes. The `docs` job generates the Maven site and the
+  OpenAPI/protobuf documentation, then runs the two npm-driven generators as their own steps against the
+  toolchains committed in `apis/messaging/docs` and `apis/graphql-server/docs` — validating and rendering the
+  AsyncAPI specification, and rendering the GraphQL SDL through SpectaQL and (optionally) Voyager. It then builds
+  the Antora site and merges everything: a "Merge documentation" step copies the contents of every
+  `target/generated-docs` directory in the reactor under `doc/api/`, so `rest-server/`, `grpc-server/`,
+  `graphql-server/` and `messaging/` land side by side without the workflow needing to know which module produced
+  which. The published result includes `doc/api/messaging/v1/index.html` and `doc/api/graphql-server/v1/index.html`
+  with the Voyager graph beneath it. Both npm generators are skipped in Maven
+  (`-Dasyncapi.docs.skip=true -Dgraphql.docs.skip=true`) in this job so the work isn't done twice — the `build`
+  job's `mvn clean verify` still exercises the `frontend-maven-plugin` wiring — and each step is guarded by
+  `hashFiles(...)`, so deleting a contract directory doesn't require a workflow edit. Their loops over
+  `*-async-api-v*.yaml` and `*-v*.graphqls` mean a new contract version needs no workflow change either.
+
+  One detail the merge step protects by accident and would break if simplified: Voyager's page loads
+  `voyager.standalone.js` and `voyager.css` by relative path, so those files must travel with `index.html`. Copying
+  whole directories preserves that; copying only `index.html` files would publish a blank graph.
 * `.github/workflows/deploy.yml` — with `id-token: write`, a concurrency group per environment that never cancels
   in progress, the GitHub Environment as the approval gate, buildpack image build and push, and `tofu apply` of the
   previously produced plan file.
@@ -112,7 +130,7 @@ flowchart TD
     B -- a workflow already exists --> D{"Stop or update?"}
     D -- stop --> STOP[Report which exist; stop]
     D -- update --> E
-    B --> E["Step 1: Write build.yml\n(build job + main-branch-only docs job)"]
+    B --> E["Step 1: Write build.yml\n(build job + main-branch-only docs job:\nMaven site, OpenAPI/protobuf docs, AsyncAPI\nand GraphQL html, Antora, merge into ./doc)"]
     C --> E
     E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check)"]
     F --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy)"]

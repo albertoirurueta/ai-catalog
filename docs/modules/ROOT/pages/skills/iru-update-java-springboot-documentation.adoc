@@ -58,7 +58,7 @@ xref:skills/iru-update-docs.adoc[] in xref:index.adoc#group-maintenance[Reposito
 |`<page-or-area>`
 |No
 |Positional argument naming a single page or area to refresh: `overview`, `architecture`, `use-cases`,
-`database-model`, `apis/rest`, `apis/grpc`, `apis/messaging`, `configuration`, or `metrics`.
+`database-model`, `apis/rest`, `apis/grpc`, `apis/graphql`, `apis/messaging`, `configuration`, or `metrics`.
 |Absent means every page
 
 |`springboot-stack.yml`
@@ -77,7 +77,8 @@ exception-mapping advice, the Stream bindings, every `@ConfigurationProperties` 
 == Outputs
 
 * An Antora site with Kroki installed alongside Mermaid and the playbook amended (`kroki-fetch-diagram`,
-  `kroki-server-url`).
+  `kroki-server-url`), plus an `api-docs-url` attribute in `docs/antora.yml` — resolved from the GitHub Pages API,
+  the git remote, or a custom domain — through which every API page links to its generated reference.
 * `index.adoc` — the service overview: purpose, capabilities, dependencies, and pointers onward.
 * `architecture.adoc` — the module table and the two mechanisms enforcing it (the enforcer rules and the named
   ArchUnit test), the concurrency model and its consequences, a per-technology section, a Mermaid dependency
@@ -91,9 +92,26 @@ exception-mapping advice, the Stream bindings, every `@ConfigurationProperties` 
 * `database-model.adoc` — per collection/table/label: a field table (name, type, mandatory, indexed, constraints,
   default, description), the indexes and which query each serves, relationships, and a per-engine diagram. Read from
   the entities *and* the migrations, since indexes and constraints usually live in the latter.
-* `apis/rest.adoc`, `apis/grpc.adoc`, `apis/messaging.adoc` — version summaries, entity/message field tables with
-  descriptions, constraints and deprecations, endpoint documentation including authorization and every error
-  response, and links to the generated HTML on GitHub Pages.
+* `apis/rest.adoc`, `apis/grpc.adoc`, `apis/graphql.adoc`, `apis/messaging.adoc` — version summaries, entity/message field tables with
+  descriptions, constraints and deprecations, and endpoint documentation including authorization and every error
+  response. **Each page carries a prominent link, near the top, to its own generated reference** published on
+  GitHub Pages — OpenAPI HTML from the REST page, protobuf HTML from the gRPC page, AsyncAPI HTML from the
+  messaging page, and the SpectaQL reference plus optional Voyager schema graph from the GraphQL page — one per
+  contract version, written as `\{api-docs-url}/<kind>/<version>/index.html` and accompanied by a link to the
+  source contract in the repository. The Voyager link is only written when `graphql-voyager` is actually pinned in
+  the GraphQL docs toolchain, since a link to a page that was never generated is worse than no link. The generated
+  HTML is not Antora content, so `xref:` cannot reach it; the shared `api-docs-url` attribute keeps every API page
+  pointing at one base that a domain change updates in a single edit.
+
+  The GraphQL page additionally documents the **endpoints** — the single `spring.graphql.path` every query and
+  mutation `POST`s to, the WebSocket path for subscriptions, and the GraphiQL explorer path together with the
+  profiles it is enabled in, since leaving that on in production exposes the whole schema. All of it is read from
+  the `application*.yml` files rather than quoted from the defaults. The messaging page is derived from the AsyncAPI
+  specification in `apis/messaging/` as well as the AVRO schemas, cross-checked against the Spring Cloud Stream
+  bindings — the bindings are what the service actually does, the specification is what it claims to do, and a
+  disagreement between them is reported as a finding about the repository. What justifies the page beyond the
+  generated HTML is what the generator can't know: consumer groups, DLQ topics, the use case behind each message,
+  and the registry's compatibility mode.
 * `configuration.adoc` — the property table with default, "dynamically changeable" (Yes / restart required /
   redeploy required, derived from the annotations), a criticality flag marking the performance and availability
   levers usable as a fast mitigation during a degradation, and a legend.

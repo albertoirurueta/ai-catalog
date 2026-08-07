@@ -72,7 +72,12 @@ the existing pom has that the template doesn't is preserved and listed in the re
 
 * Root `pom.xml` — the Spring Boot parent, the module list, all version properties, every BOM import copied from
   the reference pom, `dependencyManagement` for the project's own modules, project-wide dependencies, and the
-  full build/reporting plugin configuration.
+  full build/reporting plugin configuration. `pluginManagement` also version-manages the code and documentation
+  generators that xref:skills/iru-setup-java-springboot-apis.adoc[] wires into individual modules — the OpenAPI,
+  protobuf, GraphQL-codegen and AVRO plugins, plus `frontend-maven-plugin` for the AsyncAPI documentation
+  generators — along with the `asyncapi.docs.skip` property that lets an offline build opt out of the npm-based
+  documentation step. The GraphQL codegen version is shared with the `graphql-java-codegen` runtime artifact that
+  generated GraphQL client code extends, so the two cannot drift apart.
 * One `pom.xml` per module named in the manifest, plus the intermediate aggregator poms
   (`infrastructure/`, `infrastructure/database/`, `infrastructure/clients/`, `api/`). Each
   `infrastructure/clients/<name>` additionally carries, at `test` scope, the Testcontainers module for whichever

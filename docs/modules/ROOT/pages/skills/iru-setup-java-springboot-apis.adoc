@@ -1,6 +1,6 @@
 = Setup Java Spring Boot APIs
-:description: Sets up a Spring Boot service's contract-first API layer: the apis/ spec tree plus OpenAPI, protobuf, and AVRO code generation wired per module.
-:keywords: iru-setup-java-springboot-apis, claude code skill, contract first, openapi generator, protobuf, avro, grpc, schema registry, code generation, api versioning
+:description: Sets up a Spring Boot service's contract-first API layer: the apis/ spec tree plus OpenAPI, protobuf, GraphQL, AVRO and AsyncAPI generation per module.
+:keywords: iru-setup-java-springboot-apis, claude code skill, contract first, openapi generator, protobuf, graphql sdl, avro, asyncapi, grpc, code generation, api versioning
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -24,12 +24,41 @@ and DTOs, and the hand-written `@RestController` implements them, so `mvn genera
 real logic. Without it the generator emits controllers and every regeneration becomes a merge conflict.
 
 Contracts are versioned in the filename and in the path inside the contract — an OpenAPI spec's paths carry
-`/v1/...`, a protobuf file declares `package <service>.v1`, an AVRO namespace ends in `.v1` — so a breaking change
-means a new `v2` file alongside the `v1` one, with both generating and both served until `v1` is retired.
+`/v1/...`, a protobuf file declares `package <service>.v1`, an AVRO namespace ends in `.v1`, and a GraphQL SDL,
+which has no in-band version at all, is versioned by filename and by the package its types generate into — so a
+breaking change means a new `v2` file alongside the `v1` one, with both generating and both served until `v1` is
+retired.
 
-HTML documentation is generated alongside the code (the OpenAPI `html2` generator, and `protoc-gen-doc` for
-protobuf) into `target/generated-docs/`, where the build workflow publishes it to GitHub Pages next to the Antora
-site — so the documentation pages link to it rather than duplicating the endpoint list by hand.
+`apis/messaging/` is the one contract directory holding two kinds of file. The AVRO schemas define the message
+*payloads* and are what `avro-maven-plugin` compiles into Java; an **AsyncAPI specification** alongside them defines
+the *interface* — which topics exist, in which direction the service uses each one, which message each carries, and
+on which broker. Nothing is generated from the AsyncAPI file except documentation, but without it the AVRO schemas
+describe messages with no discoverable topics. Keeping both in one directory is deliberate: a new event means a new
+`.avsc` and a new channel, and a reviewer should see both in the same diff.
+
+HTML documentation is generated alongside the code — the OpenAPI `html2` generator, `protoc-gen-doc` for protobuf,
+`spectaql` (plus an optional GraphQL Voyager schema graph) for the GraphQL SDL, and `@asyncapi/html-template` for
+messaging — into `target/generated-docs/`, where the build workflow publishes it to GitHub Pages next to the Antora
+site, so the documentation pages link to it rather than duplicating the endpoint list by hand.
+
+GraphQL needs that treatment explicitly because `graphql-codegen-maven-plugin` generates *code*, not documentation:
+without a second toolchain the one contract-first API in the reactor would publish nothing. It follows the same
+shape as messaging — an npm toolchain pinned beside the contract in `apis/graphql-server/docs/`, driven from the
+Maven build by `frontend-maven-plugin` at `generate-resources`, with a `graphql.docs.skip` escape hatch for offline
+builds. SpectaQL is the reference someone reads to integrate (`oneFile: true` yields one self-contained
+`index.html`); Voyager is the interactive graph that answers how the types connect, and is optional because it
+roughly doubles the published bytes. Both read the SDL directly, so neither needs a running service or an
+introspection endpoint in CI.
+
+The AsyncAPI documentation is produced by the official, non-Maven AsyncAPI CLI, driven from the Maven build via
+`frontend-maven-plugin` so `mvn generate-resources` yields it with no globally installed Node. The specification is
+written against the **current AsyncAPI version** (3.1.0 at the time of writing); the skill confirms what's current
+rather than hardcoding it, since `asyncapi validate` reports `asyncapi-latest-version` informationally whenever a
+newer one exists. That same validation runs as its own execution ahead of generation, and it is a real gate rather
+than decoration: it resolves and type-checks the referenced `.avsc` files, so a malformed document, a `$ref` to a
+missing schema, or an `.avsc` that isn't valid AVRO all fail the build instead of yielding a page with empty
+payload tables. An out-of-date `asyncapi:` version, by contrast, is reported only as information — so a new
+specification release can never break the build on its own.
 
 == Purpose group
 
@@ -51,8 +80,8 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 |`stack-file`
 |No
 |`args` `key: value` line giving the manifest path. Read to determine which contracts are needed: `restServer`,
-`grpcServer`, each entry in `restClients`/`grpcClients`, and `messaging.enabled`. If none apply the skill reports
-that and stops.
+`grpcServer`, `graphqlServer`, each entry in `restClients`/`grpcClients`/`graphqlClients`, and `messaging.enabled`.
+If none apply the skill reports that and stops.
 |`springboot-stack.yml` at the repository root
 
 |Target module directories
@@ -76,7 +105,14 @@ inline in a module pom.
   a documented error schema with `4xx`/`5xx` responses, and a `securitySchemes` entry if security is enabled.
 * `apis/grpc-server/<service>_v1.proto` — a starter protobuf file with a unary and a server-streaming RPC, every
   message, field, and RPC commented, plus the field-numbering and `reserved` discipline stated in-file.
-* `apis/rest-client/<name>/` and `apis/grpc-client/<name>/` — placeholder contracts per downstream service, each
+* `apis/graphql-server/<service>-v1.graphqls` — a starter SDL with a type, an enum, an input, a query and a
+  mutation, every element carrying a description string, from which `graphql-codegen-maven-plugin` generates
+  resolver interfaces and model types. Two configuration details are load-bearing rather than cosmetic: the
+  generator's default validation annotation is `javax.validation.constraints.NotNull`, which does not exist on
+  Jakarta and fails compilation until overridden, and the SDL must additionally be **copied onto the runtime
+  classpath** (`target/classes/graphql/`, via `maven-resources-plugin`) because Spring for GraphQL loads the schema
+  at startup from `classpath:graphql/**/` — a service missing that copy compiles cleanly and then refuses to start.
+* `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and `apis/graphql-client/<name>/` — placeholder contracts per downstream service, each
   prominently marked as someone else's contract to be replaced with the real published spec. These have two
   consumers, not one: the client generator, and the API mock in the compose stack that
   xref:skills/iru-setup-java-springboot-testcontainers.adoc[] builds from the very same file. Because it is the
@@ -88,10 +124,23 @@ inline in a module pom.
   section.
 * `apis/messaging/<event>-v1.avsc` — AVRO schemas with a `doc` on the record and every field, and a default on
   every optional field, since a field added without one is a backward-incompatible change the registry rejects.
-* Generator executions added to `api/rest-server`, `api/grpc-server`, `infrastructure/clients/<name>`,
-  `infrastructure/producers`, and `api/consumers` — including the HTML documentation executions.
+* `apis/messaging/<service>-async-api-v1.yaml` — an AsyncAPI specification whose channel `address` values are the
+  real topic names from `spring.cloud.stream.bindings.*.destination`, and whose message payloads are `$ref`s to the
+  `.avsc` files rather than restatements of them. Each operation's `action` is written from this service's point of
+  view: `send` is what it produces, `receive` what it consumes. (This is the ambiguity AsyncAPI 3 fixed — in a 2.x
+  document `subscribe` meant what the service *sends*, so an adapted older file is easy to invert, and an inverted
+  action documents every arrow in the system backwards without anything failing to say so.)
+* `apis/messaging/docs/package.json` (plus its committed `package-lock.json` and a `.asyncapi-analytics` file that
+  keeps the CLI from reporting usage on every build) — the pinned AsyncAPI documentation toolchain.
+* Generator executions added to `api/rest-server`, `api/grpc-server`, `api/graphql-server`, `infrastructure/clients/<name>`,
+  `infrastructure/producers`, and `api/consumers` — including the HTML documentation executions. The AsyncAPI
+  executions go in exactly one module (`infrastructure/producers` if it exists, otherwise `api/consumers`), since
+  the specification describes the whole service and generating it twice would publish the same pages under two
+  paths.
 * Contract linting recommendations or wiring: Spectral/`oasdiff` for OpenAPI, `buf lint`/`buf breaking` for
-  protobuf, and the Confluent schema-registry Maven plugin's `test-compatibility` for AVRO.
+  protobuf, GraphQL Inspector or `graphql-schema-linter` for the SDL, the Confluent schema-registry Maven plugin's
+  `test-compatibility` for AVRO, and `asyncapi validate` wired into the build (with `asyncapi diff` recommended for
+  breaking-change detection) for the AsyncAPI specification.
 
 == Execution flow
 
@@ -103,10 +152,13 @@ flowchart TD
     B -- a target module is missing --> SKIP["Skip that contract; report it"]
     B --> C["Step 1: Create the apis/ tree\nand apis/README.md"]
     C --> D["Steps 2-3: REST server spec + Spring generator\n(interfaceOnly) and html2 docs;\ngRPC proto + protobuf plugin and protoc-gen-doc"]
-    D --> E["Steps 4-5: one client contract and generator\nper REST/gRPC client"]
+    D --> D2["Step 3a: GraphQL SDL + codegen resolver interfaces,\nplus the resources copy onto the runtime classpath"]
+    D2 --> E["Steps 4-5a: one client contract and generator\nper REST/gRPC/GraphQL client"]
     E --> F["Step 6: AVRO schemas + avro-maven-plugin\nin producers and/or consumers"]
-    F --> G["Step 7: Verify via iru-gate-runner —\ngenerate-sources, then compile"]
-    G -->|"generator produced nothing,\nor wrong package"| H["Fix inputSpec / sourceDirectory\nor the configuration schema"]
+    F --> F1["Step 6a: AsyncAPI spec at the current version —\nchannels, send/receive actions,\n$refs to the .avsc files"]
+    F1 --> F2["Step 6b: pin the npm toolchain and wire\nasyncapi validate + html-template\ninto one module via frontend-maven-plugin"]
+    F2 --> G["Step 7: Verify via iru-gate-runner —\ngenerate-sources, then compile"]
+    G -->|"generator produced nothing,\nwrong package, or empty\nAsyncAPI payload tables"| H["Fix inputSpec / sourceDirectory,\nthe .avsc $ref, or the\nconfiguration schema"]
     H --> G
     G --> I["Step 8: Confirm generated output is\ngit-ignored and excluded from analysis"]
     I --> J["Step 9: Add or recommend contract linting"]

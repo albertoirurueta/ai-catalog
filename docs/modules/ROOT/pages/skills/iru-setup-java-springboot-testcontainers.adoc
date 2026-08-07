@@ -1,5 +1,5 @@
 = Setup Java Spring Boot Testcontainers
-:description: Writes one compose.yaml for a Spring Boot service, an API mock for its downstream clients, and a Testcontainers harness launching both, so local runs and integration tests cannot drift.
+:description: Writes one compose.yaml for a Spring Boot service, an API mock for its downstream REST/gRPC/GraphQL clients, and a Testcontainers harness launching both.
 :keywords: iru-setup-java-springboot-testcontainers, claude code skill, testcontainers, docker compose, integration tests, api mocking, microcks, wiremock, maven failsafe, healthcheck
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -31,11 +31,12 @@ already provisioned.
 
 === The API mock for downstream clients
 
-Whenever the service has REST or gRPC clients, the same compose stack gains an API mocking service, because an
+Whenever the service has REST, gRPC or GraphQL clients, the same compose stack gains an API mocking service, because an
 integration test that calls a real downstream service is not an integration test of this service: it is slow, it
 fails when someone else deploys, and it cannot reproduce the error responses the adapter is supposed to handle.
 
-The mock is **driven by the contracts already in `apis/rest-client/<name>/` and `apis/grpc-client/<name>/`** — the
+The mock is **driven by the contracts already in `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and
+`apis/graphql-client/<name>/`** — the
 same files each client is generated from. A parallel set of hand-written fixtures is never created, because two
 descriptions of one contract diverge, and the day they do, the client compiles against one and passes its tests
 against the other. Unlike Prometheus and Grafana, the mock sits behind no compose profile: tests need it, and so
@@ -45,17 +46,19 @@ does a developer running the service locally.
 |===
 |Situation |Default |Why
 
-|Any gRPC client, alone or with REST clients
+|Any gRPC or GraphQL client, alone or alongside REST clients
 |**Microcks**
-|Mocks gRPC and REST from the same contracts in one container, consuming the `.proto` and the OpenAPI spec
-directly with no descriptor build step, and can later verify the real downstream service against those same
-contracts. One tool covering both protocols outweighs any per-protocol advantage.
+|Mocks REST, gRPC and GraphQL from the same contracts in one container, consuming the OpenAPI spec, the `.proto`
+and the SDL directly with no descriptor build step, and can later verify the real downstream service against those
+same contracts. One tool covering every protocol outweighs any per-protocol advantage.
 
-|REST clients only, no gRPC expected
+|REST clients only
 |**WireMock**
 |Far lighter and faster to start, with a finer-grained stub DSL for responses, delays, and faults. A
 `wiremock-grpc-extension` exists, so the choice is not a dead end if gRPC arrives later — it just adds a
-`protoc --descriptor_set_out` build step at that point.
+`protoc --descriptor_set_out` build step at that point. GraphQL is the weaker case: every operation is one
+`POST /graphql`, so stubs match on request body rather than path and the SDL is never read by the mock at all,
+leaving contract and mock free to drift.
 |===
 
 Both options are always offered, so a team already running Microcks for contract testing elsewhere keeps using it
@@ -91,10 +94,10 @@ metrics are enabled. Caffeine needs no container and its absence is reported so 
 
 |`stack.apiMock`
 |No
-|Which API mocking tool backs the service's REST/gRPC clients. Used without re-asking when the manifest records
-it; otherwise chosen via `AskUserQuestion` with the default set by whether any gRPC client exists, and written
-back to the manifest. Ignored entirely when the service has no clients.
-|Microcks with gRPC clients, WireMock for REST-only
+|Which API mocking tool backs the service's REST/gRPC/GraphQL clients. Used without re-asking when the manifest
+records it; otherwise chosen via `AskUserQuestion` with the default set by whether any gRPC or GraphQL client
+exists, and written back to the manifest. Ignored entirely when the service has no clients.
+|Microcks with gRPC or GraphQL clients, WireMock for REST-only
 
 |Client contracts
 |No
