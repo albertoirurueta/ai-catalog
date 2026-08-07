@@ -81,9 +81,17 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
   harness redirect the client to the compose stack's API mock; an adapter that hardcodes a host cannot be tested
   against anything and will reach a real downstream service from CI.
 * `infrastructure/producers` and `api/consumers` — the Kafka publisher adapter and consumer beans, AVRO mappers,
-  bindings, consumer group, and a dead-letter topic with a bounded retry policy.
+  bindings, consumer group, and a dead-letter topic with a bounded retry policy. Every `destination` and `group`
+  chosen here is reported so it can be reconciled with the AsyncAPI specification
+  xref:skills/iru-setup-java-springboot-apis.adoc[] writes in `apis/messaging/`: a binding whose topic appears as no
+  AsyncAPI channel is a topic nobody outside the repository can discover.
 * `infrastructure/metrics` — the metrics port implemented over Micrometer, with a constants class for every metric
   name and tag key, and bounded tag cardinality documented in the Javadoc.
+* `api/graphql-server` — `@Controller` classes implementing the generated resolver interfaces, mappers, a
+  `DataFetcherExceptionResolver` (GraphQL answers `200 OK` with an `errors` array, so exception mapping is entirely
+  the application's job), and query depth/complexity limits — without which one deeply nested query can exhaust the
+  service. The worked field resolver is written batched (`@BatchMapping`/`DataLoader`) rather than N+1, because the
+  scaffolded shape is the one that gets copied.
 * `api/rest-server` / `api/grpc-server` — controllers or services implementing the generated interfaces, mappers,
   the exception-to-status advice (RFC 9457 `ProblemDetail` for REST), and the security filter chain if enabled.
 * `boot` — the `@SpringBootApplication` class, `application.yml` and the three profile files, composition-root
@@ -101,7 +109,7 @@ flowchart TD
     B --> C["Step 1: Create the package layout\nfor every module"]
     C --> D["Step 2: domain — model, ports, exceptions\n(written first; no Spring annotations)"]
     D --> E["Step 3: application — use cases\nplus a mocked unit test"]
-    E --> F["Steps 4-9: one adapter per infrastructure/api module\n(database + migrations, configuration, clients,\nKafka producers/consumers, metrics, REST/gRPC)"]
+    E --> F["Steps 4-9: one adapter per infrastructure/api module\n(database + migrations, configuration, clients,\nKafka producers/consumers, metrics, REST/gRPC/GraphQL)"]
     F --> G["Step 10: boot — application class,\napplication.yml and local/dev/prod profiles,\ncomposition-root config, smoke test"]
     G --> H["Step 11: ArchUnit test enforcing\nthe package-level dependency direction"]
     H --> I["Step 12: mvn clean test via iru-gate-runner"]

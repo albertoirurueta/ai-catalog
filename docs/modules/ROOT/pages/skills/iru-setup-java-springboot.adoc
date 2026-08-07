@@ -102,27 +102,30 @@ presented with the workload shape it suits. Every engine chosen also requires an
 
 |Spring Cloud Stream / Kafka
 |No
-|Yes/no, plus the directions needed (produce, consume, or both). AVRO is the message format.
+|Yes/no, plus the directions needed (produce, consume, or both). AVRO is the message format, and an AsyncAPI
+specification alongside the schemas documents the topics carrying them.
 |No
 
-|REST server, gRPC server
+|REST server, gRPC server, GraphQL server
 |No
-|Yes/no each. Both are contract-first: specs live in `apis/` and code is generated from them.
+|Yes/no each. All three are contract-first: specs live in `apis/` and code is generated from them. GraphQL
+additionally needs a web transport starter alongside `spring-boot-starter-graphql`, which carries none of its own.
 |No
 
-|REST clients, gRPC clients
+|REST clients, gRPC clients, GraphQL clients
 |No
 |A name per downstream service; each becomes an `infrastructure/clients/<name>` module and an `apis/` spec
-directory.
+directory. One module per *service*, with a generator execution per protocol, when a service is reached over more
+than one.
 |None
 
 |API mocking tool
 |Only if a client was named
 |Which mock stands in for the downstream services in integration tests and local runs — **Microcks** whenever any
-gRPC client exists (it mocks gRPC and REST from the same contracts in one container), **WireMock** for a REST-only
-service (lighter, with a `wiremock-grpc-extension` available if gRPC arrives later). Recorded as `stack.apiMock`
-and acted on by xref:skills/iru-setup-java-springboot-testcontainers.adoc[].
-|Microcks with gRPC, WireMock for REST-only
+gRPC or GraphQL client exists (it mocks all three protocols from the same contracts in one container), **WireMock**
+for a REST-only service (lighter, with a `wiremock-grpc-extension` available if gRPC arrives later). Recorded as
+`stack.apiMock` and acted on by xref:skills/iru-setup-java-springboot-testcontainers.adoc[].
+|Microcks with gRPC or GraphQL, WireMock for REST-only
 
 |Logging, metrics, tracing
 |No
@@ -157,8 +160,8 @@ typically less relevant and some actively conflict with the contract-first hexag
 * The hexagonal source tree — ports, adapters, use cases, the `@SpringBootApplication` class, per-profile
   configuration, migration changelogs, and an ArchUnit test enforcing the dependency direction (via
   `iru-setup-java-springboot-modules`).
-* The `apis/` contract tree and the OpenAPI/protobuf/AVRO generator wiring (via
-  `iru-setup-java-springboot-apis`).
+* The `apis/` contract tree, the OpenAPI/protobuf/GraphQL-SDL/AVRO generator wiring, and the AsyncAPI
+  specification and documentation generators for messaging (via `iru-setup-java-springboot-apis`).
 * `compose.yaml` and the Testcontainers integration-test harness (via
   `iru-setup-java-springboot-testcontainers`).
 * An `infra/` OpenTofu configuration for the chosen cloud (via `iru-setup-java-springboot-platform`).
@@ -208,8 +211,8 @@ filesystem directly, so only a short completion summary needs to come back:
   not written, the whole run stops.
 * xref:skills/iru-setup-java-springboot-modules.adoc[] — Step 8: the source tree, ports, adapters, profiles, and
   the ArchUnit test. Runs after the poms because it writes sources into modules rather than creating them.
-* xref:skills/iru-setup-java-springboot-apis.adoc[] — Step 8: the `apis/` contracts and the code generators.
-  Runs after the modules because generated sources need a module to land in.
+* xref:skills/iru-setup-java-springboot-apis.adoc[] — Step 8: the `apis/` contracts, the code generators, and the
+  AsyncAPI documentation generators. Runs after the modules because generated sources need a module to land in.
 * xref:skills/iru-setup-java-springboot-testcontainers.adoc[] — Step 8: `compose.yaml` and the integration-test
   harness. Runs after the APIs because the compose stack must know whether a schema registry is needed.
 * xref:skills/iru-setup-java-springboot-platform.adoc[] — Step 8: the OpenTofu configuration.

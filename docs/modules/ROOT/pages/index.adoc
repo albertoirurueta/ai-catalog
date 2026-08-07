@@ -375,7 +375,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-springboot-apis`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Set up the `apis/` contract tree and the OpenAPI/protobuf/AVRO code generators that read it.
+|Set up the `apis/` contract tree and the OpenAPI/protobuf/GraphQL/AVRO/AsyncAPI generators that read it.
 |xref:skills/iru-setup-java-springboot-apis.adoc[]
 
 |`iru-setup-java-springboot-github-workflows`
@@ -505,7 +505,8 @@ the root `pom.xml` and nowhere else, and Java 21 is the enforced minimum.
 * xref:skills/iru-setup-java-springboot-modules.adoc[`iru-setup-java-springboot-modules`] — scaffolds the source
   tree: domain ports, one worked adapter per kind, use cases, profiles, migrations, and the ArchUnit test.
 * xref:skills/iru-setup-java-springboot-apis.adoc[`iru-setup-java-springboot-apis`] — sets up the `apis/`
-  contract tree and the OpenAPI/protobuf/AVRO generators, including their HTML documentation.
+  contract tree and the OpenAPI/protobuf/GraphQL/AVRO code generators plus the AsyncAPI documentation generators,
+  including all of their HTML documentation.
 * xref:skills/iru-setup-java-springboot-testcontainers.adoc[`iru-setup-java-springboot-testcontainers`] — writes
   one `compose.yaml` and the Testcontainers harness that launches it, so local runs and CI cannot drift apart.
 * xref:skills/iru-setup-java-springboot-platform.adoc[`iru-setup-java-springboot-platform`] — generates the
