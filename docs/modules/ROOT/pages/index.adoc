@@ -230,7 +230,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-java-code-one-task`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Implement a single Java plan task's code and tests only — validation is handled by `iru-java-code-one-task-group`.
+|Implement a single Java plan task's code and tests only, against its bundled Java code agreements — validation is handled by `iru-java-code-one-task-group`.
 |xref:skills/iru-java-code-one-task.adoc[]
 
 |`iru-java-code-one-task-group`
@@ -600,7 +600,12 @@ of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development 
   (in parallel where safe) and validates the whole bucket once: license headers, Javadoc, tests, coverage, and
   a quality regression check.
 * xref:skills/iru-java-code-one-task.adoc[`iru-java-code-one-task`] — implements a single task's code and tests only;
-  called once per task by `iru-java-code-one-task-group`.
+  called once per task by `iru-java-code-one-task-group`. It ships its own `reference/` library of this catalog's
+  general Java code agreements — `var` type inference and `final` wherever possible (classes and methods included),
+  the public-to-private declaration order every type follows with overloads kept contiguous, immutability and
+  narrow visibility, exception and null conventions, full Javadoc, and JUnit test conventions — read by
+  progressive disclosure so a one-method change doesn't pay for all of it. The rules are the default for new code:
+  a file that consistently does otherwise wins, and the divergence is reported instead of silently converted.
 * xref:skills/iru-java-test.adoc[`iru-java-test`] — runs the JUnit suite via Surefire, scoped to a
   class/method/package/tag selector.
 * xref:skills/iru-java-coverage.adoc[`iru-java-coverage`] — runs JaCoCo and reports the exact measured coverage
@@ -645,7 +650,8 @@ through `iru-code`.
   Docker.
 * xref:skills/iru-java-springboot-code-one-task.adoc[`iru-java-springboot-code-one-task`] — implements a single
   task's code and **unit tests only**, resolving which hexagonal module the code belongs in before writing
-  anything. It is the only skill in this catalog that ships its own `reference/` library — hexagonal architecture
+  anything. Like xref:skills/iru-java-code-one-task.adoc[`iru-java-code-one-task`] it ships its own `reference/`
+  library, here covering the architecture rather than the language — hexagonal architecture
   and module boundaries, DDD tactical patterns, SOLID, the distributed patterns (CQRS, transactional outbox, saga,
   eventual consistency, listen-to-yourself), and this catalog's Java code style — read by progressive disclosure so
   a small task doesn't pay for all of it.

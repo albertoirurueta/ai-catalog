@@ -1,6 +1,6 @@
 = Java Code One Task
-:description: Implements a single Java task from an implementation plan, writing the code and JUnit tests, then checking off its checkbox, nothing else here.
-:keywords: iru-java-code-one-task, claude code skill, java, junit, implementation plan, task implementation, unit testing
+:description: Implements a single Java task from an implementation plan, applying its bundled Java code agreements, writing the code and JUnit tests, then checking off its checkbox.
+:keywords: iru-java-code-one-task, claude code skill, java, junit, implementation plan, task implementation, unit testing, code style, var type inference, final, declaration order, javadoc
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -12,16 +12,77 @@ task in a bucket (potentially many at once, in parallel agents).
 
 `iru-java-code-one-task` is the Java-specific implementation worker `iru-java-code-one-task-group` calls once per task.
 Given one task's own text (what to build, the named file(s)/class(es)/method(s), the described behavior, its
-exact `implementation_plan.md` checkbox line(s), and any sub-tasks), it re-checks the current code state,
-implements exactly what's specified, and writes/updates JUnit tests. If the task didn't stop on a blocker, it
+exact `implementation_plan.md` checkbox line(s), and any sub-tasks), it loads whichever of its own bundled Java
+code agreements the task needs, re-checks the current code state, implements exactly what's specified, and
+writes/updates JUnit tests. If the task didn't stop on a blocker, it
 then immediately checks off that task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a
 "group validation pending" note, before reporting back — so an interrupted run doesn't re-attempt work that
 already landed, even if the interruption happens before the group's own validation runs. License headers,
-Javadoc, scoped tests, coverage, the full suite, code-quality regression checks, and replacing the pending note
-with the final validation outcome no longer happen here; they moved to `iru-java-code-one-task-group`, which
+Javadoc audits, scoped tests, coverage, the full suite, code-quality regression checks, and replacing the pending
+note with the final validation outcome no longer happen here; they moved to `iru-java-code-one-task-group`, which
 validates them once for the whole bucket of tasks instead of once per task, cutting the redundant tool
 invocations that used to happen here for every single task. It hands back only a short summary; it never
 captures a quality baseline or runs any test/coverage/quality check itself.
+
+=== The bundled reference library
+
+This skill ships a `reference/` directory alongside its `SKILL.md`, holding this catalog's **general Java code
+agreements** — the framework-independent conventions new code is expected to follow. It is read by
+**progressive disclosure**: `reference/README.md` is a short routing table, one file is always read, and the
+others only when the task's shape calls for them, so a one-method change doesn't pay for the whole library.
+
+The Spring Boot counterpart, xref:skills/iru-java-springboot-code-one-task.adoc[], ships its own `reference/`
+covering hexagonal module boundaries, DDD, SOLID, and the distributed patterns. Everything in this directory
+still holds there; the two libraries are complementary rather than alternatives.
+
+[cols="2,1,3", options="header"]
+|===
+|File |Read when |Covers
+
+|`code-style.md`
+|Always
+|Type inference — `var` for locals wherever the type is inferable, and the specific cases where an explicit type
+earns its keep (a right-hand side that doesn't name the type, numeric width, needing the interface rather than
+the implementation, an un-writable inferred type, a bare diamond). `final` wherever possible: fields, locals,
+parameters, plus classes and methods that aren't *designed* to be extended — with the caveats that matter, since
+a proxying framework cannot subclass a final class and Mockito 4 and earlier cannot mock one. Then immutability
+and records (including shallow-immutability defensive copying), narrowest-possible visibility, naming, exception
+and null conventions (`IllegalArgumentException` naming the offending parameter, fail fast, never swallow, no
+`System.out`), and collections/`Optional` rules.
+
+|`class-member-ordering.md`
+|The task adds a new type, or adds/moves a member in an existing one
+|The public-to-private declaration order every type follows — static constants, static fields, instance fields,
+static initialisers, constructors, methods, then nested types, each band ordered public → protected →
+package-private → private. Plus the two cross-cutting rules: overloads stay contiguous and sit where their *most
+visible* member would, and a private helper lives in the private band rather than next to its caller. Includes an
+annotated skeleton class, the variations for interfaces/enums/records, and the rules for applying the order to an
+existing file without producing an unreviewable diff.
+
+|`javadoc.md`
+|The task adds or changes a type or a public/protected member
+|Full Javadoc as a hard requirement: a standalone summary sentence, the caller's contract, `@param` for every
+parameter, type parameter, and record component, `@return`, and `@throws` for every handleable exception — the
+`@throws` list being what the tests are written against. Plus interface Javadoc as the implementation contract,
+what an overridable method must document for its subclasses, `{@inheritDoc}`, when a private member deserves a
+comment, and the mechanics that otherwise fail a doclint build.
+
+|`testing.md`
+|The task writes or updates tests — nearly every task
+|Matching the package's existing test conventions before introducing any of your own; what to cover (the changed
+behaviour through the public API, one test per documented `@throws`, boundaries) and what not to; JUnit 5
+mechanics (`assertThrows`, `@ParameterizedTest`, `@Nested`, no shared mutable state, no `Thread.sleep`); why
+private methods are tested through public behaviour rather than by widening visibility; and disciplined mocking
+— mock what you don't own, never the type under test, verify only when the interaction *is* the behaviour.
+|===
+
+The declaration-order rules are the ones with a downstream consequence: `iru-java-code-quality` runs Checkstyle's
+`DeclarationOrder` and `OverloadMethodsDeclarationOrder` one gate later, in the task group, so getting the order
+right while writing the code is what keeps that gate green.
+
+Every file states the same override: the rules are the default for **new** code, and a file that consistently
+does something else wins. A divergence is reported rather than silently converted, because restyling untouched
+code turns a two-line change into an unreviewable diff.
 
 == Purpose group
 
@@ -47,41 +108,59 @@ method(s), the described behavior, its exact `implementation_plan.md` checkbox l
 sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. Normally supplied by
 `iru-java-code-one-task-group` dispatching one task in a bucket at a time.
 |None — this skill has nothing to do without a task description.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory. If it is missing (the skill directory was copied without it), the
+skill falls back to the repository's `CLAUDE.md` conventions and the surrounding code's style, and says so in its
+report rather than guessing at what the reference would have said.
+|Bundled with the skill
 |===
 
 == Outputs
 
-* Source and test files created/modified per the task, following this repository's conventions from `CLAUDE.md`
-  (Java version, `final`/`var` type inference only where already used, full Javadoc, `IllegalArgumentException`
-  for invalid arguments, no new runtime dependencies).
-* JUnit tests added/updated covering the new/changed behavior — not run by this skill; the caller runs them once
-  for the whole bucket.
+* Source and test files created/modified per the task, following the bundled `reference/` agreements — `var` and
+  `final` as the defaults for new code, public-to-private declaration order with overloads kept together, full
+  Javadoc on every type and public/protected member — plus this repository's own `CLAUDE.md` conventions (Java
+  version, license header expectations, banned dependencies) where they are more specific, and the surrounding
+  file's existing style wherever it consistently differs.
+* JUnit tests added/updated covering the new/changed behavior, including a case per documented `@throws` — not
+  run by this skill; the caller runs them once for the whole bucket.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
   pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
   the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
-* A short summary handed back to the caller: file(s) touched, tests added/updated, and whether the run stopped
-  on a blocker.
+* A short summary handed back to the caller: file(s) touched, tests added/updated, whether the run stopped on a
+  blocker, and any deliberate deviation from `reference/` (a file that doesn't use `var`, a class left non-final
+  because a framework proxies it or the project's Mockito can't mock it, a file whose existing member order is
+  already wrong) so it reads as a decision rather than an oversight.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /java-code-one-task\n(task description)"] --> B["Step 1: re-check current\ncode state from disk"]
-    B --> C["Step 2: implement exactly what\nthe task specifies"]
-    C --> D["Step 3: write/update JUnit tests\n(not run here)"]
-    D --> E{"Ambiguous, or approach\ninfeasible against real code?"}
-    E -- yes --> F["Step 4: stop; leave checkbox\nunchecked; report blocker to caller"]
-    E -- no --> G["Step 5: check off this task's\ncheckbox + 'validation pending' note"]
-    G --> H["Step 6: report outcome\nto caller: files, tests"]
+    A["Start /iru-java-code-one-task\n(task description)"] --> B["Step 1: read reference/README.md,\nthen only the files this task needs"]
+    B -- "reference/ missing" --> B2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    B2 --> C
+    B --> C["Step 2: re-check current code state;\nnote what the file already does"]
+    C --> D["Step 3: implement exactly what the task\nspecifies (var/final, member order, Javadoc)"]
+    D --> E["Step 4: write/update JUnit tests\n(not run here)"]
+    E --> F{"Ambiguous, or approach\ninfeasible against real code?"}
+    F -- yes --> G["Step 5: stop; leave checkbox\nunchecked; report blocker to caller"]
+    F -- no --> H["Step 6: check off this task's\ncheckbox + 'validation pending' note"]
+    H --> I["Step 7: report outcome to caller:\nfiles, tests, deviations from reference/"]
 ....
+
+A conflict between `reference/` and the surrounding code is deliberately *not* a stop condition — the skill
+follows the surrounding code and reports the divergence in Step 7.
 
 == Dependencies
 
 === Invokes
 
-None — `iru-java-code-one-task` is a leaf skill; it does not call any other skill in this catalog. License headers,
-Javadoc, scoped tests, coverage, and quality checks all moved to `iru-java-code-one-task-group`.
+None — `iru-java-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads its own
+`reference/` directory and edits the code and test files the task names. License headers, Javadoc audits, scoped
+tests, coverage, and quality checks all moved to `iru-java-code-one-task-group`.
 
 === Invoked by
 
@@ -94,9 +173,9 @@ Javadoc, scoped tests, coverage, and quality checks all moved to `iru-java-code-
 
 === Related agents
 
-`iru-java-code-one-task` itself does not spawn any Agent — it only reads and edits the code/test files the task
-names.
+`iru-java-code-one-task` itself does not spawn any Agent — it only reads its `reference/` files and edits the
+code/test files the task names.
 
 == Source
 
-https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled Java code agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-java-code-one-task/reference[`reference/`].

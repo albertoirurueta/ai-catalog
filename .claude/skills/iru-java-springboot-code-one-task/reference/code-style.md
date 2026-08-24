@@ -116,6 +116,29 @@ change.
   `@Configuration` classes or anything needing a proxy (CGLIB cannot subclass a final class, and the failure
   message is unhelpful).
 
+## Class member ordering: public to private
+
+Every type's body is ordered from public to private, in a fixed sequence of member kinds:
+
+1. static constants, 2. static fields, 3. instance fields, 4. static initialisers, 5. constructors,
+6. methods, 7. nested classes/interfaces/enums/records.
+
+Within each band, order by visibility: `public`, then `protected`, then package-private, then `private`. Two
+rules cut across the sequence: **overloads stay contiguous**, ordered by visibility inside the group and placed
+where their most visible member would sit; and **a private helper goes in the private band**, not next to the
+method it serves — the public API has to be readable without scrolling past implementation details.
+
+In practice, for the types in this architecture: a use case or adapter is `private final` dependency fields, then
+its (usually Lombok-generated) constructor, then the port method(s) it implements, then its private helpers. An
+interface's members are implicitly public, so constants come first, then abstract methods, then `default`, then
+`static`, then any `private` (Java 9+) method. A record's components live in its header, so its body starts at
+static constants, then the compact constructor.
+
+Insert new members in their correct band, and **don't reorder a file that already violates the order** — a
+wholesale reshuffle buries the actual change in an unreviewable diff. This is the same agreement documented in
+full, with an annotated skeleton, in `iru-java-code-one-task/reference/class-member-ordering.md`; Checkstyle's
+`DeclarationOrder` and `OverloadMethodsDeclarationOrder` are what enforce it, one gate later, in the group skill.
+
 ## Javadoc on everything
 
 **All code must be fully documented.** On every type and every public or protected member:

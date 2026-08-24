@@ -9,7 +9,7 @@ front of it actually needs, instead of carrying every rule in context on every t
 | Read | When |
 |---|---|
 | `hexagonal-architecture.md` | **Always.** It decides which module the code belongs in and what that module may import. Getting this wrong is the one mistake that can't be fixed later without moving code between modules. |
-| `code-style.md` | **Always.** Records, Lombok, MapStruct-versus-manual, `final`, type inference, Javadoc. |
+| `code-style.md` | **Always.** Records, Lombok, MapStruct-versus-manual, `final`, type inference, public-to-private member ordering, Javadoc. |
 | `ddd-tactical-patterns.md` | The task touches `domain` — an entity, value object, aggregate, domain service, or domain event. |
 | `solid.md` | The task introduces or changes an interface, adds a branch on type, or grows an existing class's responsibilities. Also read it when a task asks for something that smells like a god-service. |
 | `distributed-patterns.md` | The task involves Kafka, a second datastore, cross-service consistency, or anything the plan describes as "eventually consistent", "projection", "outbox", "saga", or "compensating". |

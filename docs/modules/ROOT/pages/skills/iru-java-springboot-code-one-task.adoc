@@ -30,7 +30,10 @@ architecture rather than from preference:
 === The bundled reference library
 
 This skill ships a `reference/` directory alongside its `SKILL.md` — the first skill in this catalog to do so —
-holding the Spring Boot best practices and architectural patterns a task must be implemented against. It is read
+holding the Spring Boot best practices and architectural patterns a task must be implemented against. Its
+plain-Java counterpart, xref:skills/iru-java-code-one-task.adoc[], now ships one too, covering the language-level
+code agreements (`var`, `final`, declaration order, Javadoc, tests); those still apply here, and the files below
+add the architecture-specific rules on top of them rather than replacing them. It is read
 by **progressive disclosure**: `reference/README.md` is a short routing table, two files are always read, and the
 other three only when the task's shape calls for them. Reading all six on every task is the context waste the
 split exists to avoid.
@@ -49,7 +52,8 @@ than technology.
 |Always
 |Records for immutable types (with defensive copying and compact-constructor validation), Lombok where it earns
 its place and where it hurts, MapStruct only for simple mappers, `var` type inference, `final` wherever possible,
-and full Javadoc on everything.
+the public-to-private member ordering every type follows (shared with `iru-java-code-one-task`, which documents it
+in full), and full Javadoc on everything.
 
 |`ddd-tactical-patterns.md`
 |The task touches `domain`
