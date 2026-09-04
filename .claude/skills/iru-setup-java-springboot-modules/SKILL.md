@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-modules
-description: Scaffold the source tree of a DDD/hexagonal Spring Boot service whose Maven reactor already exists — the package layout for every module, the ports (interfaces) that `domain` defines, a worked adapter skeleton per `infrastructure`/`api` module (repository adapter with MapStruct mapping, refreshable `@ConfigurationProperties` beans, REST/gRPC/GraphQL/Kafka entry points, Kafka producer, metrics publisher), the `@SpringBootApplication` class and component-scan wiring in `boot`, `application.yml` plus per-profile overrides (including structured logging, actuator/Prometheus exposure, and the dynamic-configuration binding the stack selected), the database migration/changelog directory for each engine's tooling (Mongock, Liquibase and its Couchbase/MongoDB/Neo4j extensions, or Flyway), and an ArchUnit test that fails the build when the hexagonal dependency direction is violated. Reads `springboot-stack.yml` for every decision and writes no version numbers. Invoke as `/iru-setup-java-springboot-modules`, or with `args` (`stack-file:` line) when called from `iru-setup-java-springboot`. Use after `iru-setup-java-springboot-pom` has created the poms, whenever a Spring Boot service needs its hexagonal source skeleton and runtime configuration generated instead of hand-writing the ports, adapters, and profile files module by module.
+description: Scaffold the source tree of a DDD/hexagonal Spring Boot service whose Maven reactor already exists — the package layout for every module, the ports (interfaces) that `domain` defines, a worked adapter skeleton per `infrastructure`/`api` module (repository adapter with MapStruct mapping, refreshable `@ConfigurationProperties` beans, REST/gRPC/GraphQL/Kafka entry points, Kafka producer, metrics publisher), the `@SpringBootApplication` class and component-scan wiring in `boot`, `application.yml` plus per-profile overrides (including structured logging, actuator/Prometheus exposure, and the dynamic-configuration binding the stack selected), the database migration/changelog directory for each engine's tooling (Flamingock, Liquibase and its Couchbase/MongoDB/Neo4j extensions, or Flyway), and an ArchUnit test that fails the build when the hexagonal dependency direction is violated. Reads `springboot-stack.yml` for every decision and writes no version numbers. Invoke as `/iru-setup-java-springboot-modules`, or with `args` (`stack-file:` line) when called from `iru-setup-java-springboot`. Use after `iru-setup-java-springboot-pom` has created the poms, whenever a Spring Boot service needs its hexagonal source skeleton and runtime configuration generated instead of hand-writing the ports, adapters, and profile files module by module.
 model: sonnet
 ---
 
@@ -120,9 +120,10 @@ Per engine directory in the manifest, write:
 - **Adapter** — a `@Component` implementing the `domain` port, delegating to the Spring Data repository and the
   mapper. This is the only class in the module the rest of the service can reach through the port.
 - **Migrations/index management**, per this engine's tooling from the manifest:
-  - **Mongock** — `src/main/java/<base-path>/infrastructure/database/mongodb/migration/` with one
-    `@ChangeUnit` creating the example collection's indexes, plus the `mongock.migration-scan-package`
-    property in the module's config.
+  - **Flamingock** — `src/main/java/<base-path>/infrastructure/database/mongodb/migration/` with one
+    `@Change` class creating the example collection's indexes, enabled via `@EnableFlamingock` with a
+    `@Stage(location = "<base-path>.infrastructure.database.mongodb.migration")` on the module's configuration
+    class (the equivalent of Mongock's `migration-scan-package` property).
   - **Liquibase (SQL)** — `src/main/resources/db/changelog/db.changelog-master.yaml` including a first changeset
     that creates the example table and its indexes. If PostgreSQL was chosen and vectors may be stored, add a
     changeset with `CREATE EXTENSION IF NOT EXISTS vector;` and note it needs the `pgvector` image or a

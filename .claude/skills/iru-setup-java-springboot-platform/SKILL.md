@@ -138,7 +138,7 @@ only what the stack actually needs.
 | Need | Managed service | Notes to put in the generated comments |
 |---|---|---|
 | Compute | ECS Fargate service + ALB target group, or EKS deployment | Fargate needs no capacity management |
-| MongoDB | **MongoDB Atlas** (via the `mongodbatlas` provider), not DocumentDB | DocumentDB emulates an older MongoDB wire protocol and lacks features Spring Data and Mongock use; if the user insists on staying in-account, flag the compatibility risk explicitly and test the migration tooling against it early |
+| MongoDB | **MongoDB Atlas** (via the `mongodbatlas` provider), not DocumentDB | DocumentDB emulates an older MongoDB wire protocol and lacks features Spring Data and Flamingock use; if the user insists on staying in-account, flag the compatibility risk explicitly and test the migration tooling against it early |
 | PostgreSQL | RDS or Aurora PostgreSQL | `pgvector` is available as an extension — must be enabled per database; confirm the engine version supports the needed version |
 | MariaDB | RDS MariaDB | — |
 | Couchbase | **Couchbase Capella** (its own provider) | no first-party AWS equivalent |
@@ -156,7 +156,7 @@ only what the stack actually needs.
 | Need | Managed service | Notes |
 |---|---|---|
 | Compute | Cloud Run service, or GKE Autopilot deployment | Cloud Run scales to zero — excellent for `dev`; note cold starts, and that `min-instances: 1` avoids them at a cost |
-| MongoDB | MongoDB Atlas on GCP | Firestore is not MongoDB-compatible enough for Spring Data MongoDB + Mongock |
+| MongoDB | MongoDB Atlas on GCP | Firestore is not MongoDB-compatible enough for Spring Data MongoDB + Flamingock |
 | PostgreSQL | Cloud SQL for PostgreSQL, or AlloyDB | `pgvector` supported; AlloyDB for heavier analytical load |
 | MariaDB | Cloud SQL for MySQL (MariaDB-compatible) | not a true MariaDB — flag the driver/compatibility implication |
 | Couchbase | Couchbase Capella | — |

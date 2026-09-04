@@ -86,7 +86,7 @@ every other technology resolves to, so it is settled before any technology choic
 |No
 |Multi-select from MongoDB, Couchbase, relational (PostgreSQL or MariaDB), Elasticsearch, Neo4j, and Qdrant, each
 presented with the workload shape it suits. Every engine chosen also requires an index/migration tool
-(Mongock, Liquibase and its MongoDB/Couchbase/Neo4j extensions, or Flyway).
+(Flamingock, Liquibase and its MongoDB/Couchbase/Neo4j extensions, or Flyway).
 |None
 
 |Caches

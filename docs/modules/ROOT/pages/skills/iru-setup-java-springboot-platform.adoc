@@ -25,7 +25,7 @@ technologies the service actually uses and the cloud recorded in its stack manif
   every apply costs money.
 
 A substantial part of its value is the compatibility caveats it raises rather than papering over: DocumentDB is not
-MongoDB enough for Spring Data plus Mongock, Neptune is not Neo4j, Amazon OpenSearch has diverged from
+MongoDB enough for Spring Data plus Flamingock, Neptune is not Neo4j, Amazon OpenSearch has diverged from
 Elasticsearch, Cloud SQL for MySQL is not a true MariaDB, MSK ships no managed schema registry (so AVRO needs Glue
 Schema Registry or Confluent Cloud), gRPC needs the load balancer's protocol set to HTTP/2, and a Cloud Run service
 cannot reach a private Cloud SQL or Memorystore instance without a Serverless VPC Access connector. Where the

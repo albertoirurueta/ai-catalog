@@ -36,7 +36,7 @@ into this context, and reading directly only the specific files it identifies:
 | Overview | `README.md`, root pom `<description>`, the use cases in `application` |
 | Architecture | the module tree, each module's pom dependencies, `stack.concurrency`, the adapters present |
 | Use cases | `<base>.application.usecase.*` — the ports each one calls, the exceptions each one declares/throws |
-| Database model | `infrastructure/database/*/entity/*`, the Spring Data repositories, the migration files (Mongock change units, Liquibase changelogs, Flyway scripts) — the migrations are where indexes and constraints actually live |
+| Database model | `infrastructure/database/*/entity/*`, the Spring Data repositories, the migration files (Flamingock change classes, Liquibase changelogs, Flyway scripts) — the migrations are where indexes and constraints actually live |
 | REST API | `apis/rest-server/*.yaml` and the `@RestControllerAdvice` exception mapping |
 | gRPC API | `apis/grpc-server/*.proto` and the gRPC exception handler |
 | GraphQL API | `apis/graphql-server/*.graphqls` and the `DataFetcherExceptionResolver`, plus the `@Controller` classes — the SDL says what is exposed, the controllers say what is actually resolved |

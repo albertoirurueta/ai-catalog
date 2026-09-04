@@ -170,10 +170,13 @@ id against Step 1's catalogue before it goes in.
   many indexes are needed to search that data. Not for workloads that need real transactional guarantees.
   - ids: `data-mongodb` (blocking) / `data-mongodb-reactive` (reactive).
   - Index and schema-change management is **mandatory**; ask with `AskUserQuestion`:
-    - **Mongock** (recommended) — purpose-built for MongoDB change units, integrates cleanly with Spring Data.
-      Add `io.mongock:mongock-springboot` + `io.mongock:mongodb-springdata-v4-driver` (version in the root pom).
+    - **Flamingock** (recommended) — purpose-built for MongoDB change units, integrates cleanly with Spring Data,
+      and is the actively-developed successor to Mongock (which is sunsetting, end-of-life 2026-12-31). Add
+      `io.flamingock:flamingock-bom` (import scope in dependency management), `io.flamingock:flamingock-community`,
+      `io.flamingock:flamingock-springboot-integration`, and the `io.flamingock:flamingock-processor` annotation
+      processor (version in the root pom).
     - **Liquibase for MongoDB** — only worth it when Liquibase is already used for another database in the same
-      service and one migration tool for everything is worth more than Mongock's better MongoDB ergonomics. Add
+      service and one migration tool for everything is worth more than Flamingock's better MongoDB ergonomics. Add
       `org.liquibase.ext:liquibase-mongodb`.
   - Testcontainers image: `mongo:<pinned-tag>`.
 - **Couchbase** — good when data fits in single independent documents, the structure changes freely, and no
@@ -464,7 +467,7 @@ stack:
   cloud: aws                     # aws | gcp
   databases:
     - engine: mongodb            # mongodb | couchbase | postgresql | mariadb | elasticsearch | neo4j | qdrant
-      migrations: mongock        # mongock | liquibase-mongodb | liquibase-couchbase | liquibase-neo4j | liquibase | flyway | none
+      migrations: flamingock     # flamingock | liquibase-mongodb | liquibase-couchbase | liquibase-neo4j | liquibase | flyway | none
       image: mongo:8.0
   caches: [caffeine, redis]      # caffeine | redis
   redisImage: redis:8.2
