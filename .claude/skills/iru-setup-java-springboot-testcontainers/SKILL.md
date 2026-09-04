@@ -330,7 +330,7 @@ default.
 
 Integration tests must exercise the real schema, not an ad-hoc one:
 
-- Let the module's own migration tooling (Mongock / Liquibase / Flyway) run against the container, so a broken
+- Let the module's own migration tooling (Flamingock / Liquibase / Flyway) run against the container, so a broken
   migration fails a test rather than a deploy. Verify this is enabled in the test profile — several teams disable
   migrations in tests and then discover the migration is wrong in production.
 - Add a `src/test/resources/application-test.yml` per module for test-only overrides, and keep seed data as

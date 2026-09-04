@@ -124,7 +124,7 @@ Substitute `<placeholders>` from the manifest. Include only the `<module>` entri
     <mapstruct.version><latest></mapstruct.version>
     <lombok-mapstruct-binding.version><latest></lombok-mapstruct-binding.version>
     <caffeine.version><latest></caffeine.version>
-    <mongock.version><latest></mongock.version>
+    <flamingock.version><latest></flamingock.version>
     <liquibase-mongodb.version><latest></liquibase-mongodb.version>
     <liquibase-couchbase.version><latest></liquibase-couchbase.version>
     <liquibase-neo4j.version><latest></liquibase-neo4j.version>
@@ -205,7 +205,7 @@ Substitute `<placeholders>` from the manifest. Include only the `<module>` entri
         <version>${archunit.version}</version>
         <scope>test</scope>
       </dependency>
-      <!-- ... Mongock, the Liquibase extensions, and the AWS BOM as the stack requires ... -->
+      <!-- ... the Flamingock BOM, the Liquibase extensions, and the AWS BOM as the stack requires ... -->
     </dependencies>
   </dependencyManagement>
 
@@ -543,7 +543,7 @@ so the hexagonal boundaries are enforced by the classpath and not merely by conv
 |---|---|
 | `domain` | Nothing Spring, nothing infrastructural. Plain Java plus `jakarta.validation-api` if the domain uses constraint annotations, plus the shared Lombok/MapStruct/test dependencies inherited from the root. This module defines the **ports** (interfaces) — repositories, event publishers, clients, metrics — and knows no implementation. |
 | `application` | `<a>-domain`. Optionally `spring-context`/`spring-tx` if use cases need `@Service`/`@Transactional`; prefer keeping even this out and wiring in `boot` when practical. |
-| `infrastructure/database/<engine>` | `<a>-domain` plus that engine's Spring Data starter and driver, plus its migration tooling (Mongock, Liquibase + the relevant extension, or Flyway) and its Testcontainers module (`test` scope). One engine per module — never two. |
+| `infrastructure/database/<engine>` | `<a>-domain` plus that engine's Spring Data starter and driver, plus its migration tooling (Flamingock, Liquibase + the relevant extension, or Flyway) and its Testcontainers module (`test` scope). One engine per module — never two. |
 | `infrastructure/configuration` | `<a>-domain`, `spring-boot-starter` (for `@ConfigurationProperties`), `spring-boot-configuration-processor`, and the dynamic-configuration starter the manifest names (Spring Cloud Kubernetes Config, AWS Secrets Manager, or Spring Cloud Config Client + Bus). |
 | `infrastructure/clients/<name>` | `<a>-domain` plus the HTTP client starter (`spring-restclient`/`spring-webclient`) for a REST client, the gRPC client starter for a gRPC one, or `spring-boot-starter-graphql` (for `HttpGraphQlClient`/`HttpSyncGraphQlClient`) **and** `io.github.kobylynskyi:graphql-java-codegen` at compile scope for a GraphQL one — that last artifact supplies the base classes the generated request/projection classes extend, and without it the module generates and then fails to compile. A downstream service reached over more than one protocol keeps one module with one generator execution per protocol. Also the OpenAPI, protobuf or GraphQL generator plugin execution for that client's own contract, and — at `test` scope — the Testcontainers module for whichever API mock `stack.apiMock` names (`io.github.microcks:microcks-testcontainers` or the WireMock Testcontainers module), so this module's own `*IT` can start just the mock instead of the whole compose stack. |
 | `infrastructure/producers` | `<a>-domain`, `spring-cloud-stream`, `spring-cloud-stream-binder-kafka`, the AVRO serializer (`io.confluent:kafka-avro-serializer`) and `org.apache.avro:avro`, plus the AVRO generator plugin execution. |

@@ -71,7 +71,7 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
   domain-exception hierarchy.
 * `application` — one use case class per use case, with a Mockito unit test that mocks every port.
 * `infrastructure/database/<engine>` — persistence entity, Spring Data repository, MapStruct mapper, the port
-  adapter, the migration/changelog directory for that engine's tooling (Mongock change unit, Liquibase changelog
+  adapter, the migration/changelog directory for that engine's tooling (Flamingock change class, Liquibase changelog
   including a `pgvector` extension changeset where relevant, or a Flyway script), and an integration test.
 * `infrastructure/configuration` — validated `@ConfigurationProperties` beans annotated `@RefreshScope`, the
   configuration port adapter, and the wiring for the dynamic-configuration mechanism the manifest names.
