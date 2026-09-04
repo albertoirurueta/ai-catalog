@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Java Spring Boot Performance Tests :: AI Catalog</title>
+    <meta name="description" content="Generates an Apache JMeter suite for a Spring Boot service that correlates response time, CPU, and memory against the number of concurrent users.">
+    <meta name="keywords" content="iru-java-springboot-performance-tests, claude code skill, apache jmeter, load testing, spring boot, concurrency, actuator metrics, response time percentiles">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-java-springboot-performance-tests.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Java Spring Boot Performance Tests</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Produces an Apache JMeter performance suite for a Spring Boot service, covering only the happy paths of its main
+use cases, in three concurrency scenarios.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The suite exists to answer one question: <strong>as the number of concurrent users rises, what happens to response time,
+CPU, and memory?</strong> A load test that reports only response times says the service got slower without saying whether
+it ran out of heap, saturated a core, or spent the run in garbage collection — so this skill collects all three and
+correlates them against the live concurrency at each moment.</p>
+</div>
+<div class="paragraph">
+<p>Three rules shape everything it writes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Happy paths of the main use cases only.</strong> Error paths and rarely-used admin endpoints belong in the functional
+suite; here they dilute the signal and inflate the maintenance cost of a suite that is already expensive to keep
+truthful.</p>
+</li>
+<li>
+<p><strong>The suite lives outside the Maven reactor.</strong> <code>performance/</code> has its own <code>pom.xml</code> and is never listed as a
+<code>&lt;module&gt;</code> of the service&#8217;s root pom, because a load test that runs during <code>mvn verify</code> is a load test that gets
+disabled within a week.</p>
+</li>
+<li>
+<p><strong>One test plan, three scenario profiles.</strong> The plan is parameterized entirely through JMeter properties
+(<code>${__P(name,default)}</code>); a scenario is a <code>.properties</code> file, never a copy of the plan, since three copies of a
+JMX file drift apart on the first endpoint change.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The use cases are discovered rather than asked for — from the OpenAPI contracts in <code>apis/rest-server/</code>, the
+protobuf definitions in <code>apis/grpc-server/</code>, the hand-written <code>api/*</code> adapters, the <code>application/</code> use-case
+classes, and whatever <code>infrastructure/metrics/</code> already counts — then shortlisted to 3–7 and confirmed with the
+user before any file is written. Fewer than three doesn&#8217;t represent the service; more than seven spreads each
+scenario&#8217;s concurrency too thin to say anything.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-springboot" class="xref page">Spring Boot Development Tooling</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-java-springboot-performance-tests</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stack-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> line giving the manifest path. Read for the service&#8217;s shape — artifactId, base package,
+whether it has a REST or gRPC server, security, messaging, and metrics. When absent, the same facts are detected
+from the root <code>pom.xml</code>, <code>apis/</code>, and the module tree, so the skill works on a service this catalog never
+scaffolded.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>springboot-stack.yml</code> at the repository root</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Use case shortlist</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Discovered from the contracts and application layer, then confirmed, dropped, added to, or re-weighted by the
+user. Nothing is written before this confirmation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Discovered, then confirmed interactively</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Workload numbers</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Concurrency, ramp, and duration per scenario, asked via <code>AskUserQuestion</code> and explicitly labelled as placeholders
+that must be justified against expected production traffic.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">10 / 200 / stepped users</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Target environment</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>target.host</code>, <code>target.port</code>, <code>target.protocol</code> — a local compose stack, a deployed test environment, or
+(needing explicit approval) something closer to production. Never hardcoded into the plan.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked, no default host</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A standalone <code>performance/</code> project at the repository root:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>pom.xml</code> driving <code>jmeter-maven-plugin</code> with a pinned JMeter version and the <code>kg.apc:jmeter-plugins-casutg</code>
+extension resolved from Maven, so no local JMeter install or Plugins Manager step is needed.</p>
+</li>
+<li>
+<p><code>src/test/jmeter/&lt;artifactId&gt;-performance.jmx</code> — one plan holding a <code>setUp</code> group (auth and warm-up), one thread
+group per use case built from transaction controllers with think time, assertions and correlation, a
+<code>METRICS-server</code> polling group, and a <code>tearDown</code> cleanup group.</p>
+</li>
+<li>
+<p><code>src/test/jmeter/user.properties</code> — the result-writer settings, of which <code>thread_counts=true</code> is load-bearing:
+without it the JTL has no record of how many users were active per sample and the whole concurrency correlation
+becomes impossible to reconstruct.</p>
+</li>
+<li>
+<p><code>profiles/low-load.properties</code>, <code>profiles/high-load.properties</code>, <code>profiles/scale-up-down.properties</code>.</p>
+</li>
+<li>
+<p><code>src/test/resources/data/&lt;use-case&gt;.csv</code> data sets, <code>thresholds.properties</code>, and <code>scripts/summarize.py</code>.</p>
+</li>
+<li>
+<p><code>README.md</code> with the runnable commands, the think-time assumptions, and the response-time budgets.</p>
+</li>
+<li>
+<p>Root <code>.gitignore</code> entries for <code>performance/results/</code> and <code>performance/target/</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_three_scenarios"><a class="anchor" href="#_the_three_scenarios"></a>The three scenarios</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Scenario</th>
+<th class="tableblock halign-left valign-top">Purpose</th>
+<th class="tableblock halign-left valign-top">Default shape</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>low-load</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The baseline. Reference response times with no contention, cheap enough to run often.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">10 concurrent users, 1 min ramp, 5 min steady.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>high-load</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sustained saturation — whether the service holds a target concurrency for a realistic period without degrading,
+leaking, or throwing. The long ramp matters: arriving at 200 users instantly measures cold start, not steady state.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">200 concurrent users, 5 min ramp, 15 min steady.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scale-up-down</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The shaped run, using an Ultimate Thread Group. Produces the response-time/CPU/memory curve against concurrency,
+exercises autoscaling, and exposes leaks — the ramp-down uses the same step size and hold time as the ramp-up, so
+comparing 100 users on the way up against 100 on the way down distinguishes a service that recovers from one that
+has degraded.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4 steps up, 3 min hold each, then the same 4 steps down.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_cpu_and_memory_are_captured"><a class="anchor" href="#_how_cpu_and_memory_are_captured"></a>How CPU and memory are captured</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>JMeter measures the client&#8217;s view only. A dedicated <code>METRICS-server</code> thread group — one thread, a 5-second timer —
+scrapes <code>/actuator/prometheus</code> (falling back to individual <code>/actuator/metrics/&lt;name&gt;</code> calls) for process and system
+CPU, heap used/committed/max, GC pause, live threads, and <code>http.server.requests</code>. A JSR223 post-processor appends
+each reading to a CSV <strong>stamped with the live active-thread count</strong>, which is what makes those readings answer
+"based on amount of concurrent users" rather than being an undated list.</p>
+</div>
+<div class="paragraph">
+<p>Samplers in that group are prefixed <code>METRICS-</code> and filtered out of JMeter&#8217;s HTML dashboard, so a 5-second poll
+taking 3 ms doesn&#8217;t flatter every percentile. Where the service runs in a container, a <code>docker stats</code> sampler
+collects cgroup-level figures too, since the JVM&#8217;s view and the container limit are different numbers and it is the
+container limit that gets the process OOM-killed.</p>
+</div>
+<div class="paragraph">
+<p><code>scripts/summarize.py</code> then buckets every JTL sample by concurrency, joins the server metrics on the nearest
+timestamp, and emits a per-level table (p50–p99, throughput, error rate, heap and CPU average/max, GC pause) plus a
+non-zero exit code when a threshold is breached — with the up and down legs side by side for the shaped run.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-java-springboot-performance-tests"] --> B["Step 0: Resolve the manifest or detect\nthe service; check mvn/java/python3,\nActuator reachability, Docker"]
+    B -- performance/ already exists --> C["Treat as a gaps-to-fill pass;\nnever overwrite a hand-tuned JMX"]
+    C --> D
+    B --> D["Step 1: Discover use cases from apis/,\nthe api/* adapters, application/,\nand infrastructure/metrics"]
+    D --> E["Shortlist 3-7 with journey,\nvarying data, weight, and p95 budget"]
+    E --> F{"User confirms,\ndrops, adds, re-weights?"}
+    F -- corrections --> D
+    F -- confirmed --> G["Step 2: Agree the workload model,\ntarget environment, and auth"]
+    G --> H["Step 3-4: Write the standalone project\nand the single parameterized plan"]
+    H --> I["Step 5: Add the METRICS-server group\nscraping Actuator, stamped with\nthe active thread count"]
+    I --> J["Step 6: Write the three scenario profiles"]
+    J --> K["Step 7-8: summarize.py, thresholds,\nand performance/README.md"]
+    K --> L["Step 9: Verify via iru-gate-runner —\n1-user parse run, short low-load run,\nsummarizer with thresholds"]
+    L -- service cannot be started --> M["Report the suite as unverified;\nnever claim a smoke run that didn't happen"]
+    L -- failures --> N["Iterate: extractor paths, auth,\nsample_filter, empty allThreads column"]
+    N --> L
+    L --> O["Step 10: Report and give the\ncopy-pasteable run instructions"]
+    M --> O</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-explore.html" class="xref page">Explore</a> — Step 1, to survey a large service for its candidate use cases, so the caller
+gets the candidate list rather than the file contents.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="paragraph">
+<p>None. This is a top-level entry point, run directly by a person once a service has real endpoints. It is
+deliberately <strong>not</strong> part of the <a href="../index.html#group-cycle" class="xref page">Issue-to-PR Development Cycle</a> and is never reached
+through <code>iru-code</code>: a load test is too slow and too environment-dependent to belong in a per-task or per-group
+validation pass.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — spawned for each of Step 9&#8217;s verification commands, since a
+load-test log is enormous.</p>
+</li>
+<li>
+<p><a href="../agents/overview.html" class="xref page"><code>Explore</code></a> — the alternative to the <code>iru-explore</code> skill for Step 1&#8217;s survey.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_relationship_to_the_mocked_downstream_services"><a class="anchor" href="#_relationship_to_the_mocked_downstream_services"></a>Relationship to the mocked downstream services</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If the service has REST or gRPC clients, the local stack answers them with the API mock that
+<a href="iru-setup-java-springboot-testcontainers.html" class="xref page">Setup Java Spring Boot Testcontainers</a> adds to <code>compose.yaml</code> (Microcks or WireMock). A run
+against a mock measures this service in isolation — often the preferable thing to measure — but the mock answers in
+single-digit milliseconds, so any use case whose real latency is dominated by a downstream call will look far
+faster than production. The skill calls for a fixed response delay set to the downstream&#8217;s real p95 where that
+matters, and for watching that the mock itself doesn&#8217;t saturate before the service does.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-springboot-performance-tests/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

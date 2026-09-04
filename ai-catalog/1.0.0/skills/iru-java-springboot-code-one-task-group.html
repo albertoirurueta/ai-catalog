@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Java Spring Boot Code One Task Group :: AI Catalog</title>
+    <meta name="description" content="Implements one bucket of Spring Boot plan tasks and validates it once, gating on unit-test coverage and static analysis before the Testcontainers integration tests.">
+    <meta name="keywords" content="iru-java-springboot-code-one-task-group, claude code skill, spring boot, integration tests, testcontainers, archunit, jacoco coverage, checkstyle pmd spotbugs, maven reactor">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-java-springboot-code-one-task-group.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Java Spring Boot Code One Task Group</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Implements every Spring Boot task in one plan-group bucket end to end: one quality baseline up front, each task
+implemented (in parallel where safe), then the whole bucket validated once instead of once per task.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-java-springboot-code-one-task-group</code> is the bucket-level half of the <code>java-springboot</code> language/framework
+backend, the hexagonal-reactor counterpart to <a href="iru-java-code-one-task-group.html" class="xref page">Java Code One Task Group</a>. It is built on the
+same four language-level skills as that one — <a href="iru-java-code-quality.html" class="xref page">Java Code Quality</a> for Checkstyle/PMD/SpotBugs
+static analysis, <a href="iru-java-test.html" class="xref page">Java Test</a> for Surefire runs, <a href="iru-java-coverage.html" class="xref page">Java Coverage</a> for
+JaCoCo, and <a href="iru-java-javadoc.html" class="xref page">Java Javadoc</a> — each invoked through an
+<a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> agent so its report never reaches the caller&#8217;s context, and each
+preferred over a hand-written <code>mvn</code> command because it already knows how to scope the run and read the report.
+A raw <code>mvn</code> invocation is the fallback for when a skill isn&#8217;t installed in the consuming repository.</p>
+</div>
+<div class="paragraph">
+<p>Four differences from the plain-Java group skill follow from the architecture rather than from preference, and they
+shape the whole validation order:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>It owns integration testing.</strong> <a href="iru-java-springboot-code-one-task.html" class="xref page">Java Spring Boot Code One Task</a> runs unit tests only, on
+purpose — a task-level integration run would start the same Testcontainers stack once per task, which is exactly
+the redundancy group-level validation exists to remove. The container-backed pass happens here, once for the
+bucket.</p>
+</li>
+<li>
+<p><strong>Structural and static checks come first, containers last.</strong> A module-boundary violation is caught by the
+<code>maven-enforcer-plugin</code> banned-dependencies rules and the ArchUnit test in seconds, and a Checkstyle/PMD/SpotBugs
+defect in barely longer; discovering either <strong>after</strong> a multi-container integration run costs minutes and yields no
+extra information. So the order is license/Javadoc → boundaries → unit tests → unit coverage → full suite →
+static analysis → integration tests → aggregate coverage.</p>
+</li>
+<li>
+<p><strong>The coverage gate is measured from unit tests alone.</strong> See below — this is the property that decides where
+most of the other stages sit.</p>
+</li>
+<li>
+<p><strong>Every check is module-scoped.</strong> In a reactor of a dozen modules an unscoped <code>mvn</code> per bucket dominates the wall
+clock, so each stage runs with <code>-pl &lt;module list&gt; -am</code> built from the modules the bucket actually touched. The
+full-suite stage is the deliberate exception — it is reactor-wide precisely to catch a bucket&#8217;s change breaking
+an unrelated module.</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_why_coverage_is_gated_on_unit_tests_only"><a class="anchor" href="#_why_coverage_is_gated_on_unit_tests_only"></a>Why coverage is gated on unit tests only</h3>
+<div class="paragraph">
+<p>The 80% gate is measured by <a href="iru-java-coverage.html" class="xref page">Java Coverage</a> over a Surefire-only run (<code>-DskipITs</code>, no
+Failsafe, no <code>*IT</code>, nothing container-backed), never over the aggregated report in <code>coverage/</code>. Integration tests
+will raise a class&#8217;s aggregate above what its unit tests earned, and that is welcome — but it never satisfies the
+gate, for three reasons:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Unit coverage is the number the bucket&#8217;s own tasks control and can act on.</p>
+</li>
+<li>
+<p>It is available whether or not Docker is, so the verdict never becomes unreliable at exactly the moment the
+integration stage is unverified. A bucket can be validated end to end on a machine with no Docker at all; the
+only things lost are the integration result and the aggregate figure.</p>
+</li>
+<li>
+<p>A class whose coverage arrives only through a container-backed test has no fast feedback loop — a finding worth
+surfacing, not a pass to hide behind an aggregate.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>So an integration test never closes a coverage gap. If a class sits under 80% and the argument for accepting it is
+that an <code>*IT</code> exercises it, that is precisely the case the gate exists to surface: either the logic gets
+unit-tested — which usually means the adapter is doing work that belongs in <code>domain</code> or <code>application</code>, where it
+would be trivially testable — or the exception is recorded in the report with that reasoning. The aggregate is
+still read afterwards, but only to compute the delta per class: a small one means the class is genuinely
+unit-tested, and a large one names code that can only be verified with containers running, which predicts where
+the next change will be slow and hard to debug.</p>
+</div>
+<div class="paragraph">
+<p>Two honesty properties are stated explicitly in its instructions. If Docker is unavailable, or an integration run
+fails for an environment reason (image pull, port conflict, container timeout, memory), the stage is reported as
+<strong>unverified</strong> rather than silently skipped or counted as a pass — and the phrase "unverified" must never read as
+"passed", including in the <code>implementation_plan.md</code> note. And a module-boundary violation is fixed by moving the
+code or introducing the missing port, <strong>never</strong> by relaxing the rule, unless the rule is genuinely wrong for the
+project — in which case that decision is escalated in the report, since a relaxed architecture rule is something
+the whole service inherits.</p>
+</div>
+<div class="paragraph">
+<p>It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-springboot" class="xref page">Spring Boot Development Tooling</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-java-springboot-code-one-task-group &lt;bucket text&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&lt;bucket text&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Every task and sub-task in the bucket, each with its own full text (including its exact <code>implementation_plan.md</code>
+checkbox lines), the group&#8217;s <code>Parallelizable</code> verdict, and any relevant "Current code state" context.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Parallelizable</code> verdict</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read from the bucket text. <code>yes</code> fans every task out concurrently; <code>no</code> runs them one at a time in the plan&#8217;s
+order. Overridden per-pair when a port/adapter ordering dependency is detected — see the execution flow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — supplied by the plan</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Docker availability</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Probed with <code>docker info</code> in Step 1. Absence doesn&#8217;t stop the run; it makes the integration stage report as
+unverified.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Probed</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Every task in the bucket implemented, with its unit tests, by delegating to
+<a href="iru-java-springboot-code-one-task.html" class="xref page">Java Spring Boot Code One Task</a>.</p>
+</li>
+<li>
+<p>One consolidated validation pass over the bucket, in cheapest-first order — license headers, Javadoc,
+<code>maven-enforcer-plugin</code> + ArchUnit module boundaries, scoped unit tests, the 80% unit-only coverage gate, a
+reactor-wide unit suite, and a Checkstyle/PMD/SpotBugs diff against the Step 1 baseline — followed by the
+Failsafe integration tests against the Testcontainers stack and, last, the aggregated JaCoCo figure read for
+information. Stages 3.1–3.7 are the gates; 3.8 and 3.9 add information on top of them.</p>
+</li>
+<li>
+<p>Each task&#8217;s <code>implementation_plan.md</code> note finalized — module, <strong>unit-only coverage with the aggregate quoted
+separately</strong>, integration-test status, boundary and quality outcome — replacing the "group validation pending"
+placeholder, with per-task user notifications as each phase completes rather than only at the end. A single
+unattributed coverage percentage is explicitly avoided: it reads as the gate while including coverage the gate
+never counted.</p>
+</li>
+<li>
+<p>A bucket report escalating: the module-boundary result and any rule deliberately relaxed, the static-analysis
+result (new findings introduced and fixed, or that no static analysis ran at all), any class whose aggregate far
+exceeds its unit coverage, any coverage exception accepted and why, the integration-test status (passed /
+failed-and-fixed / unverified with the reason), <strong>any integration failure that unit tests missed</strong> (a signal
+about where this service&#8217;s coverage is thin), misconfigured generated-source exclusions, any port/adapter
+ordering deviation applied, and any blocked task.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-java-springboot-code-one-task-group"] --> B["Step 1: One pre-change quality baseline\nfor the bucket; probe docker info"]
+    B --> C{"Parallelizable?"}
+    C -- yes --> D["Fan out all tasks concurrently\n(port/adapter pairs still sequenced, port first)"]
+    C -- no --> E["One task at a time, in plan order"]
+    D --> F["Step 2: confirm each checkbox landed;\nbackfill on a concurrent-write race;\nnotify per task"]
+    E --> F
+    F -- a task blocked --> G["Record it; exclude its code\nfrom validation"]
+    G --> H
+    F --> H["Step 3.1-3.2: license headers, Javadoc"]
+    H --> I["Step 3.3: module boundaries —\nenforcer rules + ArchUnit"]
+    I -- violation --> J["Move the code or add the missing port.\nRelax a rule only if it is wrong; escalate it"]
+    J --> I
+    I --> K["Step 3.4: scoped unit tests (Surefire, -DskipITs)"]
+    K -- red --> L["Fix the owning task; re-run"]
+    L --> K
+    K --> Q["Step 3.5: unit-only coverage gate\n(iru-java-coverage, Surefire with -DskipITs)"]
+    Q -- under 80% --> R["Add UNIT tests via the owning task;\nan *IT never closes the gap"]
+    R --> K
+    Q --> S["Step 3.6: full reactor unit suite"]
+    S --> T["Step 3.7: Checkstyle/PMD/SpotBugs diff\nvs the Step 1 baseline"]
+    T -- new issue --> U["Fix and re-confirm 3.4 and 3.6"]
+    U --> T
+    T --> M{"Docker available,\nand any *IT in the reactor?"}
+    M -- no --> N["Report integration stage as UNVERIFIED;\nnever as passed. Coverage verdict stands"]
+    M -- yes --> O["Step 3.8: mvn verify — Failsafe against\nthe Testcontainers stack, behind the lock"]
+    O -- environment failure --> N
+    O -- assertion failure --> P["Trace to the owning task, fix, re-run;\nreport it even once fixed"]
+    P --> O
+    O --> X["Step 3.9: read the JaCoCo aggregate —\ndelta vs unit coverage, informational only"]
+    N --> V
+    X --> V["Step 4: finalize each plan note;\nnotify the user"]
+    V --> W["Step 5: report, escalating boundary,\nstatic-analysis and integration outcomes"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-java-springboot-code-one-task.html" class="xref page">Java Spring Boot Code One Task</a> — Step 2, once per task in the bucket, via the
+<code>iru-isolated-skill-executor</code> agent.</p>
+</li>
+<li>
+<p><a href="iru-java-code-quality.html" class="xref page">Java Code Quality</a> — Steps 1 and 3.7, for the Checkstyle/PMD/SpotBugs baseline and the
+regression diff against it, via <code>iru-gate-runner</code>. Skipped if not installed — and that skip is itself reported,
+since a bucket validated with no static analysis at all is worth knowing about. SpotBugs findings are treated
+more seriously than the rest: unlike most Checkstyle rules they describe real defects rather than style.</p>
+</li>
+<li>
+<p><a href="iru-check-license.html" class="xref page">Check License</a> — Step 3.1, via <code>iru-gate-runner</code>. Skipped if not installed.</p>
+</li>
+<li>
+<p><a href="iru-java-javadoc.html" class="xref page">Java Javadoc</a> — Step 3.2, via <code>iru-gate-runner</code>. Skipped if not installed. Mostly confirms
+rather than backfills, since the per-task skill already requires full Javadoc — a lot of missing Javadoc here
+means that skill was bypassed.</p>
+</li>
+<li>
+<p><a href="iru-java-test.html" class="xref page">Java Test</a> — Steps 3.4 and 3.6, via <code>iru-gate-runner</code>, told the module scope for the
+scoped run and given no selector for the reactor-wide one. Falls back to <code>mvn test -DskipITs</code> only if the skill
+isn&#8217;t installed.</p>
+</li>
+<li>
+<p><a href="iru-java-coverage.html" class="xref page">Java Coverage</a> — Step 3.5, via <code>iru-gate-runner</code>, measuring the 80% gate over a
+Surefire-only run. Falls back to <code>mvn clean jacoco:prepare-agent test jacoco:report -DskipITs</code> plus each module&#8217;s
+own <code>jacoco.csv</code> — never the aggregate, which mixes in integration execution data.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Two stages have no catalog skill behind them and run as <code>mvn</code> commands through <code>iru-gate-runner</code>: the
+module-boundary check (Step 3.3, the enforcer rules plus the ArchUnit test) and the Failsafe integration run
+(Step 3.8), along with the plain file read of the aggregated JaCoCo report in Step 3.9.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-code-one-task-group.html" class="xref page">Code One Task Group</a> — once per plan group, for that group&#8217;s <code>java-springboot</code>-tagged
+tasks. The key is discovered from this skill&#8217;s directory name, so no orchestrator names Spring Boot anywhere in
+its own instructions.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> — Step 2, once per task (many at once
+for a parallelizable bucket), so each task&#8217;s own file reads and reasoning stay out of this skill&#8217;s context.</p>
+</li>
+<li>
+<p><a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — every check in Steps 1 and 3. The integration stage is the
+clearest case for it in this catalog: a multi-container Failsafe run produces an enormous log, and what this
+skill needs back is a pass/fail plus the distinction between an assertion failure and an environment failure.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-springboot-code-one-task-group/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

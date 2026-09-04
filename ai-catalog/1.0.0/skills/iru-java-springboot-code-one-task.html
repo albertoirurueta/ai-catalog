@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Java Spring Boot Code One Task :: AI Catalog</title>
+    <meta name="description" content="Implements one Spring Boot plan task: resolves the hexagonal module first, applies its bundled best-practice reference, and runs unit tests only.">
+    <meta name="keywords" content="iru-java-springboot-code-one-task, claude code skill, spring boot, hexagonal architecture, unit tests, ddd, solid, mapstruct, javadoc, implementation plan">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-java-springboot-code-one-task.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Java Spring Boot Code One Task</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Implements a single task from a Spring Boot <code>implementation_plan.md</code>-style task list — the implementation, its unit
+tests, and its checkbox update — in a DDD/hexagonal Maven reactor.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-java-springboot-code-one-task</code> is the narrowest execution unit for a Spring Boot service in the <code>iru-code</code>
+pipeline, registering the <code>java-springboot</code> language/framework key. It is the counterpart to
+<a href="iru-java-code-one-task.html" class="xref page">Java Code One Task</a> for services scaffolded by
+<a href="iru-setup-java-springboot.html" class="xref page">Setup Java Spring Boot</a>, and it differs from that skill in two ways that follow from the
+architecture rather than from preference:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>The module boundary is resolved before any code is written.</strong> In a hexagonal reactor the same class placed in
+the wrong module is a structural defect the build rejects — via the <code>maven-enforcer-plugin</code> banned-dependencies
+rules and the ArchUnit test — so discovering it later costs a full build cycle. Step 2 settles which module the
+code belongs in, what that module may import, and (for a task spanning modules) the inside-out order to write
+them in.</p>
+</li>
+<li>
+<p><strong>It runs unit tests itself, and only unit tests.</strong> <code>iru-java-code-one-task</code> defers all testing to its group
+skill; this one validates its own work with a scoped Surefire run, because <code>domain</code> and <code>application</code> carry no
+framework on their classpath and their tests are near-instant. Integration tests are categorically out of scope:
+<code>mvn verify</code>, Failsafe, any <code>*IT</code> class, anything Docker- or Testcontainers-backed, and <code>install</code>/<code>deploy</code>/bare
+<code>mvn</code> are each named as forbidden. A task-level integration run would start the same container stack once per
+task, which is precisely the redundancy group-level validation exists to remove.</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_the_bundled_reference_library"><a class="anchor" href="#_the_bundled_reference_library"></a>The bundled reference library</h3>
+<div class="paragraph">
+<p>This skill ships a <code>reference/</code> directory alongside its <code>SKILL.md</code> — the first skill in this catalog to do so —
+holding the Spring Boot best practices and architectural patterns a task must be implemented against. Its
+plain-Java counterpart, <a href="iru-java-code-one-task.html" class="xref page">Java Code One Task</a>, now ships one too, covering the language-level
+code agreements (<code>var</code>, <code>final</code>, declaration order, Javadoc, tests); those still apply here, and the files below
+add the architecture-specific rules on top of them rather than replacing them. It is read
+by <strong>progressive disclosure</strong>: <code>reference/README.md</code> is a short routing table, two files are always read, and the
+other three only when the task&#8217;s shape calls for them. Reading all six on every task is the context waste the
+split exists to avoid.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0001%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">File</th>
+<th class="tableblock halign-left valign-top">Read when</th>
+<th class="tableblock halign-left valign-top">Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>hexagonal-architecture.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Always</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The module table and each module&#8217;s allowed dependencies, the violations that fail the build, a "where does this
+piece of work go" lookup, the inside-out order for a cross-module task, and why ports are named for intent rather
+than technology.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>code-style.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Always</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Records for immutable types (with defensive copying and compact-constructor validation), Lombok where it earns
+its place and where it hurts, MapStruct only for simple mappers, <code>var</code> type inference, <code>final</code> wherever possible,
+the public-to-private member ordering every type follows (shared with <code>iru-java-code-one-task</code>, which documents it
+in full), and full Javadoc on everything.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ddd-tactical-patterns.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task touches <code>domain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Value objects, entities, aggregates and aggregate roots, domain services versus use cases, domain events, domain
+exceptions, and ubiquitous language.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>solid.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task changes an interface, adds a branch on type, or grows a class&#8217;s responsibilities</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The five principles as they land in this architecture — including why one class per use case beats a god-service,
+and why a port&#8217;s Javadoc is what makes substitutability checkable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>distributed-patterns.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task involves Kafka, a second datastore, or eventual consistency</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">CQRS, the transactional outbox, sagas, eventual consistency, and listen-to-yourself — each with its mechanism,
+its costs, where the code goes in this module layout, and a table for choosing between them.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The reference files state explicitly that the distributed patterns are documented so a plan&#8217;s request is
+implemented <strong>correctly</strong>, never so the skill introduces an outbox, projection, or saga on its own initiative — that
+is a blocker to report instead.</p>
+</div>
+<div class="paragraph">
+<p>On MapStruct the reference deliberately overrides the prevailing published advice: it is used only for
+field-for-field mappings, with hand-written mappers preferred once conditional logic, value-object factories,
+flattening, or more than a couple of <code>expression = "java(&#8230;&#8203;)"</code> entries are involved.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-springboot" class="xref page">Spring Boot Development Tooling</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-java-springboot-code-one-task &lt;task description&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&lt;task description&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task&#8217;s own text from <code>implementation_plan.md</code> — including its exact checkbox line(s) for itself and its
+sub-tasks, so Step 7 can find and flip them, plus its sub-tasks' text and any relevant "Current code state"
+context.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>reference/</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The skill&#8217;s own bundled reference directory. If it is missing (the skill directory was copied without it), the
+skill falls back to the repository&#8217;s <code>CLAUDE.md</code> conventions and the surrounding code&#8217;s style, and says so in its
+report rather than guessing at what the reference would have said.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bundled with the skill</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>The implementation, in whichever module Step 2 resolved — with no outward-pointing import, full Javadoc on every
+type and public/protected member, and no <code>&lt;version&gt;</code> added to any module pom.</p>
+</li>
+<li>
+<p>Unit tests covering the new behaviour and the edge cases implied by the Javadoc <code>@throws</code> contracts: plain JUnit
+plus Mockito with no Spring context for <code>domain</code>/<code>application</code>, and mapper/translation/conversion tests for
+<code>infrastructure</code>/<code>api</code>. In <code>infrastructure/clients/&lt;name&gt;</code> that means mocking the <strong>generated</strong> client with Mockito
+and testing the adapter&#8217;s own mapping and error translation around it — never starting the compose stack&#8217;s API
+mock, which is a container and therefore the group&#8217;s business, even though it starts far faster than a database.
+A task adding a downstream call also checks that the adapter reads <code>clients.&lt;name&gt;.base-url</code> from configuration,
+since a hardcoded host silently defeats the integration harness&#8217;s redirect to that mock.</p>
+</li>
+<li>
+<p>This task&#8217;s checkbox in <code>implementation_plan.md</code> flipped to <code>[x]</code> with a note naming the module and files and a
+"group validation pending" marker — edited in place, touching only this task&#8217;s own line(s), so a sibling task in
+a parallel bucket can&#8217;t be clobbered.</p>
+</li>
+<li>
+<p>A report naming the modules touched, the ports added or implemented, the unit-test result, anything deliberately
+left to the group&#8217;s integration pass, any blocker, and any deviation from <code>reference/</code> made on purpose.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-java-springboot-code-one-task"] --> B["Step 1: Read reference/README.md,\nthen only the files this task needs"]
+    B -- reference/ missing --> B2["Fall back to CLAUDE.md + surrounding style;\nreport it"]
+    B2 --> C
+    B --> C["Step 2: Resolve target module,\nits allowed imports, and cross-module order"]
+    C -- task's path violates the module rules --> STOP["Step 5: stop and ask —\nthe answer changes what gets built"]
+    C --> D["Step 3: Re-check current code state;\nread neighbouring files in the same module"]
+    D --> E["Step 4: Implement exactly what the task specifies"]
+    E -->|"ambiguous, infeasible, needs a new\nruntime dep or a new distributed pattern"| STOP
+    E --> F["Step 6: Write unit tests;\nrun scoped Surefire (-DskipITs)"]
+    F -- unit test red --> G["Fix implementation or test"]
+    G --> F
+    F -- only verifiable by an integration test --> H["Write the meaningful unit tests,\nleave the rest to the group; report it"]
+    H --> I
+    F --> I["Step 7: Flip this task's checkbox\nwith 'group validation pending'"]
+    STOP --> J["Step 8: Report as blocked;\nleave the checkbox untouched"]
+    I --> K["Step 8: Report modules, ports, tests,\ndeferrals and deviations"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>None. It reads its own <code>reference/</code> directory, edits code and tests, and runs <code>mvn</code> unit-test commands directly.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-java-springboot-code-one-task-group.html" class="xref page">Java Spring Boot Code One Task Group</a> — once per task in a bucket, in parallel agents when
+the group is marked parallelizable, via the <code>iru-isolated-skill-executor</code> agent. That skill then performs the
+bucket-wide validation this one deliberately omits, including the integration tests.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Reachable through the pipeline as a whole because <a href="iru-plan.html" class="xref page">Plan</a> discovers the <code>java-springboot</code> key
+from this skill&#8217;s directory name, and <a href="iru-code-one-task-group.html" class="xref page">Code One Task Group</a> dispatches that key&#8217;s bucket to
+the group skill above. Also runs standalone as a slash command for a single task.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="paragraph">
+<p>None spawned directly — this skill runs its own scoped unit tests inline, since a Surefire run limited to a couple
+of test classes produces little output. Delegation to <code>iru-gate-runner</code> happens one level up, in the group skill,
+where the runs are reactor-wide or container-backed.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-springboot-code-one-task/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from. The bundled best-practice files live alongside it under <a href="https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-java-springboot-code-one-task/reference"><code>reference/</code></a>.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
