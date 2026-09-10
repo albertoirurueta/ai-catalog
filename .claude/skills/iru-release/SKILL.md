@@ -179,8 +179,10 @@ branch, and the files changed. Only continue once they say to go ahead.
 
 ## Step 14 — Fill in the PR description
 
-Invoke `Skill({skill: "iru-pr-description"})`. It will find the PR just opened in Step 13 (same branch), draft a
-description from the actual diff, show it, and — once confirmed — update the PR body via `gh pr edit`.
+Invoke `Skill({skill: "iru-pr-description", args: "base-branch: <main-or-master>"})`, passing the release PR's
+target branch resolved in Step 2 so the description is drafted against the same base the PR targets rather than
+whatever the repository's default branch happens to be. It will find the PR just opened in Step 13 (same branch),
+draft a description from the actual diff, show it, and — once confirmed — update the PR body via `gh pr edit`.
 
 ## Step 15 — Report
 

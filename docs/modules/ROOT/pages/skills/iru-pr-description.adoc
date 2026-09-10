@@ -1,6 +1,6 @@
 = PR Description
-:description: Drafts a pull request description from the real code diff and opens or updates a PR on GitHub, Bitbucket, or Azure DevOps.
-:keywords: iru-pr-description, claude code skill, github, bitbucket, azure devops, pull request, draft pr description, git diff analysis
+:description: Drafts a pull request description from the real code diff, against an inherited base branch, and opens or updates a PR on GitHub, Bitbucket, or Azure DevOps.
+:keywords: iru-pr-description, claude code skill, github, bitbucket, azure devops, pull request, base branch, draft pr description, git diff analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -11,7 +11,14 @@ confirming the specific action first.
 == Purpose
 
 `iru-pr-description` detects which platform hosts the repository — GitHub, Bitbucket, Azure DevOps, or TFS — and uses
-that platform's own tooling throughout instead of assuming `gh`/GitHub. After a cheap stat-only check confirms
+that platform's own tooling throughout instead of assuming `gh`/GitHub. It resolves the base branch the diff is
+read against — and that a new pull request would target — by inheritance rather than by re-derivation, taking the
+first of: an explicit `base-branch` argument (how `iru-issue` and `iru-release` hand over the base they already
+resolved), an `iru-issue` run earlier in the same conversation, a `Base branch:` line in the plan's Task summary
+(`implementation_plan.md`, or its archived copy under `.archive/`, which is what carries the choice across
+sessions), and only failing all of those, the repository's own default branch. That ordering is what keeps a PR
+opened through the `iru-issue` pipeline pointed at the base the user actually confirmed there, instead of silently
+describing and targeting a different one. After a cheap stat-only check confirms
 there's something to describe, it delegates reading the actual diff for the current branch — commits already
 ahead of the base branch plus anything staged, unstaged, or untracked — and drafting a brief, concise description
 grounded in that diff (never invented) to a sub-agent, so the raw diff never has to load into this skill's own
@@ -31,6 +38,7 @@ xref:index.adoc#group-pr[Pull Request Lifecycle]
 [source]
 ----
 /iru-pr-description
+/iru-pr-description base-branch: <branch-name>
 ----
 
 == Inputs
@@ -39,12 +47,22 @@ xref:index.adoc#group-pr[Pull Request Lifecycle]
 |===
 |Argument |Required |Description |Default
 
-|_(none)_
+|`base-branch`
+|No
+|An optional `key: value` line pinning the branch the diff is read against and that a new pull request would
+target. This is how `xref:skills/iru-issue.adoc[]` (Step 8) and `xref:skills/iru-release.adoc[]` (Step 14) hand
+over a base branch they already resolved and confirmed with the user, so the description isn't drafted against a
+different base than the PR actually targets.
+|Resolved by inheritance instead: an `iru-issue` run earlier in the same conversation, then a `Base branch:` line
+in `implementation_plan.md` (or its archived copy under `.archive/`), then the repository's own default branch
+(`git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`/`master`).
+
+|_(everything else)_
 |—
-|`iru-pr-description` takes no command-line arguments. It derives everything it needs from the current git
-branch's diff against the repository's base branch, detects the repository host itself (reusing `iru-explore`'s
-detection if it already ran this conversation), and prompts interactively (via `AskUserQuestion`) for
-branch name, destination branch, and PR title only if the user chooses to open a new pull request.
+|Nothing else is passed on the command line. The skill derives the current branch's diff itself, detects the
+repository host (reusing `iru-explore`'s detection if it already ran this conversation), and prompts
+interactively (via `AskUserQuestion`) for branch name, destination branch, and PR title only if the user chooses
+to open a new pull request.
 |Not applicable.
 |===
 
@@ -68,7 +86,8 @@ branch name, destination branch, and PR title only if the user chooses to open a
 ....
 flowchart TD
     A[Start /iru-pr-description] --> B["Step 1: Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
-    B --> C["Step 2: Determine current branch,\nbase branch; check for changes\n(stat only, not full diff)"]
+    B --> B2["Step 2: Resolve base branch\n(args, then this conversation's iru-issue run,\nthen the plan's 'Base branch:' line,\nthen the repository default)"]
+    B2 --> C["Step 2: Determine current branch;\ncheck for changes against that base\n(stat only, not full diff)"]
     C --> D{Any changes to describe?}
     D -- no --> Z[Tell user, stop]
     D -- yes --> C2["Step 2: Delegate full diff read\n+ drafting to a sub-agent"]
@@ -82,7 +101,7 @@ flowchart TD
     H -- no --> K["Step 6: Ask whether to commit,\npush, and open a new PR"]
     K -- decline --> Y
     K -- accept --> L["Collect branch name, destination\nbranch, and title via AskUserQuestion"]
-    L --> M["Commit (if needed), push,\ncreate PR via host-matching tool"]
+    L --> M["Commit (if needed), push,\ncreate PR via host-matching tool\n(destination defaults to the resolved base,\nnever a claude/* branch)"]
     J --> N["Step 7: Report outcome"]
     M --> N
 ....
@@ -97,10 +116,11 @@ DevOps MCP tools); it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-issue.adoc[] — Step 7 runs `iru-pr-description` to fill in the description of the pull request
-  it just opened for the ticket.
+* xref:skills/iru-issue.adoc[] — Step 8 runs `iru-pr-description` to fill in the description of the pull request
+  it just opened for the ticket, passing the base branch it resolved and confirmed with the user in its Step 4.2
+  as a `base-branch` argument.
 * xref:skills/iru-release.adoc[] — Step 14 runs `iru-pr-description` to fill in the description of the release
-  branch's pull request.
+  branch's pull request, passing that PR's target branch (`main`/`master`) as a `base-branch` argument.
 
 === Related agents
 
