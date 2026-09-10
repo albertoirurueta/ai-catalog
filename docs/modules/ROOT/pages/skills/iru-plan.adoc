@@ -22,8 +22,12 @@ tagged per top-level task otherwise — so the `iru-code` skill that later execu
 `iru-code-one-task-group`, knows exactly which language-specific group skill to dispatch each task group to
 without re-inferring it. When a tracked ticket is involved, the plan's Task summary records an explicit `Source:`
 line (e.g. `Source: GitHub issue #42` or `Source: Jira PROJ-123`) so `iru-code`'s own archiving step can name the
-archived plan after the exact ticket it resolved, rather than falling back to a timestamp. Everything is written
-to `implementation_plan.md` — the artifact `iru-code` later executes group by group.
+archived plan after the exact ticket it resolved, rather than falling back to a timestamp. When the base branch
+the work forks from is known — typically because `xref:skills/iru-issue.adoc[]` already resolved and confirmed it
+with the user before invoking this skill — the Task summary records that too, as a `Base branch:` line, so that a
+later `/iru-pr-description` run in a separate session can recover the choice and target the pull request at the
+same base rather than the repository default. Everything is written to `implementation_plan.md` — the artifact
+`iru-code` later executes group by group.
 
 == Purpose group
 

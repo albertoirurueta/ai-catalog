@@ -93,8 +93,9 @@ flowchart TD
 * xref:skills/iru-setup-readme.adoc[] — Step 7, to refresh `README.md`'s version references (latest release /
   latest snapshot) once `pom.xml` already carries the new release version. If `iru-setup-readme` isn't available in
   the repository, `iru-release` falls back to updating those same mentions in `README.md` by hand instead.
-* xref:skills/iru-pr-description.adoc[] — Step 14, to draft and fill in the release pull request's description once
-  it has been opened in Step 13.
+* xref:skills/iru-pr-description.adoc[] — Step 14, passing the release PR's target branch as a `base-branch`
+  argument so the description is drafted against the branch the PR actually targets, to draft and fill in the
+  release pull request's description once it has been opened in Step 13.
 
 `iru-release` does *not* invoke xref:skills/iru-setup-changelog.adoc[] even though both skills touch `CHANGELOG.md`.
 `iru-setup-changelog` is a one-time bootstrap for a repository that has no changelog yet; `iru-release` composes and

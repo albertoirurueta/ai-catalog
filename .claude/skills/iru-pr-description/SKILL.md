@@ -1,6 +1,6 @@
 ---
 name: iru-pr-description
-description: Check the current branch's code changes and draft a brief, concise pull request description (emojis and diagrams allowed where they genuinely clarify). Detects which platform hosts the repository — GitHub, Bitbucket, Azure DevOps, or TFS — and uses that platform's own tooling throughout instead of assuming `gh`/GitHub. If a pull request already exists for the current branch, offers to update its body with the draft; otherwise asks whether to commit the changes to a new branch and open a new pull request, prompting for branch name, destination branch, and PR title. Invoke as `/iru-pr-description`. Use whenever the user wants a PR description generated from the actual diff instead of writing it by hand.
+description: Check the current branch's code changes and draft a brief, concise pull request description (emojis and diagrams allowed where they genuinely clarify). Detects which platform hosts the repository — GitHub, Bitbucket, Azure DevOps, or TFS — and uses that platform's own tooling throughout instead of assuming `gh`/GitHub. Resolves the base branch the diff is described against — and that a new pull request would target — from an explicit `base-branch` argument, an `iru-issue` run earlier in the same conversation, a `Base branch:` line in `implementation_plan.md` (or its archived copy), or, failing all of those, the repository's default branch — so a PR opened through the `iru-issue` pipeline targets the base the user confirmed there instead of a re-derived one. If a pull request already exists for the current branch, offers to update its body with the draft; otherwise asks whether to commit the changes to a new branch and open a new pull request, prompting for branch name, destination branch, and PR title. Invoke as `/iru-pr-description`, optionally with a `base-branch` argument (as a `key`/`value` line, e.g. `base-branch` followed by the branch name) to pin the base explicitly. Use whenever the user wants a PR description generated from the actual diff instead of writing it by hand.
 model: sonnet
 ---
 
@@ -40,11 +40,25 @@ Record the detected host — every later step's "use the host's tool" instructio
 ## Step 2 — Determine the diff to describe, then delegate drafting
 
 - Determine the current branch: `git branch --show-current`.
-- Determine the repository's base branch: `git symbolic-ref refs/remotes/origin/HEAD` (strip the
-  `refs/remotes/origin/` prefix), falling back to `main`/`master` if that ref isn't set, or asking the user if
-  genuinely ambiguous.
+- Determine `<base-branch>` — the branch this work forks from, which is both the range the diff is read against
+  and the default destination for a new pull request in Step 6. Take the **first** of these that yields a branch,
+  rather than deriving it from the repository's default branch straight away: when this skill runs as part of the
+  `iru-issue` pipeline, the base was already resolved and confirmed with the user there, and re-deriving it here
+  would silently describe (and target) a different base than the work was actually branched from.
+  1. **An explicit `base-branch: <name>` line in this skill's `args`** — how `iru-issue` (Step 8) and `iru-release`
+     (Step 14) hand over the base they already resolved. Authoritative: use it verbatim, don't re-derive.
+  2. **`iru-issue` ran earlier in this conversation** — reuse the `<base-branch>` it resolved and confirmed in its
+     own Step 4.2, the same way Step 1 above reuses `iru-explore`'s repository-host detection.
+  3. **A `Base branch: <name>` line in the plan's "Task summary"** — read `implementation_plan.md` at the
+     repository root, or, if it's already been archived by a finished `iru-code` run, the most recent
+     `.archive/implementation_plan_*.md`. This is what carries the choice across sessions, for the case where the
+     user reviewed the plan manually and came back to run `/iru-code` and `/iru-pr-description` themselves later.
+  4. **Otherwise, derive it**: `git symbolic-ref refs/remotes/origin/HEAD` (strip the `refs/remotes/origin/`
+     prefix), falling back to `main`/`master` if that ref isn't set, or asking the user if genuinely ambiguous.
+  Note which of the four supplied the base — Step 7 reports it, so a wrong inherited value is visible rather than
+  silently applied.
 - Check whether there's anything to describe at all, without reading the full diff yet: `git status`, `git diff
-  --stat`, and `git diff <base>...HEAD --stat`. If all three come back empty (no commits ahead of base, no
+  --stat`, and `git diff <base-branch>...HEAD --stat`. If all three come back empty (no commits ahead of base, no
   staged/unstaged changes, no untracked files), tell the user and stop rather than inventing a description.
 - Otherwise, delegate reading the full diff and drafting the description to a sub-agent, so the raw diff stays out
   of this conversation and only the drafted text comes back — nothing later in this skill needs the diff itself,
@@ -134,8 +148,12 @@ can accept or override in one step:
 
 - **Branch name** — default: a kebab-case slug derived from the draft's summary (e.g.
   `fix-list-item-move-detection`). If the current branch is already a non-default branch with commits ahead of
-  base and no uncommitted changes, ask instead whether to reuse it rather than creating a new one.
-- **Destination branch** — default: the base branch found in Step 2.
+  base and no uncommitted changes, ask instead whether to reuse it rather than creating a new one — except when
+  the current branch matches `claude/*`, the throwaway per-session branch of a Claude Code cloud/web run: say so
+  and default to a new, properly named branch instead of offering to reuse it.
+- **Destination branch** — default: `<base-branch>` as resolved in Step 2. Still ask (this step opens a PR), but
+  pre-select that value rather than re-deriving the repository's default branch here. Never default to a
+  `claude/*` branch as a destination.
 - **Pull request title** — default: a concise, imperative one-liner derived from the draft.
 
 Then, in order:
@@ -160,5 +178,7 @@ Then, in order:
 
 ## Step 7 — Report
 
-Summarize what happened: the drafted description, and the outcome — PR body updated (with URL), new PR created
-(with URL), or description-only with no further action taken.
+Summarize what happened: the drafted description, the `<base-branch>` used and which of Step 2's four sources it
+came from (explicit `args`, an `iru-issue` run earlier in this conversation, the plan's `Base branch:` line, or
+derived from the repository default), and the outcome — PR body updated (with URL), new PR created (with URL), or
+description-only with no further action taken.
