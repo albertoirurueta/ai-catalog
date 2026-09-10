@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Update Java Spring Boot Documentation :: AI Catalog</title>
+    <meta name="description" content="Creates and keeps current a Spring Boot service's Antora docs: architecture, use cases, database model, APIs, configuration and metrics, derived from code.">
+    <meta name="keywords" content="iru-update-java-springboot-documentation, claude code skill, antora, kroki, mermaid, service documentation, api documentation, configuration table, metrics table">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-update-java-springboot-documentation.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Update Java Spring Boot Documentation</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Creates or refreshes the Antora documentation site for a DDD/hexagonal Spring Boot service, deriving every page from
+the contracts, entities, configuration classes, and Micrometer calls that are actually in the repository.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-update-java-springboot-documentation</code> does double duty on purpose: the first run scaffolds the page set, and
+every later run updates it from the code — which is the only way documentation of this depth survives contact with
+an evolving service.</p>
+</div>
+<div class="paragraph">
+<p>Its governing rule is that <strong>everything on these pages is derived from something in the repository</strong>. Where
+something genuinely cannot be derived — why a technology was chosen, what a use case is <strong>for</strong>, a business
+constraint — the skill writes an explicit <code>TODO:</code> marker naming what&#8217;s needed and from whom, and never writes
+plausible-sounding prose in its place. The stated reasoning: a confidently wrong architecture page is worse than an
+obviously incomplete one, because nobody re-checks it. The consolidated list of <code>TODO:</code> markers is the most useful
+part of its report.</p>
+</div>
+<div class="paragraph">
+<p>It treats <code>springboot-stack.yml</code> as <strong>intent</strong> and the code as truth, so a database in the manifest with no adapter
+module — or an adapter for something the manifest doesn&#8217;t list — is reported as a finding about the repository
+rather than quietly reconciled.</p>
+</div>
+<div class="paragraph">
+<p>The same discipline surfaces genuine defects as a side effect of documenting: an endpoint whose spec security
+doesn&#8217;t match its filter chain, an exception the code can throw but the spec doesn&#8217;t document, a property that looks
+dynamic but isn&#8217;t `@RefreshScope`d, a metric with unbounded tag cardinality, an index no query uses.</p>
+</div>
+<div class="paragraph">
+<p>Unlike <a href="iru-setup-antora.html" class="xref page">Setup Antora</a>, which installs Mermaid only, this skill also wires <strong>Kroki</strong> — Mermaid
+handles flows and sequences, while Kroki adds PlantUML, C4, and ERD, which is what the architecture and
+database-model pages need. It flags that with the public Kroki server every diagram&#8217;s source text is sent to a
+third-party service at build time, and that a sensitive model warrants self-hosting.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-service-bootstrap" class="xref page">Spring Boot Service Bootstrap</a></p>
+</div>
+<div class="paragraph">
+<p>Although grouped with the Spring Boot bootstrap family — it is the seventh sub-skill that orchestrator runs — this
+is the one member of that family intended to be re-run continuously, in the same spirit as
+<a href="iru-update-docs.html" class="xref page">Update Docs</a> in <a href="../index.html#group-maintenance" class="xref page">Repository Maintenance</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-update-java-springboot-documentation
+/iru-update-java-springboot-documentation &lt;page-or-area&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&lt;page-or-area&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Positional argument naming a single page or area to refresh: <code>overview</code>, <code>architecture</code>, <code>use-cases</code>,
+<code>database-model</code>, <code>apis/rest</code>, <code>apis/grpc</code>, <code>apis/graphql</code>, <code>apis/messaging</code>, <code>configuration</code>, or <code>metrics</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Absent means every page</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>springboot-stack.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Read for the declared stack, as intent to be checked against the code rather than as truth.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>springboot-stack.yml</code> at the repository root</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The codebase</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The real source: <code>apis/</code> contracts, <code>application.usecase</code> classes, persistence entities and migration files, the
+exception-mapping advice, the Stream bindings, every <code>@ConfigurationProperties</code> class and which carry
+<code>@RefreshScope</code>, and the Micrometer calls in <code>infrastructure/metrics</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — derived</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>An Antora site with Kroki installed alongside Mermaid and the playbook amended (<code>kroki-fetch-diagram</code>,
+<code>kroki-server-url</code>), plus an <code>api-docs-url</code> attribute in <code>docs/antora.yml</code> — resolved from the GitHub Pages API,
+the git remote, or a custom domain — through which every API page links to its generated reference.</p>
+</li>
+<li>
+<p><code>index.adoc</code> — the service overview: purpose, capabilities, dependencies, and pointers onward.</p>
+</li>
+<li>
+<p><code>architecture.adoc</code> — the module table and the two mechanisms enforcing it (the enforcer rules and the named
+ArchUnit test), the concurrency model and its consequences, a per-technology section, a Mermaid dependency
+diagram, a Kroki module-dependency diagram, and the cross-cutting concerns. Each downstream client&#8217;s section
+also names the contract it is generated from and records that the same contract drives the API mock standing in
+for that service in integration tests and local runs, so a reader knows where to add a response instead of
+inventing a fixture.</p>
+</li>
+<li>
+<p><code>use-cases.adoc</code> — one section per use case: what it does, its trigger, its ordered steps, the ports and hence
+adapters it touches, every exception it can raise and what the caller sees, and a Mermaid sequence diagram
+including the failure branch.</p>
+</li>
+<li>
+<p><code>database-model.adoc</code> — per collection/table/label: a field table (name, type, mandatory, indexed, constraints,
+default, description), the indexes and which query each serves, relationships, and a per-engine diagram. Read from
+the entities <strong>and</strong> the migrations, since indexes and constraints usually live in the latter.</p>
+</li>
+<li>
+<p><code>apis/rest.adoc</code>, <code>apis/grpc.adoc</code>, <code>apis/graphql.adoc</code>, <code>apis/messaging.adoc</code> — version summaries, entity/message field tables with
+descriptions, constraints and deprecations, and endpoint documentation including authorization and every error
+response. <strong>Each page carries a prominent link, near the top, to its own generated reference</strong> published on
+GitHub Pages — OpenAPI HTML from the REST page, protobuf HTML from the gRPC page, AsyncAPI HTML from the
+messaging page, and the SpectaQL reference plus optional Voyager schema graph from the GraphQL page — one per
+contract version, written as <code>{api-docs-url}/&lt;kind&gt;/&lt;version&gt;/index.html</code> and accompanied by a link to the
+source contract in the repository. The Voyager link is only written when <code>graphql-voyager</code> is actually pinned in
+the GraphQL docs toolchain, since a link to a page that was never generated is worse than no link. The generated
+HTML is not Antora content, so <code>xref:</code> cannot reach it; the shared <code>api-docs-url</code> attribute keeps every API page
+pointing at one base that a domain change updates in a single edit.</p>
+<div class="literalblock">
+<div class="content">
+<pre>  The GraphQL page additionally documents the **endpoints** — the single `spring.graphql.path` every query and
+  mutation `POST`s to, the WebSocket path for subscriptions, and the GraphiQL explorer path together with the
+  profiles it is enabled in, since leaving that on in production exposes the whole schema. All of it is read from
+  the `application*.yml` files rather than quoted from the defaults. The messaging page is derived from the AsyncAPI
+  specification in `apis/messaging/` as well as the AVRO schemas, cross-checked against the Spring Cloud Stream
+  bindings — the bindings are what the service actually does, the specification is what it claims to do, and a
+  disagreement between them is reported as a finding about the repository. What justifies the page beyond the
+  generated HTML is what the generator can't know: consumer groups, DLQ topics, the use case behind each message,
+  and the registry's compatibility mode.
+* `configuration.adoc` — the property table with default, "dynamically changeable" (Yes / restart required /
+  redeploy required, derived from the annotations), a criticality flag marking the performance and availability
+  levers usable as a fast mitigation during a degradation, and a legend.
+* `metrics.adoc` — the metric table with type, every tag key and its possible values, cardinality risk flagged, and
+  where to scrape and view them locally.
+* `nav.adoc` entries for every page created.</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-update-java-springboot-documentation"] --> B["Step 0: Resolve scope; read the manifest\nas intent; gather facts via the Explore agent"]
+    B --> C["Step 1: Ensure the site exists"]
+    C -- no docs/antora.yml --> D["Bootstrap via iru-setup-antora"]
+    D --> E
+    C --> E["Install Kroki; amend the playbook\nalongside Mermaid"]
+    E --> F["Step 2: Create or update the page set\nand nav.adoc, preserving hand-written prose"]
+    F --> G["Steps 3-11: derive each page —\noverview, architecture, use cases, database model,\nREST/gRPC/messaging APIs, configuration, metrics"]
+    G -- fact not derivable --> H["Write an explicit TODO: marker;\nnever invent prose"]
+    H --> G
+    G --> I["Step 12: Build the site;\nfix broken xrefs, tables, diagram syntax"]
+    I --> J["Verify every Mermaid and Kroki diagram\nactually rendered — a bad Kroki block\nbuilds without warning"]
+    J --> K["Step 13: Report pages, all TODOs by page,\nand every code/spec discrepancy found"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-antora.html" class="xref page">Setup Antora</a> — Step 1, only if <code>docs/antora.yml</code> is absent, to get the toolchain, playbook,
+and ROOT module in place before this skill adds Kroki and the service page set.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-java-springboot.html" class="xref page">Setup Java Spring Boot</a> — Step 8, last of seven sub-skills, via the
+<code>iru-isolated-skill-executor</code> agent, so the pages are derived from the finished codebase rather than an
+in-progress one.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also — and mainly — run standalone after any change to a contract, an entity, a configuration property, a metric, or
+a use case, since the pages are derived and go stale the moment the code moves.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong><code>Explore</code></strong> (built-in) — used in Step 0 for the broad structural sweeps over the module tree, use cases,
+entities, and metrics, so only the specific files it identifies are read directly. See
+<a href="../agents/overview.html" class="xref page">Agents</a>.</p>
+</li>
+<li>
+<p><strong><code>general-purpose</code></strong> (built-in, Claude Code&#8217;s default) — one-off use in Step 1 to run
+<a href="iru-setup-antora.html" class="xref page">Setup Antora</a> mid-run when no Antora module exists yet.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-update-java-springboot-documentation/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
