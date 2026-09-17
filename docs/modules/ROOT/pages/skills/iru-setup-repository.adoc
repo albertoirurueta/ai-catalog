@@ -1,0 +1,201 @@
+= Setup Repository
+:description: Catalog-wide bootstrap front door that surveys or asks a repository's project type and delegates scaffolding to exactly one of five stack orchestrators.
+:keywords: iru-setup-repository, claude code skill, bootstrap, project type detection, java, typescript, android, swift, orchestrator, askuserquestion
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+The catalog's single entry point for bootstrapping any repository. It does not scaffold anything itself — it
+detects or asks which of twelve supported project types applies, collects the handful of questions genuinely
+shared across every stack, and hands off to exactly one of five existing stack orchestrators.
+
+== Purpose
+
+`iru-setup-repository` exists so a user doesn't need to already know which of this catalog's stack-specific
+orchestrators (`iru-setup-java-library-repository`, `iru-setup-java-springboot`,
+`iru-setup-typescript-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`) applies to their
+repository. It surveys the working directory (running `iru-explore` when it already holds code) to detect the
+project type, asks only the cross-cutting questions the detected/chosen type still needs, and delegates the
+actual scaffolding — the downstream orchestrator asks its own project-identity questions and does the real work.
+Run against a repository that already has code, it forces `mode: existing` on the delegated orchestrator so it
+takes its gap-fill/update path instead of assuming a blank slate.
+
+== Purpose group
+
+xref:index.adoc#group-bootstrap[Repository Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`project-type`
+|No
+|Any value from the shared vocabulary (`java-library`, `java-springboot`, `java-springboot-hilla`,
+`typescript-library`, `react-web`, `angular-web`, `android-library`, `android-app`, `swift-library`, `apple-app`,
+`react-native-app`, `ionic-app`, `dotnet`, `other`, `unknown`). Pre-resolves Step 2 when supplied.
+|Detected by Step 1's `iru-explore` survey, or asked in Step 2
+
+|`mode`
+|No
+|`new` or `existing`.
+|`existing` when the repository is non-empty, `new` when it's empty
+
+|`open-source`
+|No
+|`yes`/`no`. Drives the recommended defaults for `publish`/`distribution` and `sonar`.
+|Asked directly, no default
+
+|`publish`
+|No
+|`yes`/`no` — library project types only (never asked for app types or Spring Boot/web-app types).
+|`yes` when open source, otherwise asked with `no` recommended
+
+|`distribution`
+|No
+|`none`/`internal`/`store` — app project types only.
+|`store` only when open source, otherwise asked with `internal` recommended
+
+|`sonar`
+|No
+|`cloud`/`self-hosted`/`none`.
+|`cloud` when open source; otherwise asked with `none` recommended
+
+|`sonar-organization`
+|No
+|SonarCloud organization slug, collected only when `sonar: cloud`.
+|None
+
+|`sonar-project-key`
+|No
+|Sonar project key, collected when `sonar: cloud` or `sonar: self-hosted`.
+|None
+
+|`sonar-host-url`
+|No
+|Self-hosted SonarQube host URL, collected only when `sonar: self-hosted`.
+|None
+
+|`flavor`
+|No
+|Meaningful only for the TypeScript orchestrator (`library`/`react`/`angular`/`react-native`/`ionic`); usually
+redundant with `project-type` and can be left unset.
+|Derived from `project-type` per Step 2's mapping table
+
+|`platforms`
+|No
+|Comma-separated Apple platforms (`ios`/`ipados`/`macos`/`watchos`) for a Swift library or Apple app.
+|Pre-filled from Step 1's detected `apple-app (…)` parenthetical when present, else asked
+
+|`framework`
+|No
+|Ionic app framework, `angular` or `react`.
+|Pre-filled from Step 1's detected `ionic-app (…)` parenthetical when present, else asked
+
+|`native-builds`
+|No
+|React Native build strategy, `eas` or `local`.
+|`eas`, asked to confirm
+
+|`integration-branch`
+|No
+|Pass-through only — never actively asked by this skill; forwarded to the delegated orchestrator when supplied.
+|None
+
+|`stable-branch`
+|No
+|Pass-through only, forwarded when supplied.
+|None
+
+|`license`
+|No
+|Pass-through only, forwarded when supplied.
+|None
+
+|`developer-name`
+|No
+|Pass-through only, forwarded when supplied.
+|None
+
+|`developer-email`
+|No
+|Pass-through only, forwarded when supplied.
+|None
+
+|`organization-url`
+|No
+|Pass-through only, forwarded when supplied.
+|None
+|===
+
+== Outputs
+
+* No files are written directly by this skill — every artifact (source scaffold, Antora docs, `.gitignore`,
+  CI workflows, `CHANGELOG.md`, `README.md`) is produced by whichever single stack orchestrator Step 4 delegates
+  to, exactly as that orchestrator's own page describes.
+* A final report (Step 5): the resolved `project-type`/`mode` and every shared input as actually applied, what
+  the delegated orchestrator reported creating/updating/leaving untouched, one consolidated secrets/environments
+  table, and an explicit warning block (review every generated file; every listed secret and matching external
+  account must already exist; which values were inferred rather than asked).
+* When the detected or chosen type is `dotnet`/`other`/unsupported: a plain report that no bootstrap orchestrator
+  exists in this catalog for it, with no delegation attempted.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-repository\nStep 0: parse args"] --> B{"Step 1: Survey working directory\n(git ls-files / manifest files present?)"}
+    B -- "Non-empty repo" --> C["Run iru-explore\nread Project type: line"]
+    B -- "Empty repo" --> D["mode: new\n(skip iru-explore)"]
+    C --> E{"Detected project type"}
+    E -- "dotnet" --> G["Report: no bootstrap\norchestrator for dotnet; stop"]
+    E -- "other / unknown / multiple" --> F
+    E -- "one of 12 known types" --> H["Pre-select matching\nStep 2 option as (detected)"]
+    H --> I
+    D --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 3 AskUserQuestion rounds:\nBackend/JVM, Mobile/native, Web/Node"]
+    F -- "none of 12 fit\nafter round 3" --> G
+    F -- "resolved" --> I["Step 3: Ask shared inputs once\n(open-source, publish/distribution,\nsonar, conditional flavor question)"]
+    I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of five\nstack orchestrators"]
+    J --> K["Step 5: Report resolved inputs,\ndelegated outcome,\nsecrets table, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-explore.adoc[] — Step 1, directly (not via a sub-agent), and only when the working directory is
+  non-empty: reads its `## Tech stack` report's `- Project type:` line to pre-select Step 2's option and set
+  `mode: existing`.
+* Exactly one of the following five, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+  agent in Step 4, chosen by the resolved `project-type` — never more than one per run outside the `multiple`
+  case:
+** xref:skills/iru-setup-java-library-repository.adoc[] — for `java-library`.
+** xref:skills/iru-setup-java-springboot.adoc[] — for `java-springboot` / `java-springboot-hilla` (via its own
+   `frontend` arg).
+** xref:skills/iru-setup-typescript-repository.adoc[] — for `typescript-library`, `react-web`, `angular-web`,
+   `react-native-app`, `ionic-app` (via its own `flavor` arg).
+** xref:skills/iru-setup-android-repository.adoc[] — for `android-library`, `android-app` (via its own `flavor`
+   arg).
+** xref:skills/iru-setup-swift-repository.adoc[] — for `swift-library`, `apple-app` (via its own `flavor` arg).
+
+=== Invoked by
+
+None from inside this catalog — it is a top-level entry point invoked by a person.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once in Step 4 to run the
+  chosen stack orchestrator end-to-end in a fresh context, so that orchestrator's own multi-step
+  exploration/scaffolding transcript doesn't accumulate in this front door's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

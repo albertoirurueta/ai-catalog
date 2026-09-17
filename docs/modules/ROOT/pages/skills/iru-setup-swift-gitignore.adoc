@@ -1,0 +1,118 @@
+= Setup Swift Gitignore
+:description: Creates or refreshes a Swift/Xcode project's root .gitignore for SwiftPM build output, Xcode artifacts, Package.resolved, Fastlane, and signing files.
+:keywords: iru-setup-swift-gitignore, claude code skill, swiftpm, xcode, xcodegen, tuist, fastlane, docc, gitignore, bootstrap
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or refresh the root `.gitignore` for a Swift package or Apple app project, composing a universal
+SwiftPM/Xcode base plus conditionally-detected sections for generator-managed Xcode projects, `Package.resolved`,
+Fastlane, signing material, and Antora/DocC documentation output — never overwriting an existing file without
+showing the user a diff and getting explicit approval first.
+
+== Purpose
+
+`iru-setup-swift-gitignore` composes a Swift/Xcode-appropriate `.gitignore`: an unconditional base
+(`.build/`, `DerivedData/`, `*.xcresult`, `xcuserdata/`, `*.xcuserstate`, the narrowly-scoped `.swiftpm/xcode/`,
+`.DS_Store`) plus sections detected from the actual project — an XcodeGen/Tuist-generated `.xcodeproj`/
+`.xcworkspace` (only when `project.yml`/`Project.swift` is present; otherwise the project file is hand-maintained
+and must stay tracked), a `Package.resolved` commit-vs-ignore decision (resolved via `args` or asked through
+`AskUserQuestion`, informed by `flavor`), Fastlane output paths, signing material, and Antora/DocC build output.
+It mirrors the diff-and-approve contract shared with the sibling
+xref:skills/iru-setup-java-gitignore.adoc[] / xref:skills/iru-setup-typescript-gitignore.adoc[] /
+xref:skills/iru-setup-android-gitignore.adoc[] skills, adapted for the Swift/Xcode ecosystem, and fits into the
+catalog's Swift/Apple bootstrap pipeline as the leaf step that runs once scaffolding and docs are in place.
+
+== Purpose group
+
+xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-swift-gitignore
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`mode`
+|No
+|`new` or `existing` — whether a root `.gitignore` is being created from scratch or gap-filled/merged into one
+that already exists.
+|Detected from whether a root `.gitignore` already exists.
+
+|`flavor`
+|No
+|`library` or `app` — informs the `Package.resolved` commit-vs-ignore recommendation. Passed straight through by
+an orchestrator (e.g. `iru-setup-swift-library`/`iru-setup-apple-app`) instead of re-detecting it.
+|Inferred from `Package.swift`'s declared products or the presence of an `.xcodeproj`/`.xcworkspace`/app
+`Info.plist`; left unresolved (asked together with `package-resolved`) if no signal is present yet.
+
+|`package-resolved`
+|No
+|`commit` or `ignore` — the pre-resolved answer for whether `Package.resolved` is tracked or ignored, so a caller
+that already knows the answer skips the `AskUserQuestion` prompt.
+|Asked via `AskUserQuestion` (recommended default: commit for `flavor: app`, ignore for `flavor: library`); if
+`flavor` is unknown and the user has no preference, defaults to commit.
+|===
+
+== Outputs
+
+* A `.gitignore` file at the repository root — newly created, or updated after explicit user approval.
+* If `.gitignore` didn't previously exist: it is written directly, no approval step needed.
+* If `.gitignore` already existed: a diff of the proposed content is shown first (via `git diff --no-index`), and
+  the file is only overwritten if the user explicitly accepts.
+* A closing report naming which conditional sections (generator-managed Xcode project, `Package.resolved`,
+  Fastlane, signing material, Antora build output, DocC output) were included versus skipped and why, the
+  `Package.resolved` commit-vs-ignore decision and its reasoning, and warnings that detection is heuristic and
+  that an already-tracked path this skill now proposes to ignore needs a manual `git rm -r --cached`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-swift-gitignore] --> B["Step 0: Resolve mode/flavor/\npackage-resolved from args\nor detect/defer"]
+    B --> C{".gitignore already\nexists at root?"}
+    C -- no --> D["Step 2: Compose universal base\n(.build/, DerivedData/, *.xcresult,\nxcuserdata/, .swiftpm/xcode/, .DS_Store)"]
+    C -- yes --> E["Read existing content\n(warn user changes will be proposed)"]
+    E --> D
+    D --> F["Step 3: Detect project-specific additions:\nXcodeGen/Tuist manifest, fastlane/,\nAntora docs, DocC catalog/plugin"]
+    F --> G{"Package.swift present?\nResolve Package.resolved"}
+    G -- "package-resolved given" --> H["Use pre-resolved value"]
+    G -- "not given" --> I["AskUserQuestion:\ncommit or ignore\n(informed by flavor)"]
+    H --> J["Step 4: Compose proposed content\n(merge with existing lines if any)"]
+    I --> J
+    J --> K{"Did .gitignore\nalready exist?"}
+    K -- no --> L["Step 6: Write .gitignore directly"]
+    K -- yes --> M["Step 5: Show diff, ask user:\naccept or skip"]
+    M -- accept --> L
+    M -- skip --> N["Leave existing .gitignore untouched"]
+    L --> O["Report + warnings"]
+    N --> O
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-swift-gitignore` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-swift-repository.adoc[] — Step 7 runs `iru-setup-swift-gitignore` after
+  `iru-setup-swift-library`/`iru-setup-apple-app` and `iru-setup-antora` have run, so it can detect their
+  generated files (the SwiftPM/Xcode project layout, Antora docs build output) already in place, passing through
+  `mode`, `flavor`, and `package-resolved` when already known.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-swift-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

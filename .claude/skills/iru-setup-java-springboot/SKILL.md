@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot
-description: End-to-end bootstrap for a brand-new Spring Boot service repository built on DDD + hexagonal architecture as a Maven multi-module reactor (`boot`, `application`, `domain`, `infrastructure/*`, `api/*`). Collects the project's identity (groupId, artifactId, base Java package), the target cloud (AWS or Google Cloud), the concurrency model (reactive/blocking/both), and every technology choice (databases + index/migration tooling, caches, security, Kafka via Spring Cloud Stream + AVRO, REST/gRPC/GraphQL servers and clients, the API mocking tool backing those clients in tests — Microcks or WireMock — logging, metrics, tracing, Spring AI, dynamic configuration), resolving the latest Spring Boot version and validating every dependency id against the live Spring Initializr metadata API (`https://start.spring.io/metadata/client`) rather than a hardcoded list. Records all of it in a `springboot-stack.yml` manifest, then orchestrates `iru-setup-java-springboot-pom` (root reactor pom with Javadoc/Checkstyle/PMD/SpotBugs/Surefire/Failsafe/JaCoCo/JXR/site/groovy build-info/Sonar plugins), `iru-setup-java-springboot-modules` (module tree, ports/adapters skeleton, configuration), `iru-setup-java-springboot-apis` (the `apis/` spec tree plus OpenAPI/protobuf/GraphQL-SDL/AVRO code generation and AsyncAPI documentation generation), `iru-setup-java-springboot-testcontainers` (docker compose + Testcontainers integration-test harness), `iru-setup-java-springboot-platform` (OpenTofu deployment), `iru-setup-java-springboot-github-workflows` (test/publish, deploy and undeploy workflows), and `iru-update-java-springboot-documentation` (Antora site with Mermaid + Kroki and the full template page set). Enforces Java 21 as a minimum. Invoke as `/iru-setup-java-springboot`. Use when starting a new Spring Boot microservice from nothing and you want the whole hexagonal reactor, CI/CD, infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and re-answering the same questions each time.
+description: End-to-end bootstrap for a brand-new Spring Boot service repository built on DDD + hexagonal architecture as a Maven multi-module reactor (`boot`, `application`, `domain`, `infrastructure/*`, `api/*`). Collects the project's identity (groupId, artifactId, base Java package), the target cloud (AWS or Google Cloud), the concurrency model (reactive/blocking/both), and every technology choice (databases + index/migration tooling, caches, security, Kafka via Spring Cloud Stream + AVRO, REST/gRPC/GraphQL servers and clients, the API mocking tool backing those clients in tests — Microcks or WireMock — logging, metrics, tracing, Spring AI, dynamic configuration), resolving the latest Spring Boot version and validating every dependency id against the live Spring Initializr metadata API (`https://start.spring.io/metadata/client`) rather than a hardcoded list. Records all of it in a `springboot-stack.yml` manifest, then orchestrates `iru-setup-java-springboot-pom` (root reactor pom with Javadoc/Checkstyle/PMD/SpotBugs/Surefire/Failsafe/JaCoCo/JXR/site/groovy build-info/Sonar plugins), `iru-setup-java-springboot-modules` (module tree, ports/adapters skeleton, configuration), `iru-setup-java-springboot-apis` (the `apis/` spec tree plus OpenAPI/protobuf/GraphQL-SDL/AVRO code generation and AsyncAPI documentation generation), `iru-setup-java-springboot-testcontainers` (docker compose + Testcontainers integration-test harness), `iru-setup-java-springboot-platform` (OpenTofu deployment), `iru-setup-java-springboot-github-workflows` (test/publish, deploy and undeploy workflows), and `iru-update-java-springboot-documentation` (Antora site with Mermaid + Kroki and the full template page set). Also asks whether the project is open source, which SonarCloud/self-hosted SonarQube/no Sonar analysis it runs, and whether a Hilla frontend is part of the service — when it is, `iru-setup-java-springboot-hilla` scaffolds the Vaadin/Hilla React frontend (BOM, starters, `vaadin-maven-plugin`, `src/main/frontend/`, Vitest, ESLint/Prettier) into the `boot` module right after `iru-setup-java-springboot-apis` — recording all three in the manifest for the sub-skills to read. Enforces Java 21 as a minimum. Invoke as `/iru-setup-java-springboot`, optionally with `args` (`key`/`value` lines) to pre-resolve `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when set), and `frontend` (`none`/`hilla`), skipping the matching interview question. Use when starting a new Spring Boot microservice from nothing and you want the whole hexagonal reactor, CI/CD, infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and re-answering the same questions each time.
 model: sonnet
 ---
 
@@ -9,7 +9,8 @@ model: sonnet
 Bootstrap a brand-new Spring Boot service repository in one pass. This skill is the **interviewer and
 orchestrator**: it asks every question exactly once, resolves the Spring Boot version and dependency ids against
 the live Spring Initializr API, writes the resolved answers to a `springboot-stack.yml` manifest at the repository
-root, and then delegates the actual file generation to seven sub-skills that each read that manifest back.
+root, and then delegates the actual file generation to seven sub-skills (eight when `frontend: hilla`) that each
+read that manifest back.
 
 The architecture is not negotiable — it is what this skill exists to impose:
 
@@ -58,10 +59,33 @@ See `iru-setup-java-springboot-apis`.
 
 ## Step 0 — Check the repository is a safe starting point
 
+This skill can be invoked stand-alone (`/iru-setup-java-springboot`) or driven by another orchestrator, so parse
+`args` first, as `key: value` lines, one per line, e.g.:
+
+```
+mode: new
+open-source: yes
+sonar: cloud
+sonar-organization: example-github
+sonar-project-key: example_orders-service
+sonar-host-url: https://sonarcloud.io
+frontend: none
+```
+
+Recognized keys: `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`), and
+— only when `sonar` is `cloud` or `self-hosted` — `sonar-organization`, `sonar-project-key`, `sonar-host-url`, plus
+`frontend` (`none`/`hilla`). Every key found here is resolved — skip the matching question in Step 3. If `args` is
+absent or doesn't look like this format, treat everything as unset and ask normally.
+
 - If `pom.xml` already exists at the repository root, this repository has already been bootstrapped (by this skill
-  or otherwise). Use `AskUserQuestion` to ask whether to **stop** (recommended — re-running the whole bootstrap
-  over an existing reactor risks clobbering real code) or **continue anyway**, in which case every sub-skill is
-  told to treat existing files as gaps-to-fill and never to overwrite a file containing hand-written code.
+  or otherwise).
+  - If `mode` was supplied via `args`, trust it: `existing` goes straight to **continue anyway** (every sub-skill
+    is told to treat existing files as gaps-to-fill and never to overwrite a file containing hand-written code)
+    without asking; `new` still asks, since regenerating on purpose over real code needs a human's confirmation
+    even when the caller expected a fresh repository.
+  - Otherwise use `AskUserQuestion` to ask whether to **stop** (recommended — re-running the whole bootstrap over
+    an existing reactor risks clobbering real code) or **continue anyway**, with the same gaps-to-fill instruction
+    to every sub-skill.
 - If `springboot-stack.yml` already exists, read it and offer its values as the defaults for every question below,
   so a re-run is a cheap "add one more database/client" pass rather than a full re-interview.
 - Verify prerequisites and report any that are missing before asking anything (a missing one is not a hard stop —
@@ -152,6 +176,37 @@ settled first:
 
 Record the answer as `stack.concurrency: blocking | reactive | both`. For every technology below, "the matching
 starter" means: blocking → the plain starter; reactive → the `-reactive`/`r2dbc` starter; both → both.
+
+## Step 3b — Open source, Sonar, and frontend
+
+Resolve three more choices, skipping any already answered by Step 0's `args`. Use `AskUserQuestion` for each.
+
+- **Open source** (`openSource`) — is this repository open source? Yes / No, asked directly with no default. This
+  answer drives the recommended default for the Sonar question right after it, per this catalog's shared
+  convention (see `iru-setup-java-library-repository`).
+- **Sonar** (`sonar.mode`) — recommend **SonarCloud** (`cloud`) when open source is Yes; when not open source,
+  state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend
+  **None** (`none`), offering **self-hosted SonarQube** (`self-hosted`) as the second option. When `cloud` or
+  `self-hosted` is chosen, also collect:
+  - `sonar.organization` — for `cloud`, suggest `<owner>-github` (the owner parsed in Step 2) as the default,
+    since that's the key SonarCloud assigns by default when an organization is created by importing from GitHub;
+    for `self-hosted`, ask only if that server has organizations enabled.
+  - `sonar.projectKey` — suggest `<owner>_<repo>` (also from Step 2) as the default for both modes.
+  - `sonar.hostUrl` — `https://sonarcloud.io` for `cloud` (confirm rather than silently assume); ask directly for
+    `self-hosted`, with no sensible default.
+  - When `sonar.mode: none`, leave `organization`/`projectKey`/`hostUrl` unset — `iru-setup-java-springboot-pom`
+    and `iru-setup-java-springboot-github-workflows` both read `sonar.mode` and omit every Sonar plugin, property,
+    and CI step accordingly.
+- **Frontend** (`frontend`) — does this service ship a Hilla frontend alongside the Spring Boot backend? **None**
+  (recommended default) or **Hilla**. Recording `frontend: hilla` here drives three downstream sub-skills: Step 8
+  runs `iru-setup-java-springboot-hilla` (right after `iru-setup-java-springboot-apis`) to actually scaffold the
+  Vaadin/Hilla React frontend into the `boot` module — the Vaadin BOM and `hilla-spring-boot-starter`/
+  `vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution, `src/main/frontend/`, Vitest,
+  and ESLint/Prettier — `iru-setup-java-springboot-pom` adds the root pom's `vaadin.version`
+  property/`dependencyManagement` import/`pluginManagement` entry/`production` profile, and
+  `iru-setup-java-springboot-github-workflows` adds the `npm`/Node ecosystem to `.github/dependabot.yml` plus the
+  `actions/setup-node` and `vitest` steps in `build.yml`. Never silently treat `hilla` as `none` — record what the
+  user actually asked for and say so in Step 11's report.
 
 ## Step 4 — Choose the technologies
 
@@ -429,9 +484,10 @@ MapStruct has no Initializr id — it's added explicitly in the root pom togethe
 
 ## Step 5 — Confirm the whole plan before writing anything
 
-Present a single compact summary: project identity, Boot and Java versions, platform, concurrency model, every
-selected technology with the dependency ids it resolved to, the migration tool per database, the client names and
-the mocking tool chosen for them,
+Present a single compact summary: project identity, Boot and Java versions, platform, concurrency model, whether
+the project is open source, the Sonar mode (and organization/project key/host URL when not `none`), the frontend
+choice, every selected technology with the dependency ids it resolved to, the migration tool per database, the
+client names and the mocking tool chosen for them,
 the exact list of Maven modules that will be created, and the docker compose services the integration-test stack
 will run. Ask for explicit confirmation, or for corrections, and loop back to the relevant part of Step 4 if the
 user changes something. **No file is written before this confirmation.**
@@ -462,6 +518,13 @@ project:
     name: Jane Doe
     email: jane@example.com
     organizationUrl: https://github.com/jane
+openSource: true                 # from Step 3b
+sonar:                           # from Step 3b — mode is the source of truth downstream
+  mode: cloud                    # cloud | self-hosted | none
+  organization: example-github   # unset when mode: none
+  projectKey: example_orders-service   # unset when mode: none
+  hostUrl: https://sonarcloud.io # unset when mode: none; the self-hosted server URL when mode: self-hosted
+frontend: none                   # none | hilla — hilla scaffolds a Hilla React frontend via iru-setup-java-springboot-hilla, see Step 3b
 stack:
   concurrency: blocking          # blocking | reactive | both
   cloud: aws                     # aws | gcp
@@ -552,14 +615,17 @@ dropping it and changing the Boot version — don't decide silently.
 
 ## Step 8 — Delegate the file generation
 
-Run the seven sub-skills **in this order**, each via the `iru-isolated-skill-executor` agent so its own file
-reads, template expansion, and build output stay out of this orchestrator's context. Every sub-skill reads
+Run the sub-skills **in this order** (seven always, plus `iru-setup-java-springboot-hilla` as an eighth whenever
+the manifest's `frontend: hilla`), each via the `iru-isolated-skill-executor` agent so its own file reads,
+template expansion, and build output stay out of this orchestrator's context. Every sub-skill reads
 `springboot-stack.yml` itself, so each prompt only needs to point it at that file and at the saved Initializr pom,
 and to name what should come back.
 
 Order matters: poms before modules (a module needs its parent to exist), modules before APIs (generated sources
-need a module to land in), APIs before Testcontainers (the compose stack must know whether a schema registry is
-needed), everything before the workflows and documentation (both survey what's actually on disk).
+need a module to land in), APIs before Hilla (the `boot` module the frontend lands in must already exist, and the
+API-generated code Hilla endpoints may call must already be there), Hilla before Testcontainers (the compose stack
+and CI docs job both need to know a frontend toolchain now exists on disk), everything before the workflows and
+documentation (both survey what's actually on disk).
 
 ```
 Agent({
@@ -584,6 +650,14 @@ Repeat that shape for, in order:
    `openapi-generator-maven-plugin` / `protobuf-maven-plugin` / `avro-maven-plugin` executions wired into the
    right module poms, HTML documentation generation included. Report back: spec files created, generator
    executions added and to which module.
+3b. **`iru-setup-java-springboot-hilla`** — only when the manifest's `frontend: hilla`. Scaffolds the Hilla React
+   frontend into the `boot` module: the Vaadin BOM/starters, the `vaadin-maven-plugin` execution,
+   `src/main/frontend/` (file-based-routing views, a customized `index.html`), `vitest.config.ts` with
+   `@vitest/coverage-v8` lcov output and a sample test, ESLint flat config + Prettier, and — when `sonar.mode`
+   isn't `none` — the frontend's `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to
+   the root pom. Report back: the resolved Vaadin version, files written versus already present, whether the
+   `vaadin:prepare-frontend` and `vitest run --coverage` gates passed, and the resolved
+   `boot/coverage/lcov.info` path.
 4. **`iru-setup-java-springboot-testcontainers`** — `docker-compose.yml` (or `compose.yaml`) with one service per
    chosen technology plus Prometheus/Grafana, the Microcks or WireMock mock backing every REST/gRPC client from
    the contracts in `apis/rest-client/`/`apis/grpc-client/`, the `ComposeContainer`-based integration-test base
@@ -635,20 +709,31 @@ Expect the generated skeleton to build and its example tests to pass. If `mvn ve
 isn't available, say so plainly and don't call it a code problem. If code generation fails (a malformed starter
 spec, an OpenAPI/protobuf generator misconfiguration), fix it — a scaffold that doesn't compile isn't done.
 
+If `frontend: hilla`, note that the plain `mvn clean verify -DskipTests` above already exercises
+`vaadin:prepare-frontend` (bound in the `boot` module's pom by `iru-setup-java-springboot-hilla`) — a
+`-Pproduction` build is **not** needed for this local sanity check, only for a real release artifact, since
+`vaadin:build-frontend` decides for itself whether a production bundle is actually needed. Don't add
+`-Pproduction` here just because the reactor has a Hilla frontend.
+
 ## Step 11 — Report and warn
 
 Summarize:
 
 - The resolved identity, Boot version, Java version, platform, and concurrency model.
+- Whether the project is open source, the Sonar mode wired (`cloud`/`self-hosted`/`none`, plus organization/project
+  key/host URL when not `none`), and the frontend choice (`none`/`hilla` — when `hilla`, what
+  `iru-setup-java-springboot-hilla` reported back: the resolved Vaadin version, whether the frontend gates passed,
+  and the resolved lcov path).
 - Every technology selected, with the starter it resolved to and the migration tool per database.
 - The full module tree created, and the `apis/` spec directories.
 - Which sub-skills completed, which stopped and why.
 - The build result from Step 10 for each of the three commands.
 - **Every secret and variable that must be provided out-of-band**, consolidated into one table from what the
   workflow and platform sub-skills reported — GitHub Actions secrets, the cloud OIDC role/workload-identity
-  binding, the Sonar token, and any LLM API key. State again that none of them belong in the repository, and
-  that the OpenTofu state backend must be remote and encrypted since state files contain resource attributes
-  that are effectively secrets.
+  binding, the Sonar token (only when `sonar.mode` is not `none`), the security-block secrets
+  (`GITLEAKS_LICENSE` if a Pro key is used), and any LLM API key. State again that none of them belong in the
+  repository, and that the OpenTofu state backend must be remote and encrypted since state files contain resource
+  attributes that are effectively secrets.
 - Any open gap: a dependency Step 1's catalogue couldn't resolve, a Spring Cloud component with no build for the
   chosen Boot version, an image tag that couldn't be pinned, a manual platform step the OpenTofu config can't do.
 

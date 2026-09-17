@@ -1,0 +1,114 @@
+= TypeScript TSDoc
+:description: Audits TypeScript files for complete TSDoc on exported symbols, generates missing docs, then verifies the build with TypeDoc or Compodoc.
+:keywords: iru-typescript-tsdoc, claude code skill, typescript, tsdoc, typedoc, compodoc, angular, react, generate documentation
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Audit given TypeScript file(s)/scope for complete TSDoc coverage on every exported function, class, interface,
+type alias, and enum — React components' props interfaces and hooks, Angular components/services/inputs/outputs
+included — generate any missing or incomplete TSDoc grounded in the actual code and current changes, then run
+the project's own doc-build tooling (TypeDoc or Compodoc) to confirm the result builds without warnings/errors.
+
+== Purpose
+
+`iru-typescript-tsdoc` closes TypeScript documentation gaps without assuming a fixed house style or framework: it
+first detects the project's flavor (library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend) to
+know which symbols count as "exported" and which tool verifies the result, discovers this project's own TSDoc bar
+(contributor guide, `typedoc.json`/`.compodocrc.json` settings, ESLint JSDoc/TSDoc rules, or observed practice),
+audits every in-scope symbol, fills in what's missing, and proves the result actually builds via TypeDoc or
+Compodoc — mirroring how `iru-java-javadoc` runs a Javadoc build rather than generating generic, possibly
+non-conforming comments.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-tsdoc
+/iru-typescript-tsdoc <path-or-glob>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<path-or-glob>`
+|No
+|Comma-separated paths/globs to audit. Resolved via `find`/`ls`; any resolved file that is a test file
+(`*.test.ts(x)`, `*.spec.ts(x)`, or anything under `test/`, `tests/`, `__tests__/`, `e2e/`) is dropped from scope
+and called out in the final report, since test files carry no TSDoc requirement here.
+|None — defaults to every non-test `.ts`/`.tsx` file touched by uncommitted changes plus commits on the current
+branch not yet on the base branch, filtering out `node_modules/`, `dist/`, `build/`, generated files, and `.d.ts`
+files. If that default scope is empty, the skill tells the user there's nothing to document and stops.
+|===
+
+== Outputs
+
+* Edits (via the Edit tool) to the in-scope files, adding or completing TSDoc comments — no logic, signatures,
+  formatting outside the added comments, or member ordering is changed.
+* A confirmed, warning-free doc-build pass: `npx typedoc --emit none --treatWarningsAsErrors
+  --validation.notDocumented true` for library/react/react-native/ionic/hilla-frontend, or `npx compodoc -p
+  tsconfig.json --silent --coverageTest <threshold> --coverageMinimumPerFile <threshold>
+  --coverageTestShowOnlyFailed` for angular.
+* A plain-text report: per file, how many exported symbols were already documented vs. gaps found and filled
+  (named, with kind); the final doc-build result (TypeDoc pass/fail detail, or Compodoc's coverage percentages
+  vs. threshold); any excluded test-file argument; any out-of-scope pre-existing doc-build failure noted as a
+  follow-up.
+* No full docs-site build, no lint/static-analysis fixes unrelated to TSDoc, and no test changes — those are left
+  to other skills.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-typescript-tsdoc\n(optional path-or-glob)"] --> B["Detect project flavor:\nhilla-frontend, react-native,\nionic, angular, react, or library"]
+    B --> C{Argument given?}
+    C -- yes --> D["Resolve paths/globs;\ndrop test files from scope"]
+    C -- no --> E["Scope to non-test .ts/.tsx files touched\nby uncommitted changes + branch commits\nnot on base"]
+    D --> F{Scope empty?}
+    E --> F
+    F -- yes --> G["Tell user: nothing to document, stop"]
+    F -- no --> H["Discover this project's TSDoc bar:\ncontributor guide, typedoc.json/.compodocrc.json,\nESLint JSDoc/TSDoc rules, or observed practice"]
+    H --> I["Skim existing documented exports\nfor phrasing and tag conventions"]
+    I --> J["Audit each in-scope file's exported\nsymbols per flavor's export definition"]
+    J --> K["Record every gap: symbol, kind,\nwhat's missing"]
+    K --> L["Generate missing TSDoc grounded in\nimplementation + git diff + Step 2 conventions"]
+    L --> M["Apply edits with the Edit tool"]
+    M --> N{Flavor?}
+    N -- angular --> O["Run npx compodoc with\ncoverageTest thresholds"]
+    N -- other --> P["Run npx typedoc --emit none\n--treatWarningsAsErrors\n--validation.notDocumented true"]
+    O --> Q{Fails or warns\non in-scope files?}
+    P --> Q
+    Q -- yes --> R["Fix offending comments,\nre-run until clean"]
+    Q -- no --> S["Report: per-file gaps filled,\ndoc-build result, excluded test files"]
+    R --> S
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-typescript-tsdoc` is a leaf skill; it only runs `npx typedoc`/`npx compodoc`, reads/edits TypeScript
+source, and reports, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — Step 3.2, once per task group, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to update TSDoc for every file the group touched and
+  confirm the project's doc-build tooling passes.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-typescript-code-one-task-group` (see
+  xref:skills/iru-typescript-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner`
+  sub-agent it spawns, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-tsdoc/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

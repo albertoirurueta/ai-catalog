@@ -1,0 +1,120 @@
+= Swift DocC
+:description: Audits Swift declarations and DocC catalogs for complete documentation coverage, generates missing DocC comments, and verifies the doc build.
+:keywords: iru-swift-docc, claude code skill, swift, docc, swiftpm, xcodebuild, symbol graph, documentation coverage, audit documentation, generate doc comments
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Audit given Swift type(s)/file(s) — and the DocC catalog(s) of the target(s) they live in — for complete,
+well-formed `///` documentation, generate whatever is missing grounded in the actual code and current changes,
+then run the project's own DocC tooling to confirm the result builds. Unlike a doc build alone, which never warns
+on missing documentation by default, this skill audits completeness via `swift package dump-symbol-graph` before
+trusting the build's silence. It only adds/completes documentation comments and catalog landing pages — it never
+changes behavior, signatures, or non-comment code, and test declarations are exempt from the requirement.
+
+== Purpose
+
+`iru-swift-docc` closes Swift documentation gaps without assuming a fixed house style: it discovers the project's
+actual documentation bar (a contributor guide, a `.swiftlint.yml` `missing_docs` opt-in rule, a `.spi.yml`
+`documentation_targets` list, or observed practice) and phrasing conventions, audits every type, initializer,
+property, method, subscript, and enum case in scope, ensures each touched target has a `<Target>.docc/<Target>.md`
+catalog landing page, fills in what's missing, and proves the result actually builds via `swift package
+generate-documentation` or `xcodebuild docbuild` — rather than generating generic, possibly non-conforming
+comments or trusting a doc build that silently accepts gaps. It is the Swift-stack equivalent of
+`iru-java-javadoc`, `iru-typescript-tsdoc`, and `iru-android-dokka`.
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-docc
+/iru-swift-docc <Type1,Type2,...>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`Type1,Type2,...`
+|No
+|Comma-separated Swift type names or file paths to audit. A simple type name is located via `find`/`grep` across
+every target's main source root (`Sources/<Target>` for a Swift package, or the target's source group for an
+Xcode project). Any resolved file living under a `Tests/` directory or a `*Tests`/`*UITests` Xcode target is
+dropped from the audited/generated scope and called out in the final report, since test code carries no
+documentation requirement here.
+|None — defaults to every main-source `.swift` file touched by uncommitted changes plus commits on the current
+branch not yet on the base branch (same approach as `iru-update-docs`). If that default scope is empty, the skill
+tells the user there's nothing to document and stops.
+|===
+
+== Outputs
+
+* Edits (via the Edit tool) to the in-scope Swift files, adding or completing `///` DocC comments — no logic,
+  signatures, formatting outside the added comments, or member ordering is changed.
+* A new or completed `Sources/<Target>/<Target>.docc/<Target>.md` catalog landing page for every touched target
+  whose catalog was missing, had no `# `<Target>`` heading, or had an empty `## Topics` section.
+* A completeness audit via `swift package dump-symbol-graph` (parsing `docComment` presence per symbol) and,
+  optionally, a corroborating `--experimental-documentation-coverage` cross-check.
+* A confirmed, warning-free structural doc build (`swift package generate-documentation --target <Target>
+  --warnings-as-errors`, or `xcodebuild docbuild` for an app/Xcode project).
+* A plain-text report: per type, members already documented vs. gaps found and filled (named); per target,
+  whether its catalog landing page was already complete, extended, or newly created; the symbol-graph audit
+  numbers (total symbols checked vs. undocumented, per target); the final build result; any test-code argument
+  excluded; any out-of-scope pre-existing doc-build warning surfaced as a separate follow-up note.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-docc\n(optional type names or file paths)"] --> B{Argument given?}
+    B -- yes --> C["Resolve each to a file;\ndrop test-code files from scope"]
+    B -- no --> D["Scope to main .swift files touched by\nuncommitted changes + branch commits not on base"]
+    C --> E{Scope empty?}
+    D --> E
+    E -- yes --> F["Tell user: nothing to document, stop"]
+    E -- no --> G["Derive distinct targets\nfrom in-scope files"]
+    G --> H["Discover documentation bar: contributor guide,\n.swiftlint.yml missing_docs, .spi.yml,\nor observed practice; reconcile to the stricter"]
+    H --> I["Skim existing documented types\nfor phrasing conventions"]
+    I --> J["Audit each in-scope declaration: type, inits,\nproperties, methods, subscripts, enum cases,\nnested/extension/conformance members"]
+    J --> K["Record every gap: member,\nwhat's missing, access level"]
+    K --> L["Check each touched target's\nDocC catalog landing page"]
+    L --> M["Create/complete &amp;lt;Target&amp;gt;.docc/&amp;lt;Target&amp;gt;.md\nwhere missing or incomplete"]
+    M --> N["Generate missing DocC comments grounded in\nimplementation + git diff/log + Step 2 conventions"]
+    N --> O["Apply edits with the Edit tool"]
+    O --> P["Audit completeness:\nswift package dump-symbol-graph"]
+    P --> Q["Optional cross-check:\n--experimental-documentation-coverage"]
+    Q --> R["Verify build: swift package generate-documentation\n--warnings-as-errors, or xcodebuild docbuild"]
+    R --> S{Fails, warns, or\naudit finds gaps?}
+    S -- yes --> T["Fix offending comments,\nre-run Step 5/6 until clean"]
+    S -- no --> U["Report: per-type gaps filled,\nper-target catalog status,\nsymbol-graph coverage, build result"]
+    T --> U
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-swift-docc` is a leaf skill; it only runs `swift package`/`xcodebuild` commands, reads/edits Swift
+source and DocC catalog pages, and reports, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-swift-code-one-task-group.adoc[] — Step 3.2, once per task group, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to update DocC documentation for every type the group
+  touched and confirm the documentation build passes.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-swift-code-one-task-group` (see
+  xref:skills/iru-swift-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner`
+  sub-agent it spawns, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-docc/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

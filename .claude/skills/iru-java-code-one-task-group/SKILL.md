@@ -20,7 +20,7 @@ Before implementing anything, collect the set of class(es) every task in this bu
 each task's own description). Capture a single pre-change quality baseline covering all of them by delegating to
 the `iru-gate-runner` agent rather than running `iru-java-code-quality` directly: `Agent({description: "Capture
 pre-change quality baseline for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
-\"java-code-quality\", args: \"<ClassName1,ClassName2,...>\"}), then report back only the list of issues found
+\"iru-java-code-quality\", args: \"<ClassName1,ClassName2,...>\"}), then report back only the list of issues found
 for these classes."})`. `iru-gate-runner` runs in its own separate context and reports back just the issue list,
 keeping unneeded report content out of the main context window. Record the returned issues as this bucket's
 pre-change baseline — an empty baseline if every file is new. This is what Step 4's quality check compares
@@ -39,7 +39,7 @@ writes/updates its tests, nothing more (license headers, Javadoc, and all valida
   Agent({
     description: "Implement <task N> via java-code-one-task",
     subagent_type: "iru-isolated-skill-executor",
-    prompt: "Invoke Skill({skill: \"java-code-one-task\", args: \"<the task's full text, including its exact
+    prompt: "Invoke Skill({skill: \"iru-java-code-one-task\", args: \"<the task's full text, including its exact
       implementation_plan.md checkbox line(s) for itself and its sub-tasks, its sub-tasks' own text, and any
       relevant Current code state context>\"}). Report back: the files touched, the tests added/updated, and
       whether the task stopped on a blocker instead of finishing.",
@@ -70,19 +70,19 @@ not once per task:
 
 1. **License headers**, for every file any task in the bucket added or modified, by delegating to `iru-gate-runner`:
    `Agent({description: "Add license headers for task group", subagent_type: "iru-gate-runner", prompt: "Invoke
-   Skill({skill: \"check-license\", args: \"<file1,file2,...>\"}) scoped to every file this bucket's tasks added
+   Skill({skill: \"iru-check-license\", args: \"<file1,file2,...>\"}) scoped to every file this bucket's tasks added
    or modified. Report back only which files were missing a header vs. fixed vs. already compliant, and — if no
    header convention existed anywhere in the repo — whether the user chose to skip or generate one."})`. If the
    user chose to skip header generation, respect that choice for the rest of this run. Skip this item if
    `iru-check-license` is unavailable in this repository.
 2. **Javadoc**, for every class any task in the bucket added or modified, by delegating to `iru-gate-runner`:
    `Agent({description: "Update Javadoc for task group", subagent_type: "iru-gate-runner", prompt: "Invoke
-   Skill({skill: \"java-javadoc\", args: \"<ClassName1,ClassName2,...>\"}) scoped to every class this bucket's
+   Skill({skill: \"iru-java-javadoc\", args: \"<ClassName1,ClassName2,...>\"}) scoped to every class this bucket's
    tasks added or modified. Report back only whether Javadoc was added/updated and for which members, and
    whether the Javadoc build verification passed."})`. If it reports the build failed, fix the reported issues
    and re-invoke until it reports success. Skip this item if `iru-java-javadoc` is unavailable in this repository.
 3. **Scoped tests**, for every class affected across the bucket, by delegating to `iru-gate-runner`: `Agent({description:
-   "Run tests for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"java-test\", args:
+   "Run tests for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-java-test\", args:
    \"<comma/wildcard selector covering every test class affected by this bucket>\"}) (fall back to `mvn test
    -Dtest=<...>` directly if the java-test skill is unavailable). If everything passes, report back only that
    all tests passed. If anything fails, report back only the failing test names, the failure reason, and the
@@ -90,7 +90,7 @@ not once per task:
    file/class), fix that task's implementation and/or tests, and re-invoke this same check — repeat until it
    reports all tests passed. Don't move on with a red test.
 4. **Coverage**, for every changed/new class across the bucket, by delegating to `iru-gate-runner`: `Agent({description:
-   "Check coverage for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"java-coverage\",
+   "Check coverage for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-java-coverage\",
    args: \"<selector covering the bucket's affected tests, plus every target class this bucket changed or
    added>\"}) (fall back to `mvn clean jacoco:prepare-agent test jacoco:report -Dtest=<...>` and reading
    `target/site/jacoco/jacoco.csv` if unavailable). Report back, per target class, its line coverage percentage
@@ -103,7 +103,7 @@ not once per task:
    re-invoke until it reports all tests passed.
 6. **Code quality**, for the same class set as Step 1, by delegating to `iru-gate-runner`: `Agent({description: "Check
    for new quality issues in task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
-   \"java-code-quality\", args: \"<ClassName1,ClassName2,...>\"}). Compare the reported issues against this
+   \"iru-java-code-quality\", args: \"<ClassName1,ClassName2,...>\"}). Compare the reported issues against this
    pre-change baseline: <baseline from Step 1>. Report back only the issues that are newly appearing (not present
    in the baseline)."})`. Any issue reported is a regression introduced by this bucket — trace it to the task
    that owns the affected class, fix it (then re-run Steps 3.3–3.5 to confirm the fix didn't break anything), and

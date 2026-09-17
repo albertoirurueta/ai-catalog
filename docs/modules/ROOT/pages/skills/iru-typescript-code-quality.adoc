@@ -1,0 +1,110 @@
+= TypeScript Code Quality
+:description: Runs ESLint, tsc --noEmit, Prettier, and Stylelint/Oxlint when configured, then reports every issue found, grouped by tool and rule id.
+:keywords: iru-typescript-code-quality, claude code skill, eslint, typescript, tsc, prettier, stylelint, oxlint, static analysis, code quality report
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run this project's TypeScript static-analysis and formatting tools — ESLint (flat config, plus Oxlint when it's
+set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, and Stylelint for CSS/SCSS when
+configured — then report every issue found (file, line, rule id, message), grouped by tool and classified by rule
+id. This is a read-only reporting skill: it runs the configured tools and reports results, it does not fix issues
+unless asked to as an explicit follow-up.
+
+== Purpose
+
+`iru-typescript-code-quality` gives a single, framework-aware lint/type-check/format pass across the npm
+ecosystem's fragmented tooling. It detects the project's framework (npm/TypeScript library, React, Angular, React
+Native, Ionic, Hilla frontend) from `package.json` to pick the right invocation (e.g. `ng lint` vs a direct
+`npx eslint`) and the right rule-id prefixes to classify against, verifies each tool's own config file actually
+exists before trusting a "zero issues" result from it, and — unlike Java's Checkstyle/PMD/SpotBugs trio, which
+always analyze the whole project — every tool here except `tsc` accepts a glob directly, so a scoped invocation
+narrows what actually runs rather than just what gets reported.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-code-quality
+/iru-typescript-code-quality <path-or-glob>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`path-or-glob`
+|No
+|Scopes both the run and the report to specific files. ESLint, Oxlint, Prettier, and Stylelint accept the glob
+directly and only analyze what it matches; `tsc` has no path argument, so it always type-checks the whole project
+graph and the reported diagnostic lines are filtered afterward to ones whose file matches the scope.
+|None — omitting it checks and reports the whole project.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Findings grouped first by tool (ESLint, Oxlint, `tsc`, Prettier, Stylelint), then by rule id/diagnostic code
+  within each tool.
+* Per issue: file:line, rule id (or `TS<code>`), and message; Prettier findings are filed under a single
+  `formatting` bucket since it has no rule ids.
+* A total issue count per tool and an overall total; a tool whose config isn't found is reported as "not
+  configured, skipped" rather than a misleading clean pass.
+* When the prompt supplies a baseline (a prior per-rule-id count, e.g. from `iru-typescript-code-one-task-group`),
+  only the new-vs-baseline regressions per rule id — not the full current list.
+* No source, ESLint, `tsc`, Prettier, or Stylelint configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-typescript-code-quality\n(optional path-or-glob)"] --> B["Detect framework from package.json\n(library, react, angular, react-native, ionic, hilla-frontend)"]
+    B --> C["Detect package manager\n(npm, pnpm, yarn) from lockfile/packageManager"]
+    C --> D["Verify each tool's config exists\n(eslint.config.*/angular.json lint target,\ntsconfig.json, prettierrc, stylelintrc, oxlintrc)"]
+    D --> E{Tool configured?}
+    E -- no --> F["Report '&amp;lt;tool&amp;gt;: not configured, skipped'"]
+    E -- yes --> G["Run ESLint (or ng lint) --format json,\nOxlint --format json if configured"]
+    G --> H["Run tsc --noEmit --pretty false\n(-b for solution-style tsconfig)"]
+    H --> I["Run Prettier --list-different"]
+    I --> J["Run Stylelint --formatter json\nif CSS/SCSS files + config exist"]
+    J --> K["Read each generated report"]
+    K --> L{Scope argument given?}
+    L -- yes --> M["Filter tsc diagnostics to matching files\n(other tools already scoped by glob)"]
+    L -- no --> N["Keep full project-wide results"]
+    M --> O
+    N --> O["Bucket issues by tool, then by rule id/TS code"]
+    O --> P{Baseline supplied?}
+    P -- yes --> Q["Report only new-vs-baseline regressions\nper rule id"]
+    P -- no --> R["Report full per-tool, per-rule-id counts\nplus overall total"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-typescript-code-quality` is a leaf skill; it only runs ESLint/Oxlint/`tsc`/Prettier/Stylelint and
+reads their generated reports, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
+  baseline for the `typescript` language/framework key.
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — Steps 1 and 3.6, once per task group's bucket, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every file
+  the bucket touches and later diff the post-change result against it.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both callers above always invoke this skill from inside a
+  `iru-gate-runner` sub-agent they spawn, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

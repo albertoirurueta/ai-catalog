@@ -1,0 +1,202 @@
+= Swift Test
+:description: Runs a Swift project's tests via swift test --filter for packages or xcodebuild -only-testing for Xcode apps, scoped to a selector.
+:keywords: iru-swift-test, claude code skill, swift, swiftpm, xcodebuild, xctest, swift testing, xcresulttool, run unit tests, test selector
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Swift project's test suite through whichever runner its layout calls for — SwiftPM's `swift test` for a
+package, `xcodebuild test` for an Xcode app/workspace project — scoped to whatever the caller asked for, and
+report a compact pass/fail summary. This is a read-only reporting skill: it runs tests and summarizes the
+outcome, it does not fix failures or modify source/test code unless asked to as an explicit follow-up.
+
+== Purpose
+
+`iru-swift-test` turns a loosely-specified request ("run FooTests", "just testBar", "everything") into the
+correct `swift test --filter`/`--skip` or `xcodebuild -only-testing:`/`-skip-testing:` invocation, detects
+package vs. app from the repository layout, parses whichever result format that runner produces (console output
+for `swift test`, an `.xcresult` bundle via `xcresulttool` for `xcodebuild test`), and — critically — detects the
+"selector matched zero tests" case that both runners otherwise hide behind a passing, exit-0 result. It is the
+Swift/Apple-platforms equivalent of `iru-java-test`/`iru-typescript-test`/`iru-android-test`.
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-test
+/iru-swift-test <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|A positional argument naming what to run: a bare test/method name, a suite/class name, a `Suite.method` or
+`Suite/method` pair, or a target-qualified form. Mapped to `--filter`/`-only-testing:` syntax per the tables below.
+|None — omitting it runs the full suite.
+
+|`kind`
+|No
+|`key: value` override of the package-vs-app auto-detection (Step 1) — `package` or `app`. Used when a repository
+has both a `Package.swift` and an `.xcodeproj`/`.xcworkspace` and the caller already knows which to exercise.
+|Auto-detected from the repository's files.
+
+|`scheme`
+|No
+|`key: value` — the Xcode scheme to test (app path only).
+|Auto-detected via `xcodebuild -list` (the sole scheme, or the one not containing "Tests"/"UITests" when several exist).
+
+|`destination`
+|No
+|`key: value` — an `xcodebuild` destination string, e.g. `platform=macOS` or
+`platform=iOS Simulator,name=iPhone 17,OS=latest` (app path only).
+|Inferred from the project's target platform: the first available iPhone simulator, or `platform=macOS` when the
+target platform can't be determined.
+
+|`workspace` / `project`
+|No
+|`key: value` — path to a `.xcworkspace`/`.xcodeproj` to disambiguate when more than one exists (app path only).
+|None — `xcodebuild -list` auto-resolves the sole project/workspace when only one exists.
+|===
+
+These `key: value` overrides are only honored when the calling skill/prompt passes them explicitly; otherwise
+this skill infers everything itself in Steps 1–3.
+
+**Package selector mapping** (`swift test`):
+
+[cols="3,3,3", options="header"]
+|===
+|What the user wants |Flag |Example
+
+|Everything
+|_(omit `--filter`)_
+|`swift test`
+
+|One test/method name
+|`--filter '<name>'`
+|`swift test --filter 'testFoo'`
+
+|One suite/class
+|`--filter '<Suite>'`
+|`swift test --filter 'FooTests'`
+
+|One method in one suite
+|`--filter '<Suite>[./]<method>'`
+|`swift test --filter 'FooTests/testBar'`
+
+|One target/module
+|`--filter '<Target>\.'`
+|`swift test --filter 'FooPackageTests\.'`
+
+|Several disjoint names
+|repeat `--filter '<pattern>'` (OR'd, not AND'd)
+|`swift test --filter testPasses --filter 'example\(\)'`
+
+|Excluding a pattern
+|`--skip '<regex>'`
+|`swift test --skip 'SlowTests'`
+|===
+
+**App selector mapping** (`xcodebuild test`):
+
+[cols="3,3,3", options="header"]
+|===
+|What the user wants |Flag |Example
+
+|Everything
+|_(omit `-only-testing:`)_
+|`xcodebuild test -scheme Demo -destination 'platform=macOS'`
+
+|One suite/class
+|`-only-testing:<TestTarget>/<Suite>`
+|`-only-testing:DemoTests/FooTests`
+
+|One method in one suite
+|`-only-testing:<TestTarget>/<Suite>/<test>`
+|`-only-testing:DemoTests/FooTests/testBar`
+
+|Whole test target/bundle
+|`-only-testing:<TestTarget>`
+|`-only-testing:DemoTests`
+
+|Several disjoint scopes
+|repeat `-only-testing:<...>`
+|`-only-testing:DemoTests/FooTests -only-testing:DemoTests/BarTests`
+
+|Excluding a scope
+|`-skip-testing:<TestTarget>/<Suite>/<test>`
+|`-skip-testing:DemoTests/SlowTests`
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Package path: totals parsed from the console's `Executed <N> tests, with <F> failures...`/`Test run with <N>
+  tests...` lines (XCTest and Swift Testing both run in one `swift test` invocation).
+* App path: totals from `xcresulttool get test-results summary` (`passedTests`/`failedTests`/`totalTestCount`/`result`).
+* On failures: each failing test's name plus the first line of its assertion/expectation message — for the app
+  path, also the `.xcresult` bundle path for full detail instead of dumping it.
+* **"Selector matched no tests"** reported explicitly and distinctly from a clean pass, for the zero-match case
+  both runners otherwise hide behind exit code 0.
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-test\n(optional selector, or key: value overrides)"] --> B["Step 1: detect package vs app\n(find Package.swift / project.yml /\nProject.swift / *.xcodeproj / *.xcworkspace)"]
+    B --> C{"Kind?"}
+    C -- "package only" --> D["Verify swift --version"]
+    C -- "app (project/workspace present)" --> E["Verify xcodebuild -version\n&amp; full Xcode install"]
+    C -- "project.yml/Project.swift only,\nnot yet generated" --> F["Stop: run xcodegen/tuist\ngenerate first"]
+    C -- "nothing found" --> G["Stop: no Swift package\nor Xcode project found"]
+    D --> H["Step 2: map selector to\nswift test --filter / --skip"]
+    E --> I["Step 3: resolve scheme &amp; destination,\nmap selector to\n-only-testing: / -skip-testing:"]
+    H --> J["Step 4: run swift test"]
+    I --> K["Step 4: rm -rf .xcresult,\nrun xcodebuild test\n-resultBundlePath"]
+    J --> L["Step 5: parse console output\n(XCTest + Swift Testing lines)"]
+    K --> M["Step 5: parse .xcresult via\nxcresulttool get test-results\nsummary / tests"]
+    L --> N{"Zero-match case?\n(no Executed / Test run lines)"}
+    M --> O{"Zero-match case?\n(totalTestCount == 0)"}
+    N -- yes --> P["Step 6: report\nselector matched no tests"]
+    O -- yes --> P
+    N -- no --> Q{"Failures?"}
+    O -- no --> R{"Failures?"}
+    Q -- yes --> S["Step 6: list failing tests +\nfirst line of message\n(+ .xcresult path for app)"]
+    R -- yes --> S
+    Q -- no --> T["Step 6: report all passed, briefly"]
+    R -- no --> T
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-swift-test` is a leaf skill; it only runs `swift test`/`xcodebuild test` commands and reports on
+their output, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-swift-code-one-task-group.adoc[] — Step 3.4, once per group validation pass, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, alongside `iru-check-license` (3.1), `iru-swift-docc`
+  (3.2), and `iru-swift-coverage` (3.5).
+* xref:skills/iru-swift-generate-all-tests.adoc[] — Step 7, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`]
+  agent, to run the newly generated tests after `iru-swift-coverage` measures the baseline.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both `iru-swift-code-one-task-group` and
+  `iru-swift-generate-all-tests` always invoke this skill from inside a `iru-gate-runner` sub-agent they spawn,
+  not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

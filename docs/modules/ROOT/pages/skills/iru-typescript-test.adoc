@@ -1,0 +1,166 @@
+= TypeScript Test
+:description: Runs a TypeScript/npm project's unit tests via Vitest, Jest, or Angular CLI's ng test, scoped to a file, directory, or name pattern, and reports results.
+:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, ng test, npm, run unit tests, test selector
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a TypeScript/npm project's unit test suite through whichever test runner it actually has configured —
+Vitest, Jest, or the Angular CLI's Vitest-backed `ng test` builder — scoping the run to whatever the caller
+asked for and reporting a compact pass/fail summary parsed from the runner's own JSON reporter. This is a
+read-only reporting skill: it never fixes a failing test or modifies source/test code unless asked to as an
+explicit follow-up.
+
+== Purpose
+
+`iru-typescript-test` turns a loosely-specified request ("run everything", "just this file", "tests matching
+this name") into the correct invocation for whichever runner a TypeScript project actually has wired, and
+returns a concise pass/fail report instead of a raw console dump. It detects the runner and package manager
+from the project's own manifests rather than assuming one, and distinguishes a genuinely clean run from a
+selector that silently matched nothing — a distinction that looks identical in a broken CI job if conflated.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-test
+/iru-typescript-test <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|A file path, a directory, or a `-t "<name pattern>"` filter, combinable as a file/directory plus a name
+pattern. Mapped to the matching runner's scoping flags per the table below.
+|None — omitting it runs the whole suite.
+|===
+
+The runner and its invocation are resolved as follows:
+
+[cols="2,1,3", options="header"]
+|===
+|Runner |Detected via |Full-suite command
+
+|Vitest
+|`vitest` in `dependencies`/`devDependencies` plus a `vitest.config.*` file (or a `test`/`vitest` block in
+`vite.config.ts`)
+|`vitest run`
+
+|Jest
+|`jest`/`jest-expo` in `dependencies`/`devDependencies` plus a `jest.config.*` file or a `"jest"` key in
+`package.json`
+|`jest`
+
+|Angular CLI (`ng test`, Vitest runner)
+|`@angular/build` devDependency with the project's `test` architect target using builder
+`@angular/build:unit-test` (its `runner` option defaults to `"vitest"`)
+|`ng test --watch=false`
+|===
+
+If none of the three is found, the skill stops and reports "no test runner wired" rather than reporting a
+misleadingly clean "0 tests". If `ng test`'s target has `options.runner` explicitly set to `"karma"`, the
+skill's Vitest-shaped commands don't apply and it reports that instead of guessing at Karma's CLI. The
+package manager (npm/pnpm/yarn) is read from `packageManager` in `package.json` or the lockfile present, and
+the runner's binary is invoked directly (`npx`/`pnpm exec`/`yarn`) rather than through the project's own
+`test` npm script, since that script often omits flags the skill needs to forward predictably.
+
+Selector scoping per runner:
+
+[cols="2,2,2,2", options="header"]
+|===
+|What the user wants |Vitest |Jest |`ng test` (Vitest runner)
+
+|One file
+|`vitest run path/to/file.test.ts`
+|`jest path/to/file.test.ts`
+|`ng test --watch=false --include=path/to/file.spec.ts`
+
+|A directory
+|`vitest run path/to/dir`
+|`jest path/to/dir`
+|`ng test --watch=false --include="path/to/dir/**"`
+
+|Name pattern
+|`vitest run -t "<pattern>"`
+|`jest -t "<pattern>"`
+|`ng test --watch=false --filter="<pattern>"`
+
+|File/dir + name pattern
+|`vitest run path/to/file.test.ts -t "<pattern>"`
+|`jest path/to/file.test.ts -t "<pattern>"`
+|`ng test --watch=false --include=path/to/file.spec.ts --filter="<pattern>"`
+|===
+
+An unmatched file/directory selector is a hard failure (non-zero exit) for all three runners; an unmatched
+`-t`/`--filter` name pattern against files that do match is not a failure — every runner reports the matched
+tests as skipped and exits `0`.
+
+== Outputs
+
+* A plain-text pass/fail summary in the conversation — never a written file.
+* Total, passed, and failed test counts parsed from each runner's JSON reporter output (`--reporter=json` for
+  Vitest, `--json` for Jest, `--reporters=json` for `ng test`), written to a scratch file and deleted after
+  parsing.
+* On failures: each failing test's `fullName` and the first line of its assertion message — no stack traces,
+  no passing-test noise.
+* A selector that matched no files is reported plainly as "matched no test files", distinct from a genuinely
+  clean 0-failure run; a name pattern that matched no individual tests is reported plainly as "0 of N tests
+  matched the filter", distinct from "all passed".
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-typescript-test\n(optional selector)"] --> B["Read package.json / angular.json\nto detect runner + package manager"]
+    B --> C{Runner detected?}
+    C -- no --> D["Stop: report\n&quot;no test runner wired&quot;"]
+    C -- yes, ng test with\nrunner=karma --> E["Stop: report Karma\nnot supported by this skill"]
+    C -- yes --> F{Selector given?}
+    F -- no --> G["Full-suite command\n(vitest run / jest / ng test --watch=false)"]
+    F -- yes --> H["Map selector to file/dir\nand/or -t / --filter syntax"]
+    H --> I["Compose scoped command"]
+    G --> J["Run via Bash with JSON reporter\n(--reporter=json / --json / --reporters=json)"]
+    I --> J
+    J --> K["Parse JSON: totals,\nfailed assertionResults"]
+    K --> L["Delete scratch JSON file"]
+    L --> M{Selector matched\nno files?}
+    M -- yes --> N["Report: selector matched\nno test files"]
+    M -- no --> O{Name pattern matched\nno tests within matched files?}
+    O -- yes --> P["Report: 0 of N tests\nmatched the filter"]
+    O -- no --> Q{Any failures?}
+    Q -- yes --> R["List failing test names +\nfirst line of each assertion message"]
+    Q -- no --> S["Report: all passed, briefly"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-typescript-test` is a leaf skill; it only runs Vitest/Jest/`ng test` commands and reports on their
+output, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — Step 3.3, to run the scoped tests for the task
+  group's changes, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 7, to run the full suite after generating tests,
+  via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both calling skills above invoke this skill from inside
+  a `iru-gate-runner` sub-agent they spawn, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

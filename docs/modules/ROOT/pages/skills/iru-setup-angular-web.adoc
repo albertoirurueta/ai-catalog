@@ -1,0 +1,164 @@
+= Setup Angular Web
+:description: Scaffolds a new Angular application via the Angular CLI, then wires up Vitest coverage, ESLint, Prettier, Stylelint, Playwright, Compodoc, and Sonar.
+:keywords: iru-setup-angular-web, claude code skill, angular, vitest, eslint, prettier, stylelint, playwright, compodoc, sonar
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a new Angular web application with `ng new`, then layer on this catalog's standard toolchain: Vitest
+coverage gates, ESLint (angular-eslint), Prettier, Stylelint for SCSS, Playwright e2e, Compodoc API docs, optional
+Storybook, and Sonar wiring.
+
+== Purpose
+
+`iru-setup-angular-web` bootstraps an Angular workspace with
+`npx -p @angular/cli@latest ng new <name> --standalone --style=scss --routing --skip-git --package-manager=npm
+--defaults --ssr=false` (Angular 22's own defaults already give a zoneless, Vitest-backed, standalone-component
+workspace) and then fills in everything that scaffold does not include out of the box: confirms `angular.json`'s
+`test` target uses `@angular/build:unit-test` with `runner: vitest`, adds `coverageReporters` and an 80%-lines
+`coverageThresholds` gate, and installs a matching-major `@vitest/coverage-v8` (the coverage collector `ng new`
+does not bundle); `ng add angular-eslint` plus `eslint-config-prettier`; a `.prettierignore` next to the CLI's own
+`.prettierrc`; Stylelint 17 for SCSS (`stylelint-config-standard-scss`, with `no-empty-source` disabled to tolerate
+the CLI's 0-byte root stylesheet); Playwright via `ng add playwright-ng-schematics` (fixing the schematic's own
+hardcoded `/MyApp/` title assertion); Compodoc; optional Storybook; and, when `sonar` is not `none`,
+`sonar-project.properties` pointing at the real `coverage/<project>/lcov.info` path. It is the Angular leaf of the
+TypeScript/Node bootstrap pipeline, parallel to `iru-setup-react-web`, `iru-setup-react-native-app`, and
+`iru-setup-ionic-app`.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-angular-web
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-typescript-repository.adoc[])
+as newline-separated `key: value` lines, parsed in Step 0 so this skill doesn't re-ask about any field already
+resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|`name`
+|Yes (unless supplied via `args`)
+|The Angular workspace/project name, e.g. `my-app` — used for the `ng new` command and as `<project>` in the
+`coverage/<project>/lcov.info` path.
+|None
+
+|`directory`
+|No
+|Where to scaffold; `.` scaffolds directly into an already-empty repository root instead of a `<name>/`
+subdirectory.
+|`name` itself
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: Apache License 2.0, MIT License, No license, or Other.
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Not written into any Angular-generated file directly; recorded for `iru-check-license`'s header generation once a
+license is chosen.
+|None
+
+|`open-source`
+|Yes (unless supplied via `args`)
+|Whether the repository is open source; drives the `sonar` recommendation.
+|None
+
+|`sonar`
+|No
+|`cloud`, `self-hosted`, or `none` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`).
+|`cloud` when open source; otherwise `none` recommended
+
+|`storybook`
+|No
+|Whether to also scaffold Storybook (`@storybook/angular-vite`) for isolated component development.
+|`no`
+
+|`mode`
+|No
+|`new` or `existing` — `existing` skips Step 1's stop-or-regenerate question and goes straight to gap-fill.
+|`new`
+|===
+
+== Outputs
+
+* A scaffolded Angular workspace (`angular.json`, `package.json`, `src/`) at the resolved `directory`.
+* `angular.json`'s `test` target configured for Vitest with coverage reporters and an 80%-lines threshold, plus
+  `@vitest/coverage-v8` installed at the matching `vitest` major.
+* ESLint (`eslint.config.js` via `angular-eslint`, extended with `eslint-config-prettier`), a `.prettierignore`,
+  Stylelint (`.stylelintrc.json`) for SCSS, and reformatted CLI-generated files (`npx prettier --write .`).
+* Playwright e2e (`playwright.config.ts`, `e2e/example.spec.ts` with its title assertion corrected to the real
+  project name).
+* Compodoc wired via a `docs` npm script producing `docs/api/`.
+* Optionally, a Storybook scaffold (`storybook: yes`).
+* `sonar-project.properties` at the repository root, only when `sonar` is `cloud` or `self-hosted`.
+* A report of what ran, was skipped as already present, or was skipped by design, plus explicit warnings to review
+  generated files, run Prettier if not already run, and install Playwright browser binaries before `ng e2e`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-angular-web] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E{"Step 1: angular.json already exists?"}
+    D --> E
+    E -- no --> F[Step 2: Collect inputs]
+    E -- yes, mode: existing --> G[Go straight to gap-fill]
+    E -- yes, otherwise --> H["AskUserQuestion:\nstop, fill gaps, or regenerate?"]
+    H -- stop --> I[Report untouched; end]
+    H -- fill gaps / regenerate --> F
+    G --> F
+    F --> J["Step 3: Look up tool versions\n(npm view, with Sept 2026 fallbacks)"]
+    J --> K["Step 4: ng new scaffold\n(standalone, scss, routing, ssr=false)"]
+    K --> L["Step 5-6: Configure test target\n+ install @vitest/coverage-v8\nmatching vitest major"]
+    L --> M["Step 7: ng add angular-eslint\n+ eslint-config-prettier"]
+    M --> N["Step 8: Confirm Prettier,\nadd .prettierignore, npx prettier --write ."]
+    N --> O["Step 9: Add Stylelint for SCSS"]
+    O --> P["Step 10: ng add playwright-ng-schematics,\nfix hardcoded title assertion"]
+    P --> Q["Step 11: Add Compodoc"]
+    Q --> R{"Step 12: storybook: yes?"}
+    R -- yes --> S["npx storybook@latest init\n(unverified end-to-end)"]
+    R -- no --> T{"Step 13: sonar != none?"}
+    S --> T
+    T -- yes --> U[Write sonar-project.properties]
+    T -- no --> V["Step 14: Report + warnings"]
+    U --> V
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-angular-web` is a leaf skill; it does not call any other skill in this catalog. It mentions
+`iru-check-license` in prose (to generate a `LICENSE` file and backfill headers once a license is chosen) without
+invoking it.
+
+=== Invoked by
+
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-angular-web` (via
+  `iru-isolated-skill-executor`) when the detected/chosen project type is `angular-web`, passing the pre-resolved
+  `name`, `directory`, `license`, developer/organization info, `open-source`, `sonar`, `storybook`, and `mode` via
+  `args`. Also runnable standalone.
+
+=== Related agents
+
+None — this skill does not itself invoke `iru-gate-runner`, `iru-isolated-skill-executor`, or `iru-change-summarizer`.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-angular-web/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

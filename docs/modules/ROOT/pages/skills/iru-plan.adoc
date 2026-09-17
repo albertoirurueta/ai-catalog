@@ -17,7 +17,8 @@ plan matches the requested task and asks the user whether to resume it as-is, di
 update it while preserving already-completed work. It grounds itself in the actual codebase (via `iru-explore`),
 resolves only genuinely ambiguous decisions with the user, groups tasks into dependency-aware task groups (each
 marked whether its tasks can be implemented in parallel), and determines which `<key>-code-one-task` skill (e.g.
-`iru-java-code-one-task`, `iru-dotnet-code-one-task`) each task belongs to — once for the whole plan if uniform,
+`iru-java-code-one-task`, `iru-dotnet-code-one-task`, `iru-typescript-code-one-task`, `iru-android-code-one-task`,
+`iru-swift-code-one-task`) each task belongs to — once for the whole plan if uniform,
 tagged per top-level task otherwise — so the `iru-code` skill that later executes it, via
 `iru-code-one-task-group`, knows exactly which language-specific group skill to dispatch each task group to
 without re-inferring it. When a tracked ticket is involved, the plan's Task summary records an explicit `Source:`

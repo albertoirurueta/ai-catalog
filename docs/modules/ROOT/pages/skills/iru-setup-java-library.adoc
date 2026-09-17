@@ -1,6 +1,6 @@
 = Setup Java Library
-:description: Generates pom.xml for a new Java library from a house template with JUnit/Mockito deps and sign profiles, scaffolding Maven source folders.
-:keywords: iru-setup-java-library, claude code skill, java, maven, pom.xml, junit, mockito, source layout, license
+:description: Generates pom.xml for a new Java library from a house template with JUnit/Mockito deps, conditional publish/sonar wiring, scaffolding Maven source folders.
+:keywords: iru-setup-java-library, claude code skill, java, maven, pom.xml, junit, mockito, source layout, license, open source, publish, maven central, sonar, sonarcloud, sonarqube
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -11,9 +11,13 @@ and scaffold the standard Maven source layout for the library's base package.
 
 `iru-setup-java-library` bootstraps a new Java/Maven library's `pom.xml` from a house template embedded in the skill
 itself — the same test dependencies (junit-jupiter, junit-platform-launcher, mockito-core,
-mockito-junit-jupiter), the same `sign`/`build-extras` profiles, and the same build/reporting plugins, with only
-the project-identity fields filled in per repository. It also creates the `src/main/java/<package>`,
-`src/main/resources/<package>`, and `src/test/java/<package>` folders for the library's base package.
+mockito-junit-jupiter), the same `build-extras` profile, and the same build/reporting plugins, with only
+the project-identity fields filled in per repository. Whether the repository is open source, whether it publishes
+to Maven Central (gating the `sign` profile and the `central-publishing-maven-plugin`), and whether to wire up a
+SonarQube/SonarCloud scan (gating the `sonar.*` properties and the `sonar-maven-plugin`) are also resolved — asked
+interactively, deriving `publish`/`sonar` recommendations from the `open-source` answer, or pre-supplied via `args`.
+It also creates the `src/main/java/<package>`, `src/main/resources/<package>`, and `src/test/java/<package>`
+folders for the library's base package.
 
 == Purpose group
 
@@ -36,9 +40,35 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |No
 |Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-java-library-repository.adoc[])
 as newline-separated `key: value` lines — `groupId`, `artifactId`, `package`, `developer-name`,
-`developer-email`, `organization-url`, `license`, and `java-version` — parsed in Step 0 so this skill doesn't ask
+`developer-email`, `organization-url`, `license`, `java-version`, `open-source`, `publish`, `sonar` (+
+`sonar-organization`/`sonar-project-key`/`sonar-host-url`) — parsed in Step 0 so this skill doesn't ask
 about any field already resolved this way.
 |None — if absent or unrecognized, every field is asked interactively.
+
+|open-source
+|No (unless resolved via `args`)
+|Whether the repository is open source (`yes`/`no`), asked first via `AskUserQuestion` — its answer sets the
+recommended defaults offered for `publish` and `sonar`.
+|None — user must choose
+
+|publish
+|No (unless resolved via `args`)
+|Whether the generated `pom.xml` wires up Maven Central publishing (`yes`/`no`), gating the `sign` profile and the
+`central-publishing-maven-plugin` plugin entry.
+|`yes` recommended when open source, otherwise `no` recommended
+
+|sonar
+|No (unless resolved via `args`)
+|Whether to wire up a SonarQube/SonarCloud scan via the `sonar-maven-plugin` (`cloud`/`self-hosted`/`none`),
+gating the four `sonar.*` properties and the plugin entry.
+|`cloud` recommended when open source, otherwise `none` recommended
+
+|sonar-organization / sonar-project-key / sonar-host-url
+|Only when `sonar` is `cloud` or `self-hosted`
+|`sonar.organization`/`sonar.projectKey`/`sonar.host.url` values. Defaulted from the parsed git owner/repo
+(`<owner>-github`, `<owner>_<repo>`) and `https://sonarcloud.io` for `cloud`; asked directly (no default for
+`sonar.host.url`) for `self-hosted`.
+|See defaults above
 
 |groupId
 |Yes (unless supplied via `args`)
@@ -82,11 +112,16 @@ and URL directly).
 
 * `pom.xml` at the repository root, generated fresh or entirely replaced if one already existed and the user
   chose to continue.
+** Conditional blocks: the `sign` profile and the `central-publishing-maven-plugin` plugin entry are included only
+   when `publish: yes` (the `build-extras` profile is always kept, regardless of `publish`); the four `sonar.*`
+   properties and the `sonar-maven-plugin` plugin entry are included only when `sonar` is `cloud` or `self-hosted`,
+   omitted entirely when `sonar: none`.
 * `src/main/java/<package>`, `src/main/resources/<package>`, and `src/test/java/<package>` created if not
   already present (empty directories won't show up in `git status` until they contain a file).
 * A report of the resolved groupId/artifactId/version, the license chosen (or "none"), the inferred repository
-  information, and which source folders were created versus already present — plus an explicit warning to review
-  the generated `pom.xml` before building or committing.
+  information, and which source folders were created versus already present, plus an explicit statement of which
+  conditional blocks were included versus omitted (`open-source`, `publish`, `sonar`) and why — plus an explicit
+  warning to review the generated `pom.xml` before building or committing.
 
 == Execution flow
 
@@ -103,8 +138,9 @@ flowchart TD
     F -- continue --> H["Read existing pom.xml values\nas defaults for unresolved fields"]
     E -- no --> I["Step 2: Collect remaining inputs\n(groupId, artifactId, version, package,\ndeveloper info, license)"]
     H --> I
-    I --> J["Step 3: Infer repository info\n(owner/repo/host, description,\ninception year) from git/gh"]
-    J --> K["Step 4-5: Fill pom.xml template\nwith resolved values"]
+    I --> I2["Step 2: Ask open-source first,\nderive publish/sonar defaults;\nresolve publish and sonar"]
+    I2 --> J["Step 3: Infer repository info\n(owner/repo/host, description,\ninception year) from git/gh"]
+    J --> K["Step 4-5: Fill pom.xml template;\nomit sign profile &amp;amp; central-publishing\nplugin if publish: no, omit sonar.*\nproperties &amp;amp; plugin if sonar: none"]
     K --> L["Step 6: Write pom.xml"]
     L --> M["Step 7: Scaffold src/main/java,\nsrc/main/resources, src/test/java folders"]
     M --> N["Step 8: Report + warn:\nreview before building"]

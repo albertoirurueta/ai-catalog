@@ -1,0 +1,213 @@
+= Setup Android Library
+:description: Scaffolds a Gradle/Kotlin Android library repository (wrapper, lib module, Compose app sample) from a genericized reference-repository template.
+:keywords: iru-setup-android-library, claude code skill, gradle, kotlin, android, jetpack compose, jacoco, dokka, sonarqube, scaffolding
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+`iru-setup-android-library` generates the standard Gradle/Kotlin toolchain for a new Android library at the
+repository root — the Gradle wrapper, root project files, a `lib/` library module, and an `app/` Jetpack Compose
+sample module that depends on `lib` — from explicit example templates embedded in the skill itself.
+
+== Purpose
+
+This skill bootstraps an Android/Kotlin library's entire Gradle build from a house template genericized from a
+real reference repository, https://github.com/albertoirurueta/irurueta-android-glutils. It writes the Gradle
+wrapper (pinned to a run-time-resolved Gradle version and checksum), the root `build.gradle.kts` /
+`settings.gradle.kts` / `gradle.properties` / `gradle/libs.versions.toml`, the `lib/` module (build script,
+ProGuard rules, manifests, Robolectric properties, `.gitignore`, one placeholder source + unit test +
+instrumented test), and an `app/` Jetpack Compose sample module that depends on `lib` and is genuinely a working
+Compose consumer, not just a declared-but-unused dependency. Every toolchain version (Gradle, AGP, Kotlin, Dokka,
+Sonar/publish/Detekt/Spotless/Kover/JUnit-bridge plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK,
+Robolectric) is looked up at run time, falling back to the versions this skill recorded in September 2026 only if
+a live lookup fails. It gates several optional toggles (publish, Sonar, built-in Kotlin, JUnit major, coverage
+tool, static-analysis stack) that each add or remove specific blocks from the generated files, and it fills gaps
+or regenerates safely on a repository that already has some of these files.
+
+== Purpose group
+
+xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-android-library
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g.
+xref:skills/iru-setup-android-repository.adoc[]) as newline-separated `key: value` lines, parsed in Step 0 so this
+skill doesn't ask about any field already resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|`group-id`
+|Yes (unless supplied via `args`)
+|Maven Central `groupId` used to publish the library, e.g. `com.example`.
+|None
+
+|`artifact-id`
+|Yes (unless supplied via `args`)
+|Maven Central `artifactId` / Gradle project name, used as `rootProject.name` and the `mavenPublishing`
+coordinates artifact id.
+|None
+
+|`namespace`
+|Yes (unless supplied via `args`)
+|Android `namespace` and base package for the placeholder source under `lib/src/main/java`. The `app/` module's
+own namespace is always `<namespace>.app`.
+|None
+
+|`description`
+|No
+|One line used in `lib/build.gradle.kts`'s `pom { description.set(...) }`.
+|None
+
+|`version`
+|No
+|The `libraryVersion` written into `lib/build.gradle.kts` and `versionName` in `app/build.gradle.kts`.
+|`1.0.0-SNAPSHOT`
+
+|`min-sdk`
+|No
+|`defaultConfig.minSdk` for both modules.
+|`26`
+
+|`compile-sdk`
+|No
+|API level both modules compile against; resolved against locally installed SDK platforms or the latest stable
+Android release, coupled to the resolved Compose BOM version.
+|Fallback `36` (Sep 2026)
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: Apache License 2.0, MIT License, No license, or Other.
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Populates the `pom { developers { developer {...} } }` block.
+|None
+
+|`open-source`
+|No
+|Whether the repository is open source; drives the recommended defaults for `publish` and `sonar`.
+|None — asked first when unresolved
+
+|`publish`
+|No
+|Whether to wire the `com.vanniktech.maven.publish` plugin and `mavenPublishing {...}` block for Maven Central
+publishing.
+|Yes when open source, otherwise No (recommended)
+
+|`sonar`
+|No
+|`cloud`, `self-hosted`, or `none` — whether to wire a SonarQube/SonarCloud scan block in both modules, plus
+`sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`.
+|`cloud` when open source, otherwise `none` (recommended)
+
+|`built-in-kotlin`
+|No
+|`no`/`yes` — whether to opt into AGP's built-in Kotlin compilation path (`android.builtInKotlin`/`android.newDsl`
+in `gradle.properties`) instead of the `org.jetbrains.kotlin.android` plugin. `yes` is unverified by this skill.
+|`no`
+
+|`junit`
+|No
+|`4`/`5` — which JUnit major the `lib` module's unit tests run on (instrumented tests always run on JUnit 4).
+`5` applies the `de.mannodermaus.android-junit` bridge plugin and is unverified locally.
+|`4`
+
+|`coverage-tool`
+|No
+|`jacoco`/`kover` — `jacoco` uses AGP's own built-in coverage flags (verified); `kover` applies the Kover plugin
+instead (unverified locally).
+|`jacoco`
+
+|`static-analysis`
+|No
+|`lint`/`lint+detekt+ktlint` — Android Lint always runs; the extended option adds Detekt (with a root
+`detekt.yml`) and Spotless (ktlint + license-header check). Unverified locally.
+|`lint`
+
+|`mode`
+|No
+|`new`/`existing` — `existing` (this catalog's shared front-door signal) skips Step 1's stop/fill/regenerate
+question and goes straight to gap-fill, creating only missing files.
+|`new`
+|===
+
+== Outputs
+
+* Gradle wrapper: `gradle/wrapper/gradle-wrapper.properties` (pinned Gradle version + `distributionSha256Sum`),
+  `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar`.
+* Root project files: `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`,
+  and (only if missing) `local.properties`.
+* `lib/` library module: `build.gradle.kts`, `proguard-rules.pro`, `.gitignore`, `src/main/AndroidManifest.xml`,
+  `src/androidTest/AndroidManifest.xml`, `src/test/resources/<namespace-path>/robolectric.properties`, one
+  placeholder `Example.kt` source, `ExampleUnitTest.kt`, and `ExampleInstrumentedTest.kt`; `detekt.yml` at the
+  repository root when `static-analysis: lint+detekt+ktlint`.
+* `app/` Jetpack Compose sample module: `build.gradle.kts`, `.gitignore`, `src/main/AndroidManifest.xml`, a real
+  Compose `MainActivity.kt` (with a working `@Preview`), `values/strings.xml`, `values/colors.xml`,
+  `values/themes.xml`, `values-night/themes.xml`, and the adaptive launcher-icon drawables/mipmaps.
+* A report of every resolved input, which optional blocks were included/omitted and why, which toolchain versions
+  came from a live lookup versus the recorded fallback, which files were created/left untouched/replaced, and an
+  explicit warning block (review before building/publishing, Sonar token and Maven Central credentials still
+  needed, no root `.gitignore` written, unverified toggle combinations).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-android-library] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E["Step 1: Survey repository\nfor already-existing files"]
+    D --> E
+    E -- none exist --> G["Step 2: Collect inputs"]
+    E -- "mode: existing" --> H["Gap-fill: create only\nmissing files"]
+    E -- "some exist, mode not set" --> F{"AskUserQuestion:\nstop / fill gaps / regenerate?"}
+    F -- stop --> STOP[Report untouched; end]
+    F -- "fill gaps" --> H
+    F -- regenerate --> I["Read existing lib/build.gradle.kts\nas defaults"]
+    I --> G
+    H --> G
+    G --> J["Step 3: Infer repo info\n(owner/repo/host, description,\ninception year) from git/gh"]
+    J --> K["Step 4: Look up toolchain versions\n(Gradle, AGP, Kotlin, Dokka, Sonar,\npublish, JUnit, Compose BOM, ...)"]
+    K --> L["Steps 5-7: Fill wrapper, root,\nlib/, and app/ templates\nwith resolved values + gating"]
+    L --> M["Step 8: Resolve every\nplaceholder"]
+    M --> N["Step 9: Write files\n(skip already-present ones per\nStep 1's decision); local.properties\nonly if missing"]
+    N --> O["Step 10: Obtain Gradle wrapper\nbinaries (gradle wrapper CLI\nor GitHub raw fetch)"]
+    O --> P["Step 11: Verify via iru-gate-runner\n(./gradlew --offline help,\n:lib:assembleDebug)"]
+    P --> Q["Step 12: Report resolved inputs,\nincluded/omitted blocks, versions,\nfiles written, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None directly by `Skill()` call — `iru-setup-android-library` is a leaf skill with respect to other catalog
+skills; it does not call another skill.
+
+=== Invoked by
+
+* xref:skills/iru-setup-android-repository.adoc[] — Step 4 runs `iru-setup-android-library` (via
+  `iru-isolated-skill-executor`) when the `library` flavor is chosen, passing every pre-resolved identity and
+  shared-pipeline `args` key so this skill's own Step 2 questions are skipped.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 11 runs `./gradlew --offline help` then
+  `./gradlew :lib:assembleDebug` through this agent, so the caller gets a compact pass/fail summary instead of raw
+  Gradle output.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-android-library/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

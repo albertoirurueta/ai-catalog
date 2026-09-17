@@ -46,6 +46,13 @@ might be asked to run.
   group is marked parallelizable) to invoke `iru-java-springboot-code-one-task`, for the same reason as its
   Java/.NET siblings: that skill re-resolves the target module and the current code state from disk itself and hands
   back a self-contained summary, so isolating it keeps the caller's context flat however many tasks the bucket has.
+* xref:skills/iru-typescript-code-one-task-group.adoc[], xref:skills/iru-android-code-one-task-group.adoc[], and
+  xref:skills/iru-swift-code-one-task-group.adoc[] — Step 2, once per task in a bucket, to invoke the matching
+  `<key>-code-one-task` skill in a fresh context, concurrently when the bucket is marked parallelizable — the same
+  reason as their Java/.NET/Spring Boot siblings above.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, runs exactly one of the five stack orchestrators end to end, so
+  whichever orchestrator matches the detected project type starts its whole bootstrap run from a clean context
+  instead of carrying the front door's own interview transcript into it.
 * xref:skills/iru-setup-java-library-repository.adoc[] — Steps 3–8, once per each of the six bootstrap skills it
   orchestrates, since every one of them re-derives what it needs from the filesystem rather than from anything
   said earlier in the conversation.
@@ -54,6 +61,10 @@ might be asked to run.
   the orchestrator just wrote rather than anything from the interview transcript, and between them they expand
   large pom/compose/OpenTofu/workflow templates and run their own builds — all of which would otherwise
   accumulate in the orchestrator's context over a single bootstrap run.
+* xref:skills/iru-setup-typescript-repository.adoc[], xref:skills/iru-setup-android-repository.adoc[], and
+  xref:skills/iru-setup-swift-repository.adoc[] — each: one call per delegated sub-skill (scaffold, antora,
+  gitignore, workflows, changelog, readme), so every sub-skill's transcript stays out of the orchestrator's
+  context, the same pattern `iru-setup-java-library-repository` and `iru-setup-java-springboot` already use.
 
 == Why this one specifically
 

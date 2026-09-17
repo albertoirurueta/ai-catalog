@@ -133,7 +133,13 @@ error-prone than it needs to be. In practice:
    elegance, because a person (or an orchestrator skill) reads several of them together.
 3. **Iterate by running it**, not just by reading it. Invoke the draft skill/agent against a real, low-stakes
    case and fix whatever it gets wrong or asks about that it shouldn't have to — a skill's instructions are
-   only as good as what actually happens when an agent follows them literally.
+   only as good as what actually happens when an agent follows them literally. For a skill that embeds file
+   templates (a scaffold, a CI workflow, a `.gitignore`), "running it" means exercising those templates
+   against the real tooling in a throwaway directory *outside* the repository
+   (`$TMPDIR/iru-verify/<stack>/<skill>/`), folding whatever quirks surface back into the `SKILL.md`, never
+   deleting anything inside the repository to do it, and reporting whatever couldn't be verified locally
+   rather than assuming it works — see
+   xref:guides/extending-the-catalog.adoc#adding-a-project-type[Adding a project type].
 4. Once it's right, if this repository documents its own catalog (as this one does via
    `iru-generate-skill-docs`), re-run that skill so the reference table, dependency graph, and the
    new skill/agent's own detail page pick it up — don't hand-maintain that documentation separately.

@@ -21,7 +21,7 @@ Before implementing anything, collect the set of type(s) every task in this buck
 each task's own description). Capture a single pre-change quality baseline covering all of them by delegating to
 the `iru-gate-runner` agent rather than running `iru-dotnet-code-quality` directly: `Agent({description: "Capture
 pre-change quality baseline for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
-\"dotnet-code-quality\", args: \"<TypeName1,TypeName2,...>\"}), then report back only the list of issues found for
+\"iru-dotnet-code-quality\", args: \"<TypeName1,TypeName2,...>\"}), then report back only the list of issues found for
 these types."})`. `iru-gate-runner` runs in its own separate context and reports back just the issue list, keeping
 unneeded report content out of the main context window. Record the returned issues as this bucket's pre-change
 baseline — an empty baseline if every file is new. This is what Step 4's quality check compares against, so it
@@ -40,7 +40,7 @@ writes/updates its tests, nothing more (license headers, doc comments, and all v
   Agent({
     description: "Implement <task N> via dotnet-code-one-task",
     subagent_type: "iru-isolated-skill-executor",
-    prompt: "Invoke Skill({skill: \"dotnet-code-one-task\", args: \"<the task's full text, including its exact
+    prompt: "Invoke Skill({skill: \"iru-dotnet-code-one-task\", args: \"<the task's full text, including its exact
       implementation_plan.md checkbox line(s) for itself and its sub-tasks, its sub-tasks' own text, and any
       relevant Current code state context>\"}). Report back: the files touched, the tests added/updated, and
       whether the task stopped on a blocker instead of finishing.",
@@ -71,20 +71,20 @@ not once per task:
 
 1. **License headers**, for every file any task in the bucket added or modified, by delegating to `iru-gate-runner`:
    `Agent({description: "Add license headers for task group", subagent_type: "iru-gate-runner", prompt: "Invoke
-   Skill({skill: \"check-license\", args: \"<file1,file2,...>\"}) scoped to every file this bucket's tasks added
+   Skill({skill: \"iru-check-license\", args: \"<file1,file2,...>\"}) scoped to every file this bucket's tasks added
    or modified. Report back only which files were missing a header vs. fixed vs. already compliant, and — if no
    header convention existed anywhere in the repo — whether the user chose to skip or generate one."})`. If the
    user chose to skip header generation, respect that choice for the rest of this run. Skip this item if
    `iru-check-license` is unavailable in this repository.
 2. **XML doc comments**, for every type any task in the bucket added or modified, by delegating to `iru-gate-runner`:
    `Agent({description: "Update XML doc comments for task group", subagent_type: "iru-gate-runner", prompt: "Invoke
-   Skill({skill: \"dotnet-docfx\", args: \"<TypeName1,TypeName2,...>\"}) scoped to every type this bucket's tasks
+   Skill({skill: \"iru-dotnet-docfx\", args: \"<TypeName1,TypeName2,...>\"}) scoped to every type this bucket's tasks
    added or modified. Report back only whether doc comments were added/updated and for which members, and
    whether the DocFX build verification passed (or was skipped because `docfx` isn't installed)."})`. If it
    reports the build failed, fix the reported issues and re-invoke until it reports success or a clean skip. Skip
    this item if `iru-dotnet-docfx` is unavailable in this repository.
 3. **Scoped tests**, for every type affected across the bucket, by delegating to `iru-gate-runner`: `Agent({description:
-   "Run tests for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"dotnet-test\", args:
+   "Run tests for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-dotnet-test\", args:
    \"<comma/wildcard selector covering every test class affected by this bucket>\"}) (fall back to `dotnet test
    --filter \"FullyQualifiedName~<...>\"` directly if the dotnet-test skill is unavailable). If everything passes,
    report back only that all tests passed. If anything fails, report back only the failing test names, the
@@ -92,7 +92,7 @@ not once per task:
    trace back to (by file/class), fix that task's implementation and/or tests, and re-invoke this same check —
    repeat until it reports all tests passed. Don't move on with a red test.
 4. **Coverage**, for every changed/new class across the bucket, by delegating to `iru-gate-runner`: `Agent({description:
-   "Check coverage for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"dotnet-coverage\",
+   "Check coverage for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-dotnet-coverage\",
    args: \"<selector covering the bucket's affected tests, plus every target class this bucket changed or
    added>\"}) (fall back to `dotnet test --filter ... --collect:\"XPlat Code Coverage\"` and reading
    `coverage.cobertura.xml` if unavailable). Report back, per target class, its line coverage percentage and
@@ -105,7 +105,7 @@ not once per task:
    until it reports all tests passed.
 6. **Code quality**, for the same type set as Step 1, by delegating to `iru-gate-runner`: `Agent({description: "Check
    for new quality issues in task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
-   \"dotnet-code-quality\", args: \"<TypeName1,TypeName2,...>\"}). Compare the reported issues against this
+   \"iru-dotnet-code-quality\", args: \"<TypeName1,TypeName2,...>\"}). Compare the reported issues against this
    pre-change baseline: <baseline from Step 1>. Report back only the issues that are newly appearing (not present
    in the baseline)."})`. Any issue reported is a regression introduced by this bucket — trace it to the task
    that owns the affected type, fix it (then re-run Steps 3.3–3.5 to confirm the fix didn't break anything), and

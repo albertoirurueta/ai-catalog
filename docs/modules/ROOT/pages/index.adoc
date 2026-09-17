@@ -1,6 +1,6 @@
 = AI Catalog
-:description: AI Catalog is a collection of Claude Code Skills and agents — reusable playbooks for issue-to-PR, Java/.NET coding, Spring Boot services, and repository bootstrap.
-:keywords: claude code skills, claude code agents, ai catalog, slash commands, software engineering playbooks, issue to pr workflow, java development, spring boot service bootstrap, dotnet development, skill catalog
+:description: 102 Claude Code Skills and 3 agents for Java, Spring Boot, .NET, database, TypeScript/Node, Android, and Swift/Apple bootstrap, coding, and release.
+:keywords: claude code skills, claude code agents, ai catalog, java development, spring boot bootstrap, dotnet development, typescript development, android development, swift development, skill catalog
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -133,6 +133,46 @@ features, and where the underlying models genuinely differ.
 |===
 |Name |Group |Purpose |Detail page
 
+|`iru-android-bump-version`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Sets an Android/Gradle project's version across lib/app `build.gradle.kts` and optionally README/Antora mentions.
+|xref:skills/iru-android-bump-version.adoc[]
+
+|`iru-android-code-one-task`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Implements a single Android/Kotlin task, detecting the lib/app module and applying the bundled Kotlin conventions.
+|xref:skills/iru-android-code-one-task.adoc[]
+
+|`iru-android-code-one-task-group`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Implements one Android/Kotlin task bucket, then validates it once per module for license, KDoc, tests, coverage, quality.
+|xref:skills/iru-android-code-one-task-group.adoc[]
+
+|`iru-android-code-quality`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Runs Android Lint, Detekt, and ktlint on a module and reports every static-analysis issue by tool.
+|xref:skills/iru-android-code-quality.adoc[]
+
+|`iru-android-coverage`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Detects and runs a module's wired Android coverage path (Kover, AGP, or vendored JaCoCo CLI) and reports exact percentages.
+|xref:skills/iru-android-coverage.adoc[]
+
+|`iru-android-dokka`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Audits Kotlin classes/packages for KDoc completeness, generates missing KDoc, and verifies the Dokka build.
+|xref:skills/iru-android-dokka.adoc[]
+
+|`iru-android-generate-all-tests`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Brings a Kotlin/Android Gradle module's JVM unit test coverage to 80% per class via generated/extended tests.
+|xref:skills/iru-android-generate-all-tests.adoc[]
+
+|`iru-android-test`
+|xref:index.adoc#group-android[Android Development Tooling]
+|Runs an Android project's JUnit 4 unit tests via AGP's `testDebugUnitTest`, scoped by class/method/pattern/module.
+|xref:skills/iru-android-test.adoc[]
+
 |`iru-build-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Build the existing Antora documentation site as-is, scaffolding it first via `iru-setup-antora` if needed.
@@ -215,7 +255,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-explore`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket.
+|Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket, reporting a normalized `Project type:` line for downstream bootstrap tooling.
 |xref:skills/iru-explore.adoc[]
 
 |`iru-generate-skill-docs`
@@ -227,6 +267,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |End-to-end kickoff for a tracked ticket: branch, explore, plan, implement, open PR, review.
 |xref:skills/iru-issue.adoc[]
+
+|`iru-java-bump-version`
+|xref:index.adoc#group-java[Java Development Tooling]
+|Sets a Maven project's version to an exact value in `pom.xml`, single-module or reactor-wide, with optional README/Antora sync.
+|xref:skills/iru-java-bump-version.adoc[]
 
 |`iru-java-code-one-task`
 |xref:index.adoc#group-java[Java Development Tooling]
@@ -335,22 +380,62 @@ features, and where the underlying models genuinely differ.
 
 |`iru-release`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
-|Cut a release branch, bump versions, draft release notes/changelog, and open the release PR.
+|Ecosystem-agnostic release: detects Java/TypeScript/Android/Swift and delegates the version bump to the matching `iru-<key>-bump-version` skill, then drafts release notes/changelog and opens the release PR.
 |xref:skills/iru-release.adoc[]
+
+|`iru-setup-android-app`
+|xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+|Scaffolds a Gradle Kotlin DSL Android application module with signing, Compose/Views UI, Sonar, and distribution wiring.
+|xref:skills/iru-setup-android-app.adoc[]
+
+|`iru-setup-android-github-workflows`
+|xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+|Scaffolds gitflow/main-only CI/CD and security GitHub Actions workflows for an Android/Gradle library or app repo.
+|xref:skills/iru-setup-android-github-workflows.adoc[]
+
+|`iru-setup-android-gitignore`
+|xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+|Creates or gap-fills root and per-module `.gitignore` files for an Android Gradle project.
+|xref:skills/iru-setup-android-gitignore.adoc[]
+
+|`iru-setup-android-library`
+|xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+|Scaffolds a Gradle/Kotlin Android library repository (wrapper, lib module, Compose app sample) from a house template.
+|xref:skills/iru-setup-android-library.adoc[]
+
+|`iru-setup-android-repository`
+|xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+|Orchestrates an Android/Gradle repository's flavor scaffold, Antora docs, gitignore, CI workflows, changelog, and README.
+|xref:skills/iru-setup-android-repository.adoc[]
+
+|`iru-setup-angular-web`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds an Angular app via `ng new`, then adds Vitest coverage, ESLint, Prettier, Stylelint, Playwright, Compodoc, and Sonar.
+|xref:skills/iru-setup-angular-web.adoc[]
 
 |`iru-setup-antora`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
 |xref:skills/iru-setup-antora.adoc[]
 
+|`iru-setup-apple-app`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Scaffolds a native Apple app's XcodeGen/Tuist manifest, SwiftPM Core package, test targets, and Fastlane/Sonar config.
+|xref:skills/iru-setup-apple-app.adoc[]
+
 |`iru-setup-changelog`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |One-time bootstrap of `CHANGELOG.md`, backfilled from git tags/GitHub Releases.
 |xref:skills/iru-setup-changelog.adoc[]
 
+|`iru-setup-ionic-app`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds a new Ionic Angular/React app via the Ionic CLI, then adds Vitest, ESLint/Prettier, Playwright, Maestro, and Sonar.
+|xref:skills/iru-setup-ionic-app.adoc[]
+
 |`iru-setup-java-github-workflows`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Scaffold/update the `develop.yml`/`main.yml`/`sync.yml` GitHub Actions CI/CD pipeline.
+|Scaffolds/updates the `develop.yml`/`main.yml`/`sync.yml`/`security.yml` GitHub Actions CI/CD pipeline, including the shared Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks security block, gated by open-source/publish/sonar args.
 |xref:skills/iru-setup-java-github-workflows.adoc[]
 
 |`iru-setup-java-gitignore`
@@ -360,17 +445,17 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-library`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Generate `pom.xml` and the standard Maven source layout for a new Java library.
+|Generates `pom.xml` and the standard Maven source layout for a new Java library, gated by open-source/publish/sonar args.
 |xref:skills/iru-setup-java-library.adoc[]
 
 |`iru-setup-java-library-repository`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Orchestrator: bootstrap a brand-new Java library repository end to end in one pass.
+|Orchestrator: bootstraps a brand-new Java library repository end to end in one pass, gated by open-source/publish/sonar args.
 |xref:skills/iru-setup-java-library-repository.adoc[]
 
 |`iru-setup-java-springboot`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Orchestrator: bootstrap a brand-new hexagonal Spring Boot service repository end to end in one pass.
+|Orchestrator: bootstraps a brand-new hexagonal Spring Boot service repository end to end in one pass, with an optional Hilla frontend and Sonar/open-source args.
 |xref:skills/iru-setup-java-springboot.adoc[]
 
 |`iru-setup-java-springboot-apis`
@@ -382,6 +467,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 |Scaffold the `build.yml`/`deploy.yml`/`undeploy.yml` workflows, with keyless OIDC cloud authentication.
 |xref:skills/iru-setup-java-springboot-github-workflows.adoc[]
+
+|`iru-setup-java-springboot-hilla`
+|xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+|Scaffolds a Hilla React frontend into a Spring Boot reactor's web module with Vitest, ESLint, and Sonar wiring.
+|xref:skills/iru-setup-java-springboot-hilla.adoc[]
 
 |`iru-setup-java-springboot-modules`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -403,10 +493,145 @@ features, and where the underlying models genuinely differ.
 |Write one `compose.yaml` and the Testcontainers harness that launches it, shared by local runs and CI.
 |xref:skills/iru-setup-java-springboot-testcontainers.adoc[]
 
+|`iru-setup-react-native-app`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds a new Expo-managed React Native app with Jest, ESLint/Prettier, EAS profiles, Maestro, and Sonar.
+|xref:skills/iru-setup-react-native-app.adoc[]
+
+|`iru-setup-react-web`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds a React + Vite + TypeScript web app with Vitest, ESLint/Oxlint, Prettier, Stylelint, Playwright, and Storybook.
+|xref:skills/iru-setup-react-web.adoc[]
+
 |`iru-setup-readme`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Create or refresh the root `README.md` from what actually exists in the repository.
 |xref:skills/iru-setup-readme.adoc[]
+
+|`iru-setup-repository`
+|xref:index.adoc#group-bootstrap[Repository Bootstrap]
+|Catalog-wide bootstrap front door: detects/asks a repository's project type and delegates to one of five stack orchestrators.
+|xref:skills/iru-setup-repository.adoc[]
+
+|`iru-setup-swift-github-workflows`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Scaffolds `build.yml`, `release.yml`, `sync.yml`, `security.yml`, and `dependabot.yml` for the Swift/Apple CI/CD pipeline.
+|xref:skills/iru-setup-swift-github-workflows.adoc[]
+
+|`iru-setup-swift-gitignore`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Creates or refreshes a Swift/Xcode project's root `.gitignore`, showing a diff before overwriting an existing one.
+|xref:skills/iru-setup-swift-gitignore.adoc[]
+
+|`iru-setup-swift-library`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Scaffolds a SwiftPM library's `Package.swift`, source/test layout, SwiftLint, formatter, DocC, and Sonar config.
+|xref:skills/iru-setup-swift-library.adoc[]
+
+|`iru-setup-swift-repository`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Bootstraps a Swift package or Apple app repository end to end: scaffold, docs, gitignore, CI, changelog, README.
+|xref:skills/iru-setup-swift-repository.adoc[]
+
+|`iru-setup-typescript-github-workflows`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds build/release/sync/security GitHub Actions workflows for an npm/TypeScript repo across five flavors.
+|xref:skills/iru-setup-typescript-github-workflows.adoc[]
+
+|`iru-setup-typescript-gitignore`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Creates or refreshes a TypeScript/npm project's `.gitignore` with framework- and tooling-specific entries, diffing before overwrite.
+|xref:skills/iru-setup-typescript-gitignore.adoc[]
+
+|`iru-setup-typescript-library`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds `package.json`, tsconfig, Vitest, ESLint, TypeDoc, and a src/test skeleton for a new npm/TypeScript library.
+|xref:skills/iru-setup-typescript-library.adoc[]
+
+|`iru-setup-typescript-repository`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Bootstraps an npm/TypeScript repository (library, React, Angular, React Native, or Ionic) end to end in one pass.
+|xref:skills/iru-setup-typescript-repository.adoc[]
+
+|`iru-swift-bump-version`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Sets a SwiftPM library's `version.txt`/CHANGELOG/README or an Apple app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`.
+|xref:skills/iru-swift-bump-version.adoc[]
+
+|`iru-swift-code-one-task`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Implements a single Swift task from an implementation plan, detecting package-vs-app shape and target.
+|xref:skills/iru-swift-code-one-task.adoc[]
+
+|`iru-swift-code-one-task-group`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Implements one Swift task-group bucket end to end, validating license, DocC, tests, coverage, and quality once, with simulator-lock serialization.
+|xref:skills/iru-swift-code-one-task-group.adoc[]
+
+|`iru-swift-code-quality`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Runs SwiftLint, the wired Swift formatter, and Periphery, and reports issues grouped by tool and rule id.
+|xref:skills/iru-swift-code-quality.adoc[]
+
+|`iru-swift-coverage`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Reports exact Swift line/function coverage via `llvm-cov` (SwiftPM) or `xccov` (Xcode); branch coverage is not available.
+|xref:skills/iru-swift-coverage.adoc[]
+
+|`iru-swift-docc`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Audits Swift declarations and DocC catalogs for missing documentation, generates it, and verifies the doc build.
+|xref:skills/iru-swift-docc.adoc[]
+
+|`iru-swift-generate-all-tests`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Brings a Swift codebase's test coverage to 80% by generating or extending Swift Testing/XCTest tests per type.
+|xref:skills/iru-swift-generate-all-tests.adoc[]
+
+|`iru-swift-test`
+|xref:index.adoc#group-swift[Swift Development Tooling]
+|Runs a Swift project's tests via `swift test --filter` (package) or `xcodebuild -only-testing` (app), scoped to a selector.
+|xref:skills/iru-swift-test.adoc[]
+
+|`iru-typescript-bump-version`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Sets an npm/TypeScript project's version to an exact value across `package.json` and its lockfile.
+|xref:skills/iru-typescript-bump-version.adoc[]
+
+|`iru-typescript-code-one-task`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one TypeScript task, routing to the detected framework's reference file before checking off its box.
+|xref:skills/iru-typescript-code-one-task.adoc[]
+
+|`iru-typescript-code-one-task-group`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one TypeScript task-group bucket end to end, then validates it once (license, TSDoc, tests, coverage, quality).
+|xref:skills/iru-typescript-code-one-task-group.adoc[]
+
+|`iru-typescript-code-quality`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Runs ESLint, `tsc`, Prettier, and Stylelint/Oxlint when configured, reporting every issue by tool and rule id.
+|xref:skills/iru-typescript-code-quality.adoc[]
+
+|`iru-typescript-coverage`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Runs Vitest/Jest/Angular test coverage and reports exact line/branch percentages and uncovered line ranges.
+|xref:skills/iru-typescript-coverage.adoc[]
+
+|`iru-typescript-generate-all-tests`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Brings a TypeScript codebase's unit test coverage to 80% by generating or extending tests file by file.
+|xref:skills/iru-typescript-generate-all-tests.adoc[]
+
+|`iru-typescript-test`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Runs a TypeScript project's unit tests via Vitest, Jest, or `ng test`, scoped by file, directory, or name pattern.
+|xref:skills/iru-typescript-test.adoc[]
+
+|`iru-typescript-tsdoc`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Audits TypeScript files for TSDoc completeness, fills gaps, and verifies the build with TypeDoc or Compodoc.
+|xref:skills/iru-typescript-tsdoc.adoc[]
 
 |`iru-update-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
@@ -434,7 +659,7 @@ file of their own and are instead described together in xref:agents/overview.ado
 |xref:agents/iru-change-summarizer.adoc[]
 
 |`iru-gate-runner`
-|Run a single verification/quality-gate skill and report back only a compact summary, optionally vs. a baseline.
+|Run a single verification/quality-gate skill spanning Java, .NET, TypeScript, Android, and Swift, and report back only a compact summary, optionally vs. a baseline.
 |xref:agents/iru-gate-runner.adoc[]
 
 |`iru-isolated-skill-executor`
@@ -453,11 +678,23 @@ library starts out matching the same conventions as every other repository in th
 [TIP]
 ====
 Reach for this group when standing up a **brand-new repository** — a one-time pass, not something you'd run
-again once the repository already exists. `iru-setup-java-library-repository` is the single entry point that
-runs the rest in order; each one also works standalone to fill a single gap in a repository that already has
-some of this in place (e.g. just `/iru-setup-antora` to add docs to a repository that already has a `pom.xml`).
+again once the repository already exists. `iru-setup-repository` is the catalog-wide front door: it detects a
+non-empty repository (via `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the
+project type over three `AskUserQuestion` rounds (Backend/JVM, Mobile/native, Web/Node), asks the shared
+`open-source`/`publish`-or-`distribution`/`sonar` inputs once, and delegates to exactly one matching stack
+orchestrator — `iru-setup-java-library-repository`, `iru-setup-java-springboot`,
+xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
+xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`], or
+xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. On an
+existing repository it forces `mode: existing` so that orchestrator takes its gap-fill/update path instead of
+assuming a brand-new repo. `iru-setup-java-library-repository`, the Java library orchestrator below, also runs
+standalone and runs the rest of this group in order; each member also works standalone to fill a single gap in a
+repository that already has some of this in place (e.g. just `/iru-setup-antora` to add docs to a repository that
+already has a `pom.xml`).
 ====
 
+* xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] — catalog-wide front door: detects/asks a
+  repository's project type and delegates to one of five stack orchestrators.
 * xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
   a brand-new Java library repository end to end in one pass.
 * xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
@@ -487,7 +724,9 @@ container image, deployed to a cloud with OpenTofu, and can be torn down again.
 `iru-setup-java-springboot` is the single entry point and the only member that asks the user anything: it
 interviews once, writes the answers to a `springboot-stack.yml` manifest, and every other member reads that
 manifest back. Each also runs standalone against an existing service to fill one gap — adding a database
-adapter, a new API contract, or another deployment environment.
+adapter, a new API contract, or another deployment environment. When the manifest records `frontend: hilla`,
+the orchestrator also runs `iru-setup-java-springboot-hilla` to scaffold a Hilla React frontend into the
+reactor's web module.
 ====
 
 The architecture this group imposes is deliberately not configurable. Dependencies point inward only —
@@ -507,6 +746,9 @@ the root `pom.xml` and nowhere else, and Java 21 is the enforced minimum.
 * xref:skills/iru-setup-java-springboot-apis.adoc[`iru-setup-java-springboot-apis`] — sets up the `apis/`
   contract tree and the OpenAPI/protobuf/GraphQL/AVRO code generators plus the AsyncAPI documentation generators,
   including all of their HTML documentation.
+* xref:skills/iru-setup-java-springboot-hilla.adoc[`iru-setup-java-springboot-hilla`] — scaffolds a Hilla React
+  frontend into the reactor's web module (Vitest, ESLint, Sonar wiring), run only when the manifest records
+  `frontend: hilla`.
 * xref:skills/iru-setup-java-springboot-testcontainers.adoc[`iru-setup-java-springboot-testcontainers`] — writes
   one `compose.yaml` and the Testcontainers harness that launches it, so local runs and CI cannot drift apart.
 * xref:skills/iru-setup-java-springboot-platform.adoc[`iru-setup-java-springboot-platform`] — generates the
@@ -517,6 +759,103 @@ the root `pom.xml` and nowhere else, and Java 21 is the enforced minimum.
   and then keeps current the service's own documentation pages. Unlike the rest of this group, it is meant to be
   re-run continuously, in the same spirit as
   xref:skills/iru-update-docs.adoc[`iru-update-docs`] in xref:index.adoc#group-maintenance[Repository Maintenance].
+
+[[group-typescript-bootstrap]]
+=== TypeScript/Node Bootstrap
+
+Scaffolding a brand-new npm/TypeScript repository end to end — library or one of four app flavors (React,
+Angular, React Native, Ionic) — so it starts out matching this catalog's conventions the same way a new Java
+library does.
+
+[TIP]
+====
+`iru-setup-typescript-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape every stack
+orchestrator in this catalog follows: scaffold (whichever of `iru-setup-typescript-library`,
+`iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, or `iru-setup-ionic-app` matches
+the chosen flavor) → `iru-setup-antora` → `iru-setup-typescript-gitignore` →
+`iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`. It accepts the same
+shared `args` vocabulary as every other orchestrator — `open-source: yes|no`, `publish: yes|no`,
+`sonar: cloud|self-hosted|none`, and `mode: new|existing` — so a value collected once upstream never needs
+re-asking. Each flavor skill and each of the shared skills also runs standalone against an existing
+repository to fill a single gap.
+====
+
+* xref:skills/iru-setup-typescript-repository.adoc[`iru-setup-typescript-repository`] — orchestrator: bootstraps
+  an npm/TypeScript repository (library, React, Angular, React Native, or Ionic) end to end in one pass.
+* xref:skills/iru-setup-typescript-library.adoc[`iru-setup-typescript-library`] — scaffolds `package.json`,
+  tsconfig, Vitest, ESLint, TypeDoc, and a src/test skeleton for a new npm/TypeScript library.
+* xref:skills/iru-setup-react-web.adoc[`iru-setup-react-web`] — scaffolds a React + Vite + TypeScript web app
+  with Vitest, ESLint/Oxlint, Prettier, Stylelint, Playwright, and Storybook.
+* xref:skills/iru-setup-angular-web.adoc[`iru-setup-angular-web`] — scaffolds an Angular app via `ng new`, then
+  adds Vitest coverage, ESLint, Prettier, Stylelint, Playwright, Compodoc, and Sonar.
+* xref:skills/iru-setup-react-native-app.adoc[`iru-setup-react-native-app`] — scaffolds a new Expo-managed React
+  Native app with Jest, ESLint/Prettier, EAS profiles, Maestro, and Sonar.
+* xref:skills/iru-setup-ionic-app.adoc[`iru-setup-ionic-app`] — scaffolds a new Ionic Angular/React app via the
+  Ionic CLI, then adds Vitest, ESLint/Prettier, Playwright, Maestro, and Sonar.
+* xref:skills/iru-setup-typescript-github-workflows.adoc[`iru-setup-typescript-github-workflows`] —
+  scaffolds build/release/sync/security GitHub Actions workflows across all five flavors.
+* xref:skills/iru-setup-typescript-gitignore.adoc[`iru-setup-typescript-gitignore`] — creates or refreshes the
+  root `.gitignore`, diffing before overwrite.
+
+[[group-android-bootstrap]]
+=== Android Bootstrap
+
+Scaffolding a brand-new Android/Gradle repository end to end — library or application — matching the house
+pattern this catalog's Android skills are genericized from
+(https://github.com/albertoirurueta/irurueta-android-glutils).
+
+[TIP]
+====
+`iru-setup-android-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape: scaffold
+(`iru-setup-android-library` or `iru-setup-android-app`, depending on flavor) → `iru-setup-antora` →
+`iru-setup-android-gitignore` → `iru-setup-android-github-workflows` → `iru-setup-changelog` →
+`iru-setup-readme`. It accepts the same shared `args` vocabulary as every other orchestrator —
+`open-source: yes|no`, `publish: yes|no` (library) or `distribution: none|internal|store` (app),
+`sonar: cloud|self-hosted|none`, and `mode: new|existing`. Each member also runs standalone against an
+existing repository to fill a single gap.
+====
+
+* xref:skills/iru-setup-android-repository.adoc[`iru-setup-android-repository`] — orchestrates an Android/Gradle
+  repository's flavor scaffold, Antora docs, gitignore, CI workflows, changelog, and README.
+* xref:skills/iru-setup-android-library.adoc[`iru-setup-android-library`] — scaffolds a Gradle/Kotlin Android
+  library repository (wrapper, lib module, Compose app sample) from the house template.
+* xref:skills/iru-setup-android-app.adoc[`iru-setup-android-app`] — scaffolds a Gradle Kotlin DSL Android
+  application module with signing, Compose/Views UI, Sonar, and distribution wiring.
+* xref:skills/iru-setup-android-github-workflows.adoc[`iru-setup-android-github-workflows`] — scaffolds
+  gitflow/main-only CI/CD and security GitHub Actions workflows for a library or app repo.
+* xref:skills/iru-setup-android-gitignore.adoc[`iru-setup-android-gitignore`] — creates or gap-fills root and
+  per-module `.gitignore` files.
+
+[[group-swift-bootstrap]]
+=== Swift/Apple Bootstrap
+
+Scaffolding a brand-new Swift repository end to end — a SwiftPM library or a native Apple app — matching this
+catalog's conventions from the first commit.
+
+[TIP]
+====
+`iru-setup-swift-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape: scaffold
+(`iru-setup-swift-library` or `iru-setup-apple-app`, depending on flavor) → `iru-setup-antora` →
+`iru-setup-swift-gitignore` → `iru-setup-swift-github-workflows` → `iru-setup-changelog` →
+`iru-setup-readme`. It accepts the same shared `args` vocabulary as every other orchestrator —
+`open-source: yes|no`, `publish: yes|no` (library) or `distribution: none|internal|store` (app),
+`sonar: cloud|self-hosted|none`, and `mode: new|existing`. Each member also runs standalone against an
+existing repository to fill a single gap.
+====
+
+* xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`] — bootstraps a Swift package or
+  Apple app repository end to end: scaffold, docs, gitignore, CI, changelog, README.
+* xref:skills/iru-setup-swift-library.adoc[`iru-setup-swift-library`] — scaffolds a SwiftPM library's
+  `Package.swift`, source/test layout, SwiftLint, formatter, DocC, and Sonar config.
+* xref:skills/iru-setup-apple-app.adoc[`iru-setup-apple-app`] — scaffolds a native Apple app's XcodeGen/Tuist
+  manifest, SwiftPM Core package, test targets, and Fastlane/Sonar config.
+* xref:skills/iru-setup-swift-github-workflows.adoc[`iru-setup-swift-github-workflows`] — scaffolds
+  `build.yml`, `release.yml`, `sync.yml`, `security.yml`, and `dependabot.yml` for the CI/CD pipeline.
+* xref:skills/iru-setup-swift-gitignore.adoc[`iru-setup-swift-gitignore`] — creates or refreshes the root
+  `.gitignore`, showing a diff before overwriting an existing one.
 
 [[group-intake]]
 === Ticket Intake
@@ -558,15 +897,17 @@ time. `iru-issue` is the single entry point for the full pipeline; `iru-explore`
 individually (`/iru-explore`, `/iru-plan`) ahead of, or instead of, the full `/iru-issue` flow. `iru-code` itself doesn't
 implement anything directly — it dispatches each of `iru-plan`'s dependency-aware task groups, in order, to
 `iru-code-one-task-group`, which resolves each task's language and delegates to whichever
-xref:index.adoc#group-java[Java], xref:index.adoc#group-dotnet[.NET], or xref:index.adoc#group-database[
-Database] Development Tooling group skill matches, and brackets the whole run with quality and security
-baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
+xref:index.adoc#group-java[Java], xref:index.adoc#group-dotnet[.NET], xref:index.adoc#group-typescript[
+TypeScript], xref:index.adoc#group-android[Android], xref:index.adoc#group-swift[Swift], or
+xref:index.adoc#group-database[Database] Development Tooling group skill matches, and brackets the whole run
+with quality and security baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
 ====
 
 * xref:skills/iru-issue.adoc[`iru-issue`] — orchestrator: branch, explore, plan, implement, open PR, review — for a
   tracked ticket.
 * xref:skills/iru-explore.adoc[`iru-explore`] — read-only research pass over the codebase, optionally grounded in a
-  GitHub issue or Jira ticket.
+  GitHub issue or Jira ticket, reporting a normalized `Project type:` line other skills (like
+  xref:index.adoc#group-bootstrap[`iru-setup-repository`]) can key off.
 * xref:skills/iru-plan.adoc[`iru-plan`] — writes a concrete, reviewable `implementation_plan.md`, grouping tasks by
   dependency and tagging each with the language/framework key a downstream `<key>-code-one-task-group` skill
   should handle it with.
@@ -576,6 +917,9 @@ baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
   task's language and dispatching to its matching `<key>-code-one-task-group` skill (e.g.
   xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
   xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
+  xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
+  xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
+  xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`],
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`]) — or a best-effort direct
   implementation if none matches.
 
@@ -617,6 +961,125 @@ of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development 
   whole codebase in one pass.
 * xref:skills/iru-java-javadoc.adoc[`iru-java-javadoc`] — audits and completes Javadoc coverage for given classes,
   then verifies it builds cleanly.
+* xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`] — sets a Maven project's version to an exact
+  value in `pom.xml`, single-module or reactor-wide, with optional README/Antora sync; called by
+  xref:skills/iru-release.adoc[`iru-release`] when the detected ecosystem is Java/Maven.
+
+[[group-typescript]]
+=== TypeScript Development Tooling
+
+The TypeScript/npm counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing a single
+plan task end to end (routed to the detected framework's reference file, whether plain TypeScript, React,
+Angular, React Native, or Ionic), plus the equivalent point-in-time checks (tests, coverage, lint, TSDoc) and a
+version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every task-group bucket
+tagged `typescript` to `iru-typescript-code-one-task-group`, which captures one quality baseline for the
+bucket, runs `iru-typescript-code-one-task` once per task (in parallel when the group allows it), then
+validates the whole bucket once via the test/coverage/quality/doc skills below. Reach for those directly any
+time while iterating day to day; `iru-code` rarely needs them invoked directly during the
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
+====
+
+* xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`] — implements a bucket
+  of TypeScript tasks (in parallel where safe) and validates the whole bucket once: license headers, TSDoc,
+  tests, coverage, and a quality regression check.
+* xref:skills/iru-typescript-code-one-task.adoc[`iru-typescript-code-one-task`] — implements a single task's code
+  and tests only, routing to the detected framework's reference file; called once per task by
+  `iru-typescript-code-one-task-group`.
+* xref:skills/iru-typescript-test.adoc[`iru-typescript-test`] — runs the unit test suite via Vitest, Jest, or
+  `ng test`, scoped by file, directory, or name pattern.
+* xref:skills/iru-typescript-coverage.adoc[`iru-typescript-coverage`] — runs Vitest/Jest/Angular coverage and
+  reports the exact measured line/branch percentages and uncovered line ranges.
+* xref:skills/iru-typescript-code-quality.adoc[`iru-typescript-code-quality`] — runs ESLint, `tsc`, Prettier, and
+  Stylelint/Oxlint when configured, reporting every issue by tool and rule id.
+* xref:skills/iru-typescript-tsdoc.adoc[`iru-typescript-tsdoc`] — audits TypeScript files for TSDoc completeness,
+  fills gaps, and verifies the build with TypeDoc or Compodoc.
+* xref:skills/iru-typescript-generate-all-tests.adoc[`iru-typescript-generate-all-tests`] — finds every file with
+  no tests or under 80% coverage (via `iru-typescript-coverage`) and generates/extends tests until it clears
+  the bar, across the whole codebase in one pass.
+* xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`] — sets an npm/TypeScript project's
+  version to an exact value across `package.json` and its lockfile; called by `iru-release` when the detected
+  ecosystem is TypeScript/npm.
+
+[[group-android]]
+=== Android Development Tooling
+
+The Android/Kotlin counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing a single
+plan task end to end against the detected lib/app module, plus the equivalent point-in-time checks (tests,
+coverage, lint/Detekt/ktlint, KDoc/Dokka) and a version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every task-group bucket
+tagged `android` to `iru-android-code-one-task-group`, which captures one quality baseline per module, runs
+`iru-android-code-one-task` once per task (in parallel when the group allows it), then validates the whole
+bucket once via the test/coverage/quality/doc skills below. Reach for those directly any time while iterating
+day to day; `iru-code` rarely needs them invoked directly during the
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
+====
+
+* xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`] — implements a bucket of
+  Android/Kotlin tasks (in parallel where safe) and validates the whole bucket once per module: license
+  headers, KDoc, tests, coverage, and a quality regression check.
+* xref:skills/iru-android-code-one-task.adoc[`iru-android-code-one-task`] — implements a single task's code and
+  tests only, detecting the lib/app module and applying the bundled Kotlin conventions; called once per task by
+  `iru-android-code-one-task-group`.
+* xref:skills/iru-android-test.adoc[`iru-android-test`] — runs the JUnit 4 unit test suite via AGP's
+  `testDebugUnitTest`, scoped by class/method/pattern/module.
+* xref:skills/iru-android-coverage.adoc[`iru-android-coverage`] — detects and runs a module's wired coverage
+  path (Kover, AGP, or vendored JaCoCo CLI) and reports the exact measured percentage.
+* xref:skills/iru-android-code-quality.adoc[`iru-android-code-quality`] — runs Android Lint, Detekt, and ktlint
+  on a module and reports every static-analysis issue by tool.
+* xref:skills/iru-android-dokka.adoc[`iru-android-dokka`] — audits Kotlin classes/packages for KDoc
+  completeness, generates missing KDoc, and verifies the Dokka build.
+* xref:skills/iru-android-generate-all-tests.adoc[`iru-android-generate-all-tests`] — finds every class with no
+  tests or under 80% coverage (via `iru-android-coverage`) and generates/extends tests per class until it
+  clears the bar, across the whole module in one pass.
+* xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`] — sets an Android/Gradle project's
+  version across lib/app `build.gradle.kts` and optionally README/Antora mentions; called by `iru-release` when
+  the detected ecosystem is Android/Gradle.
+
+[[group-swift]]
+=== Swift Development Tooling
+
+The Swift/Apple counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing a single
+plan task end to end against the detected package-vs-app shape and target, plus the equivalent point-in-time
+checks (tests, coverage, lint, DocC) and a version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every task-group bucket
+tagged `swift` to `iru-swift-code-one-task-group`, which captures one quality baseline for the bucket, runs
+`iru-swift-code-one-task` once per task (via a sub-agent when the group allows parallel work, directly
+otherwise — Xcode/Simulator state forces serialization of anything that touches it), then validates the whole
+bucket once via the test/coverage/quality/doc skills below. Reach for those directly any time while iterating
+day to day; `iru-code` rarely needs them invoked directly during the
+xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
+====
+
+* xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`] — implements a bucket of Swift
+  tasks and validates the whole bucket once: license headers, DocC, tests, coverage, and a quality regression
+  check, with simulator-lock serialization.
+* xref:skills/iru-swift-code-one-task.adoc[`iru-swift-code-one-task`] — implements a single task's code and
+  tests only, detecting package-vs-app shape and target; called once per task by
+  `iru-swift-code-one-task-group`.
+* xref:skills/iru-swift-test.adoc[`iru-swift-test`] — runs the test suite via `swift test --filter` (package) or
+  `xcodebuild -only-testing` (app), scoped to a selector.
+* xref:skills/iru-swift-coverage.adoc[`iru-swift-coverage`] — reports the exact measured line/function coverage
+  via `llvm-cov` (SwiftPM) or `xccov` (Xcode); branch coverage is not available.
+* xref:skills/iru-swift-code-quality.adoc[`iru-swift-code-quality`] — runs SwiftLint, the wired Swift formatter,
+  and Periphery, and reports issues grouped by tool and rule id.
+* xref:skills/iru-swift-docc.adoc[`iru-swift-docc`] — audits Swift declarations and DocC catalogs for missing
+  documentation, generates it, and verifies the doc build.
+* xref:skills/iru-swift-generate-all-tests.adoc[`iru-swift-generate-all-tests`] — finds every type with no tests
+  or under 80% coverage (via `iru-swift-coverage`) and generates/extends Swift Testing/XCTest tests per type,
+  across the whole codebase in one pass.
+* xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`] — sets a SwiftPM library's
+  `version.txt`/CHANGELOG/README or an Apple app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`; called by
+  `iru-release` when the detected ecosystem is Swift/Apple.
 
 [[group-springboot]]
 === Spring Boot Development Tooling
@@ -840,15 +1303,27 @@ how agents differ from skills in how they're triggered.
 
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs a single verification/quality-gate skill and reports back
   only a compact summary, optionally diffed against a baseline. Used throughout `iru-code`, `iru-code-one-task-group`,
-  `iru-java-code-one-task-group`, and `iru-dotnet-code-one-task-group`.
+  `iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`,
+  `iru-android-code-one-task-group`, and `iru-swift-code-one-task-group`, plus the `generate-all-tests` skills for
+  every language and several of the TypeScript/Android/Swift bootstrap skills (verifying a scaffold actually
+  builds).
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs one named skill end to end in a
   fresh context so the caller can keep running afterward. Used by xref:skills/iru-issue.adoc[`iru-issue`] to delegate the
   entire `iru-code` run for a ticket, by xref:skills/iru-code.adoc[`iru-code`] itself to delegate each task group to
-  `iru-code-one-task-group`, by xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`] and
-  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`] to delegate each task in a bucket
-  to `iru-java-code-one-task`/`iru-dotnet-code-one-task`, and by
-  xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] to delegate each of the six
-  bootstrap skills it orchestrates.
+  `iru-code-one-task-group`, by the `java`/`dotnet`/`typescript`/`android`/`swift` `*-code-one-task-group` skills
+  (xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
+  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
+  xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
+  xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
+  xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`]) to delegate each task in a bucket
+  to its matching `<key>-code-one-task` skill, and by
+  xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] and every stack orchestrator
+  (xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`],
+  xref:skills/iru-setup-java-springboot.adoc[`iru-setup-java-springboot`],
+  xref:skills/iru-setup-typescript-repository.adoc[`iru-setup-typescript-repository`],
+  xref:skills/iru-setup-android-repository.adoc[`iru-setup-android-repository`],
+  xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`]) to delegate each of the bootstrap
+  skills it orchestrates.
 * xref:agents/iru-change-summarizer.adoc[`iru-change-summarizer`] — fans out over a git commit/tag range and returns
   only the user-facing changes. Used by xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] to summarize one
   release at a time when backfilling a long tag history, and by xref:skills/iru-release.adoc[`iru-release`] to summarize
@@ -864,6 +1339,7 @@ happens to be available in the current session.
 ....
 flowchart LR
     subgraph Bootstrap["Repository Bootstrap"]
+        SETREPO["iru-setup-repository"]
         SJLR["iru-setup-java-library-repository"]
         SJL["iru-setup-java-library"]
         AS["iru-setup-antora"]
@@ -878,10 +1354,38 @@ flowchart LR
         SBP["iru-setup-java-springboot-pom"]
         SBM["iru-setup-java-springboot-modules"]
         SBA["iru-setup-java-springboot-apis"]
+        SBH["iru-setup-java-springboot-hilla"]
         SBT["iru-setup-java-springboot-testcontainers"]
         SBPL["iru-setup-java-springboot-platform"]
         SBW["iru-setup-java-springboot-github-workflows"]
         SBD["iru-update-java-springboot-documentation"]
+    end
+
+    subgraph TSBoot["TypeScript/Node Bootstrap"]
+        TSR["iru-setup-typescript-repository"]
+        TSL["iru-setup-typescript-library"]
+        RW["iru-setup-react-web"]
+        AW["iru-setup-angular-web"]
+        RNA["iru-setup-react-native-app"]
+        ION["iru-setup-ionic-app"]
+        TSW["iru-setup-typescript-github-workflows"]
+        TSG["iru-setup-typescript-gitignore"]
+    end
+
+    subgraph AndBoot["Android Bootstrap"]
+        ANR["iru-setup-android-repository"]
+        ANL["iru-setup-android-library"]
+        ANA["iru-setup-android-app"]
+        ANW["iru-setup-android-github-workflows"]
+        ANG["iru-setup-android-gitignore"]
+    end
+
+    subgraph SwBoot["Swift/Apple Bootstrap"]
+        SWR["iru-setup-swift-repository"]
+        SWL["iru-setup-swift-library"]
+        APP["iru-setup-apple-app"]
+        SWW["iru-setup-swift-github-workflows"]
+        SWG["iru-setup-swift-gitignore"]
     end
 
     subgraph Intake["Ticket Intake"]
@@ -940,6 +1444,10 @@ flowchart LR
         BD["iru-build-docs"]
         CL["iru-check-license"]
         CSEC["iru-check-security"]
+        JBV["iru-java-bump-version"]
+        TBV["iru-typescript-bump-version"]
+        ABV["iru-android-bump-version"]
+        SWBV["iru-swift-bump-version"]
     end
 
     subgraph Tooling["Catalog Tooling"]
@@ -1039,7 +1547,10 @@ flowchart LR
     DGAT --> DC
     DGAT --> DT
 
-    REL --> SR
+    REL --> JBV
+    REL --> TBV
+    REL --> ABV
+    REL --> SWBV
     REL --> PRD
     UD -.->|only if no Antora module yet| AS
     BD -.->|only if no Antora module yet| AS
@@ -1207,17 +1718,20 @@ tickets, and any attached prior implementation plans for extra context.
 
 === Generating a release
 
-`iru-release` must be run from `develop` and drives the whole version bump itself, delegating only the README
-and PR description. See xref:guides/common-workflows.adoc#generating-a-release[] for a more detailed
-walkthrough.
+`iru-release` must be run from `develop`, is ecosystem-agnostic (Java/Maven, TypeScript/npm, Android/Gradle, or
+Swift/Apple), and delegates the actual version-file edit to that ecosystem's own installed
+xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`]/xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`]/
+xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]
+skill (called with `sync-files: yes`, which folds in refreshing `README.md`/`docs/antora.yml`/Antora dependency
+snippets), keeping only the release notes and PR description as its own work. See
+xref:guides/common-workflows.adoc#generating-a-release[] for a more detailed walkthrough.
 
 [mermaid]
 ....
 flowchart LR
-    A["/iru-release"] --> B["Pick release + next SNAPSHOT version"]
-    B --> C["Bump pom.xml, docs/antora.yml, Antora version snippets"]
-    C --> D["iru-setup-readme\n(refresh README.md)"]
-    D --> E["Write whats-new.adoc + CHANGELOG.md"]
+    A["/iru-release"] --> B["Pick release + next\npre-release version"]
+    B --> C["Bump version via matching\niru-&amp;lt;key&amp;gt;-bump-version skill\n(sync-files: yes refreshes README.md,\ndocs/antora.yml, Antora version snippets)"]
+    C --> E["Write whats-new.adoc + CHANGELOG.md"]
     E --> F["Commit, push release_x.y.z"]
     F --> G["iru-pr-description\n(fill in the release PR)"]
 ....

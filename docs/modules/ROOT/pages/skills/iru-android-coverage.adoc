@@ -1,0 +1,108 @@
+= Android Coverage
+:description: Detects the Android coverage path a module has wired (Kover, AGP, or vendored JaCoCo CLI), runs it, and reports exact line/branch coverage.
+:keywords: iru-android-coverage, claude code skill, kotlin, gradle, kover, jacoco, agp, code coverage report, unit testing
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run whichever unit-test coverage path an Android/Kotlin module actually has wired — preferring the Kover Gradle
+plugin, falling back to the Android Gradle Plugin's own `enableUnitTestCoverage` task, and falling back further to
+a vendored JaCoCo CLI conversion — then parse the resulting JaCoCo-format XML to report exact line/branch
+coverage percentages and uncovered line numbers for the requested scope. This is a read-only reporting skill: it
+never adds tests or modifies source/test code.
+
+== Purpose
+
+`iru-android-coverage` answers "does this class/module meet the coverage bar?" with an exact, XML-derived
+percentage instead of eyeballing Gradle console output. Because Android/Kotlin modules can have coverage wired in
+three different ways (or none at all), it detects which one is actually configured before running anything, and
+reports "coverage not wired" — naming exactly what's missing — rather than a false 0%/100% when none is.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-coverage
+/iru-android-coverage [scope]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|One or more class simple names or `src/main/...` source paths, comma-separated, to scope the coverage report to.
+A path in `scope` (or an explicit `module:` line from a calling skill) also infers the target module (`:lib` or
+`:app`).
+|None — reports the whole module's (`lib` by default) coverage.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Per target class (or the whole module if unscoped): exact line-coverage and branch-coverage percentages,
+  computed directly from the parsed JaCoCo-format XML counters — never estimated.
+* If the user gave a coverage bar (e.g. "at least 80%"): a clear statement of whether each class/the whole module
+  meets it, plus uncovered line numbers for anything under the bar.
+* A named scope class absent from the report is reported as 0% coverage, not as an error (same convention as
+  `iru-java-coverage`).
+* If no coverage path is wired: "coverage not wired", naming exactly what's missing (no Kover plugin;
+  `enableUnitTestCoverage` not set; no vendored `jacococli.jar`) — never a fabricated percentage.
+* If the AGP task's XML wasn't found and Step 2 fell back to the vendored CLI conversion, that fallback is
+  called out explicitly in the report.
+* An existing `androidTest/debug/connected/report.xml` is reported for information only, clearly labeled as
+  instrumented coverage, without re-running `connectedAndroidTest`.
+* No source, test, or build code is ever modified, and coverage is never re-run to try to raise a number.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /android-coverage\n(optional scope)"] --> B["Resolve module (:lib default or :app)\nand check JDK 17+ / ANDROID_HOME / gradlew"]
+    B --> C{"Which coverage path is wired?\n(check in priority order)"}
+    C -- "1. Kover plugin applied" --> D["Run gradlew koverXmlReportDebug"]
+    C -- "2. AGP enableUnitTestCoverage set" --> E["Run gradlew createDebugUnitTestCoverageReport\nglob build/reports/coverage/test/debug for XML"]
+    C -- "3. vendored jacococli.jar present" --> F["Run testDebugUnitTest, glob build/jacoco/*.exec,\nconvert with jacococli.jar report --xml"]
+    C -- "none wired" --> G["Report \"coverage not wired\"\n(name the missing plugin/setting/jar), stop"]
+    E --> E2{"XML found by the glob?"}
+    E2 -- yes --> H
+    E2 -- "no" --> F
+    D --> H["Parse JaCoCo-format XML\n(LINE / BRANCH counters, per-line ci=0)"]
+    F --> H
+    H --> I{"Instrumented report requested\nor already on disk?"}
+    I -- "on disk" --> J["Report its totals for information only,\nlabeled instrumented — never re-run"]
+    I -- "not requested / not on disk" --> K
+    J --> K["Report line/branch % per class or module;\nuncovered lines; pass/fail vs. any given bar"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-android-coverage` is a leaf skill; it only runs Gradle tasks (or the vendored JaCoCo CLI) and parses
+the generated XML report, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-android-code-one-task-group.adoc[] — Step 3.4, once per task group's bucket, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to check the group's changed/new classes meet the
+  coverage bar.
+* xref:skills/iru-android-generate-all-tests.adoc[] — Steps 3 and 6, via
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`], to measure coverage before and after generating tests for
+  every uncovered class.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both callers above always invoke this skill from inside a
+  `iru-gate-runner` sub-agent they spawn, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-coverage/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

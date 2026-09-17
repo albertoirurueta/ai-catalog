@@ -226,7 +226,7 @@ Handle the choice as follows:
   Agent({
     description: "Implement ticket <ticket-id> via the code skill",
     subagent_type: "iru-isolated-skill-executor",
-    prompt: "Invoke Skill({skill: \"code\"}) to execute implementation_plan.md at the repository root end to end.
+    prompt: "Invoke Skill({skill: \"iru-code\"}) to execute implementation_plan.md at the repository root end to end.
       Report back: which tasks completed, the files touched, the coverage and code-quality outcome, whether the
       plan was archived, and — critically — whether `iru-code`'s Step 7 security gate (backed by `iru-check-security`)
       ever fired during the run, i.e. whether any new or newly-unaudited secret was ever detected, even if it was

@@ -1,0 +1,130 @@
+= Java Bump Version
+:description: Sets a Maven project's version to an exact value in pom.xml, single-module or reactor-wide, with optional README/Antora sync and dry-run.
+:keywords: iru-java-bump-version, claude code skill, maven, pom.xml, versions-maven-plugin, semver, snapshot, sync version, dry run
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a Maven/Java project's version to an exact value across every file that needs to agree with it. For a
+single-module `pom.xml` it rewrites the root artifact's own `<version>` element in place; for a reactor (a root
+`pom.xml` declaring `<modules>`) it runs `mvn versions:set` so every module and parent reference updates
+consistently in one step. This skill never computes a version itself — it only applies the exact value it is
+given, validated for shape, and optionally syncs README/Antora mentions to match.
+
+== Purpose
+
+`iru-java-bump-version` is the Maven-ecosystem leaf that a caller — typically `iru-release` — delegates the
+actual version-file edit to, instead of hand-editing `pom.xml` or duplicating reactor-vs-single-module logic in
+every skill that needs to change a project's version. It mirrors the same contract `iru-typescript-bump-version`,
+`iru-android-bump-version`, and `iru-swift-bump-version` each define for their own ecosystems, documenting this
+catalog's `X.Y.Z` / `X.Y.Z-SNAPSHOT` pre-release convention so a caller has one place to read the release/next-dev
+computation from.
+
+== Purpose group
+
+xref:index.adoc#group-java[Java Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-java-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|Positional. The literal target version string (e.g. `1.4.0` or `1.4.1-SNAPSHOT`) to write. This skill applies it
+verbatim — it does not compute bumps itself.
+|None — asked for if missing.
+
+|`sync-files`
+|No
+|`args` key. `yes\|no` — whether to also update README/Antora version mentions (Step 7).
+|Ask once, after Step 2, only if such mentions actually exist.
+
+|`dry-run`
+|No
+|`args` key. `yes\|no` — print the diff / the `mvn versions:set` command that would run, then stop, instead of
+writing or running anything.
+|`no`
+|===
+
+== Outputs
+
+* `pom.xml` rewritten in place — either the root artifact's own `<version>` element (single module) or every
+module's version via `mvn versions:set -DgenerateBackupPoms=false` (reactor).
+* Optionally, when `sync-files` is accepted: a `<version>` dependency snippet in `README.md`, the `version:`
+field in `docs/antora.yml` (only for a released, non-`-SNAPSHOT` value), and any Antora page under
+`docs/modules/ROOT/pages/` showing a literal `<version>` dependency snippet.
+* A report of the old and new version, whether the project was treated as a reactor or a single module, every
+file actually touched, and the Step 6 sanity-check result.
+* With `dry-run: yes`, no file is written and no mutating command is run — only the diff/command is shown.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-java-bump-version &lt;new-version&gt;\n+ args: sync-files, dry-run"] --> B{"new-version given?"}
+    B -- no --> B1["Ask user for it"]
+    B1 --> C
+    B -- yes --> C["Validate shape:\nX.Y.Z or X.Y.Z-SNAPSHOT regex"]
+    C --> C1{"Matches convention?"}
+    C1 -- no --> C2["Warn, ask whether to\nproceed anyway"]
+    C1 -- yes --> D
+    C2 --> D["Survey layout:\npom.xml at root? reactor (&lt;modules&gt;) or single module?"]
+    D --> D1{"pom.xml exists?"}
+    D1 -- "no, but build.gradle does" --> D2["Stop — point to\niru-android-bump-version"]
+    D1 -- "neither exists" --> D3["Ask user for correct\npath/build tool"]
+    D1 -- yes --> E["Locate current &lt;version&gt;\n(direct child of &lt;project&gt;, never &lt;parent&gt;\nor a dependency/plugin)"]
+    E --> F{"Reactor or single module?"}
+    F -- reactor --> G1{"dry-run?"}
+    G1 -- yes --> G1a["mvn versions:set -DdryRun\n(or list matching module POMs)"]
+    G1 -- no --> G1b["mvn versions:set -DnewVersion=...\n-DgenerateBackupPoms=false"]
+    F -- "single module" --> G2{"dry-run?"}
+    G2 -- yes --> G2a["Compute unified diff\nof the rewritten pom.xml"]
+    G2 -- no --> G2b["Rewrite pom.xml's own\n&lt;version&gt; element in place"]
+    G1a --> H
+    G1b --> H["Sanity check:\nmvn help:evaluate -Dexpression=project.version"]
+    G2a --> Z["Report diff/command,\nstop — nothing written"]
+    G2b --> H
+    H --> H1{"Output matches new-version?"}
+    H1 -- no --> H2["Stop, show actual\nerror/output — no success claim"]
+    H1 -- yes --> I{"sync-files?"}
+    I -- "ask (unset)" --> I1["Check README/antora.yml/pages\nfor version mentions"]
+    I1 --> I2{"Any found?"}
+    I2 -- no --> J
+    I2 -- yes --> I3["AskUserQuestion:\nsync them too?"]
+    I3 -- yes --> I4["Update matched README /\ndocs/antora.yml / Antora page snippets"]
+    I -- yes --> I4
+    I -- no --> J
+    I4 --> J["Report: old/new version,\nreactor vs single module,\nfiles touched, sanity-check result"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-java-bump-version` is a leaf skill; it only runs Maven (`mvn versions:set`, `mvn help:evaluate`) and
+Python/regex file rewrites, and reports on the outcome. It does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, called twice per release (once to strip `-SNAPSHOT` for the release
+version, once to bump and reappend `-SNAPSHOT` for the next development cycle) when `iru-release` detects the
+repository's ecosystem is Java/Maven, discovered by its `find .claude/skills -maxdepth 1 -type d -name
+"iru-*-bump-version"` lookup.
+
+=== Related agents
+
+None — this skill runs inline; it is not dispatched through `iru-gate-runner`, `iru-isolated-skill-executor`, or
+`iru-change-summarizer`, and does not spawn the built-in Explore/general-purpose agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-java-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

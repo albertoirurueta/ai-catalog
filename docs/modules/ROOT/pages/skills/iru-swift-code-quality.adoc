@@ -1,0 +1,104 @@
+= Swift Code Quality
+:description: Runs SwiftLint, the wired Swift formatter, and Periphery on a Swift package/app and summarizes every static-analysis issue found, without fixing anything.
+:keywords: iru-swift-code-quality, claude code skill, swift, swiftlint, swift format, swiftformat, periphery, static analysis, code quality report
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run this Swift package/app's wired static-analysis and formatting tools — SwiftLint, the Swift toolchain's
+bundled `swift format lint` (or the third-party SwiftFormat tool when that's what's configured instead), and
+Periphery — then report every issue found, grouped by tool and classified by rule id/severity. This is a
+read-only reporting skill: it runs static analysis and formatting checks and reports results, it never fixes
+issues or edits any tool's configuration.
+
+== Purpose
+
+`iru-swift-code-quality` is the Swift-stack equivalent of `iru-java-code-quality`/`iru-typescript-code-quality`/
+`iru-android-code-quality`: a fast, focused lint/format/unused-code pass callable on its own or as a baseline
+capture inside a task group. It verifies each tool is actually wired — a config file present *and* its binary on
+PATH — before trusting a "zero issues" result from it, and never installs a missing tool itself, instead offering
+Homebrew (or Mint/direct-download alternatives) via `AskUserQuestion`. SwiftLint and `swift format lint` accept
+paths directly, so a scoped invocation narrows what actually runs; Periphery has no path selector, so a scoped
+invocation still runs the whole module-graph scan and only filters the report.
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-code-quality
+/iru-swift-code-quality [scope]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|A file/directory path or a type/file simple name (e.g. `Sources/Foo.swift`, `Foo`). Narrows what SwiftLint and
+`swift format lint` actually run against (both accept paths natively) and filters the SwiftFormat/Periphery
+reports after the fact, since Periphery has no per-path selector and always scans the whole module graph. Can
+also be passed as `scope:`/`paths:` key/value lines by a calling skill, along with an optional `baseline:` block
+(a prior per-rule-id issue count or list) used to report only the new-vs-baseline diff.
+|None — checks the whole package/project.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Findings grouped by tool (SwiftLint, the wired formatter, Periphery), then by rule id, with file:line and
+  message.
+* Per tool: whether it ran or was skipped as "not wired"/"binary missing" (Step 1), a total issue count, and the
+  severity breakdown where the tool has one.
+* When a baseline was supplied, only the new-vs-baseline diff per rule id/tool instead of the full current list.
+* No source file or SwiftLint/`swift-format`/`.swiftformat`/Periphery configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-code-quality\n(optional scope, or scope/paths/baseline key:value lines)"] --> B["Resolve project root:\nPackage.swift or .xcodeproj/.xcworkspace"]
+    B --> C["Step 1: check which tools are wired\nSwiftLint (.swiftlint.yml + binary)\nformatter (.swift-format or .swiftformat + binary)\nPeriphery (.periphery.yml + binary)"]
+    C --> D{"Config present but\nbinary missing?"}
+    D -- yes --> E["AskUserQuestion:\ninstall via brew, or skip this tool"]
+    D -- no --> F
+    E --> F["Step 2: run each wired tool\n(scoped paths for SwiftLint/formatter,\nfull scan for Periphery)"]
+    F --> G{"Underlying build\nfailed for a tool?"}
+    G -- yes --> H["Report that tool's failure, stop for it\n(report not freshly regenerated)"]
+    G -- no --> I["Step 3: parse each report,\nfilter to scope if given"]
+    I --> J["Step 4: bucket by tool, then rule id;\nreport severity breakdown"]
+    J --> K{"Baseline supplied?"}
+    K -- yes --> L["Report only new-vs-baseline\nissues per tool/rule id"]
+    K -- no --> M["Report full current totals\nand per-rule-id counts"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-swift-code-quality` is a leaf skill; it only runs SwiftLint/`swift format lint`/SwiftFormat/Periphery
+and parses their reports, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
+  baseline for the `swift` language/framework key.
+* xref:skills/iru-swift-code-one-task-group.adoc[] — Steps 1 and 3, once per task group's bucket, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering the bucket's
+  touched file(s) and later diff the post-change result against it.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both callers above always invoke this skill from inside a
+  `iru-gate-runner` sub-agent they spawn, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

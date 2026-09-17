@@ -1,0 +1,186 @@
+= Setup Apple App
+:description: Scaffolds a native Apple app's XcodeGen or Tuist manifest, shared SwiftPM Core package, test targets, lint/format config, and Fastlane/Sonar setup.
+:keywords: iru-setup-apple-app, claude code skill, swift, xcodegen, tuist, swiftui, fastlane, sonarcloud, xcuitest, scaffold
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable native Apple application scaffold — a project-generator manifest (XcodeGen's
+`project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one application target per selected platform
+(iOS/iPadOS, macOS, watchOS), a shared `Packages/Core` local SwiftPM package for testable business logic,
+per-platform Swift Testing unit-test and XCUITest UI-test targets, lint/format config, a gated `fastlane/Fastfile`,
+and `sonar-project.properties` — from explicit example templates embedded in the skill itself.
+
+== Purpose
+
+`iru-setup-apple-app` bootstraps a new native Apple application from a house template: one XcodeGen or Tuist
+manifest per repository, one application target per selected platform with `SWIFT_STRICT_CONCURRENCY = complete`
+and the app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`, a shared `Packages/Core` package that holds all
+testable logic outside any UI framework, and per-platform Swift Testing/XCUITest targets. It never commits the
+generated `.xcodeproj`/`.xcworkspace` — those are always generator output, regenerated on demand by
+`xcodegen generate`/`tuist generate` and gitignored by the companion xref:skills/iru-setup-swift-gitignore.adoc[].
+It is the Swift/Apple equivalent of xref:skills/iru-setup-android-app.adoc[] and
+xref:skills/iru-setup-react-native-app.adoc[] for the other app-shaped stacks in this catalog; use
+xref:skills/iru-setup-swift-library.adoc[] instead for a pure SwiftPM library with no app target.
+
+== Purpose group
+
+xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-apple-app
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-swift-repository.adoc[]) as
+newline-separated `key: value` lines covering every field below, parsed in Step 0 so this skill doesn't ask about
+any field already resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|`app-name`
+|Yes (unless supplied via `args`)
+|Display name, e.g. `My App`, written to `CFBundleDisplayName` and slugified to derive the bundle id and
+directory names.
+|None
+
+|`bundle-id-prefix`
+|Yes (unless supplied via `args`)
+|Reverse-DNS prefix, e.g. `com.example`. The app target's bundle id is `<bundle-id-prefix>.<app-slug>`; the
+watchOS companion (when both an iOS/iPadOS and a watchOS target are selected) is
+`<bundle-id-prefix>.<app-slug>.watchkitapp`.
+|None
+
+|`platforms`
+|Yes (unless supplied via `args`)
+|Multi-select subset of `ios`, `ipados`, `macos`, `watchos`. `ipados` alone or alongside `ios` widens the one iOS
+target's `TARGETED_DEVICE_FAMILY` rather than adding a second target; `macos`/`watchos` each produce their own
+target.
+|None
+
+|`generator`
+|No
+|`xcodegen` or `tuist` — asked with a stated recommendation when unset: XcodeGen for a single-target app, Tuist
+for a project expected to grow multiple internal SwiftPM packages.
+|Asked when unset
+
+|`min-deployment-target`
+|No
+|Single OS version number (e.g. `26.0`) applied to every selected platform's deployment target.
+|Looked up in Step 4 from the highest installed simulator runtime major
+
+|`distribution`
+|No
+|`none`/`internal`/`store` — gates which Fastlane lanes (`test` only, `+beta`, or `+beta+release`) get written.
+|Asked when unset
+
+|`signing`
+|No
+|`fastlane-match`/`api-key`/`none` — gates the Fastfile's signing setup and which CI secrets Step 8 flags.
+|Asked when unset (defaults toward `none` when `distribution: none`, confirmed with the user)
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: MIT License, Apache License 2.0, No license, or Other (asked for a display name
+and URL directly).
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Recorded in Step 8's report and each Info.plist's `NSHumanReadableCopyright`.
+|None
+
+|`open-source`
+|No
+|Whether the repository is open source; drives the recommended default for `sonar`.
+|Asked directly (`yes`/`no`) when not resolved via `args`
+
+|`sonar`
+|No
+|Whether to wire up a SonarQube/SonarCloud scan (`cloud`/`self-hosted`/`none`), plus
+`sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`; gates `sonar-project.properties`.
+|`cloud` when `open-source` is `yes`; otherwise asked with `none` recommended
+
+|`mode`
+|No
+|`existing` skips Step 1's stop-or-regenerate question entirely and goes straight to gap-fill, leaving every file
+that already exists (beyond this skill's own placeholder sources) untouched. `new` follows Step 1's normal survey.
+|`new`
+|===
+
+== Outputs
+
+* `project.yml` (XcodeGen) or `Project.swift` + `Tuist.swift` (Tuist), per `generator`, with one target/scheme
+  triple per selected platform.
+* `Packages/Core/Package.swift`, `Sources/Core/Greeter.swift`, and `Tests/CoreTests/GreeterTests.swift` — a
+  minimal, genuinely testable placeholder business-logic package.
+* Per selected platform, `Targets/<Platform>/Sources/<AppName>App.swift` (SwiftUI `App` entry point),
+  `ContentView.swift`, `Tests/<AppName>Tests.swift` (Swift Testing), and `UITests/<AppName>UITests.swift`
+  (XCUITest).
+* `.swiftlint.yml` and `.swift-format` at the repository root.
+* `fastlane/Fastfile`, with only the lanes `distribution`/`signing` back — never a lane this skill can't support.
+* `sonar-project.properties`, only when `sonar` != `none`.
+* No `.xcodeproj`/`.xcworkspace` — those are `xcodegen generate`/`tuist generate` output, never written here.
+* A report of every resolved input, which files were created fresh versus left untouched (gap-fill) versus
+  replaced (update), the Step 7 verification results, and explicit warnings (generator never run locally, review
+  before build/commit, signing/Sonar credentials still needed).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-apple-app] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E["Step 1: Survey repository for\nproject.yml / Project.swift"]
+    D --> E
+    E --> F{"What already exists?"}
+    F -- neither --> H["Step 2: Collect inputs\n(app-name, bundle-id-prefix,\nplatforms, generator,\nmin-deployment-target,\ndeveloper info, license,\nopen-source, sonar,\ndistribution, signing)"]
+    F -- "mode: existing" --> G1[Go straight to gap-fill]
+    G1 --> H
+    F -- "manifest exists, otherwise" --> G2{"AskUserQuestion:\nstop or update?"}
+    G2 -- stop --> Z1[Report untouched; end]
+    G2 -- update --> H
+    F -- "only .xcodeproj exists" --> G3{"Adopt XcodeGen/Tuist\nor stop?"}
+    G3 -- stop --> Z1
+    G3 -- adopt --> H
+    H --> I["Step 3: Infer repository info\n(owner/repo/host)"]
+    I --> J["Step 4: Look up XcodeGen/Tuist/\nSwiftLint/Fastlane versions"]
+    J --> K["Step 5: Resolve templates\n(manifest, Packages/Core,\nper-platform targets,\nswiftlint, Fastfile, sonar)"]
+    K --> L["Step 6: Scaffold files,\nskipping any already present\nunder gap-fill"]
+    L --> M["Step 7: Verify via iru-gate-runner\n(YAML/swiftc parse,\nswift build/test Core,\nxcodebuild where possible)"]
+    M --> N["Step 8: Report resolved inputs,\nfiles written vs. left alone,\nand warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-apple-app` is a leaf skill; it does not call any other skill in this catalog. Verification in
+Step 7 runs through the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, not another skill.
+
+=== Invoked by
+
+* xref:skills/iru-setup-swift-repository.adoc[] — Step 5 runs `iru-setup-apple-app` for the app flavor, passing
+  the shared bootstrap inputs through `args` so this skill's own Step 2 questions are skipped.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 runs the YAML/`swiftc -parse` checks and
+  `swift build`/`swift test` against the scaffolded `Packages/Core`, plus `xcodebuild` against that package where
+  possible, through this agent so the caller gets a compact pass/fail summary instead of raw command output.
+  XcodeGen/Tuist generation itself (`xcodegen generate`/`tuist generate`) and everything downstream of a real
+  `.xcodeproj` remain unverified locally, per Step 7.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-apple-app/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

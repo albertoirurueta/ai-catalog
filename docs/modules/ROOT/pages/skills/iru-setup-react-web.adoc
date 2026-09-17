@@ -1,0 +1,166 @@
+= Setup React Web
+:description: Scaffolds a React + Vite + TypeScript web app, then layers on Vitest, ESLint or Oxlint, Prettier, Stylelint, Playwright e2e tests, and optional Storybook.
+:keywords: iru-setup-react-web, claude code skill, react, vite, typescript, vitest, eslint, playwright, stylelint, storybook
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a React + TypeScript web application with Vite, then layer on this catalog's standard
+test/coverage/lint/format/e2e toolchain — Vitest, Testing Library, ESLint or Oxlint, Prettier, Stylelint,
+Playwright, an optional Storybook setup, and `sonar-project.properties` when Sonar is enabled.
+
+== Purpose
+
+`iru-setup-react-web` bootstraps a new React web app from `npm create vite@latest <name> -- --template
+react-ts`, then wires in the house toolchain this catalog expects every TypeScript project to carry: Vitest
+(`jsdom`, v8 coverage with lcov) plus `@testing-library/react` for unit tests, ESLint 10 flat config with
+`eslint-plugin-react-hooks` (or the Vite template's own Oxlint, kept by choice), Prettier, Stylelint 17 for
+CSS, Playwright for an end-to-end smoke test under `e2e/`, an optional Storybook setup, and — when Sonar is
+enabled — `sonar-project.properties`. There is no `publish`/`distribution` question for this skill, since a
+web app isn't published to a package registry or an app store. Every step was proven against the actual
+current tooling (Vite 8, ESLint 10, Vitest 5, Playwright 1.63, Stylelint 17, Storybook 10) in a throwaway
+scaffold, so the gotchas called out along the way are observed behavior, not speculation.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-react-web
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g.
+xref:skills/iru-setup-typescript-repository.adoc[]) as newline-separated `key: value` lines — see the keys
+below. Every field found here is resolved and Step 2 skips asking about it; if `args` is absent or
+unrecognized, every field is asked interactively.
+|None
+
+|`app-name`
+|No
+|`package.json` name — only asked when scaffolding into a subdirectory; otherwise defaults to the repository
+root directory's own basename.
+|Root directory basename
+
+|`description`
+|Yes (unless supplied via `args`)
+|One-line project description written into `package.json`.
+|None
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: Apache License 2.0, MIT License, No license, or Other (display name and URL
+asked directly).
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Populates `package.json`'s `author` field.
+|None
+
+|`open-source`
+|No
+|Whether the repository is open source (`yes`/`no`) — informs the `sonar` recommendation.
+|Asked with `AskUserQuestion`
+
+|`sonar`
+|No
+|`cloud`, `self-hosted`, or `none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when
+`cloud`/`self-hosted`. Controls whether `sonar-project.properties` is written in Step 8.
+|`cloud` recommended if open source, otherwise `none` recommended
+
+|`keep-oxlint`
+|No
+|`yes` keeps the Vite template's Oxlint script alongside the new ESLint config; `no` replaces Oxlint with
+ESLint entirely.
+|Asked once with `AskUserQuestion` (recommended: `no`)
+
+|`storybook`
+|No
+|Whether to add an optional Storybook setup (`yes`/`no`) — reshapes `vitest.config.ts` into a multi-project
+config when enabled.
+|`no`
+
+|`mode`
+|No
+|`new` (scaffold fresh) or `existing` (gap-fill only what's missing) — auto-defaulted from whether
+`package.json` already exists if not supplied.
+|Auto-detected from `package.json` presence
+|===
+
+== Outputs
+
+* A Vite + React + TypeScript app scaffolded at the repository root or a subdirectory, including
+  `package.json`, `vite.config.ts`, `tsconfig.json` (project references), `src/`, and `public/`.
+* `vitest.config.ts`, `src/test/setup.ts`, and `src/App.test.tsx` for unit testing.
+* `eslint.config.js` (or Oxlint left in place, per `keep-oxlint`), `.prettierrc`, `.prettierignore`,
+  `.stylelintrc.json`.
+* `playwright.config.ts` and `e2e/smoke.spec.ts` for end-to-end testing, with the Chromium browser binary
+  installed locally.
+* `.storybook/` and its scripts, only if `storybook: yes`.
+* `sonar-project.properties` at the repository root, only if `sonar` resolved to `cloud` or `self-hosted`.
+* `tsconfig.e2e.json` and an updated `tsconfig.json` reference list, so `tsc -b` type-checks `e2e/` too.
+* A report of what was generated/skipped, every verification command run (typecheck, lint, format, test,
+  coverage, build, e2e) and its result, plus explicit warnings to review generated files, wire `SONAR_TOKEN`
+  in CI if Sonar was enabled, and provision Playwright browsers in CI.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-react-web] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E["Step 1: Survey repository -\npackage.json? mode new/existing?\nrepo root empty?"]
+    D --> E
+    E -- "package.json exists, mode unresolved" --> F["AskUserQuestion:\nexisting (gap-fill) or new (rescaffold)?"]
+    F -- stop --> G[Report untouched; end]
+    F -- existing/new --> H
+    E -- "no package.json" --> H["Step 2: Collect app-name,\ndescription, developer info,\nlicense, open-source, sonar,\nkeep-oxlint, storybook"]
+    H --> I["Step 3: npm create vite@latest\n--template react-ts; npm install"]
+    I --> J["Step 4: Add Vitest + Testing Library +\njsdom; write App.test.tsx"]
+    J --> K["Step 5: Add ESLint or keep Oxlint;\nPrettier; Stylelint (auto-fix CSS)"]
+    K --> L["Step 6: Add Playwright e2e;\nrename tests/ to e2e/; install Chromium"]
+    L --> M{"Step 7: storybook: yes?"}
+    M -- yes --> N["Run storybook init;\nreconcile vitest.config.ts project split"]
+    M -- no --> O
+    N --> O{"Step 8: sonar cloud/self-hosted?"}
+    O -- yes --> P[Write sonar-project.properties]
+    O -- no --> Q
+    P --> Q["Step 9: Wire npm scripts;\nadd tsconfig.e2e.json;\nfix tsc -b vs tsc --noEmit gotcha"]
+    Q --> R["Run typecheck, lint, format,\ntest, coverage, build, e2e"]
+    R --> S["Step 10: Report + warnings\n(review files, SONAR_TOKEN, CI browsers)"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-react-web` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-react-web` (via
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]) as one of the flavor choices
+  when the detected/chosen project type is a React web app, passing the pre-resolved inputs via `args`.
+
+Also runnable stand-alone.
+
+=== Related agents
+
+None — this skill runs to completion in a single context; it is `iru-setup-typescript-repository` that
+dispatches to it via `iru-isolated-skill-executor`.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-react-web/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

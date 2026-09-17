@@ -1,0 +1,184 @@
+= Setup TypeScript Repository
+:description: End-to-end bootstrap for an npm/TypeScript repository of five flavors (library, react, angular, react-native, ionic) in one pass.
+:keywords: iru-setup-typescript-repository, claude code skill, npm, typescript, vite, angular, react native, ionic, sonar, repository bootstrap
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for an npm/TypeScript repository of any of five flavors. It collects the flavor, the
+project's identity, and the shared pipeline parameters once, then orchestrates six other skills in a fixed
+order so nothing is asked twice.
+
+== Purpose
+
+`iru-setup-typescript-repository` is the front door for starting (or catching up) a brand-new npm/TypeScript
+repository, whatever its shape — a published library, a React or Angular web app, or a React Native or Ionic
+mobile app. Rather than duplicating each flavor's scaffold logic, documentation setup, `.gitignore` rules, CI
+workflows, changelog bootstrapping, or README generation, it resolves the `flavor` and `mode`, gathers the
+project's identity and the shared pipeline parameters (open-source, publish/distribution, Sonar, integration
+branch, Node version, package manager) once, and passes each downstream skill only the `args` keys it actually
+accepts.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-typescript-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`flavor`
+|No
+|`library`/`react`/`angular`/`react-native`/`ionic`. Resolved via two short `AskUserQuestion` rounds when absent
+(mobile app then React Native vs. Ionic), plus a further round for Ionic's own `framework` choice.
+|Asked
+
+|`mode`
+|No
+|`new`/`existing`. Defaults to `existing` (confirmed) when `package.json` already exists at the repository root,
+otherwise `new` without asking.
+|Derived from `package.json` presence
+
+|`name` / `scope` / `app-id` / `app-slug` / `description` / `license` / `developer-name` / `developer-email` /
+`organization-url` / `directory` / `storybook`
+|Yes (per flavor)
+|Free-text project-identity fields, asked directly; which apply depends on the resolved flavor (e.g. `scope` is
+library-only, `app-id` is Ionic-only, `description` is not collected for angular/react-native).
+|None — user must supply
+
+|`open-source`
+|No
+|Whether the repository is open source. Drives the recommended defaults for `publish`/`distribution`/`sonar`.
+|Asked
+
+|`publish`
+|No
+|Library only: publish to the public npm registry.
+|`yes` if open source, else asked (`no` recommended)
+
+|`distribution`
+|No
+|React Native/Ionic only: `none`/`internal`/`store`.
+|`store` if open source, else asked (`internal` recommended)
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`/`self-hosted`/`none`.
+|`cloud` if open source, else asked (`none` recommended)
+
+|`native-builds`
+|No
+|React Native only: `eas` (cloud builds) or `local`.
+|`eas`
+
+|`framework`
+|No
+|Ionic only: its own UI framework, `angular` or `react`.
+|Asked
+
+|`integration-branch` / `stable-branch` / `node-version` / `package-manager`
+|No
+|Shared pipeline parameters fed to the scaffold and workflow skills.
+|`develop` / `main` / `24` / `npm`
+|===
+
+== Outputs
+
+* The flavor's own scaffold output — `package.json` and toolchain files (via `iru-setup-typescript-library`,
+  `iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, or `iru-setup-ionic-app`) — unless
+  `mode: existing` found one already in place, in which case it is left untouched.
+* A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
+* A root `.gitignore` covering `node_modules/`, build output, coverage, and the Antora build output (via
+  `iru-setup-typescript-gitignore`).
+* `build.yml`/`release.yml`/`sync.yml`/`security.yml` GitHub Actions workflows and `.github/dependabot.yml` (via
+  `iru-setup-typescript-github-workflows`).
+* A root `CHANGELOG.md` backfilled from git/GitHub release history (via `iru-setup-changelog`).
+* A root `README.md` with badges, a project-status table, documentation links, and installation instructions
+  (via `iru-setup-readme`).
+* A final report summarizing the resolved flavor/mode/identity/license/pipeline parameters, which files were
+  created, updated, or left untouched, the consolidated required-secrets table, decisions made on the user's
+  behalf, and an explicit warning to review every generated file before building, committing, or relying on CI.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-typescript-repository] --> B["Step 0: Parse args\n(key: value lines)"]
+    B --> C{"Step 1: Resolve flavor &amp; mode"}
+    C -- flavor unset --> C1["AskUserQuestion:\nlibrary / react / angular / mobile app,\nthen react-native vs ionic,\nthen ionic framework"]
+    C1 --> D
+    C -- flavor set --> D["Step 2: Collect project identity\n(name, description, license,\ndeveloper info)"]
+    D --> E["Step 3: Collect flavor-specific inputs\n(directory, storybook, app-slug,\nnative-builds, etc.)"]
+    E --> F["Step 4: Collect shared pipeline params\n(open-source, publish/distribution,\nsonar, branches, node, package manager)"]
+    F --> G{"Step 5: mode existing &amp;\npackage.json exists?"}
+    G -- yes --> H["Skip scaffold;\nnote package.json left untouched"]
+    G -- no --> I["Run flavor's scaffold skill\n(via sub-agent)"]
+    I -- manifest existed, user stopped --> J[Stop entire pipeline; report]
+    I -- ok --> H
+    H --> K["Step 6: Run setup-antora\n(via sub-agent)"]
+    K --> L["Step 7: Run setup-typescript-gitignore\n(via sub-agent)"]
+    L --> M["Step 8: Derive docs-tool;\nrun setup-typescript-github-workflows\n(via sub-agent)"]
+    M -- workflows existed, user stopped --> N["Note in report;\ncontinue"]
+    M -- ok --> N
+    N --> O["Step 9: Run setup-changelog\n(via sub-agent)"]
+    O --> P["Step 10: Run setup-readme\n(via sub-agent)"]
+    P --> Q["Step 11: Report combined outcome,\nsecrets table, and review warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent rather than a direct `Skill` call — every sub-skill re-derives what it needs straight from the filesystem
+this orchestrator has just written to, so only a short completion summary needs to come back, keeping each
+sub-skill's own exploration/file reads out of this orchestrator's own context:
+
+* xref:skills/iru-setup-typescript-library.adoc[] — Step 5, when `flavor: library`: writes `package.json` and the
+  library toolchain, passing identity and pipeline `args`.
+* xref:skills/iru-setup-react-web.adoc[] — Step 5, when `flavor: react`: scaffolds a Vite React app, passing
+  identity, pipeline, and `storybook` `args` (no `publish`/`distribution` key).
+* xref:skills/iru-setup-angular-web.adoc[] — Step 5, when `flavor: angular`: scaffolds an Angular CLI app, passing
+  identity (no `description`), `directory`, and pipeline `args`.
+* xref:skills/iru-setup-react-native-app.adoc[] — Step 5, when `flavor: react-native`: scaffolds an Expo-managed
+  app, passing identity (no `description`), `app-slug`, `app-directory`, `native-builds`, and `distribution`
+  `args`.
+* xref:skills/iru-setup-ionic-app.adoc[] — Step 5, when `flavor: ionic`: scaffolds a Capacitor hybrid app, passing
+  `framework`, `app-id`, identity, and `distribution` `args`.
+* xref:skills/iru-setup-antora.adoc[] — Step 6: scaffolds the Antora documentation site, invoked with no `args`
+  since it derives the component name/title/version directly from `package.json`. Run before Step 8 so that
+  skill's own docs-config survey finds it already in place.
+* xref:skills/iru-setup-typescript-gitignore.adoc[] — Step 7: writes or updates the root `.gitignore`, invoked
+  with no `args` since it explores the repository directly (package manager, framework, Playwright, docs
+  tooling).
+* xref:skills/iru-setup-typescript-github-workflows.adoc[] — Step 8: writes the CI/CD workflows, passing `flavor`,
+  the pipeline parameters, `publish`/`distribution`/`native-builds`/`framework` (only when the flavor uses them),
+  and the derived `docs-tool` as `args`.
+* xref:skills/iru-setup-changelog.adoc[] — Step 9: bootstraps the root `CHANGELOG.md`, invoked with no `args`
+  since it works from the repository's own git tag/GitHub Release history.
+* xref:skills/iru-setup-readme.adoc[] — Step 10, last: bootstraps the root `README.md`, invoked with no `args`
+  since it explores the finished state left by every earlier step.
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] — Step 4, via `iru-isolated-skill-executor`, when the detected or
+  chosen project type is `typescript-library`/`react-web`/`angular-web`/`react-native-app`/`ionic-app`.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per sub-skill
+  (Steps 5–10), so all six sub-skills' own exploration/file-read transcripts don't accumulate in this
+  orchestrator's context over the course of a single bootstrap run.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-typescript-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

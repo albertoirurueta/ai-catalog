@@ -1,0 +1,118 @@
+= Swift Generate All Tests
+:description: Scans a Swift package or Xcode project for types missing tests or below 80% coverage, then writes Swift Testing/XCTest tests to clear the bar.
+:keywords: iru-swift-generate-all-tests, claude code skill, swift, swiftpm, xcodebuild, swift testing, xctest, line coverage, generate unit tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Bring an entire Swift codebase's unit test coverage up to a minimum bar — 80% line coverage — in one pass: find
+every production type (struct, class, enum, actor) with no test at all or with measured coverage below the bar,
+then write or extend tests for each until it clears it. Swift Package Manager and Xcode projects only; it never
+runs against, or falls back to, any other language.
+
+== Purpose
+
+`iru-swift-generate-all-tests` answers "bring this whole Swift codebase's test coverage up to a bar" rather than
+"write tests for this one type/task," which is what `iru-swift-code-one-task` and the `iru-code` pipeline already
+handle per task. It explores the whole codebase to build an inventory of testable types, delegates to
+`iru-swift-coverage` for the exact, measured percentage per type (never an estimate), and only writes or extends
+test code — defaulting to Swift Testing (`@Suite`, `@Test`, `#expect`, `#require`) for unit tests and falling
+back to XCTest only for `XCUITest` and performance (`measure`) cases, following the project's own test framework
+and style. It does not add license headers, DocC comments, or run a code-quality pass, and it only touches
+production source code when a type is genuinely untestable as written, which it reports explicitly rather than
+silently redesigning the type.
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-generate-all-tests [scope]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|scope
+|No
+|A Swift package target or Xcode app target to limit the run to, or a comma-separated list of specific types
+within it. Accepted as a bare positional argument or as an `args` `scope: <target-or-type-list>` line.
+|The project's primary library/app target
+|===
+
+== Outputs
+
+* New or extended test files for every type found with no matching test file, or with line coverage below 80% —
+  defaulting to Swift Testing, following the project's own test-file naming/source-root convention, and using
+  XCTest only for `XCUITest`/`measure` cases.
+* Occasionally, a minimal testability change to a type under test (e.g. extracting a protocol, injecting a
+  dependency) — only when a type is genuinely untestable as written, and always called out explicitly rather than
+  folded silently into "tests added."
+* A report: total candidate types found (and any excluded as having no testable logic), which test framework(s)
+  were detected/used, how many types already met the bar, before/after coverage per type touched, any type still
+  below 80% after two extension attempts (with its exact remaining uncovered lines), and the full-suite test
+  result.
+* No license headers, DocC comments, or code-quality fixes — those remain `iru-check-license`, `iru-swift-docc`,
+  and `iru-swift-code-quality`'s jobs.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-generate-all-tests [scope]"] --> B{"Package.swift or\n.xcodeproj/.xcworkspace found?"}
+    B -- neither --> B1["Stop: Swift projects only"]
+    B -- both found, scope unclear --> B2["AskUserQuestion:\npackage or app target?"]
+    B2 --> C
+    B -- yes --> C["Detect test framework(s):\nSwift Testing vs XCTest vs both"]
+    C --> D["Explore agent: inventory every\nproduction type + existing test\nconvention + source root"]
+    D --> E{"Test source root exists?"}
+    E -- no --> E1["Stop: ask user, this skill\nextends tests, doesn't scaffold one"]
+    E -- yes --> F["gate-runner: single swift-coverage run\nover every candidate type\n(batched if the list is large)"]
+    F --> G["Classify: missing tests /\nbelow 80% / already sufficient"]
+    G --> H["One agent per type (parallel batches):\nwrite/extend Swift Testing tests\n(XCTest only for XCUITest/measure)"]
+    H --> I["Re-measure via swift-coverage,\nscoped to touched types"]
+    I --> J{"Still below 80%?"}
+    J -- yes, attempts left --> H
+    J -- yes, 2 attempts used --> K["Report as residual gap\nwith exact uncovered lines"]
+    J -- no --> L["gate-runner: run full suite\nonce (swift-test)"]
+    K --> L
+    L --> M{"Any failures?"}
+    M -- yes, caused by this run --> N["Fix regression; re-run full suite"]
+    N --> L
+    M -- no / pre-existing --> O["Final report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-swift-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated
+  through the `iru-gate-runner` agent so a large `.profdata`/`llvm-cov`/`xccov` report never lands directly in
+  this conversation, and so the whole suite runs once per batch rather than once per type.
+* xref:skills/iru-swift-test.adoc[] — Step 7, once, to confirm the full suite still passes after every type's
+  tests have been written or extended; also delegated through `iru-gate-runner`.
+
+=== Invoked by
+
+None from inside this catalog — it is a top-level entry point invoked by a person who wants coverage brought up
+across the whole Swift codebase in one pass, independent of the `/iru-code`/`/iru-issue` pipeline (which handles
+per-task test-writing via `iru-swift-code-one-task`).
+
+=== Related agents
+
+* xref:agents/overview.adoc[`Explore`] — Step 2, to build the type/test-file inventory across the whole codebase
+  without reading every source file directly.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-swift-coverage`/`iru-swift-test`
+  and report back only a compact summary instead of a raw coverage/test log.
+* xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per type needing
+  new/extended tests, dispatched concurrently since each only touches its own test file.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-generate-all-tests/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

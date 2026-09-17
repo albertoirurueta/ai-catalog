@@ -1,14 +1,29 @@
 ---
 name: iru-release
-description: Convert the current SNAPSHOT version into a final release. Must be run from the `develop` branch (gitflow) — warns and stops otherwise. Asks the user for the release version (current SNAPSHOT stripped, a patch bump, or a major bump) and the next upcoming SNAPSHOT version, creates a `release_x.y.z` branch off `develop`, updates the version in `pom.xml`, README.md, `docs/antora.yml`, and any Antora page showing dependency snippets, creates/updates `docs/modules/ROOT/pages/whats-new.adoc` and the root `CHANGELOG.md` with a summary of changes since the previous release, opens a pull request for the release branch with a `iru-release` label attached, and uses the `iru-pr-description` skill to fill in its description. Invoke as `/iru-release`. Use whenever the user wants to cut a new release of this library.
+description: Convert the current development version into a final release. Must be run from the `develop` branch
+  (gitflow) — warns and stops otherwise. Detects the repository's ecosystem (Java/Maven, TypeScript/npm,
+  Android/Gradle, or Swift/Apple) from an `iru-explore` report already in this conversation or from the
+  repository's manifests, and delegates the version bump itself to the matching installed
+  `iru-<key>-bump-version` skill (`iru-java-bump-version`, `iru-typescript-bump-version`,
+  `iru-android-bump-version`, `iru-swift-bump-version`) rather than editing build files directly. Asks the user
+  for the release version (current pre-release value stripped, a patch bump, or a major bump) and the next
+  upcoming pre-release version, creates a `release_x.y.z` branch off `develop`, updates README.md, `docs/antora.yml`,
+  and any Antora page showing dependency snippets via the bump-version skill's own optional sync, creates/updates
+  `docs/modules/ROOT/pages/whats-new.adoc` and the root `CHANGELOG.md` with a summary of changes since the
+  previous release, opens a pull request for the release branch — using GitHub, Bitbucket, Azure DevOps, or TFS
+  tooling matching however this repository is hosted — with a `iru-release` label/tag attached where the host
+  supports one, and uses the `iru-pr-description` skill to fill in its description. A `sync.yml` GitHub workflow
+  that automatically bumps the next development version after release is optional — if this repository doesn't
+  have one, this skill notes that in its report instead of assuming it exists. Invoke as `/iru-release`. Use
+  whenever the user wants to cut a new release of this library.
 model: sonnet
 ---
 
 # Release
 
-Turn the current development SNAPSHOT into a release: pick the version numbers, cut a `release_x.y.z` branch,
-update every place that names the current release/snapshot version, draft the "what's new" notes, and open a pull
-request. This mirrors the repository's existing release history (`release_1.0.0` … `release_1.3.0`, each a PR
+Turn the current development version into a release: pick the version numbers, cut a `release_x.y.z` branch,
+update every place that names the current release/pre-release version, draft the "what's new" notes, and open a
+pull request. This mirrors the repository's existing release history (`release_1.0.0` … `release_1.3.0`, each a PR
 into `main`) — follow that convention unless the user says otherwise.
 
 ## Step 1 — Verify this is being run from `develop`
@@ -23,11 +38,51 @@ touching any file.
   to branch from the current branch instead, and do not read or modify any file first.
 - Only continue to Step 2 once the current branch is confirmed to be `develop`.
 
-## Step 2 — Gather current state
+## Step 2 — Detect the ecosystem and gather the current version
 
-- Read the project version from `pom.xml` (the `<version>` immediately under
-  `<artifactId>hermes</artifactId>`, not a dependency/plugin version). It must end in `-SNAPSHOT` — if it doesn't,
-  tell the user there's nothing to release and stop.
+- **Detect the ecosystem.** Prefer a result already in hand over re-deriving it:
+  1. If `iru-explore` ran earlier in this conversation, read its `## Tech stack` report's `- Project type:` line
+     (see `.claude/skills/iru-explore/SKILL.md` for the exact vocabulary — `java-library`, `java-springboot`,
+     `java-springboot-hilla`, `typescript-library`, `react-web`, `angular-web`, `android-library`, `android-app`,
+     `swift-library`, `apple-app`, etc.) and derive the ecosystem key from it: `java-*` → `java`;
+     `typescript-library`/`react-web`/`angular-web`/`react-native-app`/`ionic-app` → `typescript`; `android-*` →
+     `android`; `swift-*`/`apple-app` → `swift`. If the `Project type:` line is `multiple`, ask the user which
+     module this release targets, since a single release cuts one version.
+  2. Otherwise, detect it directly from manifests present at the repository root: `pom.xml` → `java`;
+     `package.json` → `typescript`; `build.gradle`/`build.gradle.kts` with the Android Gradle Plugin applied →
+     `android`; `Package.swift`, or a `*.xcodeproj`/`project.yml`/`Project.swift` → `swift`. Ask the user which
+     one this release targets if more than one manifest is found and it's genuinely ambiguous which is the
+     release target.
+- **Find the installed bump-version skill** for that ecosystem:
+  ```bash
+  find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"
+  ```
+  The key is each matching directory's name with the `iru-` prefix and `-bump-version` suffix stripped (e.g.
+  `iru-java-bump-version` → `java`). Match the detected ecosystem's key against what's actually installed.
+  - **Match found**: read that skill's own `SKILL.md` and apply its documented "read the current version"
+    mechanism directly to obtain the current value — every `iru-<key>-bump-version` skill in this catalog
+    documents locating and reading the current version as the very first thing it does before writing anything
+    (e.g. `iru-java-bump-version`'s Step 3 locates the project's own `pom.xml` `<version>`;
+    `iru-typescript-bump-version`'s Step 3 reads `package.json`'s `version` field;
+    `iru-android-bump-version`'s Step 3 reads `lib/build.gradle.kts`'s `libraryVersion`;
+    `iru-swift-bump-version`'s Step 5/"Library" case reads the latest git tag) — none of these skills expose a
+    separate read-only invocation mode, reading is simply their first ordinary step, so apply that same
+    locate-and-read logic here rather than inventing a different one. Also read that skill's own dedicated
+    pre-release-convention section (`iru-java-bump-version`'s Step 5, `iru-typescript-bump-version`'s Step 5,
+    `iru-android-bump-version`'s Step 5, `iru-swift-bump-version`'s Step 5) to know this ecosystem's convention
+    for the rest of this skill (e.g. `-SNAPSHOT` for Java/Android, `-dev.N` for npm, "the release is the git tag
+    itself, there is no in-tree pre-release marker" for a Swift library).
+  - **No match installed**: fall back to asking the user which file carries the version (e.g. `pom.xml`,
+    `package.json`) and what its pre-release suffix convention is — don't guess a bump-version skill into
+    existence, and don't fall back to editing that file directly either at this point. Note in the final report
+    (Step 12) that the version bump in Step 6 will need to be done by hand, since no matching
+    `iru-<key>-bump-version` skill is installed in this repository's `.claude/skills/`.
+- The current version **must be a pre-release per that ecosystem's convention** (e.g. ends in `-SNAPSHOT` for
+  Java/Android, `-dev.N` for npm) — if it isn't, tell the user there's nothing to release and stop. This check
+  doesn't apply the same way to a Swift library, which has no in-tree pre-release marker at all: its "current
+  version" is simply the latest git tag (`git describe --tags --abbrev=0`); a Swift app's `MARKETING_VERSION` is
+  likewise always a plain release-shaped string, per `iru-swift-bump-version`'s Step 5 — for either, skip this
+  specific check and treat the latest tag/current `MARKETING_VERSION` as the version to bump from.
 - Find the latest released version: `git tag --sort=-v:refname | head -1` (falls back to "no previous release" if
   there are no tags — a first release).
 - Check the working tree is clean (`git status`). If there are uncommitted changes, stop and ask the user to
@@ -36,17 +91,19 @@ touching any file.
   never anything else. Check `git ls-remote --heads origin main master` (or `git branch -a` if offline) rather
   than assuming; older repositories tend to use `master`, newer ones `main`. If both somehow exist, prefer `main`.
   If neither exists, stop and ask the user which branch releases should target — don't guess. This is where the
-  release branch's pull request will point (Step 13) — the release branch itself always originates from
+  release branch's pull request will point (Step 10) — the release branch itself always originates from
   `develop`, per Step 1.
 
 ## Step 3 — Ask for the release version
 
-Compute three candidates and present them with `AskUserQuestion` (previews help here — show the resulting
-version string for each):
+Compute three candidates and present them with `AskUserQuestion` (previews help here — show the resulting version
+string for each):
 
-- **Current SNAPSHOT without the suffix** (e.g. `1.4.0-SNAPSHOT` → `1.4.0`) — recommended default; this repo's
-  convention is to already bump the SNAPSHOT to the next planned minor right after the previous release, so this
-  is normally the right one.
+- **Current pre-release value stripped** (e.g. Java/Android `1.4.0-SNAPSHOT` → `1.4.0`, npm `1.4.0-dev.0` →
+  `1.4.0`, per the convention detected in Step 2) — recommended default; this repo's convention is to already
+  bump the pre-release marker to the next planned minor right after the previous release, so this is normally the
+  right one. For a Swift library, where there is no in-tree pre-release marker, this option is instead simply
+  "the next semver bump from the latest tag" (see `iru-swift-bump-version`'s Step 5).
 - **A new patch version** — latest tag with its patch component incremented (e.g. latest tag `1.3.0` → `1.3.1`),
   for when the changes since the last release turned out to be small enough not to warrant the pre-planned minor.
 - **A new major version** — latest tag with its major incremented and minor/patch reset to `0` (e.g. `1.3.0` →
@@ -55,20 +112,30 @@ version string for each):
 `AskUserQuestion` always offers a free-text "Other" option too, so an arbitrary version is always possible. Treat
 whatever is chosen/typed as the release version for the rest of this skill; validate it looks like `X.Y.Z`.
 
-## Step 4 — Ask for the upcoming SNAPSHOT version
+## Step 4 — Ask for the upcoming pre-release version
 
 Using the release version chosen in Step 3, compute three bump candidates (minor/patch/major) for the *next*
-development version, and ask via `AskUserQuestion` which to use — default/recommended: minor bump, matching this
-repo's established convention (e.g. release `1.4.0` → next `1.5.0-SNAPSHOT`). The chosen bump type plus
-`-SNAPSHOT` is the upcoming version referenced in README/docs text for the rest of this skill.
+development version per the ecosystem's own convention detected in Step 2 (e.g. Java/Android `1.5.0-SNAPSHOT`,
+npm `1.4.1-dev.0`), and ask via `AskUserQuestion` which to use — default/recommended: minor bump, matching this
+repo's established convention (e.g. release `1.4.0` → next `1.5.0-SNAPSHOT`). The chosen bump type plus the
+convention's pre-release suffix is the upcoming version referenced in README/docs text for the rest of this skill.
+This step doesn't apply the same way to a Swift library (no in-tree pre-release marker to compute a next value
+for) — skip it for that ecosystem and move on to Step 5.
 
-Note for the final report (Step 15): this skill only writes the release version into `pom.xml` — it does not bump
-`pom.xml` itself to the upcoming SNAPSHOT. That bump happens automatically once the release is published: the
-`Sync` GitHub workflow (`.github/workflows/sync.yml`) opens a `sync_x.y.z` pull request into `develop` that merges
-the released branch back in and bumps `pom.xml`/`README.md`/the Antora docs to the next snapshot. The upcoming
-version gathered here is used for the human-readable "latest snapshot" mentions in README/docs, and should match
-the minor-bump default that workflow computes (major.(minor+1).0-SNAPSHOT) unless there's a specific reason to
-diverge.
+Note for the final report (Step 12): this skill only bumps the version file(s) to the release version, in Step 6
+— it does not itself bump them again to the upcoming pre-release version afterward. For the Java/Maven path
+specifically, that second bump can happen automatically once the release is published, **if** this repository has
+a `Sync` GitHub workflow (`.github/workflows/sync.yml`, generated by `iru-setup-java-github-workflows`): it opens
+a `sync_x.y.z` pull request into `develop` that merges the released branch back in and bumps
+`pom.xml`/`README.md`/the Antora docs to the next snapshot via `.github/scripts/sync_versions.py`. Check whether
+`.github/workflows/sync.yml` actually exists before relying on this:
+
+- **Exists**: no manual next-dev bump is needed — note in Step 12's report that the `Sync` workflow will handle
+  it, and that its minor-bump default should match the upcoming version chosen here (flag it if it doesn't).
+- **Doesn't exist** (this repository has no such workflow, or the ecosystem detected in Step 2 isn't Java): say so
+  plainly in Step 12's report instead of assuming the next-dev bump will happen on its own. The user is
+  responsible for that bump instead — typically a follow-up manual call to the same `iru-<key>-bump-version`
+  skill used in Step 6, against `develop`, with the upcoming version computed here.
 
 ## Step 5 — Create the release branch
 
@@ -76,49 +143,34 @@ diverge.
   --heads origin release_<version>`) — stop and ask the user how to proceed if it does.
 - `git checkout -b release_<version>` from `develop` (confirmed to be the current branch in Step 1).
 
-## Step 6 — Update `pom.xml`
+## Step 6 — Bump the version
 
-Replace the project's `<version>...-SNAPSHOT</version>` with `<version><release-version></version>` (the specific
-tag right after `<artifactId>hermes</artifactId>` — don't touch dependency/plugin versions elsewhere in the file).
+Delegate the actual file rewrite to the bump-version skill matched in Step 2, rather than editing any build file
+directly:
 
-## Step 7 — Update `README.md`
-
-Check whether the `iru-setup-readme` skill is available (present under `.claude/skills/iru-setup-readme`).
-
-- **Available**: invoke `Skill({skill: "iru-setup-readme"})`. `pom.xml` already carries the release version from Step
-  6, so `iru-setup-readme`'s own exploration picks it up directly; since `README.md` already exists, `iru-setup-readme`
-  will show its own diff and ask for approval (its Step 9) — review that diff here rather than assuming it's
-  correct. Watch specifically for the "latest release" version: at this point in the release flow the release tag
-  doesn't exist yet (it's only created once this branch is merged and published), so `iru-setup-readme`'s git-tag-based
-  detection will still see the *previous* release as "latest" and may not know the upcoming SNAPSHOT version at
-  all (only Step 4 of this skill does). If the proposed README doesn't already show "Latest release" → the release
-  version and "Latest snapshot"/"Current development version" → the upcoming SNAPSHOT version chosen in Step 4,
-  correct those specific mentions by hand before accepting, using the manual approach below as reference — don't
-  accept a diff that regresses those two facts.
-- **Not available**: fall back to updating every version reference by hand so the README reflects the new
-  release:
-  - The "Add the following dependency" / Installation code blocks: "Latest release" → the release version, "Latest
-    snapshot" → the upcoming SNAPSHOT version.
-  - The Project Status table rows `Current development version` → the upcoming SNAPSHOT version, and
-    `Latest release shown here` → the release version.
-
-## Step 8 — Update `docs/antora.yml`
-
-Set `version:` to the release version (matching this repo's convention of the Antora component version tracking
-the latest actual release, not a SNAPSHOT).
-
-## Step 9 — Update Antora pages with version snippets
-
-Search the docs pages for the same kind of dependency snippet the README has:
-
-```bash
-grep -rl "<version>" docs/modules/ROOT/pages/*.adoc
+```
+Skill({skill: "iru-<key>-bump-version", args: "<release-version>\nsync-files: yes"})
 ```
 
-For each match (in this repo, `getting-started.adoc`), update its "Latest release" and "Latest snapshot" `<version>`
-values the same way as Step 7. Don't touch pages that don't mention a version.
+substituting the ecosystem key found in Step 2 (e.g. `iru-java-bump-version`, `iru-typescript-bump-version`,
+`iru-android-bump-version`, `iru-swift-bump-version`) and the release version chosen in Step 3. Passing
+`sync-files: yes` folds what used to be this skill's own separate README/`docs/antora.yml`/Antora-page-snippet
+update steps into this single delegated call — each `iru-<key>-bump-version` skill's own optional sync step
+already covers exactly those files for its ecosystem, so there's no separate step here for them anymore. Review
+whatever that skill reports back (old/new version, every file it touched, any warnings) before continuing to
+Step 7 — this skill does not re-verify the write itself.
 
-## Step 10 — Determine what changed, then update `whats-new.adoc` and `CHANGELOG.md`
+If Step 2 found no matching `iru-<key>-bump-version` skill installed, this is the point where the user (or this
+skill, best-effort, only if the user explicitly asks it to proceed anyway) must edit the version file(s) by hand
+instead — note clearly in Step 12's report that this happened without the usual delegated skill.
+
+The later "next development version" bump discussed in Step 4 — when it isn't handled by an automated workflow
+(no `sync.yml`, or a non-Java ecosystem) and the user wants it done as part of this same session rather than left
+for later — also goes through the same `iru-<key>-bump-version` skill: call it again with the upcoming pre-release
+version computed in Step 4, typically against `develop` once this release branch/PR exists, never against the
+release branch itself.
+
+## Step 7 — Determine what changed, then update `whats-new.adoc` and `CHANGELOG.md`
 
 Both files describe the same release from the same underlying analysis — do the analysis once, then write it into
 each file in its own house style. Don't let them drift: same set of changes, same version, same date.
@@ -153,41 +205,73 @@ each file in its own house style. Don't let them drift: same set of changes, sam
   if there's no previous tag). If `CHANGELOG.md` doesn't exist yet, create it with this same structure, an
   `[Unreleased]` section, and one entry for the release being cut.
 
-## Step 11 — Review, then commit
+## Step 8 — Review, then commit
 
 Show the user a summary of every file changed (`git status`, `git diff --stat`) before committing. Commit with a
 message matching this repo's convention: `Release <version>` (see `git log --oneline` on the previous release
 branches for the exact style).
 
-## Step 12 — Confirm before pushing and opening the PR
+## Step 9 — Confirm before pushing and opening the PR
 
 Pushing a branch and opening a pull request are visible, shared-state actions — confirm with the user before
-proceeding, summarizing: the branch name, the release version, the upcoming SNAPSHOT version, the target base
-branch, and the files changed. Only continue once they say to go ahead.
+proceeding, summarizing: the branch name, the release version, the upcoming pre-release version (if Step 4 applied
+to this ecosystem), the target base branch, and the files changed. Only continue once they say to go ahead.
 
-## Step 13 — Push and open the pull request
+## Step 10 — Push and open the pull request
 
 - `git push -u origin release_<version>`.
-- Ensure a `iru-release` label exists (`gh label list` — create it with `gh label create release --description
-  "Release pull request" --color <any hex>` if it's missing; this repo doesn't have one by default).
-- Open the PR against the `main`/`master` branch determined in Step 2 — never `develop` or any other branch —
-  titled `Release <version>` to match this repo's history, with a minimal placeholder body (the real description
-  comes next) and the `iru-release` label attached: `gh pr create --base <main-or-master> --head release_<version>
-  --title "Release <version>" --body "Release <version>." --label release`. If `gh pr create` for some reason
-  doesn't accept `--label` (older `gh` versions), fall back to `gh pr edit <number> --add-label release`
-  immediately after creating it — the PR must not be left without the label.
+- **Determine which platform hosts this repository**, the same way `iru-pr-description`'s Step 1 does: reuse the
+  `Repository host: ...` line from an `iru-explore` report already in this conversation if one exists; otherwise
+  detect it directly from `git remote get-url origin` (falling back to `git remote -v`) against known patterns —
+  `github.com` (or a GitHub Enterprise Server domain) → **GitHub**; `bitbucket.org` (cloud), or a self-hosted
+  `/scm/<project>/<repo>.git` path (Server/Data Center) → **Bitbucket**; `dev.azure.com`/`<org>.visualstudio.com`
+  → **Azure DevOps (cloud)**; a self-hosted `/tfs/` path segment, or bare `_git` without a
+  `dev.azure.com`/`visualstudio.com` domain → **Azure DevOps Server / TFS**. Ask the user (`AskUserQuestion`) if
+  the URL doesn't clearly match any of these.
+- **Ensure a release label/tag exists and open the PR**, using the tool matching the detected host:
+  - **GitHub**: ensure a `iru-release` label exists (`gh label list` — create it with `gh label create release
+    --description "Release pull request" --color <any hex>` if it's missing; this repo doesn't have one by
+    default), then:
+    ```bash
+    gh pr create --base <main-or-master> --head release_<version> --title "Release <version>" \
+      --body "Release <version>." --label release
+    ```
+    If `gh pr create` for some reason doesn't accept `--label` (older `gh` versions), fall back to `gh pr edit
+    <number> --add-label release` immediately after creating it — the PR must not be left without the label.
+  - **Bitbucket**: open the pull request via Bitbucket MCP tools if connected (`ToolSearch` "bitbucket"),
+    otherwise the REST API (`POST /2.0/repositories/<workspace>/<repo>/pullrequests` for Cloud, or the Server/Data
+    Center equivalent), titled `Release <version>`, from `release_<version>` into `<main-or-master>`. Bitbucket
+    pull requests don't carry GitHub-style labels — if this repository's Bitbucket project exposes its own
+    tag/label tooling, add an equivalent `release` tag there; otherwise note in Step 12's report that no
+    label/tag was attached because the host doesn't support one the same way GitHub does.
+  - **Azure DevOps / TFS**: `az repos pr create --target-branch <main-or-master> --source-branch
+    release_<version> --title "Release <version>" --description "Release <version>."`, or Azure DevOps MCP tools
+    if connected (`ToolSearch` "azure devops"). Add the equivalent label via `az repos pr update --id <id>
+    --labels release` if the installed CLI/extension version supports PR labels; otherwise note it the same way
+    as the Bitbucket case.
+  - If no tool for the detected host is available at all (no CLI installed/authenticated and no matching MCP
+    connection), tell the user and stop here — Step 11 needs an actual pull request to attach its description to.
+- Open the PR against the `main`/`master` branch determined in Step 2 — never `develop` or any other branch.
 
-## Step 14 — Fill in the PR description
+## Step 11 — Fill in the PR description
 
 Invoke `Skill({skill: "iru-pr-description", args: "base-branch: <main-or-master>"})`, passing the release PR's
 target branch resolved in Step 2 so the description is drafted against the same base the PR targets rather than
-whatever the repository's default branch happens to be. It will find the PR just opened in Step 13 (same branch),
-draft a description from the actual diff, show it, and — once confirmed — update the PR body via `gh pr edit`.
+whatever the repository's default branch happens to be. It will find the PR just opened in Step 10 (same branch),
+detect the same repository host itself, draft a description from the actual diff, show it, and — once confirmed —
+update the PR body using that host's own tooling.
 
-## Step 15 — Report
+## Step 12 — Report
 
-Summarize: the release version and upcoming SNAPSHOT version chosen, the branch and PR URL, which files were
-updated, and what was written to `whats-new.adoc` and `CHANGELOG.md`. Remind the user that once this PR is merged
-and a GitHub release is published from it, the `Sync` workflow will automatically open a follow-up PR into
-`develop` bumping the development snapshot (per the note in Step 4) — no manual sync step is needed unless that
-workflow's minor-bump default doesn't match the upcoming SNAPSHOT version chosen here.
+Summarize: the ecosystem detected in Step 2 and which `iru-<key>-bump-version` skill was used (or, if none was
+installed, that the bump was done by hand); the release version and upcoming pre-release version chosen (or "not
+applicable — Swift library" per Step 4); the branch and PR URL; the repository host the PR was opened on; which
+files were updated (per Step 6's delegated skill report, plus the changelog files from Step 7); and what was
+written to `whats-new.adoc` and `CHANGELOG.md`.
+
+Remind the user, per Step 4's finding: if `.github/workflows/sync.yml` exists, that once this PR is merged and a
+release is published from it, the `Sync` workflow will automatically open a follow-up PR into `develop` bumping
+the development version (no manual sync step is needed unless that workflow's minor-bump default doesn't match
+the upcoming version chosen in Step 4); if it doesn't exist (or the ecosystem isn't Java), state plainly that no
+such automation ran and the next-development-version bump — if wanted now — is a manual follow-up call to the
+same `iru-<key>-bump-version` skill used in Step 6, against `develop`.

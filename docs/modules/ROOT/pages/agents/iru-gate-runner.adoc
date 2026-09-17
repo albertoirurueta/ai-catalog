@@ -1,27 +1,35 @@
 = Gate Runner
-:description: Claude Code agent that runs a single quality gate skill (tests, coverage, lint, license, doc, or security scan) in isolation and reports a compact summary.
-:keywords: iru-gate-runner, claude code agent, quality gate, test coverage, code quality lint, license headers, security scan, run quality gates, isolate sub-agent context
+:description: Claude Code agent that runs one quality gate skill (tests, coverage, lint, license, docs, security) for Java, .NET, TypeScript, Android or Swift.
+:keywords: iru-gate-runner, claude code agent, quality gate, test coverage, code quality lint, license headers, security scan, run quality gates, isolate sub-agent context, lcov, jacoco, xccov, eslint, biome, detekt, ktlint, android lint, swiftlint, tsdoc, dokka, docc
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 A custom agent that runs a single verification/quality-gate skill — tests, coverage, code-quality/lint, license
-headers, doc-comment audits, security scans, or a full project build — in an isolated context, optionally diffs
-the result against a baseline, and reports back only a compact, structured summary.
+headers, doc-comment audits, security scans, or a full project build — across any of the catalog's language
+tracks (Java, .NET, TypeScript, Android, Swift), in an isolated context, optionally diffs the result against a
+baseline, and reports back only a compact, structured summary.
 
 == Purpose
 
 `iru-gate-runner` exists to collapse a pattern that used to be hand-written, nearly identically, at more than a
-dozen call sites across `iru-code`, `iru-code-one-task-group`, `iru-java-code-one-task-group`, and
-`iru-dotnet-code-one-task-group`: invoke a verification skill,
+dozen call sites across `iru-code`, `iru-code-one-task-group`, `iru-java-code-one-task-group`,
+`iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, and
+`iru-swift-code-one-task-group`: invoke a verification skill,
 diff it against a baseline if one is given, and return only the distilled outcome — never the raw
-Surefire/JaCoCo/Checkstyle/PMD/SpotBugs/StyleCop/CA/SARIF/detect-secrets output or a full build log. Before this
-agent existed, every one of those call sites repeated the same "report back only X, not the full report"
-instruction in its own `Agent()` prompt; centralizing it in one agent definition means that convention only has
-to be stated — and changed, if it ever needs to be — once.
+Surefire/JaCoCo/lcov/xccov/SARIF/checkstyle-result.xml/pmd.xml/spotbugsXml.xml/eslint/detekt/swiftlint/
+detect-secrets output or a full build log. Before this agent existed, every one of those call sites repeated the
+same "report back only X, not the full report" instruction in its own `Agent()` prompt; centralizing it in one
+agent definition means that convention only has to be stated — and changed, if it ever needs to be — once.
 
-It always prefers invoking the matching Claude Code skill (e.g. `iru-java-test`, `iru-dotnet-coverage`,
-`iru-java-code-quality`, `iru-check-license`, `iru-check-security`) over a raw command, falling back to the equivalent raw
-build-tool command only when the prompt says no matching skill is installed.
+It always prefers invoking the matching Claude Code skill — tests (`iru-java-test`, `iru-dotnet-test`,
+`iru-typescript-test`, `iru-android-test`, `iru-swift-test`), coverage (`iru-java-coverage`, `iru-dotnet-coverage`,
+`iru-typescript-coverage` reporting lcov line/branch %, `iru-android-coverage` reporting JaCoCo XML line/branch %,
+`iru-swift-coverage` reporting llvm-cov/`xccov` %), code-quality/lint (`iru-java-code-quality`,
+`iru-dotnet-code-quality`, `iru-typescript-code-quality` for ESLint/Biome, `iru-android-code-quality` for
+Detekt/ktlint/Android Lint, `iru-swift-code-quality` for SwiftLint, all reporting rule-id issue counts),
+doc-comment audits (`iru-java-javadoc`, `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-android-dokka`,
+`iru-swift-docc`), `iru-check-license`, and `iru-check-security` — over a raw command, falling back to the
+equivalent raw build-tool command only when the prompt says no matching skill is installed.
 
 == Tools
 
@@ -44,6 +52,30 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
   reactor-wide unit suite, and — the clearest case for this agent anywhere in the catalog — the Testcontainers-backed
   integration run, where a multi-container Failsafe log is enormous and all the caller needs back is a pass/fail plus
   whether a failure was an assertion or an environment problem.
+* xref:skills/iru-typescript-code-one-task-group.adoc[], xref:skills/iru-android-code-one-task-group.adoc[], and
+  xref:skills/iru-swift-code-one-task-group.adoc[] — the same per-bucket pattern as the Java/.NET one-task-groups:
+  a pre-change quality baseline and its later regression diff (`iru-typescript-code-quality`/
+  `iru-android-code-quality`/`iru-swift-code-quality`), license headers, the doc-comment audit
+  (`iru-typescript-tsdoc`/`iru-android-dokka`/`iru-swift-docc`), the scoped test run
+  (`iru-typescript-test`/`iru-android-test`/`iru-swift-test`), the coverage check
+  (`iru-typescript-coverage`/`iru-android-coverage`/`iru-swift-coverage`), and the full test suite — all run once
+  per bucket rather than once per task.
+* xref:skills/iru-typescript-generate-all-tests.adoc[], xref:skills/iru-android-generate-all-tests.adoc[], and
+  xref:skills/iru-swift-generate-all-tests.adoc[] — Steps 3 and 6 (the coverage measurement taken before and
+  after generating tests, via `iru-typescript-coverage`/`iru-android-coverage`/`iru-swift-coverage`) and Step 7
+  (the full test suite run once every file/class/type has its own generated tests).
+* xref:skills/iru-setup-java-springboot-hilla.adoc[] — Step 8, running `mvn vaadin:prepare-frontend` and then
+  `npm ci` plus a vitest coverage run for the Hilla frontend, so the noisy install/build output never reaches the
+  orchestrator's context.
+* xref:skills/iru-setup-android-library.adoc[] (Step 11) and xref:skills/iru-setup-android-app.adoc[] (Step 7) —
+  the Gradle verification that closes out Android scaffolding (`./gradlew --offline help`, then
+  `:lib:assembleDebug`/`:app:assembleDebug`).
+* xref:skills/iru-setup-swift-library.adoc[] (Step 13) — `swift build` and `swift test` against the freshly
+  scaffolded package.
+* xref:skills/iru-setup-apple-app.adoc[] (Step 7) — syntax checks, `swift build`/`swift test` on the
+  `Packages/Core` module, and `xcodebuild` where a full toolchain is available.
+* xref:skills/iru-setup-swift-github-workflows.adoc[] (Step 13) — verifying the workflow YAML it just wrote:
+  parsing it, resolving each action reference, and dry-running its shell steps.
 * xref:skills/iru-plan.adoc[] — recommended (when installed) for the scoped test-run step a generated
   `implementation_plan.md` instructs its executor to delegate to a sub-agent, in place of a generic,
   repository-specific sub-agent prompt.
@@ -68,4 +100,4 @@ summarize-don't-dump convention every time.
 
 == Source
 
-https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/agents/iru-gate-runner.md[`gate-runner.md` on GitHub] — the file this page was generated from.
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/agents/iru-gate-runner.md[`iru-gate-runner.md` on GitHub] — the file this page was generated from.

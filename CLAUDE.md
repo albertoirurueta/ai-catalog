@@ -43,15 +43,42 @@ Skills compose into a few recurring pipelines rather than each standing alone:
 - **Issue-to-PR cycle**: `iru-issue` → `iru-explore` → `iru-plan` → `iru-code` → `iru-pr-description` → `iru-pr-review`. `iru-plan` groups
   `implementation_plan.md`'s tasks into dependency-aware groups; `iru-code` doesn't implement anything itself — it
   dispatches each group, in order, to `iru-code-one-task-group`, which resolves each task's language and delegates
-  to the matching `<key>-code-one-task-group` skill (`iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`).
+  to the matching `<key>-code-one-task-group` skill (`iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`,
+  `iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`).
   That skill captures one quality baseline for the whole group, runs `<key>-code-one-task`
-  (`iru-java-code-one-task`, `iru-dotnet-code-one-task`) once per task — in parallel when the group allows it — and
-  validates the group once (tests/coverage/quality/doc/license), instead of once per task.
-- **Repository bootstrap**: `iru-setup-java-library-repository` orchestrates `iru-setup-java-library` →
-  `iru-setup-antora` → `iru-setup-java-gitignore` → `iru-setup-java-github-workflows` → `iru-setup-changelog` →
-  `iru-setup-readme` in a fixed order for a brand-new Java library repo; each also runs standalone.
-- **Ticket intake**: `iru-create-github-issue` / `iru-create-jira-ticket` ground a draft in the codebase via
-  `iru-explore` before filing.
+  (`iru-java-code-one-task`, `iru-dotnet-code-one-task`, `iru-typescript-code-one-task`, `iru-android-code-one-task`,
+  `iru-swift-code-one-task`) once per task — in parallel when the group allows it — and validates the group once
+  (tests/coverage/quality/doc/license), instead of once per task.
+- **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
+  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over three
+  `AskUserQuestion` rounds (Backend/JVM, Mobile/native, Web/Node), asks the shared inputs once, and delegates to the
+  matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
+  so every sub-skill takes its gap-fill/update path instead of assuming a brand-new repo. The stack orchestrators —
+  `iru-setup-java-library-repository`, `iru-setup-java-springboot`, `iru-setup-typescript-repository`,
+  `iru-setup-android-repository`, `iru-setup-swift-repository` — each also run standalone, and each chains the
+  same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
+  `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`.
+- **Shared bootstrap inputs**: every orchestrator/scaffold/workflows skill accepts the same `args` vocabulary —
+  `open-source: yes|no`, `publish: yes|no` (libraries), `distribution: none|internal|store` (apps),
+  `sonar: cloud|self-hosted|none` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), and `mode: new|existing`
+  — so a value collected once by a front door or orchestrator never needs re-asking downstream. Defaults: `sonar`
+  is `cloud` when open source, otherwise asked with `none` recommended (SonarCloud is free only for open source);
+  `publish`/`distribution` default to `yes`/`store` only when the project is open source.
+- **Release**: `iru-release` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
+  it discovers the installed `iru-<key>-bump-version` skills (`find .claude/skills -maxdepth 1 -type d -name
+  "iru-*-bump-version"`, currently `java`, `typescript`, `android`, `swift`) and delegates the actual version-file
+  edit to whichever key matches the detected project, keeping its own branch/PR/label/changelog steps ecosystem-agnostic.
+- **Android reference repository**: every `iru-*android*` skill's embedded templates are genericized from a single
+  real repository, https://github.com/albertoirurueta/irurueta-android-glutils (`lib/` + Compose `app/`,
+  `gradle/libs.versions.toml`, JUnit 4 + MockK + Robolectric + AndroidX test + Espresso, AGP JaCoCo, inline
+  `sonar {}`, Dokka to gh-pages) — keep new Android skills consistent with it, with the decided departures (Antora
+  site + Dokka under `api/`, `develop`/`main` branching with `-SNAPSHOT` on `develop` and a `sync.yml`) documented
+  in each skill rather than silently reintroduced.
+- **Template verification**: every scaffold/workflows/gate skill's embedded templates are meant to be exercised
+  against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)
+  before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can't be
+  verified locally is reported rather than assumed to work. Every `-github-workflows` skill also embeds the same
+  security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table.
 
 ### Agents (`.claude/agents/<name>.md`)
 
@@ -60,7 +87,8 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
 - **`iru-gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
   headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
   reports back only a compact summary. Used throughout `iru-code`, `iru-code-one-task-group`, `iru-java-code-one-task-group`,
-  and `iru-dotnet-code-one-task-group`, and recommended by `iru-plan` for the scoped test-run step it writes into
+  `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, and
+  `iru-swift-code-one-task-group`, and recommended by `iru-plan` for the scoped test-run step it writes into
   generated plans.
 - **`iru-isolated-skill-executor`** — runs one named skill end-to-end in a completely fresh context so an earlier
   exploration/planning transcript can't bias it, while the caller keeps running afterward. Used by `iru-issue` to

@@ -1,0 +1,181 @@
+= Setup Android GitHub Workflows
+:description: Scaffolds gitflow or main-only GitHub Actions CI/CD and security workflows for an Android/Gradle library or app repository, plus Dependabot config.
+:keywords: iru-setup-android-github-workflows, claude code skill, android, gradle, github actions, jacoco, dokka, sonarqube, ci/cd, dependabot
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold or update the GitHub Actions CI/CD and security workflows, plus a Dependabot config, for an
+Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-android-app`.
+
+== Purpose
+
+`iru-setup-android-github-workflows` wires up the house CI/CD pipeline for an Android/Gradle repository: build
+and unit test, an optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, lint with
+SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-
+`jacococli.jar` fallback), an optional SonarQube/SonarCloud scan, a Dokka + Antora documentation build
+published to GitHub Pages (library flavor), and — depending on `flavor` — either an optional Maven Central
+publish or a signed release build uploaded to Google Play or Firebase App Distribution. It also generates a
+`security.yml` (dependency-review, CodeQL, OSV-Scanner, gitleaks, plus two opt-in jobs) and
+`.github/dependabot.yml`, regardless of branching model. The skill supports two branching shapes —
+`gitflow` (`develop.yml`/`main.yml`/`sync.yml`) and `main-only` (`main.yml`/`publish.yml`, no `sync.yml`) — and
+two flavors (`library`/`app`), ships genericized example templates derived from a real Android library
+repository's actual workflows, and resolves every placeholder from a survey of the target repository rather
+than guessing. If any relevant workflow file already exists, it asks the user whether to stop or attempt an
+update using the templates as reference, preserving any step/job this skill doesn't own.
+
+== Purpose group
+
+xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-android-github-workflows
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args` (`key: value` lines)
+|No
+|Pre-resolved values, one per line, e.g. `flavor: library`. Key values: `flavor` (`library`/`app`),
+`branching` (`gitflow`/`main-only`), `integration-branch`, `stable-branch`, `java-version`,
+`run-instrumented-tests` (`yes`/`no`), `api-level`, plus this catalog's shared workflow-args vocabulary —
+`open-source`, `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar`
+(`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode`
+(`new`/`existing`), and four `security-*` opt-outs (`security-dependency-review`, `security-codeql`,
+`security-osv`, `security-gitleaks`) plus two security opt-ins (`security-owasp-dependency-check`,
+`security-mobsfscan`, app only) — so an orchestrating skill can supply them without re-prompting.
+|None — if `args` is absent or doesn't match this format, every parameter is instead resolved by surveying
+the repository (module layout, existing `sonar {}`/`mavenPublishing {}` blocks, signing config, vendored
+JaCoCo CLI, branch names, README/Antora version wording) and asking the user for the rest — `flavor` is
+required and detected/asked if ambiguous; `branching` defaults to `gitflow`, `java-version` to `17`,
+`api-level` to `35`.
+|===
+
+== Outputs
+
+Which files are written depends on `branching` × `flavor`:
+
+[cols="1,3", options="header"]
+|===
+|`branching` × `flavor` |Files written
+
+|`gitflow` / `library`
+|`.github/workflows/develop.yml`, `main.yml`, `sync.yml`, `.github/scripts/sync_versions.py`, `security.yml`,
+`.github/dependabot.yml`
+
+|`gitflow` / `app`
+|Same six files (the release job inside `main.yml` differs internally — signing/store upload instead of
+Maven Central publish)
+
+|`main-only` / `library`
+|`.github/workflows/main.yml`, `publish.yml`, `security.yml`, `.github/dependabot.yml`
+
+|`main-only` / `app`
+|Same four files (the release job inside `publish.yml` differs internally, same as above)
+|===
+
+* Every file above is created fresh, or updated in place if it already existed and the user chose to continue
+  (Step 1's stop-or-update path preserves any step/job this skill doesn't own).
+* A report of required repository secrets and settings — see the table below — plus any open gaps found along
+  the way (missing `docs/antora.yml`, a Gradle Play Publisher plugin found and preferred over the workflow-level
+  upload action, README/Antora wording that didn't match `sync_versions.py`'s regexes, a vendored
+  `jacococli.jar` found and used instead of the AGP-path default).
+
+Required secrets (only the rows that apply to what was actually generated need to be created):
+
+[cols="2,3,2", options="header"]
+|===
+|Secret |Purpose |Only needed when
+
+|`SONAR_TOKEN`
+|Auth token for the SonarQube/SonarCloud scan
+|`sonar` is `cloud` or `self-hosted`
+
+|`MAVEN_CENTRAL_USERNAME` / `MAVEN_CENTRAL_PASSWORD`
+|Maven Central Publishing Portal credentials
+|`flavor: library`, `publish: yes`
+
+|`SIGNING_MEMORY_KEY` / `SIGNING_MEMORY_KEY_ID` / `SIGNING_IN_MEMORY_KEY_PASSWORD`
+|In-memory GPG signing key, its id, and its passphrase, for Vanniktech's Maven Publish plugin
+|`flavor: library`, `publish: yes`
+
+|`ANDROID_KEYSTORE_BASE64`
+|Base64-encoded release keystore, decoded to `<app-module>/release.jks` at build time
+|`flavor: app`, `distribution` isn't `none`
+
+|`ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
+|Exported as `SIGNING_STORE_PASSWORD`/`SIGNING_KEY_ALIAS`/`SIGNING_KEY_PASSWORD`, the exact env vars
+`iru-setup-android-app`'s `app/build.gradle.kts` reads via `System.getenv()`
+|`flavor: app`, `distribution` isn't `none`
+
+|`PLAY_SERVICE_ACCOUNT_JSON`
+|Google Play service-account JSON for the workflow-level upload action
+|`flavor: app`, `distribution: store`, no Gradle Play Publisher plugin found
+
+|`FIREBASE_APP_ID` / `FIREBASE_SERVICE_CREDENTIALS`
+|Firebase App Distribution upload
+|`flavor: app`, `distribution: internal`
+
+|`NVD_API_KEY`
+|Raises the NVD lookup rate limit for OWASP Dependency-Check (the scan runs without it, just slower)
+|`security-owasp-dependency-check: yes`
+
+|`GITHUB_TOKEN`
+|`sync.yml`'s `gh` calls, `security.yml`'s CodeQL/gitleaks jobs
+|Automatic — no setup needed
+|===
+
+`sync.yml` also needs the repository's Settings → Actions → General → "Workflow permissions" set to allow
+GitHub Actions to create pull requests, and the Pages deploy jobs need Settings → Pages → "Build and
+deployment" → Source set to **GitHub Actions** — both are called out explicitly in the final report since each
+fails silently on the first real run without it.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-android-github-workflows] --> B["Step 0: Resolve inputs\n(parse args, else ask via\nAskUserQuestion/survey)"]
+    B --> C["Step 1: Survey repository\n(module layout, flavor, sonar/\npublish blocks, signing, vendored\njacococli.jar, branches, docs)"]
+    C --> D{"Do the relevant\nworkflow files\nalready exist?"}
+    D -- none exist --> F["Step 2: Resolve action\nversions (live lookup or\nSeptember 2026 fallback)"]
+    D -- some exist --> E{"Stop or continue\n(user choice)?"}
+    E -- stop --> Z["Report which files exist;\nno changes made"]
+    E -- continue --> F
+    F --> G{"branching?"}
+    G -- gitflow --> H["Step 4: Fill develop.yml/\nmain.yml templates"]
+    G -- main-only --> I["Step 7: Fill main.yml/\npublish.yml templates"]
+    H --> J["Step 5: gitflow only —\nsync.yml + sync_versions.py"]
+    I --> K["Step 8: Fill security.yml +\n.github/dependabot.yml templates"]
+    J --> K
+    K --> L["Step 12: Write files\nper Step 11's file matrix"]
+    L --> M["Step 14: Report outputs,\nopen gaps, required secrets\ntable, and warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-android-github-workflows` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-android-repository.adoc[] — Step 7 runs `iru-setup-android-github-workflows` (via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent), passing the pipeline
+  parameters (flavor, branching, integration/stable branch, Java version, instrumented-test/API-level choice,
+  plus the shared open-source/publish/distribution/sonar/mode/security-* args) through `args` as `key: value`
+  lines so it isn't asked again for facts the orchestrator already collected.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-android-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,0 +1,200 @@
+= TypeScript Code One Task
+:description: Implements one TypeScript task from an implementation plan, loading only the reference material its detected framework needs, then checks it off.
+:keywords: iru-typescript-code-one-task, claude code skill, typescript, react, angular, react native, ionic, hilla, vitest, jest, tsdoc, implementation plan
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests, and checkbox update against the real codebase — nothing else.
+This is the narrowest execution unit in the `iru-code` pipeline: `iru-typescript-code-one-task-group` calls it
+once per task in a bucket (potentially many at once, in parallel agents).
+
+== Purpose
+
+`iru-typescript-code-one-task` is the TypeScript-specific implementation worker `iru-typescript-code-one-task-group`
+calls once per task. Given one task's own text (what to build, the named file(s)/component(s)/function(s), the
+described behavior, its exact `implementation_plan.md` checkbox line(s), and any sub-tasks), it first detects the
+project's framework from `package.json` (and, for a Maven-hosted frontend, the root `pom.xml`) — plain npm/TypeScript
+library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend — then loads only the matching guidance from
+its own bundled `reference/` directory, re-checks the current code state, implements exactly what's specified, and
+writes/updates tests. If the task didn't stop on a blocker, it then immediately checks off that task's own checkbox
+(and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, before reporting back — so
+an interrupted run doesn't re-attempt work that already landed. License headers, TSDoc audits, scoped tests,
+coverage, the full suite, code-quality regression checks, and replacing the pending note with the final validation
+outcome all happen once per task group in `iru-typescript-code-one-task-group` instead of once per task. It hands
+back only a short summary; it never captures a quality baseline or runs any test/coverage/quality check itself.
+Equivalent to `iru-java-code-one-task` for npm/TypeScript projects.
+
+=== The bundled reference library
+
+This skill ships a `reference/` directory alongside its `SKILL.md`, holding this catalog's **general TypeScript
+code agreements** — strict typing with no `any`, `readonly` and discriminated unions, named exports, ESM, error
+handling, and async conventions — plus one file per supported framework for the conventions that only apply
+there. It is read by **progressive disclosure**: `reference/README.md` is a short routing table, `code-style.md`
+is always read, and everything else only when the task's shape and detected framework call for it, so a one-line
+change inside a plain library doesn't pay for React, Angular, or Hilla guidance it will never use.
+
+[cols="2,1,3", options="header"]
+|===
+|File |Read when |Covers
+
+|`code-style.md`
+|Always
+|Strict typing with no `any` (use `unknown` plus a narrowing guard, a generic, or a proper union/discriminated
+union instead), `readonly` and immutability as the defaults for new code, named exports (no default exports for
+new modules, except where a framework requires one), ESM module conventions, error-handling and async patterns.
+
+|`tsdoc.md`
+|The task adds or changes an exported function, class, interface, type alias, or enum
+|Full TSDoc as a hard requirement — `@param`, `@returns`, and `@throws` for every error a caller can handle,
+the `@throws` list being what the tests in Step 4 are written against.
+
+|`testing.md`
+|The task writes or updates tests — nearly every task
+|Matching the existing test style in the same directory (Vitest or Jest, Testing Library query priority, mocking
+with `vi.mock`/`jest.mock` only where already used) and covering the new/changed behavior, including the edge
+cases implied by the TSDoc `@throws` contracts.
+
+|`react.md`
+|Detected framework is **react** (`react` + `vite` in `package.json`)
+|Component/state/testing conventions for a Vite+React project.
+
+|`angular.md`
+|Detected framework is **angular** (`@angular/core` in dependencies)
+|Component/state/testing conventions for an Angular CLI project.
+
+|`react-native.md`
+|Detected framework is **react-native** (`expo` or `react-native` in dependencies)
+|Component/state/testing conventions for an Expo/React Native project.
+
+|`ionic.md`
+|Detected framework is **ionic** (`@ionic/angular`/`@ionic/react` with `@capacitor/core`)
+|Component/state/testing conventions for an Ionic/Capacitor project.
+
+|`hilla-frontend.md`
+|Detected framework is **hilla-frontend** (`@vaadin/hilla`/`hilla-spring-boot-starter` in `pom.xml`, or a
+`src/main/frontend/` directory)
+|Component/state/testing conventions for a Vaadin Hilla frontend.
+|===
+
+Exactly one framework file is read — the one matching the detected framework — never more than one, and none at
+all when the classification is **library**. The skill also notes the test runner (Vitest, Jest, or `ng test`) and
+package manager (npm, pnpm, or yarn) while detecting the framework, since `reference/testing.md` and the task's
+own shell commands depend on both. If `reference/` is missing entirely, the skill falls back to the repository's
+own `CLAUDE.md` conventions and the surrounding code's existing style, and says so in its report rather than
+guessing at what the reference would have said.
+
+Every file states the same override: the rules are the default for **new** code, and a file that consistently
+does something else wins. A divergence is reported rather than silently converted, because restyling untouched
+code turns a two-line change into an unreviewable diff.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/component(s)/
+function(s), the described behavior, its exact `implementation_plan.md` checkbox line(s) for itself and its
+sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. Normally supplied by
+`iru-typescript-code-one-task-group` dispatching one task in a bucket at a time.
+|None — this skill has nothing to do without a task description.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory (`README.md`, `code-style.md`, `tsdoc.md`, `testing.md`, and one file
+per framework). If it is missing (the skill directory was copied without it), the skill falls back to the
+repository's `CLAUDE.md` conventions and the surrounding code's style, and says so in its report rather than
+guessing at what the reference would have said.
+|Bundled with the skill
+|===
+
+== Outputs
+
+* Source and test files created/modified per the task, following the bundled `reference/` agreements — strict
+  typing with no `any`, `readonly`/immutability defaults, named exports, full TSDoc on every exported symbol, and
+  the detected framework's own component/state/testing conventions — plus this repository's own `CLAUDE.md`
+  conventions where they are more specific, and the surrounding file's existing style wherever it consistently
+  differs.
+* Tests added/updated (Vitest or Jest, matching the detected runner) covering the new/changed behavior, including
+  a case per documented `@throws` — not run by this skill; the caller runs them once for the whole bucket.
+* `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
+  pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
+  the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
+* A short summary handed back to the caller: the detected framework and which `reference/` file(s) were actually
+  read, the file(s) touched, tests added/updated, whether the run stopped on a blocker, and any deliberate
+  deviation from `reference/` (a file that still uses `any`, a default export kept because the framework requires
+  one, a file whose existing member order or style already diverges) so it reads as a decision rather than an
+  oversight.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-typescript-code-one-task\n(task description)"] --> B["Step 1: read package.json (+ pom.xml);\nclassify framework"]
+    B --> B1{"Framework?"}
+    B1 -- "hilla-spring-boot-starter\nor src/main/frontend/" --> B2["hilla-frontend"]
+    B1 -- "expo or react-native" --> B3["react-native"]
+    B1 -- "&amp;#64;ionic/* + capacitor" --> B4["ionic"]
+    B1 -- "&amp;#64;angular/core" --> B5["angular"]
+    B1 -- "react + vite" --> B6["react"]
+    B1 -- "none of the above" --> B7["library"]
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    B5 --> C
+    B6 --> C
+    B7 --> C["Read reference/README.md, then\ncode-style.md + task-driven files\n(tsdoc.md, testing.md, one framework file)"]
+    C -- "reference/ missing" --> C2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    C2 --> D
+    C --> D["Step 2: re-check current code state;\nnote what the file already does"]
+    D --> E["Step 3: implement exactly what the task\nspecifies (typing, readonly, exports, TSDoc)"]
+    E --> F["Step 4: write/update tests\n(not run here)"]
+    F --> G{"Ambiguous, infeasible against\nreal code, or framework detection\ngenuinely ambiguous?"}
+    G -- yes --> H["Step 5: stop; leave checkbox\nunchecked; report blocker to caller"]
+    G -- no --> I["Step 6: check off this task's\ncheckbox + 'validation pending' note"]
+    I --> J["Step 7: report outcome to caller:\nframework, files, tests, deviations"]
+....
+
+A conflict between `reference/` and the surrounding code is deliberately *not* a stop condition — the skill
+follows the surrounding code and reports the divergence in Step 7.
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-typescript-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads
+its own `reference/` directory and edits the code and test files the task names. License headers, TSDoc audits,
+scoped tests, coverage, and quality checks all live in `iru-typescript-code-one-task-group`.
+
+=== Invoked by
+
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — Step 2, once per task in a `typescript` bucket
+  (concurrently, in a single batch of `Agent` calls, when the group is marked `Parallelizable: yes`; one at a time
+  otherwise), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing
+  that task's full text including its exact checkbox line(s). That caller re-reads `implementation_plan.md`
+  afterward to confirm the checkbox this skill already flipped landed, backfilling it only if a rare concurrent-
+  write race clobbered it, then replaces the "pending" note with the final validation outcome once the whole
+  bucket's validation passes.
+
+=== Related agents
+
+`iru-typescript-code-one-task` itself does not spawn any Agent — it only reads its `reference/` files and edits
+the code/test files the task names.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled TypeScript code agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-typescript-code-one-task/reference[`reference/`].

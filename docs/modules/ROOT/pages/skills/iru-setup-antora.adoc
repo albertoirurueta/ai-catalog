@@ -100,6 +100,15 @@ None — `iru-setup-antora` is a leaf skill; it does not call any other skill in
 * xref:skills/iru-update-docs.adoc[] — conditionally, only when no Antora module exists anywhere in the repository
   yet, and only after asking the user; run via a sub-agent so `iru-update-docs` can keep running afterward instead of
   blocking on it.
+* xref:skills/iru-setup-typescript-repository.adoc[] (Step 6) — runs it via the `iru-isolated-skill-executor` agent
+  right after the flavor's scaffold and deliberately before the workflows skill so the workflows survey finds docs
+  already in place.
+* xref:skills/iru-setup-android-repository.adoc[] (Step 5) — runs it via the `iru-isolated-skill-executor` agent
+  right after the flavor's scaffold and deliberately before the workflows skill so the workflows survey finds docs
+  already in place.
+* xref:skills/iru-setup-swift-repository.adoc[] (Step 6) — runs it via the `iru-isolated-skill-executor` agent
+  right after the flavor's scaffold and deliberately before the workflows skill so the workflows survey finds docs
+  already in place.
 
 === Related agents
 

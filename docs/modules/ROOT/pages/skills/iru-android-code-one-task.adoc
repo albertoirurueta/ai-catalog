@@ -1,0 +1,179 @@
+= Android Code One Task
+:description: Implements one Android/Kotlin task from an implementation plan, detecting the lib/app module and applying the bundled conventions.
+:keywords: iru-android-code-one-task, claude code skill, kotlin, gradle, jetpack compose, junit 4, mockk, robolectric, implementation plan, task implementation, module detection
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests, and checkbox update against the real codebase — nothing else.
+This is the narrowest execution unit in the `iru-code` pipeline: `iru-android-code-one-task-group` calls it once
+per task in a bucket (potentially many at once, in parallel agents via `iru-isolated-skill-executor`).
+
+== Purpose
+
+`iru-android-code-one-task` is the Android/Kotlin-specific implementation worker `iru-android-code-one-task-group`
+calls once per task. Given one task's own text — including its exact `implementation_plan.md` checkbox line(s) —
+it first detects which Gradle module the task belongs to (`lib`, the library module, or `app`, the Compose/Views
+sample or application module), loads only the matching guidance from its own bundled `reference/` directory, re-
+checks the current code state, implements exactly what's specified, and writes/updates JUnit 4 + MockK +
+Robolectric tests. If the task didn't stop on a blocker, it compile-checks only the touched module with the
+Gradle wrapper, then immediately checks off that task's own checkbox (and its sub-tasks') in
+`implementation_plan.md` with a "group validation pending" note, before reporting back — so an interrupted run
+doesn't re-attempt work that already landed. License headers, KDoc audits, the full test suite, coverage, Dokka,
+and code-quality regression checks all happen once for the whole bucket in `iru-android-code-one-task-group`
+instead of here. It hands back only a short summary; it never captures a quality baseline or runs any
+test/coverage/quality check itself. It is the Android/Gradle equivalent of
+xref:skills/iru-java-code-one-task.adoc[] and xref:skills/iru-typescript-code-one-task.adoc[].
+
+=== Module detection and the bundled reference library
+
+An Android scaffold from this catalog has one or two Gradle modules: `lib` (the library,
+`com.android.library`) and, for a library repository, an `app` sample module (`com.android.application`,
+typically Compose) that exercises it; an app-only repository has just `app`. Before reading anything, the skill
+works out which module the task's own file paths or description name — a path under `lib/` or `app/` wins
+directly; otherwise a public/internal class, function, or `View` meant to be consumed by other projects infers
+`lib`, while an `Activity`, `Composable` screen, or a package ending in `.app` infers `app`; if genuinely
+ambiguous with both modules present, it defaults to `lib` and says so in its report. This choice decides the
+Gradle module qualifier for the compile-check (`:lib:...`/`:app:...`) and where new files are created.
+
+This skill ships a `reference/` directory alongside its `SKILL.md`, holding this catalog's general Kotlin/Android
+code agreements, read by progressive disclosure: `reference/README.md` is always read first and routes to the
+rest, so a small change doesn't pay for the whole library.
+
+[cols="2,1,3", options="header"]
+|===
+|File |Read when |Covers
+
+|`code-style.md`
+|Always
+|Kotlin official style, `val` over `var`, null-safety with no `!!`, `internal` visibility by default in a library
+module, member ordering, naming, and exception conventions.
+
+|`kdoc.md`
+|The task adds or changes a class, object, interface, function, or public/internal property
+|Full KDoc as a hard requirement — `@param` (every type parameter), `@property` for primary-constructor
+properties, `@return`, and `@throws` for every handleable exception, which is what the tests are written against.
+
+|`testing.md`
+|The task writes or updates tests — nearly every task
+|JUnit 4 + MockK + Robolectric conventions for anything touching the Android framework.
+
+|`compose.md`
+|The task adds or changes a `@Composable` function or other Jetpack Compose UI
+|Compose-specific conventions, read only for `app`-module (or library) tasks that touch Compose screens.
+
+|`views.md`
+|The task adds or changes a custom `View` subclass, ViewBinding usage, or XML-layout-backed UI
+|The Views/ViewBinding counterpart to `compose.md`, for tasks that don't use Compose.
+
+|`library-api.md`
+|The task changes a public or `internal` declaration in the `lib` module
+|Binary compatibility, `@Jvm*` annotations, and consumer ProGuard rules — read in addition to whichever UI
+reference (if any) applies.
+|===
+
+Only the framework file(s) that actually apply are read — a task confined to Compose reads `compose.md` and not
+`views.md` or `library-api.md`; a task changing `lib`'s public surface reads `library-api.md` too. Every file
+states the same override: the rules are the default for new code, and a file that consistently does something
+else wins — the divergence is reported (Step 8) rather than silently converted. If `reference/` is missing
+entirely, the skill falls back to the repository's own `CLAUDE.md` conventions and the surrounding code's style,
+and says so in its report.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/class(es)/
+function(s), the described behavior, its exact `implementation_plan.md` checkbox line(s) for itself and its
+sub-tasks, and any relevant "Current code state" context. Normally supplied by
+`iru-android-code-one-task-group` dispatching one task in a bucket at a time.
+|None — this skill has nothing to do without a task description.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory (`README.md`, `code-style.md`, `kdoc.md`, `testing.md`,
+`compose.md`, `views.md`, `library-api.md`). If missing, the skill falls back to `CLAUDE.md` and the surrounding
+code's style, and says so in its report.
+|Bundled with the skill
+|===
+
+== Outputs
+
+* Source and test files created/modified per the task, in the module (`lib`/`app`) Step 1 detected, following the
+  bundled `reference/` agreements applicable to that module and UI framework — plus this repository's own
+  `CLAUDE.md` conventions where more specific, and the surrounding file's existing style wherever it consistently
+  differs.
+* JUnit 4/MockK/Robolectric tests added/updated covering the new/changed behavior, including a case per
+  documented `@throws` — not run by this skill; the caller runs them once for the whole bucket.
+* A compile-check of only the touched module (`:lib:compileDebugKotlin`/`:app:compileDebugKotlin` plus the unit-
+  test source set) via the Gradle wrapper — not the full test suite, lint, or `assemble`.
+* `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
+  pending" note, written immediately once the task finishes cleanly. Left untouched if the task stopped on a
+  blocker.
+* A short summary handed back to the caller: module detected, file(s) touched, tests added/updated, the
+  compile-check result, any deliberate deviation from `reference/`, and any blocker.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-android-code-one-task\n(task description)"] --> B["Step 1: detect module (lib/app)\nfrom task's paths/description"]
+    B --> C["Read reference/README.md,\nthen only the files this task needs"]
+    C -- "reference/ missing" --> C2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    C2 --> D
+    C --> D["Step 2: re-check current code state;\nnote what the file already does"]
+    D --> E["Step 3: implement exactly what the task\nspecifies (val/internal, no !!, KDoc)"]
+    E --> F["Step 4: write/update JUnit 4/MockK/\nRobolectric tests (not run here)"]
+    F --> G["Step 5: compile-check touched module\n(gradlew compileDebugKotlin + test)"]
+    G --> H{"Ambiguous, infeasible,\nor module genuinely unclear?"}
+    H -- yes --> I["Step 6: stop; leave checkbox\nunchecked; report blocker to caller"]
+    H -- no --> J["Step 7: check off this task's\ncheckbox + 'validation pending' note"]
+    J --> K["Step 8: report outcome to caller:\nmodule, files, tests, compile result, deviations"]
+....
+
+A conflict between `reference/` and the surrounding code is deliberately *not* a stop condition — the skill
+follows the surrounding code and reports the divergence in Step 8. A compile failure caused by something outside
+the task's own scope (a sibling task's in-flight edit, a pre-existing error elsewhere) is likewise not fixed —
+it is reported for the caller to distinguish from a real regression.
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-android-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads its
+own `reference/` directory and edits the code and test files the task names, plus runs the Gradle wrapper to
+compile-check the touched module. License headers, KDoc audits, the full test suite, coverage, Dokka, and quality
+checks all belong to `iru-android-code-one-task-group`.
+
+=== Invoked by
+
+* xref:skills/iru-android-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a
+  single batch of `Agent` calls, when the group is marked parallelizable; one at a time otherwise), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's full text
+  including its exact checkbox line(s). That caller re-reads `implementation_plan.md` afterward to confirm the
+  checkbox this skill already flipped landed, then replaces the "pending" note with the final validation outcome
+  once the whole bucket's validation passes.
+
+=== Related agents
+
+`iru-android-code-one-task` itself does not spawn any Agent — it only reads its `reference/` files, edits the
+code/test files the task names, and runs the Gradle wrapper directly.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled Kotlin/Android code agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-android-code-one-task/reference[`reference/`].

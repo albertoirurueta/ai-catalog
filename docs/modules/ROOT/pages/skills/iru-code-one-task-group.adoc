@@ -1,6 +1,6 @@
 = Code One Task Group
 :description: Implements every task in one plan group by dispatching each task's language to a matching skill and checks off its implementation_plan.md boxes.
-:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, dotnet, database, code generation, checklist update
+:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, dotnet, typescript, android, swift, database, code generation, checklist update
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -13,6 +13,7 @@ dispatching each task by its declared language/framework key to the matching `<k
 `iru-code-one-task-group` is the generic, language-agnostic dispatcher `iru-code` calls once per plan group. It resolves
 each task's language/framework key, partitions the group's tasks into per-key buckets, hands each bucket with a
 matching `<key>-code-one-task-group` skill installed (`iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`,
+`iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`,
 `iru-database-code-one-task-group`) off to that skill in one call — which itself captures a single quality
 baseline, implements the bucket's tasks (in parallel when the group allows it), and validates the whole bucket
 once (`iru-database-code-one-task-group` is a deliberately simpler exception — see
@@ -84,6 +85,9 @@ flowchart TD
   task in the bucket (in parallel when the group allows it), and validates the bucket once.
 * xref:skills/iru-dotnet-code-one-task-group.adoc[] — the same role as `iru-java-code-one-task-group`, for tasks tagged
   `dotnet`.
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — the same role, for tasks tagged `typescript`.
+* xref:skills/iru-android-code-one-task-group.adoc[] — the same role, for tasks tagged `android`.
+* xref:skills/iru-swift-code-one-task-group.adoc[] — the same role, for tasks tagged `swift`.
 * xref:skills/iru-database-code-one-task-group.adoc[] — the same role for tasks tagged `database`, but deliberately
   simpler: always sequential, with no quality baseline or bucket-wide validation of its own.
 

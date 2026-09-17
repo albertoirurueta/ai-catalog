@@ -130,7 +130,10 @@ From the exploration, note in particular: the architectural patterns and abstrac
 consistent with, any contributor conventions documented in `CLAUDE.md`/`README`/`AGENTS.md` (naming, error
 handling, validation, documentation requirements, etc.), and the language/tooling in play (so Step 7 can apply
 the right idioms and check for the right lint/static-analysis config — e.g. Checkstyle/PMD/SpotBugs rules for
-Java, an ESLint/Prettier config for JS/TS, and so on — read any such config found rather than assuming defaults).
+Java, ESLint / Prettier / Biome (`eslint.config.*`, `.prettierrc*`, `biome.json`) plus `tsconfig.json` (strictness
+flags) for JS/TS, Detekt / ktlint / Android Lint (`detekt.yml`, `.editorconfig` ktlint rules, `lint.xml`,
+`lintOptions`/`lint {}` in Gradle) for Kotlin/Android, SwiftLint / swift-format (`.swiftlint.yml`, `.swift-format`)
+for Swift, and so on — read any such config found rather than assuming defaults).
 
 ## Step 6 — Delegate to the `code-review` skill when available
 
@@ -154,7 +157,7 @@ reimplement that analysis if it's available.
      PR directly and immediately (it does not stop for a separate confirmation) — get explicit confirmation
      before proceeding, since Step 8's confirmation gate only covers this skill's own findings, not
      `code-review`'s.
-  4. Invoke it: `Skill({skill: "code-review", args: "high --comment"})` (use `high` effort for a thorough pass;
+  4. Invoke it: `Skill({skill: "iru-code-review", args: "high --comment"})` (use `high` effort for a thorough pass;
      drop to `medium` if the user wants a lighter review). Wait for it to finish.
   5. Restore the original branch (`git checkout <original-branch>`, and `git stash pop` if a stash was created in
      step 1).

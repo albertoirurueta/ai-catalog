@@ -1,0 +1,161 @@
+= Android Test
+:description: Runs an Android/Kotlin project's JUnit 4 unit tests via AGP's testDebugUnitTest, scoped by class/method/pattern/path, reports pass/fail from JUnit XML.
+:keywords: iru-android-test, claude code skill, android, kotlin, gradle, agp, junit, robolectric, run unit tests, test selector
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run an Android/Kotlin project's JUnit 4 unit test suite through the Android Gradle Plugin's `testDebugUnitTest`
+task, scoped to whatever the caller asked for — the whole `lib` module, a single class, a class+method, a
+wildcard/package pattern, or a `lib`/`app` module path — and, only when explicitly asked and a device or emulator
+is actually attached, `connectedAndroidTest` instrumented tests too. This is a read-only reporting skill: it runs
+tests and parses the generated JUnit XML into a compact summary, it does not fix failures or modify source/test
+code unless asked to as an explicit follow-up.
+
+== Purpose
+
+`iru-android-test` turns a loosely-specified request ("run FooTest", "just the lib tests", "everything") into the
+correct `./gradlew ... testDebugUnitTest --tests ...` invocation, resolving both the Gradle module (`:lib` vs.
+`:app`) and the `--tests` filter from a single selector argument. It exists so that running and narrowing down
+Android unit tests doesn't require hand-composing Gradle `--tests` syntax each time, and so that a calling skill
+(or a human) gets back a short pass/fail report parsed from JUnit XML instead of a raw Gradle log — while also
+gating the (slower, environment-dependent) instrumented-test path behind an explicit ask and an attached
+device/emulator, so it's never run by accident.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-test
+/iru-android-test [selector]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|A class name (`FooTest`), a class+method (`FooTest#testSomething`), a wildcard/package pattern (`*ServiceTest`),
+or a path under a module's `src/test`/`src/androidTest` tree (`lib/src/test/java/.../FooTest.kt`,
+`app/src/test/...`). The module (`:lib` by default, `:app` when the path says so) and the `--tests` pattern are
+both derived from it. If the calling skill/prompt instead passes explicit `key: value` lines (e.g. `module: app`),
+those are honored directly and the module/pattern inference below is skipped.
+|None — omitting it runs the whole `lib` module unscoped.
+|===
+
+Selector-to-module mapping (Step 1):
+
+[cols="2,2", options="header"]
+|===
+|Selector shape |Module
+
+|No selector
+|`:lib` (default)
+
+|Path containing `lib/src/test` or `lib/src/androidTest`
+|`:lib`
+
+|Path containing `app/src/test` or `app/src/androidTest`
+|`:app`
+
+|Bare class name/pattern, no path
+|Search `*/src/test/**/<Name>*.{kt,java}` under the repo root — exactly one module matches → use it; several
+match → ask which, or default to `lib` and say so explicitly; none match → still default to `lib` and let
+Gradle's own "No tests found" surface the typo rather than guessing further
+|===
+
+Selector-to-`--tests` mapping (Step 2):
+
+[cols="2,2", options="header"]
+|===
+|What the user wants |`--tests` value
+
+|Everything in the module
+|_(omit `--tests`)_
+
+|One class
+|`--tests '*.FooTest'` (or the fully-qualified name if known)
+
+|One method
+|`--tests '*.FooTest.testSomething'`
+
+|Several classes/methods
+|Repeat `--tests` once per pattern — Gradle ANDs multiple `--tests` flags as independent inclusions, unlike Maven
+Surefire's single comma-separated `-Dtest` value
+
+|Wildcard/package pattern
+|`--tests 'com.example.pkg.*'`
+|===
+
+An unmatched `--tests` pattern **fails the whole build** (Gradle exits non-zero with "No tests found for given
+includes"), which the skill reports as "no matching tests for `<pattern>`" — never as "0 passed, 0 failed". The
+prompt (not necessarily the selector) can also ask for instrumented/on-device tests; those only run when a
+device/emulator is actually attached (`adb devices` lists a `device`-state line), and the skill says explicitly
+when it skips them.
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Total tests run, passed, failed, and skipped counts (parsed from `<module>/build/test-results/testDebugUnitTest/*.xml`).
+* If everything passed: a brief confirmation, without a per-test list.
+* If there are failures/errors: each failing test's `classname#name`, its assertion/exception message, and the
+  first stack-trace line, pointing to the JUnit XML file for the full trace instead of pasting it.
+* If instrumented tests were requested but skipped (no device attached): an explicit note, not a silent omission.
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-android-test\n(optional selector)"] --> B{"Selector given?"}
+    B -- no --> C["Module = :lib, no --tests filter"]
+    B -- yes --> D["Resolve module\n(path prefix, or search\nsrc/test for bare class name)"]
+    D --> E["Map selector to\n--tests pattern"]
+    E --> F["Check prerequisites:\nJAVA_HOME 17+, ANDROID_HOME/\nlocal.properties, ./gradlew present"]
+    C --> F
+    F --> G["Run ./gradlew :&amp;lt;module&amp;gt;:testDebugUnitTest\n[--tests '&amp;lt;pattern&amp;gt;'] [--offline]"]
+    G --> H{"Instrumented tests\nexplicitly requested?"}
+    H -- yes --> I{"Device/emulator\nattached (adb devices)?"}
+    I -- yes --> J["Run ./gradlew :&amp;lt;module&amp;gt;:connectedDebugAndroidTest"]
+    I -- no --> K["Skip instrumented run,\nnote it explicitly"]
+    H -- no --> L["Parse JUnit XML results\n(test-results/testDebugUnitTest/*.xml)"]
+    J --> L
+    K --> L
+    L --> M{"Build failed before\nproducing XML?"}
+    M -- yes --> N["Report the build failure\n(compile error or unmatched --tests)"]
+    M -- no --> O{"Failures or errors?"}
+    O -- yes --> P["List failing classname#name,\nmessage, first stack-trace line"]
+    O -- no --> Q["Report: all passed, briefly"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-android-test` is a leaf skill; it only runs Gradle/`adb` commands and parses the resulting JUnit XML,
+it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-android-code-one-task-group.adoc[] — Step 3.3, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to run the scoped unit tests for every class the
+  task-group bucket affected, per Gradle module.
+* xref:skills/iru-android-generate-all-tests.adoc[] — Step 7, to run the newly-generated tests it wrote and
+  confirm they pass.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-android-code-one-task-group` (see
+  xref:skills/iru-android-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner`
+  sub-agent it spawns, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

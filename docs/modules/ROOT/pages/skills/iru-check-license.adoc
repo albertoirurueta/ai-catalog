@@ -16,7 +16,13 @@ say at the top. It never assumes a fixed license or a fixed header format: it re
 license applies, then learns the *exact* header wording and comment-syntax convention from files that already
 carry one — falling back to drafting a standard header, shown to the user for explicit accept/reject, only when
 no file in the repository has one yet. It makes no assumption about language or project layout, discovering the
-real source/test roots and file extensions present each run.
+real source/test roots and file extensions present each run — including Android Gradle module source sets,
+SwiftPM's `Sources/`/`Tests/`, Hilla's embedded frontend, and React Native/Capacitor's native `ios/`/`android/`
+directories — and it knows the native comment syntax for `.kt`, `.swift`, and `.ts`/`.tsx` headers alongside the
+languages it already covered. When no repo-wide inception year is stamped in a config field (e.g. Maven's
+`<inceptionYear>` or a Gradle library module's `lib/build.gradle.kts`), it falls back to each file's first-commit
+year, or, when a single repo-wide year is needed and no field supplies one, to the repository's own first-commit
+year.
 
 == Purpose group
 
@@ -39,8 +45,11 @@ xref:index.adoc#group-maintenance[Repository Maintenance]
 |`path-or-glob`
 |No
 |Scopes the check to specific files or directories instead of the whole repository.
-|None — defaults to every source and test file in the repository's discovered source roots, skipping
-generated/vendored directories and non-code files.
+|None — defaults to every source and test file in the repository's discovered source roots (`src/main`/`src/test`
+for Maven/Gradle Java; `app/src/main`/`lib/src/main` for Android Gradle module source sets; `Sources/`/`Tests/`
+for SwiftPM; `src/main/frontend` for Hilla's embedded frontend; `ios/`/`android/` for React Native/Capacitor
+native projects; `src/`/`lib/`/`test/` for other stacks), skipping generated/vendored directories and non-code
+files.
 |===
 
 == Outputs
@@ -95,14 +104,21 @@ None — `iru-check-license` is a leaf skill; it does not call any other skill i
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] sub-agent scoped to every file the bucket touched, to add or fix
   license headers on the code it just changed.
 * xref:skills/iru-dotnet-code-one-task-group.adoc[] — the same role, for tasks in the .NET/C# language/framework key.
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — the same role (its Step 3.1), for tasks in the
+  TypeScript language/framework key.
+* xref:skills/iru-android-code-one-task-group.adoc[] — the same role (its Step 3.1), for tasks in the
+  Android language/framework key.
+* xref:skills/iru-swift-code-one-task-group.adoc[] — the same role (its Step 3.1), for tasks in the
+  Swift language/framework key.
 * xref:skills/iru-code-one-task-group.adoc[] — for tasks whose language/framework has no matching
   `<key>-code-one-task-group` skill installed, as part of its best-effort direct implementation path.
 
 === Related agents
 
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — see the note in xref:skills/iru-java-code-one-task-group.adoc[],
-  xref:skills/iru-dotnet-code-one-task-group.adoc[], and xref:agents/overview.adoc[] about the sub-agent wrapper
-  each caller uses to invoke it.
+  xref:skills/iru-dotnet-code-one-task-group.adoc[], xref:skills/iru-typescript-code-one-task-group.adoc[],
+  xref:skills/iru-android-code-one-task-group.adoc[], xref:skills/iru-swift-code-one-task-group.adoc[], and
+  xref:agents/overview.adoc[] about the sub-agent wrapper each caller uses to invoke it.
 
 == Source
 

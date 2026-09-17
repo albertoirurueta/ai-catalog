@@ -1,0 +1,104 @@
+= Setup Android Gitignore
+:description: Creates or gap-fills the root and per-module .gitignore files for an Android Gradle project, protecting the vendored JaCoCo CLI jars.
+:keywords: iru-setup-android-gitignore, claude code skill, android, gradle, kotlin, jacoco, gitignore, keystore, antora
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+`iru-setup-android-gitignore` composes the root `.gitignore` and one per-module `.gitignore` for an Android
+(Gradle/Kotlin) library or app project, using
+https://github.com/albertoirurueta/irurueta-android-glutils[irurueta-android-glutils]'s own `.gitignore`,
+`lib/.gitignore` and `app/.gitignore` as the concrete reference templates. It never overwrites an existing
+`.gitignore` without first showing the user exactly what would change and getting explicit approval.
+
+== Purpose
+
+The skill produces a house-standard Android `.gitignore`: an unconditional root base (Gradle build output,
+`local.properties`, IDE files, keystores, `google-services.json`, JaCoCo profiling output, plus the catalog's own
+Antora `docs/build/`/`docs/node_modules/` additions), a one-line anchored `/build` `.gitignore` for each Gradle
+module, and conditionally-detected root sections for Detekt/ktlint/Spotless caches and Fastlane output. It
+deliberately never ignores the vendored `jacoco-<ver>/` JaCoCo CLI directory that `iru-setup-android-library`/
+`iru-setup-android-app` commit into the repository, since CI depends on that directory staying tracked to convert
+coverage without a network dependency. It mirrors `iru-setup-java-gitignore`'s diff-and-approve contract, adapted
+to the Android/Gradle ecosystem.
+
+== Purpose group
+
+xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-android-gitignore
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`mode`
+|No
+|`new` or `existing`. Selects whether the skill should expect to write fresh files or gap-fill/merge into files
+that already exist.
+|Detected from whether a root `.gitignore` already exists (present → `existing`, absent → `new`).
+
+|`modules`
+|No
+|Comma- or space-separated Gradle module directory names that should each get their own `/build`-only
+`.gitignore` (e.g. `lib`, `app`).
+|Derived from every `include(":<name>")` entry in `settings.gradle.kts`/`settings.gradle`; if neither file
+exists yet, falls back to whichever of `lib`/`app` exist as directories, or asks the user via
+`AskUserQuestion`.
+|===
+
+== Outputs
+
+* A root `.gitignore` — newly created, or updated after explicit user approval when one already existed.
+* A `<module>/.gitignore` for each resolved module (typically `lib`, `app`) — newly created, or updated after
+  approval; skipped entirely when its content already matches.
+* A closing report stating which root file and each module file was created/updated/left untouched, which
+  conditional Step 4 sections (Detekt/ktlint/Spotless, Fastlane) were included versus skipped and why, and
+  confirmation that the vendored `jacoco-<ver>/` CLI directory was **not** added to any ignore pattern.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-android-gitignore] --> B["Resolve mode and modules\n(settings.gradle.kts include(...) entries,\nor lib/app fallback, or ask user)"]
+    B --> C{"Root or any module\n.gitignore already exists?"}
+    C -- no --> D["Compose root base template\n+ per-module /build line"]
+    C -- yes --> E["Read existing files\n(warn changes will be proposed)"]
+    E --> D
+    D --> F["Detect conditional root additions:\nDetekt/ktlint/Spotless cache,\nFastlane output"]
+    F --> G["Compose proposed content\n(merge with existing lines if any)"]
+    G --> H{"Did this file\nalready exist?"}
+    H -- no --> I["Write file directly"]
+    H -- yes --> J["Show diff, ask user:\naccept or skip"]
+    J -- accept --> I
+    J -- skip --> K["Leave existing file untouched"]
+    I --> L["Report per file,\nconfirm jacoco-&amp;lt;ver&amp;gt;/ stays untouched"]
+    K --> L
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-android-gitignore` is a leaf skill; it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-android-repository.adoc[] — Step 6 runs `iru-setup-android-gitignore` after
+  `iru-setup-android-library`/`iru-setup-android-app` and `iru-setup-antora` have run, so it can detect their
+  generated module layout (`settings.gradle.kts`) and Antora docs build output already in place.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-android-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

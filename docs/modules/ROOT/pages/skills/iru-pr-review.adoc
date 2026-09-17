@@ -1,6 +1,6 @@
 = PR Review
 :description: Reviews an open pull request against codebase conventions and linked ticket intent, posting findings as comments without editing code.
-:keywords: iru-pr-review, claude code skill, github, bitbucket, azure devops, jira, code review, review comments, pull request review, ticket intent
+:keywords: iru-pr-review, claude code skill, github, bitbucket, azure devops, jira, code review, review comments, pull request review, ticket intent, eslint, detekt, swiftlint, static analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -16,8 +16,10 @@ own tooling instead of assuming GitHub/`gh`.
 detected repository host), resolves any linked ticket (explicitly passed, or detected from a `Closes #N`-style
 reference or a bare Jira key in the PR title/body), and runs `iru-explore` (scoped to that ticket when there is one)
 so the review is grounded in how the codebase is actually structured — including its detected language(s)/
-framework(s) and the architectural style appropriate to that stack (hexagonal/DDD for a backend, MVC/MVVM for a
-UI layer, unidirectional data flow for SwiftUI/Compose) — rather than the diff in isolation. Where the external
+framework(s), the architectural style appropriate to that stack (hexagonal/DDD for a backend, MVC/MVVM for a
+UI layer, unidirectional data flow for SwiftUI/Compose), and the right lint/static-analysis config to check
+(Checkstyle/PMD/SpotBugs for Java; ESLint/Prettier/Biome plus `tsconfig.json` strictness for JS/TS; Detekt/ktlint/
+Android Lint for Kotlin/Android; SwiftLint/swift-format for Swift) — rather than the diff in isolation. Where the external
 `code-review` skill happens to be available in the current session, `iru-pr-review` prefers delegating
 correctness/reuse/simplification/efficiency analysis to it — checking out the PR locally and invoking it with
 `--comment` — rather than reimplementing that logic, and focuses its own review on what `code-review` has no way
