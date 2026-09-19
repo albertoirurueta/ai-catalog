@@ -11,15 +11,15 @@ Scaffold (or update) the `build.yml`, `release.yml`, `sync.yml` (gitflow only), 
 == Purpose
 
 `iru-setup-swift-github-workflows` wires up the house CI/CD pipeline for the Swift/Apple stack: SwiftLint +
-`swift format lint --strict`, a build/test step whose shape depends on `flavor` (library: `swift build` /
-`swift test --enable-code-coverage --parallel` plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage
-conversion and an optional `ubuntu-latest` Linux matrix leg; app: `xcodegen generate`/`tuist generate` plus one
+`swift format lint --strict`, a build/test step whose shape depends on `flavor` (library:
+`swift test --enable-code-coverage --parallel` with a `.build` cache keyed on `Package.resolved`, plus an
+`xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an optional `ubuntu-latest` Linux matrix leg; app: `xcodegen generate`/`tuist generate` plus one
 `xcodebuild test -enableCodeCoverage YES` run per selected platform destination, piped through `xcbeautify`,
 converted to Sonar's generic XML via SonarSource's `xccov-to-sonarqube-generic.sh`), an optional
 SonarQube/SonarCloud scan, a DocC + Antora documentation build published to GitHub Pages from the stable
 branch, a release workflow (library: verifies the release tag is valid semver and the manifest still parses,
 plus an optional `release-please` job; app: archives, signs via `fastlane match` or an App Store Connect API
-key, exports, uploads to TestFlight, and notarizes macOS builds), a gitflow-only `sync.yml` that merges a
+key, exports, uploads to TestFlight, and — for macOS — exports with Developer ID, notarizes and staples), a gitflow-only `sync.yml` that merges a
 released branch back into the integration branch and bumps the development version (reusing
 `iru-swift-bump-version`'s exact rewrite targets via a vendored `sync_versions.py`), and a
 `security.yml`/`dependabot.yml` block (dependency-review, CodeQL, OSV-Scanner, gitleaks). Unlike its
@@ -113,11 +113,20 @@ inferred — `flavor` defaults to auto-detected from the repository shape, `runn
 |`fastlane match`'s certs-repo URL and its encryption passphrase
 |`flavor: app`, `signing: fastlane-match`
 
+|`MATCH_GIT_BASIC_AUTHORIZATION`
+|base64 of `<git-user>:<personal-access-token>` — how `match` clones a private certs repository over HTTPS on
+the runner
+|`flavor: app`, `signing: fastlane-match`
+
 |`APP_STORE_CONNECT_API_KEY_ID` / `_ISSUER_ID` / `_KEY_BASE64`
-|App Store Connect API key (auth for `-allowProvisioningUpdates`, TestFlight upload, and — regardless of
-`signing` — notarization on macOS)
-|`flavor: app`, `signing: api-key`; also needed purely for notarization when `macos` is selected and
-`signing: fastlane-match`
+|App Store Connect API key — auth for `fastlane pilot upload`, `apple-actions/upload-testflight-build`,
+`notarytool`, and (api-key only) `-allowProvisioningUpdates`
+|`flavor: app`, `distribution` isn't `none` — both signing modes, since `match` certificates never
+authenticate an upload or a notarization
+
+|`DEVELOPER_ID_CERTIFICATE_P12_BASE64` / `DEVELOPER_ID_CERTIFICATE_PASSWORD`
+|Exported Developer ID Application certificate for the macOS `developer-id` export
+|`flavor: app`, `macos` selected, `distribution` isn't `none`, `signing: api-key`
 
 |`GITHUB_TOKEN`
 |`sync.yml`'s `gh` calls, `security.yml`'s CodeQL/gitleaks jobs
@@ -141,7 +150,7 @@ flowchart TD
     E -- stop --> Z["Report which files exist;\nno changes made"]
     E -- continue --> F
     F --> G{"flavor?"}
-    G -- library --> H["Step 4: Render build.yml\n(SwiftLint, swift build/test,\nlcov coverage, optional Linux leg,\nDocC + Antora + Pages)"]
+    G -- library --> H["Step 4: Render build.yml\n(SwiftLint, cached swift test,\nlcov coverage, optional Linux leg,\nDocC + Antora + Pages)"]
     G -- app --> I["Step 5: Render build.yml\n(xcodegen/tuist generate,\nxcodebuild test per platform,\nxccov coverage, DocC + Antora + Pages)"]
     H --> J["Step 6: Render release.yml\n(verify semver tag + manifest,\noptional release-please)"]
     I --> K["Step 7: Render release.yml\n(archive, sign, export,\nTestFlight, notarize macOS)"]

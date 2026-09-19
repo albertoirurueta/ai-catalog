@@ -17,7 +17,7 @@ This skill takes a single optional `args` line, `sonar: <cloud|self-hosted|none>
 `iru-setup-*-repository` orchestrators with the value they resolved. Only `none` changes behaviour: Step 3 then
 skips every SonarCloud/SonarQube badge and Step 5 the dashboard link, even if Sonar configuration is present on
 disk (a `mode: existing` repository may carry a `sonar {}` block the user has just chosen not to wire up —
-verified in Task 53.2, where a README otherwise gained eleven SonarCloud badges for a project the run had explicitly
+without this line, a README otherwise gains a full set of SonarCloud badges for a project the run had explicitly
 declined). Any other value, or no `args` at all, means "detect from the repository" as Step 3 describes. Record
 in Step 11 when badges were suppressed because of this line.
 
@@ -46,32 +46,24 @@ Look at the repository root for `README.md`.
   can confidently name, still link to it but describe it generically ("see `LICENSE`") rather than guessing a name.
   If no license file exists, omit the License section entirely — don't claim a license the repository doesn't
   declare.
-- **Primary language, framework, and build tool**: if an `iru-explore` report with a `- Project type:` line is
-  already available earlier in this conversation, reuse that instead of re-detecting from scratch — just confirm
-  the manifest(s) it names are still present. Otherwise detect from the manifests actually on disk:
-  - `pom.xml` — Java/Maven.
-  - `build.gradle`/`build.gradle.kts` with no Android/Kotlin-Multiplatform plugin — Java or Kotlin/Gradle.
-  - `package.json` + `pyproject.toml`/`setup.py`/`Cargo.toml` — Python/Rust with incidental Node tooling; see below
-    for when `package.json` itself is the library/app.
-  - `package.json` with `vite` + `react` dependencies — Vite+React web app.
-  - `package.json` with `@angular/cli` + an `angular.json` at the root — Angular CLI web app.
-  - `pom.xml`/`build.gradle*` with `hilla-spring-boot-starter` (or `package.json` with `@vaadin/hilla`) and a
-    `src/main/frontend/` directory — a Java/Spring Boot + Hilla full-stack app; treat it as both a Java backend
-    and a frontend for badges/snippets/status-table purposes.
-  - `package.json` with `expo` and/or `react-native`, plus an `app.json`/`app.config.js`/`app.config.ts`,
-    `metro.config.js`, and/or `eas.json` — Expo/React Native app.
-  - `package.json` with `@ionic/*`/`@capacitor/core` dependencies, plus `capacitor.config.ts`/`.js`/`.json` and/or
-    `ionic.config.json` — Ionic/Capacitor app.
-  - Gradle modules using the `com.android.library` or `com.android.application` plugin, usually alongside
-    `gradle/libs.versions.toml` and a Compose BOM dependency — Android library or application respectively.
-  - `Package.swift` (read its `products` to tell library vs. executable), or an Xcode project (`*.xcodeproj`,
-    optionally generated from `project.yml` via XcodeGen or `Project.swift` via Tuist) — Swift/Apple-platform
-    library or app.
-  - `package.json` + `tsconfig.json` with none of the app-framework markers above — a plain TypeScript/npm
-    library.
-  - A repository can have more than one of these (e.g. a Maven library with an Antora docs site under `docs` that
-    has its own `package.json` for the doc toolchain only, or a Hilla app that is both Java and TypeScript) —
-    identify the build tool for the library/application itself, not incidental tooling.
+- **Primary language, framework, and build tool**: reuse `iru-explore`'s `- Project type:` line rather than
+  re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
+  Expo/React Native, Ionic/Capacitor, Android library/app, SwiftPM/XcodeGen/Tuist, plain TypeScript/npm library,
+  and so on), and duplicating it here would drift the first time it gains a signal:
+  - If an `iru-explore` report with a `- Project type:` line is already available earlier in this conversation,
+    use it — just confirm the manifest(s) it names are still present.
+  - Otherwise invoke `Skill({skill: "iru-explore"})` with no ticket argument (a codebase-only exploration) and read
+    the `- Project type:` line from its `## Tech stack` report block, along with the build tool and framework it
+    names.
+  - Only if `iru-explore` isn't installed in this repository, fall back to a minimal one-manifest check — `pom.xml`
+    → Java/Maven, `build.gradle*` → Gradle (Android when a module applies `com.android.library`/
+    `com.android.application`), `package.json` → npm/TypeScript, `Package.swift`/`*.xcodeproj`/`project.yml`/
+    `Project.swift` → Swift/Apple — and say in Step 11 that the framework flavor wasn't detected.
+  - A repository can have more than one manifest (e.g. a Maven library with an Antora docs site under `docs` that
+    has its own `package.json` for the doc toolchain only, or a Hilla app that is both Java and TypeScript — treat
+    the latter as both a Java backend and a frontend for badges/snippets/status-table purposes) — identify the
+    build tool for the library/application itself, not incidental tooling; `iru-explore` reports `multiple` when
+    it genuinely can't pick one.
 - **Current version(s) and package/artifact identity**: read the identity from the source that actually owns it
   for the detected stack, not always `pom.xml`/`package.json`:
   - Maven: the `<version>` in `pom.xml` (immediately under the project's own `artifactId`, not a

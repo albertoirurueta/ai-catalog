@@ -21,6 +21,10 @@ Parse the invocation:
   - `package: <name-or-path>` — which workspace package to bump, when the repository has more than one.
   - `sync-files: yes|no` — whether to also update README/Antora version mentions (Step 6). If omitted, ask once
     with `AskUserQuestion` after Step 2 confirms whether such mentions actually exist; skip asking if none do.
+  - `next-version: <upcoming-version>` — the upcoming pre-release version (e.g. `1.5.0-dev.0`) that README/
+    Antora "Latest snapshot"/"Current development version"-style markers should show after a release, while
+    "Latest release" markers show `<new-version>`. Only meaningful with `sync-files: yes`; `iru-release` passes it
+    so a release never regresses a development marker to the release value (see Step 6).
 
 ## Step 1 — Validate the version string
 
@@ -119,10 +123,37 @@ above on its own (verified: `1.2.3` → `1.2.4-dev.0` in one command) — a call
 precomputing the next-dev string by hand, as long as it's running against npm specifically (pnpm/yarn's
 `prerelease` bump-type support was not separately verified here).
 
+**Expo / React Native apps (`react-native-app` projects scaffolded by `iru-setup-react-native-app`) are the one
+flavor where `package.json` is not the version the app ships.** That scaffold's `eas.json` sets
+`appVersionSource: "remote"` with `autoIncrement: true`, which means:
+
+- EAS owns the **build numbers** (`ios.buildNumber` / `android.versionCode`): they live on EAS's servers and are
+  auto-incremented per production build. This skill never touches them, and neither should `iru-release` —
+  `eas build:version:set`/`eas build:version:sync` are the only sanctioned ways to change them.
+- The **user-facing version** is `app.json`'s `expo.version` (or the `version` field of a dynamic
+  `app.config.ts`/`app.config.js`) — Expo, EAS, and the stores never read `package.json`'s `version`.
+- This skill's Step 4 only updates `package.json` (+ lockfile). So for this flavor `iru-release` must: (1) call
+  this skill with the release value as usual, so `package.json`, the git tag, README/Antora mentions, and
+  `CHANGELOG.md` stay consistent; (2) also set `expo.version` to that **same release value** — either by
+  passing `sync-files: yes` (Step 6 lists `app.json` among the mirrored files) or by editing it directly; and
+  (3) **not** write the next-dev `x.y.(z+1)-dev.0` value into `expo.version` at all — a `-dev.N` string is not
+  a valid store version, so the pre-release bump stays in `package.json` alone while `expo.version` keeps the
+  last released value until the next release. Detect the flavor from `expo` in `package.json`'s dependencies
+  plus an `app.json`/`app.config.*` with an `expo` key.
+
 ## Step 6 — Optionally sync other files that mirror the version
 
 Ask (or honor `args: sync-files`) whether to also update other places that name the current version, the same
 way `iru-release`'s Java path syncs `README.md`/`docs/antora.yml`/dependency snippets:
+
+**Marker mapping when `next-version` was given** (the `iru-release` case — same rule as
+`iru-java-bump-version`'s Step 7): rewrite each mention by what it names rather than to one value —
+"Latest release"-style markers and a Project Status `Latest release` row → `<new-version>` when it is a release
+(no `-dev.N` pre-release suffix), left untouched when `<new-version>` is itself a pre-release; "Latest snapshot"/
+"Current development version"-style markers → `next-version` when given, otherwise `<new-version>` only if it is
+a pre-release value, and untouched (with a warning in the Report step that the caller should pass `next-version`)
+when `<new-version>` is a release — never regress a development marker to a release value. A snippet with no
+such marker → `<new-version>`.
 
 - **`README.md`** — installation snippets or a "Current version" mention, if any (`grep -n
   '"version":\|npm install .*@[0-9]\|Current version' README.md`).
@@ -132,11 +163,16 @@ way `iru-release`'s Java path syncs `README.md`/`docs/antora.yml`/dependency sni
   versions there).
 - Any Antora page under `docs/modules/ROOT/pages/` showing an install/dependency snippet with a literal version
   string (`grep -rl '"version":\|@[0-9]\+\.[0-9]\+\.[0-9]\+' docs/modules/ROOT/pages/*.adoc`).
+- **`app.json`'s `expo.version`** (Expo / React Native apps only — see Step 5): the value the app actually ships
+  with. Update it only when `<new-version>` is a plain release version; for a `-dev.N` pre-release leave it
+  untouched (and say so in the report), since a pre-release string is not a valid store version. Never touch
+  `ios.buildNumber`/`android.versionCode` — EAS owns those. For a dynamic `app.config.ts`/`app.config.js`, edit
+  the `version` literal there instead, or report that the value is computed and must be updated by hand.
 
 This is offered, not automatic — these files may be intentionally out of step with `package.json` (e.g. a README
 badge pulling live from npm rather than a hardcoded string), so don't rewrite anything the user didn't confirm.
-This step exists so a future `iru-release` doesn't have to reimplement it — it can simply pass `sync-files: yes`
-once it's ready to delegate this responsibility (Task 50 of this plan).
+This step exists so `iru-release` doesn't have to reimplement it — it simply passes `sync-files: yes` and
+delegates this responsibility here.
 
 ## Step 7 — Report
 

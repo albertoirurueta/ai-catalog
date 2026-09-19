@@ -59,8 +59,8 @@ supplied). Every key found here is resolved — skip the matching question below
 (e.g. `name`/`scope`/`description`/`node-version`/`package-manager` for `iru-setup-typescript-repository`,
 `group-id`/`artifact-id`/`namespace` for `iru-setup-android-repository`) is kept as an opaque pass-through: Step 4
 forwards it verbatim only if the delegated orchestrator's own Step 0, read on disk there, recognizes the key, and
-Step 5 lists every line that was dropped because no delegated skill accepts it — never silently (verified in Task
-53.2: a fully pre-resolved `mode: new` run otherwise still stops to ask for the package name and Node version).
+Step 5 lists every line that was dropped because no delegated skill accepts it — never silently (without this
+pass-through, a fully pre-resolved `mode: new` run still stops to ask for the package name and Node version).
 If `args` is absent or doesn't look like this format, treat everything as unset and ask normally.
 
 ## Step 1 — Survey the repository
@@ -93,7 +93,7 @@ ionic-app (angular|react), dotnet, other, unknown
 to its Step 2 option (see that step's table for the full project-type → option → delegated-skill mapping):
 
 - The twelve real types (`java-library` through `ionic-app`) each map to exactly one Step 2 option — offer it as
-  that option's first choice, labeled "(detected)", instead of running the full three-round interview. An
+  that option's first choice, labeled "(detected)", instead of running the full four-round interview. An
   `android-library` line carrying a `- sample app: <module>/` sub-line is still `android-library` (the catalog's
   reference `lib/` + sample `app/` layout) — never treat the sample module as a reason to ask "which module".
 - `apple-app (…)` and `ionic-app (…)` also pre-fill Step 3's `platforms`/`framework` questions from the
@@ -110,20 +110,24 @@ to its Step 2 option (see that step's table for the full project-type → option
 Skip this step entirely when `project-type` was already resolved — either supplied via `args`, or detected in
 Step 1 and confirmed by the user (offered as that option's first entry, labeled "(detected)").
 
-Otherwise resolve it with `AskUserQuestion`, in up to three rounds (the tool caps each question at four options).
-Present each round's four named options as the round's choices; if the user says none of them fit, tell them
-plainly which theme the next round covers and continue there, rather than forcing a pick — there is no dedicated
-fifth "next group" option since the cap leaves no room for one. Round 3 is the last round: if none of its four fit
-either, treat this as `project-type: other` — ask the user to describe the stack in one line, and report per Step
-5 that this catalog has no bootstrap orchestrator for it (the same outcome as a detected `dotnet`/`other` in
-Step 1) rather than guessing a delegated skill to force it into.
+Otherwise resolve it with `AskUserQuestion`, in up to four rounds (the tool caps each question at four options,
+so each round offers three concrete project types plus one explicit escape hatch). Rounds 1–3 end with a fourth
+option, **"Something in the next group"**, whose label names the theme the next round covers (e.g. "Something in
+the next group (mobile/native)") — picking it moves on to the next round without forcing a pick. Round 4 is the
+last round, so its fourth option is instead **"None of these"**: choosing it means `project-type: other` — ask the
+user to describe the stack in one line, and report per Step 5 that this catalog has no bootstrap orchestrator for
+it (the same outcome as a detected `dotnet`/`other` in Step 1) rather than guessing a delegated skill to force it
+into. If the user free-types a type from a later round via the tool's built-in *Other* choice, accept it directly
+instead of walking them through the remaining rounds.
 
-- **Round 1 — "Backend/JVM"**: Java library / Spring Boot service / Spring Boot + Vaadin + Hilla / Android
-  library.
-- **Round 2 — "Mobile/native"** (only if none of Round 1 fit): Android app / Swift library / Apple app
-  (iOS/iPadOS/macOS/watchOS) / React Native app.
-- **Round 3 — "Web/Node"** (only if none of Round 1 or 2 fit): TypeScript/npm library / React web app / Angular
-  web app / Ionic app.
+- **Round 1 — "Java/JVM"**: Java library / Spring Boot service / Spring Boot + Vaadin + Hilla / Something in the
+  next group (Android & Swift).
+- **Round 2 — "Android & Swift"** (only if Round 1 ended on the escape hatch): Android library / Android app /
+  Swift library / Something in the next group (mobile apps).
+- **Round 3 — "Mobile apps"** (only if Round 2 ended on the escape hatch): Apple app (iOS/iPadOS/macOS/watchOS) /
+  React Native app / Ionic app / Something in the next group (web/Node).
+- **Round 4 — "Web/Node"** (only if Round 3 ended on the escape hatch): TypeScript/npm library / React web app /
+  Angular web app / None of these.
 
 | Option | `project-type` key | Delegated skill | `flavor`/extra arg |
 |---|---|---|---|
@@ -168,8 +172,12 @@ convention (see any of the five delegated orchestrators' own Step 2/3/4 for the 
 4. **Conditional, per resolved type**:
    - **Apple app / Swift library** — Apple platforms (`AskUserQuestion`, multi-select, at least one required):
      `ios` / `ipados` / `macos` / `watchos`. Pre-fill from Step 1's detected `apple-app (…)` parenthetical when
-     present. `iru-setup-swift-library` also accepts `tvos`/`visionos`/`linux` for a library — if the user wants
-     one of those, let `iru-setup-swift-repository`'s own Step 3 ask for it rather than expanding this question.
+     present. For a **Swift library only**, follow up with a second multi-select question — "Also target tvOS /
+     visionOS / Linux?" with options `tvos` / `visionos` / `linux` (none required) — and append every selected
+     value to `platforms`. This follow-up is necessary because Step 4 always forwards `platforms` pre-resolved,
+     and `iru-setup-swift-repository`'s own Step 0 skips any question whose key was supplied — so a library's
+     extra platforms can only reach `Package.swift` if this front door collects them itself. Never ask it for an
+     Apple app: `iru-setup-apple-app` accepts only the four values above.
    - **Ionic app** — framework (`AskUserQuestion`, two options): **Angular** or **React**. Pre-fill from Step 1's
      detected `ionic-app (…)` parenthetical when present.
    - **React Native app** — native-builds (`AskUserQuestion`, two options, default **`eas`**): does CI build the

@@ -157,18 +157,26 @@ supports — it works the same way whether the repository is brand new or alread
 
 === On a brand-new, empty repository
 
-`/iru-setup-repository` finds nothing to detect, so it asks the project type itself, over three short
-`AskUserQuestion` rounds rather than one long list: first which broad family (Backend/JVM, Mobile/native,
-Web/Node), then which specific type within it (of twelve total — Java library, Spring Boot service with an
-optional Hilla frontend, TypeScript/npm library, React web app, Angular web app, Ionic app, React Native app,
-Android library, Android app, Swift/SwiftPM library, Apple app, .NET). Once the type is known, it asks the
-handful of inputs every stack shares — `open-source`, `publish`/`distribution`, `sonar`, license, developer
-identity — exactly once, then delegates to that stack's own orchestrator (e.g.
+`/iru-setup-repository` finds nothing to detect, so it asks the project type itself, over up to four short
+`AskUserQuestion` rounds rather than one long list. Each round offers three concrete types plus a "Something in
+the next group" escape hatch that moves on to the next round: Java/JVM (Java library, Spring Boot service, Spring
+Boot + Vaadin + Hilla), Android & Swift (Android library, Android app, Swift/SwiftPM library), mobile apps (Apple
+app, React Native app, Ionic app), and Web/Node (TypeScript/npm library, React web app, Angular web app) — twelve
+types in total; the last round's escape hatch is "None of these", which ends the run with a plain "no orchestrator
+for this stack" report. .NET is recognised by `iru-explore` but never offered here, because the catalog has no
+.NET bootstrap orchestrator. Once the type is known, it asks only the inputs the stacks genuinely share —
+`open-source`, `publish` (libraries) or `distribution` (apps), and `sonar` (+ its organization/project-key/host
+details) — exactly once, plus the flavor-specific ones the chosen type needs (`platforms` for Swift/Apple,
+`framework` for Ionic, `native-builds` for React Native). License and developer identity are never asked by the
+front door; each stack orchestrator asks its own. It then delegates to that stack's own orchestrator (e.g.
 xref:skills/iru-setup-typescript-repository.adoc[], xref:skills/iru-setup-android-repository.adoc[]) via the
 `iru-isolated-skill-executor` agent, so its full multi-step transcript stays out of the front door's own context.
 
-The orchestrator runs its fixed six-step chain (scaffold → Antora → gitignore → CI/CD workflows → changelog →
-README) and returns a single consolidated report, including one combined required-secrets table covering every
+A `*-repository` orchestrator runs its fixed six-step chain (scaffold → Antora → gitignore → CI/CD workflows →
+changelog → README), while `iru-setup-java-springboot` runs its own manifest-driven chain (interview →
+`springboot-stack.yml` → the `iru-setup-java-springboot-*` sub-skills → `iru-update-java-springboot-documentation`
+→ gitignore/README/changelog). Either way it returns a single consolidated report, including one combined
+required-secrets table covering every
 workflow it generated (Sonar tokens, publishing credentials, signing secrets, …) instead of a separate table per
 sub-skill. What to do next is manual and outside any skill's reach: create those secrets in the repository's
 settings, set up the SonarCloud/self-hosted SonarQube project and any package-registry account the `publish`/
@@ -186,7 +194,7 @@ xref:skills/iru-setup-readme.adoc[`iru-setup-readme`] already behaves standalone
 
 === Invoking a stack orchestrator directly
 
-Each stack's orchestrator also runs standalone, useful when the front door's three-round question is unnecessary
+Each stack's orchestrator also runs standalone, useful when the front door's project-type rounds are unnecessary
 because the stack is already known:
 
 * **TypeScript/web** — `/iru-setup-typescript-repository` covers five flavors from one orchestrator; pass

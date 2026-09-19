@@ -32,8 +32,12 @@ Parse the invocation:
 - The positional argument is `<new-version>` — the exact target version string (e.g. `1.2.0`, `1.2.0-SNAPSHOT`).
   If it's missing, ask the user for it before doing anything else; don't guess or compute one here.
 - `args` (`key: value` lines), if present:
-  - `sync-files: yes|no` — whether to also update README/Antora version mentions (Step 6). If omitted, ask once
+  - `sync-files: yes|no` — whether to also update README/Antora version mentions (Step 8). If omitted, ask once
     with `AskUserQuestion` after Step 2 confirms whether such mentions actually exist; skip asking if none do.
+  - `next-version: <upcoming-version>` — the upcoming pre-release version (e.g. `1.5.0-SNAPSHOT`) that README/
+    Antora "Latest snapshot"/"Current development version"-style markers should show after a release, while
+    "Latest release" markers show `<new-version>`. Only meaningful with `sync-files: yes`; `iru-release` passes it
+    so a release never regresses a development marker to the release value (see Step 8).
   - `dry-run: yes|no` — default `no`. When `yes`, run every step through composing the new file contents and
     showing the diff (Step 7), then stop — do not write anything, and say so plainly in the report.
 
@@ -62,7 +66,7 @@ non-matching but plausible string, only flag it.
 - `app/build.gradle.kts` exists → this is (or includes) an app module; Step 4 applies to it.
 - Neither existing is a hard stop: tell the user neither module's build script was found at the expected path and
   ask for the correct path(s), or whether the project uses a different module layout than this catalog's
-  `iru-setup-android-library`/`iru-setup-android-app` scaffold produces (Task 20/21) — don't silently do nothing.
+  `iru-setup-android-library`/`iru-setup-android-app` scaffold produces — don't silently do nothing.
 - Also note, for Step 3's `mavenPublishing { coordinates(…) }` block and Step 6, whether `publish: yes` was used
   at scaffold time (the `mavenPublishing` block only exists in `lib/build.gradle.kts` when it was) — this doesn't
   change what gets rewritten (the version is only read from `libraryVersion`, `coordinates(…)` references that same
@@ -206,8 +210,8 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 21)"   # or -v 17 — the default 
 
 A non-zero exit or a Kotlin-compilation error in the output means the rewrite broke the file (e.g. the regex
 matched something unintended, or ran twice and produced a syntax error) — stop, show the actual error, and do not
-report success. This skill's own authoring did **not** run this command (Task 30 explicitly defers Gradle runs to
-another agent doing the heavier scaffold verification) — treat it as unverified-by-this-skill's-authoring but
+report success. This skill's own authoring did **not** run this command (Gradle runs were left to the heavier
+scaffold verification of `iru-setup-android-library`/`iru-setup-android-app`) — treat it as unverified-by-this-skill's-authoring but
 still the correct check to run against a real project, and say so in the report.
 
 ## Step 7 — Preview (`dry-run: yes`) or write
@@ -224,6 +228,15 @@ still the correct check to run against a real project, and say so in the report.
 
 Ask (or honor `args: sync-files`) whether to also update other places that name the current version, the same way
 `iru-typescript-bump-version`'s Step 6 and `iru-release`'s Steps 7–9 do for their ecosystems:
+
+**Marker mapping when `next-version` was given** (the `iru-release` case — same rule as
+`iru-java-bump-version`'s Step 7): rewrite each mention by what it names rather than to one value —
+"Latest release"-style markers and a Project Status `Latest release` row → `<new-version>` when it is a release
+(no `-SNAPSHOT` pre-release suffix), left untouched when `<new-version>` is itself a pre-release; "Latest snapshot"/
+"Current development version"-style markers → `next-version` when given, otherwise `<new-version>` only if it is
+a pre-release value, and untouched (with a warning in the Report step that the caller should pass `next-version`)
+when `<new-version>` is a release — never regress a development marker to a release value. A snippet with no
+such marker → `<new-version>`.
 
 - **`README.md`** — an installation/dependency snippet naming the current version, if any:
   ```bash
@@ -300,8 +313,8 @@ commands above.
   against both).
 - `1.2.0-SNAPSHOT` → `1.2.0` (release cut): `versionName` updated to `"1.2.0"` and `versionCode` correctly
   incremented `10` → `11` (target does not end in `-SNAPSHOT`).
-- `./gradlew -q help` (Step 6) was **not** run against these throwaway copies — Task 30 explicitly defers Gradle
-  execution to the agent verifying Task 20/21's full scaffold, and a bare copy of two `build.gradle.kts` files
+- `./gradlew -q help` (Step 6) was **not** run against these throwaway copies — Gradle execution was left to the
+  full scaffold verification of `iru-setup-android-library`/`iru-setup-android-app`, and a bare copy of two `build.gradle.kts` files
   outside a real Gradle project (no wrapper, no `settings.gradle.kts`, no `gradle.properties`) wouldn't exercise
   it meaningfully anyway. Marked **unverified locally**; the `JAVA_HOME=$(/usr/libexec/java_home -v 21)` note in
   Step 6 is carried over from the briefing's environment notes, not independently re-confirmed here.

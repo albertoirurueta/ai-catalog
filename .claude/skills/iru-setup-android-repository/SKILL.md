@@ -123,7 +123,7 @@ nothing on disk yet to conflict with.
 **`mode: existing` with the scaffold manifest already on disk** (`settings.gradle.kts` at the repository root, the same
 check Step 4 uses to skip the scaffold): skip every identity question in this step — nothing downstream consumes
 these answers once the scaffold is skipped (`iru-setup-readme` derives identity from the existing build files
-itself), so asking them is a wasted question (verified in Task 53.2). Resolve `license` only if `args` supplied it,
+itself), so asking them is a wasted question (verified against an existing repository). Resolve `license` only if `args` supplied it,
 and record in the final report that project identity was taken from the existing files rather than asked.
 
 For any field Step 0 already resolved from `args`, use that value directly. For everything else, ask the user
@@ -252,7 +252,7 @@ Agent({
   subagent_type: "iru-isolated-skill-executor",
   prompt: "Invoke Skill({skill: \"iru-setup-android-app\", args: \"application-id: <application-id>\\n
     namespace: <namespace>\\napp-name: <app-name>\\nmin-sdk: <min-sdk>\\n
-    compile-sdk: <compile-sdk, only if supplied>\\ntarget-sdk: <compile-sdk, only if supplied>\\n
+    compile-sdk: <compile-sdk, only if supplied>\\ntarget-sdk: <target-sdk, only if supplied>\\n
     version-name: <..., only if supplied>\\nversion-code: <..., only if supplied>\\n
     license: <license display name, or 'none'>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n

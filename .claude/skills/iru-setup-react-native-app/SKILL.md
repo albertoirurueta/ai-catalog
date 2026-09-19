@@ -167,7 +167,7 @@ shared convention:
     prebuild` output is meant to be regenerated, not hand-edited, whenever `app.json`/config plugins change — hand
     edits to a prebuilt `ios/`/`android/` folder are lost on the next `prebuild` run).
   - This answer doesn't change anything this skill writes to disk beyond `eas.json`'s `cli` block (Step 5) — it's
-    recorded here so `iru-setup-typescript-github-workflows` (Task 9, this catalog) can wire the matching CI job
+    recorded here so `iru-setup-typescript-github-workflows` can wire the matching CI job
     later without asking again.
 - **distribution** — `none`/`internal`/`store`:
   - `none` — builds (however `native-builds` produces them) are for local install/manual QA only. `eas.json`'s
@@ -421,6 +421,25 @@ themselves are **unverified locally**: running an actual `eas build`/`eas submit
 linking (`eas init`), and (for `store`) real Apple/Google credentials, none of which are available in this
 skill's verification environment.
 
+**Who owns the version for this flavor** (`appVersionSource: "remote"` + `autoIncrement: true`) — decided here so
+`iru-release`/`iru-typescript-bump-version` don't have to guess:
+
+- **Build numbers** (`ios.buildNumber` / `android.versionCode`) are owned by **EAS**: with `appVersionSource:
+  "remote"` they're stored on EAS's servers and `autoIncrement` bumps them on every `production` build. They must
+  not be written into `app.json` or bumped by any catalog skill — `eas build:version:set`/`eas build:version:sync`
+  are the only sanctioned ways to touch them.
+- **The user-facing version** (`1.4.0` on the store listing) is read from **`app.json`'s `expo.version`** —
+  `package.json`'s `version` is never consulted by Expo/EAS or the stores. `iru-typescript-bump-version` only
+  updates `package.json` (+ lockfile, and README/Antora mentions on request), so on its own a release bump for
+  this flavor changes a value the app never ships.
+- Therefore, when `iru-release` cuts a release on a `react-native-app` project it must, after delegating the
+  `package.json` bump to `iru-typescript-bump-version`, also set `expo.version` in `app.json` (or the equivalent
+  `version` field in `app.config.ts`/`app.config.js` when the project uses a dynamic config) to the **same
+  release value** — and only the release value: a `-dev.N` pre-release string is not a valid store version, so
+  the "next development" bump stays in `package.json` alone and `expo.version` keeps the last released value
+  until the next release. `iru-typescript-bump-version`'s convention section (its Step 5) records the same
+  rule from the bump skill's side, and its optional file sync offers `app.json` as one of the mirrored files.
+
 ### `.maestro/smoke.yaml`
 
 ```yaml
@@ -444,15 +463,25 @@ step list) was validated.
 sonar.organization=<sonar-organization>
 sonar.projectKey=<sonar-project-key>
 sonar.sources=.
+sonar.tests=.
+sonar.test.inclusions=**/__tests__/**,**/*.test.ts,**/*.test.tsx
 sonar.exclusions=android/**,ios/**,node_modules/**,coverage/**,.expo/**,dist/**
-sonar.tests=__tests__
+sonar.test.exclusions=android/**,ios/**,node_modules/**,coverage/**,.expo/**,dist/**
 sonar.javascript.lcov.reportPaths=coverage/lcov.info
 ```
 
 Omit the `sonar.organization` line entirely for `sonar: self-hosted` servers without organizations enabled (per
-Step 2). `android/**`/`ios/**` are excluded even though this scaffold doesn't commit those folders by default —
-they're excluded defensively for the moment `npx expo prebuild` (Step 2's `native-builds: local` path) or an EAS
-local build materializes them.
+Step 2). The source/test split follows the same pattern as this catalog's React/Angular/Ionic scaffolds
+(`sonar.sources` and `sonar.tests` name the **same** root, and `sonar.test.inclusions` is what marks the test
+files): the blank Expo template keeps `App.tsx` at the repository root and its tests under `__tests__/`, so `.`
+is the only root that covers both — but naming `.` as sources and `__tests__` as a *separate* tests root makes
+every `__tests__/*` file match both, which the scanner rejects outright ("File ... can't be indexed twice").
+With the inclusions pattern, `__tests__/**` (and any colocated `*.test.ts(x)`) is indexed once, as test code, and
+everything else under `.` is production code. `sonar.test.exclusions` mirrors `sonar.exclusions` so a
+`__tests__/` folder inside `node_modules/`/`android/`/`ios/` is never picked up as this project's tests.
+`android/**`/`ios/**` are excluded even though this scaffold doesn't commit those folders by default — they're
+excluded defensively for the moment `npx expo prebuild` (Step 2's `native-builds: local` path) or an EAS local
+build materializes them.
 
 ## Step 6 — Scaffold the Expo project
 
@@ -524,7 +553,7 @@ From `<app-directory>`:
    `expo install` (not `npm install`) is used deliberately — it resolves each package to the version actually
    compatible with the scaffolded Expo SDK, rather than each package's own independent `latest` tag. This
    `--platform web` export is the fast, native-toolchain-free build-sanity check this catalog's
-   `iru-setup-typescript-github-workflows` CI (Task 9) uses for this flavor instead of a full native build.
+   `iru-setup-typescript-github-workflows` CI uses for this flavor instead of a full native build.
 
 ## Step 8 — Report
 

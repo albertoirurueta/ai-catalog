@@ -16,8 +16,8 @@ web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid 
 lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on
 fork pull requests), Playwright e2e for the web flavors, a docs build (TypeDoc/Compodoc/Storybook) merged with
 an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific: npm
-publish via OIDC trusted publishing plus an optional Changesets version-PR job for `library`; a `dist/` deploy
-to Pages for `react`/`angular`; EAS or local Gradle/Xcode builds for `react-native`; Android/iOS store or
+publish via OIDC trusted publishing plus an optional Changesets version-PR job for `library`; a web-bundle deploy
+to Pages for `react`/`angular` (`dist/` for Vite, `dist/<project>/browser/` for Angular); EAS or local Gradle/Xcode builds for `react-native`; Android/iOS store or
 internal artifacts for `ionic`. `sync.yml` (library/react/angular only) plus its companion
 `.github/scripts/sync_versions.py` merge the stable branch back into the integration branch and bump
 `package.json` to the next `x.y.(z+1)-dev.0` prerelease. `security.yml` runs the shared
@@ -25,7 +25,8 @@ Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks block. The skill ships 
 embedded in the skill file, resolves versions at run time against the npm registry and GitHub Releases API,
 and resolves every other placeholder from a survey of the target repository rather than guessing. If any of
 the workflow files already exist, it asks the user whether to stop or attempt an update using the templates as
-reference, preserving any step this skill doesn't own.
+reference (or goes straight to the update path when `mode: existing` was supplied), preserving any step this
+skill doesn't own.
 
 == Purpose group
 
@@ -51,10 +52,11 @@ required), `integration-branch`, `stable-branch`, `node-version`, `package-manag
 `open-source` (`yes`/`no`), `publish` (`yes`/`no`, library only), `distribution` (`none`/`internal`/`store`,
 react-native/ionic only), `sonar` (`cloud`/`self-hosted`/`none`) plus `sonar-organization`/
 `sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local`, react-native only), `framework`
-(`angular`/`react`, ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), and
-`security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`). When an
-orchestrating skill (such as `iru-setup-typescript-repository`) supplies these, the corresponding fact-finding
-bullet in Step 1's survey is skipped entirely for that value.
+(`angular`/`react`, ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `mode` (`new`/`existing` —
+`existing` makes Step 2 take its update/gap-fill path on already-present workflow files without asking the
+stop-or-update question), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`
+(each `yes`/`no`). When an orchestrating skill (such as `iru-setup-typescript-repository`) supplies these, the
+corresponding fact-finding bullet in Step 1's survey is skipped entirely for that value.
 |None — if `args` is absent or doesn't match this format, every parameter is instead resolved by surveying
 `package.json` and the repository, asking the user for anything that can't be inferred. Unresolved defaults:
 `integration-branch` `develop`, `stable-branch` `main`, `node-version` `24`, and the four `security-*` keys

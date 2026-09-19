@@ -27,6 +27,11 @@ Parse the invocation:
   - `sync-files: yes|no` — whether to also update `docs/antora.yml`/Antora page version mentions and, for an app,
     a README version mention (Step 8). If omitted, ask once with `AskUserQuestion` after Step 2 confirms whether
     such mentions actually exist; skip asking if none do.
+  - `next-version: <upcoming-version>` — the upcoming pre-release version (e.g. `1.5.0-rc.1`, or the next
+    planned tag) that README/Antora "Latest snapshot"/"Current development version"-style markers should show
+    after a release, while "Latest release" markers and the dependency snippet show `<new-version>`. Only
+    meaningful with `sync-files: yes`; `iru-release` passes it so a release never regresses a development marker
+    to the release value (see Step 8).
   - `dry-run: yes|no` — default `no`. When `yes`, run every step through composing the new file contents and
     showing the diff (Step 7), then stop — do not write anything, and say so plainly in the report.
   - `kind: library|app` — overrides Step 2's auto-detected project kind. Use this when a repository legitimately
@@ -79,7 +84,7 @@ Determine the project kind (honor `args: kind` if given, otherwise auto-detect):
 
 Also note, for Step 3/8, whether `version.txt` and `CHANGELOG.md` already exist at the root (both are optional —
 `version.txt` is only meaningful when this repository's `iru-setup-swift-github-workflows`-generated `sync.yml`
-bumps `MARKETING_VERSION`/`version.txt` on the gitflow sync, i.e. Task 36's convention — and `CHANGELOG.md` is
+bumps `MARKETING_VERSION`/`version.txt` on the gitflow sync — and `CHANGELOG.md` is
 created by `iru-setup-changelog`), and for Step 4, which of `project.yml`/`Project.swift`/`*.xcconfig`/`.xcodeproj`
 actually carry `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` (a project can spread these across more than one —
 e.g. a `Version.xcconfig` included from `project.yml`'s `configFiles:` — survey with `grep -rn
@@ -93,7 +98,7 @@ rewritten unconditionally (when the file exists, or, for `version.txt`, created 
 task description for this skill states them as the library path's core deliverable, not an opt-in extra.
 
 **`version.txt`** — a plain one-line file holding the current released version, read by this catalog's
-`sync.yml` template (`iru-setup-swift-github-workflows`, Task 36) to know what the "current" version is between
+`sync.yml` template (`iru-setup-swift-github-workflows`) to know what the "current" version is between
 tags. Read the old value first, then overwrite:
 
 ```bash
@@ -107,7 +112,7 @@ if nothing references it, note in the report that a `version.txt` file was **not
 repository reads one, and the only real "version" for this package remains its git tag.
 
 **`CHANGELOG.md`** — rename the top `## [Unreleased]` heading to `## [<new-version>] - <today's date>` and reopen a
-fresh, empty `## [Unreleased]` above it, the same Keep a Changelog convention `iru-release`'s Step 10 uses for the
+fresh, empty `## [Unreleased]` above it, the same Keep a Changelog convention `iru-release`'s Step 7 uses for the
 Java/Maven path:
 
 ```bash
@@ -174,17 +179,19 @@ python3 - "project.yml" "<new-version>" <<'PY'
 import re, sys
 path, new_version = sys.argv[1], sys.argv[2]
 text = open(path).read()
+# Quote-tolerant: matches both `MARKETING_VERSION: 1.0.0` and `MARKETING_VERSION: "1.0.0"`, and keeps
+# whichever form the file already uses.
 text, n_mv = re.subn(
-    r'(MARKETING_VERSION:\s*)\S+',
-    lambda m: f'{m.group(1)}{new_version}',
+    r'(MARKETING_VERSION:\s*)("?)[^"\s]+\2',
+    lambda m: f'{m.group(1)}{m.group(2)}{new_version}{m.group(2)}',
     text, count=1,
 )
 if n_mv == 0:
     sys.exit("MARKETING_VERSION not found in project.yml")
 def bump(m):
-    return f"{m.group(1)}{int(m.group(2)) + 1}"
+    return f"{m.group(1)}{m.group(2)}{int(m.group(3)) + 1}{m.group(2)}"
 text, n_cpv = re.subn(
-    r'(CURRENT_PROJECT_VERSION:\s*)(\d+)',
+    r'(CURRENT_PROJECT_VERSION:\s*)("?)(\d+)\2',
     bump,
     text, count=1,
 )
@@ -195,8 +202,10 @@ print(f"MARKETING_VERSION replacements: {n_mv}, CURRENT_PROJECT_VERSION replacem
 PY
 ```
 
-Both regexes only touch the **first** occurrence in the file — this catalog's `iru-setup-apple-app` scaffold
-writes these keys once, under the top-level `settings: base:` block; a project that also overrides either key
+Both regexes only touch the **first** occurrence in the file, and both tolerate an optional pair of double
+quotes around the value (`1.0.0` and `"1.0.0"`; `1` and `"1"`), preserving whichever form the file uses —
+`iru-setup-apple-app` writes them unquoted, but a hand-edited or older manifest may quote them. This catalog's
+`iru-setup-apple-app` scaffold writes these keys once, under the top-level `settings: base:` block; a project that also overrides either key
 per-target (a nested `targets: <Target>: settings: base:` block) needs those reviewed by hand afterward (Step 9
 warns about this explicitly) — this skill does not attempt to find and rewrite every per-target override, only the
 project-wide default.
@@ -304,7 +313,7 @@ in-tree pre-release marker for a library at all**:
 
 - **Library**: no development-version file or field exists in-tree between releases — SwiftPM has nothing to read
   until a tag exists, so there is nothing to set to a "next dev" value the way `1.4.0-dev.0`/`1.4.0-SNAPSHOT` are.
-  The release **is** the git tag: `iru-release` (once generalized, per Task 50) determines the release version as
+  The release **is** the git tag: `iru-release` determines the release version as
   the next semver component bump from the last tag —
   ```bash
   git describe --tags --abbrev=0
@@ -374,6 +383,15 @@ Ask (or honor `args: sync-files`) whether to also update other places that name 
 `iru-typescript-bump-version`'s Step 6 and `iru-android-bump-version`'s Step 8 do for their ecosystems. Unlike
 those two skills, a library's README dependency snippet is already handled unconditionally in Step 3 — Step 8 here
 only covers the files that may legitimately be intentionally out of step with the in-tree/tag version:
+
+**Marker mapping when `next-version` was given** (the `iru-release` case — same rule as
+`iru-java-bump-version`'s Step 7): rewrite each mention by what it names rather than to one value —
+"Latest release"-style markers and a Project Status `Latest release` row → `<new-version>` when it is a release
+(no pre-release pre-release suffix), left untouched when `<new-version>` is itself a pre-release; "Latest snapshot"/
+"Current development version"-style markers → `next-version` when given, otherwise `<new-version>` only if it is
+a pre-release value, and untouched (with a warning in the Report step that the caller should pass `next-version`)
+when `<new-version>` is a release — never regress a development marker to a release value. A snippet with no
+such marker → `<new-version>`.
 
 - **`docs/antora.yml`** — its `version:` field, if this repository has an Antora site and that field is meant to
   track the released version (skip for a pre-release value, e.g. `x.y.z-rc.N` — this catalog's convention, matching

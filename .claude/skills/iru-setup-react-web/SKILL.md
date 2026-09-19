@@ -634,4 +634,6 @@ Finish with an explicit **Warn explicitly** block:
   backfill source headers.
 - If Storybook was added, remind the user that `npm run storybook` starts a dev server on port 6006 and
   `npm run build-storybook` produces `storybook-static/` — neither is wired into this skill's own `build`
-  script, by design, so a separate CI step is needed if the Storybook site should be published.
+  script, by design. `iru-setup-typescript-github-workflows` (with `docs-tool: storybook`) runs
+  `npm run build-storybook` by that exact name in `build.yml` and merges `storybook-static/` under the Antora
+  site, so keep the installer's script name as-is rather than renaming/aliasing it to `docs`.

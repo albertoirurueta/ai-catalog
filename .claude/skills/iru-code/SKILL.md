@@ -176,14 +176,31 @@ archiving — an incomplete plan stays at the root so the next run can resume it
 ## Step 7 — Final verification
 
 Once every checkbox is checked, confirm the whole build — not just the incrementally-tested pieces — is healthy
-by running the full local verification from `CLAUDE.md` via the `iru-gate-runner` agent, for the same reason as the
-other verification steps in Step 4: `Agent({description: "Run full local verification", subagent_type:
-"iru-gate-runner", prompt: "Run `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar source:jar -P
-'!build-extras'`. If it succeeds, report back only that the build succeeded. If it fails, report back only the
-failing module/goal, the failure reason, and the relevant error output/stack trace."})`. Running this via
-`iru-gate-runner` keeps the verbose build output out of the main context window. If it fails, fix it (or, if it's a
-genuine blocker per Step 6, stop and surface it) — do not archive a plan behind a broken build. Re-invoke the
-same agent call after fixing, and repeat until it reports success.
+by running the full local verification once per distinct language/framework key recorded in the plan (the same
+keys Step 3 collected). Resolve the command for each key as follows:
+
+1. If the repository's `CLAUDE.md` names a full local verification command for that stack (a "build", "verify",
+   or "full check" command), use it verbatim.
+2. Otherwise fall back to this key → command table:
+   - `java`: `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar source:jar -P '!build-extras'`
+   - `java-springboot`: `mvn -B -ntp clean verify`
+   - `dotnet`: `dotnet build && dotnet test`
+   - `typescript`: the package manager's `lint`, `typecheck` (when present), and `test` scripts, in that order
+     (`npm run lint && npm run typecheck && npm test`, or the `pnpm`/`yarn` equivalents matching the lockfile)
+   - `android`: `./gradlew build`
+   - `swift`: `swift build && swift test` for a SwiftPM package, or `xcodebuild build-for-testing` (with the
+     project's scheme and a simulator destination) for an Xcode app
+   - any other key: skip the full verification for that key and say so in Step 9's summary.
+
+Run each resolved command through the `iru-gate-runner` agent, for the same reason as the other verification
+steps in Step 4: `Agent({description: "Run full local verification (<key>)", subagent_type: "iru-gate-runner",
+prompt: "Run `<resolved command>`. If it succeeds, report back only that the build succeeded. If it fails, report
+back only the failing module/goal/target, the failure reason, and the relevant error output/stack trace."})`.
+Running this via `iru-gate-runner` keeps the verbose build output out of the main context window. If a run fails,
+fix it (or, if it's a genuine blocker per Step 6, stop and surface it) — do not archive a plan behind a broken
+build. Re-invoke the same agent call after fixing, and repeat until it reports success. Skip this full
+verification entirely (and note it in Step 9's summary) if no language/framework key could be determined for
+the plan at all.
 
 Then assess overall code quality against the baseline(s) captured in Step 3, once per distinct language/framework
 key found in the plan:
@@ -191,7 +208,7 @@ key found in the plan:
 1. For each key a baseline was captured for in Step 3, run its project-wide quality check by delegating to the
    `iru-gate-runner` agent, for the same reason as the other quality checks in this skill: `Agent({description:
    "Compare final quality against baseline (<key>)", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
-   \"<key>-code-quality\"}) unscoped, project-wide. Compare the reported issues against this baseline: <that key's
+   \"iru-<key>-code-quality\"}) unscoped, project-wide. Compare the reported issues against this baseline: <that key's
    baseline from Step 3>. Report back only the total issue count per tool and the per-file list of issues."})` —
    e.g. `iru-java-code-quality` for the `java` baseline, `iru-dotnet-code-quality` for the `dotnet` baseline,
    `iru-typescript-code-quality` for `typescript`, `iru-android-code-quality` for `android`, `iru-swift-code-quality`

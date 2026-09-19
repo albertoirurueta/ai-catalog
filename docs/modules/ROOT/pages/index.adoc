@@ -680,8 +680,10 @@ library starts out matching the same conventions as every other repository in th
 Reach for this group when standing up a **brand-new repository** — a one-time pass, not something you'd run
 again once the repository already exists. `iru-setup-repository` is the catalog-wide front door: it detects a
 non-empty repository (via `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the
-project type over three `AskUserQuestion` rounds (Backend/JVM, Mobile/native, Web/Node), asks the shared
-`open-source`/`publish`-or-`distribution`/`sonar` inputs once, and delegates to exactly one matching stack
+project type over up to four `AskUserQuestion` rounds of three concrete types each (Java/JVM, Android & Swift,
+mobile apps, Web/Node — each with a "Something in the next group" escape hatch; .NET is detected but has no
+orchestrator to offer), asks the shared `open-source`/`publish`-or-`distribution`/`sonar` inputs once, and
+delegates to exactly one matching stack
 orchestrator — `iru-setup-java-library-repository`, `iru-setup-java-springboot`,
 xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
 xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`], or
@@ -770,12 +772,12 @@ library does.
 [TIP]
 ====
 `iru-setup-typescript-repository` is the single entry point, reached either directly or via
-xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape every stack
-orchestrator in this catalog follows: scaffold (whichever of `iru-setup-typescript-library`,
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape the four
+`*-repository` orchestrators in this catalog follow: scaffold (whichever of `iru-setup-typescript-library`,
 `iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, or `iru-setup-ionic-app` matches
 the chosen flavor) → `iru-setup-antora` → `iru-setup-typescript-gitignore` →
-`iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`. It accepts the same
-shared `args` vocabulary as every other orchestrator — `open-source: yes|no`, `publish: yes|no`,
+`iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`. It accepts the
+shared `args` vocabulary the front door and the orchestrators use — `open-source: yes|no`, `publish: yes|no`,
 `sonar: cloud|self-hosted|none`, and `mode: new|existing` — so a value collected once upstream never needs
 re-asking. Each flavor skill and each of the shared skills also runs standalone against an existing
 repository to fill a single gap.
@@ -808,10 +810,11 @@ pattern this catalog's Android skills are genericized from
 [TIP]
 ====
 `iru-setup-android-repository` is the single entry point, reached either directly or via
-xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape: scaffold
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape as the other
+`*-repository` orchestrators: scaffold
 (`iru-setup-android-library` or `iru-setup-android-app`, depending on flavor) → `iru-setup-antora` →
 `iru-setup-android-gitignore` → `iru-setup-android-github-workflows` → `iru-setup-changelog` →
-`iru-setup-readme`. It accepts the same shared `args` vocabulary as every other orchestrator —
+`iru-setup-readme`. It accepts the shared `args` vocabulary the front door and the orchestrators use —
 `open-source: yes|no`, `publish: yes|no` (library) or `distribution: none|internal|store` (app),
 `sonar: cloud|self-hosted|none`, and `mode: new|existing`. Each member also runs standalone against an
 existing repository to fill a single gap.
@@ -837,10 +840,11 @@ catalog's conventions from the first commit.
 [TIP]
 ====
 `iru-setup-swift-repository` is the single entry point, reached either directly or via
-xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape: scaffold
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape as the other
+`*-repository` orchestrators: scaffold
 (`iru-setup-swift-library` or `iru-setup-apple-app`, depending on flavor) → `iru-setup-antora` →
 `iru-setup-swift-gitignore` → `iru-setup-swift-github-workflows` → `iru-setup-changelog` →
-`iru-setup-readme`. It accepts the same shared `args` vocabulary as every other orchestrator —
+`iru-setup-readme`. It accepts the shared `args` vocabulary the front door and the orchestrators use —
 `open-source: yes|no`, `publish: yes|no` (library) or `distribution: none|internal|store` (app),
 `sonar: cloud|self-hosted|none`, and `mode: new|existing`. Each member also runs standalone against an
 existing repository to fill a single gap.

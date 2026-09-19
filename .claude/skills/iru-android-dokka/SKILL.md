@@ -26,7 +26,7 @@ example names that specific package or project).
   (`src/main/java` and `src/main/kotlin`, whichever this project actually uses — both are valid for Kotlin) rather
   than guessing the module or package. If a resolved file turns out to live under a test source root
   (`src/test/java`, `src/androidTest/java` by convention), drop it from the scope audited/generated in Steps 3-6 —
-  say so in the Step 8 report rather than silently ignoring it — since test classes carry no KDoc requirement
+  say so in the Step 7 report rather than silently ignoring it — since test classes carry no KDoc requirement
   here.
 - **No argument**: default to every main-source `.kt` file touched by uncommitted changes plus commits on the
   current branch not yet on the base branch, same approach as `iru-update-docs`:
@@ -88,7 +88,7 @@ has no existing KDoc to learn from, fall back to standard KDoc convention:
   that doesn't exist just to satisfy this tag.
 - **`@suppress`** — carried over verbatim on a member intentionally hidden from generated docs; never add it new
   (that's a decision only the code owner makes) — but if an existing gap looks like it might be an accidental
-  omission mislabeled as suppressed, flag it in the Step 8 report rather than silently accepting it.
+  omission mislabeled as suppressed, flag it in the Step 7 report rather than silently accepting it.
 - **`[Declaration]`** — square-bracket KDoc links for cross-references instead of a bare name in backticks.
 
 ## Step 3 — Audit each in-scope declaration
@@ -110,7 +110,7 @@ member's purpose (not just restates its name), scoped per the bar established in
   enclosing type's page.
 - **Nested/inner classes, interfaces, objects, enums**: recurse into these with the same checks as top-level
   types.
-- **`@suppress`-tagged members**: excluded from the gap list (Step 2), but recorded as "suppressed" in the Step 8
+- **`@suppress`-tagged members**: excluded from the gap list (Step 2), but recorded as "suppressed" in the Step 7
   report rather than silently skipped.
 
 For each item found incomplete or missing entirely, record: the member, what's missing (whole comment vs. a
@@ -159,16 +159,18 @@ includes wiring).
 
 ## Step 6 — Verify the KDoc actually builds
 
-Determine the module(s) to build from the scope (Step 1). Prefer the narrowest Dokka V2 task that actually
-generates and validates the site without a full multi-module aggregate:
+Determine the module(s) to build from the scope (Step 1) — `<module>` below is whichever Gradle module each
+in-scope file lives in (`lib` for a library scaffold, `app` for an app-only repository, or both when the scope
+spans them; run the task once per module). Prefer the narrowest Dokka V2 task that actually generates and
+validates the site without a full multi-module aggregate:
 
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)   # or -v 17; Gradle/AGP may reject a newer default JDK
 export ANDROID_HOME=$HOME/Library/Android/sdk
-./gradlew :lib:dokkaGenerate
+./gradlew :<module>:dokkaGenerate
 ```
 
-Fall back to `./gradlew :lib:dokkaGeneratePublicationHtml` if the module only configures a single (HTML)
+Fall back to `./gradlew :<module>:dokkaGeneratePublicationHtml` if the module only configures a single (HTML)
 publication and `dokkaGenerate`'s aggregate task isn't registered under that exact name in this Dokka version. If
 the run fails with a configuration-cache-related error (a known Dokka V2 rough edge on some versions), retry once
 with `--no-configuration-cache` and note that this project needs the flag.
@@ -229,7 +231,7 @@ respectively, not this skill's.
   something every project already has.
 - **Verification of `dokkaGenerate`/`--no-configuration-cache` itself is unverified locally by this skill's
   author** — this task's author did not run Gradle (concurrent agents were exercising the heavy Android builds).
-  The scaffold's own `:lib:dokkaGenerate` run is exercised by Task 20.2 against the real scaffold this catalog
-  generates; this skill's Step 6 command and quirks above are grounded in the reference repository's actual
+  The scaffold's own `:lib:dokkaGenerate` run is exercised by `iru-setup-android-library`'s verification against the
+  real scaffold this catalog generates; this skill's Step 6 command and quirks above are grounded in the reference repository's actual
   `gradle.properties`/`gradle/libs.versions.toml` pins and Dokka V2's documented Gradle plugin behavior, not a
   local run of this exact skill.

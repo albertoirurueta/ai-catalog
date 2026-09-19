@@ -48,8 +48,9 @@ find . -maxdepth 2 \( -name "Package.swift" -o -name "project.yml" -o -name "Pro
 - **`project.yml` (XcodeGen) or `Project.swift` (Tuist) present but no generated `.xcodeproj`/`.xcworkspace`
   yet** → the project must be generated first (`xcodegen generate` / `tuist generate`). If the tool isn't on
   `PATH`, stop and report that generation is needed before tests can run — this skill does not install XcodeGen
-  or Tuist itself (see `iru-setup-swift-library`/`iru-setup-apple-app`, which scaffold the project and are
-  expected to have already run `xcodegen generate`/`tuist generate` once).
+  or Tuist itself. `iru-setup-apple-app` writes the `project.yml`/`Project.swift` manifest but never runs the
+  generator (the `.xcodeproj` is gitignored and regenerated on demand), so the user is expected to have run
+  `xcodegen generate`/`tuist generate` once after that scaffold before invoking this skill.
 - **Nothing found** → stop and report "no Swift package or Xcode project found" rather than guessing.
 
 Prerequisites, checked before invoking either runner since a missing one produces a confusing failure that looks

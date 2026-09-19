@@ -68,12 +68,12 @@ not written into any build file by this step.
   `## [Unreleased]` above it.
 * A commit on the release branch, and a pull request opened against `main`/`master` — using whichever host tooling
   matches this repository (GitHub, Bitbucket, Azure DevOps, or TFS) — titled `Release <version>`, carrying a
-  `iru-release` label/tag where the host supports one, and a description filled in from the actual diff.
+  `release` label/tag where the host supports one, and a description filled in from the actual diff.
 * A final report naming the detected ecosystem and bump-version skill used, the versions chosen, the branch/PR
-  and host, the files touched, and — only when this repository's ecosystem is Java and it has a `sync.yml`
-  workflow — a reminder that merging and publishing the release triggers that workflow's automatic snapshot bump
-  back into `develop`; otherwise a plain statement that no such automation ran and the next-dev bump is a manual
-  follow-up.
+  and host, the files touched, and — whenever this repository has a `.github/workflows/sync.yml` (every
+  `iru-setup-<stack>-github-workflows` skill generates one, whatever the ecosystem) — a reminder that merging and
+  publishing the release triggers that workflow's automatic next-development-version bump back into `develop`;
+  otherwise a plain statement that no such automation ran and the next-dev bump is a manual follow-up.
 * If run from any branch other than `develop`: no files are touched at all — the skill stops at Step 1.
 
 == Execution flow

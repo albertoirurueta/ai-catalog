@@ -99,8 +99,10 @@ regardless of how many types are in scope:
 Agent({
   description: "Measure coverage for every candidate type",
   subagent_type: "iru-gate-runner",
-  prompt: "Invoke Skill({skill: \"iru-swift-coverage\", args: \"scope: <Target or Type1,Type2,...>\"}) so the
-    whole test suite runs once (via `swift test --enable-code-coverage` or `xcodebuild test -enableCodeCoverage
+  prompt: "Invoke Skill({skill: \"iru-swift-coverage\", args: \"<Type1,Type2,...>\\ntarget: <Target>\"}) —
+    the comma-separated type list is `iru-swift-coverage`'s positional `[scope]` argument and the target goes
+    in its `target:` key (there is no `scope:` key; an unrecognized key would fall back to a whole-package
+    report, so the per-type classification would run against unfiltered totals) — so the whole test suite runs once (via `swift test --enable-code-coverage` or `xcodebuild test -enableCodeCoverage
     YES`, whichever this project uses) and every type is measured in the same pass. Report back, per target
     type: its exact line coverage percentage; and, ONLY for types below 80%, the specific uncovered line ranges
     too (from the `llvm-cov`/`xccov` per-file report). For types at or above 80%, report just the percentage —

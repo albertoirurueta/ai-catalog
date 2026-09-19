@@ -69,7 +69,7 @@ flowchart TD
     B --> C{"Which coverage path is wired?\n(check in priority order)"}
     C -- "1. Kover plugin applied" --> D["Run gradlew koverXmlReportDebug"]
     C -- "2. AGP enableUnitTestCoverage set" --> E["Run gradlew createDebugUnitTestCoverageReport\nglob build/reports/coverage/test/debug for XML"]
-    C -- "3. vendored jacococli.jar present" --> F["Run testDebugUnitTest, glob build/jacoco/*.exec,\nconvert with jacococli.jar report --xml"]
+    C -- "3. vendored jacococli.jar present" --> F["Run testDebugUnitTest, glob build/outputs/unit_test_code_coverage/**/*.exec\n(then build/jacoco/*.exec), convert with jacococli.jar report --xml"]
     C -- "none wired" --> G["Report: coverage not wired\n(name the missing plugin/setting/jar), stop"]
     E --> E2{"XML found by the glob?"}
     E2 -- yes --> H

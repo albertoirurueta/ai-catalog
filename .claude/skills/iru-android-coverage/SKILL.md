@@ -1,6 +1,6 @@
 ---
 name: iru-android-coverage
-description: Generate an Android/Kotlin module's unit-test line/branch coverage report — preferring the Kover Gradle plugin's `koverXmlReportDebug` task when it's applied, falling back to the Android Gradle Plugin's own `createDebugUnitTestCoverageReport` (enabled by `buildTypes { debug { enableUnitTestCoverage = true } }`) when Kover isn't wired, and falling back further to running `testDebugUnitTest` and converting `build/jacoco/*.exec` with a vendored `jacoco-*/lib/jacococli.jar` when neither Gradle-native path emits XML — then parses the resulting JaCoCo-format XML report to report exact line/branch coverage percentages and uncovered line numbers for the requested scope. Invoke as `/iru-android-coverage [scope]`, where `[scope]` is one or more class simple names or `src/main/...` source paths (comma-separated), or with no argument to report the whole module's (`lib` by default) coverage. Detects which of the three coverage paths is actually wired before running anything and reports "coverage not wired" (naming exactly what's missing) rather than a false 0%/100% when none is configured. Never runs instrumented (`connectedAndroidTest`) coverage unless the prompt explicitly asks for it with a device attached; an existing `build/reports/coverage/androidTest/debug/connected/report.xml` is only read and reported for information when it's already on disk. Use whenever the user wants to check, or verify a bar (e.g. "at least 80% line coverage") for, an Android/Kotlin class, source path, or whole module, instead of eyeballing Gradle console output.
+description: Generate an Android/Kotlin module's unit-test line/branch coverage report — preferring the Kover Gradle plugin's `koverXmlReportDebug` task when it's applied, falling back to the Android Gradle Plugin's own `createDebugUnitTestCoverageReport` (enabled by `buildTypes { debug { enableUnitTestCoverage = true } }`) when Kover isn't wired, and falling back further to running `testDebugUnitTest` and converting the raw `.exec` (globbed under `build/outputs/unit_test_code_coverage/` first, then `build/jacoco/`) with a vendored `jacoco-*/lib/jacococli.jar` when neither Gradle-native path emits XML — then parses the resulting JaCoCo-format XML report to report exact line/branch coverage percentages and uncovered line numbers for the requested scope. Invoke as `/iru-android-coverage [scope]`, where `[scope]` is one or more class simple names or `src/main/...` source paths (comma-separated), or with no argument to report the whole module's (`lib` by default) coverage. Detects which of the three coverage paths is actually wired before running anything and reports "coverage not wired" (naming exactly what's missing) rather than a false 0%/100% when none is configured. Never runs instrumented (`connectedAndroidTest`) coverage unless the prompt explicitly asks for it with a device attached; an existing `build/reports/coverage/androidTest/debug/connected/report.xml` is only read and reported for information when it's already on disk. Use whenever the user wants to check, or verify a bar (e.g. "at least 80% line coverage") for, an Android/Kotlin class, source path, or whole module, instead of eyeballing Gradle console output.
 model: haiku
 ---
 
@@ -57,32 +57,44 @@ XML lands at `<module>/build/reports/kover/reportDebug.xml` — Kover emits the 
 ./gradlew :<module>:createDebugUnitTestCoverageReport
 ```
 This task's exact emitted file name/location is not fully pinned down here — whether it produces importable XML
-at all (versus only an HTML report) is being verified concurrently against the Task 20 scaffold (Task 20.2), so
+at all (versus only an HTML report) was not verified by this skill's author against a generated scaffold, so
 **glob for it rather than hard-coding one path**:
 ```bash
 find <module>/build/reports/coverage/test/debug -iname 'report.xml' 2>/dev/null
 find <module>/build/reports/coverage/test/debug -iname '*.xml' 2>/dev/null   # wider fallback if report.xml isn't the name
 ```
-Expect the directory to be `<module>/build/reports/coverage/test/debug/` (the reference `lib/build.gradle.kts`'s
-`sonar.coverage.jacoco.xmlReportPaths` property instead points at `build/reports/coverage/test/report.xml`, one
-level up — that is the *converted* CLI report's path, from path 3 below, not necessarily this task's own output;
-always glob, never assume the two coincide). **If the glob finds no XML file at all, fall back to Step 2's third
+Expect the directory to be `<module>/build/reports/coverage/test/debug/` — the same path the
+`iru-setup-android-library`/`iru-setup-android-app` scaffolds' `sonar.coverage.jacoco.xmlReportPaths` property and
+`iru-setup-android-github-workflows`' workflows point at (`build/reports/coverage/test/debug/report.xml`). The
+upstream reference repository's `lib/build.gradle.kts` still lists `build/reports/coverage/test/report.xml`, one
+level up — that is the *converted* CLI report's path, from path 3 below, not this task's own output; if a consuming
+repository's `sonar {}` block still carries that older path, flag the mismatch in the report (Sonar would import 0 %
+coverage) rather than silently picking one. **If the glob finds no XML file at all, fall back to Step 2's third
 path (vendored CLI) automatically and say in the report that you did.**
 
 **Vendored JaCoCo CLI** (also the automatic fallback when path 2 above produces no XML):
 ```bash
 ./gradlew :<module>:testDebugUnitTest
-EXEC=$(ls <module>/build/jacoco/*.exec | head -1)   # e.g. testDebugUnitTest.exec — glob, don't hard-code the name
-mkdir -p <module>/build/reports/coverage/test
+# AGP's enableUnitTestCoverage (the scaffolds' configuration) writes the .exec under build/outputs/…; the
+# reference repo's older AGP wrote it under build/jacoco/. Glob the AGP location first, then the legacy one —
+# never hard-code the file name.
+EXEC=$(find <module>/build/outputs/unit_test_code_coverage -name '*.exec' 2>/dev/null | head -1)
+[ -n "$EXEC" ] || EXEC=$(ls <module>/build/jacoco/*.exec 2>/dev/null | head -1)
+[ -n "$EXEC" ] || { echo "no .exec file found under <module>/build/outputs/unit_test_code_coverage or <module>/build/jacoco"; exit 1; }
+mkdir -p <module>/build/reports/coverage/test/debug
 java -jar jacoco-*/lib/jacococli.jar report "$EXEC" \
   --classfiles <module>/build/tmp/kotlin-classes/debug \
   --sourcefiles <module>/src/main/java \
-  --xml <module>/build/reports/coverage/test/report.xml
+  --xml <module>/build/reports/coverage/test/debug/report.xml
 ```
 Mirrors the reference `.github/workflows/main.yml`'s "Convert unit tests coverage results" step (adapted: that
-workflow runs the full `test` lifecycle task across both build variants and converts `testReleaseUnitTest.exec`;
-this skill only runs `testDebugUnitTest`, so glob `build/jacoco/*.exec` for whichever name actually lands there
-instead of assuming `testDebugUnitTest.exec`). Locate `jacoco-*/lib/jacococli.jar` by globbing the repo root —
+workflow runs the full `test` lifecycle task across both build variants and converts
+`build/jacoco/testReleaseUnitTest.exec`; this skill only runs `testDebugUnitTest`, and with the scaffolds' AGP
+configuration the raw file lands at
+`<module>/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec` — so glob
+`build/outputs/unit_test_code_coverage/**/*.exec` first and only then `build/jacoco/*.exec`, for whichever name
+actually lands there. The converted XML is written to the same `test/debug/report.xml` path the AGP task would have
+produced, so the scaffolds' `sonar {}` block finds it either way.) Locate `jacoco-*/lib/jacococli.jar` by globbing the repo root —
 don't hard-code the version directory (`jacoco-0.8.13` in the reference repo; a consuming repo may vendor a
 different release).
 
@@ -111,7 +123,7 @@ was never executed — the source of "uncovered lines").
 ```python
 import xml.etree.ElementTree as ET
 
-path = "<module>/build/reports/coverage/test/report.xml"   # or kover's reportDebug.xml, etc.
+path = "<module>/build/reports/coverage/test/debug/report.xml"   # or kover's reportDebug.xml, etc.
 scope = None  # e.g. "Foo" or None for the whole report
 
 root = ET.parse(path).getroot()
@@ -184,13 +196,16 @@ the user (or `iru-android-code-one-task-group`, `iru-android-generate-all-tests`
   configuration-cache-specific error appears.
 - Whether AGP's `createDebugUnitTestCoverageReport` actually emits importable XML (versus HTML-only) for this
   stack's AGP version, and its exact output file name, is **unverified locally by this skill's author** — it is
-  being verified concurrently against the Task 20 scaffold (Task 20.2); this skill globs defensively and falls
+  verified only by exercising the generated `iru-setup-android-library` scaffold; this skill globs defensively and falls
   back to the vendored JaCoCo CLI conversion (known-good, taken directly from the reference repository's own CI
   step) so a wrong assumption about the AGP task's output degrades gracefully instead of silently under-reporting.
-- The vendored-CLI `.exec` file name is not guaranteed to be `testDebugUnitTest.exec` — always glob
-  `build/jacoco/*.exec` (the reference workflow's own step name, `testReleaseUnitTest.exec`, differs from what
-  this skill's `testDebugUnitTest`-only run produces).
+- The vendored-CLI `.exec` file's location and name are not guaranteed — with the scaffolds' AGP
+  `enableUnitTestCoverage` configuration it lands at
+  `build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec`, while the reference repository's
+  older CI globbed `build/jacoco/` (and its step name, `testReleaseUnitTest.exec`, differs from what this skill's
+  `testDebugUnitTest`-only run produces) — so always glob `build/outputs/unit_test_code_coverage/**/*.exec` first
+  and `build/jacoco/*.exec` second, never hard-code either.
 - This skill's JaCoCo-XML parsing (Step 4) was verified against a hand-written fixture in
   `$TMPDIR/iru-verify/android/gates/jacoco/report.xml` only; the live Gradle/JaCoCo-CLI runs that would produce a
-  real report from the Task 20 scaffold are **unverified locally by this skill's author; exercised by Task
-  20.2/23.2**.
+  real report from a generated `iru-setup-android-library` scaffold are **unverified locally by this skill's author;
+  exercised by the scaffold and workflows skills' own verification passes**.

@@ -162,8 +162,8 @@ instead of trying to parse a stale or missing report directory.
 
 - **Unmatched `--tests` fails the build** (`No tests found for given includes: [...]`, exit 1) — this is Gradle's
   own long-documented `Test`-task contract (not scaffold-specific), but this skill's author did not run a live
-  `./gradlew testDebugUnitTest` against the Task 20 scaffold to reproduce the exact current wording — **unverified
-  locally by this skill's author; exercised by Task 20.2/23.2**.
+  `./gradlew testDebugUnitTest` against a generated scaffold to reproduce the exact current wording — **unverified
+  locally by this skill's author; exercised by the scaffold and workflows skills' own verification passes**.
 - Gradle/AGP need **JDK 17+**; do not trust the machine's ambient/default `java` — set `JAVA_HOME` explicitly.
 - `ANDROID_HOME`/`local.properties` missing is the most common "works on my machine" failure; check it before
   suspecting the test code itself.
@@ -177,7 +177,8 @@ instead of trying to parse a stale or missing report directory.
   `$TMPDIR/iru-verify/android/gates/junit/` only, per this catalog's convention that gate-skill authors verify
   their own parsing logic against small fixtures rather than running the heavy Gradle build themselves — the live
   `./gradlew :lib:testDebugUnitTest` invocation and its real report path/shape are **unverified locally by this
-  skill's author; exercised by Task 20.2/23.2**. The report-path convention
+  skill's author; exercised by the scaffold and workflows skills' own verification passes**. The report-path convention
   (`<module>/build/test-results/testDebugUnitTest/*.xml`) is taken directly from the reference repository's
   (https://github.com/albertoirurueta/irurueta-android-glutils) `sonar.junit.reportsPath` property in
-  `lib/build.gradle.kts`.
+  `lib/build.gradle.kts` (spelled `sonar.junit.reportPaths` — the key Sonar actually reads — in this catalog's
+  `iru-setup-android-library`/`-app` scaffolds; the directory is the same either way).

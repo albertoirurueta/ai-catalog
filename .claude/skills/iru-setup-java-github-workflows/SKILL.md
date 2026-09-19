@@ -20,7 +20,9 @@ Scaffold (or update) four GitHub Actions workflows plus a Dependabot config for 
   a manual follow-up.
 - **`security.yml`** — runs on every pull request and push to the integration/stable branches: a
   `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job (`github/codeql-action@v4` for
-  Java), an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job
+  Java, with the JDK set up by `actions/setup-java@v6` using `cache: maven` so the CodeQL build doesn't re-download
+  the whole dependency tree on every run — the same major and cache setting `develop.yml`/`main.yml` use), an
+  OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job
   (`gitleaks/gitleaks-action@v3`) — each individually omittable via `args` (defaulting to on; see Step 1).
 - **`.github/dependabot.yml`** — grouped weekly dependency updates for the `maven` ecosystem and for
   `github-actions` itself. Always generated (or updated) regardless of the four `security-*` `args` keys above —
@@ -74,8 +76,17 @@ format, treat everything as unset and gather every fact below as usual.
 `pom.xml` beyond what Step 1 already surveys below (the Central/Nexus plugin and SonarQube/SonarCloud config
 bullets); if `args` doesn't supply them, fall back to whatever that survey finds (a `central-publishing-maven-plugin`
 or `nexus-staging-maven-plugin` present implies `publish: yes`; a configured `sonar-maven-plugin` implies `sonar:
-cloud` or `sonar: self-hosted` depending on `sonar.host.url`), asking the user directly only if the survey is
-inconclusive. The four `security-*` keys each default to `yes` when not supplied via `args` and are not otherwise
+cloud` or `sonar: self-hosted` depending on `sonar.host.url`). When neither `args` nor the survey resolves
+`publish` or `sonar` (a stand-alone run against a `pom.xml` with no publishing plugin and no `sonar-maven-plugin`),
+first ask **open-source** with `AskUserQuestion` — is this repository open source? Yes / No, no default, skipped
+when `args` already carries `open-source` — because it drives the recommended default of both follow-up
+questions, the same way `iru-setup-java-library`'s own Step 4 asks them: recommend `publish: yes` when open
+source and `no` otherwise (Maven Central is for redistributable artifacts); recommend **SonarCloud** (`sonar:
+cloud`) when open source and, when not, state plainly that SonarCloud is free only for open-source projects (a
+paid plan is required otherwise) and recommend **None** (`sonar: none`), offering **self-hosted SonarQube**
+(`sonar: self-hosted`) as the second option — then collect `sonar-organization`/`sonar-project-key`/
+`sonar-host-url` for `cloud`/`self-hosted` as the SonarQube/SonarCloud bullet below describes. The four
+`security-*` keys each default to `yes` when not supplied via `args` and are not otherwise
 surveyed — this skill always adds/keeps the corresponding `security.yml` job unless the user (or an orchestrator's
 `args`) explicitly opts out. `.github/dependabot.yml` has no matching opt-out key — it's always generated/updated.
 
@@ -204,10 +215,11 @@ jobs:
           fetch-depth: 0
 
       - name: Set up JDK <java-version>
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: adopt
           java-version: <java-version>
+          cache: maven
           # The four lines below (server-id / server-username / server-password / gpg-*) are only needed to
           # authenticate and sign the "Deploy to maven central" step further down — omit all four here if
           # publish: no (Step 1).
@@ -620,10 +632,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5
       - name: Set up JDK <java-version>
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: adopt
           java-version: <java-version>
+          cache: maven
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:

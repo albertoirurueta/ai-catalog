@@ -91,7 +91,7 @@ Sonar organization/key/host, `java-version`, `api-level`) are asked as plain con
 | `open-source` | `yes`/`no` | `gh repo view --json isPrivate` if unresolved otherwise |
 | `publish` (library only) | `yes`/`no` — gates the Maven Central publish steps | `yes` only when `open-source: yes`; otherwise ask, `no` recommended |
 | `distribution` (app only) | `none`/`internal`/`store` — gates the release upload step | `store` only when `open-source: yes`; otherwise ask, `none` recommended |
-| `sonar` | `cloud`/`self-hosted`/`none` | `cloud` when `open-source: yes`; otherwise ask, `none` recommended, with the paid-plan caveat stated (SonarCloud is free only for open-source projects) |
+| `sonar` | `cloud`/`self-hosted`/`none` | `cloud` when `open-source: yes`. When not open source, state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend `none`, offering self-hosted SonarQube (`self-hosted`) as the second option — the same wording `iru-setup-android-library`/`-app` use in their Step 2 |
 | `sonar-organization` / `sonar-project-key` / `sonar-host-url` | Sonar coordinates | Only asked when `sonar` isn't `none`; read from `lib/build.gradle.kts`'s or `app/build.gradle.kts`'s existing `sonar {}` block first (Step 1) |
 | `mode` | `new`/`existing` | Whether this is a first-time setup or a re-run against an existing pipeline; if `existing`, go straight to Step 1's stop-or-update path |
 | `security-dependency-review` / `security-codeql` / `security-osv` / `security-gitleaks` | `yes`/`no`, each gates one `security.yml` job | `yes` |
@@ -199,8 +199,8 @@ update:
 since not every action publishes one) for every `uses:` action major, and the npm registry
 (`npm view antora version`, etc.) for the Antora toolchain packages `build.yml`'s Antora step installs. If a
 lookup is unreachable, fall back to the versions confirmed current as of **September 2026**, listed here
-(all confirmed to resolve as an actual `git ls-remote --tags` ref during this skill's own Task 23.2
-verification — see Step 12 for the two that don't have a floating major tag):
+(all confirmed to resolve as an actual `git ls-remote --tags` ref during this skill's own
+verification pass — see Step 12 for the two that don't have a floating major tag):
 
 | Action | Fallback version | Floating major tag? | Notes |
 |---|---|---|---|
@@ -262,6 +262,7 @@ permissions:
   checks: write
   pull-requests: write
   contents: write
+  security-events: write   # required by github/codeql-action/upload-sarif (the Lint SARIF upload steps below)
 
 jobs:
   build:
@@ -459,6 +460,7 @@ permissions:
   checks: write
   pull-requests: write
   contents: write
+  security-events: write   # required by github/codeql-action/upload-sarif (the Lint SARIF upload steps below)
 
 jobs:
   build:
@@ -633,7 +635,9 @@ jobs:
       - name: Commit the version bump
         if: steps.guard.outputs.exists == 'false'
         run: |
-          git add <lib-module>/build.gradle.kts <app-module>/build.gradle.kts README.md docs/antora.yml docs/modules/ROOT/pages
+          # --ignore-errors keeps a missing README/docs tree (or module) from aborting the step with
+          # "fatal: pathspec ... did not match any files"; whatever does exist is staged.
+          git add --ignore-errors -- <lib-module>/build.gradle.kts <app-module>/build.gradle.kts README.md docs/antora.yml docs/modules/ROOT/pages || true
           git diff --cached --quiet || git commit -m "Sync ${{ steps.versions.outputs.next_snapshot }}"
 
       - name: Push sync branch
@@ -678,7 +682,10 @@ Notes specific to this template:
   permissions error even with the right scopes declared here. Flag this in the final report.
 - `git add` only stages `<lib-module>/build.gradle.kts` when a `lib/` module exists, and only
   `<app-module>/build.gradle.kts` when an `app/` module exists (per Step 1's module-layout survey) — drop
-  whichever path doesn't apply.
+  whichever path doesn't apply. The `--ignore-errors` flag (plus the trailing `|| true`) is what lets the same
+  step survive a repository with no `README.md` or no `docs/` tree yet: without it `git add` aborts with
+  `fatal: pathspec 'README.md' did not match any files` and the whole sync run fails before committing anything.
+  Keep the flag even after dropping module paths — the README/docs paths are still optional.
 
 ### `sync_versions.py`
 
@@ -869,6 +876,10 @@ copy:
   skill adds it (per this catalog's own convention) for a manual re-run.
 - **`Send to Sonarqube` → `Run SonarCloud analysis`, gated by `sonar` instead of always-on** — the reference
   always ran `:lib:sonar` unconditionally; this skill only emits the step when `sonar` isn't `none` (Step 0).
+- **`security-events: write` was added to the top-level `permissions:` block** of every workflow that runs
+  `github/codeql-action/upload-sarif` (`develop.yml`, `main.yml`, and Step 7's main-only `main.yml`). The
+  reference grants only `checks`/`pull-requests`/`contents`, under which the Lint SARIF upload fails with
+  "Resource not accessible by integration" — `security.yml` already grants it per job (Step 8).
 
 ## Step 7 — `main.yml` / `publish.yml` templates (`branching: main-only`)
 
@@ -895,6 +906,7 @@ permissions:
   checks: write
   pull-requests: write
   contents: write
+  security-events: write   # required by github/codeql-action/upload-sarif (the Lint SARIF upload steps below)
 
 jobs:
   build:
@@ -961,8 +973,9 @@ Notes specific to this variant:
 
 - This is the reference repository's actual permission/trigger shape (`permissions: checks: write,
   pull-requests: write, contents: write` on `main.yml`; `permissions: contents: read` on `publish.yml`),
-  preserved as-is — only the action versions, Pages mechanism, coverage-conversion default, and Sonar gating
-  changed (Step 6).
+  preserved except for one addition — `security-events: write` on `main.yml`, without which the
+  `github/codeql-action/upload-sarif` Lint steps fail with "Resource not accessible by integration" — plus the
+  action versions, Pages mechanism, coverage-conversion default, and Sonar gating changes (Step 6).
 - No `sync.yml`/`sync_versions.py` for this branching model — there's only one long-lived branch, so nothing
   needs syncing back. State this plainly in the final report so it doesn't read as an oversight.
 
@@ -1053,7 +1066,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Opt-in — only when security-owasp-dependency-check: yes (default no). Unverified locally: the exact
-  # action id/version below was not exercised during this skill's own Task 23.2 verification pass; confirm it
+  # action id/version below was not exercised during this skill's own verification pass; confirm it
   # still resolves before relying on it.
   owasp-dependency-check:
     name: OWASP Dependency-Check
@@ -1205,7 +1218,7 @@ all.
 
 ## Step 13 — Known quirks / verification notes
 
-Recorded from this skill's own Task 23.2 verification, run entirely in `$TMPDIR/iru-verify/android/workflows/`
+Recorded from this skill's own verification pass, run entirely in `$TMPDIR/iru-verify/android/workflows/`
 (created fresh, outside this repository) — never a blocker, folded into the templates above where a template
 change was warranted:
 
@@ -1228,7 +1241,7 @@ change was warranted:
   default to `bash -eo pipefail` on Linux runners) against any repository that already has `docs/antora.yml`
   committed — which every repository this skill targets does, since the Antora build step immediately after
   depends on it. Confirmed by inspecting the Java sibling's own template rather than by running it (this
-  skill's Task 23.2 verification used a throwaway repo that already had `docs/`, and `mkdir -p` succeeded as
+  skill's verification pass used a throwaway repo that already had `docs/`, and `mkdir -p` succeeded as
   expected).
 - **YAML-validated every rendered file** (all four `branching`×`flavor` combinations, `run-instrumented-tests:
   yes` for the library variant, `no` for the app variant, `sonar: cloud`, `publish: yes`/`distribution:
@@ -1237,7 +1250,8 @@ change was warranted:
   under YAML 1.1's bare-word resolution, not the string `"on"` GitHub's own parser expects — this is a false
   flag in the validator, not a defect in the generated workflow; don't quote `on:` in the template to "fix" it.
 - **`sync_versions.py` was exercised against copies of `iru-setup-android-library`'s own scaffold** —
-  `1.0.0-SNAPSHOT` → release `1.0.0` → next `1.1.0-SNAPSHOT`-shaped inputs correctly rewrote
+  `1.0.0-SNAPSHOT` → release `1.0.0` → next `1.0.1-SNAPSHOT`-shaped inputs (the patch bump `sync.yml`'s
+  `versions` step actually computes — `${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT`) correctly rewrote
   `lib/build.gradle.kts`'s `val libraryVersion`, `app/build.gradle.kts`'s `versionName`, and a sample
   README/`antora.yml` copy's version rows/`version:` field, `py_compile`-clean. `versionCode` was correctly
   left untouched (the script never writes anything but a `-SNAPSHOT` value into `NEXT_SNAPSHOT`, and
@@ -1252,7 +1266,7 @@ change was warranted:
   Java/TypeScript siblings' own `sync_versions.py` — not a regression introduced here — but confirm a
   repository's actual README puts a bare marker line ahead of its dependency snippet (not just inside the
   status table) before trusting this script's Installation-section rewrite.
-- **Gradle steps run against the Task 20 scaffold at `$TMPDIR/iru-verify/android/library`**: `export
+- **Gradle steps run against the generated `iru-setup-android-library` scaffold at `$TMPDIR/iru-verify/android/library`**: `export
   JAVA_HOME=$(/usr/libexec/java_home -v 21)` (JDK 21 preferred over the machine's newer default, per this
   catalog's own Android-skill convention); `./gradlew test lint lib:dokkaGenerate` (first invocation, no
   `--offline`) succeeded and confirmed every path this skill's templates reference:

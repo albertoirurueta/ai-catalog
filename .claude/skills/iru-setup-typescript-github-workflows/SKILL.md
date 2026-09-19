@@ -1,6 +1,6 @@
 ---
 name: iru-setup-typescript-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (library/web flavors only), and `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs on every push to the integration/stable branches, every pull request, and `workflow_dispatch`: checkout, Node setup with dependency caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), Playwright e2e for web flavors, a docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific: for `library` it publishes to npm on `release: published` via OIDC trusted publishing plus an optional Changesets version-PR job; for `react`/`angular` it builds and deploys `dist/` to Pages; for `react-native` it runs EAS or local Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular only) merge the stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0` prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot(`npm`)/dependency-review/CodeQL(`javascript-typescript`, `build-mode: none`)/OSV-Scanner/gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`. Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Creates all workflows (and the sync/security scripts) from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`, required), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`), `package-manager` (`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only, gates the npm publish job), `distribution` (`none`/`internal`/`store` — react-native/ionic only, gates native store/signing steps), `sonar` (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default `yes`), so an orchestrating skill can supply them without re-prompting. Use whenever an npm/TypeScript repository of any of these five flavors needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `build.yml`, `release.yml`, `sync.yml` (library/web flavors only), and `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs on every push to the integration/stable branches, every pull request, and `workflow_dispatch`: checkout, Node setup with dependency caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), Playwright e2e for web flavors, a docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific: for `library` it publishes to npm on `release: published` via OIDC trusted publishing plus an optional Changesets version-PR job; for `react`/`angular` it builds and deploys the web bundle (`dist/` for Vite, `dist/<project>/browser/` for Angular) to Pages; for `react-native` it runs EAS or local Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular only) merge the stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0` prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot(`npm`)/dependency-review/CodeQL(`javascript-typescript`, `build-mode: none`)/OSV-Scanner/gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`. Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Creates all workflows (and the sync/security scripts) from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`, required), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`), `package-manager` (`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only, gates the npm publish job), `distribution` (`none`/`internal`/`store` — react-native/ionic only, gates native store/signing steps), `sonar` (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `mode` (`new`/`existing` — `existing` takes the update/gap-fill path on already-present workflow files without asking, per this catalog's shared front-door convention), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default `yes`), so an orchestrating skill can supply them without re-prompting. Use whenever an npm/TypeScript repository of any of these five flavors needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -37,7 +37,9 @@ repository, for whichever `flavor` the repository actually is:
 This skill is designed for npm/TypeScript projects produced by the matching scaffold skill
 (`iru-setup-typescript-library`, `iru-setup-react-web`, `iru-setup-angular-web`,
 `iru-setup-react-native-app`, `iru-setup-ionic-app`) — the templates in Step 3 assume the fixed npm script
-names those skills wire up (`build`, `test`, `coverage`, `lint`, `format`, `typecheck`, `docs`). If
+names those skills wire up (`build`, `test`, `coverage`, `lint`, `format`, `typecheck`, plus `docs` for
+`docs-tool: typedoc`/`compodoc` and `build-storybook` — the script Storybook's own installer writes — for
+`docs-tool: storybook`). If
 `package.json` is missing at the repository root, don't stop automatically: warn the user that this skill's
 templates assume an npm/TypeScript project and most of Step 1's survey won't resolve, then use
 `AskUserQuestion` to ask whether to stop here or continue anyway. If they choose to continue, proceed through
@@ -53,6 +55,7 @@ per line, e.g.:
 
 ```
 flavor: library
+mode: new
 integration-branch: develop
 stable-branch: main
 node-version: 24
@@ -73,6 +76,12 @@ security-gitleaks: yes
 Parse any such lines from `args` first. For each key found there, use that value directly — skip the
 corresponding fact-finding bullet below entirely for it. If `args` is absent or doesn't look like this
 format, treat everything as unset and gather every fact below as usual.
+
+- **`mode`** (`new`/`existing`, only ever supplied via `args` — never surveyed or asked): this catalog's shared
+  front-door signal. `mode: existing` (set by `iru-setup-typescript-repository`/`iru-setup-repository` after
+  `iru-explore` found an established repository) tells Step 2 to take its **continue/update** branch without
+  asking — every workflow file that already exists is treated as the base to edit, and every missing one is
+  created. `mode: new` or an unset `mode` leaves Step 2's stop-or-update question in place.
 
 - **`flavor`** (skip if supplied via `args`): if not given, detect it with the same rule Tasks 12–17 of this
   catalog's TypeScript group share — inspect `package.json`: `@vaadin/hilla`/`hilla-spring-boot-starter` in a
@@ -122,9 +131,14 @@ format, treat everything as unset and gather every fact below as usual.
   default to `sonar: none` (omit the scan step entirely) rather than generating a step that can't succeed;
   ask the user only if they want Sonar wired up now instead — recommend `cloud` only when `open-source: yes`
   (SonarCloud is free only for open-source projects), otherwise flag the paid-plan caveat.
-- **Antora docs**: check for `docs/antora.yml` and `docs/antora-playbook.yml`. If either is missing, the
-  docs step in Step 3 has nothing to build against — tell the user to run the `iru-setup-antora` skill first,
-  or confirm they'll do so before merging this workflow.
+- **Antora docs**: check for `docs/antora.yml`, `docs/antora-playbook.yml`, **and** `docs/package.json` +
+  `docs/package-lock.json`. `iru-setup-antora` produces all four (its Step 3 installs Antora and the
+  lunr/mermaid/mathjax extensions into `docs/package.json`, and its Step 11 keeps `docs/package.json` and
+  `docs/package-lock.json` committed precisely so CI can `cd docs && npm ci`). If any is missing, the docs
+  steps in Step 3 have nothing to build against — `actions/setup-node`'s `cache-dependency-path:
+  docs/package-lock.json` fails outright without the lockfile — so tell the user to run the `iru-setup-antora`
+  skill first, or confirm they'll do so before merging this workflow. The docs toolchain is always npm-managed
+  (that's what `iru-setup-antora` writes) regardless of the root project's `package-manager`.
 - **Branch names** (skip the integration branch if `integration-branch` supplied via `args`, likewise
   `stable-branch`): confirm the integration branch (commonly `develop`) and the stable branch (commonly
   `main`) actually match this repository's branching model — run `git branch -a` or ask, don't assume
@@ -139,9 +153,25 @@ format, treat everything as unset and gather every fact below as usual.
   `README.md` doesn't exist yet, tell the user `sync_versions.py`'s README step will need hand-adjustment once
   the file exists.
 - **Existing npm scripts**: confirm `package.json`'s `scripts` block actually has `build`, `test`,
-  `coverage`, `lint`, `format`, `typecheck`, and (when `docs-tool` isn't `none`) `docs` — these are the exact
-  script names `build.yml` invokes via `npm run <name>`. Note any that are missing or named differently so
-  Step 4 can adjust the template rather than generate a step that fails immediately.
+  `coverage`, `lint`, `format`, `typecheck`, and — per `docs-tool` — `docs` (`typedoc`/`compodoc`) or
+  `build-storybook` (`storybook`; the script Storybook's own installer writes, so no scaffold adds a separate
+  `docs` alias for it) — these are the exact script names `build.yml` invokes via `<package-manager-run>
+  <name>`. Every scaffold skill this catalog ships wires all of them (`iru-setup-typescript-library`,
+  `iru-setup-react-web`, `iru-setup-angular-web` Step 5, `iru-setup-react-native-app`, `iru-setup-ionic-app`
+  Step 6), but a hand-started repository may not: note any that are missing or named differently so Step 4
+  can adjust the template rather than generate a step that fails immediately with "Missing script".
+- **Web build output directory** (`react`/`angular` only): `react` (Vite) writes to `dist/`; `angular`'s
+  application builder writes to `dist/<project>/browser/` — read the actual value from `angular.json`
+  (`projects.<project>.architect.build.options.outputPath`, plus its `browser` sub-key when `outputPath` is an
+  object; the default is `dist/<project>` with the deployable site under its `browser/` subfolder). This
+  resolves `<web-dist-dir>` for `release.yml`'s Pages deploy — deploying the bare `dist/` on Angular publishes
+  a root with no `index.html`.
+- **iOS workspace/scheme** (`react-native` with `native-builds: local` only): `npx expo prebuild` names the
+  generated Xcode project after the app (`app.json`'s `expo.name`, with non-alphanumeric characters stripped —
+  e.g. `My App` → `ios/MyApp.xcworkspace`, scheme `MyApp`), **not** `App` like Capacitor does. Resolve
+  `<ios-workspace>`/`<ios-scheme>` by running `npx expo prebuild --platform ios` once locally (or `--no-install`
+  when CocoaPods isn't available) and reading the basename of `ios/*.xcworkspace`; if prebuild can't be run
+  here, derive the name from `expo.name` and flag it as unverified in Step 8's report.
 - **Playwright** (`react`/`angular`/`ionic` only): check for a `playwright.config.ts` and an `e2e`/`e2e:ci`
   script. If absent, the e2e step in `build.yml` has nothing to run — note this as an open gap; the scaffold
   skills for these flavors are expected to have wired it already.
@@ -159,8 +189,13 @@ exist (skip the `sync.yml`/script check entirely for the `react-native`/`ionic` 
 one). Treat `sync.yml` and its script as one unit for this check — either both exist or neither should.
 
 - **None exist**: skip this step and go straight to Step 4 — create everything from scratch.
-- **Any exists**: use `AskUserQuestion` to ask whether to (a) stop here and leave everything untouched, or
-  (b) continue and attempt to update the existing file(s) using this skill's templates as reference.
+- **Any exists and `mode: existing` was resolved in Step 1**: don't ask — take the **Continue** branch below
+  directly (the front door already confirmed with the user that this is an established repository to catch
+  up, not one to leave untouched), and note in Step 8's report which files were updated in place because of
+  `mode: existing`.
+- **Any exists** (and `mode` is `new`/unset): use `AskUserQuestion` to ask whether to (a) stop here and leave
+  everything untouched, or (b) continue and attempt to update the existing file(s) using this skill's
+  templates as reference.
   - **Stop**: report which file(s) already exist and end here — make no changes.
   - **Continue**: proceed to Step 4, but treat each existing file as the base to edit, not as something to
     overwrite wholesale.
@@ -210,7 +245,7 @@ back to the versions confirmed current as of **September 2026**, listed here:
 | `google/osv-scanner-action` (reusable workflow) | `v2` | pin the workflow ref, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2` |
 | `gitleaks/gitleaks-action` | `v3` | |
 | `changesets/action` | `v2` | library flavor only |
-| `expo/expo-github-action` | `9` (no `v` prefix) | react-native/`native-builds: eas` only |
+| `expo/expo-github-action` | `v9` | react-native/`native-builds: eas` only — the repository publishes `v5`…`v9` tags (`git ls-remote --tags`), so the ref needs the `v` prefix like every other action here; a bare `@9` doesn't resolve |
 | `r0adkll/upload-google-play` | `v1` | ionic/`distribution: store` Android upload only |
 | `wzieba/Firebase-Distribution-Github-Action` | `v1` | only if the user opted into Firebase App Distribution for `distribution: internal` |
 
@@ -301,17 +336,25 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-      # Omit this whole step if docs-tool: none (Step 1)
+      # Omit this whole step if docs-tool: none (Step 1). Keep exactly ONE of the two run: lines — the script name
+      # differs per docs-tool: `docs` for typedoc/compodoc (both write docs/api), `build-storybook` for storybook
+      # (writes storybook-static; it's the script Storybook's own installer adds, no `docs` alias exists for it)
       - name: Build API docs
-        run: <package-manager-run> docs # typedoc -> docs/api ; compodoc -> docs/api ; storybook build -> storybook-static
+        run: <package-manager-run> docs # docs-tool: typedoc | compodoc -> docs/api
+        # run: <package-manager-run> build-storybook # docs-tool: storybook -> storybook-static
+
+      # The Antora toolchain lives in docs/package.json + docs/package-lock.json (written by iru-setup-antora) and
+      # is always npm-managed there, whatever <package-manager> the root project uses — so this second setup-node
+      # caches docs/ from its own lockfile instead of re-downloading Antora and its extensions on every run
+      - name: Set up Node <node-version> for the Antora toolchain
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
 
       - name: Install Antora
-        run: |
-          mkdir -p docs-site && cd docs-site
-          npm i -D -E antora
-          npm i @antora/lunr-extension
-          npm i @sntke/antora-mermaid-extension
-          npm i @djencks/asciidoctor-mathjax
+        run: cd docs && npm ci
 
       - name: Build Antora docs
         run: cd docs && npx antora antora-playbook.yml
@@ -355,6 +398,15 @@ Notes specific to this template:
   the resolved `docs-tool` (`typedoc`/`compodoc` → `docs/api`; `storybook` → a `docs/build/site/storybook`
   sibling path, since Storybook is a component gallery, not an API reference, and merging it under `api/`
   would be misleading) and drop the other, plus the whole `Build API docs`/merge block when `docs-tool: none`.
+  Likewise keep only ONE of the two `Build API docs` `run:` lines: `<package-manager-run> docs` for
+  `typedoc`/`compodoc`, `<package-manager-run> build-storybook` for `storybook` (`iru-setup-react-web` Step 7 /
+  `iru-setup-angular-web` Step 12 rely on Storybook's own installer, which writes `storybook`/`build-storybook`
+  scripts and nothing named `docs`).
+- The Antora steps assume `iru-setup-antora`'s layout — `docs/package.json` listing `antora` plus the
+  lunr/mermaid/mathjax extensions, and a committed `docs/package-lock.json` — so `npm ci` resolves every
+  extension the playbook names from `docs/node_modules/` and `setup-node` can cache it. Never install the
+  toolchain into some other directory (e.g. an ad hoc `docs-site/`): `antora` resolves playbook extensions
+  relative to the playbook's own directory, so they'd be "not found" at build time.
 - `actions/upload-pages-artifact`/`actions/deploy-pages` need the repository's Settings → Pages → "Build and
   deployment" → Source set to **GitHub Actions** (not "Deploy from a branch") — `deploy-pages` fails outright
   if that setting still points at a branch. Call this out in Step 7/8.
@@ -441,13 +493,17 @@ jobs:
       - name: Create or update the version PR
         uses: changesets/action@v2
         with:
-          version: <package-manager-run> changeset version
+          version: <package-manager-exec> changeset version # npx changeset version | pnpm exec changeset version | yarn changeset version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Notes specific to this template:
 
+- `version:` must run the `changeset` **binary** directly through `<package-manager-exec>` (`npx` / `pnpm exec` /
+  bare `yarn`, see Step 4), never `<package-manager-run> changeset version`: `iru-setup-typescript-library`'s
+  `package.json` defines no `changeset` npm script, so `npm run changeset version` fails with "Missing script"
+  on the very first run.
 - This job triggers on a push to the stable branch — not on `release: published` like the `publish` job above
   it — because its purpose is to open the *next* version-bump PR once the current release has landed, not to
   react to the release itself; the top-level `on:` block above only lists `release`/`workflow_dispatch`, so
@@ -501,7 +557,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: dist/
+          path: <web-dist-dir>/ # react (Vite): dist/ ; angular: dist/<project>/browser/ (see Step 4)
           retention-days: 30
 
       - name: Configure Pages
@@ -509,13 +565,18 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: dist/
+          path: <web-dist-dir>/
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
 ```
 
 Notes specific to this template:
+
+- `<web-dist-dir>` is **not** `dist/` for both flavors: Vite writes the deployable `index.html` straight into
+  `dist/`, but Angular's application builder writes it to `dist/<project>/browser/` (with a sibling `server/`
+  when SSR is on and a `3rdpartylicenses.txt` beside them) — uploading the bare `dist/` on Angular publishes a
+  Pages root with no `index.html`. Resolve it from `angular.json` per Step 1's survey / Step 4's table.
 
 - **Decision made (no ambiguity worth blocking on):** this job deploys the built app to the *same* GitHub
   Pages site `build.yml`'s `deploy-docs` job publishes the Antora/API docs to, and each workflow's own Pages
@@ -559,7 +620,7 @@ jobs:
         run: <install-command>
 
       - name: Set up EAS
-        uses: expo/expo-github-action@9
+        uses: expo/expo-github-action@v9
         with:
           token: ${{ secrets.EXPO_TOKEN }}
           eas-version: latest
@@ -611,8 +672,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
+      # No --non-interactive flag: `expo prebuild` doesn't accept one (it aborts on arg parsing), and the CI=true
+      # environment GitHub Actions sets already makes it non-interactive
       - name: Prebuild native Android project
-        run: npx expo prebuild --platform android --non-interactive
+        run: npx expo prebuild --platform android
 
       # Omit these two decode/write steps entirely if distribution: none — an unsigned bundleRelease still
       # builds, but has no keystore to sign a distributable artifact with
@@ -653,30 +716,54 @@ jobs:
       - name: Install dependencies
         run: <install-command>
 
+      # No --non-interactive flag here either (see the android job); the generated workspace/scheme are named
+      # after app.json's expo.name (e.g. ios/MyApp.xcworkspace + scheme MyApp), never `App` — resolve
+      # <ios-workspace>/<ios-scheme> from ios/*.xcworkspace per Step 1/Step 4
       - name: Prebuild native iOS project
-        run: npx expo prebuild --platform ios --non-interactive
+        run: npx expo prebuild --platform ios
 
       - name: Install CocoaPods
         working-directory: ios
         run: pod install
 
-      # Omit this whole block if distribution: none — building without a distribution profile still compiles,
-      # but produces no signed, distributable .ipa
-      - name: Import signing certificate and provisioning profile
+      # distribution: none only — compile the archive with signing disabled (nothing distributable comes out of
+      # it, so drop the Export IPA and Upload IPA steps too; the .xcarchive itself is the build proof). Drop this
+      # step instead, and keep the signed block below, when distribution is internal/store.
+      - name: Archive (unsigned)
+        working-directory: ios
+        run: |
+          xcodebuild -workspace <ios-workspace>.xcworkspace -scheme <ios-scheme> -configuration Release archive \
+            -archivePath build/App.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      # Omit this whole block if distribution: none. Signing is delegated to xcodebuild's automatic (cloud-managed)
+      # signing: with -allowProvisioningUpdates plus the App Store Connect API key, xcodebuild itself registers the
+      # device-less distribution certificate and downloads/refreshes the provisioning profile — no certificate or
+      # profile is imported into a keychain by this workflow. The API key must have the App Manager (or Admin)
+      # role for that to work; see the notes below for the manually-managed-certificate alternative.
+      - name: Decode App Store Connect API key
         env:
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > AuthKey.p8
 
-      - name: Archive
+      - name: Archive (signed)
         working-directory: ios
-        run: xcodebuild -workspace App.xcworkspace -scheme App -configuration Release archive -archivePath build/App.xcarchive
+        run: |
+          xcodebuild -workspace <ios-workspace>.xcworkspace -scheme <ios-scheme> -configuration Release archive \
+            -archivePath build/App.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/../AuthKey.p8" \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }} \
+            CODE_SIGN_STYLE=Automatic
 
       - name: Export IPA
         working-directory: ios
         run: |
           xcodebuild -exportArchive -archivePath build/App.xcarchive -exportPath build \
-            -authenticationKeyPath ../AuthKey.p8 \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/../AuthKey.p8" \
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }} \
             -exportOptionsPlist ExportOptions.plist
@@ -693,9 +780,22 @@ Notes specific to both `react-native` variants:
 - `ExportOptions.plist` is a project-specific file this skill doesn't generate (it encodes the team id and
   export method) — note in Step 8 that the user must add it under `ios/` before this workflow can export an
   `.ipa`.
+- **iOS signing model (`local` variant, `distribution` ≠ `none`)**: nothing imports a `.p12` certificate or a
+  `.mobileprovision` into the runner's keychain — the archive relies on `-allowProvisioningUpdates` +
+  `-authenticationKeyPath/-authenticationKeyID/-authenticationKeyIssuerID` + `CODE_SIGN_STYLE=Automatic`, which
+  lets `xcodebuild` create/fetch the cloud-managed distribution certificate and profile itself (Xcode 13+). It
+  needs an App Store Connect API key with the **App Manager** or **Admin** role, and `-authenticationKeyPath`
+  must be an **absolute** path (hence `$PWD/../AuthKey.p8`, evaluated inside `working-directory: ios`). If the
+  team instead manages its distribution certificate manually (a `.p12` it owns), replace the `Decode App Store
+  Connect API key` step with a keychain import (e.g. `apple-actions/import-codesign-certs`) plus a profile
+  install, set `CODE_SIGN_STYLE=Manual` with the matching `PROVISIONING_PROFILE_SPECIFIER`, and note the
+  extra secrets in Step 7's table — flag which model applies in Step 8 rather than assuming. With
+  `distribution: none` the unsigned archive (`CODE_SIGNING_ALLOWED=NO`) is all that runs.
+- `<ios-workspace>`/`<ios-scheme>`: `expo prebuild` names the workspace and scheme after the app (Step 1's
+  survey) — the `App.xcworkspace`/`-scheme App` pair only exists in Capacitor projects (the `ionic` flavor).
 - Neither variant submits to a store automatically the way `eas submit` does — they upload a signed artifact
   only. If the user wants an automated Play Console/App Store Connect upload from the `local` path too, that's
-  additional scope beyond what Task 9 asked for; note it as a follow-up rather than improvising an untested
+  additional scope beyond this skill's remit; note it as a follow-up rather than improvising an untested
   upload step.
 
 ### `release.yml` template — `ionic` flavor
@@ -748,6 +848,10 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: native-projects
+      # upload-artifact/download-artifact round-trip through a zip that drops file modes, so the Gradle wrapper
+      # comes back without its executable bit and `./gradlew` fails with "Permission denied" without this
+      - name: Restore the Gradle wrapper's executable bit
+        run: chmod +x android/gradlew
       - name: Set up JDK
         uses: actions/setup-java@v6
         with:
@@ -813,21 +917,40 @@ jobs:
         working-directory: ios/App
         run: pod install
 
-      # Omit this whole block if distribution: none
-      - name: Import App Store Connect API key
+      # distribution: none only — unsigned archive; drop the Export IPA and Upload IPA steps too. Drop this step
+      # instead, and keep the signed block below, when distribution is internal/store
+      - name: Archive (unsigned)
+        working-directory: ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release archive \
+            -archivePath build/App.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      # Omit this whole block if distribution: none. Same automatic (cloud-managed) signing model as the
+      # react-native local variant: -allowProvisioningUpdates + the App Store Connect API key let xcodebuild fetch
+      # the distribution certificate/profile itself; nothing is imported into a keychain here.
+      - name: Decode App Store Connect API key
         env:
           APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -d > AuthKey.p8
 
-      - name: Archive
+      - name: Archive (signed)
         working-directory: ios/App
-        run: xcodebuild -workspace App.xcworkspace -scheme App -configuration Release archive -archivePath build/App.xcarchive
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release archive \
+            -archivePath build/App.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/../../AuthKey.p8" \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }} \
+            CODE_SIGN_STYLE=Automatic
 
       - name: Export IPA
         working-directory: ios/App
         run: |
           xcodebuild -exportArchive -archivePath build/App.xcarchive -exportPath build \
-            -authenticationKeyPath ../../AuthKey.p8 \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$PWD/../../AuthKey.p8" \
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }} \
             -exportOptionsPlist ExportOptions.plist
@@ -841,14 +964,26 @@ jobs:
 
 Notes specific to this template:
 
-- Use `xcodebuild -workspace ios/App/App.xcworkspace -scheme App archive` exactly as named in Task 9's spec —
+- Use `xcodebuild -workspace ios/App/App.xcworkspace -scheme App archive` exactly as this skill's design names it —
   the `working-directory: ios/App` above plus a relative `-workspace App.xcworkspace` is equivalent and
   keeps every other relative path (`build/...`, `ExportOptions.plist`) short; resolve to whichever form
-  matches how the rest of this repository's iOS steps are written, if this is an update (Step 2).
+  matches how the rest of this repository's iOS steps are written, if this is an update (Step 2). Capacitor
+  really does name the workspace/scheme `App` (`ios/App/App.xcworkspace`), unlike `expo prebuild`.
   If the target repository already has a `fastlane/Fastfile`, prefer driving the archive/export/upload
   through `bundle exec fastlane <lane>` instead of raw `xcodebuild` calls — note that as the preferred path in
   Step 8's report rather than silently overriding an existing Fastlane setup with the raw-`xcodebuild` steps
   above.
+- **iOS signing**: identical model to the `react-native`/`local` variant — `-allowProvisioningUpdates` + the
+  API-key trio + `CODE_SIGN_STYLE=Automatic` on both `archive` and `-exportArchive`, an App Manager/Admin-role
+  API key, an absolute `-authenticationKeyPath` (`$PWD/../../AuthKey.p8` from `working-directory: ios/App`),
+  and the manually-managed-certificate alternative described there if the team doesn't use cloud-managed
+  signing. `distribution: none` only runs the unsigned archive.
+- The `android` job rebuilds from the `native-projects` artifact rather than re-running `npx cap sync` itself
+  (which would need the web bundle built again on that runner); the price is the `chmod +x android/gradlew`
+  step, because the artifact zip doesn't preserve the wrapper's executable bit. If a repository would rather
+  keep each native job self-contained, replace the download with `<install-command>` + `<package-manager-run>
+  build` + `npx cap sync android` in-job and drop the `chmod` — either shape is fine, just don't drop the
+  `chmod` while keeping the artifact download.
 - `<android-package-name>`: the Android application id from `android/app/build.gradle` (Capacitor's default
   project layout) — resolved in Step 1's survey when `distribution: store`.
 
@@ -1270,10 +1405,13 @@ user or note it as an open gap in Step 8's report instead of silently guessing.
 | `<node-version>` | Step 1 (`engines.node`, default `24`) / `args` |
 | `<package-manager>` | Step 1 (lockfile/`packageManager`) / `args` — one of `npm`/`pnpm`/`yarn` |
 | `<install-command>` | derived from `<package-manager>`: `npm ci` / `pnpm install --frozen-lockfile` / `yarn install --frozen-lockfile` (`--immutable` for Yarn Berry) |
-| `<package-manager-run>` | derived from `<package-manager>`: `npm run` / `pnpm run` / `yarn run` |
+| `<package-manager-run>` | derived from `<package-manager>`: `npm run` / `pnpm run` / `yarn run` — runs an npm **script** by name |
+| `<package-manager-exec>` | derived from `<package-manager>`: `npx` / `pnpm exec` / bare `yarn` (Classic and Berry both run a `node_modules/.bin` binary as `yarn <bin>`) — runs an installed **binary** that has no npm script alias, e.g. `changeset` in `release.yml`'s `version-pr` job |
 | `<lockfile-name>` | derived from `<package-manager>`: `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock` |
 | `<bump-version-command>` | derived from `<package-manager>` — see the `sync.yml` template's notes |
 | `<sonar-host-url>` | Step 1 Sonar survey / `args`; only needed when `sonar: self-hosted` |
+| `<web-dist-dir>` | `react`/`angular` only (release.yml's Pages deploy): `dist` for `react` (Vite's default `build.outDir`); `dist/<project>/browser` for `angular`, read from `angular.json`'s build `outputPath` per Step 1 (never the bare `dist`, which holds no `index.html` on Angular) |
+| `<ios-workspace>` / `<ios-scheme>` | `react-native` with `native-builds: local` only: the basename of `ios/*.xcworkspace` after `npx expo prebuild --platform ios` (both share the name — `expo prebuild` derives it from `app.json`'s `expo.name` with non-alphanumeric characters stripped), per Step 1's survey. Not used by `ionic`, whose Capacitor project is always `ios/App/App.xcworkspace` + scheme `App` |
 | `<android-package-name>` | `android/app/build.gradle`'s `applicationId`, only when `flavor: ionic` and `distribution: store` |
 
 Also apply the `sonar`/`docs-tool`/`publish`/`distribution`/`native-builds`/`flavor` gating resolved in Step 1:
@@ -1290,17 +1428,28 @@ Before writing the workflows, make sure the files they depend on exist:
   now; the Antora build step in `build.yml` will fail without them.
 - **`sonar-project.properties` missing, and `sonar` isn't `none`**: ask the user for `sonar.organization` (if
   using SonarCloud), `sonar.projectKey`, and `sonar.host.url` (default `https://sonarcloud.io` unless they run
-  self-hosted SonarQube), then create it at the repository root:
+  self-hosted SonarQube), then create it at the repository root **using the resolved flavor's own scaffold
+  template** — the source/test layout and the lcov path differ per flavor, and the scanner rejects a
+  `sonar.tests` root that doesn't exist (`library`'s `test/` is the only separate test root; every other
+  flavor colocates tests) as well as a wrong `lcov` path (Angular and Ionic-Angular write per-project
+  `coverage/<project>/lcov.info`). The common head is always:
 
   ```properties
   sonar.organization=<org>
   sonar.projectKey=<project-key>
   sonar.host.url=<sonar-host-url>
-  sonar.sources=src
-  sonar.tests=test
-  sonar.javascript.lcov.reportPaths=coverage/lcov.info
-  sonar.exclusions=**/dist/**,**/node_modules/**
   ```
+
+  and the rest mirrors the scaffold skill's own `sonar-project.properties` section, which is the canonical
+  source — copy from there rather than from this table if the two ever disagree:
+
+  | `flavor` | Mirror | Layout keys |
+  |---|---|---|
+  | `library` | `iru-setup-typescript-library` Step 5 | `sonar.sources=src`, `sonar.tests=test`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info`, `sonar.exclusions=**/dist/**` |
+  | `react` | `iru-setup-react-web` Step 8 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.test.tsx,**/*.test.ts`, `sonar.exclusions=**/e2e/**,**/dist/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
+  | `angular` | `iru-setup-angular-web` Step 13 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts`, `sonar.javascript.lcov.reportPaths=coverage/<project>/lcov.info` (`<project>` = the `angular.json` project name), `sonar.exclusions=**/dist/**,**/docs/api/**` |
+  | `react-native` | `iru-setup-react-native-app` Step 5 | `sonar.sources=.`, `sonar.tests=.`, `sonar.test.inclusions=**/__tests__/**,**/*.test.ts,**/*.test.tsx`, `sonar.exclusions`/`sonar.test.exclusions=android/**,ios/**,node_modules/**,coverage/**,.expo/**,dist/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
+  | `ionic` | `iru-setup-ionic-app` Step 10 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts` (`framework: angular`) or `**/*.test.ts,**/*.test.tsx` (`react`), `sonar.javascript.lcov.reportPaths=coverage/app/lcov.info` (`angular` — the Ionic starter's fixed `app` project key) or `coverage/lcov.info` (`react`), `sonar.exclusions=android/**,ios/**,e2e/**,coverage/**,www/**` (`angular`) / `...,dist/**` (`react`) |
 
   Skip this entirely when `sonar: none` — there's nothing to add, and the `Run SonarQube/SonarCloud analysis`
   step is omitted from `build.yml` anyway.
@@ -1338,7 +1487,7 @@ the user needs to go create:
 | `SONAR_TOKEN` | Auth token for the SonarQube/SonarCloud scan | `sonar` is `cloud` or `self-hosted` |
 | `EXPO_TOKEN` | Auth token for `expo/expo-github-action`, used by `eas build`/`eas submit` | `flavor: react-native`, `native-builds: eas` |
 | `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` | Signs the Android release bundle | `flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
-| `APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64` | Signs/exports the iOS `.ipa` via `xcodebuild` | `flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
+| `APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64` | Drives `xcodebuild`'s automatic cloud-managed signing (`-allowProvisioningUpdates` + the `-authenticationKey*` trio) on both the archive and the `.ipa` export — the key needs the App Manager or Admin role; no certificate/profile secrets are needed unless the team switched to the manually-managed alternative described under the react-native template | `flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Uploads the signed `.aab` straight to a Play Console track | `flavor: ionic`, `distribution: store` |
 | `FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase App Distribution push | `flavor: ionic` (or `react-native`), `distribution: internal`, and the user opted into Firebase App Distribution over a plain artifact upload (Step 1) |
 
@@ -1358,10 +1507,11 @@ without it.
 
 Summarize what happened: whether `build.yml`/`release.yml`/`sync.yml` (+`sync_versions.py`, when
 applicable)/`security.yml` and `.github/dependabot.yml` were created fresh, updated in place, or left
-untouched (Step 2's stop path); whether `sonar-project.properties`/`.changeset/config.json` were added versus
-already present; and any open gaps noted in Steps 1/4/5 (missing Playwright config, missing
-`ExportOptions.plist`, README/Antora wording that didn't match `sync_versions.py`'s default regexes,
-non-patch-level releases the bump default doesn't handle, etc.).
+untouched (Step 2's stop path — or updated in place without asking because `mode: existing` was supplied);
+whether `sonar-project.properties`/`.changeset/config.json` were added versus already present; and any open
+gaps noted in Steps 1/4/5 (missing Playwright config, missing `ExportOptions.plist`, an `<ios-workspace>`
+derived from `expo.name` rather than read from a real `expo prebuild` run, README/Antora wording that didn't
+match `sync_versions.py`'s default regexes, non-patch-level releases the bump default doesn't handle, etc.).
 
 State explicitly what was wired versus omitted, and why:
 
@@ -1373,7 +1523,12 @@ State explicitly what was wired versus omitted, and why:
   the `version-pr` job were generated; if `no`, both were omitted and `release.yml` was not written for the
   library flavor (no jobs would remain) — say so explicitly rather than listing it among the created files.
 - **`distribution`/`native-builds`** (react-native/ionic only): which signing/store jobs were generated versus
-  the plain-artifact fallback, and which secret rows were included versus left out of Step 7's table.
+  the plain-artifact fallback, and which secret rows were included versus left out of Step 7's table. For a
+  signed iOS job, state that it relies on `xcodebuild`'s automatic cloud-managed signing (API key with the App
+  Manager/Admin role, `-allowProvisioningUpdates`) and that a team using a manually managed distribution
+  certificate needs the keychain-import alternative described under the react-native template instead.
+- **`<web-dist-dir>`** (react/angular only): the directory `release.yml` deploys to Pages (`dist` or
+  `dist/<project>/browser`) and where it was read from.
 - **`docs-tool`**: which tool's build step was wired into `build.yml`, and whether its output merges under
   `docs/build/site/api/` or a sibling `storybook/` path.
 - **Security block**: which of `security-dependency-review`/`security-codeql`/`security-osv`/

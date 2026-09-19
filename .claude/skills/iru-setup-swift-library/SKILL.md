@@ -103,8 +103,11 @@ everything else, ask the user directly (plain conversation, pre-filling defaults
   `Sources/<Name>/<Name>.docc/` directory names — **never** pass the raw hyphenated `package-name` to `swift
   package init --name` directly; see Step 5's quirk on why that produces snake_case directories instead of the
   clean `<Name>` this skill's templates assume.
-- **platforms** — one or more of `ios`, `ipados`, `macos`, `watchos`, `tvos`, `visionos`, `linux` (multi-select;
-  offer `AskUserQuestion` with these as options when asking interactively, since bounded and short). Maps to
+- **platforms** — one or more of `ios`, `ipados`, `macos`, `watchos`, `tvos`, `visionos`, `linux`. When asking
+  interactively, split the seven values across **two `AskUserQuestion` multi-select rounds**, since the tool
+  allows at most four options per question: first the Apple platforms — *iOS / iPadOS / macOS / watchOS* — then
+  a second multi-select — *tvOS / visionOS / Linux / none of these*. Union the two answers (at least one real
+  platform required overall); this is the same two-round split `iru-setup-swift-repository` uses. Maps to
   `Package.swift`'s `platforms:` array (Step 5) with one caveat each:
   - **`ios` and `ipados` collapse to the same single `.iOS(...)` entry** — SwiftPM's `SupportedPlatform` enum has
     no separate iPadOS case; a package's minimum iOS deployment target already covers both idioms (the
@@ -230,7 +233,7 @@ PascalCase `<Name>` (e.g. `MyExampleLib`) avoids this entirely — `Sources/MyEx
 `Tests/MyExampleLibTests/MyExampleLibTests.swift`, and every generated name in `Package.swift` come out already
 matching what Steps 6–9's templates below expect. This command also emits a `.gitignore` and a `Package.swift`;
 both are overwritten by the templates immediately below rather than kept as-is — the `iru-setup-swift-gitignore`
-skill (Task 35 of this catalog) is the one responsible for the repository's actual `.gitignore` (see its own
+skill is the one responsible for the repository's actual `.gitignore` (see its own
 `.build`/`DerivedData`/`xcuserdata` entries, a superset of what `swift package init`'s own default already
 covers).
 
@@ -393,6 +396,38 @@ passing, from the single command). There is no need for two separate test target
 `swift package init --type library` on this skill's own verified toolchain (Swift 6.4/Xcode 27) generates
 **only** the Swift Testing file by default — no XCTest example — confirmed in Step 10's quirks; this skill adds
 the XCTest file itself so a consumer sees both idioms represented, per the task this skill was built from.
+
+### `Sources/<Name>/<Name>.docc/<Name>.md` — DocC catalog landing page
+
+The same landing-page shape `iru-swift-docc`'s Step 4 requires of every target (a `# ``<Name>``` module-symbol
+heading, a one-line summary, `## Overview`, and a `## Topics` section listing the public types), so a later
+`/iru-swift-docc` run finds the catalog already complete instead of flagging it as missing:
+
+```markdown
+# ``<Name>``
+
+The `<package-name>` library.
+
+## Overview
+
+`<Name>` is scaffolded with a single placeholder type, ``<Name>Example``, so the build, test, lint, coverage
+and documentation pipeline has something concrete to succeed against immediately. Replace this paragraph with a
+short description of what the library actually provides once its first real public type lands.
+
+## Topics
+
+### Essentials
+
+- ``<Name>Example``
+```
+
+A `.docc` folder containing only this one landing page is a valid, buildable DocC catalog — `swift-docc-plugin`
+auto-discovers any `.docc` directory inside the target's source folder, so nothing in `Package.swift` references
+it (unlike Dokka's `includes.from(...)`). `swift package init --type library` creates no catalog of its own,
+which is why this skill writes it explicitly; Step 13's `swift package generate-documentation` verification
+curates the archive from it. When the user later renames/replaces
+`<Name>Example`, the `## Topics` entry must follow — a `## Topics` link to a symbol that no longer exists is
+reported as a warning by `swift package generate-documentation`, not silently dropped.
 
 ## Step 7 — Reference templates: `.swiftlint.yml` and the formatter config
 
@@ -577,7 +612,7 @@ sonar.tests=Tests
 sonar.swift.file.suffixes=.swift
 
 sonar.coverageReportPaths=sonarqube-generic-coverage.xml
-sonar.swiftlint.reportPaths=swiftlint.json
+sonar.swift.swiftLint.reportPaths=swiftlint.json
 ```
 
 - `sonar.organization` is only meaningful for `sonar: cloud` (SonarCloud) — omit that line entirely for `sonar:
@@ -585,11 +620,12 @@ sonar.swiftlint.reportPaths=swiftlint.json
 - `sonar.coverageReportPaths` points at a SonarQube Generic Coverage Format XML file — **this skill does not
   generate that file itself**; it is produced by converting `xcrun llvm-cov export` output (Step 10's coverage
   quirk) via `slather coverage --sonarqube-xml` or SonarSource's own `xccov-to-sonarqube-generic.sh` script,
-  typically as a CI step (a future `iru-setup-swift-github-workflows`, Task 36 of this catalog's plan). Note this
+  typically as a CI step (`iru-setup-swift-github-workflows` wires exactly that). Note this
   explicitly in the final report so the user doesn't expect `sonar-project.properties` alone to make a local
   `sonar-scanner` run report coverage.
-- `sonar.swiftlint.reportPaths` similarly expects a `swiftlint lint --reporter json > swiftlint.json` run to have
-  already produced that file — also a CI/manual step this skill doesn't run itself.
+- `sonar.swift.swiftLint.reportPaths` (the Swift analyzer's own key — a bare `sonar.swiftlint.reportPaths` is
+  not a property SonarQube reads and is silently ignored) similarly expects a `swiftlint lint --reporter json >
+  swiftlint.json` run to have already produced that file — also a CI/manual step this skill doesn't run itself.
 - No `sonar.sourceEncoding` line is needed the way the Java/Android templates carry one — SwiftPM/Xcode source is
   UTF-8 only; there's no encoding ambiguity for the scanner to resolve.
 
@@ -598,7 +634,7 @@ sonar.swiftlint.reportPaths=swiftlint.json
 This skill's own verification run (Step 12) generates a `Package.resolved` file the moment `swift build`/`swift
 test` first resolves the `swift-docc-plugin` dependency (Step 5) — but this skill does **not** decide whether that
 file gets committed. That decision, and the actual `.gitignore` entry either way, belongs to the
-`iru-setup-swift-gitignore` skill's own `package-resolved: commit|ignore` input (Task 35 of this catalog's plan):
+`iru-setup-swift-gitignore` skill's own `package-resolved: commit|ignore` input:
 that skill's recommended default is **ignore** for a library (`flavor: library`) — a library's own
 `Package.resolved` only pins versions for its own development/test builds, never for a downstream consumer
 (SwiftPM always re-resolves against the *consumer's* manifest, ignoring the library's own lockfile) — versus
@@ -623,6 +659,7 @@ filling any template above:
 | `<Name>` | Derived from `<package-name>` per Step 2's PascalCase rule |
 | `<ios-min-major>`, `<macos-min-major>` (and the equivalent for any other selected Apple platform) | Step 2's `min-deployment-targets`; omitted per-platform if that platform wasn't selected, and the whole `platforms:` key omitted if only `linux` was selected |
 | `<swift-docc-plugin-version>` | Step 4 |
+| `<Name>` and `<package-name>` in `Sources/<Name>/<Name>.docc/<Name>.md` (Step 6's DocC landing page) | Same values as above — the ``<Name>Example`` topic entry names the placeholder type Step 6 writes, and the catalog directory is `Sources/<Name>/<Name>.docc/` |
 | `<copyright-year>` | The current year |
 | `<developer-name>`, `<license-name>`, `<license-url>` | Step 2; if "No license", drop the entire header comment block instead of leaving empty lines |
 | `<sonar-project-key>`, `<sonar-organization>`, `<sonar-host-url>` | Step 2's `sonar` answer; omit `sonar-project.properties` entirely if `sonar: none`, and omit just the `sonar.organization` line for `sonar: self-hosted` without organizations enabled |
@@ -739,7 +776,7 @@ State explicitly what was included versus omitted, and why:
   submission to the Swift Package Index).
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, `sonar-project.properties` was included
   with the resolved `sonar.organization`/`sonar.projectKey`/`sonar.host.url`, and a reminder that
-  `sonar.coverageReportPaths`/`sonar.swiftlint.reportPaths` both expect files a CI step still needs to produce; if
+  `sonar.coverageReportPaths`/`sonar.swift.swiftLint.reportPaths` both expect files a CI step still needs to produce; if
   `none`, note that this is expected when the project isn't open source unless the user explicitly chose it.
 - **`formatter`**: `swift-format` (verified) or `swiftformat` (unverified locally) — which config file was
   written and whether it's confirmed working.

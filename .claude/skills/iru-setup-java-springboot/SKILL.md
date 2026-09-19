@@ -684,7 +684,8 @@ After the sub-skills, fill in the repository-level files they don't own:
 - **`.gitignore`** — invoke `iru-setup-java-gitignore` if available. Regardless, make sure `target/`,
   `docs/build/`, `.env`, `*.tfstate`, `*.tfstate.*`, `.terraform/`, `*.tfvars` (except `*.tfvars.example`), and
   IDE directories are ignored. The tfstate and tfvars entries matter: both routinely contain credentials.
-- **`README.md`** — invoke `iru-setup-readme` if available.
+- **`README.md`** — invoke `iru-setup-readme` if available, passing `args: sonar: <manifest sonar.mode>` so the
+  README's Sonar badges and dashboard links match the choice recorded in `springboot-stack.yml`.
 - **`CHANGELOG.md`** — invoke `iru-setup-changelog` if available.
 - **`checkstyle.xml`** — the root pom's `maven-checkstyle-plugin` points at it; if no ruleset exists, write a
   starting one (Sun or Google checks with the line-length and Javadoc rules relaxed to what a Spring Boot service

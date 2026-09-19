@@ -47,6 +47,14 @@ verbatim — it does not compute bumps itself.
 |`args` key. `yes\|no` — whether to also update README/Antora version mentions (Step 7).
 |Ask once, after Step 2, only if such mentions actually exist.
 
+|`next-version`
+|No
+|`args` key. The upcoming pre-release version (e.g. `1.5.0-SNAPSHOT`) that README/Antora "Latest snapshot"/
+"Current development version" markers should show after a release, while "Latest release" markers show
+`<new-version>` — so a `sync-files: yes` run never rewrites every marker to the single release value.
+`iru-release` passes it alongside the release version.
+|Unset — development markers are then only rewritten when `<new-version>` is itself a `-SNAPSHOT` value.
+
 |`dry-run`
 |No
 |`args` key. `yes\|no` — print the diff / the `mvn versions:set` command that would run, then stop, instead of

@@ -41,7 +41,7 @@ pre-change quality baseline for task group", subagent_type: "iru-gate-runner", p
 \"iru-swift-code-quality\", args: \"<file1,file2,...>\"}), then report back only the list of issues found for these
 files, broken down by tool (SwiftLint/formatter/Periphery) and whether each tool was wired."})`. Record the
 returned issues as this bucket's pre-change baseline — an empty baseline if every file is new. This is what Step
-3.6's quality check compares against. Skip this baseline capture if `iru-swift-code-quality` is unavailable.
+3.8's quality check compares against. Skip this baseline capture if `iru-swift-code-quality` is unavailable.
 
 ## Step 2 — Implement each task via `iru-swift-code-one-task`
 
@@ -114,7 +114,7 @@ Once every task that didn't block has been implemented, run the following once f
      and acquire fresh. Say so in Step 5.
    - **Wait timeout**: still held after roughly 45 minutes of polling and not yet stale — stop waiting, report
      Steps 3.4/3.5/3.6's app-kind stages as **unverified — blocked by a concurrent simulator run**, and continue to
-     Step 3.7 (quality needs no simulator). Name it in Step 5.
+     Step 3.8 (quality needs no simulator; Step 3.7's lock release is a no-op when the lock was never acquired). Name it in Step 5.
 4. **Scoped tests**, for every test affected across the bucket, via `iru-gate-runner`: `Agent({description: "Run
    tests for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-swift-test\", args:
    \"<selector covering every test affected by this bucket>\\nkind: <package|app>\\nscheme: <scheme>\\ndestination:

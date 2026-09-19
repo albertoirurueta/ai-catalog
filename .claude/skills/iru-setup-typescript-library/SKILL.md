@@ -1,6 +1,6 @@
 ---
 name: iru-setup-typescript-library
-description: Generate `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `typedoc.json`, and (when opted in) `sonar-project.properties`/`.changeset/config.json` at the repository root for a new npm/TypeScript library, plus a `src/index.ts` + `test/index.test.ts` skeleton — asks for the package name, npm scope, description, license, developer name/email/organization URL, whether the project is open source, whether it publishes to npm (`publish`, gating `publishConfig`/`private`/the changeset config), and whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`), then looks up every devDependency's current version from the npm registry (falling back to the versions recorded in Step 4 if the registry is unreachable) and runs `npm install`. Invoke as `/iru-setup-typescript-library`. Ships with an explicit example `package.json`/`tsconfig.json`/`vitest.config.ts`/`eslint.config.js` embedded in this skill file (genericized, no real org/person names) — ESM-only, `moduleResolution: bundler`, Vitest with v8 coverage and an 80%-lines threshold, ESLint 10 flat config (`@eslint/js` + `typescript-eslint` recommended + `eslint-config-prettier`, plus a `@tony.ganchev/eslint-plugin-header` license-header rule when a license was chosen), Typedoc with `treatWarningsAsErrors`. If `package.json` already exists, surveys every file this skill owns and asks whether to stop, fill gaps only (create only what's missing, touch nothing already present), or regenerate everything. Accepts pre-resolved inputs via `args` (`key: value` lines) — `package-name`, `scope`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `publish`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), and `mode` (`new`/`existing` — `existing` skips the stop-or-regenerate question and goes straight to gap-fill, per this catalog's shared front-door convention) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `publish`/`sonar` question defaults from that answer. Use whenever a new npm/TypeScript library repository needs its build/test/lint/docs toolchain bootstrapped from this house template, instead of hand-writing each config file.
+description: Generate `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `typedoc.json`, and (when opted in) `sonar-project.properties`/`.changeset/config.json` at the repository root for a new npm/TypeScript library, plus a `src/index.ts` + `test/index.test.ts` skeleton — asks for the package name, npm scope, description, license, developer name/email/organization URL, whether the project is open source, whether it publishes to npm (`publish`, gating `publishConfig`/`private`/the changeset config), and whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`), then looks up every devDependency's current version from the npm registry (falling back to the versions recorded in Step 4 if the registry is unreachable) and runs `npm install`. Invoke as `/iru-setup-typescript-library`. Ships with an explicit example `package.json`/`tsconfig.json`/`vitest.config.ts`/`eslint.config.js` embedded in this skill file (genericized, no real org/person names) — ESM-only, `moduleResolution: bundler`, Vitest with v8 coverage and an 80%-lines threshold, ESLint 10 flat config (`@eslint/js` + `typescript-eslint` recommended + `eslint-config-prettier`, plus a `@tony.ganchev/eslint-plugin-header` license-header rule when a license was chosen), Typedoc with `treatWarningsAsErrors`. If `package.json` already exists, surveys every file this skill owns and asks whether to stop, fill gaps only (create only what's missing, touch nothing already present), or regenerate everything. Accepts pre-resolved inputs via `args` (`key: value` lines) — `package-name`, `scope`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `publish`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `integration-branch` (the `baseBranch` written into `.changeset/config.json` when `publish: yes`; default `main`), and `mode` (`new`/`existing` — `existing` skips the stop-or-regenerate question and goes straight to gap-fill, per this catalog's shared front-door convention) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `publish`/`sonar` question defaults from that answer. Use whenever a new npm/TypeScript library repository needs its build/test/lint/docs toolchain bootstrapped from this house template, instead of hand-writing each config file.
 model: haiku
 ---
 
@@ -34,6 +34,7 @@ sonar: cloud
 sonar-organization: example-org-github
 sonar-project-key: example-org_my-library
 sonar-host-url: https://sonarcloud.io
+integration-branch: develop
 mode: new
 ```
 
@@ -45,7 +46,11 @@ Recognized keys: `package-name`, `scope` (the npm scope without the leading `@`,
 when unset the package publishes unscoped), `description`, `license`, `developer-name`, `developer-email`,
 `organization-url`, `open-source` (`yes`/`no`), `publish` (`yes`/`no` — whether `package.json` is configured to
 publish to the public npm registry), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or
-`self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, and `mode` (`new`/`existing`).
+`self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch` (the branch
+Changesets compares against in `.changeset/config.json`'s `baseBranch` — only consulted when `publish: yes`;
+default `main`, but an orchestrator running this catalog's `develop`/`main` branching model passes `develop` so
+the config agrees with the workflows `iru-setup-typescript-github-workflows` generates), and `mode`
+(`new`/`existing`).
 
 `mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
 is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
@@ -401,8 +406,8 @@ generated `coverage/lcov-report/*.html`), and `docs/api/` (TypeDoc's generated s
 file. `docs` (the whole Antora tree — `antora-playbook.yml`, `antora.yml`, `.adoc` pages, and `docs/api/`),
 `.github` (the workflow YAML `iru-setup-typescript-github-workflows` writes), `.claude`, and the generated `CHANGELOG.md`/
 `README.md` are excluded too, because `build.yml`'s own "Check formatting" step runs this exact command on a fresh
-clone and none of those files are produced by Prettier — verified in Task 53.2, where the first CI run of a
-pipeline-generated repository would otherwise fail on `build.yml`, `security.yml`, `sync.yml` and
+clone and none of those files are produced by Prettier — verified against a pipeline-generated repository, whose first CI run
+would otherwise fail on `build.yml`, `security.yml`, `sync.yml` and
 `docs/antora-playbook.yml` before ever reaching the tests. `.claude` covers the Markdown of any Claude Code skills
 installed in the consuming repository (the same smoke test showed 100+ `.claude/skills/**/*.md` findings once this
 catalog was copied in). The original four entries alone were confirmed against a freshly built/tested/documented
@@ -455,8 +460,11 @@ Step 2). `<sonar-project-key>` still applies either way.
 }
 ```
 
-- `<integration-branch>` — default `main` unless the caller (an orchestrator, or the user) names a different
-  integration branch this catalog's other TypeScript skills use.
+- `<integration-branch>` — Step 0's `integration-branch` key when supplied (e.g. `develop` from
+  `iru-setup-typescript-repository`, which collects it once for the workflows and forwards it here); when
+  invoked stand-alone with `publish: yes` and no such key, ask once (offer `main`, or `develop` if `git branch
+  -a` shows one) rather than silently defaulting — a `baseBranch` that doesn't match the branch pull requests
+  actually target makes `changeset status` report every change as unreleased.
 - Sanity-checked with `npx changeset status`: it correctly loads and validates this config (it only fails with a
   git-history error — `Failed to find where HEAD diverged from "<baseBranch>"` — when run outside a real git
   history synced with that branch, which is expected for a config-only check and not a defect in the file).

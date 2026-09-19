@@ -224,6 +224,28 @@ Resolution notes:
   `branches`/`functions` keys the same way if a stricter bar is wanted later.
 - **This alone is not enough** — Step 6 installs the package the coverage collector actually needs.
 
+Then add the two npm scripts `ng new` doesn't write but this catalog's CI contract requires — the `build.yml`
+that `iru-setup-typescript-github-workflows` generates runs `npm run typecheck` and `npm run coverage` by those
+exact names for every flavor, and fails with "Missing script" on a bare `ng new` project (merge into
+`package.json`'s `scripts`, keeping the `build`/`test`/`lint`/`e2e`/`docs` entries the CLI schematics write):
+
+```jsonc
+"coverage": "ng test --watch=false --coverage",
+"typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json"
+```
+
+- `coverage` is the `ng test --coverage` invocation described above, pinned to `--watch=false` so it exits in CI
+  and in `iru-typescript-coverage` instead of entering the unit-test builder's TTY watch mode; it writes to the
+  `coverage/<project>/lcov.info` path Step 6 confirms.
+- `typecheck` runs plain `tsc` over both the app and the spec TypeScript projects `ng new` generates (each
+  `extends` the root `tsconfig.json`, so `strict`/`isolatedModules` and the rest apply) without emitting
+  anything. It type-checks TypeScript only — component templates are checked by `ng build`'s AOT compilation,
+  which `build.yml`'s later `build`/`e2e` steps and the Playwright run already exercise, so the two scripts are
+  complementary, not redundant. **Not exercised end-to-end in this skill's own verification pass** (it was added
+  to close the CI-contract gap after that pass): spot-check `npm run typecheck` once on the fresh scaffold and,
+  if `tsconfig.spec.json`'s `types` array trips over a missing global, add the missing entry there rather than
+  dropping the spec project from the script.
+
 ## Step 6 — Install the coverage collector (required, not bundled)
 
 Running `ng test --coverage` against a freshly scaffolded project fails outright with:
@@ -395,7 +417,7 @@ npx storybook@latest init
 
 This is Storybook's own installer; it detects the Angular + `@angular/build` (Vite-based) workspace and installs
 `@storybook/angular-vite` plus a `.storybook/` config and `storybook`/`build-storybook` npm scripts on its own.
-**Unverified locally**: this session did not run `storybook@latest init` end-to-end (it isn't part of Task 5.2's
+**Unverified locally**: this session did not run `storybook@latest init` end-to-end (it isn't part of this skill's
 required verification list, and Storybook's installer both prompts for feature choices and pulls a large
 dependency set) — fold in any quirk discovered the next time this step is actually exercised against Angular 22,
 in particular whether `--yes`/a non-interactive flag exists on the current Storybook CLI major to fully script the
@@ -468,5 +490,5 @@ standalone defaults confirmed in Step 4, since both are easy to get wrong from m
 - Which values were inferred versus verified: every command and file path in this skill (the `ng new` flag set,
   the coverage-collector major-matching requirement, the real `coverage/<project>/lcov.info` path, the Prettier
   and Stylelint scaffold quirks, the Playwright title-assertion bug) was verified against a real `ng new`/`ng add`
-  run in September 2026 — only Step 12 (Storybook) was not exercised end-to-end; say so again here if
-  `storybook: yes` was chosen.
+  run in September 2026 — only Step 12 (Storybook) and Step 5's added `typecheck`/`coverage` npm scripts were
+  not exercised end-to-end; say so again here (and, if `storybook: yes` was chosen, for Storybook too).

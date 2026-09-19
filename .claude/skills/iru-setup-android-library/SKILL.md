@@ -108,7 +108,8 @@ everything else, ask the user directly (plain conversation, pre-filling defaults
 - **description** — one line, used in `lib/build.gradle.kts`'s `pom { description.set(...) }`.
 - **version** — the `libraryVersion` written into `lib/build.gradle.kts`. Default `1.0.0-SNAPSHOT` if the user
   doesn't give one (this is why `settings.gradle.kts`'s `dependencyResolutionManagement` in Step 5 includes the
-  Sonatype snapshots repository — it resolves `-SNAPSHOT` dependencies of this exact form).
+  Maven Central snapshots repository, `https://central.sonatype.com/repository/maven-snapshots/` — it resolves
+  `-SNAPSHOT` dependencies of this exact form).
 - **min-sdk** — default `26` if the user doesn't give one. Written to `defaultConfig.minSdk` in both modules.
 - **compile-sdk** — the API level both modules compile against. There's no public "current" endpoint for this the
   way there is for Gradle/npm; resolve it by checking the highest `android-<N>` directory under
@@ -300,7 +301,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
+        maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
     }
 }
 
@@ -309,10 +310,15 @@ include(":app")
 include(":lib")
 ```
 
-Only `<artifact-id>` (Step 2) is substituted. The Sonatype snapshots repository is kept even when `version` doesn't
-end in `-SNAPSHOT` — it's what a future `-SNAPSHOT` bump (e.g. via `iru-android-bump-version`) will need without
-another edit here. `FAIL_ON_PROJECT_REPOS` is required, not optional: it's what makes `settings.gradle.kts` the
-single source of truth for repositories, catching a module that tries to declare its own `repositories {}` block.
+Only `<artifact-id>` (Step 2) is substituted. The Maven Central snapshots repository is kept even when `version`
+doesn't end in `-SNAPSHOT` — it's what a future `-SNAPSHOT` bump (e.g. via `iru-android-bump-version`) will need
+without another edit here. **Departure from the reference repository:** the reference still lists
+`https://oss.sonatype.org/content/repositories/snapshots`, but OSSRH (and that snapshots host with it) was
+decommissioned in mid-2025; the `-SNAPSHOT` artifacts `develop.yml`'s vanniktech `publishToMavenCentral` publishes
+now land in the Central Portal snapshot repository, so this template points at
+`https://central.sonatype.com/repository/maven-snapshots/` instead — don't copy the old URL back from the reference.
+`FAIL_ON_PROJECT_REPOS` is required, not optional: it's what makes `settings.gradle.kts` the single source of truth
+for repositories, catching a module that tries to declare its own `repositories {}` block.
 
 ### `gradle.properties`
 
@@ -736,14 +742,16 @@ sonar {
         property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
         property("sonar.java.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
 
+        // Departure from the reference: AGP writes the unit-test XML under test/debug/, and the key names below
+        // (reportPaths / androidLint.reportPaths) are the ones the Sonar analyzer actually reads
         property("sonar.coverage.jacoco.xmlReportPaths",
             listOf("build/reports/coverage/androidTest/debug/connected/report.xml",
-                "build/reports/coverage/test/report.xml"))
+                "build/reports/coverage/test/debug/report.xml"))
         property("sonar.java.coveragePlugin", "jacoco")
-        property("sonar.junit.reportsPath",
+        property("sonar.junit.reportPaths",
             listOf("build/test-results/testDebugUnitTest",
                 "build/outputs/androidTest-results/connected/debug"))
-        property("sonar.android.lint.report", "build/reports/lint-results-debug.xml")
+        property("sonar.androidLint.reportPaths", "build/reports/lint-results-debug.xml")
     }
 }
 
@@ -860,6 +868,18 @@ mavenPublishing {
     }
 }
 ```
+
+**Departures from the reference repository inside the `sonar {}` block** (kept in the `app/` module's copy in Step 7
+too — don't copy the reference's originals back):
+
+- `sonar.coverage.jacoco.xmlReportPaths` lists `build/reports/coverage/test/debug/report.xml`, not the reference's
+  `build/reports/coverage/test/report.xml` — the latter is never written. AGP's `createDebugUnitTestCoverageReport`
+  emits the XML under the variant-suffixed `test/debug/` directory (confirmed in Step 11's verification notes), and
+  that's the path `iru-setup-android-github-workflows`' `develop.yml`/`main.yml` produce before running `:lib:sonar`,
+  so the reference's path would silently report 0 % coverage on every push.
+- `sonar.junit.reportPaths` and `sonar.androidLint.reportPaths` replace the reference's `sonar.junit.reportsPath` and
+  `sonar.android.lint.report` — those two are not keys the SonarQube/SonarCloud analyzer reads (it ignores unknown
+  properties), so with the reference's spelling test results and Android Lint findings are silently never imported.
 
 No `lint { sarifReport = true }` block is written here even though a SARIF report is exactly what
 `iru-setup-android-github-workflows`'s CodeQL upload step needs (`lib/build/reports/lint-results-debug.sarif`) —
@@ -1101,14 +1121,16 @@ sonar {
         property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
         property("sonar.java.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
 
+        // Departure from the reference: AGP writes the unit-test XML under test/debug/, and the key names below
+        // (reportPaths / androidLint.reportPaths) are the ones the Sonar analyzer actually reads
         property("sonar.coverage.jacoco.xmlReportPaths",
             listOf("build/reports/coverage/androidTest/debug/connected/report.xml",
-                "build/reports/coverage/test/report.xml"))
+                "build/reports/coverage/test/debug/report.xml"))
         property("sonar.java.coveragePlugin", "jacoco")
-        property("sonar.junit.reportsPath",
+        property("sonar.junit.reportPaths",
             listOf("build/test-results/testDebugUnitTest",
                 "build/outputs/androidTest-results/connected/debug"))
-        property("sonar.android.lint.report", "build/reports/lint-results-debug.xml")
+        property("sonar.androidLint.reportPaths", "build/reports/lint-results-debug.xml")
     }
 }
 
@@ -1129,7 +1151,7 @@ dependencies {
 
 `versionName` mirrors `<version>` (Step 2's `libraryVersion`, kept as its own literal here rather than a
 cross-module reference — Gradle build scripts in different modules don't share Kotlin `val`s) — keep the two in
-sync by hand on every version bump, or use `iru-android-bump-version` (Task 30 of this same plan), which updates
+sync by hand on every version bump, or use `iru-android-bump-version`, which updates
 both in one pass. `versionCode` starts at `1`; bump it manually (or via that same skill) on every release.
 `androidx.activity:activity-compose`, `androidx.compose.ui:ui-tooling-preview`, and its `debugImplementation`-only
 counterpart `androidx.compose.ui:ui-tooling` are needed *only* because this skill's `app/` module is a genuine
@@ -1269,7 +1291,7 @@ sdk.dir=<resolved-android-sdk-path>
 `<resolved-android-sdk-path>` is `$ANDROID_HOME` or `$ANDROID_SDK_ROOT` if either is set in the environment,
 otherwise ask the user for their Android SDK path. `local.properties` must never be committed — it isn't one of
 this skill's own gitignore entries (`lib/.gitignore`/`app/.gitignore` only cover `/build`); the root `.gitignore`
-that ignores it is `iru-setup-android-gitignore`'s responsibility (Task 22 of this same plan) — call this out
+that ignores it is `iru-setup-android-gitignore`'s responsibility — call this out
 explicitly in Step 11 if that root `.gitignore` doesn't exist yet in this repository.
 
 ## Step 10 — Obtain the Gradle wrapper binaries
@@ -1349,7 +1371,7 @@ causes and are not, by themselves, defects in this skill's templates.
   the way (in case a future conversion is ever needed) is at
   **`lib/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec`** — not
   `lib/build/jacoco/testReleaseUnitTest.exec`, which is where the reference repository's own (older) CI workflow
-  looked for it. `iru-setup-android-github-workflows` (Task 23 of this same plan) should prefer the AGP task's own
+  looked for it. `iru-setup-android-github-workflows` should prefer the AGP task's own
   `report.xml` and only fall back to a vendored-jar conversion if a future AGP/Gradle combination stops emitting it.
 - **The Compose BOM's release cadence outran `compileSdk = 36`.** The newest `compose-bom` release found at
   verification time, `2026.09.00`, pulls in `androidx.compose.foundation:foundation-android:1.12.1` and

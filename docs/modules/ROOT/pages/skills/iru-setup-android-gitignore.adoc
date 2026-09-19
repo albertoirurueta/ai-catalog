@@ -1,5 +1,5 @@
 = Setup Android Gitignore
-:description: Creates or gap-fills the root and per-module .gitignore files for an Android Gradle project, protecting the vendored JaCoCo CLI jars.
+:description: Creates or gap-fills the root and per-module .gitignore files for an Android Gradle project, never ignoring a vendored JaCoCo CLI directory.
 :keywords: iru-setup-android-gitignore, claude code skill, android, gradle, kotlin, jacoco, gitignore, keystore, antora
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -13,13 +13,14 @@ https://github.com/albertoirurueta/irurueta-android-glutils[irurueta-android-glu
 == Purpose
 
 The skill produces a house-standard Android `.gitignore`: an unconditional root base (Gradle build output,
-`local.properties`, IDE files, keystores, `google-services.json`, JaCoCo profiling output, plus the catalog's own
-Antora `docs/build/`/`docs/node_modules/` additions), a one-line anchored `/build` `.gitignore` for each Gradle
-module, and conditionally-detected root sections for Detekt/ktlint/Spotless caches and Fastlane output. It
-deliberately never ignores the vendored `jacoco-<ver>/` JaCoCo CLI directory that `iru-setup-android-library`/
-`iru-setup-android-app` commit into the repository, since CI depends on that directory staying tracked to convert
-coverage without a network dependency. It mirrors `iru-setup-java-gitignore`'s diff-and-approve contract, adapted
-to the Android/Gradle ecosystem.
+`local.properties`, IDE files, keystores, `google-services.json`, profiling output, the Kotlin 2.x compiler's
+root-level `.kotlin/` cache, plus the catalog's own Antora `docs/build/`/`docs/node_modules/` additions), a
+one-line anchored `/build` `.gitignore` for each Gradle module, and a conditionally-detected root section for
+Fastlane output. It deliberately never ignores a vendored `jacoco-<ver>/` JaCoCo CLI directory if the repository
+vendors one (as the reference repository does, for `iru-setup-android-github-workflows`' opt-in
+coverage-conversion fallback), since CI would depend on that directory staying tracked to convert coverage
+without a network dependency. It mirrors `iru-setup-java-gitignore`'s diff-and-approve contract, adapted to the
+Android/Gradle ecosystem.
 
 == Purpose group
 
@@ -59,8 +60,8 @@ exists yet, falls back to whichever of `lib`/`app` exist as directories, or asks
 * A `<module>/.gitignore` for each resolved module (typically `lib`, `app`) — newly created, or updated after
   approval; skipped entirely when its content already matches.
 * A closing report stating which root file and each module file was created/updated/left untouched, which
-  conditional Step 4 sections (Detekt/ktlint/Spotless, Fastlane) were included versus skipped and why, and
-  confirmation that the vendored `jacoco-<ver>/` CLI directory was **not** added to any ignore pattern.
+  conditional Step 4 section (Fastlane) was included versus skipped and why, and confirmation that no ignore
+  pattern would match a vendored `jacoco-<ver>/` CLI directory if the repository has one.
 
 == Execution flow
 
@@ -72,7 +73,7 @@ flowchart TD
     C -- no --> D["Compose root base template\n+ per-module /build line"]
     C -- yes --> E["Read existing files\n(warn changes will be proposed)"]
     E --> D
-    D --> F["Detect conditional root additions:\nDetekt/ktlint/Spotless cache,\nFastlane output"]
+    D --> F["Detect conditional root additions:\nFastlane output"]
     F --> G["Compose proposed content\n(merge with existing lines if any)"]
     G --> H{"Did this file\nalready exist?"}
     H -- no --> I["Write file directly"]

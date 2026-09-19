@@ -50,20 +50,29 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `iru-swift-code-one-task`) once per task — in parallel when the group allows it — and validates the group once
   (tests/coverage/quality/doc/license), instead of once per task.
 - **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
-  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over three
-  `AskUserQuestion` rounds (Backend/JVM, Mobile/native, Web/Node), asks the shared inputs once, and delegates to the
+  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to four
+  `AskUserQuestion` rounds of three concrete types each (Java/JVM, Android & Swift, mobile apps, Web/Node), every
+  round ending in a "Something in the next group" escape hatch, asks the shared inputs once, and delegates to the
   matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
-  so every sub-skill takes its gap-fill/update path instead of assuming a brand-new repo. The stack orchestrators —
-  `iru-setup-java-library-repository`, `iru-setup-java-springboot`, `iru-setup-typescript-repository`,
+  so every sub-skill takes its gap-fill/update path instead of assuming a brand-new repo. The four `*-repository`
+  stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-typescript-repository`,
   `iru-setup-android-repository`, `iru-setup-swift-repository` — each also run standalone, and each chains the
   same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
   `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`.
-- **Shared bootstrap inputs**: every orchestrator/scaffold/workflows skill accepts the same `args` vocabulary —
+  `iru-setup-java-springboot` is the fifth orchestrator but follows its own manifest-driven chain instead: it
+  interviews the user once, writes a `springboot-stack.yml` manifest, delegates the reactor's generation to its
+  `iru-setup-java-springboot-*` sub-skills (pom, modules, apis, optional hilla, testcontainers, platform,
+  github-workflows) plus `iru-update-java-springboot-documentation` for the Antora site, and only then fills the
+  remaining repository-level files (`iru-setup-java-gitignore`, `iru-setup-readme`, `iru-setup-changelog`) directly.
+- **Shared bootstrap inputs**: the front door and the orchestrators share one `args` vocabulary —
   `open-source: yes|no`, `publish: yes|no` (libraries), `distribution: none|internal|store` (apps),
   `sonar: cloud|self-hosted|none` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), and `mode: new|existing`
-  — so a value collected once by a front door or orchestrator never needs re-asking downstream. Defaults: `sonar`
-  is `cloud` when open source, otherwise asked with `none` recommended (SonarCloud is free only for open source);
-  `publish`/`distribution` default to `yes`/`store` only when the project is open source.
+  — so a value collected once by a front door or orchestrator never needs re-asking downstream; each downstream
+  scaffold/workflows skill parses only the subset of those keys its own Step 0 lists and ignores the rest. Defaults:
+  `sonar` is `cloud` when open source, otherwise asked with `none` recommended (SonarCloud is free only for open
+  source); `publish`/`distribution` default to `yes`/`store` only when the project is open source.
+- **Ticket intake**: `iru-create-github-issue` / `iru-create-jira-ticket` ground a draft in the codebase via
+  `iru-explore` before filing.
 - **Release**: `iru-release` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
   it discovers the installed `iru-<key>-bump-version` skills (`find .claude/skills -maxdepth 1 -type d -name
   "iru-*-bump-version"`, currently `java`, `typescript`, `android`, `swift`) and delegates the actual version-file
@@ -78,7 +87,8 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)
   before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can't be
   verified locally is reported rather than assumed to work. Every `-github-workflows` skill also embeds the same
-  security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table.
+  security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table;
+  a stack may add opt-in scanners beyond those shared four (e.g. MobSF for Android) as long as the shared block stays.
 
 ### Agents (`.claude/agents/<name>.md`)
 

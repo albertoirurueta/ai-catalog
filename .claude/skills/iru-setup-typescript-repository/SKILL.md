@@ -103,7 +103,7 @@ Step 3); if it doesn't, default to `new` without asking further — there's noth
 **`mode: existing` with the scaffold manifest already on disk** (`package.json` at the repository root, the same
 check Step 5 uses to skip the scaffold): skip every identity question in this step — nothing downstream consumes
 these answers once the scaffold is skipped (`iru-setup-readme` derives identity from the existing build files
-itself), so asking them is a wasted question (verified in Task 53.2). Resolve `license` only if `args` supplied it,
+itself), so asking them is a wasted question (verified against an existing repository). Resolve `license` only if `args` supplied it,
 and record in the final report that project identity was taken from the existing files rather than asked.
 
 For any field Step 0 already resolved from `args`, use that value directly. For everything else, ask the user
@@ -202,12 +202,17 @@ Agent({
     description: <description>\\nlicense: <license>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     publish: <publish>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
-    sonar-host-url: <..., if set>\\nmode: <mode>\"}). Report back: whether package.json and the toolchain files
+    sonar-host-url: <..., if set>\\nintegration-branch: <integration-branch>\\nmode: <mode>\"}). Report back: whether package.json and the toolchain files
     were created fresh or already existed (and, if so, whether the user chose to stop), which devDependency
     versions came from a live registry lookup versus a fallback, and any value it resolved on its own.",
   run_in_background: false
 })
 ```
+
+`integration-branch` (Step 4's answer, default `develop`) is forwarded **only** to the `library` flavor: it's the
+`baseBranch` `iru-setup-typescript-library` writes into `.changeset/config.json` when `publish: yes`, and without
+it that file silently defaults to `main` while Step 8's workflows run on `develop`. The other four scaffold skills
+have no such key — never send it to them.
 
 The other four flavors follow the same shape, with only the `args` keys and skill name changed:
 
@@ -278,7 +283,7 @@ Agent({
     distribution: <distribution, react-native/ionic only>\\nsonar: <sonar>\\n
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
     native-builds: <native-builds, react-native only>\\nframework: <framework, ionic only>\\n
-    docs-tool: <docs-tool>\"}). Report back: whether build.yml/release.yml/sync.yml/security.yml and
+    docs-tool: <docs-tool>\\nmode: <mode>\"}). Report back: whether build.yml/release.yml/sync.yml/security.yml and
     .github/dependabot.yml were created fresh, updated, or already existed (and, if so, whether the user chose to
     stop), and the full required-secrets table it produced for this flavor/options.",
   run_in_background: false
@@ -286,12 +291,15 @@ Agent({
 ```
 
 Omit `publish`/`distribution`/`native-builds`/`framework` entirely when they don't apply to the resolved `flavor`
-(never send a key the flavor doesn't use). The four `security-*` keys are deliberately never passed — they each
-default to `yes` inside `iru-setup-typescript-github-workflows` itself, and this orchestrator doesn't ask about
-them separately; note this once in Step 11's report rather than re-asking per run. If it reports that the workflow
-files already existed and the user chose to stop, note that in Step 11's report rather than treating it as a
-failure of this skill — the scaffold, the Antora docs, and the `.gitignore` from Steps 5–7 are still valid on their
-own.
+(never send a key the flavor doesn't use). `mode` is always passed: with `mode: existing`,
+`iru-setup-typescript-github-workflows` takes its own update/gap-fill path on any workflow file already present
+(its Step 2) without asking the stop-or-update question — this is what makes this orchestrator's `mode:
+existing` promise hold for the CI step; with `mode: new` (or unset) it asks as usual. The four `security-*` keys
+are deliberately never passed — they each default to `yes` inside `iru-setup-typescript-github-workflows` itself,
+and this orchestrator doesn't ask about them separately; note this once in Step 11's report rather than re-asking
+per run. If it reports that the workflow files already existed and the user chose to stop (only possible when
+`mode` isn't `existing`), note that in Step 11's report rather than treating it as a failure of this skill — the
+scaffold, the Antora docs, and the `.gitignore` from Steps 5–7 are still valid on their own.
 
 ## Step 9 — Run `iru-setup-changelog`
 

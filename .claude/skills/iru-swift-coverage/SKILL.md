@@ -23,7 +23,7 @@ passes explicit `key: value` lines, honor them and skip the matching inference b
 - `scheme:`, `destination:`, `target:`/`module:` — override what would otherwise be inferred the same way
   `iru-swift-test` infers them (scheme from `xcodebuild -list`, destination from the first available simulator
   for iOS/tvOS/watchOS or `platform=macOS` for a macOS app, target from `Package.swift`'s test target(s)).
-- A bar/threshold line (e.g. `bar: 80`) is only used for Step 5's pass/fail wording — it never changes what runs.
+- A bar/threshold line (e.g. `bar: 80`) is only used for Step 4's pass/fail wording — it never changes what runs.
 
 ## Step 1 — Detect which coverage path is wired
 

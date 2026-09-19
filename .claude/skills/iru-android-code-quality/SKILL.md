@@ -188,7 +188,7 @@ follow-up the user (or `iru-android-code-one-task`) drives explicitly.
   `Fatal` issue — without it, the build aborts before writing `lint-results-debug.xml`, which looks identical to
   "Lint isn't wired" unless this is checked for explicitly (Step 1).
 - `lintDebug`'s console output names only the HTML and SARIF reports (`Wrote HTML report to …`/`Wrote SARIF report
-  to …`) — the XML report is written silently alongside them (verified in Task 53.1 against the Task 20 scaffold),
+  to …`) — the XML report is written silently alongside them (verified against a generated `iru-setup-android-library` scaffold),
   so check that `lint-results-debug.xml` exists on disk rather than waiting for a console line that names it.
 - Configuration cache can be incompatible with some third-party tasks (Detekt and Spotless have both shipped
   configuration-cache-incompatible releases historically); retry once with `--no-configuration-cache` if a
@@ -197,9 +197,9 @@ follow-up the user (or `iru-android-code-one-task`) drives explicitly.
   *report*, never the underlying Gradle invocation, for every tool this skill runs.
 - This skill's XML parsing (Step 3) was verified against hand-written fixtures in
   `$TMPDIR/iru-verify/android/gates/{lint,detekt}/` only; the live `./gradlew :lib:lintDebug`/`:lib:detekt`/
-  `:lib:spotlessCheck` invocations against the Task 20 scaffold, and whether Detekt/Spotless/ktlint are even
-  opted into that scaffold by default, are **unverified locally by this skill's author; exercised by Task
-  20.2/23.2**. The Android Lint report path (`build/reports/lint-results-debug.xml`) is taken directly from the
+  `:lib:spotlessCheck` invocations against a generated `iru-setup-android-library` scaffold, and whether
+  Detekt/Spotless/ktlint are even opted into that scaffold by default, are **unverified locally by this skill's
+  author; exercised by the scaffold and workflows skills' own verification passes**. The Android Lint report path (`build/reports/lint-results-debug.xml`) is taken directly from the
   reference repository's own `sonar.android.lint.report` property in
   [irurueta-android-glutils](https://github.com/albertoirurueta/irurueta-android-glutils)'s `lib/build.gradle.kts`
   — that repository itself does not wire Detekt/Spotless/ktlint, so their exact task/report names here follow

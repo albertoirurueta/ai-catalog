@@ -12,11 +12,12 @@ real material supports.
 
 `iru-setup-readme` never invents version numbers, badge URLs, dashboard links, or example code that don't
 correspond to something actually present in the repository. It gathers project identity (repository/host,
-description, license, build tool, current and latest-released versions), detecting the stack across the full
-range this catalog supports — Java/Maven, Gradle/Kotlin, Vite+React, Angular CLI, Java/Spring Boot + Hilla,
-Expo/React Native, Ionic/Capacitor, Android library/application, Swift/Apple (SwiftPM, Xcode, XcodeGen, Tuist),
-and plain TypeScript/npm — reusing an `iru-explore` report's `Project type:` line from earlier in the
-conversation instead of re-detecting from scratch when one is already available. It gathers badge sources (CI
+description, license, build tool, current and latest-released versions), taking the stack from `iru-explore`'s
+`Project type:` line — reused from earlier in the conversation when available, otherwise obtained by invoking
+`iru-explore` itself, so the manifest → project-type table (Java/Maven, Gradle/Kotlin, Vite+React, Angular CLI,
+Java/Spring Boot + Hilla, Expo/React Native, Ionic/Capacitor, Android library/application, Swift/Apple, plain
+TypeScript/npm) lives in exactly one place; only when `iru-explore` isn't installed does it fall back to a
+minimal one-manifest check. It gathers badge sources (CI
 status, SonarCloud/SonarQube, and package-registry badges for npm, Maven Central, and the Swift Package Index),
 a project status table that grows extra rows (platforms, Android min/target SDK, Kotlin/AGP, Swift tools/
 deployment targets, Node engine, TypeScript, framework) only for the stacks they apply to, documentation links
@@ -64,7 +65,8 @@ re-detected here.
 |Everything else is derived by exploring the repository directly
 (`pom.xml`/`build.gradle`/`package.json`/`Package.swift`/Android Gradle modules/Xcode or Tuist project files,
 `git remote`, `.github/workflows/*.yml`, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, and source code),
-reusing an `iru-explore` `Project type:` line already in the conversation when one is available.
+with the project type taken from `iru-explore`'s `Project type:` line (reused from the conversation, or obtained
+by invoking `iru-explore`).
 |Not applicable.
 |===
 
@@ -109,7 +111,10 @@ flowchart TD
 
 === Invokes
 
-None — `iru-setup-readme` is a leaf skill; it does not call any other skill in this catalog.
+* xref:skills/iru-explore.adoc[] — Step 2, only when no `iru-explore` report with a `Project type:` line is
+  already available in the conversation: invoked with no ticket argument to obtain the project type, build tool,
+  and framework instead of re-deriving them from manifests. When `iru-explore` isn't installed, a minimal
+  one-manifest check stands in.
 
 === Invoked by
 

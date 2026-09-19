@@ -91,7 +91,9 @@ redundant with `project-type` and can be left unset.
 
 |`platforms`
 |No
-|Comma-separated Apple platforms (`ios`/`ipados`/`macos`/`watchos`) for a Swift library or Apple app.
+|Comma-separated Apple platforms (`ios`/`ipados`/`macos`/`watchos`) for a Swift library or Apple app; a Swift
+library gets a follow-up multi-select for `tvos`/`visionos`/`linux`, appended to the same list, since
+`iru-setup-swift-repository` never re-asks a key the front door already supplied.
 |Pre-filled from Step 1's detected `apple-app (…)` parenthetical when present, else asked
 
 |`framework`
@@ -160,8 +162,8 @@ flowchart TD
     E -- "other / unknown / multiple" --> F
     E -- "one of 12 known types" --> H["Pre-select matching\nStep 2 option as (detected)"]
     H --> I
-    D --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 3 AskUserQuestion rounds:\nBackend/JVM, Mobile/native, Web/Node"]
-    F -- "none of 12 fit\nafter round 3" --> G
+    D --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 4 AskUserQuestion rounds of 3 types\n+ 'Something in the next group':\nJava/JVM, Android & Swift, mobile apps, Web/Node"]
+    F -- "'None of these'\nin round 4" --> G
     F -- "resolved" --> I["Step 3: Ask shared inputs once\n(open-source, publish/distribution,\nsonar, conditional flavor question)"]
     I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of five\nstack orchestrators"]
     J --> K["Step 5: Report resolved inputs,\ndelegated outcome,\nsecrets table, warnings"]

@@ -577,7 +577,7 @@ Notes on filling this in:
   them. `${maven.multiModuleProjectDirectory}` resolves to the reactor root from any module, which is what makes a
   single shared `checkstyle.xml` and `spotbugs-exclude.xml` work.
 - Read `sonar.mode` from the manifest (defaulting to `cloud` when the field is absent, for backward compatibility
-  with a manifest written before Task 2.1):
+  with a manifest written before the `sonar:` block existed):
   - `sonar.mode: none` — drop the whole `sonar.*` properties block (all five properties, not just the identity
     ones) and the `sonar-maven-plugin` entry rather than leaving empty placeholders.
   - `sonar.mode: cloud` — keep today's behaviour: `<sonar.host.url>https://sonarcloud.io</sonar.host.url>`, and

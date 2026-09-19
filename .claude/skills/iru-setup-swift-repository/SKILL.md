@@ -136,7 +136,7 @@ nothing on disk yet to conflict with.
 **`mode: existing` with the scaffold manifest already on disk** (`Package.swift` (or the flavor's generator manifest) at the repository root, the same
 check Step 5 uses to skip the scaffold): skip every identity question in this step — nothing downstream consumes
 these answers once the scaffold is skipped (`iru-setup-readme` derives identity from the existing build files
-itself), so asking them is a wasted question (verified in Task 53.2). Resolve `license` only if `args` supplied it,
+itself), so asking them is a wasted question (verified against an existing repository). Resolve `license` only if `args` supplied it,
 and record in the final report that project identity was taken from the existing files rather than asked.
 
 For any field Step 0 already resolved from `args`, use that value directly. For everything else, ask the user
@@ -184,6 +184,13 @@ directly.
     allows at most four options). Relay `iru-setup-swift-library`'s own caveats when presenting them: `ios` and
     `ipados` collapse to a single `.iOS(...)` entry, and `linux` adds no `platforms:` entry at all (SwiftPM has no
     `.linux` case — Linux support is implicit whenever the code avoids Apple-only imports).
+    **When `platforms` arrived via `args` for the `library` flavor, still ask the second round.** A front door
+    such as `iru-setup-repository` collects platforms with the four-option Apple vocabulary shared with the app
+    flavor (`ios`/`ipados`/`macos`/`watchos`), so a supplied value covers at most those four — treat it as
+    resolving only the first question, and ask the *tvOS / visionOS / Linux / none of these* multi-select as a
+    follow-up that **extends** the supplied list (skip the follow-up only when the supplied value already names
+    at least one of `tvos`/`visionos`/`linux`, since then the caller evidently spoke the full vocabulary). The
+    merged list is what Steps 5 and 8 receive.
   - `app`: `ios`, `ipados`, `macos`, `watchos` only. Relay `iru-setup-apple-app`'s caveat that `ipados` is not a
     separate target — it widens the iOS target's `TARGETED_DEVICE_FAMILY` — and that `watchos` without `ios`
     produces a standalone (companion-less) watch app.
@@ -193,7 +200,9 @@ directly.
   `macos`, `watchos`, `tvos`, `visionos`), the minimum OS version, in `iru-setup-swift-library`'s own
   `ios=17.0, macos=14.0` form. There is no universal default — ask directly, offering the current stable major
   minus one per platform as the suggestion if the user has no preference. Never asked for a `linux`-only
-  selection.
+  selection. When the platforms follow-up above extended an `args`-supplied list with `tvos`/`visionos`, ask
+  the minimum version for just those added platforms and append them to whatever `min-deployment-targets`
+  `args` already carried.
 - **`app` only — min-deployment-target**: a single OS version applied to every selected platform. **Deliberately
   left unasked** unless `args` supplied it: `iru-setup-apple-app` resolves its default itself from the locally
   installed simulator runtimes (Step 4 there — the bare current SDK major is *not* safe, since installed
@@ -383,6 +392,8 @@ Agent({
     release-please: <..., library only, only if supplied>\\nopen-source: <open-source>\\n
     publish: <publish, library only>\\ndistribution: <distribution, app only>\\nsonar: <sonar>\\n
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
+    security-dependency-review: <..., only if supplied>\\nsecurity-codeql: <..., only if supplied>\\n
+    security-osv: <..., only if supplied>\\nsecurity-gitleaks: <..., only if supplied>\\n
     mode: <mode>\"}). Report back: whether build.yml, release.yml, sync.yml + .github/scripts/sync_versions.py
     (gitflow only), security.yml, .github/dependabot.yml and lcov_to_sonar_generic.py (library + sonar only) were
     created fresh, updated, or already existed (and, if so, whether the user chose to stop), the runner label and
@@ -395,8 +406,9 @@ Agent({
 
 Omit `integration-branch` when `branching: main-only`, `publish`/`release-please` for `app`, and `generator`/
 `signing`/`distribution` for `library` (never send a key the flavor doesn't use). The four `security-*` keys are
-deliberately never passed unless `args` supplied them — each defaults to `yes` inside
-`iru-setup-swift-github-workflows` itself, and this orchestrator doesn't ask about them; note this once in
+forwarded only when `args` supplied them (a `security-codeql: no` given to this orchestrator must reach the
+workflows skill, or the CodeQL job is generated anyway) — each defaults to `yes` inside
+`iru-setup-swift-github-workflows` itself, and this orchestrator never asks about them; note this once in
 Step 11's report rather than re-asking per run. The shared `license`/`developer-*`/`organization-url` keys are
 likewise never passed here: the workflows skill accepts them only to tolerate a full shared-args set and would
 report them as "supplied but unused".

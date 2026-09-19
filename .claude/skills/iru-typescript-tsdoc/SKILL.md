@@ -169,10 +169,10 @@ npx typedoc --emit none --treatWarningsAsErrors --validation.notDocumented true
 
 - `--emit none` skips writing the HTML site — this only needs TypeDoc's own analysis/validation pass, not a full
   docs build, mirroring how the Java Javadoc skill runs `mvn javadoc:jar` rather than a full site build.
-- **A repository with no valid `origin` git remote makes this command fail for a non-doc reason** (verified in this
-  catalog's Task 53.1 smoke test): TypeDoc warns `The provided git remote "origin" was not valid` while resolving
+- **A repository with no valid `origin` git remote makes this command fail for a non-doc reason** (verified in a
+  smoke test against a generated library): TypeDoc warns `The provided git remote "origin" was not valid` while resolving
   source links, and `--treatWarningsAsErrors` turns that into a non-zero exit even when every export is documented.
-  Check `git remote get-url origin` first; if it fails, append `--disableGit --disableSources` (verified in Task 53.1: `--disableGit` alone
+  Check `git remote get-url origin` first; if it fails, append `--disableGit --disableSources` (verified in the same smoke test: `--disableGit` alone
   fails differently — `disableGit is set, but sourceLinkTemplate is not, so source links cannot be produced`, exit 4 —
   because TypeDoc still tries to emit source links; `--disableSources` drops them) so the exit code reflects
   documentation warnings only, and say so in the Step 6 report.

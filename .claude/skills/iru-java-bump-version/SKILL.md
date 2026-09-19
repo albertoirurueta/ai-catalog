@@ -10,7 +10,10 @@ description: Set a Maven/Java project's version to an exact value. For a single-
   `1.4.1-SNAPSHOT`) — this skill does not compute bumps itself, it only applies the value it's given (`iru-release`
   computes the release/next-dev values per the pre-release convention documented in this file and passes each one
   through in turn). Also accepts `args`: `sync-files: yes|no` (default: ask) to also update README/Antora version
-  mentions, and `dry-run: yes|no` (default `no`) to print the diff/command without writing or running anything.
+  mentions, `next-version: <upcoming-version>` so that sync maps "Latest release" markers to `<new-version>` and
+  "Latest snapshot"/"Current development version" markers to the upcoming pre-release value instead of rewriting
+  every marker to the single value, and `dry-run: yes|no` (default `no`) to print the diff/command without writing
+  or running anything.
   Reports the old and new version, whether the project was treated as a reactor or a single module, and every file
   touched. Use whenever the user, or another skill such as `iru-release`, needs a Maven project's version set to a
   specific value instead of hand-editing `pom.xml`.
@@ -36,6 +39,10 @@ Parse the invocation:
 - `args` (`key: value` lines), if present:
   - `sync-files: yes|no` — whether to also update README/Antora version mentions (Step 7). If omitted, ask once
     with `AskUserQuestion` after Step 2 confirms whether such mentions actually exist; skip asking if none do.
+  - `next-version: <upcoming-version>` — the upcoming pre-release version (e.g. `1.5.0-SNAPSHOT`) that README/
+    Antora "Latest snapshot"/"Current development version" markers should show after a release, while "Latest
+    release" markers show `<new-version>`. Only meaningful with `sync-files: yes`; `iru-release` passes it
+    alongside the release version. Validate it the same way Step 1 validates `<new-version>`.
   - `dry-run: yes|no` — default `no`. When `yes`, run every step through composing the new file contents (or the
     `mvn versions:set` command that would run) and showing the diff, then stop — do not write anything or run any
     mutating command, and say so plainly in the report.
@@ -232,7 +239,16 @@ do for their ecosystems:
   grep -n "<version>\|Latest release\|Latest snapshot\|Current development version" README.md
   ```
   Update each matched `<version>...</version>` inside an install/dependency code block the same way Step 4
-  rewrote `pom.xml` — a targeted, scoped substitution, not a blind repository-wide replace.
+  rewrote `pom.xml` — a targeted, scoped substitution, not a blind repository-wide replace — mapping each marker
+  by what it names rather than rewriting them all to one value:
+  - "Latest release" markers (and a Project Status row such as `Latest release`) → `<new-version>` when
+    `<new-version>` is a release (no `-SNAPSHOT`); when `<new-version>` is itself a `-SNAPSHOT` (a next-dev bump
+    on `develop`), leave them untouched — they still name the last real release.
+  - "Latest snapshot"/"Current development version" markers → `next-version` when it was given; otherwise
+    `<new-version>` only if it is a `-SNAPSHOT` value, and untouched (with a warning in Step 8 that the caller
+    should pass `next-version`) when `<new-version>` is a release — never regress a development marker to a
+    release value.
+  - A snippet naming a single version with no such marker → `<new-version>`.
 - **`docs/antora.yml`** — its `version:` field, if this repository has an Antora site and that field is meant to
   track the released version (skip for a `-SNAPSHOT` value — this catalog's convention is to only write a
   released version there, matching `iru-typescript-bump-version`/`iru-android-bump-version`/

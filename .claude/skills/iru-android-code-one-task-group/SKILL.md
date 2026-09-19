@@ -120,7 +120,7 @@ not once per task, but once per touched module (Step 1) where a gate is module-s
    `./gradlew test`. If everything passes, report back only that all tests passed. If anything fails, report back
    only the failing test names, the failure reason, and the first stack-trace line for each."})`. `test` is the
    aggregate lifecycle task that runs every module's unit-test variants — on this catalog's own library scaffold
-   `:lib:test` resolves to `testDebugUnitTest` only (verified in Task 53.1: no `testReleaseUnitTest` task exists for
+   `:lib:test` resolves to `testDebugUnitTest` only (verified against a generated scaffold: no `testReleaseUnitTest` task exists for
    the library module, so it is no slower than the scoped run), while a module that declares a release unit-test
    variant also runs `testReleaseUnitTest` and is noticeably slower than the scoped `testDebugUnitTest`-only runs in
    Step 3.3; run the plan's literal `./gradlew test` here for full-suite regression coverage across every module and
@@ -172,4 +172,5 @@ own author did not run any of the `./gradlew` commands above against a real scaf
 was assigned for writing this skill itself — so every gate command and report path named above is **unverified
 locally by this skill's author**; each is exercised instead by the underlying gate skill's own verification (see
 `iru-android-test`/`iru-android-coverage`/`iru-android-code-quality`/`iru-android-dokka`'s own "Known quirks"
-sections) and by this catalog's Task 20.2/23.2 scaffold runs, not by a dry run of this orchestration skill.
+sections) and by the Android scaffold and workflows skills' own verification passes, not by a dry run of this
+orthestration skill.

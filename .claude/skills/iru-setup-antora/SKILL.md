@@ -53,7 +53,7 @@ Don't assume a clean slate. Before creating anything, check:
 
 Build a concrete gap list from this survey (e.g. "antora.yml missing", "playbook exists but has no mermaid
 extension", "ROOT module exists with 5 pages already, no page covers installation"). Every later step acts only
-on genuine gaps — a fully-set-up repository (this one, `hermes`, already has all of this) should result in Step
+on genuine gaps — a fully-set-up repository (one that already has all of this) should result in Step
 13 reporting "already set up," not in duplicated or overwritten files.
 
 ## Step 3 — Install Antora and its extensions
@@ -69,7 +69,7 @@ npm i @sntke/antora-mermaid-extension
 npm i @djencks/asciidoctor-mathjax
 ```
 
-- **`docs/package.json` must exist before the first `npm i`** (verified in Task 53.2): with no manifest in
+- **`docs/package.json` must exist before the first `npm i`** (verified against a pipeline-generated repository): with no manifest in
   `docs/`, npm resolves the nearest ancestor `package.json` — the library/app's own root manifest — and installs
   Antora and the three extensions there, polluting the project's real dependencies. The `npm init -y` guard above
   creates a minimal manifest first (set `"private": true` in it afterwards so it can never be published).

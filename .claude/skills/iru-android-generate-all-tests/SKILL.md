@@ -76,8 +76,10 @@ many classes are in scope:
 Agent({
   description: "Measure coverage for every candidate class",
   subagent_type: "iru-gate-runner",
-  prompt: "Invoke Skill({skill: \"iru-android-coverage\", args: \"scope: <module or TargetClass1,TargetClass2,...>\"})
-    so the whole unit-test suite runs once and every class is measured in the same pass. Report back, per target
+  prompt: "Invoke Skill({skill: \"iru-android-coverage\", args: \"<TargetClass1,TargetClass2,...>\\nmodule: <module>\"})
+    — the class list is `iru-android-coverage`'s positional `[scope]` (its first line; omit it for a whole-module
+    report) and `module:` is its own `key: value` line (it accepts no `scope:` key) — so the whole unit-test suite
+    runs once and every class is measured in the same pass. Report back, per target
     class: its exact line coverage percentage; and, ONLY for classes below 80%, the specific uncovered line
     numbers too (from the per-class JaCoCo XML). For classes at or above 80%, report just the percentage — do not
     include per-line detail for those, to keep the report compact.",
@@ -201,7 +203,8 @@ scope is JVM unit tests only, since instrumented tests need a device/emulator th
 
 ## Known quirks / verification notes
 
-- **JUnit 5 variant**: if the module applies `de.mannodermaus.android-junit5` instead of (or alongside) plain
+- **JUnit 5 variant**: if the module applies `de.mannodermaus.android-junit` (the plugin id the scaffolds use — the
+  older `de.mannodermaus.android-junit5` id was retired when the project was renamed) alongside plain
   JUnit 4, tests use `org.junit.jupiter.api.Test` and `@Nested`/`@ParameterizedTest` are available, but MockK and
   Robolectric usage stay the same (MockK is test-framework agnostic; Robolectric's JUnit 5 extension is
   `@ExtendWith(RobolectricExtension::class)` in place of `@RunWith(RobolectricTestRunner::class)`) — detect which
@@ -212,5 +215,5 @@ scope is JVM unit tests only, since instrumented tests need a device/emulator th
   writes the test source; running/verifying it is `iru-android-test`'s job when a device is actually attached.
 - **This skill's own author did not run Gradle to verify these test skeletons compile** — the reference-repository
   test files quoted for style (constructor/property/mock patterns) were read and matched by eye, not executed
-  locally; the scaffold's own `:lib:testDebugUnitTest` run is exercised by Task 20.2 against the real scaffold
-  this catalog generates, not by this skill's authoring pass.
+  locally; the scaffold's own `:lib:testDebugUnitTest` run is exercised by `iru-setup-android-library`'s verification against the
+  real scaffold this catalog generates, not by this skill's authoring pass.

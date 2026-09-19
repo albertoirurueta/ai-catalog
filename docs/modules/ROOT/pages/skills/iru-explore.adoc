@@ -188,6 +188,9 @@ None — `iru-explore` is a leaf skill; it does not call any other skill in this
 * xref:skills/iru-setup-repository.adoc[] — Step 1 runs `iru-explore` with no argument on a non-empty repository,
   reading its report's `Project type:` line to pre-select the matching stack orchestrator instead of asking the
   user over `AskUserQuestion` rounds.
+* xref:skills/iru-setup-readme.adoc[] — Step 2 runs `iru-explore` with no argument when no report with a
+  `Project type:` line is already in the conversation, so the README's language/framework/build-tool detection
+  comes from the same table every other skill reads instead of a duplicated one.
 * xref:skills/iru-plan.adoc[] — Step 2 runs `iru-explore` first (unless equivalent exploration already happened
   earlier in the conversation) so the plan it drafts is grounded in the real codebase.
 * xref:skills/iru-issue.adoc[] — Step 5 runs `iru-explore` (scoped to the ticket) as the first step of its

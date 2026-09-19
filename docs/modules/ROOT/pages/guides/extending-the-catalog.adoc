@@ -77,22 +77,27 @@ nothing else in the pipeline needs to change.
 
 `iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) is the front door for bootstrapping *any*
 repository this catalog supports: it detects a non-empty repository by running `iru-explore` and reading its
-`Project type:` line to pre-select a stack, or, on an empty one, asks the project type over three
-`AskUserQuestion` rounds (Backend/JVM, Mobile/native, Web/Node — twelve types in total), asks the shared inputs
+`Project type:` line to pre-select a stack, or, on an empty one, asks the project type over up to four
+`AskUserQuestion` rounds of three concrete types each, every round ending in a "Something in the next group"
+escape hatch (Java/JVM, Android & Swift, mobile apps, Web/Node — twelve types in total), asks the shared inputs
 (`open-source`, `publish`/`distribution`, `sonar`, …) once, and delegates to the matching stack orchestrator via
 `iru-isolated-skill-executor`. On an existing repository it forces `mode: existing` on that delegation so every
 sub-skill takes its own gap-fill/update path instead of assuming a brand-new repo.
 
-Underneath the front door, each stack has its own orchestrator — `iru-setup-java-library-repository`,
-`iru-setup-java-springboot`, `iru-setup-typescript-repository`, `iru-setup-android-repository`,
-`iru-setup-swift-repository` — and every one of them runs the same fixed shape, standalone or via the front
+Underneath the front door, each stack has its own orchestrator. The four `*-repository` orchestrators —
+`iru-setup-java-library-repository`, `iru-setup-typescript-repository`, `iru-setup-android-repository`,
+`iru-setup-swift-repository` — all run the same fixed six-step shape, standalone or via the front
 door: scaffold (the language/flavor-specific `iru-setup-<stack>-library`/`-app` skill, e.g.
 `iru-setup-typescript-repository`'s own `flavor` picks between `iru-setup-typescript-library`,
 `iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, `iru-setup-ionic-app`) →
 `iru-setup-antora` → `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog`
-→ `iru-setup-readme`. `iru-setup-antora`, `iru-setup-changelog`, and `iru-setup-readme` are the three steps
-already generalized across every orchestrator — don't fork those; a new stack only ever needs its own scaffold,
-gitignore, and workflows skills.
+→ `iru-setup-readme`. `iru-setup-java-springboot` is the exception: it runs a manifest-driven chain of its own
+(interview → `springboot-stack.yml` → `iru-setup-java-springboot-pom`/`-modules`/`-apis`/`-hilla`/
+`-testcontainers`/`-platform`/`-github-workflows` → `iru-update-java-springboot-documentation` → gitignore/README/
+changelog) because a hexagonal Spring Boot reactor has far more to generate than a single scaffold step.
+`iru-setup-antora`, `iru-setup-changelog`, and `iru-setup-readme` are the three steps
+already generalized across the `*-repository` orchestrators — don't fork those; a new stack only ever needs its
+own scaffold, gitignore, and workflows skills.
 
 To add a 13th project type:
 

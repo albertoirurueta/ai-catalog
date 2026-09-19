@@ -178,7 +178,7 @@ Then, unless Step 0 already resolved them, ask about **ui**, **built-in-kotlin**
   into AGP's built-in Kotlin compilation support instead of the separate `org.jetbrains.kotlin.android` plugin —
   still experimental as of AGP 9.x; only recommend `yes` if the user explicitly wants to try it).
 - **junit** — `4` (default; Robolectric + MockK + JUnit 4, exactly as the reference project) or `5` (adds the
-  `de.mannodermaus.android-junit5` plugin so `app/src/test` can also use JUnit 5 Jupiter alongside the JUnit-4-only
+  `de.mannodermaus.android-junit` plugin so `app/src/test` can also use JUnit 5 Jupiter alongside the JUnit-4-only
   Robolectric runner — see Step 5's opt-ins).
 - **coverage-tool** — `jacoco` (default; AGP's built-in `create<Variant>UnitTestCoverageReport` task, no extra
   plugin) or `kover` (adds `org.jetbrains.kotlinx.kover` for a Kotlin-native coverage report/verification DSL
@@ -266,7 +266,7 @@ actually observed in September 2026) only when the lookup fails, and say so expl
 | Detekt (opt-in) | `https://plugins.gradle.org/m2/io/gitlab/arturbosch/detekt/io.gitlab.arturbosch.detekt.gradle.plugin/maven-metadata.xml` | `1.23.8` — **unverified locally**, confirm at run time |
 | Spotless (opt-in) | `https://plugins.gradle.org/m2/com/diffplug/spotless/com.diffplug.spotless.gradle.plugin/maven-metadata.xml` | `7.2.1` — **unverified locally**, confirm at run time |
 | Kover (opt-in, `coverage-tool: kover`) | `https://plugins.gradle.org/m2/org/jetbrains/kotlinx/kover/org.jetbrains.kotlinx.kover.gradle.plugin/maven-metadata.xml` | `0.9.2` — **unverified locally**, confirm at run time |
-| `de.mannodermaus.android-junit5` (opt-in, `junit: 5`) | `https://plugins.gradle.org/m2/de/mannodermaus/android-junit5/de.mannodermaus.android-junit5.gradle.plugin/maven-metadata.xml` | `2.0.0` — **unverified locally**, confirm at run time |
+| `de.mannodermaus.android-junit` (opt-in, `junit: 5`) | `https://plugins.gradle.org/m2/de/mannodermaus/android-junit/de.mannodermaus.android-junit.gradle.plugin/maven-metadata.xml` `<release>` — the plugin id dropped its trailing `5` when the `mannodermaus/android-junit5` project was renamed `android-junit-framework`; a lookup against the old `de.mannodermaus.android-junit5` coordinate returns nothing (same finding as `iru-setup-android-library`) | `2.0.1` (the value `iru-setup-android-library` resolved) — **unverified locally by this skill**, confirm at run time |
 | Firebase App Distribution plugin (opt-in, `distribution: internal`) | `https://plugins.gradle.org/m2/com/google/firebase/appdistribution/com.google.firebase.appdistribution.gradle.plugin/maven-metadata.xml` | `5.1.1` — **unverified locally**, confirm at run time |
 | Gradle Play Publisher plugin (opt-in, `distribution: store` + plugin choice) | `https://plugins.gradle.org/m2/com/github/triplet/play/com.github.triplet.play.gradle.plugin/maven-metadata.xml` | `3.11.1` — **unverified locally**, confirm at run time |
 
@@ -369,13 +369,20 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
+        maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
     }
 }
 
 rootProject.name = "<project-name>"
 include(":app")
 ```
+
+**Departure from the reference repository:** the reference lists `https://oss.sonatype.org/content/repositories/snapshots`
+as its snapshots repository, but OSSRH (and that host with it) was decommissioned in mid-2025 — `-SNAPSHOT`
+artifacts published through the Central Portal now land in
+`https://central.sonatype.com/repository/maven-snapshots/`, which is what this template uses so an app can still
+consume a `-SNAPSHOT` build of a library published by `iru-setup-android-library`'s `develop.yml`. Don't copy the
+old URL back from the reference.
 
 `FAIL_ON_PROJECT_REPOS` matches the reference project: it forbids any module-level `build.gradle.kts` from
 declaring its own `repositories {}` block, forcing every dependency to resolve through this single
@@ -416,13 +423,14 @@ android.dependency.useConstraints=true
 android.r8.strictFullModeForKeepRules=false
 android.r8.optimizedResourceShrinking=false
 android.builtInKotlin=<built-in-kotlin-flag>
-android.newDsl=false
+android.newDsl=<built-in-kotlin-flag>
 ```
 
-`<built-in-kotlin-flag>` is `false` unless Step 2's `built-in-kotlin` answer was `yes`. `android.newDsl` stays
-`false` regardless — it gates an unrelated, still-experimental AGP DSL rewrite the reference project also opts out
-of. Copied verbatim from the reference project's `gradle.properties` otherwise (no real repository/org names appear
-in this file, so nothing else needed genericizing).
+`<built-in-kotlin-flag>` is `false` unless Step 2's `built-in-kotlin` answer was `yes`, in which case **both**
+lines become `true` — the same coupling `iru-setup-android-library`'s `gradle.properties` template uses, since
+AGP's built-in Kotlin support is what the new DSL is paired with (the reference project opts out of both together,
+`false`/`false`). Copied verbatim from the reference project's `gradle.properties` otherwise (no real
+repository/org names appear in this file, so nothing else needed genericizing).
 
 ### `gradle/libs.versions.toml`
 
@@ -616,14 +624,16 @@ sonar {
         property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
         property("sonar.java.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
 
+        // Departure from the reference: AGP writes the unit-test XML under test/debug/, and the key names below
+        // (reportPaths / androidLint.reportPaths) are the ones the Sonar analyzer actually reads
         property("sonar.coverage.jacoco.xmlReportPaths",
             listOf("build/reports/coverage/androidTest/debug/connected/report.xml",
-                "build/reports/coverage/test/report.xml"))
+                "build/reports/coverage/test/debug/report.xml"))
         property("sonar.java.coveragePlugin", "jacoco")
-        property("sonar.junit.reportsPath",
+        property("sonar.junit.reportPaths",
             listOf("build/test-results/testDebugUnitTest",
                 "build/outputs/androidTest-results/connected/debug"))
-        property("sonar.android.lint.report", "build/reports/lint-results-debug.xml")
+        property("sonar.androidLint.reportPaths", "build/reports/lint-results-debug.xml")
     }
 }
 
@@ -651,6 +661,18 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
 }
 ```
+
+**Departures from the reference repository inside the `sonar {}` block** (mirroring `iru-setup-android-library`'s
+templates — don't copy the reference's originals back):
+
+- `sonar.coverage.jacoco.xmlReportPaths` lists `build/reports/coverage/test/debug/report.xml`, not the reference's
+  `build/reports/coverage/test/report.xml` — the latter is never written. AGP's `createDebugUnitTestCoverageReport`
+  emits the XML under the variant-suffixed `test/debug/` directory (see the verification notes after Step 8), which
+  is also the path `iru-setup-android-github-workflows`' workflows produce before running `:app:sonar`; the
+  reference's path would silently report 0 % coverage on every push.
+- `sonar.junit.reportPaths` and `sonar.androidLint.reportPaths` replace the reference's `sonar.junit.reportsPath` and
+  `sonar.android.lint.report` — those two are not keys the SonarQube/SonarCloud analyzer reads (unknown properties
+  are ignored), so with the reference's spelling test results and Android Lint findings are silently never imported.
 
 **`signingConfigs` safety, spelled out:** `hasReleaseSigning` is computed once, from four env vars, before `android
 {}` runs. `signingConfigs { if (hasReleaseSigning) { create("release") { … } } }` means the `"release"`
@@ -1142,12 +1164,13 @@ parsing path instead of the JaCoCo one.
 **JUnit 5 (`junit: 5`, additive — Robolectric's runner itself stays JUnit 4)** — add to `[versions]`/`[plugins]`:
 
 ```toml
-androidJunit5 = "<android-junit5-plugin-version>"
+mannodermausAndroidJunit = "<mannodermaus-plugin-version>"
 # [plugins]
-android-junit5 = { id = "de.mannodermaus.android-junit5", version.ref = "androidJunit5" }
+mannodermaus-android-junit = { id = "de.mannodermaus.android-junit", version.ref = "mannodermausAndroidJunit" }
 ```
 
-apply in `app/build.gradle.kts`'s `plugins {}`, and add the plugin's own BOM-pinned JUnit 5 test dependencies per
+apply in `app/build.gradle.kts`'s `plugins {}` as `alias(libs.plugins.mannodermaus.android.junit)` (the same alias
+`iru-setup-android-library` uses), and add the plugin's own BOM-pinned JUnit 5 test dependencies per
 its README (`testImplementation(libs.junit.jupiter)`, `testRuntimeOnly(libs.junit.jupiter.engine)` — exact
 coordinates come from that plugin's own version catalog recommendation at the version resolved in Step 4, since it
 pins compatible JUnit 5 Jupiter/Platform versions together). Robolectric's `@RunWith(RobolectricTestRunner::class)`
@@ -1249,7 +1272,7 @@ anything they need to re-add.
   fails configuration when signing secrets are absent, exactly as designed.
 - The default JDK on this machine (JDK 26) is **not** used — `JAVA_HOME` was pinned explicitly to JBR 21
   (`export JAVA_HOME=$(/usr/libexec/java_home -v 21)`) for every `./gradlew` invocation; not re-tested against JDK
-  17 in this pass (Task 20's library verification exercises that fallback), but the same JBR distribution is
+  17 in this pass (`iru-setup-android-library`'s verification exercises that fallback), but the same JBR distribution is
   present locally at `-v 17` too. Record JDK 21 (or 17) as a hard prerequisite, not just a suggestion — this AGP/
   Gradle combination was never tried against JDK 26.
 - `app/build/reports/lint-results-debug.xml` (17 issues in this run, **all** `Warning`-severity "newer version

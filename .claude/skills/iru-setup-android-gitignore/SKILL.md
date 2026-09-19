@@ -10,9 +10,11 @@ description: Create or update the root `.gitignore` (Gradle/Android Studio noise
   overwrites it silently: it merges in whatever's missing (`mode: existing`), shows the user a diff, and only
   writes on explicit approval. Templates are genericized from
   https://github.com/albertoirurueta/irurueta-android-glutils's own `.gitignore`, `lib/.gitignore` and
-  `app/.gitignore`. Deliberately does **not** ignore the vendored `jacoco-<ver>/` JaCoCo CLI directory that
-  `iru-setup-android-library`/`iru-setup-android-app` commit into the repository — it must stay tracked so CI can
-  convert coverage without a network dependency. Mirrors `iru-setup-java-gitignore`'s diff-and-approve contract for
+  `app/.gitignore`. Always ignores the Kotlin 2.x compiler's root-level `.kotlin/` cache directory, and deliberately
+  does **not** ignore a vendored `jacoco-<ver>/` JaCoCo CLI directory if the repository vendors one (as the
+  reference repository does, for `iru-setup-android-github-workflows`' opt-in coverage-conversion fallback) — it
+  must stay tracked so CI can convert coverage without a network dependency. Mirrors `iru-setup-java-gitignore`'s
+  diff-and-approve contract for
   the Android/Gradle ecosystem. Use whenever an Android library or app project needs a `.gitignore` bootstrapped
   from scratch, or an existing one checked/gap-filled against this house template without touching it unless the
   user approves.
@@ -64,14 +66,18 @@ Parse `args` as `key: value` lines, skipping any question already answered:
 ## Step 2 — The root `.gitignore` base template
 
 Every Android project gets this baseline, adapted verbatim from the reference repository's own root `.gitignore`,
-plus two additions this catalog always wants for a project that also carries Antora documentation
-(`iru-setup-antora`) — the reference repository itself has no `docs/` yet, so these two lines are this skill's own
-addition, not lifted from the reference:
+plus three additions of this skill's own: `.kotlin/` (the Kotlin 2.x compiler's root-level cache directory, which
+every build creates whether or not any static-analysis tooling is wired — the reference predates it), and two
+Antora lines this catalog always wants for a project that also carries Antora documentation (`iru-setup-antora`)
+— the reference repository itself has no `docs/` yet:
 
 ```gitignore
 # Gradle files
 .gradle/
 build/
+
+# Kotlin compiler cache (created at the repository root by every Kotlin 2.x build)
+.kotlin/
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -123,11 +129,15 @@ This section is unconditional — include it verbatim. Notes on specific lines:
   unconditionally, matching the reference; if the project intentionally commits a placeholder version for CI to
   overwrite, that's a project-specific call to flag in Step 7's report, not something this template should special
   case.
-- **The vendored JaCoCo CLI directory (`jacoco-<ver>/`, e.g. `jacoco-0.8.13/lib/jacococli.jar`) is deliberately
-  never added to this template, and no line here may be broadened to match it.** `iru-setup-android-library`/
-  `iru-setup-android-app` commit that directory into the repository on purpose (JaCoCo CLI jars used to convert
-  the AGP unit-test coverage `.exec` output to XML in CI, without depending on network access at build/CI time —
-  see Task 20.2/23's verification notes). Concretely: **do not** add a `*.jar` pattern anywhere in this template
+- `.kotlin/` is unconditional: Kotlin 2.x creates that cache directory at the repository root on every build,
+  regardless of whether Detekt/ktlint/Spotless (Step 4) are wired, so it doesn't belong behind a conditional.
+- **A vendored JaCoCo CLI directory (`jacoco-<ver>/`, e.g. `jacoco-0.8.13/lib/jacococli.jar`) is deliberately
+  never added to this template, and no line here may be broadened to match it.** Neither `iru-setup-android-library`
+  nor `iru-setup-android-app` vendors one (AGP's `createDebugUnitTestCoverageReport` emits the XML directly), but
+  if the repository vendors one — as the reference repository does, and as `iru-setup-android-github-workflows`'
+  opt-in coverage-conversion fallback expects — it must stay tracked: the JaCoCo CLI jars are what convert the AGP
+  unit-test coverage `.exec` output to XML in CI without depending on network access at build/CI time.
+  Concretely: **do not** add a `*.jar` pattern anywhere in this template
   (the reference `.gitignore` has none, precisely so the vendored jars stay tracked) — before proposing any new
   line in Step 4 that could plausibly be a glob starting with `*.jar`, `**/*.jar`, `jacoco*/`, `lib/`, or `/lib/`,
   check it against `git check-ignore -v jacoco-<ver>/lib/jacococli.jar` in the target repository (or the verified
@@ -159,13 +169,10 @@ varies per project.
 - **Antora docs already covered** — Step 2's `docs/build/`/`docs/node_modules/` lines are unconditional (added even
   when `docs/` doesn't exist yet, since `iru-setup-antora` typically runs later in the same bootstrap pipeline);
   don't duplicate them here.
-- **Detekt/ktlint/Spotless caches**, if `iru-setup-android-library`/`-app` was run with static analysis opted in
-  (`detekt.yml` exists, or a `spotless`/`detekt` plugin alias is present in `gradle/libs.versions.toml`): add
-  ```gitignore
-  .kotlin/
-  ```
-  (Kotlin compiler's own incremental-compilation cache directory at the repository root, distinct from each
-  module's `build/`). Skip if neither tool is wired.
+- **Detekt/ktlint/Spotless**: nothing extra to add — Detekt and Spotless keep their caches under each module's
+  `build/` (already ignored), and the root-level `.kotlin/` compiler cache is in Step 2's unconditional base
+  template rather than gated on static analysis, since every Kotlin 2.x build creates it. Mention in Step 7's
+  report that no section was needed for these tools.
 - **Fastlane**, if a `fastlane/` directory exists (some app projects add it later for store metadata/screenshots
   automation, outside this catalog's own scaffold skills but sometimes added by hand): add
   ```gitignore
@@ -176,8 +183,8 @@ varies per project.
   ```
   Skip entirely if no `fastlane/` directory exists — don't preemptively add Fastlane's own template when the
   project has no Fastlane setup to speak of.
-- Don't invent additional entries beyond what's actually detected — if the project has no Detekt/ktlint/Spotless
-  config and no `fastlane/` directory, the composed root `.gitignore` should simply not mention them.
+- Don't invent additional entries beyond what's actually detected — if the project has no `fastlane/` directory,
+  the composed root `.gitignore` should simply not mention it.
 
 ## Step 5 — Compose the proposed content
 
@@ -216,12 +223,13 @@ repository root and to `<module>/.gitignore` for each module in the resolved lis
 - Whether the root `.gitignore` was newly created, updated (and which lines were added), or left untouched
   (already matched).
 - Same, per module.
-- Which conditional Step 4 sections were included versus skipped and why (e.g. "no Detekt/ktlint section — no
-  `detekt.yml` and no matching plugin alias in `gradle/libs.versions.toml`", "no Fastlane section — no `fastlane/`
-  directory").
-- Confirmation that the vendored `jacoco-<ver>/` CLI directory was **not** added to any ignore pattern (or, if it
-  was found already tracked in the target repository, confirm it still shows as tracked via
-  `git check-ignore jacoco-*/lib/jacococli.jar; echo $?` returning `1`, i.e. not ignored).
+- Which conditional Step 4 sections were included versus skipped and why (e.g. "no Fastlane section — no
+  `fastlane/` directory"; "Detekt/ktlint/Spotless need no section of their own — `.kotlin/` is in the base
+  template").
+- Confirmation that no ignore pattern would match a vendored `jacoco-<ver>/` CLI directory (only relevant if the
+  repository vendors one, as the reference repository does — if it was found already tracked in the target
+  repository, confirm it still shows as tracked via `git check-ignore jacoco-*/lib/jacococli.jar; echo $?`
+  returning `1`, i.e. not ignored).
 - If any file already existed: whether the user accepted or skipped the proposed changes, per file.
 
 **Warn explicitly**:
@@ -231,14 +239,15 @@ repository root and to `<module>/.gitignore` for each module in the resolved lis
 - If the repository already had files tracked under a directory this skill now proposes to ignore, `git rm -r
   --cached` that directory manually after reviewing the diff — writing `.gitignore` alone does not untrack
   already-committed files.
-- The vendored `jacoco-<ver>/lib/*.jar` files must stay committed for CI's coverage-conversion fallback
-  (`iru-setup-android-github-workflows`'s "Convert unit tests coverage results" step) to work without network
-  access — never let a future edit to this `.gitignore` start matching them.
+- If the repository vendors `jacoco-<ver>/lib/*.jar` files (as the reference repository does), they must stay
+  committed for CI's opt-in coverage-conversion fallback (`iru-setup-android-github-workflows`'s "Convert unit
+  tests coverage results" step) to work without network access — never let a future edit to this `.gitignore`
+  start matching them.
 - Which values were inferred versus verified: the root/per-module templates (Step 2/3) are lifted verbatim from
   irurueta-android-glutils's own `.gitignore` files, which is a real, currently-maintained Android library
-  repository — verified as accurate to that source as of this skill's authoring. The Detekt/ktlint and Fastlane
-  additions (Step 4) are this catalog's own convention, not sourced from that reference repository, and worth a
-  second look on a project with an unusual layout for either tool.
+  repository — verified as accurate to that source as of this skill's authoring. The `.kotlin/`/Antora lines
+  (Step 2) and the Fastlane addition (Step 4) are this catalog's own convention, not sourced from that reference
+  repository, and worth a second look on a project with an unusual layout.
 
 ## Verification notes
 

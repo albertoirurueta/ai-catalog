@@ -87,6 +87,14 @@ otherwise plain `<package-name>`.
 `sonar-project-key`/`sonar-host-url` once `cloud` or `self-hosted` is chosen.
 |`cloud` when open-source; otherwise asked, `none` recommended
 
+|`integration-branch`
+|No
+|The branch Changesets compares against — written as `baseBranch` into `.changeset/config.json`, so it is only
+consulted when `publish` is `yes`. `iru-setup-typescript-repository` forwards the value it collected for the CI
+workflows so the two agree; stand-alone with `publish: yes` and no value, the skill asks once instead of
+silently defaulting.
+|`main`
+
 |`mode`
 |No
 |`new`/`existing`. `existing` skips Step 1's stop-or-regenerate question and goes straight to gap-fill (create only

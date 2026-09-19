@@ -265,6 +265,11 @@ unless a platform/opt-in note below says otherwise.
 |---|---|
 | `<app-name>` | Step 2 |
 | `<app-slug>` | Slugified `<app-name>` (lowercase, alphanumeric only), derived in Step 2 |
+| `<AppName>` | PascalCase form of `<app-name>` (each whitespace/`-`/`_`-separated word capitalized and concatenated, non-alphanumeric characters stripped, e.g. `My App` → `MyApp`) — the target-name stem, `PRODUCT_NAME`/`PRODUCT_MODULE_NAME`, the `@main` `App` type and the source/test file names |
+| `<device-family>` | `"1"` (`ios` only), `"2"` (`ipados` only), `"1,2"` (both) — from Step 2's platform selection |
+| `<xcode-version>` | Step 4's `xcodebuild -version` major.minor (e.g. `27.0`) |
+| `<min-deployment-target-major>` | The integer major of `<min-deployment-target>` (e.g. `26.0` → `26`), snapped to the nearest `.v<N>` case `PackageDescription` actually declares — see the `Packages/Core/Package.swift` note |
+| `<first-available-simulator-name>` | The first device listed under the current iOS runtime in `xcrun simctl list devices available`, resolved at scaffold time (Step 7/the Fastfile note) — a literal name, never left for the user to fill in |
 | `<bundle-id-prefix>` | Step 2 |
 | `<bundle-id>` | `<bundle-id-prefix>.<app-slug>` |
 | `<watch-bundle-id>` | `<bundle-id-prefix>.<app-slug>.watchkitapp` — only when `watchos` + (`ios`/`ipados`) are both selected |
@@ -326,8 +331,10 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "<marketing-version>"
-    CURRENT_PROJECT_VERSION: "<current-project-version>"
+    # Written unquoted on purpose — iru-swift-bump-version and sync.yml's sync_versions.py rewrite these two
+    # keys by regex (quote-tolerant, but the unquoted form is the canonical one this catalog verifies against).
+    MARKETING_VERSION: <marketing-version>
+    CURRENT_PROJECT_VERSION: <current-project-version>
 packages:
   Core:
     path: Packages/Core
@@ -348,6 +355,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: <bundle-id>
+        # The target is named <AppName>-iOS, which would otherwise yield a <AppName>_iOS module and a
+        # <AppName>-iOS.app/.ipa product — pin both so `@testable import <AppName>` resolves and release.yml's
+        # `build/export/<AppName>.ipa` path matches. Repeat on every app target (macOS/watchOS too).
+        PRODUCT_NAME: <AppName>
+        PRODUCT_MODULE_NAME: <AppName>
         # "1" = iPhone only, "2" = iPad only, "1,2" = both — resolved per Step 2's ios/ipados selection.
         TARGETED_DEVICE_FAMILY: "<device-family>"
     info:
@@ -395,13 +407,17 @@ against exactly this shape, with `<AppName>` → `MyApp`, one iOS target, no wat
 Repeat the `targets`/`schemes` block per additional selected platform:
 
 - **macOS** — `platform: macOS`, target names `<AppName>-macOS`/`<AppName>Tests-macOS`/`<AppName>UITests-macOS`,
-  `type: application` stays the same (AppKit/SwiftUI `App` life cycle), no `TARGETED_DEVICE_FAMILY` key (macOS
-  doesn't use it), Info.plist adds `LSMinimumSystemVersion: "<min-deployment-target>"`.
+  `type: application` stays the same (AppKit/SwiftUI `App` life cycle), the same `PRODUCT_NAME`/
+  `PRODUCT_MODULE_NAME: <AppName>` pair in `settings.base`, no `TARGETED_DEVICE_FAMILY` key (macOS doesn't use
+  it), Info.plist adds `LSMinimumSystemVersion: "<min-deployment-target>"`.
   - Only when `distribution` isn't `none`: `settings.base` also needs `ENABLE_HARDENED_RUNTIME: true` (required for
     `notarytool` to accept the archive later — see the Fastfile's `notarize_release` lane).
 - **watchOS** — `platform: watchOS`, target names `<AppName>-watchOS`/`<AppName>Tests-watchOS`/`<AppName>UITests-watchOS`,
   Info.plist adds `WKCompanionAppBundleIdentifier: <bundle-id>` (only when `ios`/`ipados` is also selected — points
-  back at the iOS app), `PRODUCT_BUNDLE_IDENTIFIER: <watch-bundle-id>`. This is the modern, single-target watch-app
+  back at the iOS app), `PRODUCT_BUNDLE_IDENTIFIER: <watch-bundle-id>` plus the same `PRODUCT_NAME`/
+  `PRODUCT_MODULE_NAME: <AppName>` pair (each platform builds into its own products directory, and the embedded
+  watch app lands under the iOS bundle's `Watch/` folder, so the identical product name never collides). This is
+  the modern, single-target watch-app
   shape (no separate WatchKit Extension target) — current for every watchOS version this skill's fallback Xcode
   (27.0) supports.
 - **`ipados`-without-`ios`**: same iOS-platform target as above, just `<device-family>` → `"2"` and no iPad-specific
@@ -430,9 +446,18 @@ import ProjectDescription
 let baseSettings: SettingsDictionary = [
     "SWIFT_VERSION": "6.0",
     "SWIFT_STRICT_CONCURRENCY": "complete",
+    // Swift string literals, so these stay quoted here (unlike project.yml) — iru-swift-bump-version and
+    // sync_versions.py match exactly this `"KEY": "value"` shape.
     "MARKETING_VERSION": "<marketing-version>",
     "CURRENT_PROJECT_VERSION": "<current-project-version>",
 ]
+
+// Applied to every *app* target (never to the test targets, whose module names must stay distinct): pins the
+// product to <AppName>.app/.ipa and the module to <AppName>, since the target is named <AppName>-iOS.
+let appSettings: SettingsDictionary = baseSettings.merging([
+    "PRODUCT_NAME": "<AppName>",
+    "PRODUCT_MODULE_NAME": "<AppName>",
+]) { _, new in new }
 
 let iosTarget = Target.target(
     name: "<AppName>-iOS",
@@ -452,7 +477,7 @@ let iosTarget = Target.target(
         // Only when `watchos` is also selected:
         .target(name: "<AppName>-watchOS"),
     ],
-    settings: .settings(base: baseSettings)
+    settings: .settings(base: appSettings)
 )
 
 let iosTestTarget = Target.target(
@@ -605,6 +630,7 @@ platform's `Targets/<Platform>/Sources/`.
 ### `Targets/<Platform>/Tests/<AppName>Tests.swift` (Swift Testing, unit-test target)
 
 ```swift
+import Core
 import Testing
 @testable import <AppName>
 
@@ -619,7 +645,9 @@ struct <AppName>Tests {
 ```
 
 A deliberately thin placeholder — its only job is to prove the app target's unit-test target actually compiles and
-links against both the app module and `Core`. Real app-target tests belong here once there's app-specific logic
+links against both the app module and `Core` (`import Core` is what brings `Greeter` into scope — `@testable
+import <AppName>` re-exports nothing from the app's own dependencies; and `<AppName>` resolves only because the
+app target pins `PRODUCT_MODULE_NAME: <AppName>`, see the manifests above). Real app-target tests belong here once there's app-specific logic
 (view models, formatters, etc.) that doesn't belong in the platform-agnostic `Core` package.
 
 ### `Targets/<Platform>/UITests/<AppName>UITests.swift` (XCUITest, UI-test target)
@@ -635,7 +663,8 @@ final class <AppName>UITests: XCTestCase {
     func testAppLaunches() throws {
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.staticTexts["<app-name>"].waitForExistence(timeout: 5))
+        // ContentView renders `Greeter().greeting(for: "<app-name>")`, i.e. the literal "Hello, <app-name>!".
+        XCTAssertTrue(app.staticTexts["Hello, <app-name>!"].waitForExistence(timeout: 5))
     }
 }
 ```
@@ -786,7 +815,7 @@ time, not a placeholder the user is expected to fill in later). **Fastlane lanes
 this skill or its verification** — every lane above is written but never run; Step 7/8 say so explicitly. `notarize`
 here refers to Fastlane's community `fastlane-plugin-notarize` (needs `fastlane add_plugin notarize`) — the raw
 `xcrun notarytool submit --wait` + `xcrun stapler staple` fallback in the comment needs no plugin and is what
-`iru-setup-swift-github-workflows`'s `release.yml` (Task 36) uses directly in CI instead of a Fastlane plugin.
+`iru-setup-swift-github-workflows`'s `release.yml` uses directly in CI instead of a Fastlane plugin.
 
 ### `sonar-project.properties` (only when `sonar` != `none`)
 
@@ -799,7 +828,7 @@ sonar.sources=Packages/Core/Sources,Targets/iOS/Sources,Targets/macOS/Sources,Ta
 sonar.tests=Packages/Core/Tests,Targets/iOS/Tests,Targets/iOS/UITests,Targets/macOS/Tests,Targets/macOS/UITests,Targets/watchOS/Tests,Targets/watchOS/UITests
 sonar.swift.file.suffixes=.swift
 sonar.coverageReportPaths=sonarqube-generic-coverage.xml
-sonar.swiftlint.reportPaths=swiftlint.json
+sonar.swift.swiftLint.reportPaths=swiftlint.json
 ```
 
 List only the `sonar.sources`/`sonar.tests` path segments for platforms actually selected in Step 2 — omit any
@@ -847,7 +876,7 @@ actual `.xcodeproj`, including a real end-to-end app build/run) is **unverified 
    and ran `swift build` (succeeds) and `swift test` (`1 test in 1 suite passed`).
 4. **The `xcodebuild`/simulator/`.xcresult` path Step 5's Fastfile and the whole app workflow depend on** — proven
    against the same `Core` package (a SwiftPM package opens directly in `xcodebuild` without any `.xcodeproj`,
-   exactly as Task 34.2 specifies):
+   exactly as this skill's verification requires):
    - `xcodebuild test -scheme Core -destination 'platform=macOS' -enableCodeCoverage YES -resultBundlePath TestResults.xcresult` — succeeds (`** TEST SUCCEEDED **`).
    - `xcrun simctl list devices available` (no `timeout` binary is installed on this machine — GNU coreutils isn't
      present and `brew` can't supply it either; ran it plain, which returned promptly) — first iOS entry:
@@ -868,7 +897,8 @@ actual `.xcodeproj`, including a real end-to-end app build/run) is **unverified 
    executed** — this skill only wrote the Fastfile text (see Step 5/8).
 
 Verification directory: `$TMPDIR/iru-verify/swift/app` (the `Packages/Core` package lives at
-`$TMPDIR/iru-verify/swift/app/Packages/Core`; nothing was ever written inside the `ai-catalog` repository itself).
+`$TMPDIR/iru-verify/swift/app/Packages/Core`; the verification run writes nothing inside the repository being
+bootstrapped — it only ever touches that throwaway directory).
 
 Report pass/fail and any error output verbatim for a failure; don't dump a successful run's full log.
 

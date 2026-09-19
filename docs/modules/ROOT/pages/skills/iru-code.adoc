@@ -141,9 +141,13 @@ so verbose report output stays out of `iru-code`'s own context window and only t
   involved) and Step 7 (final project-wide comparison against that baseline).
 * xref:skills/iru-check-security.adoc[] — Step 3 (project-wide baseline) and Step 7 (final comparison) — any increase
   is a hard stop, unlike the quality gate's "accept as-is" option.
-* A final full-build verification (Step 7) via `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar
-  source:jar -P '!build-extras'` (or the equivalent for other languages/frameworks in play), run directly as a
-  raw command rather than via a skill.
+* A final full-build verification (Step 7), run once per language/framework key in the plan through
+  `iru-gate-runner` as a raw command rather than via a skill: the full verification command the repository's
+  `CLAUDE.md` names for that stack, else a per-key default (`mvn clean jacoco:prepare-agent install jacoco:report
+  javadoc:jar source:jar -P '!build-extras'` for `java`, `mvn -B -ntp clean verify` for `java-springboot`,
+  `dotnet build && dotnet test`, the package manager's `lint`/`typecheck`/`test` scripts for `typescript`,
+  `./gradlew build` for `android`, `swift build && swift test` or `xcodebuild build-for-testing` for `swift`);
+  skipped when no key could be resolved.
 
 === Invoked by
 

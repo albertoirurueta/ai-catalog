@@ -157,7 +157,7 @@ reimplement that analysis if it's available.
      PR directly and immediately (it does not stop for a separate confirmation) — get explicit confirmation
      before proceeding, since Step 8's confirmation gate only covers this skill's own findings, not
      `code-review`'s.
-  4. Invoke it: `Skill({skill: "iru-code-review", args: "high --comment"})` (use `high` effort for a thorough pass;
+  4. Invoke it: `Skill({skill: "code-review", args: "high --comment"})` (use `high` effort for a thorough pass;
      drop to `medium` if the user wants a lighter review). Wait for it to finish.
   5. Restore the original branch (`git checkout <original-branch>`, and `git stash pop` if a stash was created in
      step 1).

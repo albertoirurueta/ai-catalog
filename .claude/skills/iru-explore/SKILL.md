@@ -384,8 +384,8 @@ Summarize for the user in plain text (no file output unless asked):
   - **Android library with a sample app**: when every `com.android.application` module depends on a sibling
     `com.android.library` module (`implementation(project(":lib"))`) — this catalog's reference library layout,
     `lib/` + Compose `app/` — the value is `android-library`, with the sample module recorded on an indented
-    sub-line for information (`- sample app: app/`), **not** `multiple` (verified in Task 53.2: the front door
-    otherwise asks which module to bootstrap for what is a single library project).
+    sub-line for information (`- sample app: app/`), **not** `multiple` (reporting `multiple` here makes the front door
+    ask which module to bootstrap for what is a single library project).
   - **Multiple modules of different types**: when the repository contains more than one module with a distinct
     project type (e.g. a backend plus a mobile client, or two independent Android apps), the line's value is
     `multiple`, followed by one `<module-path>: <type>` entry per module on indented sub-lines, e.g.:

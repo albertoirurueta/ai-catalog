@@ -1,6 +1,6 @@
 ---
 name: iru-setup-swift-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift build`/`swift test --enable-code-coverage --parallel` plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, `xcodegen generate`/`tuist generate` plus one `xcodebuild test -enableCodeCoverage YES -resultBundlePath` per selected platform destination (piped through `xcbeautify`, `.xcresult` uploaded as a build artifact, coverage converted via SonarSource's `xccov-to-sonarqube-generic.sh`) for the app flavor, an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: `xcodebuild archive` + `-exportArchive`, signed via `fastlane match` or an App Store Connect API key, uploaded to TestFlight, notarized+stapled for macOS), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, and the four `security-*` opt-outs — so an orchestrating skill can supply them without re-prompting. Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Creates all workflows from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, `xcodegen generate`/`tuist generate` plus one `xcodebuild test -enableCodeCoverage YES -resultBundlePath` per selected platform destination (piped through `xcbeautify`, `.xcresult` uploaded as a build artifact, coverage converted via SonarSource's `xccov-to-sonarqube-generic.sh`) for the app flavor, an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: `xcodebuild archive` + `-exportArchive`, signed via `fastlane match` or an App Store Connect API key, uploaded to TestFlight, and — for macOS — exported with Developer ID, notarized and stapled), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, and the four `security-*` opt-outs — so an orchestrating skill can supply them without re-prompting. Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Creates all workflows from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -209,7 +209,8 @@ own verification):
 | `maxim-lobanov/setup-xcode` | `v1` | yes | |
 | `actions/setup-node` | `v7` | yes | used only for the Antora build step |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
-| `actions/upload-artifact` | `v7` | yes | uploads each `.xcresult` bundle, app flavor only |
+| `actions/upload-artifact` | `v7` | yes | uploads each `.xcresult` bundle (app flavor `build.yml`) and the notarized macOS `.zip` (app flavor `release.yml`) |
+| `actions/cache` | `v6` | yes | caches `.build` keyed on `Package.resolved`/`Package.swift`, library flavor (macOS and Linux legs) |
 | `actions/upload-pages-artifact` | `v5` | yes | |
 | `actions/deploy-pages` | `v5` | yes | |
 | `actions/dependency-review-action` | **`v5.0.0`** | **no** | never published a floating `v5` tag — only exact-version tags; pin the exact version and re-check at generation time |
@@ -218,7 +219,8 @@ own verification):
 | `gitleaks/gitleaks-action` | `v3` | yes | |
 | `SonarSource/sonarqube-scan-action` | `v8` | yes | only when `sonar` isn't `none` |
 | `googleapis/release-please-action` | `v5` | yes | only when `release-please: yes` (library only) |
-| `apple-actions/upload-testflight-build` | `v5` | yes | app flavor, `distribution` isn't `none`, only when `signing != fastlane-match` (the Fastlane `pilot` path is used instead when `fastlane-match` is chosen — Step 7) |
+| `apple-actions/upload-testflight-build` | `v5` | yes | app flavor, `distribution` isn't `none`, only when `signing != fastlane-match` (the Fastlane `pilot` path is used instead when `fastlane-match` is chosen — Step 7); its inputs are `issuer-id`/`api-key-id`/`api-private-key` |
+| `apple-actions/import-codesign-certs` | `v7` | yes | app flavor, `macos` selected, `signing: api-key` — imports the Developer ID Application `.p12` the `developer-id` export needs (Step 7) |
 | `swift-actions/setup-swift` | `v2` | yes | library flavor's `ubuntu-latest` matrix leg — an alternative to the official `swift` Docker image (below) |
 | `swift` Docker image (`container: swift:<tag>`) | `6.3-noble` | n/a — not a `uses:` action | the **open-source Linux Swift toolchain lags the Apple-toolchain-bundled Swift version** — confirmed during this skill's own verification: this machine's Xcode 27/Swift 6.4 has no Linux `swift:6.4*` tag published yet on Docker Hub, only up to `6.3.3`; re-check `https://hub.docker.com/v2/repositories/library/swift/tags` at generation time rather than assuming the two track each other |
 | `swiftlint` (Homebrew formula, not a `uses:` action) | `0.65.1` | n/a | preinstalled on the `macos-26` runner image (Step 0's note); only `brew install`ed when missing |
@@ -236,11 +238,11 @@ Unlike `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`
 workflow files, no equivalent real Swift/Apple repository was available to derive this skill's templates from.
 Instead, every template in Steps 4–9 is assembled from:
 
-- The exact, verified commands `iru-setup-swift-library` (Task 33), `iru-setup-apple-app` (Task 34),
+- The exact, verified commands `iru-setup-swift-library`, `iru-setup-apple-app`,
   `iru-swift-coverage`, and `iru-swift-bump-version` already established and verified for this catalog's Swift
   stack — the build-products path, the `.xctest` binary naming, the `llvm-cov`/`xccov` invocations, the DocC
   flags, the version-file rewrite targets — reused here verbatim rather than reinvented.
-- This skill's own verification pass (Step 13), run against Task 33's actual scaffold.
+- This skill's own verification pass (Step 13), run against `iru-setup-swift-library`'s actual generated scaffold.
 - The Java/TypeScript/Android siblings' own conventions for the parts that are ecosystem-agnostic — the
   Dependabot/CodeQL/dependency-review/OSV-Scanner/gitleaks security block shape, the Pages-deploy-from-Actions
   mechanism, the gitflow `sync.yml` merge-back-and-bump pattern — carried over for consistency across this
@@ -286,10 +288,20 @@ jobs:
       - name: Run swift format lint
         run: swift format lint --strict --recursive Sources Tests
 
-      - name: Build
-        run: swift build
+      # Keyed on Package.resolved when the repository commits it (package-resolved: commit), falling back to
+      # Package.swift's hash otherwise — hashFiles() of a missing file is the empty string, so the key still works.
+      - name: Cache SwiftPM build directory
+        uses: actions/cache@v6
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
 
-      - name: Test with coverage
+      # No separate `swift build` first: --enable-code-coverage changes the compiler flags, so a plain build
+      # followed by a coverage test run compiles the whole package twice on a paid macOS runner. `swift test`
+      # builds everything it needs itself.
+      - name: Build and test with coverage
         run: swift test --enable-code-coverage --parallel
 
       - name: Export lcov coverage
@@ -325,12 +337,15 @@ jobs:
       # in this skill's own verification: --allow-writing-to-directory alone does not create missing intermediate
       # directories, and generate-documentation fails with an NSCocoaErrorDomain "couldn't be moved" error if the
       # parent doesn't already exist.
+      # --hosting-base-path must be <repo>/api, not <repo>: the archive is merged into the Pages site under
+      # api/ below, and DocC bakes this path into every absolute asset/JS link — with the bare <repo> they'd
+      # resolve to /<repo>/js/… instead of /<repo>/api/js/… and the published API docs render blank.
       - name: Generate DocC documentation
         if: github.ref == 'refs/heads/<stable-branch>'
         run: |
           mkdir -p docc-output
           swift package --allow-writing-to-directory docc-output generate-documentation \
-            --target <Name> --transform-for-static-hosting --hosting-base-path <repo> \
+            --target <Name> --transform-for-static-hosting --hosting-base-path <repo>/api \
             --output-path docc-output
 
       - name: Set up Node
@@ -376,9 +391,15 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v7
-      - name: Build
-        run: swift build
-      - name: Test
+      - name: Cache SwiftPM build directory
+        uses: actions/cache@v6
+        with:
+          path: .build
+          key: linux-spm-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            linux-spm-
+      # `swift test` builds the package and its tests itself — a preceding `swift build` would just compile twice.
+      - name: Build and test
         run: swift test --parallel
 
   # Omit this whole job if github.ref != refs/heads/<stable-branch> was already the deploy job's own gate above —
@@ -516,7 +537,9 @@ Same job name/trigger shape as Step 4's `build-test` job, replacing every step f
           mkdir -p docc-output
           swift package --package-path Packages/Core --allow-writing-to-directory docc-output \
             generate-documentation --target Core --transform-for-static-hosting \
-            --hosting-base-path <repo> --output-path docc-output
+            --hosting-base-path <repo>/api --output-path docc-output
+      # (--hosting-base-path is <repo>/api, not <repo>, for the same reason as Step 4: the archive is merged
+      # into the Pages site under api/, and DocC bakes the base path into its absolute asset links.)
       # ... Set up Node / Install Antora / Build Antora docs / Merge DocC API docs / Upload Pages artifact:
       # identical to Step 4, copy verbatim.
 ```
@@ -554,6 +577,11 @@ on:
   push:
     branches: [ <stable-branch> ]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify (e.g. v1.2.0) — a manual dry run has no release event to read it from"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -565,14 +593,16 @@ jobs:
     runs-on: ubuntu-latest
     container: swift:<linux-swift-tag>
     steps:
+      # No fetch-depth: 0 — nothing in this job reads git history; a shallow checkout of the tagged commit is
+      # all `swift package dump-package` needs.
       - name: Check out code
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
+      # `github.event.release.tag_name` is empty on workflow_dispatch, so the manual dry run Step 14 recommends
+      # would otherwise always fail the semver check — fall back to the `tag` input.
       - name: Verify the tag is valid semver
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
           VERSION="${TAG#v}"
@@ -614,19 +644,29 @@ on:
   release:
     types: [released]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to archive (e.g. v1.2.0) — a manual dry run has no release event to read it from"
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
   archive-and-upload:
     name: Archive, sign, and upload
     runs-on: <runner>
     steps:
+      # No fetch-depth: 0 — nothing in this job reads git history; a shallow checkout of the tagged commit is
+      # all xcodebuild needs.
       - name: Check out code
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Select Xcode <xcode-version>
         uses: maxim-lobanov/setup-xcode@v1
@@ -638,19 +678,36 @@ jobs:
           command -v xcodegen >/dev/null || brew install xcodegen   # generator: tuist — swap for tuist generate --no-open
           xcodegen generate
 
-      # signing: fastlane-match only
+      # signing: fastlane-match only. MATCH_GIT_BASIC_AUTHORIZATION is what `match` uses to clone a *private*
+      # certificates repository over HTTPS (base64 of "<user>:<personal-access-token>"); without it the clone
+      # prompts for credentials and the job hangs. `developer_id` is only fetched when macos is selected —
+      # the developer-id export below needs a Developer ID Application certificate in the keychain.
       - name: Fetch distribution signing certificates and profiles
+        if: <signing == fastlane-match>
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-        run: fastlane match appstore --readonly --git_url "$MATCH_GIT_URL"
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          fastlane match appstore --readonly --git_url "$MATCH_GIT_URL"
+          <macos selected: fastlane match developer_id --readonly --git_url "$MATCH_GIT_URL">
 
-      # signing: api-key only — writes the .p8 key match/App Store Connect API auth both eventually need
+      # distribution != none, either signing mode — every upload/notarization path below authenticates with an
+      # App Store Connect API key (`fastlane pilot`, apple-actions/upload-testflight-build and notarytool all
+      # need one; `match` certificates alone never authenticate an upload). Decodes the base64 secret once into
+      # AuthKey.p8 for xcodebuild/notarytool, and into a multi-line env var for the TestFlight action's
+      # `api-private-key` input, which takes the raw .p8 content rather than a path.
       - name: Write the App Store Connect API key
-        if: <signing == api-key>
+        if: <distribution != none>
         env:
           API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-        run: echo "$API_KEY_BASE64" | base64 -d > AuthKey.p8
+        run: |
+          echo "$API_KEY_BASE64" | base64 -d > AuthKey.p8
+          {
+            echo "APP_STORE_CONNECT_API_PRIVATE_KEY<<EOF"
+            cat AuthKey.p8
+            echo "EOF"
+          } >> "$GITHUB_ENV"
 
       - name: Archive <AppName>-iOS
         run: |
@@ -680,40 +737,99 @@ jobs:
             -exportPath build/export -exportOptionsPlist ExportOptions.plist \
             <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
 
-      # distribution: internal or store, signing: fastlane-match — uses the Fastfile's own credentials wiring
+      # distribution: internal or store, signing: fastlane-match. `fastlane pilot upload` has no App Store
+      # Connect session of its own — it is given the API key through pilot's `api_key_path` option, a small JSON
+      # file with the key id, issuer id and the .p8 contents.
       - name: Upload to TestFlight via fastlane pilot
-        if: <signing == fastlane-match>
-        run: fastlane pilot upload --ipa build/export/<AppName>.ipa --skip_waiting_for_build_processing
+        if: <signing == fastlane-match && distribution != none>
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          json.dump({
+              "key_id": os.environ["APP_STORE_CONNECT_API_KEY_ID"],
+              "issuer_id": os.environ["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+              "key": open("AuthKey.p8").read(),
+              "in_house": False,
+          }, open("AuthKey.json", "w"))
+          PY
+          fastlane pilot upload --ipa build/export/<AppName>.ipa --api_key_path AuthKey.json \
+            --skip_waiting_for_build_processing
 
-      # distribution: internal or store, signing: api-key — no Fastlane session needed, the action takes the API
-      # key directly
+      # distribution: internal or store, signing: api-key — the action's inputs are `issuer-id`, `api-key-id`
+      # and `api-private-key` (raw .p8 content, decoded into the env above), not a base64 blob or a path.
       - name: Upload to TestFlight
-        if: <signing == api-key>
+        if: <signing == api-key && distribution != none>
         uses: apple-actions/upload-testflight-build@v5
         with:
           app-path: build/export/<AppName>.ipa
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          api-key-issuer-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          api-key-base64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          api-private-key: ${{ env.APP_STORE_CONNECT_API_PRIVATE_KEY }}
 
-      # macos platform selected, distribution != none — notarization is macOS-only; iOS/watchOS builds never go
-      # through notarytool/stapler.
+      # ---- macOS (macos selected, distribution != none) ----
+      # Default: Developer ID distribution (a directly downloadable, notarized .app) — an `app-store` export
+      # produces a .pkg for App Store Connect that is never notarized, so notarytool would have nothing valid to
+      # submit; see the notes below for swapping to the App Store .pkg path instead. A developer-id export needs
+      # a "Developer ID Application" certificate in the runner keychain: `match developer_id` above supplies it
+      # for fastlane-match; for api-key, cloud-managed signing cannot create Developer ID certificates, so the
+      # exported .p12 is imported explicitly here.
+      - name: Import the Developer ID Application certificate
+        if: <macos selected && signing == api-key>
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+
+      - name: Write ExportOptions-macos.plist
+        if: <macos selected>
+        run: |
+          cat > ExportOptions-macos.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string><team-id></string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          PLIST
+
       - name: Archive and export <AppName>-macOS
         if: <macos selected>
         run: |
           xcodebuild archive -scheme <AppName>-macOS -archivePath build/<AppName>-macOS.xcarchive \
             <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
           xcodebuild -exportArchive -archivePath build/<AppName>-macOS.xcarchive \
-            -exportPath build/export-macos -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/export-macos -exportOptionsPlist ExportOptions-macos.plist \
             <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
 
-      - name: Notarize <AppName>-macOS
+      # notarytool only accepts a zip, dmg or pkg — never a bare .app directory. Zip with ditto (the only
+      # archiver that preserves the bundle's resource forks/symlinks the way Apple expects), submit the zip,
+      # staple the ticket onto the .app itself, then re-zip the stapled bundle as the artifact to ship.
+      - name: Notarize and staple <AppName>-macOS
         if: <macos selected>
         run: |
-          xcrun notarytool submit build/export-macos/<AppName>.app \
+          ditto -c -k --keepParent build/export-macos/<AppName>.app build/export-macos/<AppName>.zip
+          xcrun notarytool submit build/export-macos/<AppName>.zip \
             --key AuthKey.p8 --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
             --issuer ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }} --wait
           xcrun stapler staple build/export-macos/<AppName>.app
+          rm build/export-macos/<AppName>.zip
+          ditto -c -k --keepParent build/export-macos/<AppName>.app build/export-macos/<AppName>.zip
+
+      - name: Upload the notarized macOS app
+        if: <macos selected>
+        uses: actions/upload-artifact@v7
+        with:
+          name: <AppName>-macOS
+          path: build/export-macos/<AppName>.zip
 ```
 
 Notes specific to this template:
@@ -725,14 +841,34 @@ Notes specific to this template:
   companion-embedded shape this catalog's scaffold assumes. Only a *standalone* watchOS app (no iOS companion at
   all, `iru-setup-apple-app`'s own documented-as-unusual case) gets its own archive/export/notarize block,
   mirroring the iOS one.
-- `xcrun notarytool submit --key/--key-id/--issuer` (the API-key auth form) is used regardless of `signing`
-  because Apple's notarization service has never accepted `fastlane match`-style certificate-only auth for
-  submission — it always needs either an Apple ID + app-specific password or an API key; this catalog's
-  `iru-setup-apple-app` Fastfile comment already documents the same `xcrun notarytool submit --wait` +
-  `xcrun stapler staple` fallback for exactly this reason. When `signing: fastlane-match` (no App Store Connect
-  API key secrets configured), the `Notarize` step above needs an additional `APP_STORE_CONNECT_API_KEY_*` secret
-  set purely for notarization even though the rest of the pipeline uses `match` — call this out explicitly in the
-  final report as an extra secret requirement specific to macOS distribution.
+- **The App Store Connect API key is required for every `distribution != none` pipeline, whichever `signing`
+  mode is chosen** — `fastlane match` only supplies certificates and profiles; it never authenticates an upload
+  or a notarization. `fastlane pilot upload` gets the key via `--api_key_path` (the JSON file the step writes),
+  `apple-actions/upload-testflight-build` via its `api-private-key` input (the decoded `.p8` content, not a
+  path and not base64), and `xcrun notarytool submit --key/--key-id/--issuer` via the `.p8` file directly.
+  Apple's notarization service has never accepted certificate-only auth; this catalog's `iru-setup-apple-app`
+  Fastfile comment already documents the same `xcrun notarytool submit --wait` + `xcrun stapler staple`
+  fallback for exactly this reason.
+- **macOS defaults to Developer ID + notarization, not an App Store `.pkg`.** `ExportOptions-macos.plist`'s
+  `method: developer-id` yields a signed `.app` that `notarytool` can stamp and that users download directly;
+  an `app-store` export instead produces a `.pkg` for App Store Connect that is *never* notarized (App Review
+  handles that), so pairing it with a notarize step is a contradiction. For a Mac App Store release swap the
+  method back to `app-store`, drop the whole `Notarize and staple` step, and upload the exported
+  `build/export-macos/<AppName>.pkg` with the same `fastlane pilot`/`upload-testflight-build` step used for
+  iOS (both accept a `.pkg`). State which of the two paths was generated in the final report.
+- The `developer-id` export needs a **Developer ID Application** certificate in the runner keychain — `match
+  developer_id --readonly` fetches it under `signing: fastlane-match`; under `signing: api-key`, `-allowProvisioningUpdates`
+  can create App Store certificates on demand but *not* Developer ID ones (only the Account Holder can), hence
+  the explicit `import-codesign-certs` step and its two extra secrets. Hardened runtime
+  (`ENABLE_HARDENED_RUNTIME`, which `iru-setup-apple-app` sets on the macOS target) is what makes the notarized
+  build pass Gatekeeper.
+- `MATCH_GIT_BASIC_AUTHORIZATION` (base64 of `<git-user>:<personal-access-token>`) is how `match` clones a
+  private certificates repository over HTTPS on a runner with no interactive git credentials; an SSH deploy key
+  loaded via `webfactory/ssh-agent` is the alternative if the certs repo URL is `git@…` — either way, one of
+  the two must exist or the `match` step hangs on a credential prompt.
+- `workflow_dispatch` carries a required `tag` input so a manual dry run archives the same tagged commit a real
+  Release would (`github.event.release.tag_name` is empty outside the `release` event); `RELEASE_TAG` resolves
+  to whichever is present.
 - `<team-id>` in `ExportOptions.plist` has no run-time lookup — ask the user for their Apple Developer Team ID
   directly (Step 0/1 has no signal for it) and note it as a required manual input in the final report.
 - Every `<signing == api-key: ...>` inline marker means "append these flags only when `signing: api-key`" —
@@ -835,10 +971,21 @@ jobs:
           NEXT_VERSION: ${{ steps.versions.outputs.next_version }}
         run: python3 .github/scripts/sync_versions.py
 
+      # Emit only this flavor's/generator's real files — `git add` aborts on the first pathspec that matches
+      # nothing and stages *none* of the others, so one line naming both project.yml and Project.swift (or a
+      # library's version.txt next to an app's manifest) would silently stage nothing and the sync PR would
+      # carry no version bump. flavor: library →
       - name: Commit the version bump
         if: steps.guard.outputs.exists == 'false'
         run: |
-          git add version.txt CHANGELOG.md README.md project.yml Project.swift docs/antora.yml docs/modules/ROOT/pages 2>/dev/null || true
+          git add version.txt CHANGELOG.md README.md docs/antora.yml docs/modules/ROOT/pages
+          git diff --cached --quiet || git commit -m "Sync ${{ steps.versions.outputs.next_version }}"
+
+      # flavor: app, generator: xcodegen → (generator: tuist — replace project.yml with Project.swift)
+      - name: Commit the version bump
+        if: steps.guard.outputs.exists == 'false'
+        run: |
+          git add project.yml CHANGELOG.md README.md docs/antora.yml docs/modules/ROOT/pages
           git diff --cached --quiet || git commit -m "Sync ${{ steps.versions.outputs.next_version }}"
 
       - name: Push sync branch
@@ -872,11 +1019,15 @@ Notes specific to this template:
   for both the library and app cases (there is no `-SNAPSHOT`/`-dev.N`-style pre-release marker in either Swift
   case to gate a minor-vs-patch choice on, unlike the Java sibling's Maven `-SNAPSHOT` convention). If this
   repository does minor/major-level releases too, flag it as an open gap in the final report.
-- `git add` lists every file either the library or the app path might touch and swallows the "no such file"
-  error for whichever half doesn't apply (`|| true`) rather than needing a separate `git add` line per flavor —
-  simpler than the Java/Android siblings' flavor-specific `git add`, since this skill already knows `flavor` at
-  generation time and could narrow it, but keeping it broad costs nothing since `git add` on a nonexistent path
-  is harmless once redirected.
+- **Write exactly one `Commit the version bump` step**, with the `git add` line for the resolved `flavor` and
+  (app only) `generator` — the two variants above are alternatives, never both. Every path on that line must
+  exist in the repository: `git add` fails on the first unmatched pathspec *before* staging anything, so a
+  catch-all list with `2>/dev/null || true` would swallow the error and commit nothing at all. Keep only the
+  files `sync_versions.py` can actually touch — `version.txt` (library), `project.yml` **or** `Project.swift`
+  (app, by generator), `CHANGELOG.md`, `README.md`, `docs/antora.yml`, `docs/modules/ROOT/pages` — and drop any
+  of those the repository genuinely lacks (e.g. no Antora docs: remove both `docs/…` entries; Step 1's survey
+  knows). If a path may legitimately be absent, add it on its own line (`git add <path> || true`) so its failure
+  can't mask the others.
 - Same "Workflow permissions" repository-setting caveat as every sibling's `sync.yml` — the `permissions:` block
   here is necessary but not sufficient; Settings → Actions → General → "Workflow permissions" must also allow
   GitHub Actions to create pull requests, or `gh pr create` fails despite the token having the right scopes.
@@ -935,14 +1086,20 @@ def update_project_yml(next_version):
     if not path.exists():
         return
     text = path.read_text()
-    text, n_mv = re.subn(r'(MARKETING_VERSION:\s*)\S+', lambda m: f'{m.group(1)}{next_version}', text, count=1)
+    # Quote-tolerant: matches `MARKETING_VERSION: 1.0.0` and `MARKETING_VERSION: "1.0.0"` alike, and keeps
+    # whichever form the file already uses (same regexes as iru-swift-bump-version's project.yml path).
+    text, n_mv = re.subn(
+        r'(MARKETING_VERSION:\s*)("?)[^"\s]+\2',
+        lambda m: f'{m.group(1)}{m.group(2)}{next_version}{m.group(2)}',
+        text, count=1,
+    )
     if n_mv == 0:
         sys.exit("project.yml: MARKETING_VERSION not found")
 
     def bump(m):
-        return f"{m.group(1)}{int(m.group(2)) + 1}"
+        return f"{m.group(1)}{m.group(2)}{int(m.group(3)) + 1}{m.group(2)}"
 
-    text, n_cpv = re.subn(r'(CURRENT_PROJECT_VERSION:\s*)(\d+)', bump, text, count=1)
+    text, n_cpv = re.subn(r'(CURRENT_PROJECT_VERSION:\s*)("?)(\d+)\2', bump, text, count=1)
     if n_cpv == 0:
         sys.exit("project.yml: CURRENT_PROJECT_VERSION not found")
     path.write_text(text)
@@ -1093,15 +1250,22 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '<xcode-version>'
+      # flavor: app only — the .xcodeproj is gitignored and regenerated, so autobuild would find no project to
+      # build; generate it before codeql-action/init runs (generator: tuist — swap for tuist generate --no-open).
+      - name: Generate Xcode project
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: swift
           build-mode: autobuild
           # If autobuild ever fails against this project's layout, switch to build-mode: manual and add an
-          # explicit build step here instead (flavor: library — `swift build`; flavor: app — `xcodegen
-          # generate`/`tuist generate` then `xcodebuild build -scheme <Scheme>`), the same fallback the Java/
-          # Android siblings document for their own autobuild step.
+          # explicit build step between init and analyze instead (flavor: library — `swift build`; flavor:
+          # app — `xcodebuild build -scheme <AppName>-iOS -destination 'generic/platform=iOS Simulator'
+          # CODE_SIGNING_ALLOWED=NO` against the project generated above), the same fallback the Java/Android
+          # siblings document for their own autobuild step.
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4
 
@@ -1136,6 +1300,10 @@ jobs:
 
 Notes specific to this template:
 
+- `codeql`'s `Generate Xcode project` step is emitted for `flavor: app` only (drop it for a library — `swift
+  build` needs no generated project); it must come *before* `codeql-action/init`, since autobuild inspects the
+  checkout for something to build the moment the extractor starts, and the app scaffold's `.xcodeproj` only
+  exists after `xcodegen generate`/`tuist generate`.
 - `codeql`'s `runs-on: <runner>` and its own `maxim-lobanov/setup-xcode` step make this the only `security.yml`
   job that runs on a macOS runner (and therefore the only one subject to the ~10x minutes-cost note) — every
   other language this catalog's `iru-setup-*-github-workflows` siblings cover runs CodeQL on `ubuntu-latest`;
@@ -1246,7 +1414,7 @@ needs no adaptation for this catalog's use — see Step 5).
 | `<linux-swift-tag>` | Step 2's live Docker Hub lookup, fallback `6.3-noble` |
 | `<Name>` | Library: `Package.swift`'s target/product name (Step 1). Not used for the app flavor. |
 | `<AppName>` / `<app-name>` | App: `project.yml`'s `name:` / `Project.swift`'s `Project(name:` (Step 1) |
-| `<repo>` | Parsed from `git remote get-url origin`, used only as DocC's `--hosting-base-path` |
+| `<repo>` | Parsed from `git remote get-url origin`, used only in DocC's `--hosting-base-path <repo>/api` — the `/api` suffix is fixed (it is where the Pages merge step copies the archive), only the `<repo>` segment is substituted |
 | `<team-id>` | Asked directly (Step 7) — no run-time signal for it |
 | `<sonar-host-url>` / `<sonar-organization>` / `<sonar-project-key>` | Step 0/1 Sonar survey / `args`; only needed when `sonar` isn't `none` |
 | `<generator>` | Step 1 (`project.yml` vs. `Project.swift`) |
@@ -1265,11 +1433,14 @@ matching value doesn't apply.
 | `lcov_to_sonar_generic.py` (vendored file) | `flavor: library`, `sonar` isn't `none` |
 | `xccov-to-sonarqube-generic.sh` (fetched at CI time) | `flavor: app`, `sonar` isn't `none` |
 | `release-please` job in `release.yml` | `flavor: library`, `release-please: yes` |
-| `Fetch distribution signing certificates` step | `flavor: app`, `signing: fastlane-match` |
-| `Write the App Store Connect API key` step + every `-authenticationKeyPath` flag | `flavor: app`, `signing: api-key` |
-| `Upload to TestFlight` steps | `flavor: app`, `distribution` isn't `none` (`fastlane pilot` for `fastlane-match`, the action for `api-key`) |
-| `Archive and export <AppName>-macOS` + `Notarize` steps | `flavor: app`, `macos` selected, `distribution` isn't `none` |
+| `Fetch distribution signing certificates` step | `flavor: app`, `signing: fastlane-match` (its `match developer_id` line only when `macos` is also selected) |
+| `Write the App Store Connect API key` step | `flavor: app`, `distribution` isn't `none` (both signing modes — `pilot`, the TestFlight action and `notarytool` all authenticate with it) |
+| Every `-authenticationKeyPath` flag | `flavor: app`, `signing: api-key` |
+| `Upload to TestFlight` steps | `flavor: app`, `distribution` isn't `none` (`fastlane pilot --api_key_path` for `fastlane-match`, the action for `api-key`) |
+| `Import the Developer ID Application certificate` step | `flavor: app`, `macos` selected, `distribution` isn't `none`, `signing: api-key` |
+| `Write ExportOptions-macos.plist` + `Archive and export <AppName>-macOS` + `Notarize and staple` + `Upload the notarized macOS app` steps | `flavor: app`, `macos` selected, `distribution` isn't `none` |
 | `codeql` job | `security-codeql: yes` |
+| `codeql`'s `Generate Xcode project` step (before `codeql-action/init`) | `flavor: app` |
 | `dependency-review` / `osv-scanner` / `gitleaks` jobs | matching `security-*: yes` |
 | `sync.yml` + `sync_versions.py` | `branching: gitflow` only |
 
@@ -1304,12 +1475,12 @@ Run through the `iru-gate-runner` agent where output could be long. Verification
 3. Resolve every `uses:` ref with `gh api repos/<owner>/<repo>/git/ref/tags/<ref>` or `git ls-remote --tags
    https://github.com/<owner>/<repo> <ref>`, recording which actions lack a floating major tag (Step 2's table
    already reflects this skill's own such run).
-4. Run the library flavor's `build.yml` shell steps for real against Task 33's existing scaffold, copied first
+4. Run the library flavor's `build.yml` shell steps for real against `iru-setup-swift-library`'s existing generated scaffold, copied first
    (never mutate the original) — see "Known quirks / verification notes" below for exact commands and results.
 
 ### Known quirks / verification notes (September 2026, against Xcode 27.0 / Swift 6.4, no `brew` installed)
 
-- **Verified for real** in `$TMPDIR/iru-verify/swift/workflows/library-copy` (a fresh `cp -R` of Task 33's own
+- **Verified for real** in `$TMPDIR/iru-verify/swift/workflows/library-copy` (a fresh `cp -R` of `iru-setup-swift-library`'s own
   `$TMPDIR/iru-verify/swift/library` scaffold, package `ExampleLibrary`, `.build`/`Package.resolved`/
   `coverage.lcov` removed first since the copied `.build` carried stale absolute-path symlinks back to the
   original directory):
@@ -1365,7 +1536,7 @@ Run through the `iru-gate-runner` agent where output could be long. Verification
   `.xcworkspace` to locate build settings — it has no path for a bare SwiftPM package with neither, which
   `iru-setup-swift-library`'s scaffold never produces. **Both problems independently rule out slather for the
   library flavor** — this skill's `lcov_to_sonar_generic.py` (verified above) is the actual default for exactly
-  the reason Task 36's own brief anticipated, not a fallback of convenience.
+  the reason anticipated when this skill was designed, not a fallback of convenience.
 - **SonarSource's `xccov-to-sonarqube-generic.sh` was located and read in full** (at
   `SonarSource/sonar-scanning-examples/swift-coverage/swift-coverage-example/xccov-to-sonarqube-generic.sh` —
   not the more guessable `swift-coverage/xccov-to-sonarqube-generic.sh` path) — confirmed by reading its actual
@@ -1435,7 +1606,9 @@ generated:
 |---|---|---|
 | `SONAR_TOKEN` | Auth token for the SonarQube/SonarCloud scan | `sonar` is `cloud` or `self-hosted` |
 | `MATCH_GIT_URL` / `MATCH_PASSWORD` | `fastlane match`'s certs-repo URL and its encryption passphrase | `flavor: app`, `signing: fastlane-match` |
-| `APP_STORE_CONNECT_API_KEY_ID` / `_ISSUER_ID` / `_KEY_BASE64` | App Store Connect API key (auth for `-allowProvisioningUpdates`, TestFlight upload, and — regardless of `signing` — notarization on macOS) | `flavor: app`, `signing: api-key`; also needed purely for notarization when `macos` is selected and `signing: fastlane-match` |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | base64 of `<git-user>:<personal-access-token>` — how `match` clones a private certs repository over HTTPS on the runner (an SSH deploy key via `webfactory/ssh-agent` is the alternative for a `git@…` URL) | `flavor: app`, `signing: fastlane-match` |
+| `APP_STORE_CONNECT_API_KEY_ID` / `_ISSUER_ID` / `_KEY_BASE64` | App Store Connect API key — auth for `fastlane pilot upload` (`--api_key_path`), `apple-actions/upload-testflight-build` (`api-private-key`), `notarytool`, and (api-key only) `-allowProvisioningUpdates` | `flavor: app`, `distribution` isn't `none` — **both** signing modes, since `match` certificates never authenticate an upload or a notarization |
+| `DEVELOPER_ID_CERTIFICATE_P12_BASE64` / `DEVELOPER_ID_CERTIFICATE_PASSWORD` | Exported Developer ID Application certificate for the macOS `developer-id` export (automatic signing can't create one) | `flavor: app`, `macos` selected, `distribution` isn't `none`, `signing: api-key` (under `fastlane-match`, `match developer_id` supplies it instead) |
 | `GITHUB_TOKEN` | `sync.yml`'s `gh` calls, `security.yml`'s CodeQL/gitleaks jobs | Automatic — no setup needed |
 
 `sync.yml` also needs the repository setting under Settings → Actions → General → "Workflow permissions" set to
@@ -1447,8 +1620,9 @@ deployment" → Source set to **GitHub Actions**. Call both out explicitly.
 - **The user must review every generated (or updated) workflow file before relying on it.** Branch names, the
   Apple Developer Team ID, and the signing/distribution setup were inferred or asked for directly and may need
   correction — and because this pipeline handles signing keys and can publish to TestFlight/App Store, a bad
-  assumption here has real consequences. Recommend a dry run via `workflow_dispatch` before trusting it on a
-  real release.
+  assumption here has real consequences. Recommend a dry run via `workflow_dispatch` (supplying an existing
+  tag in its `tag` input — both `release.yml` flavors read `github.event.release.tag_name || inputs.tag`) before
+  trusting it on a real release.
 - Every secret in the table above, and the matching SonarCloud project / Apple Developer Program membership /
   `fastlane match` certs repository / App Store Connect API key, must already exist before CI can pass — this
   skill only writes the workflow YAML, it never creates any of those accounts or credentials itself.
