@@ -75,7 +75,7 @@ flowchart TD
     D --> E{Target classes given?}
     E -- yes --> F["Use given class list"]
     E -- no --> G["Infer from test selector\n(FooTests -> Foo), or defer to\nevery class touched by the run"]
-    F --> H["Delete stale TestResults;\nrun dotnet test --collect:\n\"XPlat Code Coverage\""]
+    F --> H["Delete stale TestResults;\nrun dotnet test --collect:\nXPlat Code Coverage"]
     G --> H
     H --> I{Test run succeeded?}
     I -- no --> J["Report failure, stop\n(don't read a stale report)"]

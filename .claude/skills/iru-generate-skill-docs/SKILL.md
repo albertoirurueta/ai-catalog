@@ -251,6 +251,13 @@ which kills the whole diagram. Rewording the label to avoid angle brackets altog
 Only label *text* is affected. Never touch link syntax — `-->`, `-.->`, `==>`, `<-->` are Mermaid operators and
 must stay literal. `\n` inside a label is fine and does produce a line break.
 
+The same care applies to **double quotes inside a quoted label**. Mermaid has no backslash escape: a label
+written `G["Report \"coverage not wired\""]` ends the string at the first inner quote and the parser then fails
+on the rest, which — unlike the angle-bracket case — kills the whole diagram with a syntax error. Either reword
+the label so it needs no inner quotes (`G["Report: coverage not wired"]`, `H["run dotnet test --collect:\nXPlat
+Code Coverage"]`), or use single quotes inside the double-quoted label. Don't reach for `#quot;` for the same
+reason `#60;`/`#62;` are avoided above.
+
 ## Step 10 — Verify the site builds
 
 From the docs module directory:

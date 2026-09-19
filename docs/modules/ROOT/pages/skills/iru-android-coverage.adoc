@@ -70,7 +70,7 @@ flowchart TD
     C -- "1. Kover plugin applied" --> D["Run gradlew koverXmlReportDebug"]
     C -- "2. AGP enableUnitTestCoverage set" --> E["Run gradlew createDebugUnitTestCoverageReport\nglob build/reports/coverage/test/debug for XML"]
     C -- "3. vendored jacococli.jar present" --> F["Run testDebugUnitTest, glob build/jacoco/*.exec,\nconvert with jacococli.jar report --xml"]
-    C -- "none wired" --> G["Report \"coverage not wired\"\n(name the missing plugin/setting/jar), stop"]
+    C -- "none wired" --> G["Report: coverage not wired\n(name the missing plugin/setting/jar), stop"]
     E --> E2{"XML found by the glob?"}
     E2 -- yes --> H
     E2 -- "no" --> F
