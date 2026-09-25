@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Common workflows :: AI Catalog</title>
+    <meta name="description" content="Walks through the day-to-day ticket-to-PR development cycle, filing a ticket with AI assistance, and cutting a release using this catalog's skills.">
+    <meta name="keywords" content="claude code, development workflow, ticket to pull request, iru-issue, iru-plan, iru-code, release process, skill orchestration">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="common-workflows.html">Common workflows</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/common-workflows.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Common workflows</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><a href="../index.html#_common_workflows" class="xref page">Common workflows</a> on the top-level page gives a one-diagram-each overview of
+how this catalog&#8217;s skills compose for a handful of recurring jobs. This page goes deeper on the four a person
+actually runs most often — starting work on a ticket, filing a ticket before that work begins, bootstrapping a
+repository, and cutting a release — with a fuller diagram and, for the first one, a breakdown of what each step
+in it actually does.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="typical-development-cycle"><a class="anchor" href="#typical-development-cycle"></a>Typical development cycle, starting from a ticket</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This is <strong>the main workflow for day-to-day work</strong> in this catalog. Whenever there&#8217;s a tracked ticket — a GitHub
+issue or a Jira ticket — to pick up, this is the path to reach for: <code>/iru-issue &lt;ticket-id&gt;</code> runs it end to end, from
+"just filed" to "pull request open for review." Each stage also works standalone (<code>/iru-explore</code>, <code>/iru-plan</code>, <code>/iru-code</code>,
+<code>/iru-pr-description</code>, <code>/iru-pr-review</code>), so the same flow applies whether one command drives all of it or a person runs
+each stage themselves.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    A["Explore issue + codebase"] --> B["Prepare implementation plan"]
+    B --> R1{{"User reviews the\nimplementation plan"}}
+    R1 --> C["Code implementation"]
+    C --> D["Create and review\nPull Request"]
+    D --> R2{{"User reviews\nthe final result"}}</div></div>
+<div class="paragraph">
+<p>The two hexagons are manual gates, not automated steps: nothing moves past either one without the user&#8217;s own
+judgment call. Between "Prepare implementation plan" and "Code implementation," the user reads
+<code>implementation_plan.md</code> and either lets it proceed or asks for changes — this is the cheapest point to redirect
+the work, before any code is written. After "Create and review Pull Request," the user reviews the actual diff
+and the automated review comments before merging — the PR is always opened as a draft, so nothing ships without
+that final look.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 22.2222%;">
+<col style="width: 22.2222%;">
+<col style="width: 55.5556%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Diagram block</th>
+<th class="tableblock halign-left valign-top">Skill(s)</th>
+<th class="tableblock halign-left valign-top">What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Explore issue + codebase</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="../skills/iru-explore.html" class="xref page"><code>iru-explore</code></a></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Fetches the ticket (GitHub issue or Jira ticket), auto-detecting which tracker it belongs to</p>
+</li>
+<li>
+<p>Detects the codebase&#8217;s language(s)/framework(s), whether an Antora documentation module exists, and which
+platform hosts the repository</p>
+</li>
+<li>
+<p>If a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket
+or codebase and folds anything relevant into the report as extra context</p>
+</li>
+<li>
+<p>Builds a grounded, read-only understanding of the code relevant to the ticket — no files are changed</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Prepare implementation plan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="../skills/iru-plan.html" class="xref page"><code>iru-plan</code></a></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>If <code>implementation_plan.md</code> already exists, assesses whether it matches the requested task and asks the user
+to skip planning (resume as-is), discard and regenerate, or update while preserving completed tasks</p>
+</li>
+<li>
+<p>Reuses the exploration above rather than repeating it</p>
+</li>
+<li>
+<p>Asks the user up to four focused questions only where something is genuinely ambiguous; otherwise picks a
+best-practice approach and states the rationale directly in the plan</p>
+</li>
+<li>
+<p>Groups tasks into dependency-aware task groups, each marked whether its tasks can be implemented in parallel</p>
+</li>
+<li>
+<p>Tags each task (and sub-task) with the language/framework key a later <code>&lt;key&gt;-code-one-task-group</code> skill should
+handle it with</p>
+</li>
+<li>
+<p>Writes <code>implementation_plan.md</code> at the repository root, tasks/sub-tasks numbered <code>Task N</code>/<code>Task N.M</code>, one
+checkbox per task/sub-task</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>User reviews the implementation plan</em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">— (manual gate)</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>The user reads <code>implementation_plan.md</code> and either confirms it, edits it, or asks for a different approach</p>
+</li>
+<li>
+<p>Nothing is implemented until this review happens — <code>/iru-issue</code> explicitly asks whether to proceed automatically
+or stop here for manual review</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Code implementation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="../skills/iru-code.html" class="xref page"><code>iru-code</code></a></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Captures a project-wide code-quality baseline (<code>iru-java-code-quality</code>/<code>iru-dotnet-code-quality</code>) and a security
+baseline (<code>iru-check-security</code>) before making any change</p>
+</li>
+<li>
+<p>Works through <code>implementation_plan.md</code> one task group at a time, dispatching each to
+<a href="../skills/iru-code-one-task-group.html" class="xref page"><code>iru-code-one-task-group</code></a>, which resolves each task&#8217;s language and delegates
+to <a href="../skills/iru-java-code-one-task-group.html" class="xref page"><code>iru-java-code-one-task-group</code></a>,
+<a href="../skills/iru-dotnet-code-one-task-group.html" class="xref page"><code>iru-dotnet-code-one-task-group</code></a>, or (for database-tagged tasks)
+<a href="../skills/iru-database-code-one-task-group.html" class="xref page"><code>iru-database-code-one-task-group</code></a> (or implements it directly if
+no matching skill applies), checking off boxes as it goes</p>
+</li>
+<li>
+<p>Each task group&#8217;s tasks are implemented in parallel when the plan allows it (database task groups are always
+sequential instead), then paired with tests reaching at least 80% line coverage — verified against a real
+coverage report, not estimated — plus license headers and language-appropriate doc comments, all validated
+once per group rather than once per task</p>
+</li>
+<li>
+<p>Re-checks the quality and security baselines at the end (a security regression is a hard stop, unlike a
+quality regression, which the user can accept or turn into follow-up tasks), runs a full local build, and
+updates the Antora documentation via <code>iru-update-docs</code> (which also proposes matching updates to a connected
+documentation MCP, if one exists, for the user to approve)</p>
+</li>
+<li>
+<p>Archives <code>implementation_plan.md</code> to <code>.archive/</code> on success and asks for a review — <code>iru-code</code> never commits,
+pushes, or opens a pull request itself</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create and review Pull Request</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="../skills/iru-pr-description.html" class="xref page"><code>iru-pr-description</code></a> + <a href="../skills/iru-pr-review.html" class="xref page"><code>iru-pr-review</code></a></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>The branch is pushed and a pull request opened <strong>as a draft</strong> against the base branch</p>
+</li>
+<li>
+<p><code>iru-pr-description</code> drafts the PR body from the real diff</p>
+</li>
+<li>
+<p><code>iru-pr-review</code> re-runs <code>iru-explore</code> grounded in the linked ticket, then leaves review comments — delegating
+correctness/reuse/efficiency analysis to the external <code>code-review</code> skill when it&#8217;s available in the session,
+and focusing its own pass on whether the change matches the ticket&#8217;s intent and this codebase&#8217;s conventions</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>User reviews the final result</em></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">— (manual gate)</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>The user reads the PR diff and the automated review comments before merging</p>
+</li>
+<li>
+<p>Because the PR is opened as a draft, nothing merges automatically — this is the last checkpoint before the
+change ships</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="filing-a-ticket"><a class="anchor" href="#filing-a-ticket"></a>Filing a ticket before work begins</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The cycle above needs a ticket (or at least a free-form description) to start from. That ticket doesn&#8217;t have to
+be written by hand: <a href="../skills/iru-create-github-issue.html" class="xref page"><code>iru-create-github-issue</code></a> and
+<a href="../skills/iru-create-jira-ticket.html" class="xref page"><code>iru-create-jira-ticket</code></a> let AI assist in producing one, so it&#8217;s ready to feed
+straight into the <a href="#typical-development-cycle">typical development cycle</a> above.</p>
+</div>
+<div class="paragraph">
+<p>Either skill runs <code>iru-explore</code> first — a previous analysis of the current codebase — then asks the user the same
+handful of questions every time: what the purpose of the task is, what additional context exists (linked URLs,
+attached files, related tickets, and — Jira only — an optional epic), and the task&#8217;s due date and importance.
+From that, it classifies the ticket (bug vs. feature/enhancement, or the matching Jira issue type), drafts a
+structured title and body — including an agent-assessed estimated difficulty — and matches it against the
+repository&#8217;s actual label set or Jira project configuration rather than inventing one. The draft is always shown
+for confirmation before anything is filed. See <a href="creating-tickets.html" class="xref page">Creating GitHub issues and Jira tickets</a> for the full breakdown of
+what&#8217;s asked, how the draft is structured, and every skill involved.</p>
+</div>
+<div class="paragraph">
+<p>Tickets can still be created manually — directly in GitHub or Jira, with no AI involvement at all — and nothing
+in the <a href="#typical-development-cycle">typical development cycle</a> requires going through
+these skills first; <code>/iru-issue</code> and <code>/iru-plan</code> work the same way against a hand-written ticket, or even no ticket at
+all. What AI assist adds is consistency and grounding: every draft is checked against the real codebase and asks
+for the same structured information, rather than depending on whoever&#8217;s filing it to remember what a
+well-formed ticket needs.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart LR
+    A["/iru-create-github-issue\nor /iru-create-jira-ticket"] --> B["iru-explore\n(analyze current codebase)"]
+    B --> C["Ask purpose + additional context\n(+ due date, importance)"]
+    C --> D["Classify bug vs. feature;\ndraft title + structured body"]
+    D --> E{"User confirms?"}
+    E -- edits --> D
+    E -- declines --> F["Stop: draft kept,\nnothing filed"]
+    E -- confirmed --> G["File via gh issue create\nor Jira MCP tools"]
+    G --> H(["/iru-issue &amp;lt;id&amp;gt; or /iru-plan &amp;lt;id&amp;gt;\n(separate, later invocation)"])</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="bootstrapping-a-repository"><a class="anchor" href="#bootstrapping-a-repository"></a>Bootstrapping a repository</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This workflow is for standing up a repository&#8217;s scaffold, docs, gitignore, CI/CD, changelog, and README in one
+pass, rather than writing each by hand or running five to six skills separately.
+<a href="../skills/iru-setup-repository.html" class="xref page"><code>iru-setup-repository</code></a> is the front door for every stack this catalog
+supports — it works the same way whether the repository is brand new or already has code in it.</p>
+</div>
+<div class="sect2">
+<h3 id="_on_a_brand_new_empty_repository"><a class="anchor" href="#_on_a_brand_new_empty_repository"></a>On a brand-new, empty repository</h3>
+<div class="paragraph">
+<p><code>/iru-setup-repository</code> finds nothing to detect, so it asks the project type itself, over up to four short
+<code>AskUserQuestion</code> rounds rather than one long list. Each round offers three concrete types plus a "Something in
+the next group" escape hatch that moves on to the next round: Java/JVM (Java library, Spring Boot service, Spring
+Boot + Vaadin + Hilla), Android &amp; Swift (Android library, Android app, Swift/SwiftPM library), mobile apps (Apple
+app, React Native app, Ionic app), and Web/Node (TypeScript/npm library, React web app, Angular web app) — twelve
+types in total; the last round&#8217;s escape hatch is "None of these", which ends the run with a plain "no orchestrator
+for this stack" report. .NET is recognised by <code>iru-explore</code> but never offered here, because the catalog has no
+.NET bootstrap orchestrator. Once the type is known, it asks only the inputs the stacks genuinely share —
+<code>open-source</code>, <code>publish</code> (libraries) or <code>distribution</code> (apps), and <code>sonar</code> (+ its organization/project-key/host
+details) — exactly once, plus the flavor-specific ones the chosen type needs (<code>platforms</code> for Swift/Apple,
+<code>framework</code> for Ionic, <code>native-builds</code> for React Native). License and developer identity are never asked by the
+front door; each stack orchestrator asks its own. It then delegates to that stack&#8217;s own orchestrator (e.g.
+<a href="../skills/iru-setup-typescript-repository.html" class="xref page">Setup TypeScript Repository</a>, <a href="../skills/iru-setup-android-repository.html" class="xref page">Setup Android Repository</a>) via the
+<code>iru-isolated-skill-executor</code> agent, so its full multi-step transcript stays out of the front door&#8217;s own context.</p>
+</div>
+<div class="paragraph">
+<p>A <code><strong>-repository</code> orchestrator runs its fixed six-step chain (scaffold → Antora → gitignore → CI/CD workflows →
+changelog → README), while <code>iru-setup-java-springboot</code> runs its own manifest-driven chain (interview →
+<code>springboot-stack.yml</code> → the <code>iru-setup-java-springboot-</strong></code> sub-skills → <code>iru-update-java-springboot-documentation</code>
+→ gitignore/README/changelog). Either way it returns a single consolidated report, including one combined
+required-secrets table covering every
+workflow it generated (Sonar tokens, publishing credentials, signing secrets, …) instead of a separate table per
+sub-skill. What to do next is manual and outside any skill&#8217;s reach: create those secrets in the repository&#8217;s
+settings, set up the SonarCloud/self-hosted SonarQube project and any package-registry account the <code>publish</code>/
+<code>distribution</code> choice implies, review the generated files, and commit.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_on_an_existing_repository"><a class="anchor" href="#_on_an_existing_repository"></a>On an existing repository</h3>
+<div class="paragraph">
+<p><code>/iru-setup-repository</code> runs <a href="../skills/iru-explore.html" class="xref page"><code>iru-explore</code></a> first and reads back its <code>Project type:</code>
+line, so the type question is pre-selected instead of asked — a repository already recognizable as, say,
+<code>android-library</code> skips straight to the shared inputs. It then forces <code>mode: existing</code> on the delegation, so
+every sub-skill downstream takes its own gap-fill/update path rather than assuming a brand-new repo: a scaffold
+skill fills in only what&#8217;s missing, and anything that would overwrite existing content —
+<code>.gitignore</code>, <code>README.md</code> — is shown as a diff for the user to accept or skip, the same way
+<a href="../skills/iru-setup-readme.html" class="xref page"><code>iru-setup-readme</code></a> already behaves standalone.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoking_a_stack_orchestrator_directly"><a class="anchor" href="#_invoking_a_stack_orchestrator_directly"></a>Invoking a stack orchestrator directly</h3>
+<div class="paragraph">
+<p>Each stack&#8217;s orchestrator also runs standalone, useful when the front door&#8217;s project-type rounds are unnecessary
+because the stack is already known:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>TypeScript/web</strong> — <code>/iru-setup-typescript-repository</code> covers five flavors from one orchestrator; pass
+<code>flavor</code> to skip the question (<code>library</code>, <code>react</code>, <code>angular</code>, <code>react-native</code>, <code>ionic</code>), e.g.
+<code>/iru-setup-typescript-repository</code> with <code>args: flavor: react</code> for a Vite+React web app, or <code>flavor: ionic</code> (plus
+<code>framework: angular</code> or <code>framework: react</code> for Ionic&#8217;s own underlying choice).</p>
+</li>
+<li>
+<p><strong>Android</strong> — <code>/iru-setup-android-repository</code> with <code>args: flavor: library</code> (a <code>lib/</code> module plus a Compose
+<code>app/</code> sample, following the Android reference-repository conventions) or <code>flavor: app</code> (a single <code>app/</code>
+module).</p>
+</li>
+<li>
+<p><strong>Swift/Apple</strong> — <code>/iru-setup-swift-repository</code> with <code>args: flavor: library</code> for a SwiftPM package, or
+<code>flavor: app</code> for an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS app (add <code>platforms</code> to scope the
+targets when <code>app</code>).</p>
+</li>
+<li>
+<p><strong>Spring Boot + Hilla</strong> — <code>/iru-setup-java-springboot</code> itself already asks whether the service has a frontend;
+pass <code>args: frontend: hilla</code> to skip that question and have <code>iru-setup-java-springboot-hilla</code> scaffold the
+Vaadin/Hilla React frontend into the <code>boot</code> module right after the API layer is generated.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="generating-a-release"><a class="anchor" href="#generating-a-release"></a>Generating a release</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This workflow is used once a batch of tasks has already been completed, reviewed, and tested — not mid-feature.
+<a href="../skills/iru-release.html" class="xref page"><code>iru-release</code></a> converts the repository&#8217;s current development pre-release version
+into a final, tagged release: it must be run from <code>develop</code> (this catalog follows gitflow) and stops immediately
+if it isn&#8217;t. It is not Maven-only — the version-bump step itself is delegated to whichever
+<code>iru-&lt;key&gt;-bump-version</code> skill (<a href="extending-the-catalog.html#_release_generation_for_other_ecosystems" class="xref page">guides/extending-the-catalog.adoc#_release_generation_for_other_ecosystems</a>
+covers the registry) matches the project&#8217;s detected ecosystem (<code>java</code>, <code>typescript</code>, <code>android</code>, <code>swift</code> today),
+so the same <code>/iru-release</code> flow applies whether the version lives in <code>pom.xml</code>, <code>package.json</code>, a Gradle version
+catalog, or a Swift package manifest.</p>
+</div>
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["/iru-release"] --> B{"Current branch is develop?"}
+    B -- no --> Z["Stop: checkout develop\nand retry"]
+    B -- yes --> C["Gather state: current version,\nlatest tag, base branch, clean tree"]
+    C --> D["Ask user: release version\n(3 computed candidates + free text)"]
+    D --> E["Ask user: next pre-release version\n(3 computed candidates + free text)"]
+    E --> F["Create release_x.y.z\nbranch off develop"]
+    F --> G["Delegate the version edit to\niru-&lt;key&gt;-bump-version;\nupdate README.md (via iru-setup-readme),\ndocs/antora.yml, Antora version snippets"]
+    G --> H["Write whats-new.adoc +\nCHANGELOG.md sections"]
+    H --> I["Commit changes on the release branch"]
+    I --> J{"User confirms\npush + PR?"}
+    J -- no --> K["Stop: nothing pushed"]
+    J -- yes --> L["Push branch;\nopen PR against main/master"]
+    L --> M["iru-pr-description\n(fill in the release PR body)"]
+    M --> N(["Merging the release PR\ntriggers the Sync workflow's\nautomatic version bump into develop"])</div></div>
+<div class="paragraph">
+<p>Every file that echoes the version number — the ecosystem&#8217;s own version file (via <code>iru-&lt;key&gt;-bump-version</code>),
+<code>README.md</code>, <code>docs/antora.yml</code>, and any Antora page with a dependency snippet — is updated in the same pass, so
+nothing is left pointing at the previous release once the PR merges.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_see_also"><a class="anchor" href="#_see_also"></a>See also</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../index.html#_common_workflows" class="xref page">Common workflows</a> on the top-level page — the shorter, one-diagram version
+of these same workflows, alongside the catalog&#8217;s other supported flows (updating an existing repository after
+unrelated changes).</p>
+</li>
+<li>
+<p><a href="creating-tickets.html" class="xref page">Creating GitHub issues and Jira tickets</a> — a full breakdown of the "Filing a ticket" workflow above: every piece of
+information asked for, how the drafted ticket is structured, and every skill involved.</p>
+</li>
+<li>
+<p><a href="extending-the-catalog.html" class="xref page">Extending the skills and agents catalog</a> — how the repository-bootstrap and release-generation pipelines used
+above are built to be extended with a new stack or ecosystem.</p>
+</li>
+<li>
+<p><a href="../index.html#group-cycle" class="xref page">Issue-to-PR Development Cycle</a> and <a href="../index.html#group-intake" class="xref page">Ticket Intake</a> —
+the purpose groups these workflows draw their skills from.</p>
+</li>
+<li>
+<p><a href="../skills/iru-issue.html" class="xref page">Issue</a>, <a href="../skills/iru-plan.html" class="xref page">Plan</a>, <a href="../skills/iru-code.html" class="xref page">Code</a> — detail pages for the typical
+development cycle&#8217;s own skills.</p>
+</li>
+<li>
+<p><a href="../skills/iru-setup-repository.html" class="xref page">Setup Repository</a> — detail page for the repository-bootstrap front door.</p>
+</li>
+<li>
+<p><a href="../skills/iru-release.html" class="xref page">Release</a> — detail page for the release workflow.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
