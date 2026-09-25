@@ -1,0 +1,140 @@
+= Swift Coverage
+:description: Runs swift test or xcodebuild test with coverage enabled and parses llvm-cov/xccov output to report exact line and function coverage for Swift code.
+:keywords: iru-swift-coverage, claude code skill, swift, swiftpm, xcodebuild, llvm-cov, xccov, code coverage report, unit testing
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run whichever coverage path a Swift package or Xcode app project actually has wired — `swift test
+--enable-code-coverage` followed by `xcrun llvm-cov` for a SwiftPM package, or `xcodebuild test
+-enableCodeCoverage YES` followed by `xcrun xccov` for an Xcode app target — and report the exact, measured
+line/function coverage percentage for the scope the caller cares about. This is a read-only reporting skill: it
+measures and reports coverage, it does not add tests or modify source/test code unless asked to as an explicit
+follow-up.
+
+== Purpose
+
+`iru-swift-coverage` answers "does this file/type meet the coverage bar?" with an exact, tool-derived percentage
+instead of an eyeballed guess from `swift test`/`xcodebuild test` console output. It auto-detects whether the
+repository is a bare SwiftPM package or an Xcode app project, runs the matching coverage path, and — for scope
+under the bar — points to the exact uncovered line ranges so a follow-up can target them precisely. It is the
+Swift/Apple-platform equivalent of `iru-java-coverage`, `iru-typescript-coverage`, and `iru-android-coverage`.
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-coverage
+/iru-swift-coverage [scope]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|Comma-separated list of file paths (e.g. `Sources/Demo/Calculator.swift`) or type simple names (e.g.
+`Calculator`, `Calculator,Formatter`) to report coverage for.
+|None — omitting it reports the whole package/target.
+
+|`kind: package\|app`
+|No
+|Override the package-vs-app detection (SwiftPM `Package.swift` vs. Xcode `.xcodeproj`/`.xcworkspace`) that
+Step 1 would otherwise infer.
+|Auto-detected.
+
+|`xcresult: <path>`
+|No
+|An already-produced `.xcresult` bundle to parse directly, skipping the `xcodebuild test` run entirely.
+|None — runs `xcodebuild test` itself for the app path.
+
+|`scheme:` / `destination:` / `target:`/`module:`
+|No
+|Override what would otherwise be inferred the same way `iru-swift-test` infers them.
+|Inferred from `xcodebuild -list` / available simulators / `Package.swift` test targets.
+
+|`bar: <N>`
+|No
+|A coverage threshold (e.g. `bar: 80`) used only for Step 5's pass/fail wording.
+|None — no pass/fail statement is made without one.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Per target file/type: exact line-coverage and function-coverage percentages, computed directly from
+  `llvm-cov`/`xccov` output — never estimated.
+* Branch coverage is always reported as **not available** for Swift (never as 0%) — verified locally against
+  Swift 6.4/Xcode 27: `llvm-cov report`'s Branches column stays `0 0 -`, and `xccov`'s JSON schema has no branch
+  field at all.
+* If the caller gave a coverage bar: a clear statement of whether each file/type/the whole scope meets it.
+* For scope under the bar: the exact uncovered line ranges (collapsed from `llvm-cov export -format=lcov`'s
+  `DA:` lines or `xccov`'s per-line JSON), not just the aggregate percentage.
+* A scope file/type absent from the report is reported as 0% coverage, not as an error.
+* If coverage isn't wired (no test target in `Package.swift`, no test scheme in the Xcode project), that is
+  reported explicitly, naming exactly what's missing, instead of a false 0%/100%.
+* No source or test code is ever modified, and coverage is never re-run to try to raise a number.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-coverage\n(optional scope, key: value overrides)"] --> B["Detect package vs. app\n(Package.swift vs. .xcodeproj/.xcworkspace/\nproject.yml/Project.swift), or use kind: override"]
+    B --> C{xcresult: given?}
+    C -- yes --> H
+    C -- no --> D{Path wired?}
+    D -- "package, no test target" --> E["Stop: coverage not wired\n(no test target in Package.swift)"]
+    D -- "app, no test scheme" --> F["Stop: coverage not wired\n(no test scheme found)"]
+    D -- package, wired --> G1["swift test --enable-code-coverage\n(optionally --filter scope)"]
+    D -- app, wired --> G2["xcodebuild test -enableCodeCoverage YES\n-resultBundlePath &amp;lt;bundle&amp;gt;.xcresult"]
+    G1 --> I1{Run succeeded?}
+    G2 --> I2{Run succeeded?}
+    I1 -- no --> J["Report failure, stop\n(don't parse a stale profile)"]
+    I2 -- no --> J
+    I1 -- yes --> K1["Locate .xctest binaries +\ndefault.profdata via swift build --show-bin-path"]
+    K1 --> L1["xcrun llvm-cov report / export -format=lcov\n--ignore-filename-regex Tests/DerivedSources"]
+    I2 -- yes --> H["xcrun xccov view --report --json &amp;lt;bundle&amp;gt;.xcresult"]
+    L1 --> M["Compute line % and function %\nfor scope from lcov DA:/FNF:/FNH: data"]
+    H --> N["Walk targets[].files[] by path suffix\nor type name for line/function %"]
+    M --> O
+    N --> O{Scope found in report?}
+    O -- no --> P["Report 0% (not an error)"]
+    O -- yes --> Q["Report exact line/function %;\nbranch coverage always 'not available'"]
+    P --> R
+    Q --> R{Bar given and under it?}
+    R -- yes --> S["List uncovered line ranges\n(collapsed from DA:/isExecutable data)"]
+    R -- no --> T["State pass/fail vs. bar, or\njust report the percentages"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-swift-coverage` is a leaf skill; it only runs `swift test`/`xcodebuild test` and parses the
+resulting `llvm-cov`/`xccov` output, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-swift-code-one-task-group.adoc[] — Step 3.5, once per task group, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to check every changed/new file in the group meets
+  the coverage bar.
+* xref:skills/iru-swift-generate-all-tests.adoc[] — Steps 3 and 6, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to measure baseline coverage before generating tests
+  and again afterward to confirm the bar is met.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both `iru-swift-code-one-task-group` and
+  `iru-swift-generate-all-tests` always invoke this skill from inside a `iru-gate-runner` sub-agent they spawn,
+  not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-coverage/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

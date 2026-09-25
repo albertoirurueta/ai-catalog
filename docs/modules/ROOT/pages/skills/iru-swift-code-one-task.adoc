@@ -1,0 +1,189 @@
+= Swift Code One Task
+:description: Implements one Swift task from an implementation plan, detecting package-vs-app shape and target, applying Swift 6 conventions, then checking it off.
+:keywords: iru-swift-code-one-task, claude code skill, swift, swiftpm, xcodegen, tuist, xcodebuild, swift testing, docc, implementation plan, task implementation
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests, and checkbox update against the real codebase — nothing else.
+This is the narrowest execution unit in the `iru-code` pipeline: `iru-swift-code-one-task-group` calls it once
+per task in a bucket (potentially many at once, in parallel agents via `iru-isolated-skill-executor`).
+
+== Purpose
+
+`iru-swift-code-one-task` is the Swift-specific implementation worker `iru-swift-code-one-task-group` calls once
+per task. Given one task's own text (what to build, its exact `implementation_plan.md` checkbox line(s), and any
+sub-tasks), it first detects the repository's Swift project shape and the target the task belongs to, loads only
+the matching guidance from its own bundled `reference/` directory, re-checks the current code state, implements
+exactly what's specified, and writes/updates tests. If the task didn't stop on a blocker, it compile-checks the
+touched target, then immediately checks off that task's own checkbox (and its sub-tasks') in
+`implementation_plan.md` with a "group validation pending" note, before reporting back — so an interrupted run
+doesn't re-attempt work that already landed. License headers, DocC audits, the full test suite, coverage, and
+code-quality checks all happen once per bucket in `iru-swift-code-one-task-group`, not here. It uses a medium
+model on purpose: the plan already carries the hard reasoning, so this skill only executes one task's
+implementation against code agreements that live in `reference/` rather than being re-derived per task.
+
+=== Package-vs-app shape and target detection
+
+Before reading anything, Step 1 works out which of two shapes the repository is:
+
+* **A plain Swift Package** — a `Package.swift` at or near the root with no `.xcodeproj`/generator manifest
+  alongside it. Code lives under `Sources/<Target>/` and `Tests/<Target>Tests/`, one pair per `Package.swift`
+  target.
+* **An Apple app project** — an `.xcodeproj` exists or is generated, via `project.yml` (XcodeGen), `Project.swift`
+  (Tuist), or, with neither manifest, a hand-maintained `*.xcodeproj` whose `project.pbxproj` is the source of
+  truth. An app project frequently also has a local `Packages/Core` package holding testable logic behind thin,
+  per-platform UI targets.
+
+It then works out which **target** the task's file paths or description name — a path under `Sources/<Target>/`
+or `Packages/Core/Sources/<Target>/` names that target directly; a path under a per-platform app target directory
+(read from the manifest's `targets:`/`Target(...)` list rather than guessed) names that target; otherwise the
+skill infers from the described behavior (reusable logic with no UI import vs. a SwiftUI/UIKit/AppKit view for
+one platform), defaulting to the package's main target (or `Packages/Core`) when genuinely ambiguous. This
+package/app choice, plus the target, decides both which `reference/` files apply and Step 5's compile-check
+command (`swift build --build-tests` vs. `xcodebuild build-for-testing -scheme <Scheme>`).
+
+=== The bundled reference library
+
+This skill ships a `reference/` directory alongside its `SKILL.md`, holding this catalog's **general Swift 6
+code agreements**. It is read by **progressive disclosure**: `reference/README.md` routes to the rest,
+`reference/code-style.md` is always read, and the others only when the task's shape calls for them.
+
+[cols="2,1,3", options="header"]
+|===
+|File |Read when |Covers
+
+|`code-style.md`
+|Always
+|Swift 6 strict concurrency (`Sendable`, actors, `@MainActor`, structured concurrency, `nonisolated`, avoiding
+`@unchecked Sendable`), value types first, `guard` early exits, access control (`public`/`package`/`internal`),
+typed throws with `enum: Error` error types, naming per the Swift API Design Guidelines, and member ordering
+(`// MARK:` sections).
+
+|`docc.md`
+|The task adds or changes a type, or any `public`/`package`/`internal` member
+|DocC documentation comment conventions.
+
+|`testing.md`
+|The task writes or updates tests — nearly every task
+|Swift Testing/XCTest conventions: Swift Testing by default, XCTest only for XCUITest and `measure`.
+
+|`swiftui.md`
+|The task adds or changes a SwiftUI `View` or view model
+|SwiftUI view composition conventions.
+
+|`package-api.md`
+|The task changes a `public` declaration in a library package's target
+|Semver-stable package API conventions, availability, `Package.swift` hygiene.
+
+|`app-structure.md`
+|The task adds a new app target, touches the generator manifest, or wires shared logic between `Packages/Core`
+and a platform target
+|Per-platform app structure conventions.
+|===
+
+Every file states the same override: the rules are the default for **new** code, and a file that consistently
+does something else wins — the divergence is reported in Step 8 rather than silently restyled. If `reference/`
+is missing entirely, the skill falls back to this repository's own `CLAUDE.md` conventions and the surrounding
+code's style, and says so in its report.
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/type(s)/
+function(s), the described behavior, its exact `implementation_plan.md` checkbox line(s) for itself and its
+sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. Normally supplied by
+`iru-swift-code-one-task-group` dispatching one task in a bucket at a time.
+|None — this skill has nothing to do without a task description.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory (`README.md`, `code-style.md`, `docc.md`, `testing.md`,
+`swiftui.md`, `package-api.md`, `app-structure.md`). If missing, the skill falls back to `CLAUDE.md` and the
+surrounding code's style, and says so in its report rather than guessing at what the reference would have said.
+|Bundled with the skill
+|===
+
+== Outputs
+
+* Source and test files created/modified per the task, following the bundled `reference/` agreements —
+  strict-concurrency-clean Swift 6, value types first, narrow access control, typed throws, `// MARK:`-grouped
+  member order, full DocC on public/package members — plus this repository's own `CLAUDE.md` conventions where
+  they are more specific, and the surrounding file's existing style wherever it consistently differs.
+* Swift Testing (or XCTest where warranted) tests added/updated covering the new/changed behavior, including a
+  case per documented `- Throws:` — not run by this skill; the caller runs the suite once for the whole bucket.
+* A compile-check of the touched target (`swift build --build-tests`, or `xcodebuild build-for-testing` after
+  regenerating the project if the manifest changed) — passed, fixed, found unrelated to this task, or reported
+  unavailable.
+* `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
+  pending" note, written immediately once the task finishes cleanly — before this skill reports back. Left
+  untouched if the task stopped on a blocker.
+* A short summary handed back to the caller: project shape and target detected, reference file(s) read, file(s)
+  touched, tests added/updated, compile-check result, whether the run stopped on a blocker, and any deliberate
+  deviation from `reference/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-code-one-task\n(task description)"] --> B["Step 1: detect package vs. app shape\nand target; read only needed reference/ files"]
+    B -- "reference/ missing" --> B2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    B2 --> C
+    B --> C["Step 2: re-check current code state;\nnote existing concurrency/access/ordering style"]
+    C --> D["Step 3: implement exactly what the task\nspecifies (concurrency, access control, DocC, order)"]
+    D --> E["Step 4: write/update Swift Testing/XCTest\ntests (not run here)"]
+    E --> F["Step 5: compile-check the touched target\n(swift build / xcodebuild build-for-testing)"]
+    F -- "fails on this task's own code" --> F2["Fix it"]
+    F2 --> G
+    F -- "fails outside task scope,\nor unavailable" --> F3["Note it; don't fix unrelated code"]
+    F3 --> G
+    F -- "passes" --> G{"Step 6: ambiguous, infeasible,\nor genuinely ambiguous shape?"}
+    G -- yes --> H["Stop; leave checkbox\nunchecked; report blocker to caller"]
+    G -- no --> I["Step 7: check off this task's\ncheckbox + 'validation pending' note"]
+    I --> J["Step 8: report outcome to caller:\nshape/target, files, tests, compile result, deviations"]
+....
+
+A conflict between `reference/` and the surrounding code is deliberately *not* a stop condition — the skill
+follows the surrounding code and reports the divergence in Step 8.
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-swift-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads its
+own `reference/` directory and edits the code and test files the task names. License headers, DocC audits, the
+full test suite, coverage, and quality checks all happen once per bucket in `iru-swift-code-one-task-group`.
+
+=== Invoked by
+
+* xref:skills/iru-swift-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a
+  single batch of `Agent` calls, when the group is marked `Parallelizable: yes`; one at a time otherwise), via
+  the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's
+  full text including its exact checkbox line(s). That caller re-reads `implementation_plan.md` afterward to
+  confirm the checkbox this skill already flipped landed, then replaces the "pending" note with the final
+  validation outcome once the whole bucket's validation passes.
+
+=== Related agents
+
+`iru-swift-code-one-task` itself does not spawn any Agent — it only reads its `reference/` files and edits the
+code/test files the task names.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled Swift code agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-swift-code-one-task/reference[`reference/`].

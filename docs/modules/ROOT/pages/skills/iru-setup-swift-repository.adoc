@@ -1,0 +1,207 @@
+= Setup Swift Repository
+:description: Bootstraps a brand-new (or catches up an existing) Swift package or Apple app repository end-to-end in one pass, for either flavor.
+:keywords: iru-setup-swift-repository, claude code skill, swiftpm, xcodegen, tuist, antora, github actions, changelog, readme, repository bootstrap
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a Swift repository of either flavor — a SwiftPM library or a native Apple app. It
+collects the project's identity and pipeline parameters once, resolves which flavor and branching model apply,
+and orchestrates six other skills in a fixed order so nothing is asked twice.
+
+== Purpose
+
+`iru-setup-swift-repository` is the top-level entry point (standalone, or as the Swift/Apple branch of
+`iru-setup-repository`) for starting or catching up a Swift repository, whichever of its two flavors it is: a
+redistributable SwiftPM `library`, or a native iOS/iPadOS/macOS/watchOS `app` generated from an XcodeGen or Tuist
+manifest. Rather than duplicating the flavor's own scaffold logic, documentation scaffolding, `.gitignore` setup,
+CI/CD workflows, changelog bootstrapping, and README generation, it gathers the shared inputs — project identity
+(package name or app name/bundle-id prefix, license, developer name/email/organization URL), flavor-specific
+inputs (platforms, minimum deployment targets, generator, signing), and pipeline parameters (branching model,
+integration/stable branch, macOS runner, open-source/publish/distribution/sonar) — once, and passes each
+downstream skill only the `args` keys its own Step 0 accepts. In `mode: existing` it skips the scaffold entirely
+when a scaffold manifest already exists, so every downstream step takes its own update/gap-fill path instead of
+assuming a brand-new repository.
+
+== Purpose group
+
+xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-swift-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`flavor`
+|No
+|`library` (a SwiftPM package) or `app` (an XcodeGen/Tuist-generated native app). Detected from
+`Package.swift`/`project.yml`/`Project.swift` on disk when absent, else asked via `AskUserQuestion`.
+|Detected, else asked
+
+|`branching`
+|No
+|`gitflow` (integration + stable branch, `sync.yml` bumps the post-release version) or `main-only` (a single
+stable branch, no `sync.yml`).
+|`gitflow`, asked to confirm
+
+|`mode`
+|No
+|`new` or `existing`. Defaults to `existing` (confirmed) when the flavor's scaffold manifest already exists at
+the repository root, otherwise `new` without asking.
+|Detected, else `new`
+
+|`package-name` (library) / `app-name` + `bundle-id-prefix` (app)
+|Yes
+|Free-text project-identity fields specific to the resolved flavor, asked in Step 2 using exactly the key names
+the scaffold skill reads.
+|None
+
+|`license`, `developer-name`, `developer-email`, `organization-url`
+|Yes
+|Shared identity fields for both flavors, resolved once via `AskUserQuestion` for the license (Apache 2.0
+recommended for `library`, MIT for `app`, No license, or Other) and plain conversation for the rest.
+|None — user must choose
+
+|`platforms`
+|Yes
+|Flavor-specific vocabulary: `ios, ipados, macos, watchos, tvos, visionos, linux` for `library`; `ios, ipados,
+macos, watchos` for `app`. `AskUserQuestion` multi-select, at least one required.
+|None
+
+|`min-deployment-targets` (library) / `min-deployment-target` (app)
+|No
+|Per-platform OS versions for a library (no universal default, asked directly); a single OS version for an app,
+deliberately left for `iru-setup-apple-app` to resolve from local simulator runtimes unless supplied.
+|Asked (library) / resolved downstream (app)
+
+|`generator` (app only)
+|Yes
+|`xcodegen` (recommended for a single-target/platform app) or `tuist` (for a modular app), via
+`AskUserQuestion`.
+|None
+
+|`signing` (app only)
+|Yes
+|`fastlane-match`, `api-key`, or `none`, asked alongside `distribution` in Step 4.
+|`none` when `distribution: none`, else asked
+
+|`integration-branch`, `stable-branch`, `runner`
+|No
+|CI pipeline parameters consumed by `iru-setup-swift-github-workflows`. Integration branch skipped entirely for
+`main-only`.
+|`develop`, `main`, `macos-26`
+
+|`open-source`, `publish` (library), `distribution` (app), `sonar` (+ detail keys)
+|No
+|Shared open-source-driven pipeline vocabulary, resolved via `AskUserQuestion` with open-source-dependent
+recommended defaults; passed through unchanged to Steps 5 and 8.
+|`publish`/`distribution` default `yes`/`store` when open source; `sonar` defaults `cloud` when open source,
+otherwise asked with `none` recommended
+
+|`xcode-version`, `release-please`, `formatter`, `package-resolved`, `security-*` opt-outs
+|No
+|Pass-through toggles never asked by this orchestrator — each downstream skill resolves or asks its own default
+when the key isn't supplied.
+|Resolved downstream
+|===
+
+== Outputs
+
+* The flavor's own scaffold: `Package.swift` + `Sources/`/`Tests/` (via `iru-setup-swift-library`), or the
+  generator manifest + `Packages/Core` + `Targets/` + `fastlane/Fastfile` (via `iru-setup-apple-app`) — skipped
+  in `mode: existing` when the manifest already exists.
+* A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
+* A root `.gitignore` covering `.build/`, `DerivedData/`, `*.xcresult`, generated `*.xcodeproj`/`*.xcworkspace`,
+  signing material, and the Antora build output (via `iru-setup-swift-gitignore`).
+* `build.yml`/`release.yml` (+ `sync.yml` and `.github/scripts/sync_versions.py` for gitflow), `security.yml`,
+  and `.github/dependabot.yml` (via `iru-setup-swift-github-workflows`).
+* A root `CHANGELOG.md` backfilled from git tag/GitHub Release history (via `iru-setup-changelog`).
+* A root `README.md` with badges, a project-status table, documentation links, and installation instructions
+  (via `iru-setup-readme`).
+* A final report summarizing the resolved flavor/branching/mode, identity/license/pipeline parameters, which
+  files were created versus left untouched, the consolidated required-secrets/settings table, every decision
+  made on the user's behalf, and explicit warnings to review every generated file before building, committing,
+  or relying on CI.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-swift-repository] --> B["Step 0: Parse args\n(key: value lines)"]
+    B --> C["Step 1: Resolve flavor,\nbranching and mode\n(survey disk, AskUserQuestion)"]
+    C --> D["Step 2: Collect project identity\n(package-name or app-name/bundle-id,\nlicense, developer info)"]
+    D --> E["Step 3: Collect flavor-specific inputs\n(platforms, min-deployment-target(s),\ngenerator/signing for app)"]
+    E --> F["Step 4: Collect shared pipeline\nparameters (branches, runner,\nopen-source, publish/distribution, sonar)"]
+    F --> G{"Step 5: mode existing\nand scaffold manifest\nalready exists?"}
+    G -- yes --> H["Skip scaffold;\nnote as left untouched"]
+    G -- no --> I["Run flavor's scaffold skill\n(iru-setup-swift-library or\niru-setup-apple-app, via sub-agent)"]
+    I -- scaffold existed,\nuser chose stop --> J[Stop entire pipeline; report]
+    I -- ok --> K
+    H --> K["Step 6: Run setup-antora\n(documentation site, via sub-agent)"]
+    K --> L["Step 7: Run setup-swift-gitignore\n(root .gitignore, via sub-agent)"]
+    L --> M["Step 8: Run setup-swift-github-workflows\n(CI/CD + security workflows, via sub-agent)"]
+    M -- workflows existed,\nuser chose stop --> N["Note in report;\nSteps 5-7 still valid"]
+    M -- ok --> O
+    N --> O["Step 9: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
+    O --> P["Step 10: Run setup-readme\n(root README.md, via sub-agent)"]
+    P --> Q["Step 11: Report combined outcome,\nsecrets table, decisions and warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent rather than a direct `Skill` call — every sub-skill re-derives what it needs straight from the filesystem
+this orchestrator has just written to, so only a short completion summary needs to come back, keeping each
+sub-skill's own exploration/file reads (and the two scaffold skills' very long template listings) out of this
+orchestrator's own context. Every sub-agent runs with `run_in_background: false` since each step depends on the
+previous one's files being on disk:
+
+* xref:skills/iru-setup-swift-library.adoc[] — Step 5, `flavor: library`: writes `Package.swift` and the source
+  folders, passing Steps 2–4's answers (`package-name`, `platforms`, `min-deployment-targets`, license, developer
+  fields, `open-source`, `publish`, `sonar` + detail keys, `formatter` if supplied, `mode`) as `args`.
+* xref:skills/iru-setup-apple-app.adoc[] — Step 5, `flavor: app`: writes the generator manifest,
+  `Packages/Core`, per-platform `Targets/`, and `fastlane/Fastfile`, passing the app-specific identity
+  (`app-name`, `bundle-id-prefix`), `platforms`, `generator`, `distribution`, `signing`, license, developer
+  fields, `open-source`, `sonar` + detail keys, and `mode` as `args`.
+* xref:skills/iru-setup-antora.adoc[] — Step 6: scaffolds the Antora documentation site, invoked with no `args`
+  since it derives the component name/title/version directly from the manifest Step 5 just wrote (or an initial
+  `1.0.0` if no tags/releases exist yet). Run before Step 8 so that skill's own docs-site check finds everything
+  in place.
+* xref:skills/iru-setup-swift-gitignore.adoc[] — Step 7: writes or updates the root `.gitignore`, passing
+  `flavor` (so its `Package.resolved` recommendation matches the project shape) and `package-resolved` only if
+  supplied; `mode` is deliberately not passed since the skill's own `.gitignore`-presence check is the more
+  precise signal.
+* xref:skills/iru-setup-swift-github-workflows.adoc[] — Step 8: writes the CI/CD + security workflows, passing
+  `flavor`, `platforms`, `branching`, `integration-branch` (gitflow only), `stable-branch`, `runner`,
+  `xcode-version` if supplied, `generator`/`signing` (app only), `release-please` if supplied (library only),
+  `open-source`, `publish`/`distribution`, `sonar` + detail keys, and `mode` as `args`.
+* xref:skills/iru-setup-changelog.adoc[] — Step 9: bootstraps the root `CHANGELOG.md`, invoked with no `args`
+  since it works from the repository's own git tag/GitHub Release history; position relative to Steps 5–8
+  doesn't matter functionally.
+* xref:skills/iru-setup-readme.adoc[] — Step 10, last: bootstraps the root `README.md`, invoked with no `args`
+  since it explores the finished state left by every earlier step.
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] — Step 4, via `iru-isolated-skill-executor`, when the detected or
+  chosen project type is `swift-library`/`apple-app`.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per sub-skill (Steps
+  5–10), so all six sub-skills' own exploration/file-read transcripts don't accumulate in this orchestrator's
+  context over the course of a single bootstrap run.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-swift-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

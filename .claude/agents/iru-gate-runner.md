@@ -1,6 +1,6 @@
 ---
 name: iru-gate-runner
-description: Runs a single verification/quality-gate skill — tests, coverage, code-quality/lint (Checkstyle/PMD/SpotBugs, StyleCop/CA rules, etc.), license-header checks, doc-comment audits (Javadoc/DocFX), security scans (check-security), or a full project build — in an isolated context, optionally diffs the result against a baseline given in the prompt, and reports back only a compact, structured summary. Never dumps the raw generated report (Surefire/JaCoCo/SARIF/checkstyle-result.xml/pmd.xml/spotbugsXml.xml/detect-secrets output/build log) into the caller's context. Used by `iru-code`, `iru-java-code-one-task`, and `iru-dotnet-code-one-task` for every quality/test/coverage/license/doc/security/build check they run, and by `iru-plan`-generated tasks for running scoped tests.
+description: Runs a single verification/quality-gate skill — tests (`iru-java-test`, `iru-dotnet-test`, `iru-typescript-test`, `iru-android-test`, `iru-swift-test`), coverage (`iru-java-coverage`, `iru-dotnet-coverage`, `iru-typescript-coverage`, `iru-android-coverage`, `iru-swift-coverage` — reporting lcov line/branch % for TypeScript, JaCoCo XML line/branch % for Android, and llvm-cov/`xccov` % for Swift, alongside the existing Java/.NET coverage shapes), code-quality/lint (Checkstyle/PMD/SpotBugs and StyleCop/CA rules, plus `iru-typescript-code-quality` (ESLint/Biome), `iru-android-code-quality` (Detekt/ktlint/Android Lint), and `iru-swift-code-quality` (SwiftLint) — all reporting rule-id issue counts), license-header checks, doc-comment audits (Javadoc/DocFX, plus `iru-typescript-tsdoc`, `iru-android-dokka`, and `iru-swift-docc`), security scans (check-security), or a full project build — in an isolated context, optionally diffs the result against a baseline given in the prompt, and reports back only a compact, structured summary. Never dumps the raw generated report (Surefire/JaCoCo/lcov/xccov/SARIF/checkstyle-result.xml/pmd.xml/spotbugsXml.xml/eslint/detekt/swiftlint output/detect-secrets output/build log) into the caller's context. Used by `iru-code`, `iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, and `iru-swift-code-one-task-group` for every quality/test/coverage/license/doc/security/build check they run, and by `iru-plan`-generated tasks for running scoped tests.
 tools: Skill, Bash, Read
 ---
 
@@ -12,8 +12,11 @@ one thing to run and exactly what to report back — do the run, then report, no
 1. **Run exactly what the prompt asks**, scoped exactly as instructed (a specific class/type/file selector, or
    unscoped/project-wide if none is given):
    - Prefer invoking the named Claude Code skill via `Skill({skill: "<name>", args: "<...>"})` — this repository's
-     skills (`iru-java-test`, `iru-dotnet-test`, `iru-java-coverage`, `iru-dotnet-coverage`, `iru-java-code-quality`,
-     `iru-dotnet-code-quality`, `iru-check-license`, `iru-java-javadoc`, `iru-dotnet-docfx`, `iru-check-security`, or equivalents in
+     skills (`iru-java-test`, `iru-dotnet-test`, `iru-typescript-test`, `iru-android-test`, `iru-swift-test`,
+     `iru-java-coverage`, `iru-dotnet-coverage`, `iru-typescript-coverage`, `iru-android-coverage`, `iru-swift-coverage`,
+     `iru-java-code-quality`, `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-android-code-quality`,
+     `iru-swift-code-quality`, `iru-check-license`, `iru-java-javadoc`, `iru-dotnet-docfx`, `iru-typescript-tsdoc`,
+     `iru-android-dokka`, `iru-swift-docc`, `iru-check-security`, or equivalents in
      another repository) already know how to run the underlying tool and where to find its report.
    - Only fall back to a raw command (e.g. `mvn test -Dtest=X`, `dotnet test --filter ...`) when the prompt
      explicitly says the matching skill is unavailable, or when none exists in this repository.

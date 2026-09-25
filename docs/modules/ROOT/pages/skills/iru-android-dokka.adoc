@@ -1,0 +1,120 @@
+= Android Dokka
+:description: Audits Kotlin classes and packages for complete KDoc, generates missing KDoc and module/package includes, then verifies the Dokka V2 build.
+:keywords: iru-android-dokka, claude code skill, kotlin, dokka, gradle, kdoc, detekt, generate documentation
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Audit given Kotlin class(es)/file(s)/package scope — and the module(s)/package(s) they live in — for complete
+KDoc coverage, generate whatever is missing grounded in the actual code and current changes, then run the
+project's Dokka V2 `dokkaGenerate` Gradle task to confirm the generated site is well-formed. Unlike a purely
+read-only audit, `iru-android-dokka` does modify files: it writes KDoc comments and, where needed, creates/wires
+`module.md`/`package.md` includes into `dokkaSourceSets` — but it never changes behavior, signatures, or
+non-KDoc code, and test classes are exempt from the documentation requirement.
+
+== Purpose
+
+`iru-android-dokka` closes KDoc gaps without assuming a fixed house style: it first discovers the project's own
+documentation bar (a contributor guide, a Detekt `comments` rule set's `UndocumentedPublicClass`/
+`UndocumentedPublicFunction`/`UndocumentedPublicProperty` settings, a `documentedVisibilities` override, or
+observed practice in nearby classes) and phrasing conventions grounded in
+https://github.com/albertoirurueta/irurueta-android-glutils[irurueta-android-glutils], then audits every type,
+primary/secondary constructor, property, function, enum entry, companion-object member, and nested/inner
+declaration in scope, fills in what's missing, ensures each touched module has a `module.md` and each touched
+package a `# Package` section wired via `includes.from(...)`, and proves the result actually builds via the
+project's own `dokkaGenerate` task — since, unlike Javadoc/TypeDoc, Dokka does not fail or warn on undocumented
+members by default.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-dokka
+/iru-android-dokka <scope>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<scope>`
+|No
+|Comma-separated class names, file paths, or a package glob to audit. A simple class name is located via
+`find`/`grep` across every module's main source root (`src/main/java` and `src/main/kotlin`). Any resolved file
+living under a test source root (`src/test/java`, `src/androidTest/java`) is dropped from the audited/generated
+scope and called out in the final report, since test classes carry no KDoc requirement here.
+|None — defaults to every main-source `.kt` file touched by uncommitted changes plus commits on the current
+branch not yet on the base branch (same approach as `iru-update-docs`). If that default scope is empty, the
+skill tells the user there's nothing to document and stops.
+|===
+
+== Outputs
+
+* Edits (via the Edit tool) to the in-scope Kotlin files, adding or completing KDoc comments — no logic,
+  signatures, formatting outside the added comments, or member ordering is changed.
+* A new or completed `module.md` for every touched module missing one, and a `# Package <fqn>` section (in
+  `module.md` or a dedicated `package.md`) for every touched package that didn't already have one, plus the
+  `dokka { dokkaSourceSets { named("main") { includes.from(...) } } }` wiring if it wasn't already present.
+* A confirmed, warning-free run of the project's `dokkaGenerate` (or `dokkaGeneratePublicationHtml`) Gradle task
+  scoped to the module(s) touched, output at `<module>/build/dokka/html`.
+* A plain-text report: per class, how many members were already documented vs. gaps found and filled (named) vs.
+  `@suppress`-tagged and excluded; per module/package, whether `module.md`/`package.md` coverage already existed,
+  was extended, or was newly created (and whether `includes.from(...)` wiring had to be added); the final
+  `dokkaGenerate` result; any test-class argument excluded; any out-of-scope pre-existing Dokka warning surfaced
+  as a separate follow-up note.
+* No Detekt/lint fixes outside KDoc, and no test changes — those are left to other skills.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-android-dokka\n(optional scope)"] --> B{Argument given?}
+    B -- yes --> C["Resolve each to a file;\ndrop test-source files from scope"]
+    B -- no --> D["Scope to .kt files touched by uncommitted\nchanges + branch commits not on base"]
+    C --> E{Scope empty?}
+    D --> E
+    E -- yes --> F["Tell user: nothing to document, stop"]
+    E -- no --> G["Derive distinct modules\nand packages from in-scope files"]
+    G --> H["Discover this project's KDoc bar:\ncontributor guide, detekt.yml comments rules,\ndocumentedVisibilities, or observed practice"]
+    H --> I["Skim existing documented classes\nfor phrasing conventions"]
+    I --> J["Audit each in-scope declaration: type,\nconstructors, properties, functions,\nenum entries, nested/inner types"]
+    J --> K["Record every gap: member,\nwhat's missing, visibility"]
+    K --> L["Check each touched module's module.md\nand each package's coverage"]
+    L --> M["Create/complete module.md and\npackage sections; wire includes.from(...)\nif missing"]
+    M --> N["Generate missing KDoc grounded in\nimplementation + git diff/log + Step 2 conventions"]
+    N --> O["Apply edits with the Edit tool"]
+    O --> P["Run ./gradlew dokkaGenerate\n(or discovered equivalent) to verify the build"]
+    P --> Q{Fails or warns\non in-scope files?}
+    Q -- yes --> R["Fix offending comments,\nre-run until clean"]
+    Q -- no --> S["Report: per-class gaps filled,\nper-module/package doc status,\nbuild result"]
+    R --> S
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-android-dokka` is a leaf skill; it only runs Gradle commands, reads/edits Kotlin source, and reports,
+it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-android-code-one-task-group.adoc[] — Step 3, item 2, once per task group's bucket, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to update KDoc for every class the bucket touched and
+  confirm the `dokkaGenerate` build passes.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-android-code-one-task-group` (see
+  xref:skills/iru-android-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner`
+  sub-agent it spawns, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-dokka/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

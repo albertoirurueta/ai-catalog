@@ -1,0 +1,120 @@
+= Android Bump Version
+:description: Sets an Android/Gradle project's version to an exact value across lib/build.gradle.kts, app/build.gradle.kts, and optionally README/Antora mentions.
+:keywords: iru-android-bump-version, claude code skill, android, gradle, kotlin dsl, versioncode, versionname, bump version, sync files
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set an Android (Gradle/Kotlin DSL) project's version to an exact literal value across every file that needs to
+agree with it: `lib/build.gradle.kts`'s `libraryVersion`, `app/build.gradle.kts`'s `versionName` (and, per this
+catalog's own convention, `versionCode`), and — optionally — `README.md`/Antora version mentions. This skill
+never computes a version itself; it only applies exactly the string it is given, after validating its shape.
+
+== Purpose
+
+`iru-android-bump-version` is the Android/Gradle-ecosystem equivalent of a Maven `pom.xml` version bump: a small,
+deterministic skill that a caller (typically `iru-release`) can invoke twice per release — once to strip the
+`-SNAPSHOT` suffix for the release itself, once to open the next development cycle — without either caller having
+to hand-edit Kotlin DSL build scripts or reason about `versionCode` semantics. Because Gradle doesn't parse or
+validate a free-form version string the way npm's `version` command does, this skill validates with a regex
+instead and rewrites each file with a targeted `python3` substitution.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|The exact target version string (e.g. `1.2.0`, `1.2.0-SNAPSHOT`). Validated against this catalog's
+`X.Y.Z`/`X.Y.Z-SNAPSHOT` convention via regex; a non-matching but plausible string (e.g. a `-rc.N` suffix) is
+flagged, not hard-stopped.
+|None — the skill asks for it if omitted; an empty or whitespace-containing value is rejected up front.
+
+|`sync-files` (args)
+|No
+|Whether to also update `README.md`, `docs/antora.yml`'s `version:` field (released versions only), and any
+Antora page showing a dependency snippet.
+|Ask — the skill asks once, after Step 2 confirms whether such mentions actually exist.
+
+|`dry-run` (args)
+|No
+|When `yes`, compose and show the diff for every file that would change, then stop without writing anything or
+running the Gradle sanity check.
+|`no`
+|===
+
+== Outputs
+
+* `lib/build.gradle.kts`'s `val libraryVersion = "…"` updated to the new version, when a `lib` module exists.
+* `app/build.gradle.kts`'s `versionName` updated to the new version, when an `app` module exists; `versionCode`
+  incremented by exactly 1 only when `<new-version>` does not end in `-SNAPSHOT` (left unchanged otherwise).
+* Optionally, `README.md`'s dependency snippet, `docs/antora.yml`'s `version:` field, and/or Antora pages with a
+  literal dependency snippet, if `sync-files` was accepted.
+* A `./gradlew -q help` sanity check confirming the rewritten Kotlin DSL is still syntactically valid (skipped on
+  a `dry-run`).
+* A report of the old and new version, every file actually changed (or skipped and why), whether `versionCode`
+  was bumped, and a warning to review the diff before committing.
+* No commit is created — this skill only edits files (or, on `dry-run: yes`, only prints diffs).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-android-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, dry-run]"] --> B{new-version given\nand not blank/whitespace?}
+    B -- no --> C["Ask user for the\ntarget version string"]
+    C --> D
+    B -- yes --> D["Validate shape against\nX.Y.Z / X.Y.Z-SNAPSHOT regex\n(warn, don't stop, if it doesn't match)"]
+    D --> E["Survey modules:\nlib/build.gradle.kts present?\napp/build.gradle.kts present?"]
+    E --> F{Neither module found?}
+    F -- yes --> G["Ask for correct path(s)\nor different module layout"]
+    F -- no --> H["Read + rewrite lib/build.gradle.kts\nlibraryVersion (if lib module)"]
+    H --> I["Read + rewrite app/build.gradle.kts\nversionName (if app module)"]
+    I --> J{new-version ends\nin -SNAPSHOT?}
+    J -- yes --> K["Leave versionCode unchanged"]
+    J -- no --> L["Increment versionCode by 1"]
+    K --> M{dry-run: yes?}
+    L --> M
+    M -- yes --> N["Show diff for every file;\nwrite nothing; skip gradlew check"]
+    M -- no --> O["Write files"]
+    O --> P["Run ./gradlew -q help\nsanity check"]
+    P --> Q{sync-files given?}
+    N --> Q
+    Q -- no --> R["Ask whether to sync\nREADME / antora.yml / dependency pages"]
+    R --> S
+    Q -- yes --> S["Update accepted files"]
+    S --> T["Report: old/new version, files changed,\nversionCode decision, gradlew result,\nreview-before-commit warning"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-android-bump-version` is a leaf skill; it only runs shell/`python3` file rewrites and a Gradle sanity
+check, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, when the detected ecosystem is Android/Gradle, called twice per
+  release (once with the stripped release version, once with the next `x.y.(z+1)-SNAPSHOT` version) to apply
+  each computed version string in turn.
+
+=== Related agents
+
+None — this skill runs inline; it is not invoked from inside a custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

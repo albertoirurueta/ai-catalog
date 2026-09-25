@@ -87,6 +87,10 @@ sub-agent it delegates to.
 
 * xref:skills/iru-setup-java-library-repository.adoc[] — Step 7 runs `iru-setup-changelog` with no `args`, working
   entirely from the repository's own git tag/GitHub Release history.
+* xref:skills/iru-setup-typescript-repository.adoc[] (Step 9), xref:skills/iru-setup-android-repository.adoc[]
+  (Step 8), and xref:skills/iru-setup-swift-repository.adoc[] (Step 9) — each runs it via the
+  `iru-isolated-skill-executor` agent, treating an early "CHANGELOG.md already exists" stop as a note rather than
+  a failure.
 
 === Related agents
 

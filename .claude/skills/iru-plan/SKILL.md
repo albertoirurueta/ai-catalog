@@ -1,6 +1,6 @@
 ---
 name: iru-plan
-description: Generate an implementation_plan.md at the repository root detailing the tasks needed to complete a piece of work, optionally grounded in a specific GitHub issue or Jira ticket. Invoke as `/iru-plan <ticket-id>` to plan for that ticket (a GitHub issue ID or Jira key, auto-detected like `iru-explore`), or `/iru-plan` with a description in the same message to plan manually described work. Runs the `iru-explore` skill first to ground the plan in the actual codebase and ticket, unless that exploration already happened earlier in this conversation. Records the source GitHub issue or Jira ticket, if any, in the plan's Task summary so later steps in the pipeline can track which tracked ticket the plan resolves, and — when the base branch the work forks from is known (e.g. `iru-issue` already confirmed it with the user) — records that too as a `Base branch:` line, so a later `/iru-pr-description` run in a separate session targets the same base. If `implementation_plan.md` already exists at the repository root, determines whether it matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or update it while preserving already-completed tasks. Groups tasks into dependency-aware task groups — each marked parallelizable or not — so a downstream `iru-code`-style skill can validate once per group instead of once per task. Records which language/framework (e.g. `java`, `dotnet`) each task and sub-task belongs to, using the same keys as this repository's installed `<language>-code-one-task` skills, so a downstream execution skill knows which one to invoke per task without re-inferring it. Use when the user wants a concrete, reviewable step-by-step plan before code changes begin.
+description: Generate an implementation_plan.md at the repository root detailing the tasks needed to complete a piece of work, optionally grounded in a specific GitHub issue or Jira ticket. Invoke as `/iru-plan <ticket-id>` to plan for that ticket (a GitHub issue ID or Jira key, auto-detected like `iru-explore`), or `/iru-plan` with a description in the same message to plan manually described work. Runs the `iru-explore` skill first to ground the plan in the actual codebase and ticket, unless that exploration already happened earlier in this conversation. Records the source GitHub issue or Jira ticket, if any, in the plan's Task summary so later steps in the pipeline can track which tracked ticket the plan resolves, and — when the base branch the work forks from is known (e.g. `iru-issue` already confirmed it with the user) — records that too as a `Base branch:` line, so a later `/iru-pr-description` run in a separate session targets the same base. If `implementation_plan.md` already exists at the repository root, determines whether it matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or update it while preserving already-completed tasks. Groups tasks into dependency-aware task groups — each marked parallelizable or not — so a downstream `iru-code`-style skill can validate once per group instead of once per task. Records which language/framework (e.g. `java`, `dotnet`, `typescript`, `android`, `swift`) each task and sub-task belongs to, using the same keys as this repository's installed `<language>-code-one-task` skills, so a downstream execution skill knows which one to invoke per task without re-inferring it. Use when the user wants a concrete, reviewable step-by-step plan before code changes begin.
 model: opus
 ---
 
@@ -85,7 +85,8 @@ on, or scope that could reasonably mean two very different things).
 
 Downstream, a `iru-code`-style skill executes this plan one task **group** at a time by invoking `iru-code-one-task-group`,
 which in turn dispatches each task in the group to a language-specific `<key>-code-one-task-group`/
-`<key>-code-one-task` skill (e.g. `iru-java-code-one-task`, `iru-dotnet-code-one-task`). Both the language key and the
+`<key>-code-one-task` skill (e.g. `iru-java-code-one-task`, `iru-dotnet-code-one-task`, `iru-typescript-code-one-task`,
+`iru-android-code-one-task`, `iru-swift-code-one-task`). Both the language key and the
 grouping need to be explicit and unambiguous in the plan — don't leave either to be re-inferred later.
 
 **Language/framework keys:**
@@ -93,7 +94,8 @@ grouping need to be explicit and unambiguous in the plan — don't leave either 
 - Find which `*-code-one-task` skills are actually installed in this repository:
   `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`. The directory name minus its `iru-` prefix
   and its `-code-one-task` suffix is the key (e.g. `iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task`
-  → `dotnet`) — the `iru-` prefix is only this catalog's marketplace-collision namespace, not part of the
+  → `dotnet`, `iru-typescript-code-one-task` → `typescript`, `iru-android-code-one-task` → `android`,
+  `iru-swift-code-one-task` → `swift`) — the `iru-` prefix is only this catalog's marketplace-collision namespace, not part of the
   language/framework key itself. Use these exact keys — don't invent a synonym (e.g. write `dotnet`, not `csharp`
   or `net`, if `iru-dotnet-code-one-task` is what's installed).
 - Determine each task's language/framework from the exploration in Step 3 (the `iru-explore` skill already detects the
@@ -175,7 +177,7 @@ all if the user chose to skip planning). Structure it as:
    - Call out verification steps explicitly where this repository's conventions require them (e.g. "update
      the docs", "run the linter/static-analysis profile"). For running the tests touched by a task, call out
      delegating to the `iru-gate-runner` agent (e.g. `Agent({description: "Run tests for <selector>", subagent_type:
-     "gate-runner", prompt: "Invoke Skill({skill: \"<test-skill>\", args: \"<selector>\"}) ..."})`, if
+     "iru-gate-runner", prompt: "Invoke Skill({skill: \"<test-skill>\", args: \"<selector>\"}) ..."})`, if
      `iru-gate-runner` is installed in this repository's `.claude/agents/` — otherwise the equivalent generic
      sub-agent delegation) rather than running the test-running skill or command directly in the main
      conversation, so test output doesn't consume the main context window. Scope it to the relevant test(s) using

@@ -1,0 +1,123 @@
+= TypeScript Code One Task Group
+:description: Implements every TypeScript task in a plan bucket, then validates the whole group once for headers, TSDoc, tests, coverage, and quality.
+:keywords: iru-typescript-code-one-task-group, claude code skill, typescript, npm, vitest, jest, tsdoc, coverage, code quality, implementation plan
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of TypeScript tasks from a plan's task group end to end: capture a single pre-change quality
+baseline, run `iru-typescript-code-one-task` once per task (in parallel when the group allows it), then validate
+the entire bucket once — license headers, TSDoc, scoped tests, an 80% coverage check, a full-suite run, and a
+code-quality regression check.
+
+== Purpose
+
+`iru-typescript-code-one-task-group` is the npm/TypeScript counterpart to `iru-java-code-one-task-group`, carrying
+the same cost-cutting shape into TypeScript projects: it validates a whole bucket once instead of once per task.
+Step 1 detects the project's flavor (`hilla-frontend` / `react-native` / `ionic` / `angular` / `react` / `library`),
+test runner (Vitest, Jest, or the Angular CLI builder), and package manager (npm/pnpm/yarn) once, then captures a
+pre-change quality baseline covering every file the bucket's tasks are expected to touch. Step 2 implements each
+task via `iru-typescript-code-one-task` — concurrently, in a single batch of `Agent` calls, when the plan marks the
+group `Parallelizable: yes`; one at a time otherwise. `iru-typescript-code-one-task` itself checks off each task's
+box in `implementation_plan.md` the moment that task finishes, with a "group validation pending" note — this skill
+re-reads the file as each task's agent reports back to confirm the box landed, backfilling it only if a rare
+concurrent-write race clobbered it, and notifies the user before group-wide validation runs. Once every
+non-blocked task has landed, Step 3 validates the whole bucket in one pass: license headers, TSDoc, the affected
+test files, coverage, the full suite, and a quality-regression check against its one baseline. A failure traced to
+a specific task sends that task back for a fix and a re-run of the affected checks, rather than re-validating the
+whole bucket.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every TypeScript-tagged task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable`
+verdict and any relevant "Current code state" context.
+|None — this skill is always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source and test files created/modified per task, via `iru-typescript-code-one-task`.
+* License headers and TSDoc kept current across every file the bucket touched, checked once for the whole bucket
+  rather than once per task.
+* Tests achieving at least 80% line and branch coverage for the bucket's changed/new files, verified against the
+  real coverage report.
+* `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note — first an
+  "implemented, group validation pending" note written by `iru-typescript-code-one-task` itself as each task lands
+  (backfilled here only if a rare concurrent-write race dropped it), then replaced with the final coverage/quality
+  outcome once bucket-wide validation passes.
+* User-facing notifications at both phases: per task as its implementation lands, and once when group validation
+  completes.
+* A summary handed back to the caller (`iru-code-one-task-group`): per task, files touched, tests added/updated,
+  coverage achieved, code-quality outcome, and any task that stopped on a blocker.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-typescript-code-one-task-group] --> B["Step 1: detect flavor, test runner\nand package manager once;\ncapture pre-change quality baseline\n(iru-typescript-code-quality, via iru-gate-runner)"]
+    B --> C{Bucket Parallelizable?}
+    C -- yes --> D["Step 2: invoke typescript-code-one-task\nfor every task concurrently"]
+    C -- no --> E["Step 2: invoke typescript-code-one-task\nfor each task, one at a time"]
+    D --> F["Confirm/backfill each task's box\n(set by typescript-code-one-task itself); notify user"]
+    E --> F
+    F --> G["Step 3: validate the whole bucket once —\nlicense headers, TSDoc, scoped tests,\ncoverage, full suite, quality vs. baseline"]
+    G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
+    H --> G
+    G -- clean --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
+    I --> J["Step 5: report the bucket's\noutcome to the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-typescript-code-one-task.adoc[] — Step 2, once per task in the bucket (concurrently or
+  sequentially per the group's `Parallelizable` verdict), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent — that skill implements exactly
+  what the task specifies, writes/updates its tests, and checks off its own checkbox in `implementation_plan.md`
+  with a "group validation pending" note before reporting back.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than
+directly, so verbose report output stays out of this skill's own context:
+
+* xref:skills/iru-typescript-code-quality.adoc[] — Step 1 (pre-change baseline for the bucket) and Step 3.6 (final
+  regression check against that baseline).
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
+* xref:skills/iru-typescript-tsdoc.adoc[] — Step 3.2, TSDoc for every exported symbol the bucket touched.
+* xref:skills/iru-typescript-test.adoc[] — Step 3.3, scoped tests for every file the bucket affected, plus the
+  Step 3.5 full-suite run (`npm test` / `pnpm test` / `yarn test`).
+* xref:skills/iru-typescript-coverage.adoc[] — Step 3.4, coverage for every changed/new file in the bucket.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, once for the whole bucket of tasks tagged (or defaulted to)
+  `typescript`, via a direct `Skill` call.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per task in the bucket
+  (Step 2), potentially many at once when the group is parallelizable, so each task's own implementation transcript
+  doesn't accumulate in this skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for the baseline capture (Step 1) and every
+  validation check (Step 3), keeping full reports out of this skill's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

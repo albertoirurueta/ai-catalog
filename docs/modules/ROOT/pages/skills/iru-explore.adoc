@@ -1,6 +1,6 @@
 = Explore
-:description: Investigates a repository's codebase and a linked GitHub issue or Jira ticket to produce a grounded, read-only report before any plan or code change.
-:keywords: iru-explore, claude code skill, github, jira, codebase research, ticket investigation, tech stack detection, exploration
+:description: Investigates a repository and a linked GitHub issue or Jira ticket into a grounded, read-only report with a normalized project-type line.
+:keywords: iru-explore, claude code skill, github, jira, codebase research, ticket investigation, tech stack detection, project type detection, exploration
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -21,7 +21,12 @@ attaches back onto a resolved ticket, so a match here is a previously-completed 
 travelling with the ticket itself. It also detects which platform hosts the repository (GitHub, Bitbucket, Azure
 DevOps, or TFS) and the language(s)/framework(s) in play — both in the existing codebase and in whatever change is
 being requested — so its "Tech stack" report can be reused directly by later skills (`iru-plan`, `iru-code`,
-`iru-update-docs`, PR/branch creation) instead of each re-detecting the same facts. This works even when the current
+`iru-update-docs`, PR/branch creation) instead of each re-detecting the same facts. Language/framework detection
+covers Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Expo/React Native, Ionic/Capacitor, Android
+(library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks in addition to the classic Java/.NET/
+Python/Go/Rust ones, and the report boils that detection down to a single normalized `Project type:` line — the
+shared vocabulary the `iru-setup-repository` bootstrap front door reads to pre-select the right stack orchestrator
+on an existing repository. This works even when the current
 working directory isn't a git repository at all: it warns the user once, records that explicitly, and keeps going
 with whatever sources don't need git (a Jira ticket, a documentation MCP, and any files actually present) — a
 GitHub issue lookup in that case falls back to asking the user for the target `owner/repo` explicitly. It also
@@ -63,10 +68,66 @@ general codebase tour.
 
 * A plain-text report in the conversation — never a written file.
 * Always a **Tech stack** section: codebase languages/frameworks (per module, if more than one), the
-  languages/frameworks implicated by the requested change, the Antora docs location (or "none found"), and the
-  detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, "no remote configured", or "none — not a git
-  repository") — structured so later skills in the same conversation can read it directly instead of
-  re-detecting it.
+  languages/frameworks implicated by the requested change, a normalized **`Project type:`** line, the Antora docs
+  location (or "none found"), and the detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, "no remote
+  configured", or "none — not a git repository") — structured so later skills in the same conversation can read it
+  directly instead of re-detecting it.
+* The **`Project type:`** line is a single-token-per-module normalization of the detected stack — this exact
+  vocabulary is a shared contract with `iru-setup-repository`, which reads it verbatim to pre-select the right
+  bootstrap flow on an existing repository:
++
+[cols="1,3", options="header"]
+|===
+|Value |Meaning
+
+|`java-library`
+|Java/Kotlin library (`pom.xml`/`build.gradle*`, no Spring Boot, no Android plugin)
+
+|`java-springboot`
+|Spring Boot service (no Hilla markers)
+
+|`java-springboot-hilla`
+|Spring Boot + Vaadin + Hilla (`hilla-spring-boot-starter`/`vaadin-spring-boot-starter`, `@vaadin/hilla`, `src/main/frontend/`)
+
+|`typescript-library`
+|Plain TypeScript/npm library, no app framework
+
+|`react-web`
+|Vite + React (or another React web setup, not Native/Ionic)
+
+|`angular-web`
+|Angular CLI web app, not layered under Ionic
+
+|`android-library`
+|Gradle `com.android.library` module
+
+|`android-app`
+|Gradle `com.android.application` module
+
+|`swift-library`
+|SwiftPM `.library(...)` product
+
+|`apple-app`
+|SwiftPM `.executable(...)` product, or an Xcode/XcodeGen/Tuist app target — lists detected platforms in parentheses (`ios`, `ipados`, `macos`, `watchos`)
+
+|`react-native-app`
+|Expo / React Native app
+
+|`ionic-app`
+|Ionic/Capacitor hybrid app — lists its underlying framework in parentheses (`angular` or `react`)
+
+|`dotnet`
+|.NET project (`*.csproj`/`*.fsproj`/`*.sln`)
+
+|`other`
+|A stack was detected but has no key above (e.g. Vue, Flutter, plain Python, Go, Rust, Ruby, C/C++)
+
+|`unknown`
+|Nothing matched any manifest or source-level signal
+
+|`multiple`
+|More than one module with a distinct project type — followed by one `<module-path>: <type>` sub-line per module
+|===
 * If a documentation MCP (e.g. Confluence, Notion) is connected: a **Related documentation** section listing
   relevant pages found (title, link, one-line summary), or a note that none was relevant/connected.
 * A **Related past implementation plans** section covering both the local `.archive/` check and, for a Jira
@@ -109,7 +170,7 @@ flowchart TD
     E --> J["General orientation pass:\narchitecture, modules, recent git\nhistory (skipped if not a git repo)"]
     I --> O["Check .archive/ for a plan whose\ntopic overlaps the current task"]
     J --> O
-    O --> K["Detect tech stack: codebase\nlanguages/frameworks + Antora docs"]
+    O --> K["Detect tech stack (incl. Vite+React, Angular,\nHilla, Expo/RN, Ionic, Android, SwiftPM/Xcode)\n+ Antora docs; derive normalized\nProject type: line"]
     K --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- yes --> N["Search it for pages relevant\nto the ticket/codebase"]
     M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ epic/linked tickets,\n+ Related documentation)"]
@@ -124,6 +185,12 @@ None — `iru-explore` is a leaf skill; it does not call any other skill in this
 
 === Invoked by
 
+* xref:skills/iru-setup-repository.adoc[] — Step 1 runs `iru-explore` with no argument on a non-empty repository,
+  reading its report's `Project type:` line to pre-select the matching stack orchestrator instead of asking the
+  user over `AskUserQuestion` rounds.
+* xref:skills/iru-setup-readme.adoc[] — Step 2 runs `iru-explore` with no argument when no report with a
+  `Project type:` line is already in the conversation, so the README's language/framework/build-tool detection
+  comes from the same table every other skill reads instead of a duplicated one.
 * xref:skills/iru-plan.adoc[] — Step 2 runs `iru-explore` first (unless equivalent exploration already happened
   earlier in the conversation) so the plan it drafts is grounded in the real codebase.
 * xref:skills/iru-issue.adoc[] — Step 5 runs `iru-explore` (scoped to the ticket) as the first step of its
@@ -137,6 +204,11 @@ None — `iru-explore` is a leaf skill; it does not call any other skill in this
   `iru-create-github-issue`.
 * xref:skills/iru-knowledge-to-jira.adoc[] — the Jira counterpart: same use of `iru-explore` with no argument to
   ground the purpose statement it synthesizes, reused as-is when it then runs `iru-create-jira-ticket`.
+
+NOTE: xref:skills/iru-release.adoc[] does not invoke `iru-explore` itself — it reads the `Project type:` and
+`Repository host:` lines from an `iru-explore` report already produced earlier in the same conversation (or falls
+back to inspecting the repository's manifests directly) to pick which `iru-<key>-bump-version` skill and git-host
+tooling to use.
 
 === Related agents
 

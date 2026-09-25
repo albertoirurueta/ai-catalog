@@ -1,6 +1,6 @@
 = Code
 :description: Executes implementation_plan.md end to end, implementing and validating each task group in order, then updates docs and archives the finished plan.
-:keywords: iru-code, claude code skill, implementation plan, automated coding, code quality gate, security baseline, test coverage, java, dotnet, github issue
+:keywords: iru-code, claude code skill, implementation plan, automated coding, code quality gate, security baseline, test coverage, java, dotnet, typescript, android, swift, github issue
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -12,8 +12,9 @@ skill orchestrates the actual implementation work; it is the execution counterpa
 
 `iru-code` is the autonomous orchestration engine of the catalog. Given a plan produced by `iru-plan` (or by `iru-issue`,
 which runs `iru-plan` internally), it determines which language/framework key(s) are in play, captures a
-project-wide code-quality baseline (via `iru-java-code-quality`, `iru-dotnet-code-quality`, or whichever
-`<key>-code-quality` skill matches) and a project-wide security baseline (via `iru-check-security`), then works
+project-wide code-quality baseline (via `iru-java-code-quality`, `iru-dotnet-code-quality`, `iru-typescript-code-quality`,
+`iru-android-code-quality`, `iru-swift-code-quality`, or whichever `<key>-code-quality` skill matches) and a
+project-wide security baseline (via `iru-check-security`), then works
 through every task **group** in plan order — dispatching each group to `iru-code-one-task-group`, which resolves
 each task's language and delegates to the matching `<key>-code-one-task-group` skill (implementing, testing,
 and validating the whole group once), checking off the plan's checkboxes and notifying the user as it goes so
@@ -134,13 +135,19 @@ flowchart TD
 Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than directly,
 so verbose report output stays out of `iru-code`'s own context window and only the distilled outcome comes back:
 
-* xref:skills/iru-java-code-quality.adoc[] / xref:skills/iru-dotnet-code-quality.adoc[] — Step 3 (project-wide baseline,
-  once per language/framework key involved) and Step 7 (final project-wide comparison against that baseline).
+* xref:skills/iru-java-code-quality.adoc[] / xref:skills/iru-dotnet-code-quality.adoc[] /
+  xref:skills/iru-typescript-code-quality.adoc[] / xref:skills/iru-android-code-quality.adoc[] /
+  xref:skills/iru-swift-code-quality.adoc[] — Step 3 (project-wide baseline, once per language/framework key
+  involved) and Step 7 (final project-wide comparison against that baseline).
 * xref:skills/iru-check-security.adoc[] — Step 3 (project-wide baseline) and Step 7 (final comparison) — any increase
   is a hard stop, unlike the quality gate's "accept as-is" option.
-* A final full-build verification (Step 7) via `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar
-  source:jar -P '!build-extras'` (or the equivalent for other languages/frameworks in play), run directly as a
-  raw command rather than via a skill.
+* A final full-build verification (Step 7), run once per language/framework key in the plan through
+  `iru-gate-runner` as a raw command rather than via a skill: the full verification command the repository's
+  `CLAUDE.md` names for that stack, else a per-key default (`mvn clean jacoco:prepare-agent install jacoco:report
+  javadoc:jar source:jar -P '!build-extras'` for `java`, `mvn -B -ntp clean verify` for `java-springboot`,
+  `dotnet build && dotnet test`, the package manager's `lint`/`typecheck`/`test` scripts for `typescript`,
+  `./gradlew build` for `android`, `swift build && swift test` or `xcodebuild build-for-testing` for `swift`);
+  skipped when no key could be resolved.
 
 === Invoked by
 

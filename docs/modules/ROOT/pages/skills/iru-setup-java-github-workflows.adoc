@@ -1,26 +1,31 @@
 = Setup Java GitHub Workflows
-:description: Scaffolds develop.yml, main.yml, and sync.yml GitHub Actions workflows for a Java/Maven CI/CD pipeline covering build, test, and publishing.
-:keywords: iru-setup-java-github-workflows, claude code skill, java, maven, github actions, ci/cd, jacoco coverage, sonarqube, maven central, checkstyle
+:description: Scaffolds develop, main, sync, and security GitHub Actions workflows plus dependabot.yml for a Java/Maven pipeline with optional publishing.
+:keywords: iru-setup-java-github-workflows, claude code skill, java, maven, github actions, ci/cd, jacoco coverage, sonarqube, maven central, checkstyle, dependabot, codeql, osv-scanner, gitleaks, dependency review
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Scaffold or update the `develop.yml`, `main.yml`, and `sync.yml` GitHub Actions workflows (plus the companion
-`.github/scripts/sync_versions.py` script) that make up a Java/Maven library's CI/CD release pipeline.
+Scaffold or update the `develop.yml`, `main.yml`, `sync.yml`, and `security.yml` GitHub Actions workflows
+(plus the companion `.github/scripts/sync_versions.py` script and `.github/dependabot.yml`) that make up a
+Java/Maven library's CI/CD release and security pipeline.
 
 == Purpose
 
 `iru-setup-java-github-workflows` wires up the full house pipeline for a Java/Maven repository: build and test,
-Checkstyle/PMD/SpotBugs static analysis, JaCoCo coverage and a Maven `site` report, a SonarQube/SonarCloud
-scan, an Antora documentation build, publishing both the Antora docs and the Maven site report to GitHub
-Pages, and publishing the release artifact to Maven Central. `develop.yml` runs this pipeline on every push to
-the integration branch; `main.yml` runs the same pipeline when a GitHub Release is published; `sync.yml`
-triggers on that same release-published event to open a pull request merging the released branch back into
-the integration branch and bumping the development snapshot version across `pom.xml`, `README.md`, and the
-Antora docs, via `sync_versions.py`. The skill ships generic, genericized example templates (derived from a
-real repository's workflows) embedded in the skill file itself, and resolves every placeholder in them from a
-survey of the target repository rather than guessing. If any of the three workflow files already exist, it
-asks the user whether to stop or attempt an update using the templates as reference, preserving any step this
-skill doesn't own (e.g. a Slack notification).
+Checkstyle/PMD/SpotBugs static analysis, JaCoCo coverage and a Maven `site` report, an optional
+SonarQube/SonarCloud scan (gated by `sonar`), an Antora documentation build, publishing both the Antora docs
+and the Maven site report to GitHub Pages, and an optional publish of the release artifact to Maven Central
+(gated by `publish`, along with its `setup-java` signing inputs and `mvnsettings.xml`). `develop.yml` runs this
+pipeline on every push to the integration branch; `main.yml` runs the same pipeline when a GitHub Release is
+published; `sync.yml` triggers on that same release-published event to open a pull request merging the
+released branch back into the integration branch and bumping the development snapshot version across
+`pom.xml`, `README.md`, and the Antora docs, via `sync_versions.py`. `security.yml` runs a
+dependency-review/CodeQL/OSV-Scanner/gitleaks block on every pull request and push to the integration/stable
+branches, each job individually gated by its own `security-*` argument (default `yes`); `.github/dependabot.yml`
+(grouped weekly updates for `maven` and `github-actions`) is always generated with no opt-out. The skill ships
+generic, genericized example templates (derived from a real repository's workflows) embedded in the skill file
+itself, and resolves every placeholder in them from a survey of the target repository rather than guessing. If
+any of the workflow files already exist, it asks the user whether to stop or attempt an update using the
+templates as reference, preserving any step this skill doesn't own (e.g. a Slack notification).
 
 == Purpose group
 
@@ -43,46 +48,78 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |No
 |Pre-resolved values for the six pipeline parameters — `integration-branch`, `java-version`,
 `publishing-server-id`, `extras-profile-id`, `sign-profile-id`, and `settings-file` — plus, optionally,
-`group-id`/`artifact-id` if the caller already has them, passed one per line, e.g. `integration-branch: develop`.
-When an orchestrating skill (such as `iru-setup-java-library-repository`) supplies these, the corresponding
-fact-finding step in Step 1's survey is skipped entirely for that value instead of asking the user again (or, for
-`group-id`/`artifact-id`, instead of re-reading `pom.xml` for values the caller already collected).
+`group-id`/`artifact-id` if the caller already has them; `open-source` (`yes`/`no`); `publish` (`yes`/`no` —
+gates the Maven Central deploy step, its `setup-java` signing inputs, and `mvnsettings.xml`); `sonar`
+(`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` — gates the
+SonarCloud analysis step); and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`
+(each `yes`/`no`, default `yes` — individually gate those `security.yml` jobs), passed one per line, e.g.
+`integration-branch: develop`. When an orchestrating skill (such as `iru-setup-java-library-repository`)
+supplies these, the corresponding fact-finding step in Step 1's survey is skipped entirely for that value
+instead of asking the user again (or, for `group-id`/`artifact-id`, instead of re-reading `pom.xml` for values
+the caller already collected).
 |None — if `args` is absent or doesn't match this `key: value` format, every parameter is instead resolved by
 surveying `pom.xml` and the repository (Maven coordinates, compiler version, publishing/signing/extras
 profiles, Sonar config, Antora setup, branch names, README/Antora version wording), asking the user directly
 for anything that can't be inferred — the Java version falls back to a question defaulting to `21` when
-`pom.xml` declares no `maven.compiler.source`/`target`/`release`.
+`pom.xml` declares no `maven.compiler.source`/`target`/`release`. The four `security-*` keys default to `yes`
+when not supplied and are not otherwise surveyed.
 |===
 
 == Outputs
 
-* `.github/workflows/develop.yml`, `.github/workflows/main.yml`, and `.github/workflows/sync.yml` — created
-  fresh, or updated in place if any already existed and the user chose to continue.
+* `.github/workflows/develop.yml`, `.github/workflows/main.yml`, `.github/workflows/sync.yml`, and
+  `.github/workflows/security.yml` — created fresh, or updated in place if any already existed and the user
+  chose to continue. The Maven Central deploy step and its `setup-java` signing inputs in `develop.yml`/`main.yml`
+  are generated only when `publish: yes`; the SonarCloud analysis step only when `sonar` isn't `none`.
 * `.github/scripts/sync_versions.py`, always written together with `sync.yml` — never one without the other.
-* Supporting files created if missing: `sonar-project.properties` (if Sonar values are supplied), and the
-  Maven settings file used for deploy (default `mvnsettings.xml`), plus `.gitignore` entries for `/docs/build/`
-  and `/target/` if absent.
-* A report of required repository secrets (`SONAR_TOKEN`, `OSSRH_USERNAME`/`OSSRH_PASSWORD`,
-  `SIGNING_KEY`/`SIGNING_KEY_ID`/`SIGNING_PASSWORD`, and conditionally `SONATYPE_STAGING_PROFILE_ID`) and the
-  repository setting that must be enabled for `sync.yml` to be able to open pull requests, plus any open gaps
-  (missing Central plugin, missing signing profile, missing Antora setup, README/Antora wording that didn't
-  match `sync_versions.py`'s default regexes).
+* `.github/dependabot.yml` — grouped weekly updates for the `maven` and `github-actions` ecosystems, always
+  generated/updated regardless of the `security-*` args.
+* Supporting files created if missing: `sonar.*` properties and the `sonar-maven-plugin` added to `pom.xml`
+  (only when `sonar` isn't `none`), the Maven settings file used for deploy — default `mvnsettings.xml` — (only
+  when `publish: yes`), plus `.gitignore` entries for `/docs/build/` and `/target/` if absent.
+* A report of required repository secrets and the repository setting that must be enabled for `sync.yml` to be
+  able to open pull requests, plus any open gaps (missing Central plugin, missing signing profile, missing
+  Antora setup, README/Antora wording that didn't match `sync_versions.py`'s default regexes).
+
+[cols="1,2,2", options="header"]
+|===
+|Secret |Purpose |Only needed when
+
+|`SONAR_TOKEN`
+|Auth token for the SonarQube/SonarCloud scan, passed as `-Dsonar.token` to `mvn sonar:sonar`
+|`sonar` is `cloud` or `self-hosted`
+
+|`OSSRH_USERNAME` / `OSSRH_PASSWORD`
+|Maven Central (Sonatype) publishing credentials
+|`publish: yes`
+
+|`SIGNING_KEY` / `SIGNING_KEY_ID` / `SIGNING_PASSWORD`
+|GPG private key, its key id, and its passphrase, for artifact signing
+|`publish: yes`
+
+|`SONATYPE_STAGING_PROFILE_ID`
+|Only needed with the legacy `nexus-staging-maven-plugin`; unused (and can be left unset) if the target repo
+uses `central-publishing-maven-plugin`
+|`publish: yes`, and only with `nexus-staging-maven-plugin`
+|===
+
+None of `security.yml`'s four jobs need a secret beyond the automatically provided `GITHUB_TOKEN`.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-java-github-workflows] --> B["Step 1: Survey target repo\n(parse args first, then fill\nremaining gaps from pom.xml/repo)"]
-    B --> C{"Do develop.yml/main.yml/\nsync.yml already exist?"}
-    C -- none exist --> E["Step 3-4: Fill reference\ntemplates with survey values"]
+    A[Start /iru-setup-java-github-workflows] --> B["Step 1: Survey target repo\n(parse args first, then fill\nremaining gaps from pom.xml/repo;\nresolve publish/sonar/security-* gates)"]
+    B --> C{"Do develop.yml/main.yml/\nsync.yml/security.yml/\ndependabot.yml already exist?"}
+    C -- none exist --> E["Step 3-4: Fill reference\ntemplates with survey values,\ndropping blocks gated off\nby publish/sonar/security-*"]
     C -- any exists --> D{"Stop or continue\n(user choice)?"}
     D -- stop --> Z["Report which files exist;\nno changes made"]
     D -- continue --> E
-    E --> F["Step 5: Create missing supporting\nfiles (sonar-project.properties,\nMaven settings XML, .gitignore entries)"]
-    F --> G["Step 6: Write workflow files\nand sync_versions.py"]
-    G --> H["Step 7: List required\nrepository secrets/settings"]
-    H --> I["Step 8: Report and warn\nabout open gaps"]
+    E --> F["Step 5: Create missing supporting\nfiles (sonar.* properties + plugin\nwhen sonar != none, Maven settings\nXML when publish: yes, .gitignore)"]
+    F --> G["Step 6: Write workflow files,\nsync_versions.py, and\n.github/dependabot.yml"]
+    G --> H["Step 7: List required\nrepository secrets/settings\n(rows filtered by publish/sonar)"]
+    H --> I["Step 8: Report and warn\nabout open gaps and what\nwas wired vs. omitted"]
 ....
 
 == Dependencies

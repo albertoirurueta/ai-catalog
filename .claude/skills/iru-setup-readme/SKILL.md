@@ -1,6 +1,6 @@
 ---
 name: iru-setup-readme
-description: Create or update the root `README.md` for a repository — a brief description, badges (CI status, SonarCloud/SonarQube, etc.), a project status table (language, versions, license, CI, quality tools), documentation links (Antora site, Maven site report, SonarCloud dashboard, CHANGELOG), installation instructions (Maven/Gradle/npm/etc. dependency snippets, matched to the project's actual build tool), and a short "how it works" section with a runnable example. Invoke as `/iru-setup-readme`. Explores the repository's actual state (`pom.xml`/`build.gradle`/`package.json`, git remote, GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled with placeholders or invented content. If `README.md` already exists, warns the user and shows the proposed new content as a diff before writing anything, so they can accept or skip the changes. Use whenever a repository needs a README bootstrapped or refreshed from what's actually there, instead of hand-writing it.
+description: Create or update the root `README.md` for a repository — a brief description, badges (CI status, SonarCloud/SonarQube, npm, Maven Central, Swift Package Index, etc.), a project status table (language, versions, platforms, license, CI, quality tools), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC, CHANGELOG), installation instructions (Maven/Gradle/npm/SwiftPM/etc. dependency snippets, or a "run it locally"/store-listing section for apps, matched to the project's actual stack and build tool), and a short "how it works" section with a runnable example. Invoke as `/iru-setup-readme`, or `/iru-setup-readme sonar: none` (an `args` line — the only key it accepts) to suppress Sonar badges and dashboard links even when a `sonar {}` block or `sonar-project.properties` exists, so an orchestrator that resolved `sonar: none` gets a README matching that choice. Explores the repository's actual state (`pom.xml`/`build.gradle`/`package.json`/`Package.swift`/Android Gradle modules/Xcode or Tuist project files/etc., git remote, GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled with placeholders or invented content. If `README.md` already exists, warns the user and shows the proposed new content as a diff before writing anything, so they can accept or skip the changes. Use whenever a repository needs a README bootstrapped or refreshed from what's actually there, instead of hand-writing it.
 model: sonnet
 ---
 
@@ -10,6 +10,16 @@ Create or refresh a repository's root `README.md` by exploring what actually exi
 build files, CI workflows, quality-tool config, documentation, license, and source code — and composing only the
 sections that real material supports. Never invent version numbers, badge URLs, dashboard links, or example code
 that don't correspond to something actually present.
+
+## Step 0 — Resolve inputs
+
+This skill takes a single optional `args` line, `sonar: <cloud|self-hosted|none>`, passed by this catalog's
+`iru-setup-*-repository` orchestrators with the value they resolved. Only `none` changes behaviour: Step 3 then
+skips every SonarCloud/SonarQube badge and Step 5 the dashboard link, even if Sonar configuration is present on
+disk (a `mode: existing` repository may carry a `sonar {}` block the user has just chosen not to wire up —
+without this line, a README otherwise gains a full set of SonarCloud badges for a project the run had explicitly
+declined). Any other value, or no `args` at all, means "detect from the repository" as Step 3 describes. Record
+in Step 11 when badges were suppressed because of this line.
 
 ## Step 1 — Check whether `README.md` already exists
 
@@ -36,16 +46,39 @@ Look at the repository root for `README.md`.
   can confidently name, still link to it but describe it generically ("see `LICENSE`") rather than guessing a name.
   If no license file exists, omit the License section entirely — don't claim a license the repository doesn't
   declare.
-- **Primary language and build tool**: check for `pom.xml` (Java/Maven), `build.gradle`/`build.gradle.kts`
-  (Java or Kotlin/Gradle), `package.json` (Node), `pyproject.toml`/`setup.py` (Python), `Cargo.toml` (Rust), etc.
-  A repository can have more than one (e.g. a Maven library with an Antora docs site under `docs` that has its own
-  `package.json` for the doc toolchain only) — identify the build tool for the library/application itself, not
-  incidental tooling.
-- **Current version(s)**: for Maven, the `<version>` in `pom.xml` (immediately under the project's own
-  `artifactId`, not a dependency/plugin). For Gradle, the `version` in `build.gradle`. For npm, the `"version"` in
-  `package.json`. Also find the latest released version: `git tag --sort=-v:refname | head -1` (or `gh release
-  list --limit 1` if on GitHub with `gh` available). If the current version has no `-SNAPSHOT`/prerelease suffix
-  and matches the latest tag, there's only one version to show, not a "current dev / latest release" pair.
+- **Primary language, framework, and build tool**: reuse `iru-explore`'s `- Project type:` line rather than
+  re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
+  Expo/React Native, Ionic/Capacitor, Android library/app, SwiftPM/XcodeGen/Tuist, plain TypeScript/npm library,
+  and so on), and duplicating it here would drift the first time it gains a signal:
+  - If an `iru-explore` report with a `- Project type:` line is already available earlier in this conversation,
+    use it — just confirm the manifest(s) it names are still present.
+  - Otherwise invoke `Skill({skill: "iru-explore"})` with no ticket argument (a codebase-only exploration) and read
+    the `- Project type:` line from its `## Tech stack` report block, along with the build tool and framework it
+    names.
+  - Only if `iru-explore` isn't installed in this repository, fall back to a minimal one-manifest check — `pom.xml`
+    → Java/Maven, `build.gradle*` → Gradle (Android when a module applies `com.android.library`/
+    `com.android.application`), `package.json` → npm/TypeScript, `Package.swift`/`*.xcodeproj`/`project.yml`/
+    `Project.swift` → Swift/Apple — and say in Step 11 that the framework flavor wasn't detected.
+  - A repository can have more than one manifest (e.g. a Maven library with an Antora docs site under `docs` that
+    has its own `package.json` for the doc toolchain only, or a Hilla app that is both Java and TypeScript — treat
+    the latter as both a Java backend and a frontend for badges/snippets/status-table purposes) — identify the
+    build tool for the library/application itself, not incidental tooling; `iru-explore` reports `multiple` when
+    it genuinely can't pick one.
+- **Current version(s) and package/artifact identity**: read the identity from the source that actually owns it
+  for the detected stack, not always `pom.xml`/`package.json`:
+  - Maven: the `<version>` in `pom.xml` (immediately under the project's own `artifactId`, not a
+    dependency/plugin), plus `groupId`/`artifactId`.
+  - Gradle/Android library: `group` and `libraryVersion` (or equivalent) in `lib/build.gradle.kts`, falling back
+    to a version property in `gradle.properties` when the build script references one.
+  - npm/Vite/Angular/Expo/Ionic/TypeScript: the `"name"`/`"version"` in `package.json`.
+  - Swift: the package name from `Package.swift`, with the version taken from git tags (SwiftPM has no in-file
+    version field) — `git tag --sort=-v:refname | head -1`.
+  - Xcode app: `MARKETING_VERSION` from the project's build settings (`project.pbxproj`, `project.yml`, or
+    `Project.swift`, depending on which of Xcode/XcodeGen/Tuist generates the project).
+  - Also find the latest released version for any stack: `git tag --sort=-v:refname | head -1` (or `gh release
+    list --limit 1` if on GitHub with `gh` available). If the current version has no `-SNAPSHOT`/prerelease
+    suffix and matches the latest tag, there's only one version to show, not a "current dev / latest release"
+    pair.
 
 ## Step 3 — Gather badge sources
 
@@ -56,16 +89,33 @@ SonarCloud project that isn't configured yet.
   say, a stale/dependabot-only workflow), add a status badge:
   `https://github.com/<owner>/<repo>/actions/workflows/<file>/badge.svg`, linking to
   `https://github.com/<owner>/<repo>/actions/workflows/<file>`.
-- **SonarCloud/SonarQube**: check `sonar-project.properties` or `sonar.*` properties in `pom.xml`/`build.gradle`
-  for `sonar.projectKey` (and `sonar.organization` if using SonarCloud). If found and hosted on SonarCloud, add the
-  standard metric badges (bugs, code smells, coverage, duplicated lines density, lines of code, maintainability
-  rating, quality gate status, reliability rating, security rating, technical debt, vulnerabilities), each of the
-  form `https://sonarcloud.io/api/project_badges/measure?project=<projectKey>&metric=<metric>`, linking to
-  `https://sonarcloud.io/dashboard?id=<projectKey>`. If Sonar config exists but points at a self-hosted SonarQube
-  instance instead, link the dashboard but skip the SonarCloud-specific badge images (they're a SonarCloud-only
-  feature) and note this in Step 11.
-- **Package registry badges** (npm version, Maven Central version, etc.): include only if the project is actually
-  published there — e.g. don't add an npm badge for a library that's never been published to the npm registry.
+- **SonarCloud/SonarQube** (skip entirely when Step 0 resolved `sonar: none`): check `sonar-project.properties` or `sonar.*` properties in `pom.xml`/`build.gradle*`
+  (or an equivalent `sonar-project.properties` used by a non-Java stack) for `sonar.projectKey` (and
+  `sonar.organization` if using SonarCloud) — this applies to any stack, not just Java/Maven. If found and hosted
+  on SonarCloud, add the full metric set the reference Android READMEs use — Quality Gate Status,
+  Maintainability Rating, Reliability Rating, Security Rating, Bugs, Code Smells, Coverage, Duplicated Lines (%),
+  Lines of Code, Technical Debt, Vulnerabilities — each of the form
+  `https://sonarcloud.io/api/project_badges/measure?project=<project-key>&metric=<metric>` (metric keys:
+  `alert_status`, `sqale_rating`, `reliability_rating`, `security_rating`, `bugs`, `code_smells`, `coverage`,
+  `duplicated_lines_density`, `ncloc`, `sqale_index`, `vulnerabilities`), each linking to
+  `https://sonarcloud.io/summary/new_code?id=<project-key>`. If Sonar config exists but points at a self-hosted
+  SonarQube instance instead, link the dashboard but skip the SonarCloud-specific badge images (they're a
+  SonarCloud-only feature) and note this in Step 11.
+- **Package registry badges**, only if the project is actually published there — never fabricate a badge for a
+  registry the project has never published to:
+  - **npm**: `img.shields.io/npm/v/<name>` (version) and `img.shields.io/npm/dm/<name>` (monthly downloads),
+    linking to `https://www.npmjs.com/package/<name>`, when `package.json`'s `"name"` is confirmed published
+    (e.g. a publish step in a GitHub Actions workflow, or the package is already live on the registry).
+  - **Maven Central**: `https://maven-badges.herokuapp.com/maven-central/<group>/<artifact>/badge.svg` (or the
+    `img.shields.io/maven-central/v/<group>/<artifact>` equivalent), linking to the Maven Central search page for
+    that coordinate, when the `pom.xml` publishing profile actually targets Central (e.g. a
+    `central-publishing-maven-plugin`/`nexus-staging-maven-plugin` configuration or a release-publish workflow
+    step).
+  - **Swift Package Index**: platform and Swift-version shields,
+    `https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F<owner>%2F<repo>%2Fbadge%3Ftype%3Dplatforms`
+    and `…%2Fbadge%3Ftype%3Dswift-versions`, linking to `https://swiftpackageindex.com/<owner>/<repo>`, when the
+    package is confirmed listed there (or a `Package.swift` plus an SPI-focused release workflow strongly implies
+    it — note the inference in Step 11 if not confirmed live).
 - If none of the above exist yet, skip the badges section of the README entirely rather than leaving an empty
   heading.
 
@@ -76,12 +126,22 @@ Compose a small table from whatever Steps 2–3 actually resolved; omit rows wit
 | Row | Source                                                                                                                         |
 | --- |--------------------------------------------------------------------------------------------------------------------------------|
 | Language | Detected primary language + version (e.g. `Java 21`)                                                                           |
-| Build tool | Maven / Gradle / npm / etc.                                                                                                    |
+| Build tool | Maven / Gradle / npm / SwiftPM / Xcode / etc.                                                                                  |
 | Current development version | The unreleased/SNAPSHOT version from the build file, if different from the latest release                                      |
 | Latest release | The latest git tag / release version                                                                                           |
+| Platform(s) | For Android/Apple/web projects only: Android / iOS / iPadOS / macOS / watchOS / web, as applicable                             |
+| Min / target SDK | Android only: `minSdk` and compile/target SDK from the Gradle module, when they differ from the platform row above             |
+| Kotlin / AGP | Android/Kotlin-Gradle only: Kotlin version and Android Gradle Plugin version, when pinned explicitly                           |
+| Swift tools / deployment targets | Swift only: the Swift tools version from `Package.swift` and the platform deployment targets it declares          |
+| Node engine | npm-based projects only: the `engines.node` range from `package.json`, if one is declared                                     |
+| TypeScript | TypeScript projects only: the `typescript` version pinned in `package.json`/`package-lock.json`                               |
+| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, etc.)                                            |
 | License | The license identified in Step 2, if any                                                                                       |
 | CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds")                               |
-| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Checkstyle, SpotBugs, PMD, ESLint, etc.) |
+| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Checkstyle, SpotBugs, PMD, ESLint, Detekt, SwiftLint, etc.) |
+
+Omit every row in this extended set (platforms through framework) that doesn't apply to the detected stack — a
+plain Java/Maven library still shows only the original rows.
 
 ## Step 5 — Gather documentation links
 
@@ -94,6 +154,22 @@ Include a link only when the thing it points to actually exists in the repositor
 - **Maven/Gradle site report**: if the CI workflow merges a Maven `site` (or Gradle equivalent) report into the
   published docs (e.g. a `mvn-site` subpath alongside the Antora output, matching this repository's own
   `develop`/`main` workflow pattern), link to it at that subpath.
+- **Generated API docs published to GitHub Pages**: grep `.github/workflows/*.yml` for the publish step of each
+  tool below, and link only the ones actually wired into a workflow — never assume one just because the stack
+  matches:
+  - **TypeDoc** (TypeScript libraries): a `typedoc` invocation feeding a Pages publish step, normally landing at
+    `https://<owner>.github.io/<repo>/api`.
+  - **Compodoc** (Angular): a `compodoc`/`@compodoc/compodoc` invocation, normally landing at
+    `https://<owner>.github.io/<repo>/api`.
+  - **Storybook** (React/Angular component libraries): a `build-storybook` (or `storybook build`) step publishing
+    the static build, normally landing at `https://<owner>.github.io/<repo>/storybook` or
+    `https://<owner>.github.io/<repo>/api/storybook`, depending on where the workflow places it.
+  - **Dokka** (Android/Kotlin): a `dokkaHtml`/`dokkaGenerate` Gradle task feeding a Pages publish step, normally
+    landing at `https://<owner>.github.io/<repo>/api`.
+  - **DocC** (Swift): a `docc`/`xcodebuild docbuild` step (often via `docc-render`/`Swift-DocC-Plugin`) feeding a
+    Pages publish step, normally landing at `https://<owner>.github.io/<repo>/api`.
+  - Use the subpath the workflow actually publishes to rather than assuming `/api` when the workflow config makes
+    a different path clear (e.g. `/storybook` vs. `/api/storybook`).
 - **SonarCloud/SonarQube dashboard**: reuse the link built in Step 3.
 - **Changelog**: if `CHANGELOG.md` exists at the root, link to it directly (`CHANGELOG.md`).
 - Omit any of the above whose source doesn't exist — don't add a "Documentation" section at all if none of these
@@ -108,12 +184,30 @@ versa:
   current build-file version is a distinct `-SNAPSHOT`, show both under "Latest release" / "Latest snapshot"
   (mirroring how a snapshot repository would need to be added — only mention that if the project's own POM/
   settings actually reference one).
-- **Gradle**: the equivalent `implementation '<groupId>:<artifactId>:<version>'` (or Kotlin DSL form if
-  `build.gradle.kts`).
-- **npm/yarn**: `npm install <package-name>` (or `yarn add`), using the real `package.json` name.
+- **Gradle (Kotlin DSL)**: `implementation("<group>:<artifact>:<version>")`. If the project publishes a
+  `gradle/libs.versions.toml` version catalog, show that form too — the catalog entry under `[libraries]`
+  (`<alias> = { module = "<group>:<artifact>", version.ref = "<versionAlias>" }`) plus the consuming
+  `implementation(libs.<alias>)` line — instead of (or alongside) the plain coordinate form.
+- **npm**: `npm install <name>`, using the real `package.json` name and its latest published version. Add the
+  pnpm (`pnpm add <name>`) and/or yarn (`yarn add <name>`) equivalents only when the repository's own lockfile
+  (`pnpm-lock.yaml` / `yarn.lock`) shows that's the package manager actually in use, rather than listing all
+  three by default.
+- **SwiftPM**: a `.package(url: "<repository-url>", from: "<version>")` entry for `Package.swift`, plus the
+  matching `.product(name: "<ProductName>", package: "<PackageName>")` target dependency (read the real product
+  name from `Package.swift`'s `products`), and the equivalent steps for Xcode users ("File > Add Package
+  Dependencies…", paste the repository URL, select the product).
 - **Python**: `pip install <package-name>`, using the real project name from `pyproject.toml`/`setup.py`.
-- If the build tool isn't one of the above, or the project isn't actually published/publishable yet (no
-  registry/repository config found), omit the Installation section and note the gap in Step 11 rather than
+- **Distributed apps** (Android/iOS apps, not libraries): when the manifest declares a store distribution (e.g. a
+  Gradle `distribution`/Play publishing config, an App Store Connect/Fastlane/`eas submit` workflow step, or
+  existing store metadata in the repository), replace the dependency snippet with store links the user fills in
+  — `<App Store URL>`, `<TestFlight URL>`, `<Google Play URL>` — as placeholders, never invented real URLs.
+  Otherwise (no store distribution config found, or the app isn't a library at all), show how to run it locally
+  instead, matched to the detected stack: `npm start` / `npx expo start` (Expo/React Native), `ionic serve`
+  (Ionic), `./gradlew installDebug` (Android), `xcodebuild -scheme <Scheme> -destination …` or "open in Xcode and
+  run" (Apple platforms) — pick the one command that actually matches the project's own scripts/Gradle
+  tasks/scheme rather than a generic default.
+- If the build tool isn't one of the above, or the project isn't actually published/publishable/runnable yet (no
+  registry/repository/run config found), omit the Installation section and note the gap in Step 11 rather than
   guessing coordinates.
 
 ## Step 7 — Write the "how it works" section with an example

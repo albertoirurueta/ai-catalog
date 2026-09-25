@@ -1,13 +1,15 @@
 = Setup Java Spring Boot
-:description: Bootstraps a new Spring Boot service repository with DDD and hexagonal architecture as a Maven multi-module reactor, CI/CD, OpenTofu, and docs.
-:keywords: iru-setup-java-springboot, claude code skill, spring boot, hexagonal architecture, domain driven design, maven multi-module, spring initializr, java 21, microservice bootstrap
+:description: Bootstraps a Spring Boot service repository as a hexagonal Maven multi-module reactor with Sonar/open-source/Hilla choices, CI/CD, OpenTofu, docs.
+:keywords: iru-setup-java-springboot, claude code skill, spring boot, hexagonal architecture, domain driven design, maven multi-module, spring initializr, java 21, microservice bootstrap, sonarcloud, sonarqube, hilla, vaadin
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 End-to-end bootstrap for a brand-new Spring Boot service repository built on Domain-Driven Design and hexagonal
 (ports and adapters) architecture, realised as a Maven multi-module reactor. It interviews the user once, resolves
-every Spring Boot version and dependency id against the live Spring Initializr API, records the answers in a
-`springboot-stack.yml` manifest, and then delegates all file generation to seven sub-skills.
+every Spring Boot version and dependency id against the live Spring Initializr API, records the answers — including
+whether the project is open source, its Sonar mode, and whether it ships a Hilla frontend — in a
+`springboot-stack.yml` manifest, and then delegates all file generation to seven sub-skills (eight when
+`frontend: hilla`).
 
 == Purpose
 
@@ -45,13 +47,53 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 /iru-setup-java-springboot
 ----
 
+Optionally with `args` (`key`/`value` lines) to pre-resolve some questions and skip the matching interview step,
+whether invoked directly or driven by another orchestrator such as xref:skills/iru-setup-repository.adoc[]:
+
+[source]
+----
+mode: new
+open-source: yes
+sonar: cloud
+sonar-organization: example-github
+sonar-project-key: example_orders-service
+sonar-host-url: https://sonarcloud.io
+frontend: none
+----
+
 == Inputs
 
-All inputs are collected interactively; nothing is passed in via `args`. The skill is the top of the chain.
+Most inputs are collected interactively; the table below also covers the keys accepted via `args` (Step 0), which
+pre-resolve the matching question instead of asking it.
 
 [cols="1,1,3,2", options="header"]
 |===
 |Argument |Required |Description |Default
+
+|`args: mode`
+|No
+|`new` or `existing`. When `pom.xml` already exists and `mode: existing` was supplied, Step 0 goes straight to
+"continue anyway" (gap-fill mode) without asking; `mode: new` still asks for confirmation before regenerating over
+real code.
+|Asked via `AskUserQuestion` when not supplied
+
+|`args: open-source`
+|No
+|`yes` or `no`. Answers Step 3b's open-source question, which drives the Sonar recommendation right after it.
+|Asked via `AskUserQuestion` when not supplied
+
+|`args: sonar` (+ `sonar-organization` / `sonar-project-key` / `sonar-host-url`)
+|No
+|`cloud`, `self-hosted`, or `none`. SonarCloud is recommended when open source; otherwise `none` is recommended
+(SonarCloud requires a paid plan when not open source), with `self-hosted` offered as the alternative. The
+organization/project-key/host-URL keys apply only when `sonar` is `cloud` or `self-hosted`.
+|Asked via `AskUserQuestion` when not supplied
+
+|`args: frontend`
+|No
+|`none` or `hilla`. `hilla` adds xref:skills/iru-setup-java-springboot-hilla.adoc[] as an eighth sub-skill in Step
+8, scaffolding a Vaadin/Hilla React frontend into the `boot` module.
+|`none`
 
 |groupId, artifactId, version, base Java package, service description, developer name/email/organizationUrl
 |Yes
@@ -153,15 +195,19 @@ typically less relevant and some actively conflict with the contract-first hexag
 
 == Outputs
 
-* `springboot-stack.yml` at the repository root — the manifest recording the resolved identity and every
-  technology choice, with container image tags pinned. Meant to be committed; read by every sub-skill and later
-  by `iru-update-java-springboot-documentation`.
+* `springboot-stack.yml` at the repository root — the manifest recording the resolved identity, every technology
+  choice, and now also `openSource`, `sonar` (`mode`/`organization`/`projectKey`/`hostUrl`), and `frontend`
+  (`none`/`hilla`), with container image tags pinned. Meant to be committed; read by every sub-skill and later by
+  `iru-update-java-springboot-documentation`.
 * The full Maven reactor: root `pom.xml` plus one pom per module (via `iru-setup-java-springboot-pom`).
 * The hexagonal source tree — ports, adapters, use cases, the `@SpringBootApplication` class, per-profile
   configuration, migration changelogs, and an ArchUnit test enforcing the dependency direction (via
   `iru-setup-java-springboot-modules`).
 * The `apis/` contract tree, the OpenAPI/protobuf/GraphQL-SDL/AVRO generator wiring, and the AsyncAPI
   specification and documentation generators for messaging (via `iru-setup-java-springboot-apis`).
+* When `frontend: hilla`: the Vaadin/Hilla React frontend in the `boot` module — the Vaadin BOM/starters, the
+  `vaadin-maven-plugin` execution, `src/main/frontend/`, Vitest with lcov coverage, and ESLint/Prettier (via
+  `iru-setup-java-springboot-hilla`).
 * `compose.yaml` and the Testcontainers integration-test harness (via
   `iru-setup-java-springboot-testcontainers`).
 * An `infra/` OpenTofu configuration for the chosen cloud (via `iru-setup-java-springboot-platform`).
@@ -171,8 +217,10 @@ typically less relevant and some actively conflict with the contract-first hexag
   `iru-update-java-springboot-documentation`).
 * Repository-level supporting files: `.gitignore`, `README.md`, `CHANGELOG.md`, `checkstyle.xml`, and optionally
   `LICENSE`.
-* A final report consolidating every secret and variable that must be supplied out-of-band, every open gap, and
-  the result of the three verification builds.
+* A final report consolidating the open-source/Sonar/frontend choices (and, when `frontend: hilla`, what
+  `iru-setup-java-springboot-hilla` reported back), every secret and variable that must be supplied out-of-band
+  (the Sonar token only when `sonar.mode` is not `none`, plus `GITLEAKS_LICENSE` if a Pro key is used), every open
+  gap, and the result of the three verification builds.
 
 == Execution flow
 
@@ -185,13 +233,16 @@ flowchart TD
     C -- API unreachable --> STOP2["Stop — never fall back\nto hardcoded versions"]
     C --> D["Step 2: Collect project identity;\ninfer repository info from git"]
     D --> E["Step 3: Deployment platform (AWS/GCP)\nand concurrency model"]
-    E --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
+    E --> EB["Step 3b: Open source, Sonar mode\n(cloud/self-hosted/none), frontend (none/hilla)"]
+    EB --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
     F --> G["Step 5: Confirm the whole plan"]
     G -- corrections --> F
     G -- confirmed --> H["Step 6: Write springboot-stack.yml"]
     H --> I["Step 7: Fetch the reference pom from Initializr"]
     I -- invalid id / incompatible version --> F
-    I --> J["Step 8: Delegate to 7 sub-skills in order,\neach via iru-isolated-skill-executor"]
+    I --> J["Step 8: Delegate to 7 sub-skills in order\n(8th when frontend: hilla),\neach via iru-isolated-skill-executor"]
+    J -.->|"frontend: hilla only,\nafter APIs, before Testcontainers"| JH["iru-setup-java-springboot-hilla"]
+    JH -.-> J
     J -- pom sub-skill did not write the root pom --> STOP3["Stop — no reactor to attach to"]
     J --> K["Step 9: Supporting files\n(.gitignore, README, CHANGELOG, checkstyle.xml)"]
     K --> L["Step 10: Verify — clean verify -DskipTests,\ntest, verify (via iru-gate-runner)"]
@@ -213,8 +264,13 @@ filesystem directly, so only a short completion summary needs to come back:
   the ArchUnit test. Runs after the poms because it writes sources into modules rather than creating them.
 * xref:skills/iru-setup-java-springboot-apis.adoc[] — Step 8: the `apis/` contracts, the code generators, and the
   AsyncAPI documentation generators. Runs after the modules because generated sources need a module to land in.
+* xref:skills/iru-setup-java-springboot-hilla.adoc[] — Step 8, sub-step 3b, only when the manifest's
+  `frontend: hilla`: the Vaadin/Hilla React frontend scaffolded into the `boot` module. Runs after the APIs (the
+  `boot` module and API-generated code it may call must already exist) and before Testcontainers (the compose
+  stack and CI docs job need to know a frontend toolchain now exists on disk).
 * xref:skills/iru-setup-java-springboot-testcontainers.adoc[] — Step 8: `compose.yaml` and the integration-test
-  harness. Runs after the APIs because the compose stack must know whether a schema registry is needed.
+  harness. Runs after the APIs (and Hilla, when present) because the compose stack must know whether a schema
+  registry is needed.
 * xref:skills/iru-setup-java-springboot-platform.adoc[] — Step 8: the OpenTofu configuration.
 * xref:skills/iru-setup-java-springboot-github-workflows.adoc[] — Step 8: the build, deploy, and undeploy
   workflows. Runs late because it surveys what is actually on disk.
@@ -229,13 +285,14 @@ scanning, the latter specifically if an LLM API token may ever have been committ
 
 === Invoked by
 
-None — `iru-setup-java-springboot` is a top-level entry point; no other skill in this catalog invokes it.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, via xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`],
+  when the detected or chosen project type is `java-springboot` or `java-springboot-hilla`.
 
 === Related agents
 
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per sub-skill in Step
-  8, so seven sub-skills' template expansion, file reads, and build output don't accumulate in this
-  orchestrator's context over a single bootstrap run.
+  8, so each sub-skill's (seven, eight when `frontend: hilla`) template expansion, file reads, and build output
+  don't accumulate in this orchestrator's context over a single bootstrap run.
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for each of Step 10's three Maven verification
   runs, so a multi-module Maven log never lands in this conversation.
 

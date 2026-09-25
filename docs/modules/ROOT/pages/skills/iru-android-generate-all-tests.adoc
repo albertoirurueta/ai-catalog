@@ -1,0 +1,117 @@
+= Android Generate All Tests
+:description: Brings a Kotlin/Android Gradle module's JVM unit test coverage to 80% per class, writing or extending JUnit 4/MockK/Robolectric tests until it clears.
+:keywords: iru-android-generate-all-tests, claude code skill, kotlin, android, gradle, junit, mockk, robolectric, jacoco, generate unit tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Bring one Gradle module's JVM unit test coverage up to a minimum bar — 80% line coverage — in one pass: find
+every class with no test class at all, or with measured coverage below the bar, then write or extend tests for
+each until it clears it. Kotlin/Android/Gradle only; it never runs against, or falls back to, any other language
+or build tool.
+
+== Purpose
+
+`iru-android-generate-all-tests` answers "bring this whole module's test coverage up to a bar" rather than
+"write tests for this one class/task," which is what `iru-android-code-one-task` and the `iru-code` pipeline
+already handle per task. It uses the `Explore` agent to build an inventory of testable classes and the module's
+existing test convention, delegates to `iru-android-coverage` for the exact, measured percentage per class
+(never an estimate), and only writes or extends JVM unit test code under `src/test/java` — it does not add
+license headers, KDoc, or run a code-quality pass, and it only touches production source code when a class is
+genuinely untestable as written (e.g. no seam to substitute a hard dependency), which it reports explicitly
+rather than silently redesigning the class. It follows this catalog's JUnit 4 + MockK + Robolectric conventions,
+grounded in the real Android reference repository, when a project has nothing of its own to learn from.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-generate-all-tests [scope]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|The Gradle module to scope this run to, or a comma-separated list of specific classes (their module is resolved
+from each one's file path).
+|`lib` (or asked via `AskUserQuestion` if no `lib` module exists and more than one module applies an Android
+plugin)
+|===
+
+== Outputs
+
+* New or extended JVM unit test files under `<module>/src/test/java` for every class found with no matching
+  test class, or with line coverage below 80% — following this project's own JUnit 4/JUnit 5, MockK, and
+  Robolectric conventions, including the SDK-branch test-class split convention where the project already uses
+  it.
+* Occasionally, a minimal testability change to a class under test (e.g. extracting an interface, injecting a
+  dependency) — only when a class is genuinely untestable as written, and always called out explicitly rather
+  than folded silently into "tests added."
+* A report: total candidate classes found (and any excluded as having no testable logic), how many already met
+  the bar, before/after coverage per class touched, any class still below 80% after two extension attempts
+  (with its exact remaining uncovered lines and, where apparent, why), and the full-suite test result.
+* No `src/androidTest` instrumented tests, license headers, KDoc, or code-quality fixes — those remain opt-in,
+  or `iru-check-license`, `iru-android-dokka`, and `iru-android-code-quality`'s jobs respectively.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-android-generate-all-tests] --> B{"Kotlin/Android Gradle\nproject found?"}
+    B -- no --> B1[Stop: Kotlin/Android\nGradle only]
+    B -- yes --> C{"Multiple Android modules\n&amp;amp; no scope given?"}
+    C -- yes, no lib module --> C1["AskUserQuestion:\nwhich module?"]
+    C -- yes, lib exists / single module / scope given --> D
+    C1 --> D["Explore agent: inventory every\nmain-source class + existing test\nconvention + test source root"]
+    D --> E["gate-runner: single android-coverage run\nover every candidate class\n(batched if the list is large)"]
+    E --> F["Classify: missing tests /\nbelow 80% / already sufficient"]
+    F --> G["One agent per class (parallel batches):\nwrite new or extend existing tests"]
+    G --> H["Re-measure via android-coverage,\nscoped to touched classes"]
+    H --> I{"Still below 80%?"}
+    I -- yes, attempts left --> G
+    I -- yes, 2 attempts used --> J[Report as residual gap\nwith exact uncovered lines]
+    I -- no --> K["gate-runner: run full unit-test\nsuite once (android-test)"]
+    J --> K
+    K --> L{"Any failures?"}
+    L -- yes, caused by this run --> M[Fix regression; re-run full suite]
+    M --> K
+    L -- no / pre-existing --> N[Final report]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-android-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation:
+  delegated through the `iru-gate-runner` agent so its per-class JaCoCo XML/HTML report never lands directly in
+  this conversation, and so the whole suite runs once per batch rather than once per class.
+* xref:skills/iru-android-test.adoc[] — Step 7, once, to confirm the full JVM unit-test suite still passes after
+  every class's tests have been written or extended; also delegated through `iru-gate-runner`.
+
+=== Invoked by
+
+None from inside this catalog — it is a top-level entry point invoked by a person who wants coverage brought up
+across one Gradle module in one pass, independent of the `/iru-code`/`/iru-issue` pipeline (which handles
+per-task test-writing via `iru-android-code-one-task`).
+
+=== Related agents
+
+* xref:agents/overview.adoc[`Explore`] — Step 2, to build the class/test-file inventory across the module
+  without reading every source file directly.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-android-coverage`/
+  `iru-android-test` and report back only a compact summary instead of a raw coverage/test log.
+* xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per class
+  needing new/extended tests, dispatched concurrently since each only touches its own test file.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-generate-all-tests/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

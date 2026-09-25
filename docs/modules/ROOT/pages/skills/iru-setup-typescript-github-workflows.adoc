@@ -1,0 +1,168 @@
+= Setup TypeScript GitHub Workflows
+:description: Scaffolds build, release, sync, and security GitHub Actions workflows for an npm/TypeScript library, React, Angular, React Native, or Ionic repo.
+:keywords: iru-setup-typescript-github-workflows, claude code skill, npm, typescript, github actions, playwright, codeql, sonarqube, dependabot, ci/cd
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold or update the `build.yml`, `release.yml`, `sync.yml` (library/react/angular flavors only), and
+`security.yml` GitHub Actions workflows plus `.github/dependabot.yml` that make up an npm/TypeScript
+repository's CI/CD release pipeline, for whichever of five flavors the repository actually is.
+
+== Purpose
+
+`iru-setup-typescript-github-workflows` wires up the house pipeline for an npm/TypeScript repository of one of
+five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI
+web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs install,
+lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on
+fork pull requests), Playwright e2e for the web flavors, a docs build (TypeDoc/Compodoc/Storybook) merged with
+an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific: npm
+publish via OIDC trusted publishing plus an optional Changesets version-PR job for `library`; a web-bundle deploy
+to Pages for `react`/`angular` (`dist/` for Vite, `dist/<project>/browser/` for Angular); EAS or local Gradle/Xcode builds for `react-native`; Android/iOS store or
+internal artifacts for `ionic`. `sync.yml` (library/react/angular only) plus its companion
+`.github/scripts/sync_versions.py` merge the stable branch back into the integration branch and bump
+`package.json` to the next `x.y.(z+1)-dev.0` prerelease. `security.yml` runs the shared
+Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks block. The skill ships generic example templates
+embedded in the skill file, resolves versions at run time against the npm registry and GitHub Releases API,
+and resolves every other placeholder from a survey of the target repository rather than guessing. If any of
+the workflow files already exist, it asks the user whether to stop or attempt an update using the templates as
+reference (or goes straight to the update path when `mode: existing` was supplied), preserving any step this
+skill doesn't own.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-typescript-github-workflows
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args` (`key: value` lines)
+|No (`flavor` is required once resolved)
+|Pre-resolved values, one `key: value` line each: `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`,
+required), `integration-branch`, `stable-branch`, `node-version`, `package-manager` (`npm`/`pnpm`/`yarn`),
+`open-source` (`yes`/`no`), `publish` (`yes`/`no`, library only), `distribution` (`none`/`internal`/`store`,
+react-native/ionic only), `sonar` (`cloud`/`self-hosted`/`none`) plus `sonar-organization`/
+`sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local`, react-native only), `framework`
+(`angular`/`react`, ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `mode` (`new`/`existing` —
+`existing` makes Step 2 take its update/gap-fill path on already-present workflow files without asking the
+stop-or-update question), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`
+(each `yes`/`no`). When an orchestrating skill (such as `iru-setup-typescript-repository`) supplies these, the
+corresponding fact-finding bullet in Step 1's survey is skipped entirely for that value.
+|None — if `args` is absent or doesn't match this format, every parameter is instead resolved by surveying
+`package.json` and the repository, asking the user for anything that can't be inferred. Unresolved defaults:
+`integration-branch` `develop`, `stable-branch` `main`, `node-version` `24`, and the four `security-*` keys
+each `yes`.
+|===
+
+== Outputs
+
+* `.github/workflows/build.yml` and `.github/workflows/release.yml` — created fresh, or updated in place if
+  either already existed and the user chose to continue.
+* `.github/workflows/sync.yml` and `.github/scripts/sync_versions.py` — written together, only for the
+  `library`/`react`/`angular` flavors; never generated for `react-native`/`ionic`.
+* `.github/workflows/security.yml` and `.github/dependabot.yml` — always created or updated, independent of
+  `flavor`/`sonar`/`publish`/`distribution`.
+* Supporting files created if missing: `sonar-project.properties` (when `sonar` isn't `none`), and
+  `.gitignore` entries for `dist/`, `coverage/`, `docs/api/`, `docs/build/`, `storybook-static/`.
+* A report of required repository secrets (per the flavor/`sonar`/`publish`/`distribution`/`native-builds`
+  actually resolved) and repository settings that must be enabled, plus any open gaps (missing Playwright
+  config, missing `ExportOptions.plist`, README/Antora wording that didn't match `sync_versions.py`'s default
+  regexes, non-patch-level releases the bump default doesn't handle).
+
+=== Generated workflow files by flavor
+
+[cols="2,1,1,1,1,1", options="header"]
+|===
+|File |`library` |`react` |`angular` |`react-native` |`ionic`
+
+|`build.yml` |Yes |Yes |Yes |Yes |Yes
+|`release.yml` |Yes (publish job + optional Changesets version-PR) |Yes (Pages deploy) |Yes (Pages deploy) |Yes (EAS or local Gradle/Xcode) |Yes (Android/iOS store or internal artifacts)
+|`sync.yml` + `sync_versions.py` |Yes |Yes |Yes |No |No
+|`security.yml` |Yes |Yes |Yes |Yes |Yes
+|`.github/dependabot.yml` |Yes |Yes |Yes |Yes |Yes
+|===
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-typescript-github-workflows] --> A2{"package.json exists?"}
+    A2 -- missing --> A3{"Stop or continue anyway?\n(AskUserQuestion)"}
+    A3 -- stop --> Z1["End - no changes"]
+    A3 -- continue, gaps flagged --> B
+    A2 -- exists --> B["Step 1: Parse args, then survey repo\n(flavor, package manager, node version,\nopen-source, publish/distribution, sonar,\ndocs-tool, branches, npm scripts, Playwright)"]
+    B --> C{"Do build.yml/release.yml/sync.yml/\nsecurity.yml/dependabot.yml already exist?"}
+    C -- none exist --> E["Step 3-4: Fill reference templates\nfor the resolved flavor"]
+    C -- any exists --> D{"Stop or continue\n(user choice)?"}
+    D -- stop --> Z2["Report which files exist;\nno changes made"]
+    D -- continue --> E
+    E --> F["Step 5: Create missing supporting files\n(sonar-project.properties, .gitignore entries)"]
+    F --> G["Step 6: Write build.yml, release.yml,\nsecurity.yml, dependabot.yml\n+ sync.yml/sync_versions.py for\nlibrary/react/angular flavors only"]
+    G --> H["Step 7: List required repository\nsecrets and settings"]
+    H --> I["Step 8: Report what was wired vs\nomitted, and warn to review before\nrelying on the pipeline"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-typescript-github-workflows` is a leaf skill; it does not call any other skill in this
+catalog.
+
+=== Invoked by
+
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 8 runs `iru-setup-typescript-github-workflows` (via
+  the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent), passing the resolved
+  `flavor` and the shared pipeline parameters (branches, Node version, package manager, `open-source`,
+  `publish`/`distribution`, `sonar`, `docs-tool`, `security-*`) through `args` so this skill isn't asked again
+  for facts the orchestrator already collected.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to a built-in agent.
+
+== Required repository secrets
+
+Reported in Step 7 — only the rows that apply to what was actually generated (per `flavor`/`sonar`/`publish`/
+`distribution`/`native-builds`) are listed, so an omitted row is one fewer secret the user needs to create:
+
+[cols="2,3", options="header"]
+|===
+|Secret |Only needed when
+
+|`SONAR_TOKEN`
+|`sonar` is `cloud` or `self-hosted`
+
+|`EXPO_TOKEN`
+|`flavor: react-native`, `native-builds: eas`
+
+|`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
+|`flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none`
+
+|`APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64`
+|`flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none`
+
+|`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+|`flavor: ionic`, `distribution: store`
+
+|`FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON`
+|`flavor: ionic` (or `react-native`), `distribution: internal`, and the user opted into Firebase App
+Distribution over a plain artifact upload
+|===
+
+`GITHUB_TOKEN` needs no setup — GitHub Actions provides it automatically for `sync.yml`'s `gh` calls and
+`security.yml`'s `gitleaks`/CodeQL jobs.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-typescript-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

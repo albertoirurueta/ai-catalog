@@ -31,6 +31,13 @@ answering "where is X defined". It cannot edit files.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 0 uses it for the broad structural sweeps a
   service's documentation is derived from (the module tree, the use-case classes, the persistence entities and
   migration files, the Micrometer calls), so only the specific files it identifies get read directly.
+* xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 2 uses it to build a structural map of every
+  candidate source file and the existing test-file convention across the project, instead of reading each file
+  inline.
+* xref:skills/iru-android-generate-all-tests.adoc[] — Step 2 uses it the same way, to map every candidate class
+  and the existing test-file convention across the module.
+* xref:skills/iru-swift-generate-all-tests.adoc[] — Step 2 uses it the same way, to map every candidate type and
+  the existing test-file convention across the target.
 
 === Why this one specifically
 
@@ -59,6 +66,13 @@ naming a specific type. It has the same tool access as the main conversation.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, the same one-off case as above: only when a
   Spring Boot service has no Antora module yet, to run `iru-setup-antora` before this skill adds the Kroki
   extension and the service page set on top.
+* xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per file needing tests,
+  dispatched concurrently in batches, each reading only its own source file (and any existing test file) to
+  write or extend that file's tests.
+* xref:skills/iru-android-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per class needing tests, the
+  same way.
+* xref:skills/iru-swift-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per type needing tests, the
+  same way.
 
 === Why this one specifically
 

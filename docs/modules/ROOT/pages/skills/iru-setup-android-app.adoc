@@ -1,0 +1,196 @@
+= Setup Android App
+:description: Scaffolds a Gradle Kotlin DSL Android application module (app/) with signing, Compose or Views UI, Sonar, and Firebase or Play distribution wiring.
+:keywords: iru-setup-android-app, claude code skill, gradle, kotlin, android, compose, jacoco, sonarqube, scaffold, distribution
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable Gradle Kotlin-DSL Android application project — wrapper, root build files, and a
+single `app/` `com.android.application` module — from explicit example templates genericized line for line from a
+real reference repository's Gradle toolchain.
+
+== Purpose
+
+`iru-setup-android-app` bootstraps a standalone Android application's Gradle project: the wrapper, root
+`build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, and `gradle/libs.versions.toml`, plus a single
+`app/` module wired with `applicationId`/`namespace`, `versionCode`/`versionName`, build-info `buildConfigField`s,
+an env-var-driven `signingConfigs { release {…} }` block that never fails configuration when signing secrets are
+absent, a Compose-by-default UI (or a classic AppCompat + ViewBinding `views` variant), Robolectric + MockK +
+JUnit 4 unit-test tooling, an instrumented-test skeleton, and an optional inline `sonar { properties {…} } }`
+block. It never writes a Maven Central publishing block — `iru-setup-android-library` is the companion skill for
+a library module. Every Gradle/Kotlin/plugin version is looked up at run time against the real package registries,
+falling back to a recorded, CI-verified combination when a lookup fails.
+
+== Purpose group
+
+xref:index.adoc#group-android-bootstrap[Android Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-android-app
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-android-repository.adoc[])
+as newline-separated `key: value` lines covering every field below, parsed in Step 0 so this skill doesn't ask
+about any field already resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|`application-id`
+|Yes (unless supplied via `args`)
+|Reverse-DNS application id, written to `defaultConfig.applicationId` and used to derive the Kotlin package path.
+|None
+
+|`namespace`
+|No
+|The module's Kotlin/resource namespace (`android.namespace`).
+|`application-id`'s value
+
+|`app-name`
+|Yes (unless supplied via `args`)
+|Display name shown under the launcher icon (`strings.xml`'s `app_name`).
+|None
+
+|`min-sdk`
+|No
+|Minimum supported Android API level.
+|`26`
+
+|`compile-sdk` / `target-sdk`
+|No
+|Compile and target Android API levels, looked up in Step 4.
+|Current stable Android API level (e.g. `36`)
+
+|`version-name` / `version-code`
+|No
+|App version string and monotonic build integer.
+|`1.0.0` / `1`
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: MIT License, Apache License 2.0, No license, or Other.
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Recorded in Step 8's report only (no publishing block exists here to embed them in).
+|None
+
+|`open-source`
+|No
+|Whether the repository is open source; drives the `sonar` default.
+|Asked via `AskUserQuestion` when unresolved
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted`, or `none` — whether/how to wire the `org.sonarqube` Gradle plugin and `sonar {}` block.
+|`cloud` if open source, otherwise `none` recommended
+
+|`ui`
+|No
+|`compose` (Jetpack Compose Material 3) or `views` (AppCompat + ViewBinding).
+|`compose`
+
+|`distribution`
+|No
+|`none`, `internal` (Firebase App Distribution plugin), or `store` (Google Play, workflow action or Gradle Play
+Publisher plugin).
+|`store` only when open source; otherwise asked
+
+|`built-in-kotlin`
+|No
+|`no` (separate Kotlin Android plugin) or `yes` (AGP's built-in Kotlin compilation support).
+|`no`
+
+|`junit`
+|No
+|`4` (Robolectric + MockK, matches the reference project) or `5` (adds JUnit 5 Jupiter alongside).
+|`4`
+
+|`coverage-tool`
+|No
+|`jacoco` (AGP's built-in coverage task) or `kover` (Kotlin-native coverage plugin).
+|`jacoco`
+
+|`static-analysis`
+|No
+|`lint` (Android Lint only) or `lint+detekt+ktlint` (adds Detekt + Spotless/ktlint).
+|`lint`
+
+|`mode`
+|No
+|`new` follows Step 1's normal survey; `existing` skips straight to gap-fill (create only missing files, never
+overwrite hand-edited application source).
+|`new`
+|===
+
+== Outputs
+
+* Gradle wrapper files, root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, and
+  `gradle/libs.versions.toml` at the repository root.
+* An `app/` module: `build.gradle.kts`, `proguard-rules.pro`, `AndroidManifest.xml`, theme/color/string/launcher-icon
+  resources, `MainActivity.kt` (+ Compose theme wrapper, or a ViewBinding layout for `ui: views`),
+  `robolectric.properties`, a placeholder unit test, an instrumented-test skeleton, and `app/.gitignore`.
+* Any opt-in Gradle plugin blocks selected (Detekt/Spotless, Kover, JUnit 5, Firebase App Distribution, Gradle
+  Play Publisher) applied on top of the base templates.
+* A report of resolved inputs, which toolchain versions came from a live lookup versus a recorded fallback, which
+  files were created/left alone/replaced, and explicit warnings (license/keystore/`google-services.json`/Sonar
+  token/distribution credentials review).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-android-app] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E{"Step 1: settings.gradle.kts /\napp/build.gradle.kts already exist?"}
+    D --> E
+    E -- neither exists --> F["Step 2: Collect inputs\n(application-id, namespace, app-name,\nSDK levels, version, license, UI,\nopen-source, sonar, distribution)"]
+    E -- "app module exists,\nmode: existing" --> G["Gap-fill only:\ncreate missing files, leave rest untouched"]
+    E -- "app module exists,\nmode not existing" --> H["AskUserQuestion:\nstop or update?"]
+    H -- stop --> I[Report untouched; end]
+    H -- update --> J["Regenerate toolchain files,\nnever touch application source\nbeyond this skill's own placeholders"]
+    E -- "conflicting scaffold\n(library-only / no app module)" --> K["Warn user;\nask to add app module or stop"]
+    K -- stop --> I
+    K -- add module --> F
+    F --> L["Step 3: Infer owner/repo/host\nfrom git remote"]
+    G --> L
+    J --> L
+    L --> M["Step 4: Look up Gradle/AGP/Kotlin/\nDokka/Sonar/test-library versions\n(fallback to recorded values on failure)"]
+    M --> N["Step 5-6: Fill templates and\nscaffold wrapper, root build files,\nand app/ module, applying opt-ins"]
+    N --> O["Step 7: Verify via iru-gate-runner\n(gradlew --offline help,\n:app:assembleDebug)"]
+    O --> P["Step 8: Report resolved inputs,\nversions used, files touched, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-android-app` is a leaf skill; it does not call any other skill in this catalog. It is
+self-contained and does not read `iru-setup-android-library`'s files at run time even when a repository ends up
+with both a `lib/` and an `app/` module.
+
+=== Invoked by
+
+* xref:skills/iru-setup-android-repository.adoc[] — Step 4, via the `iru-isolated-skill-executor` agent, when the
+  repository's project type is an Android application.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 runs `./gradlew --offline help` and
+  `./gradlew :app:assembleDebug` through this agent so its (potentially long) build output doesn't fill this
+  skill's own context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-android-app/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

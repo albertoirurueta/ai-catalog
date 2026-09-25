@@ -1,0 +1,121 @@
+= Android Code Quality
+:description: Runs Android Lint, Detekt, and ktlint (via Spotless or the standalone plugin) on a Gradle module and summarizes every issue found, grouped by tool.
+:keywords: iru-android-code-quality, claude code skill, gradle, kotlin, android lint, detekt, ktlint, spotless, static analysis, code quality report
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run whichever static-analysis tools an Android/Kotlin module actually has wired — Android Lint (always available
+via AGP), Detekt (only when its plugin is applied), and ktlint (only when wired, either through Spotless's
+`spotlessCheck` or the standalone `org.jlleitschuh.gradle.ktlint` plugin) — then read each tool's generated report
+to summarize every issue found, grouped by tool and classified by id/severity. This is a read-only reporting
+skill: it runs static analysis and reports results, it does not fix issues or modify lint/Detekt/Spotless
+configuration unless asked to as an explicit follow-up.
+
+== Purpose
+
+`iru-android-code-quality` gives a lint/static-analysis pass called out separately from `iru-android-test`/
+`iru-android-coverage`, without trusting console output alone. Before running anything it verifies each tool is
+actually wired (plugin applied, config file present) so a "zero issues" result from a tool that was never
+configured is never reported as a clean pass — an absent tool is explicitly called "not wired" instead of being
+silently omitted or misreported as passing. It parses each tool's own generated report (Lint's XML, Detekt's
+Checkstyle-format XML or SARIF, Spotless's console output, ktlint's text/XML report) directly rather than relying
+on the Gradle console, and can scope its summary to a single file/class even though none of these tools expose a
+per-file CLI selector — the underlying Gradle run always analyzes the whole module.
+
+== Purpose group
+
+xref:index.adoc#group-android[Android Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-android-code-quality
+/iru-android-code-quality <scope>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|A file/class name or path used to filter the *reported* summary — Lint, Detekt, and Spotless/ktlint all analyze
+the whole module in one Gradle invocation (none exposes a per-file CLI selector), so a scoped invocation still runs
+everything and only filters which parsed entries are shown. Also used to infer which module (`:lib` or `:app`) to
+target, the same way `iru-android-test`/`iru-android-coverage` do.
+|None — reports every issue project-wide.
+
+|`module`
+|No
+|An explicit `module: <lib\|app>` key/value line passed by a calling skill, honored instead of inferring the
+module from `scope`.
+|`lib`
+
+|baseline
+|No
+|A prior run's per-tool/per-id issue counts or itemized list, passed by a calling skill (e.g.
+`iru-android-code-one-task-group`). When given, the report is limited to the new-vs-baseline diff.
+|None — reports the full current result.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation — never a written file.
+* Findings grouped by tool (Android Lint, Detekt, ktlint/Spotless), then by id/rule, with a severity breakdown
+  per tool (Lint: Fatal/Error/Warning/Informational; Detekt/ktlint: error/warning; Spotless: a single
+  `formatting` bucket).
+* An overall total and a per-tool total; a tool that isn't wired is called out as "not wired" rather than omitted
+  or shown as a false "0 issues" pass.
+* When a baseline was supplied, only the new-vs-baseline issues (increased counts, newly appearing ids/entries).
+* No source, Lint, Detekt, Spotless, or ktlint configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-android-code-quality\n(optional scope, module:, baseline)"] --> B["Resolve module (:lib default or :app)\nand scope from inputs"]
+    B --> C["Verify which tools are wired:\nLint (always), Detekt (plugin applied?),\nktlint (Spotless spotlessCheck or\nstandalone ktlintCheck?)"]
+    C --> D["Run each wired tool via Gradle\n(lintDebug, detekt, spotlessCheck/ktlintCheck)"]
+    D --> E{"Underlying compile step\nfailed outright?"}
+    E -- yes --> F["Report failure for that tool, stop\n(report wasn't regenerated)"]
+    E -- no --> G["Parse lint-results-debug.xml"]
+    G --> H["Parse detekt.xml or detekt.sarif\n(if Detekt wired)"]
+    H --> I["Parse Spotless console output or\nktlint text/XML report (if wired)"]
+    I --> J{"Scope given?"}
+    J -- yes --> K["Filter each tool's parsed entries\nto the matching file/class"]
+    J -- no --> L["Keep full module-wide results"]
+    K --> M
+    L --> M["Classify by tool, then by id/rule\nand severity"]
+    M --> N{"Baseline supplied?"}
+    N -- yes --> O["Diff against baseline;\nreport only new/increased issues"]
+    N -- no --> P["Report full current totals,\nseverity breakdown, per-id counts"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-android-code-quality` is a leaf skill; it only runs Gradle tasks and reads the generated Lint/Detekt/
+Spotless/ktlint reports, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
+  baseline for the `android` language/framework key.
+* xref:skills/iru-android-code-one-task-group.adoc[] — Steps 1 and 3.6, once per task group's bucket, via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every class the
+  bucket touches and later diff the post-change result against it.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both callers above always invoke this skill from inside a
+  `iru-gate-runner` sub-agent they spawn, not inline.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-android-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

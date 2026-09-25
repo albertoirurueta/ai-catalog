@@ -10,4 +10,9 @@
 
 |https://github.com/albertoirurueta/ai-catalog[Repository]
 |Github repository
+
+|https://github.com/albertoirurueta/irurueta-android-glutils[Android reference repository]
+|The real Android library repository (`lib/` + Compose `app/`, `gradle/libs.versions.toml`, JUnit 4 + MockK +
+Robolectric, AGP JaCoCo, inline `sonar {}`, Dokka) that every `iru-*android*` skill's embedded templates are
+genericized from
 |===

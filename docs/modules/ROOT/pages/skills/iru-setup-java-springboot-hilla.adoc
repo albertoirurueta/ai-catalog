@@ -1,0 +1,134 @@
+= Setup Java Spring Boot Hilla
+:description: Scaffolds a Hilla React frontend into a Spring Boot reactor's web module: Vaadin/Hilla poms, file-based-routing views, vitest, eslint and Sonar wiring.
+:keywords: iru-setup-java-springboot-hilla, claude code skill, hilla, vaadin, vitest, eslint, prettier, react, maven, sonar
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds a Hilla (Vaadin) React frontend into the module of a Spring Boot hexagonal reactor that runs the web
+server: the Vaadin BOM and starter dependencies, the `vaadin-maven-plugin` build-frontend execution, a file-based
+router with a sample view and test, a `vitest`/`@vitest/coverage-v8` toolchain, ESLint flat config plus Prettier,
+the `.gitignore` additions the frontend needs, and — only when Sonar analysis is enabled — the `sonar.sources`/
+`sonar.tests`/lcov properties on the root pom.
+
+== Purpose
+
+`iru-setup-java-springboot-hilla` fills in the one part of a Spring Boot reactor that `iru-setup-java-springboot-pom`
+and `iru-setup-java-springboot-modules` don't cover on their own: an actual Hilla React frontend, wired end to end
+and verified against a real build rather than assumed to work. Two findings behind it were confirmed empirically by
+building and running a real Spring Boot 4 + Hilla project: `hilla-spring-boot-starter` alone does not build, because
+the auto-generated Flow compatibility shim under `src/main/frontend/generated/flow/` always references a Flow
+client resource that only `vaadin-spring-boot-starter` provides — both starters are always added, regardless of
+whether hand-written Flow `@Route` views are wanted; and `routes.tsx`/`generated/file-routes.ts` are derived by
+Hilla's file-based router on every `prepare-frontend`/`build-frontend` run, so this skill writes `views/@index.tsx`
+and `views/@layout.tsx` only and never touches anything under `src/main/frontend/generated/`.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-java-springboot-hilla
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`stack-file`
+|No
+|`args` `key: value` line naming the manifest path. Read for the module layout (which module is `boot`, the web
+module) and `sonar.mode`. If it doesn't exist, the skill stops and tells the user to run
+`/iru-setup-java-springboot` (or `-modules`) first.
+|`springboot-stack.yml` at the repository root
+
+|`frontend`
+|Yes (manifest field)
+|Must be `hilla` in the manifest for this skill to proceed without asking. If it's `none`, the user is asked via
+`AskUserQuestion` whether to add a frontend anyway; proceeding updates the manifest's `frontend:` field to `hilla`.
+|None — read from the manifest
+
+|`sonar.mode`
+|Yes (manifest field)
+|When not `none`, triggers Step 7's `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` merge into the
+root pom's existing Sonar properties. Skipped entirely when `none`.
+|None — read from the manifest
+|===
+
+== Outputs
+
+* `<web-module>/pom.xml` — `vaadin-spring-boot-starter`, `hilla-spring-boot-starter`, and optional `vaadin-dev`
+  dependencies, plus the `vaadin-maven-plugin` execution (`prepare-frontend`, `build-frontend`).
+* Root `pom.xml` — the `<vaadin.version>` property, `vaadin-bom` `dependencyManagement` import, `vaadin-maven-plugin`
+  `pluginManagement` entry, and `production` profile, only when they aren't already there (normally owned by
+  xref:skills/iru-setup-java-springboot-pom.adoc[]).
+* `<web-module>/src/main/frontend/views/@index.tsx`, `views/@layout.tsx`, and `index.html` — never anything under
+  `src/main/frontend/generated/`.
+* `<web-module>/vitest.config.ts` (extending Vaadin's generated Vite config), `src/main/frontend/test/setup.ts`, and
+  a colocated sample test `views/@index.test.tsx`.
+* `<web-module>/package.json` `test`/`test:watch`/`coverage`/`lint`/`format` scripts and devDependencies (vitest,
+  `@vitest/coverage-v8`, Testing Library, ESLint, Prettier and their plugins).
+* `<web-module>/eslint.config.js` (flat config), `.prettierrc.json`, `.prettierignore`.
+* `.gitignore` additions for `<web-module>/node_modules/`, `src/main/frontend/generated/`, and
+  `vite.generated.ts` — shown as a diff and confirmed before writing.
+* Root pom `sonar.sources`/`sonar.tests`/`sonar.test.inclusions`/`sonar.javascript.lcov.reportPaths` merged in, and
+  `sonar.exclusions` extended with `**/frontend/generated/**`, only when `sonar.mode` isn't `none`.
+* Optional example Flow `@Route` Java class and component starter, only if Step 1's Flow-views question was
+  answered Yes.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-java-springboot-hilla"] --> B["Step 0: Read the manifest"]
+    B -- manifest missing --> STOP1["Stop: run iru-setup-java-springboot\n(or -modules) first"]
+    B -- frontend is not hilla --> ASK1{"AskUserQuestion:\nproceed anyway?"}
+    ASK1 -- stop --> STOP2["Stop"]
+    ASK1 -- proceed --> B2["Update manifest frontend: hilla"]
+    B2 --> C
+    B -- frontend is hilla --> C["Step 1: Survey web module,\nroot pom Vaadin wiring,\nexisting frontend files,\nresolve npm/Vaadin versions,\nFlow-views question"]
+    C -- existing frontend found --> ASK2{"AskUserQuestion:\nstop / fill gaps /\nregenerate sample /\nregenerate everything"}
+    ASK2 -- stop --> STOP3["Stop"]
+    ASK2 -- proceed --> D
+    C -- no existing frontend --> D["Step 2: Module pom dependencies\n(both Vaadin/Hilla starters)\nand vaadin-maven-plugin execution"]
+    D --> E["Step 3: src/main/frontend/\n@index.tsx, @layout.tsx, index.html"]
+    E --> F["Step 4: vitest.config.ts,\ntest/setup.ts, sample @index.test.tsx"]
+    F --> G["Step 5: package.json scripts/deps,\neslint.config.js, Prettier config"]
+    G --> H["Step 6: .gitignore additions\n(shown as diff, confirmed)"]
+    H --> I{"Step 7: sonar.mode\nis none?"}
+    I -- yes --> K
+    I -- no --> J["Merge sonar.sources/tests/\nlcov.reportPaths, extend\nsonar.exclusions"]
+    J --> K["Step 8: Verify via iru-gate-runner —\nmvn vaadin:prepare-frontend,\nthen npm ci + vitest --coverage"]
+    K -- optional --> L["Optional: mvn package -Pproduction\n-DskipTests via iru-gate-runner"]
+    K --> M["Step 9: Report versions, files\nwritten, Sonar/Node outcome,\nwarnings"]
+    L --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It reads `springboot-stack.yml` and writes pom, frontend, and configuration files directly.
+
+=== Invoked by
+
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, sub-step "3b", via the `iru-isolated-skill-executor` agent,
+  only when the manifest's `frontend` is `hilla`, run right after
+  xref:skills/iru-setup-java-springboot-apis.adoc[].
+
+Also runs standalone (`/iru-setup-java-springboot-hilla`) against any reactor already built by
+xref:skills/iru-setup-java-springboot-modules.adoc[].
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 8's `mvn vaadin:prepare-frontend` gate, then
+  `npm ci` + `npx vitest run --coverage` in the web module, and an optional `-Pproduction` package build.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-hilla/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

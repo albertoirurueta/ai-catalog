@@ -1,6 +1,6 @@
 = Setup Java Spring Boot Poms
-:description: Generates the Maven reactor for a hexagonal Spring Boot service: a root pom holding every version, one pom per module, and the full quality plugin set.
-:keywords: iru-setup-java-springboot-pom, claude code skill, maven multi-module, pom.xml, dependency management, maven enforcer, jacoco, checkstyle, spotbugs, java 21
+:description: Generates the Maven reactor for a hexagonal Spring Boot service: root pom with every version, module poms, quality plugins, Sonar and Hilla wiring.
+:keywords: iru-setup-java-springboot-pom, claude code skill, maven multi-module, pom.xml, dependency management, maven enforcer, jacoco, checkstyle, spotbugs, java 21, sonar, hilla, vaadin
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -50,8 +50,10 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 |`stack-file`
 |No
 |`args` `key: value` line giving the path to the manifest written by `iru-setup-java-springboot`. Read in full for
-the project identity, concurrency model, and technology list. If the file doesn't exist the skill stops and points
-the user at `/iru-setup-java-springboot` — it deliberately does not re-interview.
+the project identity, concurrency model, technology list, the top-level `sonar` block (`mode: cloud \| self-hosted
+\| none` plus `organization`/`projectKey`/`hostUrl`), and `frontend` (`none`/`hilla`). A manifest with no `sonar`
+key, or `frontend: none`/absent, is treated as `cloud`/no-Hilla for backward compatibility. If the file doesn't
+exist the skill stops and points the user at `/iru-setup-java-springboot` — it deliberately does not re-interview.
 |`springboot-stack.yml` at the repository root
 
 |`initializr-pom`
@@ -77,7 +79,14 @@ the existing pom has that the template doesn't is preserved and listed in the re
   protobuf, GraphQL-codegen and AVRO plugins, plus `frontend-maven-plugin` for the AsyncAPI documentation
   generators — along with the `asyncapi.docs.skip` property that lets an offline build opt out of the npm-based
   documentation step. The GraphQL codegen version is shared with the `graphql-java-codegen` runtime artifact that
-  generated GraphQL client code extends, so the two cannot drift apart.
+  generated GraphQL client code extends, so the two cannot drift apart. The `sonar.*` properties and the
+  `sonar-maven-plugin` entry are written only when the manifest's `sonar.mode` isn't `none`, with
+  `sonar.host.url` resolved per mode (SonarCloud for `cloud`, the manifest's host for `self-hosted`) and
+  `sonar.organization` omitted for `self-hosted` unless the manifest set one. When the manifest's `frontend` is
+  `hilla`, the root pom additionally gains a `vaadin.version`/`vaadin.skip` property pair, a `vaadin-bom`
+  `dependencyManagement` import, a `vaadin-maven-plugin` `pluginManagement` entry, and a `production` profile
+  (`vaadin.productionMode=true`) — all four omitted otherwise; see
+  xref:skills/iru-setup-java-springboot-hilla.adoc[] for how a module is wired against these pins.
 * One `pom.xml` per module named in the manifest, plus the intermediate aggregator poms
   (`infrastructure/`, `infrastructure/database/`, `infrastructure/clients/`, `api/`). Each
   `infrastructure/clients/<name>` additionally carries, at `test` scope, the Testcontainers module for whichever
@@ -89,7 +98,9 @@ the existing pom has that the template doesn't is preserved and listed in the re
 * `checkstyle.xml` and `spotbugs-exclude.xml` at the repository root, if absent.
 * A report listing the reactor's build order, every version pinned (separating those copied from the reference pom
   from those looked up on Maven Central), which module each significant dependency landed in, anything that
-  couldn't be placed, and any hexagon violation found.
+  couldn't be placed, any hexagon violation found, how `sonar.mode` was wired (`none`, `cloud`, or `self-hosted`,
+  with the resolved host/organization/project key), and how `frontend` was wired (`none`, or `hilla` with the
+  resolved `vaadin.version`).
 
 == Execution flow
 
@@ -102,7 +113,7 @@ flowchart TD
     C -- root pom exists --> D{"Stop or regenerate?"}
     D -- stop --> STOP2[Stop; report]
     D -- regenerate --> E
-    C -- no root pom --> E["Step 1: Write the root pom\n(all versions, all plugins, enforcer, Sonar)"]
+    C -- no root pom --> E["Step 1: Write the root pom\n(all versions, all plugins, enforcer;\nconditional Sonar and Hilla/Vaadin wiring)"]
     E --> F["Steps 2-3: Place dependencies per module;\nwrite each module pom with no versions\nand its bannedDependencies rule"]
     F --> G["Step 4: Write every pom to disk"]
     G --> H["Step 5: Write checkstyle.xml\nand spotbugs-exclude.xml"]

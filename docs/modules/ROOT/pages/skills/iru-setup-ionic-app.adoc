@@ -1,0 +1,189 @@
+= Setup Ionic App
+:description: Scaffolds a new Ionic (Angular or React) hybrid app via the Ionic CLI, then adds Vitest coverage, ESLint/Prettier, Playwright, Maestro, and Sonar.
+:keywords: iru-setup-ionic-app, claude code skill, ionic, capacitor, vitest, eslint, playwright, maestro, sonarqube, scaffold
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a new Ionic (Angular or React) hybrid mobile app at the repository root using the real `@ionic/cli`
+`start` schematic, then layer on this catalog's house test/lint/e2e/Sonar conventions on top of the stock starter.
+
+== Purpose
+
+`iru-setup-ionic-app` bootstraps a new Ionic 9 + Capacitor 8 app — no Cordova, no Ionic Appflow — using the
+Ionic CLI's own scaffold instead of a hand-rolled reimplementation of it, then wires in Vitest with v8 coverage
+(the Angular flavor's `@angular/build:unit-test` runner, or Vite's own runner for React), the starter's existing
+ESLint flat config plus Prettier, a Playwright web-build smoke test, a Maestro on-device flow skeleton, and
+`sonar-project.properties` when opted in. Every command and quirk documented in its `SKILL.md` was confirmed by
+actually running the exact sequence against both flavors (`@ionic/cli` 7.2.1, `@ionic/angular`/`@ionic/react`
+9.0.4, Capacitor 8.5.2) rather than assumed from the tools' documentation alone.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-ionic-app
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. a future `iru-setup-ionic-app-repository` or
+`iru-setup-repository`) as newline-separated `key: value` lines, parsed in Step 0 so this skill doesn't ask
+about any field already resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|`framework`
+|Yes (unless supplied via `args`)
+|Which flavor to scaffold: `angular` or `react`.
+|None — user must choose
+
+|`app-name`
+|Yes (unless supplied via `args`)
+|Kebab-case project/directory name, used as `ionic.config.json`'s `name` and `capacitor.config.ts`'s `appName`.
+|None
+
+|`app-id`
+|Yes (unless supplied via `args`)
+|Reverse-DNS application id, e.g. `com.example.myapp`; overwrites the starter's hardcoded `io.ionic.starter`
+via a `cap init` re-run.
+|None
+
+|`description`
+|No
+|One-line project description written into `package.json`'s `description` field.
+|None
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: MIT License, Apache License 2.0, No license (sets `"private": true`), or Other
+(asked for a SPDX id directly).
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Populate `package.json`'s `author` field, which the starter's template omits.
+|None
+
+|`open-source`
+|No
+|Whether the repository is open source (`yes`/`no`); drives the recommended defaults for `distribution` and
+`sonar`.
+|None — asked first when unresolved
+
+|`distribution`
+|No
+|How the app reaches real devices: `none`, `internal`, or `store`. Recorded only, for a later
+`iru-setup-typescript-github-workflows` run — this skill never touches store/signing config.
+|`store` when open source; otherwise asked with `internal` recommended
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|Whether/how to wire up `sonar-project.properties` in Step 10: `cloud`, `self-hosted`, or `none`.
+|`cloud` when open source; otherwise asked with `none` recommended
+
+|`add-android`
+|No
+|Whether to run `npx cap add android` in Step 5. Notes the Android SDK requirement if undetected.
+|Asked with Yes recommended
+
+|`add-ios`
+|No
+|Whether to run `npx cap add ios` in Step 5. Only offered on macOS; silently skipped elsewhere.
+|Asked with Yes recommended (macOS only)
+
+|`mode`
+|No
+|`new` or `existing`. `existing` skips Step 1's stop-or-regenerate question and goes straight to filling gaps
+in an already-scaffolded project.
+|`new`
+|===
+
+== Outputs
+
+* A scaffolded Ionic app at the repository root (`package.json`, `capacitor.config.ts`, `src/`, framework
+  config), moved up from a temporary sibling directory when the root wasn't empty.
+* `capacitor.config.ts` re-initialized with the real `app-id` in place of the starter's `io.ionic.starter`.
+* Vitest coverage wired into `angular.json` (Angular) or `vite.config.ts` (React), plus non-interactive
+  `test`/`coverage` `package.json` scripts.
+* `eslint.config.js` extended with build/coverage `ignores` and `eslint-config-prettier`; `.prettierrc.json`
+  and `format`/`format:fix` scripts added.
+* `playwright.config.ts` and `e2e/smoke.spec.ts` (optionally replacing the React starter's Cypress setup), plus
+  an `e2e` script.
+* `.maestro/smoke.yaml`, an unverified on-device smoke-flow skeleton.
+* `sonar-project.properties` at the repository root, only when `sonar` is `cloud` or `self-hosted`.
+* `android/` and/or `ios/` native platform folders, for whichever of `add-android`/`add-ios` was Yes.
+* A report of every resolved value, what was included versus omitted and why, and explicit warnings to review
+  generated files and provision Sonar/store credentials before relying on CI.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-ionic-app] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E{"Step 1: Ionic project\nalready exists at root?"}
+    D --> E
+    E -- no --> F["Step 2: Collect inputs\n(framework, app-name/id, description,\ndeveloper info, license, open-source,\ndistribution, sonar, add-android/ios)"]
+    E -- "mode: existing" --> G["Gap-fill only:\ndetect framework from package.json,\nskip Step 2 questions"]
+    E -- otherwise --> H["Warn user; AskUserQuestion:\nstop / fill gaps / regenerate"]
+    H -- stop --> I[Report nothing changed; end]
+    H -- "fill gaps" --> G
+    H -- regenerate --> J["Ask user to clear the root first,\nthen scaffold fresh"]
+    J --> F
+    G --> K["Step 3: Look up dependency versions\n(&amp;lt;npm view&amp;gt;, Capacitor/Vitest\nversion-matching caveats)"]
+    F --> K
+    K --> L["Step 4: Scaffold via ionic start\n(temp-dir workaround if root non-empty);\ncap init with real app-id;\nupdate package.json"]
+    L --> M{"Step 5: add-android /\nadd-ios resolved Yes?"}
+    M -- android --> N["npm install @capacitor/android;\nnpx cap add android"]
+    M -- ios --> O["npm install @capacitor/ios;\nnpx cap add ios (macOS only)"]
+    M -- neither --> P[Note both can be added later]
+    N --> Q
+    O --> Q
+    P --> Q["Step 6: Wire Vitest + v8 coverage\nper flavor"]
+    Q --> R["Step 7: Extend ESLint ignores;\ninstall Prettier + config"]
+    R --> S{"Step 8: React + Cypress present?"}
+    S -- yes --> T["AskUserQuestion:\nreplace Cypress with Playwright\nor keep both"]
+    S -- no --> U[Install Playwright + http-server;\nwrite config + smoke test]
+    T --> U
+    U --> V["Step 9: Write .maestro/smoke.yaml\nskeleton"]
+    V --> W{"Step 10: sonar resolved\ncloud or self-hosted?"}
+    W -- yes --> X[Write sonar-project.properties\nwith per-flavor lcov path]
+    W -- none --> Y[Skip Step 10]
+    X --> Z["Step 11: Report resolved values,\nincluded/omitted items, and warnings"]
+    Y --> Z
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-ionic-app` is a leaf skill; it does not call any other skill in this catalog. It mentions
+xref:skills/iru-check-license.adoc[], xref:skills/iru-setup-typescript-gitignore.adoc[], and
+xref:skills/iru-setup-typescript-github-workflows.adoc[] in its report/warnings only, as pointers for the user
+to run afterward — it never calls them itself.
+
+=== Invoked by
+
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-ionic-app` (via
+  `iru-isolated-skill-executor`) as one of the flavor choices when the detected/chosen project type is an Ionic
+  app, passing the pre-resolved `framework`, app identity, license, `open-source`, `distribution`, and `sonar`
+  fields via `args` so this skill's own Step 2 questions are skipped. Also runnable standalone.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-ionic-app/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

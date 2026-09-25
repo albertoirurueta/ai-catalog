@@ -1,6 +1,6 @@
 ---
 name: iru-explore
-description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — both in the existing codebase and in the requested change — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
+description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Expo/React Native, Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -223,16 +223,52 @@ fallback when manifests are absent or ambiguous:
 
 - **Build/package manifests** are the primary signal:
   - `pom.xml`, `build.gradle`/`build.gradle.kts` → Java/Kotlin; check dependencies for `spring-boot-starter*`
-    (Spring/Spring Boot), `micronaut-*`, `quarkus-*`, or an Android Gradle plugin (`com.android.application`/
-    `com.android.library`) — and within Android, `androidx.compose` deps → Jetpack Compose vs. XML/View-based UI.
+    (Spring/Spring Boot) — and among Spring Boot deps, `hilla-spring-boot-starter` and/or
+    `com.vaadin:vaadin-spring-boot-starter` → Hilla (Spring Boot + Vaadin + Hilla), corroborated by a
+    `@vaadin/hilla` dependency in a co-located `package.json` and a `src/main/frontend/` directory — `micronaut-*`,
+    `quarkus-*`, or an Android Gradle plugin (`com.android.application`/`com.android.library`).
+    - **Android plugin id**: `com.android.library` → Android library module, `com.android.application` → Android
+      application module — read it directly from `build.gradle`/`build.gradle.kts`, or, when the project
+      centralizes versions/plugins in `gradle/libs.versions.toml` (itself a signal worth recording), from a
+      plugin alias named e.g. `android-library`/`android-application` there instead. Check for an
+      `androidx.compose:compose-bom` (or another `androidx.compose*`) dependency → Jetpack Compose UI, vs. its
+      absence → XML/View-based UI. A repository laid out as a `lib/` module (library plugin) alongside an `app/`
+      module (application plugin) that depends on it (`implementation(project(":lib"))`) is this catalog's
+      reference Android *library* shape — the app is the library's sample/demo, not a second deliverable — so
+      record the library as the project type and the sample module as a sub-line, rather than treating them as
+      two unrelated modules (see Step 7's `android-library` rule).
   - `*.csproj`/`*.fsproj`/`*.sln` → C#/.NET (or F#); check for `Microsoft.AspNetCore.*` (ASP.NET Core), `*.Maui`/
     Xamarin (cross-platform mobile), WPF/WinForms project types.
-  - `package.json` → JavaScript/TypeScript; check `dependencies`/`devDependencies` for `react`, `vue`, `angular`,
-    `next`, `express`, `nestjs`, etc.
+  - `package.json` → JavaScript/TypeScript; check `dependencies`/`devDependencies`:
+    - `vite` + `react` (typically alongside a `vite.config.*` file) → Vite + React web app.
+    - `@angular/cli` and/or `@angular/core`, corroborated by an `angular.json` at the project root → Angular CLI
+      web app.
+    - `@vaadin/hilla`, alongside a `src/main/frontend/` directory → the frontend half of a Hilla app (see the
+      `pom.xml` bullet above for its Spring Boot backend half).
+    - `expo` and/or `react-native` → Expo / React Native app; corroborated by `app.json`/`app.config.*` (Expo app
+      config), `metro.config.js` (Metro bundler), `eas.json` (Expo Application Services), and/or native `ios/`
+      and `android/` project directories (present in a bare/ejected React Native app, typically absent in a
+      managed Expo app).
+    - `@ionic/angular` or `@ionic/react` → Ionic, with which of the two deps is present telling you the
+      underlying framework (Angular vs. React) Ionic is layered on; `@capacitor/core` plus a
+      `capacitor.config.*` and/or `ionic.config.json` corroborate it as an Ionic/Capacitor hybrid app rather
+      than a plain Angular/React web app.
+    - `vue`, `next`, `express`, `nestjs`, etc. — other framework deps, as already covered.
+    - No app-framework dependency present, but `main`/`exports`/`types` fields plus a co-located
+      `tsconfig.json` → a plain TypeScript/npm library (no framework), not an application.
   - `requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py` → Python; check for `django`, `flask`, `fastapi`.
-  - `Podfile`, `Package.swift`, `*.xcodeproj`/`*.xcworkspace` → Swift and/or Objective-C; check `import SwiftUI`
-    vs. `import UIKit` in source files for the UI framework in use, and `.m`/`.mm`/`.h` file presence for
-    Objective-C alongside `.swift`.
+  - `Podfile`, `Package.swift`, `project.yml`, `Project.swift`, `*.xcodeproj`/`*.xcworkspace` → Swift and/or
+    Objective-C:
+    - `Package.swift` (SwiftPM) — its `products:` array tells library vs. executable (`.library(...)` vs.
+      `.executable(...)`), and its `platforms:` array (e.g. `.iOS(.v16)`, `.macOS(.v13)`) gives the target
+      platforms directly.
+    - `project.yml` → an XcodeGen-managed project; `Project.swift` → a Tuist-managed project — either means the
+      `.xcodeproj` itself is generated, so treat the generator file, not the generated project, as the source of
+      truth for target/platform config, and read its `deploymentTarget` setting for target platforms.
+    - A hand-maintained `*.xcodeproj`/`*.xcworkspace` with no generator file present — read target platforms from
+      `SUPPORTED_PLATFORMS` / `TARGETED_DEVICE_FAMILY` in the `.pbxproj` or an `.xcconfig`.
+    - Either way, check `import SwiftUI` vs. `import UIKit` in source files for the UI framework in use, and
+      `.m`/`.mm`/`.h` file presence for Objective-C alongside `.swift`.
   - `CMakeLists.txt`, `Makefile`, `*.vcxproj` with `.c`/`.cpp`/`.h`/`.hpp` sources → C/C++.
   - `go.mod` → Go. `Cargo.toml` → Rust. `Gemfile` → Ruby.
 - **Source-level fallback**: when manifests are absent, sparse, or ambiguous (e.g. a monorepo with multiple
@@ -300,6 +336,9 @@ Summarize for the user in plain text (no file output unless asked):
   - Languages (codebase): <e.g. Java, Kotlin>
   - Frameworks (codebase): <e.g. Spring Boot (backend/), Jetpack Compose (android/)>
   - Languages/frameworks (requested change): <e.g. Kotlin, Jetpack Compose — matches android/ module>
+  - Project type: <one of: java-library, java-springboot, java-springboot-hilla, typescript-library, react-web,
+    angular-web, android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos),
+    react-native-app, ionic-app (angular|react), dotnet, other, unknown>
   - Antora docs: <e.g. docs/ (antora.yml component "my-lib") — or "none found">
   - Repository host: <e.g. GitHub (github.com/org/repo) — or Bitbucket / Azure DevOps / TFS, with base URL — or
     "no remote configured" — or "none — not a git repository">
@@ -312,6 +351,51 @@ Summarize for the user in plain text (no file output unless asked):
   introduces something new (per Step 5), say so explicitly here rather than folding it silently into the
   existing list. Always state the Antora docs and Repository host lines, even when the answer is "none found"/"no
   remote", so later skills like `iru-update-docs` or ones creating branches/PRs don't need to re-check.
+
+  **The `Project type:` line** is a normalized, single-token-per-module summary of the Step 5 signals — this
+  exact vocabulary is a shared contract with the `iru-setup-repository` front door, which reads this line
+  verbatim to pre-select the right bootstrap flow, so never invent a value outside the list above. Derive it
+  from Step 5's findings as follows:
+
+  | Project type            | Derived from (Step 5 signals)                                                            |
+  |--------------------------|-------------------------------------------------------------------------------------------|
+  | `java-library`           | `pom.xml`/`build.gradle*` present, no `spring-boot-starter*`, no Android plugin           |
+  | `java-springboot`        | `spring-boot-starter*` dependency present, no Hilla markers                               |
+  | `java-springboot-hilla`  | `hilla-spring-boot-starter`/`vaadin-spring-boot-starter` (+ `@vaadin/hilla`, `src/main/frontend/`) |
+  | `typescript-library`     | `package.json` with `main`/`exports`/`types` + `tsconfig.json`, no app-framework dep       |
+  | `react-web`               | `package.json` with `vite` + `react` (or another React web setup, not Native/Ionic)        |
+  | `angular-web`             | `@angular/cli`/`@angular/core` + `angular.json`, not layered under Ionic                   |
+  | `android-library`         | Gradle `com.android.library` plugin (direct or via `libs.versions.toml` alias)             |
+  | `android-app`             | Gradle `com.android.application` plugin (direct or via `libs.versions.toml` alias)         |
+  | `swift-library`           | `Package.swift` with a `.library(...)` product                                             |
+  | `apple-app`               | `Package.swift` `.executable(...)` product, or an Xcode/XcodeGen/Tuist app target          |
+  | `react-native-app`        | `expo`/`react-native` deps (+ `app.json`/`metro.config.js`/`eas.json`, `ios/`+`android/`)   |
+  | `ionic-app`               | `@ionic/angular` or `@ionic/react` (+ `@capacitor/core`, `capacitor.config.*`)              |
+  | `dotnet`                  | `*.csproj`/`*.fsproj`/`*.sln` present (library, ASP.NET Core, MAUI/Xamarin, WPF/WinForms)   |
+  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, plain Python, Go, Rust, Ruby, C/C++) |
+  | `unknown`                 | Nothing in Step 5 matched any manifest or source-level signal                              |
+
+  - `apple-app` lists its detected target platforms in parentheses, using the platform keys `ios`, `ipados`,
+    `macos`, `watchos` (e.g. `apple-app (ios, ipados)`) — derived from `Package.swift`'s `platforms:` array,
+    `project.yml`/`Project.swift`'s `deploymentTarget`, or `SUPPORTED_PLATFORMS`/`TARGETED_DEVICE_FAMILY`, as
+    detected in Step 5.
+  - `ionic-app` lists its underlying framework in parentheses — `ionic-app (angular)` or `ionic-app (react)` —
+    from whichever of `@ionic/angular`/`@ionic/react` was found.
+  - **Android library with a sample app**: when every `com.android.application` module depends on a sibling
+    `com.android.library` module (`implementation(project(":lib"))`) — this catalog's reference library layout,
+    `lib/` + Compose `app/` — the value is `android-library`, with the sample module recorded on an indented
+    sub-line for information (`- sample app: app/`), **not** `multiple` (reporting `multiple` here makes the front door
+    ask which module to bootstrap for what is a single library project).
+  - **Multiple modules of different types**: when the repository contains more than one module with a distinct
+    project type (e.g. a backend plus a mobile client, or two independent Android apps), the line's value is
+    `multiple`, followed by one `<module-path>: <type>` entry per module on indented sub-lines, e.g.:
+    ```
+    - Project type: multiple
+      - backend/: java-springboot
+      - android/: android-app
+    ```
+  - Say `unknown` only when nothing in Step 5 matched anything at all; say `other` when something clearly
+    matched (a manifest and/or source-level signal was found) but that stack has no key in the table above.
 - If Step 6 found a connected documentation MCP, include a **Related documentation** section listing each
   relevant page found (title, link, one-line summary) — or a one-line note that none was relevant/connected.
   This is what a later `iru-plan` step should draw on for additional context beyond the codebase and ticket.

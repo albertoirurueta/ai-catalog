@@ -5,9 +5,10 @@
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 xref:index.adoc#_common_workflows[Common workflows] on the top-level page gives a one-diagram-each overview of
-how this catalog's skills compose for a handful of recurring jobs. This page goes deeper on the three a person
-actually runs most often — starting work on a ticket, filing a ticket before that work begins, and cutting a
-release — with a fuller diagram and, for the first one, a breakdown of what each step in it actually does.
+how this catalog's skills compose for a handful of recurring jobs. This page goes deeper on the four a person
+actually runs most often — starting work on a ticket, filing a ticket before that work begins, bootstrapping a
+repository, and cutting a release — with a fuller diagram and, for the first one, a breakdown of what each step
+in it actually does.
 
 [[typical-development-cycle]]
 == Typical development cycle, starting from a ticket
@@ -146,45 +147,117 @@ flowchart LR
     G --> H(["/iru-issue &amp;lt;id&amp;gt; or /iru-plan &amp;lt;id&amp;gt;\n(separate, later invocation)"])
 ....
 
+[[bootstrapping-a-repository]]
+== Bootstrapping a repository
+
+This workflow is for standing up a repository's scaffold, docs, gitignore, CI/CD, changelog, and README in one
+pass, rather than writing each by hand or running five to six skills separately.
+xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] is the front door for every stack this catalog
+supports — it works the same way whether the repository is brand new or already has code in it.
+
+=== On a brand-new, empty repository
+
+`/iru-setup-repository` finds nothing to detect, so it asks the project type itself, over up to four short
+`AskUserQuestion` rounds rather than one long list. Each round offers three concrete types plus a "Something in
+the next group" escape hatch that moves on to the next round: Java/JVM (Java library, Spring Boot service, Spring
+Boot + Vaadin + Hilla), Android & Swift (Android library, Android app, Swift/SwiftPM library), mobile apps (Apple
+app, React Native app, Ionic app), and Web/Node (TypeScript/npm library, React web app, Angular web app) — twelve
+types in total; the last round's escape hatch is "None of these", which ends the run with a plain "no orchestrator
+for this stack" report. .NET is recognised by `iru-explore` but never offered here, because the catalog has no
+.NET bootstrap orchestrator. Once the type is known, it asks only the inputs the stacks genuinely share —
+`open-source`, `publish` (libraries) or `distribution` (apps), and `sonar` (+ its organization/project-key/host
+details) — exactly once, plus the flavor-specific ones the chosen type needs (`platforms` for Swift/Apple,
+`framework` for Ionic, `native-builds` for React Native). License and developer identity are never asked by the
+front door; each stack orchestrator asks its own. It then delegates to that stack's own orchestrator (e.g.
+xref:skills/iru-setup-typescript-repository.adoc[], xref:skills/iru-setup-android-repository.adoc[]) via the
+`iru-isolated-skill-executor` agent, so its full multi-step transcript stays out of the front door's own context.
+
+A `*-repository` orchestrator runs its fixed six-step chain (scaffold → Antora → gitignore → CI/CD workflows →
+changelog → README), while `iru-setup-java-springboot` runs its own manifest-driven chain (interview →
+`springboot-stack.yml` → the `iru-setup-java-springboot-*` sub-skills → `iru-update-java-springboot-documentation`
+→ gitignore/README/changelog). Either way it returns a single consolidated report, including one combined
+required-secrets table covering every
+workflow it generated (Sonar tokens, publishing credentials, signing secrets, …) instead of a separate table per
+sub-skill. What to do next is manual and outside any skill's reach: create those secrets in the repository's
+settings, set up the SonarCloud/self-hosted SonarQube project and any package-registry account the `publish`/
+`distribution` choice implies, review the generated files, and commit.
+
+=== On an existing repository
+
+`/iru-setup-repository` runs xref:skills/iru-explore.adoc[`iru-explore`] first and reads back its `Project type:`
+line, so the type question is pre-selected instead of asked — a repository already recognizable as, say,
+`android-library` skips straight to the shared inputs. It then forces `mode: existing` on the delegation, so
+every sub-skill downstream takes its own gap-fill/update path rather than assuming a brand-new repo: a scaffold
+skill fills in only what's missing, and anything that would overwrite existing content —
+`.gitignore`, `README.md` — is shown as a diff for the user to accept or skip, the same way
+xref:skills/iru-setup-readme.adoc[`iru-setup-readme`] already behaves standalone.
+
+=== Invoking a stack orchestrator directly
+
+Each stack's orchestrator also runs standalone, useful when the front door's project-type rounds are unnecessary
+because the stack is already known:
+
+* **TypeScript/web** — `/iru-setup-typescript-repository` covers five flavors from one orchestrator; pass
+  `flavor` to skip the question (`library`, `react`, `angular`, `react-native`, `ionic`), e.g.
+  `/iru-setup-typescript-repository` with `args: flavor: react` for a Vite+React web app, or `flavor: ionic` (plus
+  `framework: angular` or `framework: react` for Ionic's own underlying choice).
+* **Android** — `/iru-setup-android-repository` with `args: flavor: library` (a `lib/` module plus a Compose
+  `app/` sample, following the Android reference-repository conventions) or `flavor: app` (a single `app/`
+  module).
+* **Swift/Apple** — `/iru-setup-swift-repository` with `args: flavor: library` for a SwiftPM package, or
+  `flavor: app` for an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS app (add `platforms` to scope the
+  targets when `app`).
+* **Spring Boot + Hilla** — `/iru-setup-java-springboot` itself already asks whether the service has a frontend;
+  pass `args: frontend: hilla` to skip that question and have `iru-setup-java-springboot-hilla` scaffold the
+  Vaadin/Hilla React frontend into the `boot` module right after the API layer is generated.
+
 [[generating-a-release]]
 == Generating a release
 
 This workflow is used once a batch of tasks has already been completed, reviewed, and tested — not mid-feature.
-xref:skills/iru-release.adoc[`iru-release`] converts the repository's current development SNAPSHOT into a final,
-tagged release: it must be run from `develop` (this catalog follows gitflow) and stops immediately if it isn't.
+xref:skills/iru-release.adoc[`iru-release`] converts the repository's current development pre-release version
+into a final, tagged release: it must be run from `develop` (this catalog follows gitflow) and stops immediately
+if it isn't. It is not Maven-only — the version-bump step itself is delegated to whichever
+`iru-<key>-bump-version` skill (xref:guides/extending-the-catalog.adoc#_release_generation_for_other_ecosystems[]
+covers the registry) matches the project's detected ecosystem (`java`, `typescript`, `android`, `swift` today),
+so the same `/iru-release` flow applies whether the version lives in `pom.xml`, `package.json`, a Gradle version
+catalog, or a Swift package manifest.
 
 [mermaid]
 ....
 flowchart TD
     A["/iru-release"] --> B{"Current branch is develop?"}
     B -- no --> Z["Stop: checkout develop\nand retry"]
-    B -- yes --> C["Gather state: SNAPSHOT version,\nlatest tag, base branch, clean tree"]
+    B -- yes --> C["Gather state: current version,\nlatest tag, base branch, clean tree"]
     C --> D["Ask user: release version\n(3 computed candidates + free text)"]
-    D --> E["Ask user: next SNAPSHOT version\n(3 computed candidates + free text)"]
+    D --> E["Ask user: next pre-release version\n(3 computed candidates + free text)"]
     E --> F["Create release_x.y.z\nbranch off develop"]
-    F --> G["Update pom.xml, README.md\n(via iru-setup-readme), docs/antora.yml,\nAntora version snippets"]
+    F --> G["Delegate the version edit to\niru-&lt;key&gt;-bump-version;\nupdate README.md (via iru-setup-readme),\ndocs/antora.yml, Antora version snippets"]
     G --> H["Write whats-new.adoc +\nCHANGELOG.md sections"]
     H --> I["Commit changes on the release branch"]
     I --> J{"User confirms\npush + PR?"}
     J -- no --> K["Stop: nothing pushed"]
     J -- yes --> L["Push branch;\nopen PR against main/master"]
     L --> M["iru-pr-description\n(fill in the release PR body)"]
-    M --> N(["Merging the release PR\ntriggers the Sync workflow's\nautomatic snapshot bump into develop"])
+    M --> N(["Merging the release PR\ntriggers the Sync workflow's\nautomatic version bump into develop"])
 ....
 
-Every file that echoes the version number — `pom.xml`, `README.md`, `docs/antora.yml`, and any Antora page with
-a dependency snippet — is updated in the same pass, so nothing is left pointing at the previous release once the
-PR merges.
+Every file that echoes the version number — the ecosystem's own version file (via `iru-<key>-bump-version`),
+`README.md`, `docs/antora.yml`, and any Antora page with a dependency snippet — is updated in the same pass, so
+nothing is left pointing at the previous release once the PR merges.
 
 == See also
 
 * xref:index.adoc#_common_workflows[Common workflows] on the top-level page — the shorter, one-diagram version
-  of these same three workflows, alongside the catalog's other supported flows (bootstrapping a new repository,
-  updating an existing one after unrelated changes).
+  of these same workflows, alongside the catalog's other supported flows (updating an existing repository after
+  unrelated changes).
 * xref:guides/creating-tickets.adoc[] — a full breakdown of the "Filing a ticket" workflow above: every piece of
   information asked for, how the drafted ticket is structured, and every skill involved.
+* xref:guides/extending-the-catalog.adoc[] — how the repository-bootstrap and release-generation pipelines used
+  above are built to be extended with a new stack or ecosystem.
 * xref:index.adoc#group-cycle[Issue-to-PR Development Cycle] and xref:index.adoc#group-intake[Ticket Intake] —
   the purpose groups these workflows draw their skills from.
 * xref:skills/iru-issue.adoc[], xref:skills/iru-plan.adoc[], xref:skills/iru-code.adoc[] — detail pages for the typical
   development cycle's own skills.
+* xref:skills/iru-setup-repository.adoc[] — detail page for the repository-bootstrap front door.
 * xref:skills/iru-release.adoc[] — detail page for the release workflow.

@@ -1,0 +1,111 @@
+= TypeScript Generate All Tests
+:description: Scans a TypeScript/npm codebase for files with no tests or below 80% line coverage, then writes or extends unit tests until each clears that bar.
+:keywords: iru-typescript-generate-all-tests, claude code skill, typescript, npm, vitest, jest, line coverage, generate unit tests, code coverage report
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Bring an entire TypeScript codebase's unit test coverage up to a minimum bar — 80% line coverage — in one pass:
+find every source file with no test at all or with measured coverage below the bar, then write or extend tests
+for each until it clears it. TypeScript/npm only; it never runs against, or falls back to, any other language.
+
+== Purpose
+
+`iru-typescript-generate-all-tests` answers "bring this whole codebase's test coverage up to a bar" rather than
+"write tests for this one file/task," which is what `iru-typescript-code-one-task` and the `iru-code` pipeline
+already handle per task. It explores the whole codebase to build an inventory of testable files across any
+detected flavor (library, React, Angular, React Native, Ionic, or Hilla frontend), delegates to
+`iru-typescript-coverage` for the exact, measured percentage per file, and only writes or extends test code — it
+does not add license headers, TSDoc, or run a code-quality pass, and it only touches production source code when
+a file is genuinely untestable as written (e.g. no seam to substitute a hard dependency), which it reports
+explicitly rather than silently redesigning the module.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-generate-all-tests
+----
+
+== Inputs
+
+None — no arguments are accepted. It always scopes to the whole repository (or, in a workspaces/monorepo setup
+with no obvious single target, asks which workspace to scope the run to before continuing).
+
+== Outputs
+
+* New or extended test files for every source file found with no matching test file, or with line coverage
+  below 80% — following this project's detected flavor's testing library (Vitest/Jest, `@testing-library/react`,
+  `@testing-library/react-native`, Angular `TestBed`, or Hilla Vitest browser mode) and its existing test-file
+  convention (sibling `.test`/`.spec`, or a mirrored `test/` tree).
+* Occasionally, a minimal testability change to a module under test (e.g. accepting a dependency as a parameter,
+  extracting a hook/service) — only when a file is genuinely untestable as written, and always called out
+  explicitly rather than folded silently into "tests added."
+* A report: total candidate files found (and any excluded as having no testable logic), the detected flavor/test
+  runner/package manager/test-file convention, how many already met the bar, before/after coverage per file
+  touched, any file still below 80% after two extension attempts (with its exact remaining uncovered lines), and
+  the full-suite test result.
+* No license headers, TSDoc, or code-quality fixes — those remain `iru-check-license`, `iru-typescript-tsdoc`,
+  and `iru-typescript-code-quality`'s jobs.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-typescript-generate-all-tests] --> B{"package.json found?"}
+    B -- no --> B1[Stop: TypeScript/npm only]
+    B -- yes --> C{"TypeScript toolchain\npresent?"}
+    C -- no --> C1[Stop: this skill is for\nTypeScript projects]
+    C -- yes --> D{"Multiple package.json,\nno obvious target?"}
+    D -- yes --> D1[AskUserQuestion: which\nworkspace to scope to]
+    D1 --> E
+    D -- no --> E["Explore agent: inventory source\nfiles, detect flavor, test runner,\npackage manager, test convention"]
+    E --> F{"No tests exist and no\ntest runner configured?"}
+    F -- yes --> F1[Stop: ask user; this skill\nextends tests, doesn't scaffold one]
+    F -- no --> G["gate-runner: single\ntypescript-coverage run over every\ncandidate file (batched if large)"]
+    G --> H["Classify: missing tests /\nbelow 80% / already sufficient"]
+    H --> I["One agent per file (parallel\nbatches): write new or extend\nexisting tests"]
+    I --> J["Re-measure via\ntypescript-coverage, scoped to\ntouched files"]
+    J --> K{"Still below 80%?"}
+    K -- yes, attempts left --> I
+    K -- yes, 2 attempts used --> L[Report as residual gap\nwith exact uncovered lines]
+    K -- no --> M["gate-runner: run full\nsuite once (typescript-test)"]
+    L --> M
+    M --> N{"Any failures?"}
+    N -- yes, caused by this run --> O[Fix regression;\nre-run full suite]
+    O --> M
+    N -- no / pre-existing --> P[Final report]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-typescript-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation:
+  delegated through the `iru-gate-runner` agent so its full `lcov.info`/coverage HTML report never lands
+  directly in this conversation, and so the whole suite runs once per batch rather than once per file.
+* xref:skills/iru-typescript-test.adoc[] — Step 7, once, to confirm the full suite still passes after every
+  file's tests have been written or extended; also delegated through `iru-gate-runner`.
+
+=== Invoked by
+
+None from inside this catalog — it is a top-level entry point invoked by a person who wants coverage brought up
+across the whole codebase in one pass, independent of the `/iru-code`/`/iru-issue` pipeline (which handles
+per-task test-writing via `iru-typescript-code-one-task`).
+
+=== Related agents
+
+* xref:agents/overview.adoc[`Explore`] — Step 2, to build the source-file/test-file inventory and detect the
+  project's flavor, test runner, package manager, and test convention without reading every file directly.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-typescript-coverage`/
+  `iru-typescript-test` and report back only a compact summary instead of a raw coverage/test log.
+* xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per file
+  needing new/extended tests, dispatched concurrently since each only touches its own test file.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-generate-all-tests/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

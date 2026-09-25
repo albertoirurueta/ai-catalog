@@ -1,0 +1,134 @@
+= Swift Bump Version
+:description: Sets a SwiftPM library's version.txt, CHANGELOG.md, and README, or an Apple app's MARKETING_VERSION/CURRENT_PROJECT_VERSION, to an exact version.
+:keywords: iru-swift-bump-version, claude code skill, swift, swiftpm, xcodegen, tuist, xcconfig, agvtool, bump version, sync files
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a Swift (SwiftPM library) or Apple app (XcodeGen/Tuist/xcconfig/`.xcodeproj`) project's version to an exact
+literal value across every file that needs to agree with it. A SwiftPM library carries no in-tree version field at
+all — a consumer resolves it against the package's git tag — so this skill only rewrites the files that mirror that
+tag by this catalog's own convention (`version.txt`, `CHANGELOG.md`, README dependency snippets). An Apple app, by
+contrast, does carry an in-tree version (`MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`), rewritten in whichever
+project format is present. This skill never computes a version itself; it only applies exactly the string it is
+given, after validating its shape.
+
+== Purpose
+
+`iru-swift-bump-version` is the Swift/Apple-ecosystem equivalent of `iru-java-bump-version`/`iru-typescript-bump-version`/
+`iru-android-bump-version`: a small, deterministic skill a caller (typically `iru-release`) can invoke with a
+literal version string, without having to reason about SwiftPM's git-tag-based versioning, XcodeGen/Tuist manifest
+syntax, or `agvtool`. Because neither SwiftPM nor Xcode build settings parse or validate a free-form version string,
+this skill validates with a regex and rewrites each file with a targeted `python3` substitution (or, for a
+hand-maintained `.xcodeproj` with no generator, via `agvtool`).
+
+== Purpose group
+
+xref:index.adoc#group-swift[Swift Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-swift-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|The exact target version string (e.g. `1.4.0`, `1.4.0-rc.1`). Validated against this catalog's
+`X.Y.Z`/`X.Y.Z-<pre-release>` convention via regex; a non-matching but plausible string is flagged, not
+hard-stopped.
+|None — the skill asks for it if omitted; an empty or whitespace-containing value is rejected up front.
+
+|`sync-files` (args)
+|No
+|Whether to also update `docs/antora.yml`'s `version:` field, Antora pages showing a dependency snippet, and — for
+an app only — a README "Current version"/App Store badge mention.
+|Ask — the skill asks once, after confirming whether such mentions actually exist.
+
+|`dry-run` (args)
+|No
+|When `yes`, compose and show the diff for every file that would change, then stop without writing anything or
+running the sanity check.
+|`no`
+
+|`kind` (args)
+|No
+|Overrides the auto-detected project kind (`library`/`app`). Needed only when a repository legitimately has both a
+root `Package.swift` and a generator manifest/`.xcodeproj` (e.g. an app with a local `Packages/Core` package).
+|Auto-detected from which manifest files exist at the repository root; asked via `AskUserQuestion` if both are
+present and this isn't given.
+|===
+
+== Outputs
+
+* **Library**: `version.txt` updated (or created, only if the repository's `sync.yml`/README actually reference
+  it); `CHANGELOG.md`'s `## [Unreleased]` heading renamed to `## [<new-version>] - <date>` with a fresh
+  `## [Unreleased]` reopened above it (skipped if the file doesn't exist); README `.package(url:, from:/exact:)`
+  snippets rewritten to the new version.
+* **App**: `MARKETING_VERSION` set to the new version and `CURRENT_PROJECT_VERSION` incremented by exactly 1, in
+  whichever of `project.yml` (XcodeGen), `Project.swift` (Tuist), a `*.xcconfig` file, or `.xcodeproj`
+  (`agvtool`/`project.pbxproj` sed) actually carries the value.
+* Optionally, `docs/antora.yml`'s `version:` field, Antora pages with a literal dependency snippet, and/or a README
+  version badge mention, if `sync-files` was accepted.
+* A sanity check: `swift package dump-package` for a library, or an Xcode project regenerate +
+  `xcodebuild -showBuildSettings` round-trip (or `agvtool what-version`/`what-marketing-version` read-back for a
+  hand-maintained `.xcodeproj`) for an app.
+* A report of the detected kind, the old and new version, every file actually changed (or skipped and why), and an
+  explicit warning that — for a library — the git tag itself is the real release artifact, this skill never creates
+  it.
+* No commit or git tag is created — this skill only edits files (or, on `dry-run: yes`, only prints diffs).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-swift-bump-version\n&amp;lt;new-version&amp;gt;\n[args: sync-files, dry-run, kind]"] --> B{new-version given\nand not blank/whitespace?}
+    B -- no --> C["Ask user for the\ntarget version string"]
+    C --> D
+    B -- yes --> D["Validate shape against\nX.Y.Z(-pre)(+build) regex\n(warn, don't stop, if it doesn't match)"]
+    D --> E["Survey project kind: Package.swift only means library;\nproject.yml/Project.swift/.xcodeproj means app;\nboth present and no kind arg means ask via AskUserQuestion\n(honor args: kind override otherwise)"]
+    E --> F{Kind resolved?}
+    F -- neither found --> G["Hard stop: ask for correct path\nor different project layout"]
+    F -- library --> H["Rewrite version.txt, CHANGELOG.md,\nand README .package snippets"]
+    F -- app --> I["Rewrite MARKETING_VERSION and\nCURRENT_PROJECT_VERSION in project.yml /\nProject.swift / *.xcconfig / agvtool"]
+    H --> J{dry-run: yes?}
+    I --> J
+    J -- yes --> K["Show diff for every file;\nwrite nothing; skip sanity check"]
+    J -- no --> L["Write files"]
+    L --> M["Sanity check: swift package dump-package (library)\nor generate + xcodebuild / agvtool read-back (app)"]
+    K --> N
+    M --> N{sync-files given?}
+    N -- no --> O["Ask whether to sync\nantora.yml / doc pages / README badge"]
+    O --> P
+    N -- yes --> P["Update accepted files"]
+    P --> Q["Report: kind, old/new version, files changed,\nsanity-check result, git-tag/versionCode warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-swift-bump-version` is a leaf skill; it only runs shell/`python3`/`xcrun agvtool` file rewrites and a
+sanity check, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, when the detected ecosystem is Swift/Apple, called with the version
+  string `iru-release` computes: for a library, the single release version derived from the last git tag (there is
+  no in-tree dev/pre-release marker to bump back to afterward, unlike the Java/npm/Android paths); for an app,
+  whichever `MARKETING_VERSION` value the caller decides (a plain release string or a beta suffix).
+
+=== Related agents
+
+None — this skill runs inline; it is not invoked from inside a custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

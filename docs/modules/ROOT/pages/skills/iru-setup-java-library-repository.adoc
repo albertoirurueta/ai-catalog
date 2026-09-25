@@ -1,20 +1,29 @@
 = Setup Java Library Repository
-:description: Bootstraps a brand-new Java/Maven library repository end-to-end: pom.xml, Antora docs, gitignore, CI workflows, changelog, and README, in one pass.
-:keywords: iru-setup-java-library-repository, claude code skill, java, maven, pom.xml, antora, github actions, changelog, readme, repository bootstrap
+:description: Bootstraps or catches up a Java/Maven library repository end-to-end: pom.xml, Antora docs, gitignore, CI/security workflows, changelog, README.
+:keywords: iru-setup-java-library-repository, claude code skill, java, maven, pom.xml, antora, github actions, security, dependabot, sonar, open source, changelog, readme, repository bootstrap
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-End-to-end bootstrap for a brand-new Java/Maven library repository. It collects the project's identity and
-pipeline parameters once, then orchestrates six other skills in a fixed order so nothing is asked twice.
+End-to-end bootstrap for a Java/Maven library repository, new or existing. It collects the project's identity,
+pipeline parameters, and open-source/publish/Sonar choices once, then orchestrates six other skills in a fixed
+order so nothing is asked twice.
 
 == Purpose
 
-`iru-setup-java-library-repository` is the top-level entry point for starting a Java/Maven library repository from
-nothing. Rather than duplicating the logic of `pom.xml` generation, documentation scaffolding, `.gitignore`
-setup, CI/CD workflows, changelog bootstrapping, and README generation, it gathers the shared inputs — project
-identity (groupId, artifactId, base package, developer name/email/organizationUrl, license) and pipeline
-parameters (integration branch, Java version, publishing server id, sign/extras profile ids, Maven settings
-file) — once, and passes each downstream skill only what it needs.
+`iru-setup-java-library-repository` is the stack orchestrator for starting (or catching up) a Java/Maven
+library repository — runnable standalone or delegated to by xref:skills/iru-setup-repository.adoc[]. Rather than
+duplicating the logic of `pom.xml` generation, documentation scaffolding,
+`.gitignore` setup, CI/CD and security workflows, changelog bootstrapping, and README generation, it gathers the
+shared inputs — project identity (groupId, artifactId, base package, developer name/email/organizationUrl,
+license), pipeline parameters (integration branch, Java version, publishing server id, sign/extras profile ids,
+Maven settings file), and whether the project is open source, publishes to Maven Central, and runs SonarCloud,
+self-hosted SonarQube, or no Sonar analysis — once, and passes each downstream skill only what it needs.
+
+A new Step 0 first parses an optional `args` block (`mode`, `open-source`, `publish`, `sonar` plus its
+`sonar-organization`/`sonar-project-key`/`sonar-host-url` detail keys) so a caller like
+xref:skills/iru-setup-repository.adoc[] can pre-resolve these and skip the matching questions. In `mode: existing`
+it skips regenerating an already-present `pom.xml` and tells every downstream step to take its own update/gap-fill
+path instead of assuming a brand-new repository.
 
 == Purpose group
 
@@ -26,6 +35,10 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 ----
 /iru-setup-java-library-repository
 ----
+
+Optionally with an `args` block (`key: value` lines) to pre-resolve `mode`, `open-source`, `publish`, `sonar`
+(plus its detail keys) and skip the matching questions — this is how
+xref:skills/iru-setup-repository.adoc[] drives it.
 
 == Inputs
 
@@ -74,39 +87,69 @@ name and URL directly).
 |No
 |Settings file used by the CI workflows for authentication.
 |`mvnsettings.xml`
+
+|`mode` (`args`)
+|No
+|`new` or `existing`. If unset: defaults to `existing` (confirmed via `AskUserQuestion`) when `pom.xml` already
+exists at the repository root, otherwise `new` without asking. Drives whether Step 3 regenerates `pom.xml`.
+|`existing` if `pom.xml` exists, else `new`
+
+|`open-source` (`args`)
+|No
+|Whether the repository is open source. Drives the recommended defaults for `publish` and `sonar`.
+|Asked directly, no default
+
+|`publish` (`args`)
+|No
+|Whether to publish to Maven Central.
+|`yes` if open source; otherwise asked, `no` recommended
+
+|`sonar` (`args`)
+|No
+|`cloud`, `self-hosted`, or `none`. When `cloud`/`self-hosted`, also collects `sonar-organization`/
+`sonar-project-key`/`sonar-host-url`.
+|`cloud` if open source; otherwise asked, `none` recommended
 |===
 
 == Outputs
 
 * `pom.xml` and the `src/main/java`/`src/main/resources`/`src/test/java` source folders for the base package
-  (via `iru-setup-java-library`).
+  (via `iru-setup-java-library`) — skipped when `mode: existing` and `pom.xml` already exists, leaving it
+  untouched.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * A root `.gitignore` covering the build tool, IDE files, and the Antora build output (via
   `iru-setup-java-gitignore`).
-* `develop.yml`/`main.yml`/`sync.yml` GitHub Actions workflows and the `.github/scripts/sync_versions.py` script
-  (via `iru-setup-java-github-workflows`).
+* `develop.yml`/`main.yml`/`sync.yml`/`security.yml` GitHub Actions workflows, `.github/dependabot.yml`, and the
+  `.github/scripts/sync_versions.py` script (via `iru-setup-java-github-workflows`), with the Maven Central
+  publish step and the SonarCloud/self-hosted SonarQube scan step present or absent according to `publish`/`sonar`.
 * A root `CHANGELOG.md` backfilled from git/GitHub release history (via `iru-setup-changelog`).
 * A root `README.md` with badges, a project-status table, documentation links, and installation instructions
   (via `iru-setup-readme`).
-* A final report summarizing the resolved identity/license/pipeline parameters, which files were created versus
-  left untouched (because a downstream skill's own approval step chose to stop), the required GitHub secrets, and
-  an explicit warning to review every generated file before building, committing, or relying on CI.
+* A final report summarizing the resolved identity/license/pipeline parameters, the resolved `mode`, which files
+  were created, updated, or left untouched (because a downstream skill's own approval step chose to stop, or a
+  `mode: existing` skip in Step 3), the required GitHub secrets, and an explicit disclosure of the
+  `open-source`/`publish`/`sonar` wiring decisions (what was included in `pom.xml` and the workflows, and why
+  anything was omitted). Ends with a warning to review every generated file before building, committing, or
+  relying on CI.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-java-library-repository] --> B["Step 1: Collect project identity\n(groupId, artifactId, package,\ndeveloper info, license)"]
-    B --> C["Step 2: Collect pipeline parameters\n(branch, Java version, server/profile ids,\nsettings file)"]
-    C --> D["Step 3: Run setup-java-library\n(pom.xml + source folders, via sub-agent)"]
-    D -- pom.xml existed and user chose stop --> E[Stop entire pipeline; report]
-    D -- ok --> F["Step 4: Run setup-antora\n(documentation site, via sub-agent)"]
-    F --> G["Step 5: Run setup-java-gitignore\n(root .gitignore, via sub-agent)"]
-    G --> H["Step 6: Run setup-java-github-workflows\n(CI/CD workflows, via sub-agent)"]
-    H --> I["Step 7: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
-    I --> J["Step 8: Run setup-readme\n(root README.md, via sub-agent)"]
-    J --> K["Step 9: Report combined outcome\nand review warnings"]
+    Z["Step 0: Parse args\n(mode, open-source, publish, sonar\n&amp; sonar-organization/-project-key/-host-url)"] --> A["Step 1: Collect project identity\n(groupId, artifactId, package,\ndeveloper info, license)"]
+    A --> B["Step 2: Collect pipeline parameters\n(branch, Java version, server/profile ids,\nsettings file, open-source, publish, sonar)"]
+    B --> C{"Step 3: mode: existing\n&amp; pom.xml exists?"}
+    C -- yes --> D["Skip setup-java-library;\nleave pom.xml untouched"]
+    C -- no --> E["Run setup-java-library\n(pom.xml + source folders, via sub-agent)"]
+    E -- pom.xml existed and user chose stop --> F[Stop entire pipeline; report]
+    E -- ok --> G["Step 4: Run setup-antora\n(documentation site, via sub-agent)"]
+    D --> G
+    G --> H["Step 5: Run setup-java-gitignore\n(root .gitignore, via sub-agent)"]
+    H --> I["Step 6: Run setup-java-github-workflows\n(CI/security workflows + dependabot.yml,\npassing open-source/publish/sonar, via sub-agent)"]
+    I --> J["Step 7: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
+    J --> K["Step 8: Run setup-readme\n(root README.md, via sub-agent)"]
+    K --> L["Step 9: Report combined outcome,\nwiring decisions, and review warnings"]
 ....
 
 == Dependencies
@@ -120,16 +163,20 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
 
 * xref:skills/iru-setup-java-library.adoc[] — Step 3, first: writes `pom.xml` and the source folders, passing
   Step 1's answers (groupId, artifactId, package, developer name/email/organizationUrl, license) plus Step 2's
-  Java version as `args` `key: value` lines so `iru-setup-java-library` doesn't ask for them again — and so the
-  `pom.xml` compiler level matches the JDK the workflows in Step 6 set up.
+  Java version and `open-source`/`publish`/`sonar` (+ detail keys) as `args` `key: value` lines so
+  `iru-setup-java-library` doesn't ask for them again — and so the `pom.xml` compiler level and publish/Sonar
+  wiring matches the workflows Step 6 generates. Skipped entirely when `mode: existing` and `pom.xml` already
+  exists.
 * xref:skills/iru-setup-antora.adoc[] — Step 4: scaffolds the Antora documentation site, invoked with no `args`
   since it derives the component name/title/version directly from the `pom.xml` Step 3 just wrote.
 * xref:skills/iru-setup-java-gitignore.adoc[] — Step 5: writes or updates the root `.gitignore`, invoked with no
   `args` since it explores the repository directly (including what Steps 3–4 just wrote).
-* xref:skills/iru-setup-java-github-workflows.adoc[] — Step 6: writes the CI/CD workflows, passing Step 2's pipeline
-  parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file)
-  plus Step 1's already-collected `groupId`/`artifactId` as `args` `key: value` lines, so that skill's own survey
-  doesn't need to re-read them from `pom.xml`.
+* xref:skills/iru-setup-java-github-workflows.adoc[] — Step 6: writes the CI/CD and security workflows
+  (`develop.yml`/`main.yml`/`sync.yml`/`security.yml`/`.github/dependabot.yml`), passing Step 2's pipeline
+  parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file,
+  `open-source`/`publish`/`sonar` + detail keys) plus Step 1's already-collected `groupId`/`artifactId` as `args`
+  `key: value` lines, so that skill's own survey doesn't need to re-read them from `pom.xml` and stays in
+  agreement with what Step 3 wrote there.
 * xref:skills/iru-setup-changelog.adoc[] — Step 7: bootstraps the root `CHANGELOG.md`, invoked with no `args` since
   it works from the repository's own git tag/GitHub Release history.
 * xref:skills/iru-setup-readme.adoc[] — Step 8, last: bootstraps the root `README.md`, invoked with no `args` since
@@ -137,7 +184,8 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
 
 === Invoked by
 
-None — `iru-setup-java-library-repository` is a top-level entry point; no other skill in this catalog invokes it.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, via the `iru-isolated-skill-executor` agent, when the
+  detected or chosen project type is `java-library`.
 
 === Related agents
 

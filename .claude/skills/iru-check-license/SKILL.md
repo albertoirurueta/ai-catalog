@@ -29,8 +29,10 @@ license the root file represents and surface a copyright holder or inception yea
 
 - **Argument provided** (a path or glob): scope the check to files matching it.
 - **No argument**: scope to every source and test file in the repository's actual source roots (e.g. `src/main`,
-  `src/test` for Maven/Gradle Java projects; `src/`, `lib/`, `test/` for other stacks — discover the real layout
-  rather than assuming one). Skip generated/vendored directories (`target/`, `build/`, `node_modules/`, `dist/`,
+  `src/test` for Maven/Gradle Java projects; `app/src/main`, `lib/src/main` for Android (Gradle module source
+  sets); `Sources/`, `Tests/` for SwiftPM; `src/main/frontend` for Hilla's embedded frontend; `ios/`, `android/`
+  for React Native/Capacitor native projects (generated native code under those dirs is usually excluded — see
+  below); `src/`, `lib/`, `test/` for other stacks — discover the real layout rather than assuming one). Skip generated/vendored directories (`target/`, `build/`, `node_modules/`, `dist/`,
   `.git/`, anything matching the project's own `.gitignore`) and non-code files (config, markdown, data) unless
   the project's existing headers (found in Step 3) show those file types are also headered.
 - Determine the set of distinct source file extensions actually present in scope (`.java`, `.js`, `.ts`, `.py`,
@@ -43,8 +45,10 @@ block at the very top of the file (before `package`/`import`/`module`/shebang li
 name, a copyright line, or a URL to the license text:
 
 - **If a header is found**: use it verbatim as the template for that extension — same comment delimiters
-  (`/* ... */`, `//`, `#`, `<!-- -->`, etc.), same wording, same line wrapping, same copyright line format
-  (holder name, contact, year). Cross-check 2-3 more instances of that extension to confirm the format is
+  (`/* ... */`, `//`, `#`, `<!-- -->`, etc. — e.g. `.kt` headers use `/* ... */` or a block of `//` lines, same as
+  Java; `.swift` idiomatically uses `//` line comments, though `/* ... */` is also fine; `.ts`/`.tsx` use
+  `/* ... */`/`/** ... */` or `//`, same as other JS-family files), same wording, same line wrapping, same
+  copyright line format (holder name, contact, year). Cross-check 2-3 more instances of that extension to confirm the format is
   consistent repo-wide; if instances disagree, prefer the version used by the newest files (`git log -1 --
   <file>` per candidate) and note the inconsistency in the final report rather than silently picking one.
 - **If no header exists anywhere in the repo for any extension**: don't generate anything yet. Ask the user
@@ -72,9 +76,13 @@ name, a copyright line, or a URL to the license text:
     Never write the accepted header to any file until the user has explicitly accepted a shown example.
 - Determine the **year** to use in generated/backfilled headers: if the project already stamps a fixed year
   across all existing headers (e.g. a repo-wide inception year regardless of when each file was authored — check
-  `<inceptionYear>` in `pom.xml` or similar), reuse that same fixed year for consistency, even for brand-new
-  files. Otherwise, use each file's first-commit year via `git log --follow --format=%ad --date=format:%Y -- <file>
-  | tail -1` (or the current year if the file is untracked/new).
+  `<inceptionYear>` in `pom.xml` or a Gradle library module's `lib/build.gradle.kts` or similar), reuse that same
+  fixed year for consistency, even for brand-new files. `package.json` has no standard inception-year field — fall
+  back for npm/TypeScript projects; likewise `Package.swift` has none for SwiftPM projects — fall back there too.
+  Otherwise, use each file's first-commit year via `git log --follow --format=%ad --date=format:%Y -- <file>
+  | tail -1` (or the current year if the file is untracked/new), and when a single repo-wide inception year is
+  needed and no config field supplies one, the universal fallback is the repository's own first commit: `git log
+  --reverse --format=%ad --date=format:%Y | head -1`.
 
 ## Step 4 — Audit every in-scope file
 

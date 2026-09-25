@@ -1,11 +1,12 @@
 = Setup Java Spring Boot GitHub Workflows
-:description: Creates the build, deploy, and undeploy GitHub Actions workflows for a Spring Boot service, with keyless OIDC cloud auth and guarded teardown.
-:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks
+:description: Creates build, deploy, undeploy, and security GitHub Actions workflows for a Spring Boot service with OIDC cloud auth and optional Sonar/Hilla.
+:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks, hilla, vaadin, codeql, dependabot, osv-scanner, gitleaks
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Creates the three GitHub Actions workflows a Spring Boot service needs: one that builds, tests, analyses, and
-publishes documentation; one that deploys; and one that stops or destroys an environment.
+Creates the GitHub Actions workflows a Spring Boot service needs: one that builds, tests, analyses, and publishes
+documentation (optionally running a Hilla frontend's tests too); one that deploys; one that stops or destroys an
+environment; and one that runs dependency/code/secret security scans, plus a Dependabot config.
 
 == Purpose
 
@@ -15,6 +16,14 @@ GPG-signed — it is built into a container image and deployed — so the publis
 replaced by image build, OpenTofu apply, and teardown. The shared stages (test, analyse, Sonar, Antora, GitHub
 Pages) follow the same house pattern, so the two remain recognisably related.
 
+The `build.yml` Sonar step is no longer offered reactively: it reads the manifest's `sonar.mode`
+(`cloud`/`self-hosted`/`none`, defaulting to `cloud` for a manifest written before the field existed) as the source
+of truth and drops the step entirely — rather than disabling it with a permanently-false condition — when
+`sonar.mode: none`. When the manifest's `frontend` field is `hilla`, `build.yml` also sets up Node, runs the
+frontend's Vitest suite with coverage (after the Maven build, since the frontend's generated config imports
+compiled helpers that only exist once Maven has reached `vaadin:prepare-frontend`), and packages with
+`-Pproduction -Dvaadin.ci.build=true`.
+
 [cols="1,2,3", options="header"]
 |===
 |Workflow |Trigger |Does
@@ -22,8 +31,9 @@ Pages) follow the same house pattern, so the two remain recognisably related.
 |`build.yml`
 |Push to the integration/main branch, and every pull request
 |Build, unit tests (Surefire), Testcontainers integration tests (Failsafe), static analysis, aggregated coverage,
-Sonar, and — on the main branch only — the Antora site plus the generated OpenAPI, protobuf, GraphQL and AsyncAPI
-HTML, published to GitHub Pages
+Sonar (when `sonar.mode` isn't `none`), frontend Vitest tests and coverage (when `frontend: hilla`), and — on the
+main branch only — the Antora site plus the generated OpenAPI, protobuf, GraphQL and AsyncAPI HTML, published to
+GitHub Pages
 
 |`deploy.yml`
 |`workflow_dispatch` with an environment input, optionally on release published
@@ -34,6 +44,16 @@ smoke check that fails the deploy if the service never becomes healthy
 |`workflow_dispatch` only
 |Scale to zero (the reversible default) or destroy an environment, behind a typed-confirmation check and a protected
 GitHub Environment
+
+|`security.yml`
+|Push to the main branch, every pull request, and a weekly schedule
+|Dependency review, CodeQL (with a `javascript-typescript` matrix leg when `frontend: hilla`), OSV-Scanner, and
+gitleaks — each job individually omittable via its own `args` flag
+
+|`.github/dependabot.yml`
+|n/a — configuration, not a workflow
+|Grouped weekly updates for the `maven`, `docker`, and `github-actions` ecosystems, plus `npm` (pointed at the real
+web module) when the manifest's `frontend` isn't `none`; always generated regardless of the `security-*` flags
 |===
 
 No credential is ever written into a workflow file: cloud access is keyless via OIDC, and everything else is a
@@ -64,8 +84,8 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 
 |`stack-file`
 |No
-|`args` `key: value` line giving the manifest path. Read for the cloud, the Java version, and the technologies in
-play.
+|`args` `key: value` line giving the manifest path. Read for the cloud, the Java version, `sonar.mode` (and its
+`organization`/`projectKey`/`hostUrl`), `frontend` (`none`/`hilla`), and the technologies in play.
 |`springboot-stack.yml` at the repository root
 
 |`integration-branch`, `main-branch`
@@ -73,13 +93,21 @@ play.
 |`args` `key: value` lines. Otherwise confirmed against `git branch -a` rather than assumed to be gitflow.
 |`develop`, `main`
 
+|`security-dependency-review`, `security-codeql`, `security-osv`, `security-gitleaks`
+|No
+|`args` `key: value` lines, each `yes`/`no`. Individually gate the matching job in `security.yml`. Any not supplied
+via `args` is asked with `AskUserQuestion`, except when this skill runs unattended as part of
+xref:skills/iru-setup-java-springboot.adoc[]'s Step 8, where the default stands without asking.
+|`yes` for all four
+
 |On-disk survey
 |Yes
 |The workflows must match reality, so the skill reads: the reactor's modules and the `boot` directory, where
-`report-aggregate` writes, whether the Sonar plugin and properties exist, the Antora config and which extensions
-`docs/package.json` lists, where the API doc generators write, whether `apis/messaging/` and
-`apis/graphql-server/` hold their contracts and committed `docs/package-lock.json` toolchains (and whether the
-GraphQL one pins `graphql-voyager` as well as `spectaql`), which `infra/envs/<env>` directories exist, whether
+`report-aggregate` writes, whether the Sonar plugin and properties exist (only when `sonar.mode` isn't `none`), the
+Antora config and which extensions `docs/package.json` lists, where the API doc generators write, whether
+`apis/messaging/` and `apis/graphql-server/` hold their contracts and committed `docs/package-lock.json` toolchains
+(and whether the GraphQL one pins `graphql-voyager` as well as `spectaql`), which module carries the Hilla frontend
+and its `package-lock.json` path (only when `frontend: hilla`), which `infra/envs/<env>` directories exist, whether
 GitHub Environments exist, and how heavy the compose stack is.
 |None — derived
 
@@ -116,9 +144,19 @@ notification, an extra matrix leg).
   previously produced plan file.
 * `.github/workflows/undeploy.yml` — with the typed-confirmation check, the same concurrency group as `deploy.yml`
   so the two can never run at once, and separate `stop` and `destroy` paths.
+* `.github/workflows/security.yml` — a `dependency-review` job (pull requests only), a `codeql` job (matrix
+  `java-kotlin`, plus `javascript-typescript` when `frontend: hilla`), an `osv-scanner` job (the
+  `google/osv-scanner-action` reusable workflow), and a `gitleaks` job (full checkout history) — each job present
+  only when its `security-*` flag is `yes`. If all four flags are `no`, the file is skipped entirely rather than
+  written with no jobs.
+* `.github/dependabot.yml` — always generated: grouped weekly updates for `maven`, `docker`, and `github-actions`,
+  plus an `npm` entry (directory set to the real web module, normally `/boot`) whenever the manifest's `frontend`
+  isn't `none`, and a further `npm` entry per documentation toolchain (`docs/`, `apis/messaging/docs/`,
+  `apis/graphql-server/docs/`) that already has its own committed `package-lock.json`.
 * A report including the full table of required repository secrets, environment secrets, environment variables, and
-  GitHub Environments — plus the two settings that are easy to miss: GitHub Pages served from `gh-pages`, and an
-  OIDC trust policy scoped to the repository *and* the environment.
+  GitHub Environments — plus the settings that are easy to miss: GitHub Pages served from `gh-pages`, an OIDC trust
+  policy scoped to the repository *and* the environment, and (for `security.yml`) Code scanning and Dependency
+  graph enabled in repository settings so CodeQL and dependency review have somewhere to report into.
 
 == Execution flow
 
@@ -134,7 +172,8 @@ flowchart TD
     C --> E
     E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check)"]
     F --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy)"]
-    G --> H["Step 4: Assemble the secrets,\nvariables, and environments table"]
+    G --> G2["Step 3b: Write security.yml\n(dependency-review, CodeQL, OSV-Scanner,\ngitleaks - each gated by a security-* flag)\nand always write dependabot.yml"]
+    G2 --> H["Step 4: Assemble the secrets,\nvariables, and environments table"]
     H --> I["Step 5: Validate — YAML parses,\naction versions current, secret names consistent;\nMaven commands verified locally via iru-gate-runner"]
     I --> J["Step 6: Report files, gaps,\nand review warnings"]
 ....

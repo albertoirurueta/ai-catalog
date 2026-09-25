@@ -1,0 +1,167 @@
+= Setup TypeScript Library
+:description: Generates package.json, tsconfig.json, vitest.config.ts, eslint.config.js, typedoc.json and a src/test skeleton for a new npm/TypeScript library.
+:keywords: iru-setup-typescript-library, claude code skill, npm, typescript, vitest, eslint, typedoc, changesets, sonarcloud, scaffold
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate the standard npm/TypeScript library toolchain at the repository root — `package.json`, `tsconfig.json`,
+`vitest.config.ts`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `typedoc.json`, and, when opted in,
+`sonar-project.properties` and `.changeset/config.json` — plus a minimal `src/index.ts` + `test/index.test.ts`
+skeleton, from explicit house templates embedded in the skill itself.
+
+== Purpose
+
+`iru-setup-typescript-library` bootstraps a new npm/TypeScript library's build/test/lint/docs toolchain from a
+house template: ESM-only `package.json` and `tsconfig.json` (`moduleResolution: bundler`), Vitest with v8 coverage
+and an 80%-lines threshold, ESLint 10 flat config (`@eslint/js` + `typescript-eslint` recommended +
+`eslint-config-prettier`, plus a license-header rule once a license is chosen), Prettier, and Typedoc with
+`treatWarningsAsErrors`. Every devDependency version is looked up from the npm registry at run time (Step 4), with
+a recorded fallback only for when that lookup fails, and `npm install` is run at the end so the scaffold is
+immediately buildable.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-typescript-library
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. `iru-setup-typescript-repository`) as
+newline-separated `key: value` lines, parsed in Step 0 so this skill doesn't re-ask about any field already
+resolved this way.
+|None — if absent or unrecognized, every field is asked interactively.
+
+|`package-name`
+|Yes (unless supplied via `args`)
+|Unscoped npm package name, e.g. `my-library`.
+|None
+
+|`scope`
+|No
+|npm scope without the leading `@`, e.g. `example-org`. Published name is `@<scope>/<package-name>` when set,
+otherwise plain `<package-name>`.
+|Unscoped
+
+|`description`
+|No
+|One line, used in `package.json`'s `description` field.
+|Empty, or `gh repo view`'s description if available (Step 3)
+
+|`license`
+|Yes (unless supplied via `args`)
+|Resolved via `AskUserQuestion`: MIT License, Apache License 2.0, No license (`UNLICENSED`, forces
+`"private": true`), or Other (SPDX id asked directly).
+|None — user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Populates `package.json`'s `author` object.
+|None
+
+|`open-source`
+|No
+|Whether the repository is open source (`yes`/`no`). Drives the recommended defaults for `publish` and `sonar`.
+|Asked first when invoked stand-alone with nothing pre-resolved
+
+|`publish`
+|No
+|Whether `package.json` is configured to publish to the public npm registry (`yes`/`no`). Gates `publishConfig`,
+`.changeset/config.json`, and the `@changesets/cli` devDependency.
+|`yes` when open-source; otherwise asked, `no` recommended
+
+|`sonar`
+|No
+|`cloud`/`self-hosted`/`none` — whether to write `sonar-project.properties`. Plus `sonar-organization`/
+`sonar-project-key`/`sonar-host-url` once `cloud` or `self-hosted` is chosen.
+|`cloud` when open-source; otherwise asked, `none` recommended
+
+|`integration-branch`
+|No
+|The branch Changesets compares against — written as `baseBranch` into `.changeset/config.json`, so it is only
+consulted when `publish` is `yes`. `iru-setup-typescript-repository` forwards the value it collected for the CI
+workflows so the two agree; stand-alone with `publish: yes` and no value, the skill asks once instead of
+silently defaulting.
+|`main`
+
+|`mode`
+|No
+|`new`/`existing`. `existing` skips Step 1's stop-or-regenerate question and goes straight to gap-fill (create only
+missing files, touch nothing already present).
+|`new`
+|===
+
+== Outputs
+
+* `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`, `.prettierignore`,
+  `typedoc.json` at the repository root.
+* `src/index.ts` and `test/index.test.ts` — a minimal placeholder module and its test, verified to build/test/
+  lint/typecheck/document clean.
+* `sonar-project.properties` — only when `sonar` is `cloud` or `self-hosted`.
+* `.changeset/config.json` — only when `publish: yes`.
+* `node_modules/` from `npm install` (or `pnpm`/`yarn` if that package manager is already in use in the
+  repository), run at the end of Step 7.
+* A report (Step 8) of the resolved package identity, which files were created/left untouched/replaced, which
+  devDependency versions came from a live lookup versus the recorded fallback, and explicit warnings to review
+  every generated file, add a `LICENSE` file if a license was chosen, and set up `SONAR_TOKEN`/npm publishing
+  credentials before relying on `sonar`/`publish`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-typescript-library] --> B{"Step 0: args supplied?"}
+    B -- yes --> C[Parse key: value pairs from args]
+    B -- no --> D[Treat every field as unset]
+    C --> E{"Step 1: any owned file\nalready exists?"}
+    D --> E
+    E -- none exist --> F["Step 2: Collect inputs\n(package-name, scope, description,\ndeveloper info, license,\nopen-source, publish, sonar)"]
+    E -- mode: existing --> G["Gap-fill: create only\nmissing files"]
+    G --> F
+    E -- yes, mode not set --> H["Warn user; AskUserQuestion:\nstop / fill gaps only / regenerate"]
+    H -- stop --> I[Report nothing written; end]
+    H -- fill gaps only --> F
+    H -- regenerate --> J["Read existing package.json\nas defaults"]
+    J --> F
+    F --> K["Step 3: Infer repository info\n(owner/repo/host from git remote,\ndescription fallback via gh)"]
+    K --> L["Step 4: Look up devDependency\nversions via npm view\n(TypeScript/@types/node caveats)"]
+    L --> M["Step 5-6: Fill templates\nand write files\n(respecting stop/fill-gaps/regenerate)"]
+    M --> N["Step 7: npm install\n(or pnpm/yarn if already in use)"]
+    N --> O["Step 8: Report + warn:\nreview before building/publishing"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-typescript-library` is a leaf skill; it does not call any other skill in this catalog. It
+mentions `iru-check-license` and `iru-setup-typescript-gitignore` in its Step 8 report prose, but does not invoke
+either.
+
+=== Invoked by
+
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-typescript-library` (one of five
+  flavor choices) via the `iru-isolated-skill-executor` agent, passing the pre-resolved package identity,
+  developer info, license, and shared bootstrap inputs (`open-source`/`publish`/`sonar`/`mode`) via `args` as
+  `key: value` lines so this skill's own Step 2 questions are skipped.
+
+=== Related agents
+
+None — this skill runs synchronously; isolation, when used, is applied by its caller
+(xref:skills/iru-setup-typescript-repository.adoc[]), not by this skill itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-typescript-library/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

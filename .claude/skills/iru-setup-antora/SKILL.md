@@ -53,7 +53,7 @@ Don't assume a clean slate. Before creating anything, check:
 
 Build a concrete gap list from this survey (e.g. "antora.yml missing", "playbook exists but has no mermaid
 extension", "ROOT module exists with 5 pages already, no page covers installation"). Every later step acts only
-on genuine gaps — a fully-set-up repository (this one, `hermes`, already has all of this) should result in Step
+on genuine gaps — a fully-set-up repository (one that already has all of this) should result in Step
 13 reporting "already set up," not in duplicated or overwritten files.
 
 ## Step 3 — Install Antora and its extensions
@@ -62,12 +62,17 @@ If `docs/` doesn't exist yet, create it (`mkdir docs`). From inside `docs/`:
 
 ```bash
 cd docs
+[ -f package.json ] || npm init -y >/dev/null   # npm otherwise walks up and installs into the ROOT package.json
 npm i -D -E antora
 npm i @antora/lunr-extension
 npm i @sntke/antora-mermaid-extension
 npm i @djencks/asciidoctor-mathjax
 ```
 
+- **`docs/package.json` must exist before the first `npm i`** (verified against a pipeline-generated repository): with no manifest in
+  `docs/`, npm resolves the nearest ancestor `package.json` — the library/app's own root manifest — and installs
+  Antora and the three extensions there, polluting the project's real dependencies. The `npm init -y` guard above
+  creates a minimal manifest first (set `"private": true` in it afterwards so it can never be published).
 - `npm i -D -E antora` pins an exact Antora version as a dev dependency (`-E` = exact, no `^`/`~` range) —
   matching how this repo pins it in `docs/package.json`.
 - The three extensions add: full-text search (`@antora/lunr-extension`), Mermaid diagram rendering
@@ -260,9 +265,11 @@ rather than reordering what's already there:
 
 ## Step 11 — Ignore the build output
 
-Check the repository's `.gitignore` for an entry covering `docs/build/`. If missing, add one (this repository's
-own `.gitignore` has `/docs/build/`). Do **not** gitignore `docs/node_modules/`, `docs/package.json`, or
-`docs/package-lock.json` — those are committed, matching how this repository tracks them.
+Check the repository's `.gitignore` for entries covering `docs/build/` **and** `docs/node_modules/`. If either
+is missing, add it — every `iru-setup-<stack>-gitignore` skill in this catalog writes both, and CI reinstalls the
+toolchain with `cd docs && npm ci` from the committed lockfile. Do **not** gitignore `docs/package.json` or
+`docs/package-lock.json` — those must stay committed for `npm ci` to work. (This catalog's own repository
+historically committed `docs/node_modules/`; that is a legacy quirk, not the convention to reproduce.)
 
 ## Step 12 — Build the site
 
@@ -291,5 +298,5 @@ Summarize, grouped by what Step 2 found already present vs. what this run create
 - Build result from Step 12, with the path to the built `index.html`.
 
 Remind the user to review the generated `index.adoc`/`installation.adoc`/`reference.adoc` content themselves
-before trusting it, and that `docs/build/` should stay untracked while `docs/node_modules/`, `docs/package.json`,
+before trusting it, and that `docs/build/` and `docs/node_modules/` should stay untracked while `docs/package.json`,
 and `docs/package-lock.json` should be committed.

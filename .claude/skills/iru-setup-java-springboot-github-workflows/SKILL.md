@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-github-workflows
-description: Create the GitHub Actions workflows for a Spring Boot service repository — a build workflow (`build.yml`) that runs on pushes to the integration and main branches and on pull requests, executing unit tests via Surefire and Testcontainers-backed integration tests via Failsafe, Checkstyle/PMD/SpotBugs static analysis, aggregated JaCoCo coverage, a SonarCloud/SonarQube scan via `mvn sonar:sonar`, the Antora documentation build, and the generated API documentation — OpenAPI, protobuf, the AsyncAPI HTML produced by `@asyncapi/html-template`, and the GraphQL reference produced by `spectaql` and `graphql-voyager` — publishing all of it to GitHub Pages; a `deploy.yml` that builds and pushes the container image, authenticates to AWS or Google Cloud via keyless OIDC, and applies the OpenTofu configuration for a chosen environment behind a GitHub Environment approval gate; and an `undeploy.yml` that scales the service to zero or destroys an environment's infrastructure, guarded by a typed-confirmation input and a protected environment. Derives the pipeline from `springboot-stack.yml` and the actual reactor/`infra/` layout on disk, lists every required repository secret and environment, and never writes a credential into a workflow file. Invoke as `/iru-setup-java-springboot-github-workflows`, or with `args` (`stack-file:`, `integration-branch:` lines) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of hand-writing the YAML for testing, analysis, documentation publishing, deployment, and teardown.
+description: Create the GitHub Actions workflows for a Spring Boot service repository — a build workflow (`build.yml`) that runs on pushes to the integration and main branches and on pull requests, executing unit tests via Surefire and Testcontainers-backed integration tests via Failsafe, Checkstyle/PMD/SpotBugs static analysis, aggregated JaCoCo coverage, optionally a SonarCloud/SonarQube scan via `mvn sonar:sonar` (gated by the manifest's `sonar.mode`), the Antora documentation build, and the generated API documentation — OpenAPI, protobuf, the AsyncAPI HTML produced by `@asyncapi/html-template`, and the GraphQL reference produced by `spectaql` and `graphql-voyager` — publishing all of it to GitHub Pages; when the manifest's `frontend` is `hilla`, `build.yml` also sets up Node via `actions/setup-node`, runs `vaadin:prepare-frontend` before it, then `npm ci` and `npx vitest run --coverage` in the web module, and packages with `-Pproduction -Dvaadin.ci.build=true`; a `deploy.yml` that builds and pushes the container image, authenticates to AWS or Google Cloud via keyless OIDC, and applies the OpenTofu configuration for a chosen environment behind a GitHub Environment approval gate; an `undeploy.yml` that scales the service to zero or destroys an environment's infrastructure, guarded by a typed-confirmation input and a protected environment; a `security.yml` that runs a `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job (`github/codeql-action@v4`, matrix including `javascript-typescript` when `frontend` is `hilla`), an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job (`gitleaks/gitleaks-action@v3`) — each individually omittable; and a `.github/dependabot.yml` with grouped weekly updates for the `maven`, `docker`, and `github-actions` ecosystems, plus `npm` (pointed at the real web module's directory) when the manifest's `frontend` isn't `none`. Reads `sonar.mode` from `springboot-stack.yml` as the source of truth for whether the Sonar step and `SONAR_TOKEN` secret are generated at all, rather than asking reactively. Derives the pipeline from `springboot-stack.yml` and the actual reactor/`infra/` layout on disk, lists every required repository secret and environment, and never writes a credential into a workflow file. Invoke as `/iru-setup-java-springboot-github-workflows`, or with `args` (`stack-file:`, `integration-branch:`, `main-branch:` lines, plus `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`, each `yes`/`no`, default `yes`) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of hand-writing the YAML for testing, analysis, documentation publishing, deployment, teardown, and dependency/secret/code security scanning.
 model: sonnet
 ---
 
@@ -14,9 +14,11 @@ sync stages are replaced by image build, OpenTofu apply, and teardown.
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `build.yml` | push to integration/main branch, and every pull request | build, unit tests, integration tests, static analysis, coverage, Sonar, docs; publishes Pages from the main branch only |
+| `build.yml` | push to integration/main branch, and every pull request | build, unit tests, integration tests, static analysis, coverage, Sonar (when `sonar.mode` isn't `none`), docs; publishes Pages from the main branch only |
 | `deploy.yml` | `workflow_dispatch` (environment input) and optionally on release published | build + push image, OIDC auth, `tofu apply`, smoke check |
 | `undeploy.yml` | `workflow_dispatch` only, with typed confirmation | scale to zero, or `tofu destroy` an environment |
+| `security.yml` | push to main branch, every pull request, weekly schedule | dependency review, CodeQL, OSV-Scanner, gitleaks — each individually omittable |
+| `.github/dependabot.yml` | n/a (config, not a workflow) | grouped weekly updates for `maven`, `docker`, `github-actions`, and `npm` when a frontend is present |
 
 **No credential is ever written into a workflow file.** Cloud access is keyless via OIDC; everything else is a
 repository or environment secret referenced by name.
@@ -29,16 +31,39 @@ Parse `args` for `key: value` lines:
 stack-file: springboot-stack.yml
 integration-branch: develop
 main-branch: main
+security-dependency-review: yes
+security-codeql: yes
+security-osv: yes
+security-gitleaks: yes
 ```
 
-Read `springboot-stack.yml` for the cloud, the Java version, and which technologies are in play. Then survey what's
-actually on disk — the workflows must match reality, not the manifest's intent:
+- **`stack-file`**/**`integration-branch`**/**`main-branch`** — as before.
+- **`security-dependency-review`**/**`security-codeql`**/**`security-osv`**/**`security-gitleaks`** — each
+  `yes`/`no`, default `yes` when not supplied. Individually gate the matching job in `security.yml` (Step 3b);
+  `.github/dependabot.yml` itself is always generated regardless of these four flags, since dependency updates and
+  vulnerability scanning are two different concerns. Any not supplied via `args` is asked with `AskUserQuestion`
+  (default yes) rather than silently assumed, unless this skill is running unattended as part of
+  `iru-setup-java-springboot`'s Step 8, in which case the default stands without asking.
+
+Read `springboot-stack.yml` for the cloud, the Java version, `sonar.mode`
+(`cloud`/`self-hosted`/`none` — absent means `cloud`, for backward compatibility with a manifest written before
+this field existed) and its `sonar.organization`/`sonar.projectKey`/`sonar.hostUrl`, `frontend`
+(`none`/`hilla`), and which technologies are in play. **`sonar.mode` is the source of truth for whether `build.yml`
+gets a Sonar step at all** — this skill no longer asks reactively whether to add or omit it. **`frontend: hilla`
+is the source of truth for whether `build.yml` gets a Node/Vitest step, `security.yml`'s CodeQL matrix gets a
+`javascript-typescript` language, and `.github/dependabot.yml` gets an `npm` ecosystem entry** — see Step 1 and
+Step 3b. Then survey what's actually on disk — the workflows must match reality, not the manifest's intent:
 
 - The reactor's modules, and the `boot` module's directory (that's what produces the image).
 - Whether `coverage/` exists and where `report-aggregate` writes (`coverage/target/site/jacoco-aggregate/jacoco.xml`)
-  — this is the path Sonar reads.
-- Whether `sonar-maven-plugin` and the `sonar.*` properties exist in the root pom. If not, the Sonar step will
-  fail; offer to add them (asking for `sonar.organization`/`sonar.projectKey`) or to omit the step.
+  — this is the path Sonar reads, when `sonar.mode` isn't `none`.
+- When `sonar.mode` isn't `none`: whether `sonar-maven-plugin` and the `sonar.*` properties actually exist in the
+  root pom (written by `iru-setup-java-springboot-pom` per the same `sonar.mode` field). If they don't — a
+  manifest/pom drift, e.g. the pom was generated by an older `iru-setup-java-springboot-pom` that predates the
+  `sonar:` block — say so in Step 6's report and offer to
+  re-run `iru-setup-java-springboot-pom` rather than silently generating a `mvn sonar:sonar` step that's certain
+  to fail. When `sonar.mode: none`, skip this check entirely: no Sonar step is generated, so there's nothing on
+  the pom side to verify.
 - Whether `docs/antora.yml` and `docs/antora-playbook.yml` exist, and which extensions `docs/package.json` lists
   (the install step must match — including `asciidoctor-kroki` if the docs use Kroki).
 - Where the API documentation generators write (`*/target/generated-docs/...`), from the module poms.
@@ -49,6 +74,13 @@ actually on disk — the workflows must match reality, not the manifest's intent
   (set up by `iru-setup-java-springboot-apis`). If so, the docs job must also produce the AsyncAPI HTML; note
   whether `apis/messaging/docs/package-lock.json` is committed, since that decides `npm ci` versus `npm install`,
   and which module's pom carries the `frontend-maven-plugin` executions.
+- When `frontend: hilla`: which module actually carries `src/main/frontend/` and the `vaadin-maven-plugin`
+  execution (written by `iru-setup-java-springboot-hilla` — normally `boot`), and whether that module's
+  `package-lock.json` is committed (it should be — `vaadin:prepare-frontend` generates it alongside `package.json`
+  at the module root, next to `pom.xml`, not inside `src/main/frontend/`; confirm the real path rather than
+  assuming `src/main/frontend/package-lock.json`, which is not where it lives). If the module or its
+  `vitest.config.ts` doesn't exist yet, still generate the Node/Vitest step in `build.yml` but mark it as
+  requiring `/iru-setup-java-springboot-hilla` first, and say so in the report.
 - Whether `infra/envs/<env>/` directories exist and which environments they define. If `infra/` doesn't exist,
   still generate `deploy.yml`/`undeploy.yml` but mark the OpenTofu steps as requiring
   `/iru-setup-java-springboot-platform` first, and say so in the report.
@@ -102,16 +134,47 @@ jobs:
           java-version: <java-version>
           cache: maven
 
+      # Only when the manifest's frontend: hilla. Must come before the Maven build step below: the Vaadin
+      # plugin's `prepare-frontend`/`build-frontend` goals (bound in <web-module>/pom.xml by
+      # iru-setup-java-springboot-hilla) need Node on PATH, and without a pre-installed Node the plugin falls
+      # back to downloading its own into ~/.vaadin, which adds real time to every uncached run.
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          # The real path npm writes its lock file to: vaadin:prepare-frontend generates package.json/
+          # package-lock.json at the web module's root, next to its pom.xml — never inside
+          # src/main/frontend/. Confirmed by an actual generated project; don't use
+          # src/main/frontend/package-lock.json here.
+          cache-dependency-path: <web-module>/package-lock.json
+
       - name: Build, unit tests and integration tests
         # `verify` runs Surefire, then Failsafe against the Testcontainers stack, then the JaCoCo
         # aggregate report. Docker is available on ubuntu-latest runners, so no extra setup is needed.
-        run: mvn -B -ntp clean verify
+        # -Pproduction -Dvaadin.ci.build=true only apply when frontend: hilla: the production profile builds
+        # the real Vite bundle instead of leaving the frontend in dev-bundle mode, and vaadin.ci.build=true
+        # (confirmed against the plugin's own parameter metadata) makes it run `npm ci` instead of
+        # `npm install` so the committed package-lock.json is never silently rewritten by CI.
+        run: mvn -B -ntp clean verify -Pproduction -Dvaadin.ci.build=true
+
+      # Only when the manifest's frontend: hilla. Must run after the Maven step above, not before: both
+      # vite.config.ts and vitest.config.ts import <web-module>/vite.generated.ts, which itself imports
+      # helper scripts under <web-module>/target/plugins/ — files that exist only once a Maven build has
+      # reached vaadin:prepare-frontend. Running this step first fails on a module-not-found error that has
+      # nothing to do with the frontend tests themselves. Confirmed by an actual local run.
+      - name: Frontend unit tests and coverage
+        working-directory: <web-module>
+        run: |
+          npm ci
+          npx vitest run --coverage
 
       - name: Static analysis and site report
         run: mvn -B -ntp site -DskipTests -Djacoco.skip
 
       - name: Run SonarCloud analysis
-        # Skipped on pull requests from forks, where SONAR_TOKEN is not available.
+        # Only present at all when the manifest's sonar.mode isn't `none` — see Step 0. Skipped on pull
+        # requests from forks, where SONAR_TOKEN is not available.
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -127,6 +190,7 @@ jobs:
             **/target/surefire-reports/**
             **/target/failsafe-reports/**
             coverage/target/site/jacoco-aggregate/**
+            <web-module>/coverage/**
           retention-days: 7
 
   docs:
@@ -148,7 +212,9 @@ jobs:
           cache: maven
 
       - name: Install Node
-        uses: actions/setup-node@v4
+        # v7 — confirmed the current major via the live GitHub API at the time of writing, and kept in step
+        # with the `build` job's own Set up Node step (frontend: hilla) so both jobs use one version.
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -244,6 +310,14 @@ explicit `npm i` list `iru-setup-antora` uses, **including `asciidoctor-kroki`**
 Kroki-diagram page will fail the build. The `mvn site` invocation at the reactor root aggregates every module's
 reports; verify the aggregate actually lands in `./target/site` for this reactor (a multi-module `site` sometimes
 needs `site:stage`) and use whichever path is real.
+
+If the manifest's `sonar.mode` is `none`, drop the entire `Run SonarCloud analysis` step from `build.yml` rather
+than leaving it in with a permanently-false condition — dead YAML that can never run is worse than no YAML.
+
+If the manifest's `frontend` isn't `hilla`, drop the `Set up Node` and `Frontend unit tests and coverage` steps,
+the `-Pproduction -Dvaadin.ci.build=true` flags on the Maven build step, and the `<web-module>/coverage/**`
+artifact-upload path entirely — same reasoning as the Sonar step above, and there's no web module for any of it
+to point at.
 
 If the repository has no `apis/messaging/`, drop the AsyncAPI step, the `-Dasyncapi.docs.skip=true` flag, and the
 second `cache-dependency-path` entry entirely rather than leaving dead YAML behind. If it does:
@@ -472,13 +546,171 @@ Additional guards to put in, and to explain in the report:
 - Consider omitting `prod` from the `destroy` path entirely for a service holding real data, and say so as a
   recommendation.
 
+## Step 3b — `security.yml` and `.github/dependabot.yml`
+
+The shared security block every workflows skill in this catalog embeds (see `iru-setup-java-github-workflows` for
+the library-repository equivalent). Four independent jobs, each gated by the matching `security-*` `args` key from
+Step 0 (default on) — omit a job's steps entirely when its flag is `no`, rather than disabling it with a
+permanently-false `if:`.
+
+```yaml
+name: Security
+
+on:
+  push:
+    branches: [ <main-branch> ]
+  pull_request:
+    branches: [ <integration-branch>, <main-branch> ]
+  schedule:
+    # Weekly, so a CVE disclosed after code was merged is still caught — not just at merge time.
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Dependency review
+        uses: actions/dependency-review-action@v5
+
+  codeql:
+    name: CodeQL analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # java-kotlin covers the whole reactor. javascript-typescript is added here whenever the manifest's
+        # frontend: hilla — iru-setup-java-springboot-hilla scaffolds real TS/TSX source under
+        # <web-module>/src/main/frontend/ for CodeQL to actually analyse.
+        language: [ java-kotlin, javascript-typescript ]  # drop javascript-typescript when frontend: none
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Set up JDK <java-version>
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: <java-version>
+          cache: maven
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+
+  osv-scanner:
+    name: OSV-Scanner
+    permissions:
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
+    with:
+      scan-args: |-
+        --recursive
+        ./
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+        with:
+          # gitleaks needs full history to scan commits already merged, not just the current tree.
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Drop whichever `jobs:` entries the matching `security-*` flag turned off — a job that never runs because its own
+condition is always false is dead YAML, same reasoning as the Sonar step above. If all four are off, still write
+`security.yml` with a comment explaining it currently declares no jobs would be more confusing than simply not
+writing the file — in that case, skip `security.yml` entirely and say so in Step 6's report.
+
+`.github/dependabot.yml` is **always** generated, independent of the four flags above — dependency-update PRs and
+vulnerability scanning are separate concerns, and this catalog's convention keeps Dependabot on unconditionally:
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      maven-dependencies:
+        patterns: [ "*" ]
+
+  - package-ecosystem: docker
+    # This reactor builds its image with Cloud Native Buildpacks (spring-boot:build-image), so there is
+    # normally no Dockerfile — but Dependabot's docker ecosystem also tracks image tags referenced from
+    # compose.yaml at the repository root (written by iru-setup-java-springboot-testcontainers), which is
+    # what this entry actually keeps current: Postgres/MongoDB/Kafka/etc. and the API-mock image.
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      docker-dependencies:
+        patterns: [ "*" ]
+
+  # Only when the manifest's `frontend` field isn't `none` (e.g. `hilla`) — directory is the real web module
+  # iru-setup-java-springboot-hilla scaffolded the frontend into (survey Step 0; normally "/boot"), since
+  # that's where package.json/package-lock.json actually live, never "/" or "/<web-module>/src/main/frontend".
+  - package-ecosystem: npm
+    directory: "/boot"
+    schedule:
+      interval: weekly
+    groups:
+      npm-dependencies:
+        patterns: [ "*" ]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      github-actions-dependencies:
+        patterns: [ "*" ]
+```
+
+Omit the `npm` entry entirely when the manifest's `frontend: none` — an ecosystem entry for a toolchain that
+doesn't exist yet gives Dependabot nothing to scan and just adds noise to its config. When `frontend: hilla`, set
+`directory` to the actual web module (survey Step 0; `iru-setup-java-springboot-hilla` currently always chooses
+`boot`, so `/boot` unless the survey finds otherwise) — `package.json`/`package-lock.json` live at that module's
+root next to its `pom.xml`, never inside `src/main/frontend/`. If the repository's Antora
+docs (`docs/package.json`) or the AsyncAPI/GraphQL documentation toolchains (`apis/messaging/docs/package.json`,
+`apis/graphql-server/docs/package.json`) already have their own `package-lock.json` files, list each as a
+separate `npm` entry pointed at its own `directory` regardless of `frontend`, since those are genuinely present on
+disk — the `frontend` gate is specifically about a Hilla application frontend, not the documentation toolchains
+`iru-setup-java-springboot-apis`/`iru-setup-antora` already manage.
+
 ## Step 4 — Required secrets, variables, and environments
 
 Report these as a table; this skill cannot create them.
 
 | Name | Kind | Purpose |
 |---|---|---|
-| `SONAR_TOKEN` | repository secret | SonarCloud/SonarQube scan |
+| `SONAR_TOKEN` | repository secret | SonarCloud/SonarQube scan — **only listed when `sonar.mode` isn't `none`**; omit this row entirely for `sonar.mode: none` |
 | `AWS_DEPLOY_ROLE_ARN` | environment secret | OIDC role assumed per environment (AWS) |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT` | environment secrets | OIDC identity (Google Cloud) |
 | `AWS_REGION` / `GCP_PROJECT_ID`, `GCP_REGION` | environment variables | not secret, but environment-specific |
@@ -486,7 +718,12 @@ Report these as a table; this skill cannot create them.
 | `<PROVIDER>_API_KEY` | environment secret | LLM provider key, if `stack.ai.enabled` — never in the repository |
 | third-party provider tokens (`MONGODB_ATLAS_*`, `CONFLUENT_CLOUD_*`, …) | environment secrets | needed by the OpenTofu providers for managed services outside the cloud account |
 
-`GITHUB_TOKEN` needs no setup. Also required, and easy to miss:
+`frontend: hilla` needs no new secret or variable of its own — `npm ci`/`npx vitest`/`vaadin:build-frontend` all
+run unauthenticated against the public npm registry and Maven Central, so this table is unchanged by it.
+
+`GITHUB_TOKEN` needs no setup and is all four `security.yml` jobs (Step 3b) require — none of `dependency-review`,
+CodeQL, OSV-Scanner, or gitleaks need a secret of their own in the free/public-repository tier of each action.
+Also required, and easy to miss:
 
 - **A GitHub Environment per deployment environment**, with required reviewers on `prod`.
 - **GitHub Pages** configured to serve from the `gh-pages` branch (Settings → Pages), or the docs job publishes
@@ -494,6 +731,9 @@ Report these as a table; this skill cannot create them.
 - The **OIDC trust policy** on the cloud side must name this repository *and* the environment. If it's scoped only
   to the repository, any branch can deploy to production — flag this as a real finding if the platform skill's
   output shows a wildcard subject.
+- **CodeQL** requires "Code scanning" to be enabled for the repository (Settings → Code security) — the workflow
+  uploads results there. **Dependency review** requires Dependency graph to be enabled (on by default for public
+  repositories). Both are one-time repository settings this skill cannot flip itself; say so in Step 6's report.
 
 ## Step 5 — Validate
 
@@ -516,24 +756,44 @@ Report these as a table; this skill cannot create them.
   is only reported as information and exits 0, so a new specification release won't break the pipeline. Note that
   `npm ci` here has failed before on an unpublished transitive dependency of the CLI, so a green run on your
   machine with a warm cache isn't proof CI will install cleanly.
+- If the Node/Vitest step was added (`frontend: hilla`), run its commands locally too, **in the same order as the
+  workflow**: `mvn -B -ntp clean verify -Pproduction -Dvaadin.ci.build=true` first, then `npm ci` and
+  `npx vitest run --coverage` in the web module. Running the npm/vitest commands before the Maven build fails on
+  a module-not-found error from `vite.generated.ts` (it imports compiled helpers under `<web-module>/target/`)
+  that has nothing to do with the frontend tests — confirmed while writing `iru-setup-java-springboot-hilla`, and
+  the single most likely way this ordering gets silently swapped in a future edit.
 - Do **not** trigger `deploy.yml` or `undeploy.yml` as a test. Recommend instead: a dry run of `build.yml` by
   pushing to a throwaway branch with the trigger temporarily widened, and a first `deploy.yml` run against `dev`
   only, watched to completion.
+- Check `security.yml` and `.github/dependabot.yml` parse the same way as the other workflows, and confirm every
+  `security-*` flag from Step 0 produced exactly the jobs it should — a flag left `no` must mean the job's whole
+  entry is absent from the file, not present-but-disabled.
 
 ## Step 6 — Report
 
 Summarize: which workflow files were created or updated; the branch names and Java version resolved; whether the
-Sonar step was included, omitted, or needs pom changes; whether the docs job's Antora install matches
-`docs/package.json` (including Kroki); whether the AsyncAPI and GraphQL documentation steps were included and what
-they publish under `doc/api/messaging/` and `doc/api/graphql-server/` (and whether the Voyager graph was part of
-it); which environments `deploy.yml`/`undeploy.yml` offer and where they came
-from; the container-image build approach chosen; the full secrets/variables/environments table from Step 4; and any
+Sonar step was included (and, if so, `sonar.mode` and the resolved organization/project key/host URL) or omitted
+because `sonar.mode: none`, and whether the pom's own Sonar wiring matched what Step 0 expected; whether the docs
+job's Antora install matches `docs/package.json` (including Kroki); whether the AsyncAPI and GraphQL documentation
+steps were included and what they publish under `doc/api/messaging/` and `doc/api/graphql-server/` (and whether
+the Voyager graph was part of it); which environments `deploy.yml`/`undeploy.yml` offer and where they came
+from; the container-image build approach chosen; which of the four `security.yml` jobs were included versus
+omitted (and by which flag), whether the CodeQL matrix includes `javascript-typescript` (and why, per the
+manifest's `frontend` field), and whether `.github/dependabot.yml` includes the `npm` ecosystem and at which
+`directory` (and why, per the manifest's `frontend` field); when `frontend: hilla`, whether the `Set up Node` and
+`Frontend unit tests and coverage` steps were added, the resolved web module and `package-lock.json` path (and
+whether it matched or differed from the plan's `src/main/frontend/package-lock.json` assumption — it does differ:
+the real path is `<web-module>/package-lock.json`), the `actions/setup-node` major version used (`v7`, confirmed
+current against the live GitHub API — no discrepancy found at the time of writing) and whether it matches the
+docs job's own `actions/setup-node` version; the full secrets/variables/environments table from Step 4; and any
 gap — missing `infra/`, missing Sonar config, missing GitHub Environments, a container stack too large for a
-standard runner.
+standard runner, Code scanning or Dependency graph not yet enabled for `security.yml`'s jobs to report into, or a
+missing `<web-module>/src/main/frontend/` (`frontend: hilla` but `iru-setup-java-springboot-hilla` hasn't run
+yet).
 
 Warn explicitly:
 
-- **Review all three workflows before pushing.** `deploy.yml` and `undeploy.yml` change and destroy real
+- **Review all workflows before pushing.** `deploy.yml` and `undeploy.yml` change and destroy real
   infrastructure; a wrong environment name or a missing approval gate has immediate consequences.
 - **Configure required reviewers on `prod` before the workflows land on the main branch**, not after — until then,
   anyone with write access can dispatch a production deploy or teardown.

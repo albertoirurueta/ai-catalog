@@ -1,22 +1,25 @@
 = Release
-:description: Cuts a release branch from develop, bumps the SNAPSHOT version everywhere it appears, drafts release notes, and opens a pull request into main.
-:keywords: iru-release, claude code skill, maven, gitflow, changelog, release notes, version bump, pull request, github
+:description: Cuts a release branch from develop, delegates the version bump to the ecosystem's bump-version skill, drafts notes, and opens a pull request.
+:keywords: iru-release, claude code skill, gitflow, java, typescript, android, swift, changelog, release notes, version bump, pull request, github, bitbucket, azure devops, tfs
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Convert the current development SNAPSHOT into a final release: cut a `release_x.y.z` branch off `develop`,
-update every place that names the current release/snapshot version, draft the "what's new" notes, and open a
+Convert the current development version into a final release: cut a `release_x.y.z` branch off `develop`,
+update every place that names the current release/pre-release version, draft the "what's new" notes, and open a
 pull request. This mirrors the repository's existing release history (`release_1.0.0` … `release_1.3.0`, each a
 PR into `main`) — it follows that gitflow convention rather than inventing its own.
 
 == Purpose
 
-`iru-release` automates the mechanical parts of cutting a release so nothing gets missed or drifts out of sync: the
-version number itself, every file that echoes it (`pom.xml`, `README.md`, `docs/antora.yml`, Antora pages with
-dependency snippets), the human-readable release notes (`whats-new.adoc` and `CHANGELOG.md`), and the pull
-request that carries the release branch into `main`/`master`. It is strict about gitflow — it refuses to run
-from anywhere but `develop` — so the release branch always originates from the same integration branch this
-repository's history already shows it does.
+`iru-release` automates the mechanical parts of cutting a release so nothing gets missed or drifts out of sync,
+and it is ecosystem-agnostic: it detects whether the repository is Java/Maven, TypeScript/npm, Android/Gradle, or
+Swift/Apple, and delegates the actual version-file edit to that ecosystem's own installed `iru-<key>-bump-version`
+skill (`iru-java-bump-version`, `iru-typescript-bump-version`, `iru-android-bump-version`, `iru-swift-bump-version`)
+rather than editing build files directly. It still owns every other release step itself: the human-readable release
+notes (`whats-new.adoc` and `CHANGELOG.md`), and the pull request — opened against whichever host the repository
+actually uses (GitHub, Bitbucket, Azure DevOps, or TFS) — that carries the release branch into `main`/`master`. It
+is strict about gitflow — it refuses to run from anywhere but `develop` — so the release branch always originates
+from the same integration branch this repository's history already shows it does.
 
 == Purpose group
 
@@ -37,32 +40,40 @@ xref:index.adoc#group-maintenance[Repository Maintenance]
 
 |Release version
 |Yes (asked interactively)
-|The version to cut, chosen via `AskUserQuestion` from three computed candidates — current SNAPSHOT with the
-suffix stripped, a patch bump on the latest tag, or a major bump on the latest tag — plus a free-text "Other"
-option.
-|Current SNAPSHOT with `-SNAPSHOT` stripped (e.g. `1.4.0-SNAPSHOT` → `1.4.0`).
+|The version to cut, chosen via `AskUserQuestion` from three computed candidates — current pre-release value
+stripped (per the detected ecosystem's convention), a patch bump on the latest tag, or a major bump on the latest
+tag — plus a free-text "Other" option.
+|Current pre-release value with its suffix stripped (e.g. Java/Android `1.4.0-SNAPSHOT` → `1.4.0`, npm
+`1.4.0-dev.0` → `1.4.0`; for a Swift library, the next semver bump from the latest tag).
 
-|Upcoming SNAPSHOT version
-|Yes (asked interactively)
+|Upcoming pre-release version
+|Yes (asked interactively) — skipped for a Swift library, which has no in-tree pre-release marker
 |The next development version, chosen via `AskUserQuestion` from three bump candidates (minor/patch/major)
-computed from the release version just chosen. Used only for human-readable "latest snapshot" mentions in
-README/docs — it is not written into `pom.xml`.
-|Minor bump on the release version, `-SNAPSHOT` appended (e.g. release `1.4.0` → next `1.5.0-SNAPSHOT`).
+computed from the release version just chosen, per the ecosystem's own pre-release convention. Used only for
+human-readable "latest snapshot" mentions in README/docs and for an optional follow-up bump-version call — it is
+not written into any build file by this step.
+|Minor bump on the release version, with the ecosystem's pre-release suffix appended (e.g. Java/Android release
+`1.4.0` → next `1.5.0-SNAPSHOT`; npm release `1.4.0` → next `1.4.1-dev.0`).
 |===
 
 == Outputs
 
 * A pushed `release_<version>` branch, branched from `develop`.
-* `pom.xml` updated to the release version; `README.md`, `docs/antora.yml`, and any Antora page with a
-  dependency snippet updated to show the release version as "latest release" and the upcoming SNAPSHOT as
-  "latest snapshot".
+* The version file(s) for the detected ecosystem bumped to the release version by the matching
+  `iru-<key>-bump-version` skill (called with `sync-files: yes`), which also refreshes `README.md`,
+  `docs/antora.yml`, and any Antora page with a dependency snippet to show the release version as "latest release".
+  If no matching bump-version skill is installed, this happens by hand instead and the final report says so.
 * `docs/modules/ROOT/pages/whats-new.adoc` with a new, newest-first section for the release, and `CHANGELOG.md`
   with `## [Unreleased]` renamed to the release's dated section (Keep a Changelog format) and a fresh empty
   `## [Unreleased]` above it.
-* A commit on the release branch, and a pull request opened against `main`/`master` titled `Release <version>`,
-  carrying a `iru-release` label and a description filled in from the actual diff.
-* A final report naming the versions chosen, the branch/PR, the files touched, and a reminder that merging and
-  publishing the release triggers the `Sync` workflow's automatic snapshot bump back into `develop`.
+* A commit on the release branch, and a pull request opened against `main`/`master` — using whichever host tooling
+  matches this repository (GitHub, Bitbucket, Azure DevOps, or TFS) — titled `Release <version>`, carrying a
+  `release` label/tag where the host supports one, and a description filled in from the actual diff.
+* A final report naming the detected ecosystem and bump-version skill used, the versions chosen, the branch/PR
+  and host, the files touched, and — whenever this repository has a `.github/workflows/sync.yml` (every
+  `iru-setup-<stack>-github-workflows` skill generates one, whatever the ecosystem) — a reminder that merging and
+  publishing the release triggers that workflow's automatic next-development-version bump back into `develop`;
+  otherwise a plain statement that no such automation ran and the next-dev bump is a manual follow-up.
 * If run from any branch other than `develop`: no files are touched at all — the skill stops at Step 1.
 
 == Execution flow
@@ -72,34 +83,39 @@ README/docs — it is not written into `pom.xml`.
 flowchart TD
     A[Start /iru-release] --> B{Current branch is develop?}
     B -- no --> B1[Warn and stop:\nask user to checkout develop and retry]
-    B -- yes --> C["Gather state: pom.xml SNAPSHOT version,\nlatest tag, clean working tree, main/master base branch"]
+    B -- yes --> C["Detect ecosystem (iru-explore report\nor manifests) and matching\niru-&lt;key&gt;-bump-version skill;\nread current pre-release version,\nlatest tag, clean tree, main/master base"]
     C --> D[Ask user for the release version]
-    D --> E[Ask user for the upcoming SNAPSHOT version]
+    D --> E["Ask user for the upcoming pre-release\nversion (skipped for Swift library)"]
     E --> F[Create release_x.y.z branch off develop]
-    F --> G["Update pom.xml, README.md (via setup-readme\nor by hand), docs/antora.yml, and Antora\npages with version snippets"]
+    F --> G["Bump version via matching\niru-&lt;key&gt;-bump-version skill\n(sync-files: yes)"]
     G --> H["Determine changes since previous tag\n(via change-summarizer agent);\nwrite whats-new.adoc and CHANGELOG.md sections"]
     H --> I[Show diff summary, then commit]
     I --> J{Confirm push + PR with user}
     J -- declines --> J1[Stop without pushing]
-    J -- confirmed --> K["Push branch; open PR against\nmain/master with release label"]
+    J -- confirmed --> K["Detect repository host (GitHub/Bitbucket/\nAzure DevOps/TFS); push branch;\nopen PR against main/master with release label/tag"]
     K --> L[Invoke pr-description skill\nto fill in the PR body]
-    L --> M[Report versions, branch, PR URL,\nfiles updated, sync-workflow reminder]
+    L --> M["Report ecosystem, bump-version skill used,\nversions, branch, PR URL, host,\nfiles updated, sync-workflow reminder"]
 ....
 
 == Dependencies
 
 === Invokes
 
-* xref:skills/iru-setup-readme.adoc[] — Step 7, to refresh `README.md`'s version references (latest release /
-  latest snapshot) once `pom.xml` already carries the new release version. If `iru-setup-readme` isn't available in
-  the repository, `iru-release` falls back to updating those same mentions in `README.md` by hand instead.
-* xref:skills/iru-pr-description.adoc[] — Step 14, passing the release PR's target branch as a `base-branch`
+* xref:skills/iru-java-bump-version.adoc[], xref:skills/iru-typescript-bump-version.adoc[],
+  xref:skills/iru-android-bump-version.adoc[], xref:skills/iru-swift-bump-version.adoc[] — Step 6, whichever one
+  matches the ecosystem detected in Step 2 (Java/Maven, TypeScript/npm, Android/Gradle, or Swift/Apple). The
+  installed candidates are discovered with `find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"`
+  rather than assumed, and the matching one is invoked with `sync-files: yes` so it also refreshes
+  `README.md`/`docs/antora.yml`/Antora dependency-snippet pages itself — `iru-release` no longer does that work
+  directly. If no matching skill is installed, `iru-release` falls back to bumping the version file(s) by hand and
+  says so in the final report.
+* xref:skills/iru-pr-description.adoc[] — Step 11, passing the release PR's target branch as a `base-branch`
   argument so the description is drafted against the branch the PR actually targets, to draft and fill in the
-  release pull request's description once it has been opened in Step 13.
+  release pull request's description once it has been opened in Step 10.
 
 `iru-release` does *not* invoke xref:skills/iru-setup-changelog.adoc[] even though both skills touch `CHANGELOG.md`.
 `iru-setup-changelog` is a one-time bootstrap for a repository that has no changelog yet; `iru-release` composes and
-edits `CHANGELOG.md` directly itself on every run (Step 10), since by the time a repository is cutting releases
+edits `CHANGELOG.md` directly itself on every run (Step 7), since by the time a repository is cutting releases
 the changelog already exists and just needs its `[Unreleased]` section turned into a dated release entry.
 
 === Invoked by
@@ -108,10 +124,10 @@ None — `iru-release` is a top-level entry point, run directly by a person via 
 
 === Related agents
 
-* xref:agents/iru-change-summarizer.adoc[`iru-change-summarizer`] — Step 10, to summarize the commit/diff range since the
-  previous release into user-facing changes for `whats-new.adoc`/`CHANGELOG.md`, keeping the raw `git log`/diff
-  content out of this skill's own context — the same agent `iru-setup-changelog` uses, applied here to a single range
-  instead of a fan-out across many past releases.
+* xref:agents/iru-change-summarizer.adoc[`iru-change-summarizer`] — Step 7, to summarize the commit/diff range since
+  the previous release into user-facing changes for `whats-new.adoc`/`CHANGELOG.md`, keeping the raw `git log`/diff
+  content out of this skill's own context — the same agent `iru-setup-changelog` uses, applied here to a single
+  range instead of a fan-out across many past releases.
 
 == Source
 

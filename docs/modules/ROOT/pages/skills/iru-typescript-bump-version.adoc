@@ -1,0 +1,120 @@
+= TypeScript Bump Version
+:description: Sets an npm/TypeScript project's version to an exact value, updating package.json and syncing the npm, pnpm, or yarn lockfile in place.
+:keywords: iru-typescript-bump-version, claude code skill, typescript, npm, pnpm, yarn, package.json, semver, bump version, sync lockfile
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set an npm/TypeScript project's version to an exact literal value across every file that needs to agree with
+it: `package.json`, the lockfile of whichever package manager the project uses, and — optionally — any
+README/Antora mentions of the current version. This skill never computes a version itself; it only applies
+the exact string it is given, after checking that the string looks like an attempted version at all.
+
+== Purpose
+
+`iru-typescript-bump-version` is the npm-ecosystem equivalent of a Java `pom.xml` version bump: a small,
+deterministic skill that a caller (typically `iru-release`) can invoke twice per release — once to strip the
+pre-release suffix for the release itself, once to open the next development cycle — without either caller
+having to know npm/pnpm/yarn's differing version commands or lockfile quirks. It detects the package manager
+in play, finds the right `package.json` (asking when a workspace or a Hilla-managed frontend makes that
+ambiguous), and runs that package manager's own `version` command so the lockfile stays consistent.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-typescript-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|The exact target version string (e.g. `1.4.0`, `2.0.0-dev.3`). Validated for shape by the package manager's
+own `version` command rather than a separate regex; an empty or whitespace-containing value is rejected
+up front.
+|None — the skill asks for it if omitted.
+
+|`package` (args)
+|No
+|Which workspace package to bump, by name or path, when more than one `package.json` with a `version` field
+exists.
+|None — the skill asks which package (or whether to bump every workspace member in lockstep) when the
+repository has more than one and this isn't given.
+
+|`sync-files` (args)
+|No
+|Whether to also update README/Antora mentions of the version (installation snippets, a "Current version"
+line, `docs/antora.yml`'s `version:` field for released versions only).
+|Ask — the skill asks once, after checking whether such mentions actually exist, skipping the question if
+none do.
+|===
+
+== Outputs
+
+* `package.json` updated to the new version.
+* The package manager's lockfile updated to match, where that package manager's `version` command touches
+  one: npm's `package-lock.json` is updated together with `package.json`; pnpm's `pnpm-lock.yaml` and yarn's
+  `yarn.lock` do not embed a root version and need no lockfile change (a stray `package-lock.json` found in a
+  pnpm project is flagged instead).
+* Optionally, `README.md`, `docs/antora.yml`, and/or Antora pages with a literal dependency/version snippet,
+  if `sync-files` was accepted.
+* A report of the old and new version, every file actually changed, anything skipped and why, and which parts
+  of the process were verified locally (npm, pnpm) versus not (Yarn Classic/Berry) and should be spot-checked.
+* No commit or git tag is created — this skill only edits files.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-typescript-bump-version\n&amp;lt;new-version&amp;gt; [args: package, sync-files]"] --> B{new-version given\nand not blank/whitespace?}
+    B -- no --> C["Ask user for a valid\nsemver-shaped version string"]
+    C --> D
+    B -- yes --> D["Detect package manager:\npackageManager field, then lockfile present\n(npm / pnpm / yarn Classic / yarn Berry)"]
+    D --> E["Find every package.json\nwith a version field"]
+    E --> F{More than one found?}
+    F -- no --> H
+    F -- yes, package arg given --> H["Target that package"]
+    F -- yes, workspace detected --> G1["Ask which package,\nor bump all in lockstep"]
+    F -- yes, Hilla frontend --> G2["Warn: Vaadin-managed frontend version;\nask before touching, default skip"]
+    G1 --> H
+    G2 --> H
+    H --> I["Read and report current version"]
+    I --> J["Run package manager's own version command\n(npm version / pnpm version / yarn version)\nwith --no-git-tag-version where applicable"]
+    J --> K{Command succeeded?}
+    K -- no --> L["Stop, show the actual error;\nno file treated as updated"]
+    K -- yes --> M{sync-files given?}
+    M -- no --> N["Ask whether to sync README /\ndocs/antora.yml / dependency snippets"]
+    N --> O
+    M -- yes --> O["Update accepted files (README, antora.yml,\ndependency-snippet pages)"]
+    O --> P["Report: old/new version, files changed,\nfiles skipped and why, verified vs.\nunverified behaviour, review-before-commit warning"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-typescript-bump-version` is a leaf skill; it only runs package-manager commands and edits files
+directly, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, when the detected ecosystem is TypeScript/npm, called twice per
+  release (once with the stripped release version, once with the next `-dev.0` pre-release version) to apply
+  each computed version string in turn.
+
+=== Related agents
+
+None — this skill runs inline; it is not invoked from inside a custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-typescript-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

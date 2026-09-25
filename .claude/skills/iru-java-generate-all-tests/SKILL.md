@@ -58,7 +58,7 @@ classes are in scope:
 Agent({
   description: "Measure coverage for every candidate class",
   subagent_type: "iru-gate-runner",
-  prompt: "Invoke Skill({skill: \"java-coverage\", args: \"<TargetClass1,TargetClass2,...>\"}) with no test
+  prompt: "Invoke Skill({skill: \"iru-java-coverage\", args: \"<TargetClass1,TargetClass2,...>\"}) with no test
     selector, so the whole suite runs once and every class is measured in the same pass. Report back, per target
     class: its exact line coverage percentage; and, ONLY for classes below 80%, the specific uncovered line
     numbers too (from the per-class HTML report). For classes at or above 80%, report just the percentage — do
@@ -128,7 +128,7 @@ caught `OutOfMemoryError`). Name these explicitly if that's what remains uncover
 ## Step 7 — Run the full suite once to confirm no regressions
 
 Delegate to `iru-gate-runner`: `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt:
-"Invoke Skill({skill: \"java-test\"}) (fall back to `mvn test` directly if unavailable). If everything passed,
+"Invoke Skill({skill: \"iru-java-test\"}) (fall back to `mvn test` directly if unavailable). If everything passed,
 report back only that all tests passed. If anything failed, report back only the failing test names, the
 failure reason, and the stack trace for each."})`. Fix any regression this run's new/extended tests introduced
 (a genuine bug in a generated test, not a pre-existing failure), then re-invoke until it reports all tests

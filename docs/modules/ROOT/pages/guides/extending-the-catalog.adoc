@@ -75,50 +75,79 @@ nothing else in the pipeline needs to change.
 
 == Repository bootstrap for other stacks
 
-`iru-setup-java-library-repository` (xref:skills/iru-setup-java-library-repository.adoc[]) is a fixed, six-step
-orchestration — `iru-setup-java-library` → `iru-setup-antora` → `iru-setup-java-gitignore` →
-`iru-setup-java-github-workflows` → `iru-setup-changelog` → `iru-setup-readme` — built specifically for a brand-new
-Java/Maven repository. Three of those six (`iru-setup-antora`, `iru-setup-changelog`, `iru-setup-readme`) already derive
-everything from whatever's on disk and aren't Java-specific in principle; the other three
-(`iru-setup-java-library`, `iru-setup-java-gitignore`, `iru-setup-java-github-workflows`) are.
+`iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) is the front door for bootstrapping *any*
+repository this catalog supports: it detects a non-empty repository by running `iru-explore` and reading its
+`Project type:` line to pre-select a stack, or, on an empty one, asks the project type over up to four
+`AskUserQuestion` rounds of three concrete types each, every round ending in a "Something in the next group"
+escape hatch (Java/JVM, Android & Swift, mobile apps, Web/Node — twelve types in total), asks the shared inputs
+(`open-source`, `publish`/`distribution`, `sonar`, …) once, and delegates to the matching stack orchestrator via
+`iru-isolated-skill-executor`. On an existing repository it forces `mode: existing` on that delegation so every
+sub-skill takes its own gap-fill/update path instead of assuming a brand-new repo.
 
-To support bootstrapping a different stack (an npm library, a Python package, a .NET library), the two
-options this catalog's own architecture points at:
+Underneath the front door, each stack has its own orchestrator. The four `*-repository` orchestrators —
+`iru-setup-java-library-repository`, `iru-setup-typescript-repository`, `iru-setup-android-repository`,
+`iru-setup-swift-repository` — all run the same fixed six-step shape, standalone or via the front
+door: scaffold (the language/flavor-specific `iru-setup-<stack>-library`/`-app` skill, e.g.
+`iru-setup-typescript-repository`'s own `flavor` picks between `iru-setup-typescript-library`,
+`iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, `iru-setup-ionic-app`) →
+`iru-setup-antora` → `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog`
+→ `iru-setup-readme`. `iru-setup-java-springboot` is the exception: it runs a manifest-driven chain of its own
+(interview → `springboot-stack.yml` → `iru-setup-java-springboot-pom`/`-modules`/`-apis`/`-hilla`/
+`-testcontainers`/`-platform`/`-github-workflows` → `iru-update-java-springboot-documentation` → gitignore/README/
+changelog) because a hexagonal Spring Boot reactor has far more to generate than a single scaffold step.
+`iru-setup-antora`, `iru-setup-changelog`, and `iru-setup-readme` are the three steps
+already generalized across the `*-repository` orchestrators — don't fork those; a new stack only ever needs its
+own scaffold, gitignore, and workflows skills.
 
-* **Add a parallel orchestrator.** Write `iru-setup-<stack>-library` (the manifest/source-folder scaffold),
-  reuse `iru-setup-antora`/`iru-setup-changelog`/`iru-setup-readme` unchanged, and write
-  `iru-setup-<stack>-gitignore` / `iru-setup-<stack>-<ci-provider>-workflows` as needed, then an
-  `iru-setup-<stack>-library-repository` that chains them in the equivalent order — same shape as the Java
-  one, new stack.
-* **Add a front door that asks first.** A single `iru-setup-library-repository` that opens with
-  `AskUserQuestion` ("which stack is this?" — Java/Maven, Node/npm, .NET, Python, …) and then delegates to
-  whichever `iru-setup-<stack>-library-repository` matches, the way `iru-plan`/`iru-code-one-task-group` dispatch on a
-  language key rather than assuming one. This is worth building once at least a second stack-specific
-  orchestrator exists — before that, there's nothing to choose between.
+To add a 13th project type:
 
-Either way, `iru-setup-antora`, `iru-setup-changelog`, and `iru-setup-readme` are the parts of this pipeline already
-generalized — don't fork those; extend the stack-specific three (or their equivalents for the new stack).
+. Write the stack's own `iru-setup-<stack>-<flavor>` scaffold skill(s), `iru-setup-<stack>-gitignore`, and
+  `iru-setup-<stack>-<ci-provider>-workflows` (embedding the shared security block — see
+  xref:adding-a-project-type[] below), reusing `iru-setup-antora`/`iru-setup-changelog`/`iru-setup-readme`
+  unchanged.
+. If the stack should join the `iru-code` pipeline, add its `iru-<key>-code-one-task`/`iru-<key>-code-one-task-group`
+  pair per xref:_language_framework_backends_for_the_code_pipeline[] above — this is a separate registry from
+  the bootstrap one and only needed when the new stack's code should be *implemented* through `/iru-code`, not
+  merely scaffolded.
+. Write the `iru-setup-<stack>-repository` orchestrator that chains the six steps above in order, following an
+  existing one (xref:skills/iru-setup-typescript-repository.adoc[] is the most recent template) for how it
+  collects shared inputs once and forwards each sub-skill only the `args` keys its own Step 0 accepts.
+. Register the new stack in the three places that don't discover it automatically:
+  * `iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) Steps 2 and 4 — add it as a new option in
+    the relevant `AskUserQuestion` round and as a new delegation target.
+  * `iru-explore` (xref:skills/iru-explore.adoc[]) Step 7 — add the new `Project type:` value (and its detection
+    signal) to the table that line's vocabulary is a shared contract with `iru-setup-repository`.
+  * `iru-setup-readme` (xref:skills/iru-setup-readme.adoc[]) Step 2 — add whatever manifest/build-file detection
+    and installation-snippet shape the new stack needs.
 
 == Release generation for other ecosystems
 
-`iru-release` (xref:skills/iru-release.adoc[]) is, today, entirely Maven/gitflow-shaped: it reads and writes a
-`<version>` element in `pom.xml`, assumes a `develop` integration branch and a `release_x.y.z` branch name,
-and hands `README.md`/Antora version-snippet updates off to `iru-setup-readme`. The parts of it that are already
-stack-agnostic — determining the PR base branch by checking what actually exists on the remote rather than
-assuming `main`, delegating the changelog summary to the `iru-change-summarizer` agent
+`iru-release` (xref:skills/iru-release.adoc[]) is no longer Maven-only: its branch/PR/label/changelog steps —
+determining the PR base branch by checking what actually exists on the remote rather than assuming `main`,
+delegating the changelog summary to the `iru-change-summarizer` agent
 (xref:agents/iru-change-summarizer.adoc[]), drafting the PR description via `iru-pr-description`
-(xref:skills/iru-pr-description.adoc[]) — don't need to change for a new ecosystem.
+(xref:skills/iru-pr-description.adoc[]) — stay the same for every ecosystem, and only the version-bump mechanics
+are pluggable: which file carries the version, what "current pre-release" looks like in that ecosystem, and what
+command (if any) applies the bump. That pluggable piece is now a registry, the same shape as
+xref:_language_framework_backends_for_the_code_pipeline[]: `iru-release` runs `find .claude/skills -maxdepth 1
+-type d -name "iru-*-bump-version"` and delegates the actual edit to whichever `iru-<key>-bump-version` skill
+matches the project it detected (today: `java`, `typescript`, `android`, `swift`), falling back to asking the
+user which file to edit by hand if none is installed.
 
-What would need to generalize is narrowly the version-bump mechanics: which file carries the version
-(`pom.xml` vs `package.json` vs `<Project>/Directory.Build.props`/`.csproj` vs `pyproject.toml`), what
-"current pre-release" looks like in that ecosystem (`-SNAPSHOT` vs a pre-release semver tag vs a dev version
-marker), and what command (if any) applies the bump for that tool. Rather than teaching one `iru-release` skill
-every ecosystem's version file, the same registry shape as
-xref:_language_framework_backends_for_the_code_pipeline[] applies cleanly here: detect the project's
-language/build tool (`iru-explore`'s own Step 3 already does this), then look for and delegate to an
-`iru-<key>-bump-version`-style skill if one is installed, falling back to asking the user which file to edit by
-hand if none is. That keeps `iru-release`'s own branch/PR/label/changelog steps — the genuinely reusable
-majority of the skill — untouched while making the one Maven-specific step pluggable per ecosystem.
+To add a new ecosystem, create `iru-<key>-bump-version` following the sibling contract every existing one
+shares (xref:skills/iru-typescript-bump-version.adoc[] is a good template):
+
+* Takes a single literal `<new-version>` argument — it never computes a bump itself, only applies the exact
+  value it's given (the caller, typically `iru-release`, computes release/next-dev values and passes each
+  through in turn).
+* Supports a read-current-version mode so `iru-release` can read the existing version before asking the user
+  what to bump it to.
+* Documents that ecosystem's own pre-release convention (`-SNAPSHOT`, a `-dev.N`/`-alpha.N` suffix, …) so
+  `iru-release`'s "next SNAPSHOT" question offers a sensible default.
+* Reports the old and new version and every file it touched (manifest, lockfile, any README/Antora version
+  mentions it also syncs).
+
+`iru-release` picks up the new key automatically on its next run — nothing else in that skill needs to change.
 
 == Ticket trackers and git hosts
 
@@ -189,6 +218,49 @@ xref syntax, the nav.adoc format) in place — there's currently no signal in th
 doc toolchain needs supporting at once, so building that generalization ahead of a second real use case would
 be speculative.
 
+[[adding-a-project-type]]
+== Adding a project type
+
+The sections above cover each extension point in isolation; a genuinely new project type (a 13th stack, not just
+a new flavor of an existing one) touches most of them at once. This checklist pulls the full set together in the
+order it's usually easiest to work through:
+
+. **Naming** — every new skill and agent carries the `iru-` prefix in its directory name, frontmatter `name`, and
+  every cross-reference to it (xref:guides/creating-skills-and-agents.adoc[]); a stack's skills share the same
+  `<key>` throughout (`iru-<key>-code-one-task`, `iru-<key>-bump-version`, `iru-setup-<key>-gitignore`, …).
+. **Shared `args` vocabulary** — accept the same keys every other orchestrator/scaffold/workflows skill does:
+  `open-source: yes|no`, `publish: yes|no` (libraries) or `distribution: none|internal|store` (apps),
+  `sonar: cloud|self-hosted|none` (+ its detail keys), and `mode: new|existing` — with the same defaults (`sonar`
+  defaults to `cloud` for open source, otherwise asked with `none` recommended; `publish`/`distribution` default
+  to `yes`/`store` only when open source). Add a `flavor` key only when the stack itself has more than one shape
+  (library vs. app, or several app frameworks) the way `iru-setup-typescript-repository` does.
+. **Model tier** — pick the frontmatter `model` by what the skill actually does, matching this catalog's existing
+  split: `haiku` for setup/gitignore/workflows/orchestrator/test/coverage/code-quality/bump-version skills (their
+  work is templated and mechanical); `sonnet` for `<key>-code-one-task`/`<key>-code-one-task-group`, doc-comment
+  audits, and `<key>-generate-all-tests` (they read and reason about arbitrary source).
+. **Embedded, genericized templates** — every scaffold/workflows skill carries its own templates inline (no
+  external template repo), genericized from a real reference project when one exists (see the Android reference
+  repository rule in `CLAUDE.md`), with dependency/tool versions looked up at run time rather than hardcoded, so
+  the skill doesn't go stale as the ecosystem moves.
+. **Sonar/publishing gating** — wire the `sonar`/`publish`/`distribution` args into the actual workflow and pom/
+  manifest content generated, the same way the existing stacks do (a Sonar step only appears in CI when
+  `sonar` isn't `none`; a publish/release job only appears when `publish`/`distribution` says so).
+. **The security block** — every `iru-setup-<stack>-github-workflows` skill embeds the same block (Dependabot,
+  dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table listing exactly the
+  secrets its generated workflows reference.
+. **Report-only gates through `iru-gate-runner`** — route the new stack's test/coverage/code-quality/doc-comment
+  skills through the `iru-gate-runner` agent (xref:agents/iru-gate-runner.adoc[]) from its `<key>-code-one-task-group`
+  skill, exactly as xref:_quality_gates[] above describes, so raw tool output never leaks into the calling context.
+. **Throwaway-directory verification** — exercise every scaffold/workflows/gate template against the real tooling
+  in a directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`), fold whatever quirks surface
+  back into the `SKILL.md`, never delete anything inside this repository to do it, and report whatever couldn't be
+  verified locally instead of assuming it works.
+. **Front-door/explore/readme registration** — the three places that don't discover a new stack automatically
+  (`iru-setup-repository` Steps 2/4, `iru-explore` Step 7's `Project type:` table, `iru-setup-readme` Step 2) each
+  need a new entry, per xref:_repository_bootstrap_for_other_stacks[] above.
+. **Docs** — once everything above is in place, run `/iru-generate-skill-docs` and confirm `nav.adoc` picked up
+  every new skill page, per xref:_after_adding_a_new_extension[] below.
+
 == After adding a new extension
 
 Once a new skill following one of the shapes above is in place:
@@ -205,6 +277,8 @@ Once a new skill following one of the shapes above is in place:
 
 * xref:guides/creating-skills-and-agents.adoc[]
 * xref:guides/common-workflows.adoc[]
+* xref:skills/iru-setup-repository.adoc[], xref:skills/iru-release.adoc[] — the front door and the release skill
+  this guide's registries plug into.
 * xref:skills/iru-jira-custom-context.adoc[]
 * xref:agents/overview.adoc[]
 * xref:index.adoc[]
