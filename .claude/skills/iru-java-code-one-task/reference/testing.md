@@ -4,15 +4,19 @@ Every task's implementation comes with the tests that prove it. This skill **wri
 them — the calling `iru-java-code-one-task-group` runs the suite, coverage, and quality checks once for the whole
 task group. Write tests that will pass and that will hold the coverage gate up; don't invoke Maven here.
 
-## Follow the package you're in
+## The fixed rules come first
 
-Before writing a test, read an existing test in the same package. Match its structure, its naming convention,
-its assertion library, and its use (or non-use) of Mockito. Introducing a second convention in a project — a
-different naming scheme, AssertJ where the rest is plain JUnit assertions, Mockito where nothing else mocks — is
-a cost paid by every later reader, and it isn't what the task asked for.
+`mandatory-rules.md` (always read) fixes the parts of a test that are not up for matching: JUnit assertions and
+never AssertJ, Mockito mocks/spies and never hand-written fakes, `methodBeingTested_whenCondition_expectedResult`
+method names, one `*Test` class per public class (`*IT` for integration tests), standard member ordering, and
+full Javadoc in test sources. Those apply even when the package's existing tests do otherwise.
 
-Defaults for a project that doesn't yet have a convention: JUnit 5 (Jupiter), plain `org.junit.jupiter.api.Assertions`,
-Mockito only where a real collaborator genuinely can't be used.
+## Follow the package you're in, for everything else
+
+Before writing a test, read an existing test in the same package and match what the rules above leave open: how
+fixtures are built, whether `@Nested` is used, how parameterised cases are sourced, whether the class uses
+`@ExtendWith(MockitoExtension.class)` or `mock(...)` calls. Defaults for a project that doesn't yet have a
+convention: JUnit 5 (Jupiter), `org.junit.jupiter.api.Assertions`, and Mockito via `MockitoExtension`.
 
 ## What to cover
 
@@ -28,8 +32,8 @@ Mockito only where a real collaborator genuinely can't be used.
 
 ## Writing the test
 
-- **One behaviour per test method**, with a name that says what it asserts — following the package's existing
-  naming style.
+- **One behaviour per test method**, named `methodBeingTested_whenCondition_expectedResult` (see
+  `mandatory-rules.md`).
 - **Arrange, act, assert**, in that order and visibly separated. Keep the assertion at the end; a test whose
   assertions are scattered through setup is hard to diagnose when it fails.
 - **Assert the specific thing.** `assertEquals(expected, actual)` over `assertTrue(expected.equals(actual))` —
@@ -47,19 +51,24 @@ Mockito only where a real collaborator genuinely can't be used.
 - **Don't test private methods directly**, and don't widen a member's visibility to test it. Exercise it through
   the public behaviour that uses it; if that's genuinely impossible, the design is telling you the logic wants to
   be its own type — which is a finding to report, not a refactor to perform mid-task.
-- **`final var` and `final` fixtures** apply here as much as in production code (`code-style.md`), and test
-  classes get the same member ordering as any other type (`class-member-ordering.md`). Test methods don't need
-  Javadoc unless the *why* of the scenario is non-obvious.
+- **`final var` and `final` fixtures** apply here as much as in production code (`code-style.md`), as do named
+  constants instead of magic numbers; test classes get the same member ordering as any other type
+  (`class-member-ordering.md`), and every test class, test method, field, and helper gets Javadoc
+  (`mandatory-rules.md`).
 
 ## Mocking, carefully
 
 - Mock what you don't own or can't afford: a remote client, the filesystem, a clock, a slow collaborator. Use
-  the real thing for a value object, a record, or a simple in-memory collaborator — a mock of a value object is
-  pure ceremony.
-- **Don't mock the type under test**, and don't `spy` on it to stub away the part the task just changed.
+  the real thing for a value object or a record — a mock of a value object is pure ceremony.
+- **Never a hand-written fake.** When a collaborator needs a stand-in, it's a Mockito `mock`/`@Mock` or, when
+  most of the real behaviour is wanted, a `spy`/`@Spy` — never a `Fake*`/`InMemory*`/`Stub*` class or an
+  anonymous implementation written for the test (`mandatory-rules.md`).
+- **Don't mock the type under test**, and don't `spy` on it to stub away the part the task just changed. The
+  one exception is an abstract class, tested through a `CALLS_REAL_METHODS` mock instead of a throwaway
+  subclass.
 - **Verify interactions only when the interaction *is* the behaviour** (a message was published, a repository
   was asked to save). Otherwise assert on the result; over-verified tests break on every harmless refactor.
-- Prefer constructor injection of a test double over reflection or a static hook.
+- Prefer constructor injection of the mock (or `@InjectMocks`) over reflection or a static hook.
 - Remember Mockito's own limits before making a collaborator `final` in production code — see the `final`
   section of `code-style.md`.
 

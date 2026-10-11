@@ -48,9 +48,13 @@ public final class ShippingQuoter {
     /** Currency every quote is expressed in. */
     protected static final Currency QUOTE_CURRENCY = Currency.getInstance("EUR");
 
+    /** Timeout applied by {@link #quote(Order)} when the caller doesn't supply one. */
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(5);
 
+    /** Rate table every quote is priced against. */
     private final RateTable rates;
+
+    /** Clock used to decide which rates are currently valid. */
     private final Clock clock;
 
     /**
@@ -114,6 +118,13 @@ public final class ShippingQuoter {
         return quote;
     }
 
+    /**
+     * Prices a shipment of the given weight with one carrier, using the rates valid now.
+     *
+     * @param carrier the carrier to price with; never {@code null}.
+     * @param weight  the shipment's weight; never {@code null}.
+     * @return the price; never {@code null}.
+     */
     private Money priceFor(final Carrier carrier, final Weight weight) {
         ...
     }
@@ -127,6 +138,7 @@ public final class ShippingQuoter {
     public record Quote(Carrier carrier, Money price) {
     }
 
+    /** Geographic band a destination falls into, which selects the rate row. */
     private enum Zone {
         DOMESTIC, EU, INTERNATIONAL
     }
