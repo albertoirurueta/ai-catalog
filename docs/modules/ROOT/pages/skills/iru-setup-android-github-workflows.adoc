@@ -13,15 +13,21 @@ Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-
 and unit test, an optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, lint with
 SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-
 `jacococli.jar` fallback), an optional SonarQube/SonarCloud scan, a Dokka + Antora documentation build
-published to GitHub Pages (library flavor), and — depending on `flavor` — either an optional Maven Central
+published to GitHub Pages (library flavor; with `pages: no` the docs are still built but only uploaded as a workflow
+artifact), and — depending on `flavor` — either an optional Maven Central
 publish or a signed release build uploaded to Google Play or Firebase App Distribution. It also generates a
 `security.yml` (dependency-review, CodeQL, OSV-Scanner, gitleaks, plus two opt-in jobs) and
 `.github/dependabot.yml`, regardless of branching model. The skill supports two branching shapes —
 `gitflow` (`develop.yml`/`main.yml`/`sync.yml`) and `main-only` (`main.yml`/`publish.yml`, no `sync.yml`) — and
 two flavors (`library`/`app`), ships genericized example templates derived from a real Android library
 repository's actual workflows, and resolves every placeholder from a survey of the target repository rather
-than guessing. If any relevant workflow file already exists, it asks the user whether to stop or attempt an
-update using the templates as reference, preserving any step/job this skill doesn't own.
+than guessing. It announces whether it is creating the pipeline from scratch or updating an existing one; for each
+pre-existing workflow file it compares the file with this run's choices, names every concrete mismatch (for example
+an emulator step with `ci-tests: unit`, or a Pages deploy with `pages: no`), and asks Update / Keep as is / Replace
+(Stop on the first question), preserving any step/job this skill doesn't own on Update. Standalone, it also
+resolves `visibility`, `sonar`, `ci-tests` and `pages` with cost-aware recommendations for private repositories
+(GitHub Actions minutes, SonarCloud pricing, GitHub Pages availability). There is no `ci` key: invoking the skill
+means CI is wanted.
 
 == Purpose group
 
@@ -45,9 +51,15 @@ xref:index.adoc#group-android-bootstrap[Android Bootstrap]
 |Pre-resolved values, one per line, e.g. `flavor: library`. Key values: `flavor` (`library`/`app`),
 `branching` (`gitflow`/`main-only`), `integration-branch`, `stable-branch`, `java-version`,
 `run-instrumented-tests` (`yes`/`no`), `api-level`, plus this catalog's shared workflow-args vocabulary —
-`open-source`, `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar`
-(`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode`
-(`new`/`existing`), and four `security-*` opt-outs (`security-dependency-review`, `security-codeql`,
+`open-source`, `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`; used only to derive
+`run-instrumented-tests` when that key is absent, `full` giving `yes` and `unit` giving `no`; an explicit
+`run-instrumented-tests` always wins), `pages` (`yes`/`no` — library only; deploy docs to GitHub Pages, or only
+upload them as a workflow artifact; public repositories default to `yes`, private/internal ones are asked with `no`
+recommended), `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar`
+(`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`; `cloud` is recommended
+only for an open-source public repository), `mode` (`new`/`existing`; informational only, it never means "update
+silently"), `on-existing` (`ask`/`keep`/`update`/`replace`; applied to every pre-existing file without asking, the
+warning still printed; meant for scripted runs), and four `security-*` opt-outs (`security-dependency-review`, `security-codeql`,
 `security-osv`, `security-gitleaks`) plus two security opt-ins (`security-owasp-dependency-check`,
 `security-mobsfscan`, app only) — so an orchestrating skill can supply them without re-prompting.
 |None — if `args` is absent or doesn't match this format, every parameter is instead resolved by surveying
@@ -80,8 +92,13 @@ Maven Central publish)
 |Same four files (the release job inside `publish.yml` differs internally, same as above)
 |===
 
-* Every file above is created fresh, or updated in place if it already existed and the user chose to continue
-  (Step 1's stop-or-update path preserves any step/job this skill doesn't own).
+* Every file above is created fresh when absent. When it already existed, it is updated in place (merged,
+  preserving any step/job this skill doesn't own), replaced with the template, or left as is, per the user's answer
+  or `on-existing` (Step 1); choosing Stop writes nothing. Per file, the report states the action taken
+  (created / updated / replaced / kept as is) and, for a kept file, each mismatch with this run's choices.
+* With `pages: no` the library `build` job uploads the built Dokka + Antora site as a `docs-site` workflow artifact
+  (`actions/upload-artifact`) instead of the Pages artifact, and no `deploy-docs` job or Pages permissions are
+  generated. With `ci-tests: unit` the emulator and KVM steps are omitted.
 * A report of required repository secrets and settings — see the table below — plus any open gaps found along
   the way (missing `docs/antora.yml`, a Gradle Play Publisher plugin found and preferred over the workflow-level
   upload action, README/Antora wording that didn't match `sync_versions.py`'s regexes, a vendored
@@ -132,8 +149,10 @@ Required secrets (only the rows that apply to what was actually generated need t
 |===
 
 `sync.yml` also needs the repository's Settings → Actions → General → "Workflow permissions" set to allow
-GitHub Actions to create pull requests, and the Pages deploy jobs need Settings → Pages → "Build and
-deployment" → Source set to **GitHub Actions** — both are called out explicitly in the final report since each
+GitHub Actions to create pull requests. With `pages: yes`, the Pages deploy jobs also need Settings → Pages →
+"Build and deployment" → Source set to **GitHub Actions** (and, for a private/internal repository, a GitHub Pro,
+Team or Enterprise Cloud plan; the site is public unless Enterprise Cloud private access control is used); with
+`pages: no` there is no Pages setting to change. These are called out explicitly in the final report since each
 fails silently on the first real run without it.
 
 == Execution flow
@@ -141,21 +160,26 @@ fails silently on the first real run without it.
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-android-github-workflows] --> B["Step 0: Resolve inputs\n(parse args, else ask via\nAskUserQuestion/survey)"]
+    A[Start /iru-setup-android-github-workflows] --> B["Step 0: Resolve inputs\n(parse args, else ask via AskUserQuestion/survey;\nstandalone: visibility, sonar, ci-tests, pages)"]
     B --> C["Step 1: Survey repository\n(module layout, flavor, sonar/\npublish blocks, signing, vendored\njacococli.jar, branches, docs)"]
     C --> D{"Do the relevant\nworkflow files\nalready exist?"}
-    D -- none exist --> F["Step 2: Resolve action\nversions (live lookup or\nSeptember 2026 fallback)"]
-    D -- some exist --> E{"Stop or continue\n(user choice)?"}
-    E -- stop --> Z["Report which files exist;\nno changes made"]
-    E -- continue --> F
+    D -- none exist --> D1["Announce: creating from scratch"]
+    D -- some exist --> D2["Announce: updating existing pipeline\nname mismatches with this run's choices"]
+    D2 --> E{"on-existing set?"}
+    E -- yes --> E1["Apply keep / update / replace\nto every file"]
+    E -- no --> E2{"AskUserQuestion per file:\nUpdate / Keep as is / Replace\n(Stop on first question)"}
+    E2 -- stop --> Z["Report which files exist;\nno changes made"]
+    E2 -- choices --> F
+    E1 --> F
+    D1 --> F["Step 2: Resolve action\nversions (live lookup or\nSeptember 2026 fallback)"]
     F --> G{"branching?"}
-    G -- gitflow --> H["Step 4: Fill develop.yml/\nmain.yml templates"]
+    G -- gitflow --> H["Step 4: Fill develop.yml/\nmain.yml templates\n(Pages deploy or docs artifact per pages)"]
     G -- main-only --> I["Step 7: Fill main.yml/\npublish.yml templates"]
     H --> J["Step 5: gitflow only —\nsync.yml + sync_versions.py"]
     I --> K["Step 8: Fill security.yml +\n.github/dependabot.yml templates"]
     J --> K
-    K --> L["Step 12: Write files\nper Step 11's file matrix"]
-    L --> M["Step 14: Report outputs,\nopen gaps, required secrets\ntable, and warnings"]
+    K --> L["Step 12: Write files per Step 11's file matrix\nand each file's Update / Keep / Replace choice"]
+    L --> M["Step 14: Report mode, per-file actions, open gaps,\nrequired secrets table, and warnings"]
 ....
 
 == Dependencies
@@ -169,7 +193,7 @@ None — `iru-setup-android-github-workflows` is a leaf skill; it does not call 
 * xref:skills/iru-setup-android-repository.adoc[] — Step 7 runs `iru-setup-android-github-workflows` (via the
   xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent), passing the pipeline
   parameters (flavor, branching, integration/stable branch, Java version, instrumented-test/API-level choice,
-  plus the shared open-source/publish/distribution/sonar/mode/security-* args) through `args` as `key: value`
+  plus the shared open-source/visibility/ci-tests/pages/publish/distribution/sonar/mode/on-existing/security-* args) through `args` as `key: value`
   lines so it isn't asked again for facts the orchestrator already collected.
 
 === Related agents

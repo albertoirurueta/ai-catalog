@@ -1,10 +1,10 @@
 = Setup Java Spring Boot Poms
-:description: Generates the Maven reactor for a hexagonal Spring Boot service: root pom with every version, module poms, quality plugins, Sonar and Hilla wiring.
+:description: Generates or updates the Maven reactor for a hexagonal Spring Boot service: root pom with every version, module poms, quality plugins, Sonar and Hilla.
 :keywords: iru-setup-java-springboot-pom, claude code skill, maven multi-module, pom.xml, dependency management, maven enforcer, jacoco, checkstyle, spotbugs, java 21, sonar, hilla, vaadin
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Generates the whole Maven reactor for a DDD/hexagonal Spring Boot service: the root `pom.xml` that holds every
+Generates (or updates, announcing which) the whole Maven reactor for a DDD/hexagonal Spring Boot service: the root `pom.xml` that holds every
 dependency and plugin version, one `pom.xml` per module, and the shared static-analysis configuration those poms
 reference.
 
@@ -63,10 +63,26 @@ fetches it itself from the manifest's `initializr.dependencies` and confirms the
 plain-text error.
 |Fetched fresh from `https://start.spring.io/pom.xml`
 
-|Existing root `pom.xml` handling
+|`mode`
 |No
-|If a root `pom.xml` already exists, `AskUserQuestion` asks whether to stop or regenerate. On regenerate, anything
-the existing pom has that the template doesn't is preserved and listed in the report.
+|`args` `key: value` line, `new` or `existing`. Informational only: scratch-vs-update is decided per file from what is
+on disk, and `mode: existing` does not mean "update silently".
+|None
+
+|`on-existing`
+|No
+|`args` `key: value` line, `ask`, `keep`, `update` or `replace`. Applied to every pre-existing file without asking
+(the warning is still printed).
+|`ask`
+
+|Existing files handling
+|No
+|The skill says whether it is generating the reactor from scratch or updating an existing one, listing which of the
+root pom, module poms, `checkstyle.xml` and `spotbugs-exclude.xml` exist. For each it warns, states where the file
+disagrees with the manifest, and asks **Update** (merge; unknown dependencies, plugins, profiles and properties are
+preserved and listed in the report), **Keep as is** (recommended for `checkstyle.xml` and `spotbugs-exclude.xml`),
+**Replace**, or **Stop** (root pom question only; recommended when the existing root pom is not `pom`-packaged).
+Module poms may be asked as one grouped question.
 |None — user must choose
 |===
 
@@ -80,7 +96,8 @@ the existing pom has that the template doesn't is preserved and listed in the re
   generators — along with the `asyncapi.docs.skip` property that lets an offline build opt out of the npm-based
   documentation step. The GraphQL codegen version is shared with the `graphql-java-codegen` runtime artifact that
   generated GraphQL client code extends, so the two cannot drift apart. The `sonar.*` properties and the
-  `sonar-maven-plugin` entry are written only when the manifest's `sonar.mode` isn't `none`, with
+  `sonar-maven-plugin` entry are written only when the manifest's `sonar.mode` isn't `none` (even if `ci.enabled` is
+  `false`, in which case an XML comment notes that no CI step sends reports), with
   `sonar.host.url` resolved per mode (SonarCloud for `cloud`, the manifest's host for `self-hosted`) and
   `sonar.organization` omitted for `self-hosted` unless the manifest set one. When the manifest's `frontend` is
   `hilla`, the root pom additionally gains a `vaadin.version`/`vaadin.skip` property pair, a `vaadin-bom`
@@ -95,10 +112,12 @@ the existing pom has that the template doesn't is preserved and listed in the re
 * `coverage/pom.xml` — JaCoCo `report-aggregate` across every module, declared last in the reactor so every
   module's execution data already exists when it runs.
 * `boot/pom.xml` — additionally carrying `spring-boot-maven-plugin` and the `groovy-maven-plugin` build-info step.
-* `checkstyle.xml` and `spotbugs-exclude.xml` at the repository root, if absent.
-* A report listing the reactor's build order, every version pinned (separating those copied from the reference pom
+* `checkstyle.xml` and `spotbugs-exclude.xml` at the repository root, if absent (an existing one follows the Step 0
+  answer, Keep by default; on Update the generated-source matches are added to `spotbugs-exclude.xml` if missing).
+* A report stating whether the reactor was generated from scratch or updated, the action per file (created / updated /
+  replaced / kept as is, with each mismatch left in a kept file), and listing the reactor's build order, every version pinned (separating those copied from the reference pom
   from those looked up on Maven Central), which module each significant dependency landed in, anything that
-  couldn't be placed, any hexagon violation found, how `sonar.mode` was wired (`none`, `cloud`, or `self-hosted`,
+  couldn't be placed, any hexagon violation found, a note when Sonar is configured but `ci.enabled` is `false`, how `sonar.mode` was wired (`none`, `cloud`, or `self-hosted`,
   with the resolved host/organization/project key), and how `frontend` was wired (`none`, or `hilla` with the
   resolved `vaadin.version`).
 
@@ -110,10 +129,10 @@ flowchart TD
     A["Start /iru-setup-java-springboot-pom"] --> B["Step 0: Read the manifest;\nfetch or read the Initializr reference pom"]
     B -- manifest missing --> STOP["Stop — run /iru-setup-java-springboot first"]
     B --> C["Classify every extracted dependency\nto its owning module"]
-    C -- root pom exists --> D{"Stop or regenerate?"}
-    D -- stop --> STOP2[Stop; report]
-    D -- regenerate --> E
-    C -- no root pom --> E["Step 1: Write the root pom\n(all versions, all plugins, enforcer;\nconditional Sonar and Hilla/Vaadin wiring)"]
+    C -- pre-existing pom files --> D{"Per file: Update /\nKeep as is / Replace / Stop?\n(or on-existing)"}
+    D -- stop at root pom --> STOP2[Stop; report]
+    D -- update, keep or replace --> E
+    C -- from scratch --> E["Step 1: Write the root pom\n(all versions, all plugins, enforcer;\nconditional Sonar and Hilla/Vaadin wiring)"]
     E --> F["Steps 2-3: Place dependencies per module;\nwrite each module pom with no versions\nand its bannedDependencies rule"]
     F --> G["Step 4: Write every pom to disk"]
     G --> H["Step 5: Write checkstyle.xml\nand spotbugs-exclude.xml"]
@@ -136,7 +155,10 @@ None directly. It reads `springboot-stack.yml` and the Spring Initializr API, an
   `iru-isolated-skill-executor` agent. It is the one sub-skill whose failure stops the whole bootstrap: without a
   root pom there is no reactor for anything else to attach to.
 
-Also runs standalone (`/iru-setup-java-springboot-pom`) to regenerate the reactor from an updated manifest.
+Receives `mode`, and `on-existing` only when that arrived in the orchestrator's own `args`. If the root pom is kept as is
+but is not a usable `pom`-packaged reactor, the bootstrap stops there.
+
+Also runs standalone (`/iru-setup-java-springboot-pom`) to regenerate or update the reactor from an updated manifest.
 
 === Related agents
 

@@ -11,7 +11,9 @@ when opted in, `.spi.yml` and `sonar-project.properties`.
 == Purpose
 
 `iru-setup-swift-library` bootstraps a new Swift/SwiftPM library from an explicit, genericized house template
-embedded in the skill itself. Every file starts from `swift package init --type library`'s own scaffold, then this
+embedded in the skill itself. It announces up front whether it is creating the package from scratch or updating an
+existing one, and for every file of its own that already exists it warns and asks Update / Keep as is / Replace /
+Stop (or applies `on-existing` from `args`). Every file starts from `swift package init --type library`'s own scaffold, then this
 skill rewrites it: `Package.swift` gets `// swift-tools-version: 6.0`, a `platforms:` array derived from the
 selected Apple platforms, a `swift-docc-plugin` dependency, and `swiftLanguageModes: [.v6]`; `Sources/<Name>/`
 gets a placeholder `Sendable` type; `Tests/<Name>Tests/` gets both a Swift Testing `@Test` example and an XCTest
@@ -39,7 +41,7 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
 |`args`
 |No
-|Pre-resolved parameters passed by an orchestrating skill (e.g. a future
+|Pre-resolved parameters passed by an orchestrating skill (e.g.
 xref:skills/iru-setup-swift-repository.adoc[]) as newline-separated `key: value` lines covering every field below,
 parsed in Step 0 so this skill doesn't ask about any field already resolved this way.
 |None — if absent or unrecognized, every field is asked interactively.
@@ -90,7 +92,9 @@ and URL directly).
 |No
 |Whether to wire up a SonarQube/SonarCloud scan (`cloud`/`self-hosted`/`none`), plus
 `sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`; gates `sonar-project.properties`.
-|`cloud` when `open-source` is `yes`; otherwise asked with `none` recommended
+|`cloud` only when `open-source` is `yes` and `visibility` is `public` (or unknown); otherwise asked with `none`
+recommended (SonarCloud needs a paid plan for private projects), offering self-hosted SonarQube second. With
+`ci: no`, `none` is recommended and a chosen scan only gets the build-side `sonar-project.properties`.
 
 |`formatter`
 |No
@@ -98,10 +102,30 @@ and URL directly).
 end-to-end) or `swiftformat` (the third-party nicklockwood/SwiftFormat tool, unverified locally).
 |`swift-format`
 
+|`visibility`
+|No
+|`public`, `private` or `internal` (behaves like `private`). Only used to key the `sonar` recommendation; this
+skill never asks it, it only arrives via `args`.
+|Unset (treated as unknown)
+
+|`ci`
+|No
+|`yes`/`no` -- whether GitHub Actions workflows will exist to send Sonar reports. With `no`, the skill says plainly
+that no workflow will send analysis automatically and recommends `sonar: none`; if Sonar is still chosen, the
+Step 14 report notes that no CI step sends reports.
+|Unset
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace` -- answers Step 1's per-file question for every existing file at once (the
+warning and file list are still printed).
+|`ask`
+
 |`mode`
 |No
-|`existing` skips Step 1's stop-or-regenerate question entirely and goes straight to gap-fill, leaving every file
-that already exists untouched. `new` follows Step 1's normal survey.
+|`new` or `existing`. `existing` marks an update rather than a from-scratch run but no longer means a silent
+gap-fill: Step 1 still warns and asks per existing file. The files actually on disk decide whether each is created
+or updated.
 |`new`
 |===
 
@@ -116,7 +140,9 @@ that already exists untouched. `new` follows Step 1's normal survey.
 * `.spi.yml`, only when `publish: yes`.
 * `sonar-project.properties`, only when `sonar` is not `none`.
 * A report of the resolved `package-name`/`<Name>`, platforms and deployment targets, license, and every
-  yes/no/gated choice; which files were created, left untouched (fill-gaps), or replaced (regenerate); whether
+  yes/no/gated choice; the mode announced up front (from scratch or update); per file whether it was created,
+  updated, replaced or kept as is (with each mismatch listed for a kept file, and how `visibility`/`ci` shaped the
+  Sonar recommendation); whether
   `swift build`/`swift test` succeeded; and explicit warnings (review before build/commit, `SONAR_TOKEN` and a CI
   step still needed for `sonar-project.properties` to mean anything, `.spi.yml` alone doesn't submit to the Swift
   Package Index, no `.gitignore` touched, SwiftLint/`swiftformat`/`.spi.yml` submission unverified locally).
@@ -132,21 +158,23 @@ flowchart TD
     C --> E["Step 1: Survey repository\nfor existing files"]
     D --> E
     E --> F{"Any file already exists?"}
-    F -- none exist --> H["Step 2: Collect inputs\n(package-name, platforms,\nmin-deployment-targets, license,\ndeveloper info, open-source,\npublish, sonar, formatter)"]
-    F -- "mode: existing" --> G1[Go straight to gap-fill]
+    F -- none exist --> F1["Announce: creating the\npackage from scratch"]
+    F -- at least one --> F2["Announce: updating an\nexisting package; list files"]
+    F2 --> G{"on-existing set to\nkeep, update or replace?"}
+    G -- yes --> G1["Apply it to every\nexisting file"]
+    G -- no --> G2{"AskUserQuestion per file:\nUpdate / Keep as is /\nReplace / Stop"}
+    G2 -- Stop --> Z1[Report nothing changed; end]
+    G2 -- other --> G3["Record per-file decision;\nread existing Package.swift\nas defaults if replaced or updated"]
+    F1 --> H
     G1 --> H
-    F -- otherwise --> G2{"AskUserQuestion:\nstop / fill gaps / regenerate"}
-    G2 -- stop --> Z1[Report files untouched; end]
-    G2 -- "fill gaps" --> H
-    G2 -- regenerate --> G3["Read existing Package.swift\nas defaults for unresolved fields"]
-    G3 --> H
+    G3 --> H["Step 2: Collect inputs\n(package-name, platforms,\nmin-deployment-targets, license,\ndeveloper info, open-source,\npublish, sonar, formatter)"]
     H --> I["Step 3: Infer repository info\n(owner/repo/host, inception year,\nstable branch)"]
     I --> J["Step 4: Look up swift-docc-plugin\nversion via GitHub Releases API"]
-    J --> K["Step 5: swift package init\n--type library --name &amp;lt;Name&amp;gt;,\nthen rewrite Package.swift"]
+    J --> K["Step 5: swift package init\n--type library --name &amp;lt;Name&amp;gt;\n(only if no Package.swift),\nthen write Package.swift"]
     K --> L["Steps 6-9: Build templates for\nSources/&amp;lt;Name&amp;gt;, Tests/&amp;lt;Name&amp;gt;Tests,\n.swiftlint.yml, formatter config,\nDocC page, .spi.yml,\nsonar-project.properties"]
-    L --> M["Step 12: Write each file per\nStep 1's fill/regenerate decision"]
+    L --> M["Step 12: Write each file per its decision:\ncreate / update (diff first) /\nkeep as is / replace"]
     M --> N["Step 13: Verify via iru-gate-runner\n(swift build, swift test)"]
-    N --> O["Step 14: Report resolved inputs,\nfiles written, verification result,\nand warnings"]
+    N --> O["Step 14: Report mode, per-file action,\nverification result, and warnings"]
 ....
 
 == Dependencies
@@ -157,9 +185,9 @@ None — `iru-setup-swift-library` is a leaf skill; it does not call any other s
 
 === Invoked by
 
-* A future `iru-setup-swift-repository` (Step 5, library flavor) — this catalog's Swift/Apple bootstrap
-  orchestrator is expected to run `iru-setup-swift-library` after resolving the shared bootstrap inputs, passing
-  them through `args` so this skill's own Step 2 questions are skipped.
+* xref:skills/iru-setup-swift-repository.adoc[] (Step 5, library flavor) — this catalog's Swift/Apple bootstrap
+  orchestrator runs `iru-setup-swift-library` after resolving the shared bootstrap inputs, passing them through
+  `args` so this skill's own Step 2 questions are skipped.
 
 === Related agents
 

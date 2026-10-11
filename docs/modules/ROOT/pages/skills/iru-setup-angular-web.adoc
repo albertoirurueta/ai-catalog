@@ -73,22 +73,37 @@ license is chosen.
 
 |`open-source`
 |Yes (unless supplied via `args`)
-|Whether the repository is open source; drives the `sonar` recommendation.
+|Whether the repository is open source; drives the `sonar` recommendation together with `visibility`.
 |None
 
 |`sonar`
 |No
-|`cloud`, `self-hosted`, or `none` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`).
-|`cloud` when open source; otherwise `none` recommended
+|`cloud`, `self-hosted`, or `none` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`). `cloud` is recommended only for a repository that is both public and open source (SonarCloud is free only for public open-source projects, per its current pricing); otherwise `none` is recommended, with self-hosted SonarQube as the alternative.
+|`cloud` when public and open source; otherwise `none` recommended
 
 |`storybook`
 |No
 |Whether to also scaffold Storybook (`@storybook/angular-vite`) for isolated component development.
 |`no`
 
+|`visibility`
+|No
+|`public`, `private`, or `internal` — the GitHub repository's visibility, used only to key the `sonar` recommendation. `internal` counts as private. If `open-source: yes` but visibility is private/internal, the skill warns and asks which is right.
+|Resolved only when the `sonar` question is asked: `gh repo view --json visibility -q .visibility`, else asked (Public recommended when open source)
+
+|`ci`
+|No
+|`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
+|`yes` implied
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing artifact. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
+|`ask`
+
 |`mode`
 |No
-|`new` or `existing` — `existing` skips Step 1's stop-or-regenerate question and goes straight to gap-fill.
+|`new` or `existing`. `existing` marks the run as an *update* of an established repository, but never means "update silently" — Step 1 still warns and asks per pre-existing artifact unless `on-existing` says otherwise.
 |`new`
 |===
 
@@ -104,7 +119,7 @@ license is chosen.
 * Compodoc wired via a `docs` npm script producing `docs/api/`.
 * Optionally, a Storybook scaffold (`storybook: yes`).
 * `sonar-project.properties` at the repository root, only when `sonar` is `cloud` or `self-hosted`.
-* A report of what ran, was skipped as already present, or was skipped by design, plus explicit warnings to review
+* A report that opens by repeating the announced mode (from scratch or updating an existing setup), lists per owned artifact the action taken (created / updated / replaced / kept as is / removed) and each mismatch a kept artifact leaves with this run's choices, the `visibility` used for Sonar and where it came from, what ran or was skipped by design, plus explicit warnings to review
   generated files, run Prettier if not already run, and install Playwright browser binaries before `ng e2e`.
 
 == Execution flow
@@ -115,29 +130,32 @@ flowchart TD
     A[Start /iru-setup-angular-web] --> B{"Step 0: args supplied?"}
     B -- yes --> C[Parse key: value pairs from args]
     B -- no --> D[Treat every field as unset]
-    C --> E{"Step 1: angular.json already exists?"}
+    C --> E["Step 1: Survey angular.json and\nevery artifact Steps 5-13 own"]
     D --> E
-    E -- no --> F[Step 2: Collect inputs]
-    E -- yes, mode: existing --> G[Go straight to gap-fill]
-    E -- yes, otherwise --> H["AskUserQuestion:\nstop, fill gaps, or regenerate?"]
-    H -- stop --> I[Report untouched; end]
-    H -- fill gaps / regenerate --> F
-    G --> F
-    F --> J["Step 3: Look up tool versions\n(npm view, with Sept 2026 fallbacks)"]
-    J --> K["Step 4: ng new scaffold\n(standalone, scss, routing, ssr=false)"]
-    K --> L["Step 5-6: Configure test target\n+ install @vitest/coverage-v8\nmatching vitest major"]
-    L --> M["Step 7: ng add angular-eslint\n+ eslint-config-prettier"]
-    M --> N["Step 8: Confirm Prettier,\nadd .prettierignore, npx prettier --write ."]
-    N --> O["Step 9: Add Stylelint for SCSS"]
-    O --> P["Step 10: ng add playwright-ng-schematics,\nfix hardcoded title assertion"]
-    P --> Q["Step 11: Add Compodoc"]
-    Q --> R{"Step 12: storybook: yes?"}
-    R -- yes --> S["npx storybook@latest init\n(unverified end-to-end)"]
-    R -- no --> T{"Step 13: sonar != none?"}
-    S --> T
-    T -- yes --> U[Write sonar-project.properties]
-    T -- no --> V["Step 14: Report + warnings"]
-    U --> V
+    E -- "nothing exists" --> F[Announce: scaffolding from scratch]
+    E -- "workspace exists or mode: existing" --> G["Announce: updating an existing workspace; warn\nng new is never re-run"]
+    G --> H{"on-existing keep/update/replace?"}
+    H -- yes --> I[Apply it to every existing artifact]
+    H -- no --> J["AskUserQuestion per artifact:\nUpdate / Keep as is / Replace / Stop"]
+    J -- Stop --> K[Report untouched; end]
+    J -- other --> L
+    I --> L
+    F --> L["Step 2: Collect name, directory, developer info,\nlicense, open-source, visibility, sonar, storybook"]
+    L --> M["Step 3: Look up tool versions\n(npm view, with Sept 2026 fallbacks)"]
+    M --> N["Step 4: ng new scaffold\n(standalone, scss, routing, ssr=false;\nskipped when a workspace exists)"]
+    N --> O["Step 5-6: Configure test target\n+ install @vitest/coverage-v8\nmatching vitest major"]
+    O --> P["Step 7: ng add angular-eslint\n+ eslint-config-prettier"]
+    P --> Q["Step 8: Confirm Prettier,\nadd .prettierignore, npx prettier --write ."]
+    Q --> R["Step 9: Add Stylelint for SCSS"]
+    R --> S["Step 10: ng add playwright-ng-schematics,\nfix hardcoded title assertion"]
+    S --> T["Step 11: Add Compodoc"]
+    T --> U{"Step 12: storybook: yes?"}
+    U -- yes --> V["npx storybook@latest init\n(unverified end-to-end)"]
+    U -- no --> W{"Step 13: sonar != none?"}
+    V --> W
+    W -- yes --> X[Write sonar-project.properties]
+    W -- no --> Y["Step 14: Report per-artifact actions,\nmismatches, warnings"]
+    X --> Y
 ....
 
 == Dependencies

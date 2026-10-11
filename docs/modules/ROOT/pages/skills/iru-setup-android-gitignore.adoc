@@ -8,7 +8,8 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 (Gradle/Kotlin) library or app project, using
 https://github.com/albertoirurueta/irurueta-android-glutils[irurueta-android-glutils]'s own `.gitignore`,
 `lib/.gitignore` and `app/.gitignore` as the concrete reference templates. It never overwrites an existing
-`.gitignore` without first showing the user exactly what would change and getting explicit approval.
+`.gitignore` silently: it announces whether it is creating files from scratch or updating existing ones, and for each
+pre-existing file it warns, shows a diff and asks the user to Update, Keep as is, or Replace.
 
 == Purpose
 
@@ -19,8 +20,8 @@ one-line anchored `/build` `.gitignore` for each Gradle module, and a conditiona
 Fastlane output. It deliberately never ignores a vendored `jacoco-<ver>/` JaCoCo CLI directory if the repository
 vendors one (as the reference repository does, for `iru-setup-android-github-workflows`' opt-in
 coverage-conversion fallback), since CI would depend on that directory staying tracked to convert coverage
-without a network dependency. It mirrors `iru-setup-java-gitignore`'s diff-and-approve contract, adapted to the
-Android/Gradle ecosystem.
+without a network dependency. It mirrors `iru-setup-java-gitignore`'s warn-and-ask contract (Update / Keep as is /
+Replace per pre-existing file), adapted to the Android/Gradle ecosystem.
 
 == Purpose group
 
@@ -41,8 +42,9 @@ xref:index.adoc#group-android-bootstrap[Android Bootstrap]
 
 |`mode`
 |No
-|`new` or `existing`. Selects whether the skill should expect to write fresh files or gap-fill/merge into files
-that already exist.
+|`new` or `existing`. Selects whether the skill should expect to write fresh files or work with files that already
+exist. `existing` never means "update silently": every pre-existing file still goes through the Update / Keep /
+Replace question unless `on-existing` decides it.
 |Detected from whether a root `.gitignore` already exists (present → `existing`, absent → `new`).
 
 |`modules`
@@ -52,14 +54,24 @@ that already exist.
 |Derived from every `include(":<name>")` entry in `settings.gradle.kts`/`settings.gradle`; if neither file
 exists yet, falls back to whichever of `lib`/`app` exist as directories, or asks the user via
 `AskUserQuestion`.
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. How each already-existing `.gitignore` is treated: `ask` asks per file;
+the others apply that choice to every pre-existing file without asking (the warning and diff are still shown).
+Meant for scripted runs; an orchestrator passes it only if it received it itself.
+|`ask`
 |===
 
 == Outputs
 
-* A root `.gitignore` — newly created, or updated after explicit user approval when one already existed.
-* A `<module>/.gitignore` for each resolved module (typically `lib`, `app`) — newly created, or updated after
-  approval; skipped entirely when its content already matches.
-* A closing report stating which root file and each module file was created/updated/left untouched, which
+* A root `.gitignore` — newly created, or, when one already existed, updated (merged), replaced with the bare
+  template, or left as is, according to the user's answer or `on-existing`.
+* A `<module>/.gitignore` for each resolved module (typically `lib`, `app`) — newly created, or handled the same
+  way as the root file when it existed; skipped entirely when its content already matches.
+* A closing report stating whether the run created from scratch or updated existing files, the action taken per
+  pre-existing file (updated / replaced / kept as is, and whether the user or `on-existing` chose it, with the
+  template lines still missing from each kept file), which
   conditional Step 4 section (Fastlane) was included versus skipped and why, and confirmation that no ignore
   pattern would match a vendored `jacoco-<ver>/` CLI directory if the repository has one.
 
@@ -68,19 +80,22 @@ exists yet, falls back to whichever of `lib`/`app` exist as directories, or asks
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-android-gitignore] --> B["Resolve mode and modules\n(settings.gradle.kts include(...) entries,\nor lib/app fallback, or ask user)"]
+    A[Start /iru-setup-android-gitignore] --> B["Resolve mode, on-existing and modules\n(settings.gradle.kts include(...) entries,\nor lib/app fallback, or ask user)"]
     B --> C{"Root or any module\n.gitignore already exists?"}
-    C -- no --> D["Compose root base template\n+ per-module /build line"]
-    C -- yes --> E["Read existing files\n(warn changes will be proposed)"]
+    C -- no --> C1["Announce: creating from scratch"]
+    C -- yes --> E["Announce: updating existing\nlist existing files"]
+    C1 --> D["Compose root base template\n+ per-module /build line"]
     E --> D
     D --> F["Detect conditional root additions:\nFastlane output"]
     F --> G["Compose proposed content\n(merge with existing lines if any)"]
     G --> H{"Did this file\nalready exist?"}
     H -- no --> I["Write file directly"]
-    H -- yes --> J["Show diff, ask user:\naccept or skip"]
-    J -- accept --> I
-    J -- skip --> K["Leave existing file untouched"]
-    I --> L["Report per file,\nconfirm jacoco-&amp;lt;ver&amp;gt;/ stays untouched"]
+    H -- yes --> J["Show diff, then ask per file\n(or apply on-existing):\nUpdate, Keep as is, Replace"]
+    J -- Update --> I
+    J -- Replace --> I2["Write bare template"]
+    J -- Keep as is --> K["Leave existing file untouched"]
+    I --> L["Report per file and action taken,\nconfirm jacoco-&amp;lt;ver&amp;gt;/ stays untouched"]
+    I2 --> L
     K --> L
 ....
 

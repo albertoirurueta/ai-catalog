@@ -1,5 +1,5 @@
 = Setup Java Spring Boot GitHub Workflows
-:description: Creates build, deploy, undeploy, and security GitHub Actions workflows for a Spring Boot service with OIDC cloud auth and optional Sonar/Hilla.
+:description: Creates or updates build, deploy, undeploy and security GitHub Actions workflows for a Spring Boot service, honouring visibility, ci-tests and pages.
 :keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks, hilla, vaadin, codeql, dependabot, osv-scanner, gitleaks
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -16,6 +16,15 @@ GPG-signed — it is built into a container image and deployed — so the publis
 replaced by image build, OpenTofu apply, and teardown. The shared stages (test, analyse, Sonar, Antora, GitHub
 Pages) follow the same house pattern, so the two remain recognisably related.
 
+The skill announces whether it is creating the workflows from scratch or updating existing ones, and asks per
+existing file whether to Update, Keep as is, Replace, or Stop (or applies `on-existing`). It also resolves
+visibility-aware CI choices: `visibility`, `sonar`, `ci-tests` (`unit` runs Surefire only with `-DskipITs`; `full`
+also runs Failsafe against Testcontainers) and `pages` (`no` uploads the built docs as a workflow artifact instead of
+publishing to GitHub Pages). For private or internal repositories it states the Actions-minutes cost
+(2,000/month on Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud; Linux 2-core $0.006/min) and that GitHub
+Pages needs Pro, Team or Enterprise Cloud and is public on the internet unless Enterprise Cloud access control is
+used.
+
 The `build.yml` Sonar step is no longer offered reactively: it reads the manifest's `sonar.mode`
 (`cloud`/`self-hosted`/`none`, defaulting to `cloud` for a manifest written before the field existed) as the source
 of truth and drops the step entirely — rather than disabling it with a permanently-false condition — when
@@ -30,10 +39,11 @@ compiled helpers that only exist once Maven has reached `vaadin:prepare-frontend
 
 |`build.yml`
 |Push to the integration/main branch, and every pull request
-|Build, unit tests (Surefire), Testcontainers integration tests (Failsafe), static analysis, aggregated coverage,
-Sonar (when `sonar.mode` isn't `none`), frontend Vitest tests and coverage (when `frontend: hilla`), and — on the
-main branch only — the Antora site plus the generated OpenAPI, protobuf, GraphQL and AsyncAPI HTML, published to
-GitHub Pages
+|Build, unit tests (Surefire), Testcontainers integration tests (Failsafe, only when `ci.tests: full`), static
+analysis, aggregated coverage, Sonar (when `sonar.mode` isn't `none`), frontend Vitest tests and coverage (when
+`frontend: hilla`), and — on the main branch only — the Antora site plus the generated OpenAPI, protobuf, GraphQL and
+AsyncAPI HTML, published to GitHub Pages when `ci.pages: yes`, otherwise uploaded as a `documentation` workflow
+artifact
 
 |`deploy.yml`
 |`workflow_dispatch` with an environment input, optionally on release published
@@ -84,8 +94,9 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 
 |`stack-file`
 |No
-|`args` `key: value` line giving the manifest path. Read for the cloud, the Java version, `sonar.mode` (and its
-`organization`/`projectKey`/`hostUrl`), `frontend` (`none`/`hilla`), and the technologies in play.
+|`args` `key: value` line giving the manifest path. Read for the cloud, the Java version, `visibility`, the `ci:`
+block (`ci.tests`, `ci.pages`), `sonar.mode` (and its `organization`/`projectKey`/`hostUrl`), `frontend`
+(`none`/`hilla`), and the technologies in play.
 |`springboot-stack.yml` at the repository root
 
 |`integration-branch`, `main-branch`
@@ -100,6 +111,27 @@ via `args` is asked with `AskUserQuestion`, except when this skill runs unattend
 xref:skills/iru-setup-java-springboot.adoc[]'s Step 8, where the default stands without asking.
 |`yes` for all four
 
+|`visibility`, `ci-tests`, `pages`, `sonar`
+|No
+|`args` `key: value` lines overriding the manifest's `visibility` (`public`/`private`/`internal`), `ci.tests`
+(`unit`/`full`), `ci.pages` (`yes`/`no`) and `sonar.mode` (`cloud`/`self-hosted`/`none`). Resolution order is `args`,
+then manifest, then (for `visibility`) `gh repo view --json visibility`, then asking. Public repositories get
+`pages: yes` without asking; private/internal ones are asked, with No recommended. Values resolved by asking are
+offered back to the manifest; an `args` override applies to this run only unless the user agrees.
+|Manifest values
+
+|`mode`
+|No
+|`new` or `existing`. Informational only: `mode: existing` does not mean "update silently" — existing files are
+still asked about.
+|None
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. Applied to every pre-existing workflow/config file without asking (the
+warning is still printed).
+|`ask`
+
 |On-disk survey
 |Yes
 |The workflows must match reality, so the skill reads: the reactor's modules and the `boot` directory, where
@@ -113,16 +145,19 @@ GitHub Environments exist, and how heavy the compose stack is.
 
 |Existing workflow files
 |No
-|If any exists, `AskUserQuestion` asks whether to stop or update it, preserving steps this skill doesn't own (a Slack
-notification, an extra matrix leg).
+|Covers `build.yml`, `deploy.yml`, `undeploy.yml`, `security.yml` and `.github/dependabot.yml`. For each that exists,
+the skill warns, states where it contradicts this run's choices, and asks (unless `on-existing` is set): **Update**
+(merge, keeping steps this skill doesn't own such as a Slack notification or an extra matrix leg), **Keep as is**,
+**Replace** (regenerate from the template, losing customizations), or **Stop**.
 |None — user must choose
 |===
 
 == Outputs
 
 * `.github/workflows/build.yml` — a `build` job (checkout with full history for Sonar blame, JDK with Maven cache,
-  `mvn clean verify`, the site report, the Sonar scan skipped on fork pull requests, and test reports uploaded even
-  on failure) plus a `docs` job gated to main-branch pushes. The `docs` job generates the Maven site and the
+  `mvn clean verify` — or `mvn clean verify -DskipITs` with `ci.tests: unit` — the site report, the Sonar scan skipped on fork pull requests, and test reports uploaded even
+  on failure) plus a `docs` job gated to main-branch pushes (renamed `Build documentation` and ending in an artifact upload rather
+  than a `gh-pages` deploy when `ci.pages: no`, in which case it also drops `contents: write` and the `.nojekyll` touch). The `docs` job generates the Maven site and the
   OpenAPI/protobuf documentation, then runs the two npm-driven generators as their own steps against the
   toolchains committed in `apis/messaging/docs` and `apis/graphql-server/docs` — validating and rendering the
   AsyncAPI specification, and rendering the GraphQL SDL through SpectaQL and (optionally) Voyager. It then builds
@@ -154,9 +189,12 @@ notification, an extra matrix leg).
   isn't `none`, and a further `npm` entry per documentation toolchain (`docs/`, `apis/messaging/docs/`,
   `apis/graphql-server/docs/`) that already has its own committed `package-lock.json`.
 * A report including the full table of required repository secrets, environment secrets, environment variables, and
-  GitHub Environments — plus the settings that are easy to miss: GitHub Pages served from `gh-pages`, an OIDC trust
+  GitHub Environments — plus the settings that are easy to miss: GitHub Pages served from `gh-pages` (only when `ci.pages: yes`), an OIDC trust
   policy scoped to the repository *and* the environment, and (for `security.yml`) Code scanning and Dependency
-  graph enabled in repository settings so CodeQL and dependency review have somewhere to report into.
+  graph enabled in repository settings so CodeQL and dependency review have somewhere to report into. The report also
+  states whether the run created or updated the workflows, the action taken per file (created / updated / replaced /
+  kept as is, with each mismatch for kept files), how `visibility`, `ci.tests` and `ci.pages` were resolved, and the
+  Actions-minutes note for private/internal repositories.
 
 == Execution flow
 
@@ -164,11 +202,12 @@ notification, an extra matrix leg).
 ....
 flowchart TD
     A["Start /iru-setup-java-springboot-github-workflows"] --> B["Step 0: Read the manifest; survey the reactor,\nSonar config, Antora setup, infra/envs,\nGitHub Environments, compose stack weight"]
-    B -- compose stack too heavy for a standard runner --> C["Flag now; offer a larger runner\nor a per-module IT matrix"]
-    B -- a workflow already exists --> D{"Stop or update?"}
-    D -- stop --> STOP[Report which exist; stop]
-    D -- update --> E
-    B --> E["Step 1: Write build.yml\n(build job + main-branch-only docs job:\nMaven site, OpenAPI/protobuf docs, AsyncAPI\nand GraphQL html, Antora, merge into ./doc)"]
+    B --> B2["Resolve CI choices (visibility, sonar,\nci-tests, pages); announce scratch vs update"]
+    B2 -- compose stack too heavy and ci-tests full --> C["Flag now; offer a larger runner\nor a per-module IT matrix"]
+    B2 -- a workflow file already exists --> D{"Per file: Update /\nKeep as is / Replace / Stop?\n(or on-existing)"}
+    D -- stop --> STOP[Stop without changing any file]
+    D -- update, keep or replace --> E
+    B2 --> E["Step 1: Write build.yml\n(unit vs full tests, Pages vs artifact)\n(build job + main-branch-only docs job:\nMaven site, OpenAPI/protobuf docs, AsyncAPI\nand GraphQL html, Antora, merge into ./doc)"]
     C --> E
     E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check)"]
     F --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy)"]
@@ -191,7 +230,8 @@ None. It reads `springboot-stack.yml` and surveys the repository, then writes wo
 === Invoked by
 
 * xref:skills/iru-setup-java-springboot.adoc[] — Step 8, sixth of seven sub-skills, via the
-  `iru-isolated-skill-executor` agent. Runs late because it surveys what is actually on disk — the reactor, the
+  `iru-isolated-skill-executor` agent (skipped entirely when the manifest has `ci.enabled: false`; it reads `visibility`,
+  `ci.tests` and `ci.pages` from the manifest, so only `mode` and, if applicable, `on-existing` are forwarded). Runs late because it surveys what is actually on disk — the reactor, the
   Antora setup, and the `infra/envs/` directories from
   xref:skills/iru-setup-java-springboot-platform.adoc[].
 

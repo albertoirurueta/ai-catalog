@@ -34,7 +34,7 @@ holding the Spring Boot best practices and architectural patterns a task must be
 plain-Java counterpart, xref:skills/iru-java-code-one-task.adoc[], now ships one too, covering the language-level
 code agreements (`var`, `final`, declaration order, Javadoc, tests); those still apply here, and the files below
 add the architecture-specific rules on top of them rather than replacing them. It is read
-by **progressive disclosure**: `reference/README.md` is a short routing table, two files are always read, and the
+by **progressive disclosure**: `reference/README.md` is a short routing table, three files are always read, and the
 other three only when the task's shape calls for them. Reading all six on every task is the context waste the
 split exists to avoid.
 
@@ -48,12 +48,25 @@ split exists to avoid.
 piece of work go" lookup, the inside-out order for a cross-module task, and why ports are named for intent rather
 than technology.
 
+|`mandatory-rules.md`
+|Always
+|The non-negotiable rules for production *and* test code, which take precedence over "match the surrounding
+code": JUnit assertions never AssertJ, Mockito mocks or spies never hand-written fakes,
+`methodBeingTested_whenCondition_expectedResult` test names, one `*Test` (unit) / `*IT` (integration) class per
+public class, `var` with explicit type witnesses, records defensively copying collections, `final` parameters,
+Javadoc on every type, method, constructor, and field (private and test sources included), named constants,
+`getFirst()`/`getLast()`, method references, `switch` expressions, stream predicates, no redundant `this`, Spring
+utility predicates, LF line endings — plus the Spring-only rules: pinned locales and Lombok
+`@RequiredArgsConstructor`/`@Slf4j` for constructors and loggers. They bind the code the task writes or rewrites;
+pre-existing violations in touched files are left alone and named in the report.
+
 |`code-style.md`
 |Always
 |Records for immutable types (with defensive copying and compact-constructor validation), Lombok where it earns
 its place and where it hurts, MapStruct only for simple mappers, `var` type inference, `final` wherever possible,
 the public-to-private member ordering every type follows (shared with `iru-java-code-one-task`, which documents it
-in full), and full Javadoc on everything.
+in full), and full Javadoc on everything. Where it says to match a module's existing style,
+`mandatory-rules.md` is the exception.
 
 |`ddd-tactical-patterns.md`
 |The task touches `domain`
@@ -113,10 +126,13 @@ report rather than guessing at what the reference would have said.
 
 == Outputs
 
-* The implementation, in whichever module Step 2 resolved — with no outward-pointing import, full Javadoc on every
-  type and public/protected member, and no `<version>` added to any module pom.
-* Unit tests covering the new behaviour and the edge cases implied by the Javadoc `@throws` contracts: plain JUnit
-  plus Mockito with no Spring context for `domain`/`application`, and mapper/translation/conversion tests for
+* The implementation, in whichever module Step 2 resolved — with no outward-pointing import, every line following
+  `reference/mandatory-rules.md`, full Javadoc on every type, method, constructor, and field (private ones
+  included), and no `<version>` added to any module pom.
+* Unit tests covering the new behaviour and the edge cases implied by the Javadoc `@throws` contracts, written to
+  `reference/mandatory-rules.md` (JUnit 5 assertions, Mockito mocks or spies instead of fakes, one `<ClassName>Test`
+  per public class, `methodBeingTested_whenCondition_expectedResult` names, Javadoc on the test class and every
+  member): plain JUnit plus Mockito with no Spring context for `domain`/`application`, and mapper/translation/conversion tests for
   `infrastructure`/`api`. In `infrastructure/clients/<name>` that means mocking the *generated* client with Mockito
   and testing the adapter's own mapping and error translation around it — never starting the compose stack's API
   mock, which is a container and therefore the group's business, even though it starts far faster than a database.
@@ -126,14 +142,15 @@ report rather than guessing at what the reference would have said.
   "group validation pending" marker — edited in place, touching only this task's own line(s), so a sibling task in
   a parallel bucket can't be clobbered.
 * A report naming the modules touched, the ports added or implemented, the unit-test result, anything deliberately
-  left to the group's integration pass, any blocker, and any deviation from `reference/` made on purpose.
+  left to the group's integration pass, any blocker, and any deviation from `reference/` made on purpose, and any pre-existing violation of `reference/mandatory-rules.md`
+  noticed in the touched files and left alone as out of scope.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-java-springboot-code-one-task"] --> B["Step 1: Read reference/README.md,\nthen only the files this task needs"]
+    A["Start /iru-java-springboot-code-one-task"] --> B["Step 1: Read reference/README.md, the three always-read files\n(incl. mandatory-rules.md), then only what this task needs"]
     B -- reference/ missing --> B2["Fall back to CLAUDE.md + surrounding style;\nreport it"]
     B2 --> C
     B --> C["Step 2: Resolve target module,\nits allowed imports, and cross-module order"]
@@ -148,7 +165,7 @@ flowchart TD
     H --> I
     F --> I["Step 7: Flip this task's checkbox\nwith 'group validation pending'"]
     STOP --> J["Step 8: Report as blocked;\nleave the checkbox untouched"]
-    I --> K["Step 8: Report modules, ports, tests,\ndeferrals and deviations"]
+    I --> K["Step 8: Report modules, ports, tests,\ndeferrals and deviations,\nand pre-existing mandatory-rules violations left alone"]
 ....
 
 == Dependencies

@@ -17,10 +17,14 @@ manifest. Rather than duplicating the flavor's own scaffold logic, documentation
 CI/CD workflows, changelog bootstrapping, and README generation, it gathers the shared inputs — project identity
 (package name or app name/bundle-id prefix, license, developer name/email/organization URL), flavor-specific
 inputs (platforms, minimum deployment targets, generator, signing), and pipeline parameters (branching model,
-integration/stable branch, macOS runner, open-source/publish/distribution/sonar) — once, and passes each
-downstream skill only the `args` keys its own Step 0 accepts. In `mode: existing` it skips the scaffold entirely
-when a scaffold manifest already exists, so every downstream step takes its own update/gap-fill path instead of
-assuming a brand-new repository.
+integration/stable branch, macOS runner, open-source/visibility/publish/distribution/sonar, and the cost-aware
+CI choices `ci`, `ci-tests` and `pages`) — once, and passes each downstream skill only the `args` keys its own
+Step 0 accepts. It announces up front whether it is setting the repository up from scratch or updating an existing
+one (with an absent/present/partial inventory of every component it owns). It never skips the scaffold itself:
+every sub-skill warns about and asks Update / Keep as is / Replace for each pre-existing file it owns (or applies
+`on-existing` from `args` in scripted runs), and the final report states per component whether it was created,
+updated, replaced, kept as is, or skipped (`ci: no`). Because macOS runner minutes cost roughly 10x Linux minutes
+on private repositories, the CI questions are asked with visibility-aware cost guidance.
 
 == Purpose group
 
@@ -54,13 +58,15 @@ stable branch, no `sync.yml`).
 |`mode`
 |No
 |`new` or `existing`. Defaults to `existing` (confirmed) when the flavor's scaffold manifest already exists at
-the repository root, otherwise `new` without asking.
+the repository root, otherwise `new` without asking. No longer decides what happens to individual files: any
+owned artifact already on disk is handled by its owning sub-skill's Update / Keep as is / Replace question.
 |Detected, else `new`
 
 |`package-name` (library) / `app-name` + `bundle-id-prefix` (app)
 |Yes
 |Free-text project-identity fields specific to the resolved flavor, asked in Step 2 using exactly the key names
-the scaffold skill reads.
+the scaffold skill reads. Skipped entirely in `mode: existing` when the scaffold manifest is on disk (identity is
+read from it).
 |None
 
 |`license`, `developer-name`, `developer-email`, `organization-url`
@@ -101,9 +107,43 @@ deliberately left for `iru-setup-apple-app` to resolve from local simulator runt
 |`open-source`, `publish` (library), `distribution` (app), `sonar` (+ detail keys)
 |No
 |Shared open-source-driven pipeline vocabulary, resolved via `AskUserQuestion` with open-source-dependent
-recommended defaults; passed through unchanged to Steps 5 and 8.
-|`publish`/`distribution` default `yes`/`store` when open source; `sonar` defaults `cloud` when open source,
-otherwise asked with `none` recommended
+recommended defaults; passed through unchanged to Steps 5 and 8. `sonar: cloud` is recommended only for a public
+open-source repository (SonarCloud needs a paid plan for private projects); with `ci: no` it recommends `none`.
+|`publish`/`distribution` default `yes`/`store` when open source; `sonar` defaults `cloud` when open source and
+public, otherwise asked with `none` recommended
+
+|`visibility`
+|No
+|`public`, `private` or `internal` (behaves like `private` for every cost decision). Taken from `args`, else
+detected with `gh repo view --json visibility`, else asked (Public recommended when open source). Warns when an
+open-source project is private/internal.
+|Detected, else asked
+
+|`ci`
+|No
+|`yes`/`no` -- whether GitHub Actions workflows are generated at all. Asked with the cost facts (free on public
+repositories; included minutes on private ones; macOS minutes about 10x Linux). `no` skips Step 8 entirely
+(no workflows, `security.yml`, Dependabot config or `sync_versions.py`) and `ci-tests`/`pages` are not asked.
+|`yes` recommended for public; asked for private
+
+|`ci-tests`
+|No
+|`unit` (unit-test targets only; UI-test bundles/integration targets stay local) or `full` (adds UI tests).
+Only meaningful when `ci: yes`.
+|`full` recommended for public, `unit` for private/internal
+
+|`pages`
+|No
+|`yes`/`no` -- deploy the DocC + Antora site to GitHub Pages, or only upload it as a workflow artifact. Only
+meaningful when `ci: yes`. Defaulted to `yes` without asking for public repositories; private asks with `no`
+recommended (Pages on private repos needs a paid plan and the site is public).
+|`yes` public; asked for private
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` -- how every sub-skill treats prior setup it finds. Never asked here; forwarded
+to the sub-skills only when supplied via `args`.
+|`ask` (each sub-skill asks)
 
 |`xcode-version`, `release-please`, `formatter`, `package-resolved`, `security-*` opt-outs
 |No
@@ -114,19 +154,21 @@ when the key isn't supplied.
 
 == Outputs
 
+* A "Setup mode" announcement (from scratch vs. updating, with a component inventory) before any question.
 * The flavor's own scaffold: `Package.swift` + `Sources/`/`Tests/` (via `iru-setup-swift-library`), or the
-  generator manifest + `Packages/Core` + `Targets/` + `fastlane/Fastfile` (via `iru-setup-apple-app`) — skipped
-  in `mode: existing` when the manifest already exists.
+  generator manifest + `Packages/Core` + `Targets/` + `fastlane/Fastfile` (via `iru-setup-apple-app`) — always
+  invoked; the scaffold skill decides per existing file whether to update, keep or replace it.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * A root `.gitignore` covering `.build/`, `DerivedData/`, `*.xcresult`, generated `*.xcodeproj`/`*.xcworkspace`,
   signing material, and the Antora build output (via `iru-setup-swift-gitignore`).
 * `build.yml`/`release.yml` (+ `sync.yml` and `.github/scripts/sync_versions.py` for gitflow), `security.yml`,
-  and `.github/dependabot.yml` (via `iru-setup-swift-github-workflows`).
+  and `.github/dependabot.yml` (via `iru-setup-swift-github-workflows`) — all skipped when `ci: no`.
 * A root `CHANGELOG.md` backfilled from git tag/GitHub Release history (via `iru-setup-changelog`).
 * A root `README.md` with badges, a project-status table, documentation links, and installation instructions
   (via `iru-setup-readme`).
-* A final report summarizing the resolved flavor/branching/mode, identity/license/pipeline parameters, which
-  files were created versus left untouched, the consolidated required-secrets/settings table, every decision
+* A final report summarizing the resolved flavor/branching/mode, identity/license/pipeline parameters
+  (`visibility`, `ci`, `ci-tests`, `pages` included), a per-component table of whether each was created, updated,
+  replaced, kept as is (with any listed mismatches) or skipped (`ci: no`), the consolidated required-secrets/settings table, every decision
   made on the user's behalf, and explicit warnings to review every generated file before building, committing,
   or relying on CI.
 
@@ -136,23 +178,26 @@ when the key isn't supplied.
 ....
 flowchart TD
     A[Start /iru-setup-swift-repository] --> B["Step 0: Parse args\n(key: value lines)"]
-    B --> C["Step 1: Resolve flavor,\nbranching and mode\n(survey disk, AskUserQuestion)"]
-    C --> D["Step 2: Collect project identity\n(package-name or app-name/bundle-id,\nlicense, developer info)"]
-    D --> E["Step 3: Collect flavor-specific inputs\n(platforms, min-deployment-target(s),\ngenerator/signing for app)"]
-    E --> F["Step 4: Collect shared pipeline\nparameters (branches, runner,\nopen-source, publish/distribution, sonar)"]
-    F --> G{"Step 5: mode existing\nand scaffold manifest\nalready exists?"}
-    G -- yes --> H["Skip scaffold;\nnote as left untouched"]
-    G -- no --> I["Run flavor's scaffold skill\n(iru-setup-swift-library or\niru-setup-apple-app, via sub-agent)"]
-    I -- scaffold existed,\nuser chose stop --> J[Stop entire pipeline; report]
-    I -- ok --> K
-    H --> K["Step 6: Run setup-antora\n(documentation site, via sub-agent)"]
+    B --> C["Step 1: Resolve flavor,\nbranching and mode;\nprint Setup mode announcement\n(from scratch or update + inventory)"]
+    C --> D{"mode existing and\nscaffold manifest on disk?"}
+    D -- yes --> D1["Step 2: Skip identity questions\n(read from manifest)"]
+    D -- no --> D2["Step 2: Collect project identity\n(package-name or app-name/bundle-id,\nlicense, developer info)"]
+    D1 --> E
+    D2 --> E["Step 3: Collect flavor-specific inputs\n(platforms, min-deployment-target(s),\ngenerator for app)"]
+    E --> F["Step 4: Collect shared pipeline parameters\n(branches, runner, open-source, visibility,\npublish/distribution, signing, ci, sonar,\nci-tests, pages)"]
+    F --> I["Step 5: Run flavor's scaffold skill\n(iru-setup-swift-library or\niru-setup-apple-app, via sub-agent;\nasks Update / Keep / Replace per file)"]
+    I -- "user chose stop,\nno manifest on disk" --> J[Stop entire pipeline; report]
+    I -- "ok, or stop but\nmanifest exists" --> K["Step 6: Run setup-antora\n(documentation site, via sub-agent)"]
     K --> L["Step 7: Run setup-swift-gitignore\n(root .gitignore, via sub-agent)"]
-    L --> M["Step 8: Run setup-swift-github-workflows\n(CI/CD + security workflows, via sub-agent)"]
-    M -- workflows existed,\nuser chose stop --> N["Note in report;\nSteps 5-7 still valid"]
-    M -- ok --> O
-    N --> O["Step 9: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
+    L --> M{"Step 8: ci is no?"}
+    M -- yes --> M1["Skip workflows entirely;\nrecord skipped (ci: no)"]
+    M -- no --> M2["Run setup-swift-github-workflows\n(CI/CD + security workflows, via sub-agent)"]
+    M2 -- "workflows existed,\nuser chose stop" --> N["Note in report;\nSteps 5-7 still valid"]
+    M2 -- ok --> O
+    N --> O
+    M1 --> O["Step 9: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
     O --> P["Step 10: Run setup-readme\n(root README.md, via sub-agent)"]
-    P --> Q["Step 11: Report combined outcome,\nsecrets table, decisions and warnings"]
+    P --> Q["Step 11: Report per-component outcome,\nsecrets table, decisions and warnings"]
 ....
 
 == Dependencies
@@ -168,28 +213,33 @@ previous one's files being on disk:
 
 * xref:skills/iru-setup-swift-library.adoc[] — Step 5, `flavor: library`: writes `Package.swift` and the source
   folders, passing Steps 2–4's answers (`package-name`, `platforms`, `min-deployment-targets`, license, developer
-  fields, `open-source`, `publish`, `sonar` + detail keys, `formatter` if supplied, `mode`) as `args`.
+  fields, `open-source`, `publish`, `sonar` + detail keys, `formatter` if supplied, `visibility`, `ci`,
+  `on-existing` if supplied, `mode`) as `args`. Always invoked, even when `Package.swift` already exists.
 * xref:skills/iru-setup-apple-app.adoc[] — Step 5, `flavor: app`: writes the generator manifest,
   `Packages/Core`, per-platform `Targets/`, and `fastlane/Fastfile`, passing the app-specific identity
   (`app-name`, `bundle-id-prefix`), `platforms`, `generator`, `distribution`, `signing`, license, developer
-  fields, `open-source`, `sonar` + detail keys, and `mode` as `args`.
+  fields, `open-source`, `sonar` + detail keys, `visibility`, `ci`, `on-existing` if supplied, and `mode` as
+  `args`. Always invoked, even when the generator manifest already exists.
 * xref:skills/iru-setup-antora.adoc[] — Step 6: scaffolds the Antora documentation site, invoked with no `args`
-  since it derives the component name/title/version directly from the manifest Step 5 just wrote (or an initial
+  (only `on-existing` when supplied) since it derives the component name/title/version directly from the manifest Step 5 just wrote (or an initial
   `1.0.0` if no tags/releases exist yet). Run before Step 8 so that skill's own docs-site check finds everything
   in place.
 * xref:skills/iru-setup-swift-gitignore.adoc[] — Step 7: writes or updates the root `.gitignore`, passing
   `flavor` (so its `Package.resolved` recommendation matches the project shape) and `package-resolved` only if
-  supplied; `mode` is deliberately not passed since the skill's own `.gitignore`-presence check is the more
+  supplied, plus `on-existing` if supplied; `mode` is deliberately not passed since the skill's own `.gitignore`-presence check is the more
   precise signal.
-* xref:skills/iru-setup-swift-github-workflows.adoc[] — Step 8: writes the CI/CD + security workflows, passing
+* xref:skills/iru-setup-swift-github-workflows.adoc[] — Step 8, skipped entirely when `ci: no`: writes the
+  CI/CD + security workflows, passing
   `flavor`, `platforms`, `branching`, `integration-branch` (gitflow only), `stable-branch`, `runner`,
   `xcode-version` if supplied, `generator`/`signing` (app only), `release-please` if supplied (library only),
-  `open-source`, `publish`/`distribution`, `sonar` + detail keys, and `mode` as `args`.
+  `open-source`, `publish`/`distribution`, `sonar` + detail keys, `visibility`, `ci-tests`, `pages`,
+  `security-*` if supplied, `on-existing` if supplied, and `mode` as `args`.
 * xref:skills/iru-setup-changelog.adoc[] — Step 9: bootstraps the root `CHANGELOG.md`, invoked with no `args`
-  since it works from the repository's own git tag/GitHub Release history; position relative to Steps 5–8
+  (only `on-existing` when supplied) since it works from the repository's own git tag/GitHub Release history; position relative to Steps 5–8
   doesn't matter functionally.
-* xref:skills/iru-setup-readme.adoc[] — Step 10, last: bootstraps the root `README.md`, invoked with no `args`
-  since it explores the finished state left by every earlier step.
+* xref:skills/iru-setup-readme.adoc[] — Step 10, last: bootstraps the root `README.md`, passing `sonar`, `ci`,
+  `pages` (only when `ci: yes`) and `on-existing` if supplied, and otherwise exploring the finished state left by
+  every earlier step.
 
 === Invoked by
 

@@ -17,7 +17,7 @@ Scaffold (or update) the `build.yml`, `release.yml`, `sync.yml` (gitflow only), 
 `xcodebuild test -enableCodeCoverage YES` run per selected platform destination, piped through `xcbeautify`,
 converted to Sonar's generic XML via SonarSource's `xccov-to-sonarqube-generic.sh`), an optional
 SonarQube/SonarCloud scan, a DocC + Antora documentation build published to GitHub Pages from the stable
-branch, a release workflow (library: verifies the release tag is valid semver and the manifest still parses,
+branch (or, with `pages: no`, built and uploaded as a `docs-site` workflow artifact without publishing), a release workflow (library: verifies the release tag is valid semver and the manifest still parses,
 plus an optional `release-please` job; app: archives, signs via `fastlane match` or an App Store Connect API
 key, exports, uploads to TestFlight, and — for macOS — exports with Developer ID, notarizes and staples), a gitflow-only `sync.yml` that merges a
 released branch back into the integration branch and bumps the development version (reusing
@@ -26,8 +26,13 @@ released branch back into the integration branch and bumps the development versi
 Java/TypeScript/Android siblings, no single real Swift repository exists to genericize these templates from —
 they are assembled instead from this catalog's own already-verified `iru-setup-swift-library`/
 `iru-setup-apple-app`/`iru-swift-coverage`/`iru-swift-bump-version` commands, plus this skill's own verification
-pass. If any relevant workflow file already exists, it asks the user whether to stop or attempt an update using
-the templates as reference, preserving any step this skill doesn't own.
+pass. It announces whether it is creating the pipeline from scratch or updating an existing one. It creates every
+workflow that doesn't exist, and for each one that already exists it warns and asks Update (merge using the
+templates as reference, keeping foreign steps and jobs) / Keep as is (listing every mismatch with this run's
+choices) / Replace (regenerate; customizations lost) / Stop, or applies `on-existing` from `args`. Because nearly
+every job runs on macOS runners (about 10x the cost of Linux minutes, billed against included minutes on private
+repositories), it resolves `visibility` and asks `sonar`, `ci-tests` and `pages` with those cost facts; `ci-tests:
+unit` skips the app's XCUITest bundles (or a library integration-test target) in CI.
 
 == Purpose group
 
@@ -52,27 +57,38 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 `xcode-version`, `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`), `generator`
 (`xcodegen`/`tuist`, app only), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please`
 (library only), plus this catalog's shared workflow-args vocabulary (`open-source`, `publish`, `distribution`,
-`sonar` + coordinates, `mode`, and the four `security-*` opt-outs). When an orchestrating skill (such as
+`sonar` + coordinates, `mode`, and the four `security-*` opt-outs), plus `visibility`
+(`public`/`private`/`internal`, driving the Actions-minutes, SonarCloud and Pages guidance), `ci-tests` (`unit` or
+`full`), `pages` (`yes`/`no`) and `on-existing` (`ask`/`keep`/`update`/`replace`). When an orchestrating skill (such as
 `iru-setup-swift-repository`) supplies these, the corresponding fact-finding step in Step 1's survey is skipped
 for that value.
 |None — if `args` is absent or doesn't match this `key: value` format, every parameter is instead resolved by
 surveying `Package.swift`/`project.yml`/`Project.swift`/`fastlane/Fastfile`/`sonar-project.properties` and the
 repository, asking the user directly (via `AskUserQuestion` for bounded choices) for anything that can't be
 inferred — `flavor` defaults to auto-detected from the repository shape, `runner` defaults to `macos-26`,
-`branching` defaults to `gitflow`.
+`branching` defaults to `gitflow`. Stand-alone, `visibility` comes from `gh repo view --json visibility` (else
+asked); `sonar` is recommended `cloud` only for a public open-source repository (otherwise `none`, with the paid
+plan caveat); `ci-tests` defaults to `full` for public and `unit` recommended for private/internal; `pages`
+defaults to `yes` for public without asking, and for private/internal is asked with `no` recommended. `ci` is never
+asked -- invoking this skill means CI is wanted. `on-existing` defaults to `ask`. `mode` is informational only
+and no longer short-circuits the per-file question.
 |===
 
 == Outputs
 
-* `.github/workflows/build.yml`, `release.yml`, and (gitflow only) `sync.yml` — created fresh, or updated in
-  place if any already existed and the user chose to continue.
+* `.github/workflows/build.yml`, `release.yml`, and (gitflow only) `sync.yml` — created fresh, or updated, replaced or kept
+  as is per file when it already existed (the user's Update / Keep as is / Replace choice, or `on-existing`).
+  `build.yml` honours `ci-tests` (UI-test bundles or integration targets skipped when `unit`) and `pages` (a
+  `docs-site` artifact upload instead of the Pages deploy job when `no`).
 * `.github/workflows/security.yml` and `.github/dependabot.yml` — always written (or updated), independent of
   `flavor`/`branching`.
 * `.github/scripts/sync_versions.py`, always written together with `sync.yml` — never one without the other,
   and never for `main-only`.
 * `.github/scripts/lcov_to_sonar_generic.py` — only when `flavor: library` and `sonar` isn't `none` (the app
   flavor instead fetches SonarSource's own `xccov-to-sonarqube-generic.sh` at CI time).
-* A report of which files were created/updated/left untouched, open gaps (missing `docs/antora.yml`, a
+* A report of the mode announced (from scratch or update), the action taken per file (created / updated /
+  replaced / kept as is, with each mismatch listed for a kept file), how `visibility`, `ci-tests` and `pages` were
+  applied, open gaps (missing `docs/antora.yml`, a
   `Packages/Core` with no `swift-docc-plugin` dependency, a `<team-id>` the user still needs to supply, version
   wording that didn't match `sync_versions.py`'s regexes), the required-secrets table below, and warnings about
   what this skill's own verification pass could not exercise locally (no `brew` — SwiftLint, `xcbeautify`,
@@ -135,23 +151,31 @@ authenticate an upload or a notarization
 
 `sync.yml` also needs the repository setting under Settings -> Actions -> General -> "Workflow permissions" set
 to allow GitHub Actions to create pull requests. The Pages deploy job needs Settings -> Pages -> "Build and
-deployment" -> Source set to GitHub Actions.
+deployment" -> Source set to GitHub Actions -- only when `pages: yes`; on a private or internal repository that
+also needs a GitHub Pro, Team or Enterprise Cloud plan, and the published site is public unless Enterprise Cloud
+private access control is used.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-setup-swift-github-workflows"] --> B["Step 0: Resolve inputs\n(parse args, else survey /\nAskUserQuestion)"]
-    B --> C["Step 1: Survey repo\n(flavor, platforms, generator,\nsigning, sonar, branches,\nexisting workflows)"]
-    C --> D{"Do build.yml/release.yml/\nsync.yml already exist?"}
-    D -- none exist --> F["Step 2: Look up action/tool\nversions at run time"]
-    D -- any exists --> E{"Stop or continue\n(user choice)?"}
-    E -- stop --> Z["Report which files exist;\nno changes made"]
-    E -- continue --> F
+    A["Start /iru-setup-swift-github-workflows"] --> B["Step 0: Resolve inputs\n(parse args; stand-alone resolve\nvisibility, sonar, ci-tests, pages)"]
+    B --> C["Step 1: Survey repo\n(flavor, platforms, generator,\nsigning, sonar, branches,\ntest targets, existing workflows)"]
+    C --> D{"Do any workflow\nfiles already exist?"}
+    D -- none exist --> D1["Announce: creating the\npipeline from scratch"]
+    D -- any exists --> D2["Announce: updating an\nexisting pipeline; list files"]
+    D2 --> E{"on-existing set to\nkeep, update or replace?"}
+    E -- yes --> E1["Apply it to every\nexisting file"]
+    E -- no --> E2{"AskUserQuestion per file:\nUpdate / Keep as is /\nReplace / Stop"}
+    E2 -- Stop --> Z["Report which files exist;\nno changes made"]
+    E2 -- other --> E3[Record per-file decision]
+    D1 --> F
+    E1 --> F
+    E3 --> F["Step 2: Look up action/tool\nversions at run time"]
     F --> G{"flavor?"}
-    G -- library --> H["Step 4: Render build.yml\n(SwiftLint, cached swift test,\nlcov coverage, optional Linux leg,\nDocC + Antora + Pages)"]
-    G -- app --> I["Step 5: Render build.yml\n(xcodegen/tuist generate,\nxcodebuild test per platform,\nxccov coverage, DocC + Antora + Pages)"]
+    G -- library --> H["Step 4: Render build.yml\n(SwiftLint, cached swift test,\nci-tests skips, lcov coverage,\noptional Linux leg,\nDocC + Antora, Pages or artifact)"]
+    G -- app --> I["Step 5: Render build.yml\n(xcodegen/tuist generate,\nxcodebuild test per platform with\nci-tests skips, xccov coverage,\nDocC + Antora, Pages or artifact)"]
     H --> J["Step 6: Render release.yml\n(verify semver tag + manifest,\noptional release-please)"]
     I --> K["Step 7: Render release.yml\n(archive, sign, export,\nTestFlight, notarize macOS)"]
     J --> L{"branching == gitflow?"}
@@ -159,8 +183,8 @@ flowchart TD
     L -- yes --> M["Step 8: Render sync.yml\n+ sync_versions.py"]
     L -- no --> N["Step 9: Render security.yml\n+ dependabot.yml"]
     M --> N
-    N --> O["Steps 12-13: Write files per\nflavor x branching matrix;\nverify (YAML lint, uses: refs,\nreal build/test run)"]
-    O --> P["Step 14: Report files written,\nrequired secrets, open gaps,\nwarnings"]
+    N --> O["Steps 12-13: Write files per decision\nand flavor x branching matrix;\nverify (YAML lint, uses: refs,\nreal build/test run)"]
+    O --> P["Step 14: Report mode, per-file action,\nrequired secrets, open gaps,\nwarnings"]
 ....
 
 == Dependencies

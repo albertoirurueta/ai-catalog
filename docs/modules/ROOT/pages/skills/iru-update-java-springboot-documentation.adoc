@@ -37,7 +37,7 @@ third-party service at build time, and that a sensitive model warrants self-host
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 
-Although grouped with the Spring Boot bootstrap family — it is the seventh sub-skill that orchestrator runs — this
+Although grouped with the Spring Boot bootstrap family — it is the last sub-skill that orchestrator runs — this
 is the one member of that family intended to be re-run continuously, in the same spirit as
 xref:skills/iru-update-docs.adoc[] in xref:index.adoc#group-maintenance[Repository Maintenance].
 
@@ -61,9 +61,21 @@ xref:skills/iru-update-docs.adoc[] in xref:index.adoc#group-maintenance[Reposito
 `database-model`, `apis/rest`, `apis/grpc`, `apis/graphql`, `apis/messaging`, `configuration`, or `metrics`.
 |Absent means every page
 
+|`mode`
+|No
+|`key: value` line, `new` or `existing`. Informational only: it never means "update silently".
+|None
+
+|`on-existing`
+|No
+|`key: value` line, `ask`, `keep`, `update` or `replace`. When set, applied to every existing page without asking (the
+warning is still printed). Any other `key: value` line is ignored.
+|`ask`
+
 |`springboot-stack.yml`
 |No
-|Read for the declared stack, as intent to be checked against the code rather than as truth.
+|Read for the declared stack, as intent to be checked against the code rather than as truth, including its `ci:`
+block (`enabled`, `pages`), which Step 7 uses to decide where the API reference links point.
 |`springboot-stack.yml` at the repository root
 
 |The codebase
@@ -76,9 +88,18 @@ exception-mapping advice, the Stream bindings, every `@ConfigurationProperties` 
 
 == Outputs
 
+Before writing, the skill announces whether it is creating the page set from scratch or updating existing
+documentation (listing the pages found). For existing pages it asks once: **Update** (refresh derived parts, keep
+hand-written prose, list contradictions), **Keep as is** (only create missing pages and nav entries), **Replace**
+(regenerate every page, losing hand-written prose) or **Stop**.
+
 * An Antora site with Kroki installed alongside Mermaid and the playbook amended (`kroki-fetch-diagram`,
   `kroki-server-url`), plus an `api-docs-url` attribute in `docs/antora.yml` — resolved from the GitHub Pages API,
-  the git remote, or a custom domain — through which every API page links to its generated reference.
+  the git remote, or a custom domain — through which every API page links to its generated reference. When the
+  manifest says docs are not deployed to Pages (`ci.pages: false` or `ci.enabled: false`) no github.io
+  `api-docs-url` is written: the API links are replaced by a pointer to the `documentation` workflow artifact (with
+  `ci.enabled: true`) or by local-build instructions naming the Maven command (with `ci.enabled: false`), and the
+  source contract link is kept.
 * `index.adoc` — the service overview: purpose, capabilities, dependencies, and pointers onward.
 * `architecture.adoc` — the module table and the two mechanisms enforcing it (the enforcer rules and the named
   ArchUnit test), the concurrency model and its consequences, a per-technology section, a Mermaid dependency
@@ -118,14 +139,19 @@ exception-mapping advice, the Stream bindings, every `@ConfigurationProperties` 
 * `metrics.adoc` — the metric table with type, every tag key and its possible values, cardinality risk flagged, and
   where to scrape and view them locally.
 * `nav.adoc` entries for every page created.
+* A report stating whether the page set was created or updated, the Step 0 option chosen, and per page created /
+  updated / replaced / kept as is, plus which `api-docs-url` variant was used.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-update-java-springboot-documentation"] --> B["Step 0: Resolve scope; read the manifest\nas intent; gather facts via the Explore agent"]
-    B --> C["Step 1: Ensure the site exists"]
+    A["Start /iru-update-java-springboot-documentation"] --> B["Step 0: Resolve scope; read the manifest\nas intent; announce scratch vs update;\ngather facts via the Explore agent"]
+    B -- pages exist, user chooses stop --> STOP[Stop without changes]
+    B -- pages exist --> B2["Update / Keep as is / Replace\n(or on-existing)"]
+    B2 --> C
+    B -- from scratch --> C["Step 1: Ensure the site exists"]
     C -- no docs/antora.yml --> D["Bootstrap via iru-setup-antora"]
     D --> E
     C --> E["Install Kroki; amend the playbook\nalongside Mermaid"]

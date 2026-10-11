@@ -18,7 +18,11 @@ absent, a Compose-by-default UI (or a classic AppCompat + ViewBinding `views` va
 JUnit 4 unit-test tooling, an instrumented-test skeleton, and an optional inline `sonar { properties {…} } }`
 block. It never writes a Maven Central publishing block — `iru-setup-android-library` is the companion skill for
 a library module. Every Gradle/Kotlin/plugin version is looked up at run time against the real package registries,
-falling back to a recorded, CI-verified combination when a lookup fails.
+falling back to a recorded, CI-verified combination when a lookup fails. It announces whether it is scaffolding from
+scratch or updating an existing Gradle project; for each file group it owns that already exists (each build file,
+the wrapper, the `app/` skeleton, `detekt.yml`) it warns and asks Update / Keep as is / Replace (and Stop on the
+first question), even under `mode: existing`, unless `on-existing` decides. It never overwrites hand-edited
+application source.
 
 == Purpose group
 
@@ -92,7 +96,20 @@ about any field already resolved this way.
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No
 |`cloud`, `self-hosted`, or `none` — whether/how to wire the `org.sonarqube` Gradle plugin and `sonar {}` block.
-|`cloud` if open source, otherwise `none` recommended
+|`cloud` only if open source and public, otherwise `none` recommended
+
+|`visibility`
+|No
+|`public`, `private` or `internal` (GitHub repository visibility). Only used to pick the `sonar` recommendation:
+SonarCloud is recommended only for a public open-source repository, since it is free only for public projects.
+|Unset (treated as matching `open-source`)
+
+|`ci`
+|No
+|`yes`/`no` — whether CI workflows will exist to send Sonar reports. With `no`, the skill says plainly that no CI
+step would send reports and recommends `sonar: none`; if Sonar is still chosen, only the `sonar {}` block is
+written and the report says nothing sends results.
+|Unset
 
 |`ui`
 |No
@@ -127,9 +144,17 @@ Publisher plugin).
 
 |`mode`
 |No
-|`new` follows Step 1's normal survey; `existing` skips straight to gap-fill (create only missing files, never
-overwrite hand-edited application source).
+|`new` or `existing` (the catalog's shared front-door signal). `existing` no longer means "gap-fill silently":
+Step 1 still warns about and asks about every pre-existing file group unless `on-existing` decides.
 |`new`
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` — how every pre-existing file group is treated without asking (the warning is
+still printed). `keep` creates only missing files (the old `mode: existing` behavior). Hand-edited application
+source is never overwritten either way. Meant for scripted runs; an orchestrator passes it only if it received it
+itself.
+|`ask`
 |===
 
 == Outputs
@@ -141,8 +166,10 @@ overwrite hand-edited application source).
   `robolectric.properties`, a placeholder unit test, an instrumented-test skeleton, and `app/.gitignore`.
 * Any opt-in Gradle plugin blocks selected (Detekt/Spotless, Kover, JUnit 5, Firebase App Distribution, Gradle
   Play Publisher) applied on top of the base templates.
-* A report of resolved inputs, which toolchain versions came from a live lookup versus a recorded fallback, which
-  files were created/left alone/replaced, and explicit warnings (license/keystore/`google-services.json`/Sonar
+* A report of resolved inputs, which toolchain versions came from a live lookup versus a recorded fallback, whether
+  the run scaffolded from scratch or updated an existing project, the action taken per file group (created /
+  updated / replaced / kept as is, and whether the user or `on-existing` chose it, with any mismatch listed for a
+  kept group), and explicit warnings (license/keystore/`google-services.json`/Sonar
   token/distribution credentials review).
 
 == Execution flow
@@ -153,23 +180,25 @@ flowchart TD
     A[Start /iru-setup-android-app] --> B{"Step 0: args supplied?"}
     B -- yes --> C[Parse key: value pairs from args]
     B -- no --> D[Treat every field as unset]
-    C --> E{"Step 1: settings.gradle.kts /\napp/build.gradle.kts already exist?"}
+    C --> E{"Step 1: settings.gradle.kts /\napp/build.gradle.kts or other\nStep 5 files already exist?"}
     D --> E
-    E -- neither exists --> F["Step 2: Collect inputs\n(application-id, namespace, app-name,\nSDK levels, version, license, UI,\nopen-source, sonar, distribution)"]
-    E -- "app module exists,\nmode: existing" --> G["Gap-fill only:\ncreate missing files, leave rest untouched"]
-    E -- "app module exists,\nmode not existing" --> H["AskUserQuestion:\nstop or update?"]
-    H -- stop --> I[Report untouched; end]
-    H -- update --> J["Regenerate toolchain files,\nnever touch application source\nbeyond this skill's own placeholders"]
+    E -- none exist --> E1["Announce: scaffolding from scratch"]
+    E1 --> F["Step 2: Collect inputs\n(application-id, namespace, app-name,\nSDK levels, version, license, UI,\nopen-source, sonar using visibility and ci,\ndistribution)"]
+    E -- "owned files exist" --> E2["Announce: updating existing Gradle project\nlist files, group into artifacts"]
+    E2 --> H{"on-existing set?"}
+    H -- yes --> J["Apply keep / update / replace\nto every artifact"]
+    H -- no --> H2{"AskUserQuestion per artifact:\nUpdate / Keep as is / Replace\n(Stop on first question)"}
+    H2 -- stop --> I[Report untouched; end]
+    H2 -- choices --> F
+    J --> F
     E -- "conflicting scaffold\n(library-only / no app module)" --> K["Warn user;\nask to add app module or stop"]
     K -- stop --> I
     K -- add module --> F
     F --> L["Step 3: Infer owner/repo/host\nfrom git remote"]
-    G --> L
-    J --> L
     L --> M["Step 4: Look up Gradle/AGP/Kotlin/\nDokka/Sonar/test-library versions\n(fallback to recorded values on failure)"]
-    M --> N["Step 5-6: Fill templates and\nscaffold wrapper, root build files,\nand app/ module, applying opt-ins"]
+    M --> N["Step 5-6: Fill templates and scaffold wrapper,\nroot build files and app/ module, applying opt-ins\nand each artifact's Update / Keep / Replace choice"]
     N --> O["Step 7: Verify via iru-gate-runner\n(gradlew --offline help,\n:app:assembleDebug)"]
-    O --> P["Step 8: Report resolved inputs,\nversions used, files touched, warnings"]
+    O --> P["Step 8: Report mode, per-artifact actions,\nversions used, warnings"]
 ....
 
 == Dependencies

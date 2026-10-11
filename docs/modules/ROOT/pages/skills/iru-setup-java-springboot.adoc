@@ -1,19 +1,22 @@
 = Setup Java Spring Boot
-:description: Bootstraps a Spring Boot service repository as a hexagonal Maven multi-module reactor with Sonar/open-source/Hilla choices, CI/CD, OpenTofu, docs.
+:description: Sets up or updates a Spring Boot service repository as a hexagonal Maven multi-module reactor, with visibility-aware CI, Sonar, Hilla, OpenTofu and docs.
 :keywords: iru-setup-java-springboot, claude code skill, spring boot, hexagonal architecture, domain driven design, maven multi-module, spring initializr, java 21, microservice bootstrap, sonarcloud, sonarqube, hilla, vaadin
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-End-to-end bootstrap for a brand-new Spring Boot service repository built on Domain-Driven Design and hexagonal
+End-to-end bootstrap for a new (or older, partially set-up) Spring Boot service repository built on Domain-Driven Design and hexagonal
 (ports and adapters) architecture, realised as a Maven multi-module reactor. It interviews the user once, resolves
 every Spring Boot version and dependency id against the live Spring Initializr API, records the answers — including
-whether the project is open source, its Sonar mode, and whether it ships a Hilla frontend — in a
+whether the project is open source, its visibility, its CI choices, its Sonar mode, and whether it ships a Hilla frontend — in a
 `springboot-stack.yml` manifest, and then delegates all file generation to seven sub-skills (eight when
 `frontend: hilla`).
 
 == Purpose
 
-`iru-setup-java-springboot` is the top-level entry point for starting a Spring Boot microservice from nothing. It
+`iru-setup-java-springboot` is the top-level entry point for starting a Spring Boot microservice from nothing, or for updating a repository
+that already has an older or partial setup. It announces which of the two it is doing ("from scratch" or
+"updating an existing repository", with an inventory of what is absent, present, or partial) and then lets each
+sub-skill ask Update / Keep as is / Replace per pre-existing artifact it owns. It
 is the **interviewer and orchestrator** of the Spring Boot family: no other skill in that family asks the user
 anything about the stack, because this one asks everything exactly once and writes the answers to a manifest the
 others read back.
@@ -59,6 +62,11 @@ sonar-organization: example-github
 sonar-project-key: example_orders-service
 sonar-host-url: https://sonarcloud.io
 frontend: none
+visibility: public
+ci: yes
+ci-tests: full
+pages: yes
+on-existing: ask
 ----
 
 == Inputs
@@ -72,20 +80,23 @@ pre-resolve the matching question instead of asking it.
 
 |`args: mode`
 |No
-|`new` or `existing`. When `pom.xml` already exists and `mode: existing` was supplied, Step 0 goes straight to
-"continue anyway" (gap-fill mode) without asking; `mode: new` still asks for confirmation before regenerating over
-real code.
-|Asked via `AskUserQuestion` when not supplied
+|`new` or `existing`. `mode` from `args` wins; otherwise a root `pom.xml` (or any other artifact this run owns)
+means `existing`. Step 0 prints a "Setup mode" statement (from scratch vs updating, with an absent/present/partial
+inventory) and forwards `mode` to every sub-skill. Only a genuinely incompatible root build (Gradle, or a
+single-module `jar`/`war` pom with root sources) triggers a Stop / Continue anyway question, even when `mode:
+existing` was supplied.
+|Detected from the repository when not supplied
 
 |`args: open-source`
 |No
-|`yes` or `no`. Answers Step 3b's open-source question, which drives the Sonar recommendation right after it.
+|`yes` or `no`. Answers Step 3b's open-source question, which drives the visibility and Sonar recommendations.
 |Asked via `AskUserQuestion` when not supplied
 
 |`args: sonar` (+ `sonar-organization` / `sonar-project-key` / `sonar-host-url`)
 |No
-|`cloud`, `self-hosted`, or `none`. SonarCloud is recommended when open source; otherwise `none` is recommended
-(SonarCloud requires a paid plan when not open source), with `self-hosted` offered as the alternative. The
+|`cloud`, `self-hosted`, or `none`. SonarCloud is recommended only when the repository is public and open source;
+otherwise `none` is recommended (SonarCloud requires a paid plan for private projects), with `self-hosted` offered
+as the alternative. With `ci: no`, `none` is recommended since nothing would send reports automatically. The
 organization/project-key/host-URL keys apply only when `sonar` is `cloud` or `self-hosted`.
 |Asked via `AskUserQuestion` when not supplied
 
@@ -94,6 +105,41 @@ organization/project-key/host-URL keys apply only when `sonar` is `cloud` or `se
 |`none` or `hilla`. `hilla` adds xref:skills/iru-setup-java-springboot-hilla.adoc[] as an eighth sub-skill in Step
 8, scaffolding a Vaadin/Hilla React frontend into the `boot` module.
 |`none`
+
+|`args: visibility`
+|No
+|`public`, `private`, or `internal`. Otherwise detected with `gh repo view --json visibility` when a GitHub remote
+exists, else asked (Public recommended when open source). `internal` behaves like `private` for every cost decision;
+open source with a non-public repository triggers a contradiction warning.
+|Detected via `gh`, else asked
+
+|`args: ci`
+|No
+|`yes` or `no`. Whether to generate GitHub Actions workflows. Recommended for public repositories; for private ones
+the included-minutes budget (2,000/month on Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud; Linux 2-core
+$0.006/min) is shown. `no` makes Step 8 skip `iru-setup-java-springboot-github-workflows` entirely: no `build.yml`,
+`deploy.yml`, `undeploy.yml`, `security.yml` or `.github/dependabot.yml`.
+|Asked via `AskUserQuestion` when not supplied
+
+|`args: ci-tests`
+|No
+|`unit` (Surefire `*Test` only; Failsafe `*IT` stays local) or `full` (Surefire plus Failsafe against the
+Testcontainers stack). Only meaningful when `ci: yes`; `unit` is recommended for private/internal repositories.
+|Asked when `ci: yes`
+
+|`args: pages`
+|No
+|`yes` or `no`. Whether CI publishes the Antora site, Maven site and API docs to GitHub Pages. Only meaningful when
+`ci: yes`. Public repositories get `yes` without asking; private/internal ones are asked (No recommended: Pages needs
+Pro, Team or Enterprise Cloud and the site is public on the internet unless Enterprise Cloud access control is used).
+|Asked when `ci: yes` and not public
+
+|`args: on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, for scripted runs. Never asked as a question. Forwarded to sub-skills and to
+the Step 9 supporting-file skills only when it arrived via `args`; otherwise each sub-skill asks Update / Keep as is /
+Replace per artifact it owns. Also pre-answers Step 6's question about an existing `springboot-stack.yml`.
+|`ask`
 
 |groupId, artifactId, version, base Java package, service description, developer name/email/organizationUrl
 |Yes
@@ -196,8 +242,9 @@ typically less relevant and some actively conflict with the contract-first hexag
 == Outputs
 
 * `springboot-stack.yml` at the repository root — the manifest recording the resolved identity, every technology
-  choice, and now also `openSource`, `sonar` (`mode`/`organization`/`projectKey`/`hostUrl`), and `frontend`
-  (`none`/`hilla`), with container image tags pinned. Meant to be committed; read by every sub-skill and later by
+  choice, and also `openSource`, `sonar` (`mode`/`organization`/`projectKey`/`hostUrl`), `frontend`
+  (`none`/`hilla`), `visibility`, and `ci` (`enabled`/`tests`/`pages`), with container image tags pinned. If a
+  manifest already existed, the user chooses Update / Keep as is / Replace (or `on-existing` applies). Meant to be committed; read by every sub-skill and later by
   `iru-update-java-springboot-documentation`.
 * The full Maven reactor: root `pom.xml` plus one pom per module (via `iru-setup-java-springboot-pom`).
 * The hexagonal source tree — ports, adapters, use cases, the `@SpringBootApplication` class, per-profile
@@ -211,13 +258,14 @@ typically less relevant and some actively conflict with the contract-first hexag
 * `compose.yaml` and the Testcontainers integration-test harness (via
   `iru-setup-java-springboot-testcontainers`).
 * An `infra/` OpenTofu configuration for the chosen cloud (via `iru-setup-java-springboot-platform`).
-* `build.yml`, `deploy.yml`, and `undeploy.yml` GitHub Actions workflows (via
-  `iru-setup-java-springboot-github-workflows`).
+* `build.yml`, `deploy.yml`, `undeploy.yml`, and `security.yml` GitHub Actions workflows plus
+  `.github/dependabot.yml` (via `iru-setup-java-springboot-github-workflows`) — all skipped when `ci: no`.
 * An Antora documentation site with Mermaid and Kroki and the full service page set (via
   `iru-update-java-springboot-documentation`).
 * Repository-level supporting files: `.gitignore`, `README.md`, `CHANGELOG.md`, `checkstyle.xml`, and optionally
   `LICENSE`.
-* A final report consolidating the open-source/Sonar/frontend choices (and, when `frontend: hilla`, what
+* A final report with the setup mode and, per component, the action taken (created / updated / replaced / kept as is /
+  skipped (ci: no)), consolidating the open-source/visibility/CI/Sonar/frontend choices (and, when `frontend: hilla`, what
   `iru-setup-java-springboot-hilla` reported back), every secret and variable that must be supplied out-of-band
   (the Sonar token only when `sonar.mode` is not `none`, plus `GITLEAKS_LICENSE` if a Pro key is used), every open
   gap, and the result of the three verification builds.
@@ -227,24 +275,24 @@ typically less relevant and some actively conflict with the contract-first hexag
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-setup-java-springboot"] --> B["Step 0: Check pom.xml / springboot-stack.yml\nand verify prerequisites"]
-    B -- pom.xml exists, user chooses stop --> STOP[Stop; report]
+    A["Start /iru-setup-java-springboot"] --> B["Step 0: Parse args, announce setup mode\n(from scratch / update + inventory),\nverify prerequisites"]
+    B -- incompatible root build, user chooses stop --> STOP[Stop; report]
     B -- ok --> C["Step 1: Fetch Initializr metadata;\nconfirm Boot version and Java version (21 minimum)"]
     C -- API unreachable --> STOP2["Stop — never fall back\nto hardcoded versions"]
     C --> D["Step 2: Collect project identity;\ninfer repository info from git"]
     D --> E["Step 3: Deployment platform (AWS/GCP)\nand concurrency model"]
-    E --> EB["Step 3b: Open source, Sonar mode\n(cloud/self-hosted/none), frontend (none/hilla)"]
+    E --> EB["Step 3b: Open source, visibility, CI\n(ci, ci-tests, pages), Sonar mode, frontend"]
     EB --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
     F --> G["Step 5: Confirm the whole plan"]
     G -- corrections --> F
-    G -- confirmed --> H["Step 6: Write springboot-stack.yml"]
+    G -- confirmed --> H["Step 6: Write springboot-stack.yml\n(Update / Keep as is / Replace if it exists)"]
     H --> I["Step 7: Fetch the reference pom from Initializr"]
     I -- invalid id / incompatible version --> F
-    I --> J["Step 8: Delegate to 7 sub-skills in order\n(8th when frontend: hilla),\neach via iru-isolated-skill-executor"]
+    I --> J["Step 8: Delegate to sub-skills in order\n(8th when frontend: hilla; workflows skipped\nwhen ci: no), each via iru-isolated-skill-executor"]
     J -.->|"frontend: hilla only,\nafter APIs, before Testcontainers"| JH["iru-setup-java-springboot-hilla"]
     JH -.-> J
-    J -- pom sub-skill did not write the root pom --> STOP3["Stop — no reactor to attach to"]
-    J --> K["Step 9: Supporting files\n(.gitignore, README, CHANGELOG, checkstyle.xml)"]
+    J -- no usable root reactor pom after pom sub-skill --> STOP3["Stop — no reactor to attach to"]
+    J --> K["Step 9: Supporting files\n(.gitignore, README, CHANGELOG, checkstyle.xml;\nexisting checkstyle.xml kept)"]
     K --> L["Step 10: Verify — clean verify -DskipTests,\ntest, verify (via iru-gate-runner)"]
     L --> M["Step 11: Report, secrets table,\nand review warnings"]
 ....
@@ -259,7 +307,7 @@ filesystem directly, so only a short completion summary needs to come back:
 
 * xref:skills/iru-setup-java-springboot-pom.adoc[] — Step 8, first: the root reactor pom and every module pom.
   Also receives the path to the Initializr reference pom saved in Step 7. If this reports that the root pom was
-  not written, the whole run stops.
+  not written (or an existing non-reactor pom was kept), the whole run stops. Receives `mode`, and `on-existing` only when it arrived via `args`.
 * xref:skills/iru-setup-java-springboot-modules.adoc[] — Step 8: the source tree, ports, adapters, profiles, and
   the ArchUnit test. Runs after the poms because it writes sources into modules rather than creating them.
 * xref:skills/iru-setup-java-springboot-apis.adoc[] — Step 8: the `apis/` contracts, the code generators, and the
@@ -272,14 +320,16 @@ filesystem directly, so only a short completion summary needs to come back:
   harness. Runs after the APIs (and Hilla, when present) because the compose stack must know whether a schema
   registry is needed.
 * xref:skills/iru-setup-java-springboot-platform.adoc[] — Step 8: the OpenTofu configuration.
-* xref:skills/iru-setup-java-springboot-github-workflows.adoc[] — Step 8: the build, deploy, and undeploy
-  workflows. Runs late because it surveys what is actually on disk.
+* xref:skills/iru-setup-java-springboot-github-workflows.adoc[] — Step 8: the build, deploy, undeploy and security
+  workflows plus Dependabot. Reads `visibility`, `ci.tests` and `ci.pages` from the manifest. Skipped entirely when
+  `ci.enabled: false`. Runs late because it surveys what is actually on disk.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 8, last: the Antora site and the service
   page set, derived from the finished codebase.
 
 In Step 9 it also invokes, if available, xref:skills/iru-setup-java-gitignore.adoc[],
 xref:skills/iru-setup-readme.adoc[], and xref:skills/iru-setup-changelog.adoc[] for the repository-level files the
-Spring Boot sub-skills don't own. It additionally recommends — but does not invoke —
+Spring Boot sub-skills don't own (forwarding `ci`, `pages` and `sonar` to the README skill, and `on-existing` when it
+arrived via `args`). It additionally recommends — but does not invoke —
 xref:skills/iru-check-license.adoc[] for license headers and xref:skills/iru-check-security.adoc[] for secret
 scanning, the latter specifically if an LLM API token may ever have been committed.
 

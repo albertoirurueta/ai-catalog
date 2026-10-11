@@ -6,7 +6,8 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 
 End-to-end bootstrap for an Android/Gradle repository of either flavor — library or app. It resolves the
 flavor, branching model and mode once, collects the project's identity and shared pipeline parameters once, then
-orchestrates six other skills in a fixed order so nothing is asked twice.
+prints a setup-mode statement (from scratch, or an inventory of the prior setup it found), then orchestrates six
+other skills in a fixed order so nothing is asked twice.
 
 == Purpose
 
@@ -15,8 +16,12 @@ run standalone) once the project type is known to be `android-library` or `andro
 Gradle scaffolding, documentation setup, `.gitignore` generation, CI/CD workflow authoring, changelog
 bootstrapping, or README generation, it resolves the flavor's scaffold skill (`iru-setup-android-library` or
 `iru-setup-android-app`) and passes every downstream skill only the `args` keys that skill's own Step 0 actually
-accepts. In `mode: existing` it skips the scaffold outright when `settings.gradle.kts` already exists and tells
-every downstream step to take its own update/gap-fill path instead of assuming a brand-new repository.
+accepts. It always invokes the scaffold skill, even in `mode: existing`: every component sub-skill announces
+whether it is creating from scratch or updating, warns about the prior setup it owns, and asks Update / Keep as is /
+Replace per file (or applies `on-existing` when that arrived via `args`) — the orchestrator never asks those
+questions itself, so nothing is asked twice. Pipeline questions are cost-aware: the repository `visibility` drives
+recommendations about GitHub Actions minutes, SonarCloud pricing and GitHub Pages availability, and `ci: no` skips
+the workflows step entirely (security block included).
 
 == Purpose group
 
@@ -50,8 +55,15 @@ resolved via `AskUserQuestion` when unset.
 |`mode`
 |No
 |`new` or `existing`. Defaults to `existing` (confirmed) when `settings.gradle.kts` already exists at the
-repository root, otherwise `new` without asking.
+repository root, otherwise `new` without asking. Either way, every sub-skill still asks Update / Keep as is /
+Replace for each pre-existing file it owns; `mode` only tells them whether to expect prior setup.
 |Detected from disk
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. Never asked by this orchestrator; forwarded to the component sub-skills only
+when it arrived via `args`, so they apply it instead of asking per file.
+|`ask` (sub-skills ask)
 
 |Identity fields (`group-id`, `artifact-id`, `namespace`, `description`, `version` for `library`;
 `application-id`, `namespace`, `app-name`, `version-name`, `version-code` for `app`; `license`,
@@ -61,22 +73,63 @@ repository root, otherwise `new` without asking.
 scaffold skill reads.
 |None — user must supply
 
-|`integration-branch`, `stable-branch`, `java-version`, `min-sdk`, `api-level`, `run-instrumented-tests`
+|`integration-branch`, `stable-branch`, `java-version`, `min-sdk`, `api-level`
 |No
-|Shared pipeline parameters asked in Step 3, presented with their defaults.
-|`develop`, `main`, `17`, `26`, `35`, `yes`
+|Shared pipeline parameters asked in Step 3, presented with their defaults. Branches, Java version and emulator API
+level are skipped when `ci: no`.
+|`develop`, `main`, `17`, `26`, `35`
 
-|`open-source`, `publish` (`library`), `distribution` (`app`)
+|`run-instrumented-tests`
 |No
-|Whether the repository is open source, and the publish/distribution path, resolved via `AskUserQuestion` with
-open-source-driven recommended defaults.
+|The workflows skill's own key. When supplied it always wins over the `ci-tests` mapping; otherwise it is derived
+from `ci-tests` (`full` gives `yes`, `unit` gives `no`).
+|Derived from `ci-tests`
+
+|`open-source`
+|No
+|Whether the repository is open source, resolved via `AskUserQuestion`; drives the recommended defaults below.
+|Asked
+
+|`visibility`
+|No
+|`public`, `private` or `internal`. Detected with `gh repo view --json visibility` when a GitHub remote exists,
+otherwise asked (Public recommended when open source). An open-source project with a private/internal repository
+is flagged as contradictory. `internal` behaves like `private`.
+|Detected or asked
+
+|`ci`
+|No
+|`yes`/`no`: generate GitHub Actions workflows at all? Public: Yes recommended (free runners). Private/internal: the
+included-minutes and per-minute cost facts are stated and `no` is offered. `ci: no` skips Step 7 entirely (no
+workflows, `security.yml`, Dependabot, `sync.yml`) and the `ci-tests`/`pages` questions.
+|Asked
+
+|`ci-tests`
+|No
+|`unit` (JVM unit tests only: cheaper, recommended for private/internal) or `full` (unit + emulator instrumented
+tests: recommended for public). Asked only when `ci: yes` and `run-instrumented-tests` was not supplied.
+|Asked
+
+|`pages`
+|No
+|`yes`/`no`: publish the docs to GitHub Pages, or only upload them as a workflow artifact. Library only (the app
+flavor has no docs deploy) and only when `ci: yes`. Public: `yes` without asking. Private/internal: asked, `no`
+recommended (Pages on private repositories needs GitHub Pro, Team or Enterprise Cloud, and the site would be public).
+|`yes` for public; asked otherwise
+
+|`publish` (`library`), `distribution` (`app`)
+|No
+|The Maven Central publish path, or the app distribution path (`none`/`internal`/`store`), resolved via
+`AskUserQuestion` with open-source-driven recommended defaults.
 |`publish`/`distribution` default `yes`/`store` only when open source
 
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No
 |`cloud`/`self-hosted`/`none`, resolved via `AskUserQuestion`; detail keys collected only when `cloud` or
-`self-hosted` is chosen.
-|`cloud` when open source, otherwise `none` recommended
+`self-hosted` is chosen. `cloud` is recommended only for open-source public repositories (SonarCloud is free only
+for public projects); otherwise `none` (or self-hosted SonarQube) is recommended, and with `ci: no` the user is told
+nothing would send reports automatically.
+|`cloud` when open source and public, otherwise `none` recommended
 
 |`compile-sdk`
 |No
@@ -95,38 +148,42 @@ skill asks them itself.
 
 * The flavor's Gradle scaffold — a `lib/` library module plus a Compose `app/` sample, or a single `app/`
   application module — the Gradle wrapper and root build files (via `iru-setup-android-library` or
-  `iru-setup-android-app`), skipped in `mode: existing` when `settings.gradle.kts` already exists.
+  `iru-setup-android-app`), created from scratch or updated per file group according to the user's Update / Keep as
+  is / Replace answers.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * Root and per-module `.gitignore` files (via `iru-setup-android-gitignore`).
 * CI/CD workflows — `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only), plus
-  `security.yml` and `.github/dependabot.yml` (via `iru-setup-android-github-workflows`).
+  `security.yml` and `.github/dependabot.yml` (via `iru-setup-android-github-workflows`); none of these are
+  generated when `ci: no`.
 * A root `CHANGELOG.md` backfilled from git/GitHub release history (via `iru-setup-changelog`).
 * A root `README.md` with badges, a project-status table, documentation links, and installation instructions
   (via `iru-setup-readme`).
-* A final report summarizing the resolved flavor/branching/mode, identity/license/pipeline parameters, which
-  files were created versus left untouched, the consolidated required-secrets table, and explicit review
-  warnings.
+* A final report summarizing the setup mode, the resolved flavor/branching/mode, identity/license/pipeline
+  parameters (including `visibility`, `ci`, `ci-tests`, `pages`), a per-component table with the action actually
+  taken (created / updated / replaced / kept as is / skipped (`ci: no`)), the consolidated required-secrets table
+  (omitted when no workflows were generated), and explicit review warnings.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-android-repository] --> B["Step 0: Parse args\n(flavor, branching, mode, identity,\npipeline params, toolchain toggles)"]
-    B --> C["Step 1: Resolve flavor, branching, mode\n(survey disk, confirm or AskUserQuestion)"]
-    C --> D["Step 2: Collect project identity\n(group/artifact-id or application-id,\nnamespace, license, developer info)"]
-    D --> E["Step 3: Collect pipeline parameters\n(branches, Java version, min-sdk, api-level,\nopen-source, publish/distribution, sonar)"]
-    E --> F{"mode: existing and\nsettings.gradle.kts exists?"}
-    F -- yes, skip scaffold --> H["Step 5: Run iru-setup-antora"]
-    F -- no --> G["Step 4: Run flavor's scaffold skill\n(iru-setup-android-library or\niru-setup-android-app, via sub-agent)"]
-    G -- scaffold files existed,\nuser chose stop --> STOP[Stop entire pipeline; report]
-    G -- ok --> H
+    A[Start /iru-setup-android-repository] --> B["Step 0: Parse args\n(flavor, branching, mode, visibility, ci, ci-tests,\npages, on-existing, identity, pipeline params)"]
+    B --> C["Step 1: Resolve flavor, branching, mode\nand print Setup mode\n(from scratch, or inventory of prior setup)"]
+    C --> D["Step 2: Collect project identity\n(skipped when settings.gradle.kts exists)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, sonar,\nci-tests, pages, publish/distribution)"]
+    E --> G["Step 4: Run flavor's scaffold skill\n(iru-setup-android-library or\niru-setup-android-app, via sub-agent)\nasks Update / Keep / Replace / Stop"]
+    G -- user chose stop --> STOP[Stop entire pipeline; report]
+    G -- ok --> H["Step 5: Run iru-setup-antora"]
     H --> I["Step 6: Run iru-setup-android-gitignore"]
-    I --> J["Step 7: Run iru-setup-android-github-workflows"]
-    J -- workflow files existed,\nuser chose stop --> K["Step 8: Run iru-setup-changelog\n(note stop, continue)"]
-    J -- ok --> K
-    K --> L["Step 9: Run iru-setup-readme"]
-    L --> M["Step 10: Report combined outcome,\nrequired secrets, review warnings"]
+    I --> CI{"ci: no?"}
+    CI -- yes --> K["Step 7 skipped\n(no workflows or security block)"]
+    CI -- no --> J["Step 7: Run iru-setup-android-github-workflows"]
+    J -- "user chose stop,\nnote it and continue" --> K2["Step 8: Run iru-setup-changelog"]
+    J -- ok --> K2
+    K --> K2
+    K2 --> L["Step 9: Run iru-setup-readme"]
+    L --> M["Step 10: Report setup mode, per-component actions,\nrequired secrets, review warnings"]
 ....
 
 == Dependencies
@@ -140,22 +197,26 @@ exploration/file reads (and the Android scaffold's very long template listings) 
 context. Every sub-agent is launched with `run_in_background: false` since each step depends on the previous
 one's files being on disk:
 
-* xref:skills/iru-setup-android-library.adoc[] — Step 4, `flavor: library`: writes `lib/` and the sample Compose
-  `app/` module, passing Step 2's identity fields and Step 3's pipeline parameters as `args`; skipped in
-  `mode: existing` when `settings.gradle.kts` already exists.
-* xref:skills/iru-setup-android-app.adoc[] — Step 4, `flavor: app`: writes the single `app/` application module,
-  passing the same kind of `args`; skipped under the same `mode: existing` condition.
-* xref:skills/iru-setup-antora.adoc[] — Step 5: scaffolds the Antora documentation site, invoked with no `args`
-  since it derives the component name/title/version from the Gradle project itself.
+* xref:skills/iru-setup-android-library.adoc[] — Step 4, `flavor: library`: writes or updates `lib/` and the sample
+  Compose `app/` module, passing Step 2's identity fields and Step 3's pipeline parameters (including `visibility`,
+  `ci`, `mode`, and `on-existing` when supplied) as `args`. Always invoked, even in `mode: existing`.
+* xref:skills/iru-setup-android-app.adoc[] — Step 4, `flavor: app`: writes or updates the single `app/` application
+  module, passing the same kind of `args`. Always invoked, even in `mode: existing`.
+* xref:skills/iru-setup-antora.adoc[] — Step 5: scaffolds or updates the Antora documentation site, invoked with
+  no `args` (only `on-existing`, when it arrived via this orchestrator's `args`) since it derives the component
+  name/title/version from the Gradle project itself.
 * xref:skills/iru-setup-android-gitignore.adoc[] — Step 6: writes or updates root and per-module `.gitignore`
-  files, invoked with no `args` since it derives the module list from `settings.gradle.kts` and detects `mode`
-  from whether a root `.gitignore` already exists.
-* xref:skills/iru-setup-android-github-workflows.adoc[] — Step 7: writes the CI/CD + security workflows, passing
-  Step 1's `flavor`/`branching` and Step 3's pipeline parameters as `args`.
-* xref:skills/iru-setup-changelog.adoc[] — Step 8: bootstraps the root `CHANGELOG.md`, invoked with no `args`
-  since it works from the repository's own git tag/GitHub Release history.
-* xref:skills/iru-setup-readme.adoc[] — Step 9, last: bootstraps the root `README.md`, invoked with no `args`
-  since it explores the finished state left by every earlier step.
+  files, invoked with no `args` (only `on-existing`, when supplied) since it derives the module list from
+  `settings.gradle.kts` and detects `mode` from whether a root `.gitignore` already exists.
+* xref:skills/iru-setup-android-github-workflows.adoc[] — Step 7, skipped entirely when `ci: no`: writes the
+  CI/CD + security workflows, passing Step 1's `flavor`/`branching` and Step 3's pipeline parameters (including
+  `visibility`, `ci-tests`, `pages`, and the effective `run-instrumented-tests`) as `args`.
+* xref:skills/iru-setup-changelog.adoc[] — Step 8: bootstraps or updates the root `CHANGELOG.md`, invoked with no
+  `args` (only `on-existing`, when supplied) since it works from the repository's own git tag/GitHub Release
+  history.
+* xref:skills/iru-setup-readme.adoc[] — Step 9, last: bootstraps or updates the root `README.md`, passing only
+  `sonar`, `ci`, `pages` (and `on-existing` when supplied); it explores the finished state left by every earlier
+  step.
 
 === Invoked by
 
