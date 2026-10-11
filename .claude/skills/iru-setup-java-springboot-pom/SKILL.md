@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-pom
-description: Generate the Maven reactor for a DDD/hexagonal Spring Boot service — the root `pom.xml` (the single place every dependency and plugin version is declared) plus one `pom.xml` per module (`domain`, `application`, `infrastructure/database/<engine>`, `infrastructure/configuration`, `infrastructure/clients/<name>`, `infrastructure/producers`, `infrastructure/metrics`, `api/rest-server`, `api/grpc-server`, `api/graphql-server`, `api/consumers`, `boot`, `coverage`). Enforces Java 21 as a minimum via `maven.compiler.release`, `java.version`, and a `maven-enforcer-plugin` `requireJavaVersion` rule, and enforces the hexagonal dependency direction per module with `banned-dependencies`. Wires the full report/quality plugin set — Javadoc, Checkstyle, PMD, SpotBugs, Surefire, Failsafe, JaCoCo (per module plus a `report-aggregate` in `coverage`), JXR, Maven Site, `groovy-maven-plugin` for `build-info.properties`, and, unless the manifest's `sonar.mode` is `none`, `sonar-maven-plugin` — with generated sources excluded from every analysis. When the manifest's `frontend` is `hilla`, also owns the root pom's Vaadin/Hilla version management — a `vaadin.version` property, a `dependencyManagement` import of the `com.vaadin:vaadin-bom`, a `pluginManagement` entry for `vaadin-maven-plugin`, a `production` Maven profile (`vaadin.productionMode=true`), and the `vaadin.skip` escape-hatch property — `iru-setup-java-springboot-hilla` then wires the actual module (dependencies, plugin execution, frontend source) against those root-level pins. Reads its inputs from the `springboot-stack.yml` manifest (including `sonar.mode`/`sonar.organization`/`sonar.projectKey`/`sonar.hostUrl` — `cloud` points at SonarCloud, `self-hosted` points at the given host URL, `none` omits the `sonar.*` properties and the plugin entirely — and `frontend`, either `none` or `hilla`) and from the reference pom fetched from the Spring Initializr API, so starter artifact names and BOM imports come from the API rather than from memory. Invoke as `/iru-setup-java-springboot-pom` (it reads `springboot-stack.yml` from the repository root), or with `args` (`stack-file:` / `initializr-pom:` lines) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service's multi-module Maven reactor needs generating or regenerating from the recorded stack, instead of hand-writing a dozen interdependent poms.
+description: Generate the Maven reactor for a DDD/hexagonal Spring Boot service — the root `pom.xml` (the single place every dependency and plugin version is declared) plus one `pom.xml` per module (`domain`, `application`, `infrastructure/database/<engine>`, `infrastructure/configuration`, `infrastructure/clients/<name>`, `infrastructure/producers`, `infrastructure/metrics`, `api/rest-server`, `api/grpc-server`, `api/graphql-server`, `api/consumers`, `boot`, `coverage`). Enforces Java 21 as a minimum via `maven.compiler.release`, `java.version`, and a `maven-enforcer-plugin` `requireJavaVersion` rule, and enforces the hexagonal dependency direction per module with `banned-dependencies`. Wires the full report/quality plugin set — Javadoc, Checkstyle, PMD, SpotBugs, Surefire, Failsafe, JaCoCo (per module plus a `report-aggregate` in `coverage`), JXR, Maven Site, `groovy-maven-plugin` for `build-info.properties`, and, unless the manifest's `sonar.mode` is `none`, `sonar-maven-plugin` — with generated sources excluded from every analysis. When the manifest's `frontend` is `hilla`, also owns the root pom's Vaadin/Hilla version management — a `vaadin.version` property, a `dependencyManagement` import of the `com.vaadin:vaadin-bom`, a `pluginManagement` entry for `vaadin-maven-plugin`, a `production` Maven profile (`vaadin.productionMode=true`), and the `vaadin.skip` escape-hatch property — `iru-setup-java-springboot-hilla` then wires the actual module (dependencies, plugin execution, frontend source) against those root-level pins. Reads its inputs from the `springboot-stack.yml` manifest (including `sonar.mode`/`sonar.organization`/`sonar.projectKey`/`sonar.hostUrl` — `cloud` points at SonarCloud, `self-hosted` points at the given host URL, `none` omits the `sonar.*` properties and the plugin entirely — and `frontend`, either `none` or `hilla`) and from the reference pom fetched from the Spring Initializr API, so starter artifact names and BOM imports come from the API rather than from memory. Announces whether it is generating the reactor from scratch or updating an existing one, and for every pom/analysis-config file it owns that already exists warns and asks Update (merge, keeping custom dependencies/plugins/profiles) / Keep as is / Replace / Stop — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-pom` (it reads `springboot-stack.yml` from the repository root), or with `args` (`stack-file:` / `initializr-pom:` / `mode:` (`new`/`existing`) / `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service's multi-module Maven reactor needs generating or regenerating from the recorded stack, instead of hand-writing a dozen interdependent poms.
 model: sonnet
 ---
 
@@ -23,6 +23,8 @@ Parse `args` for `key: value` lines:
 ```
 stack-file: springboot-stack.yml
 initializr-pom: /path/to/scratchpad/initializr-pom.xml
+mode: existing
+on-existing: ask
 ```
 
 - **`stack-file`** — defaults to `springboot-stack.yml` at the repository root. Read it in full; it carries the
@@ -49,6 +51,10 @@ initializr-pom: /path/to/scratchpad/initializr-pom.xml
   ```
 
   Confirm the response is XML, not a plain-text error, before using it.
+- **`mode`** (`new`/`existing`) — informational; scratch-vs-update is still decided per file from what's on disk,
+  and `mode: existing` does not mean "update silently".
+- **`on-existing`** (`ask`/`keep`/`update`/`replace`, default `ask`) — applied to every pre-existing file below
+  without asking (the warning is still printed).
 
 From the reference pom, extract into a working table you'll consult for every module below:
 
@@ -62,9 +68,30 @@ Then classify every extracted dependency to the module that should own it, using
 you can't confidently place goes in the `boot` module (which depends on everything and where a misplacement is
 harmless) and gets reported as unplaced in Step 8 — never drop it silently.
 
-If `pom.xml` already exists at the repository root, use `AskUserQuestion` to ask whether to stop or to regenerate.
-On regenerate, keep any dependency, plugin, or profile the existing pom has that this skill's template doesn't,
-and list those in Step 8 so the user can confirm each one survived.
+Say whether this run is **generating the reactor from scratch** (no root `pom.xml`, no module poms) or **updating
+an existing one** (list which of the root pom, the module poms named in `modules:`, `checkstyle.xml`, and
+`spotbugs-exclude.xml` already exist). For each one that exists, warn and — unless `on-existing` says otherwise —
+ask with `AskUserQuestion` (up to 4 files per call, one question each; the module poms may be asked as one
+grouped question, "all existing module poms", with a per-module override if the user wants one). Say concretely
+where an existing file disagrees with the manifest (e.g. "your root pom has `sonar-maven-plugin` but
+`sonar.mode: none`", "it lists `api/grpc-server` but the manifest has no gRPC server"):
+
+- **Update (Recommended)** — merge: add what's missing and correct what this skill owns (versions, managed
+  BOMs, plugin configuration, the `sonar.*`/Vaadin wiring per the manifest, `<modules>`) using the templates
+  below; keep every dependency, plugin, profile, and property the existing pom has that the template doesn't, and
+  list those in Step 8 so the user can confirm each one survived. A customized part this skill owns may be
+  rewritten.
+- **Keep as is** — leave the file untouched. Customizations survive, but it may stay out of date or disagree with
+  the manifest — Step 8 lists each mismatch. Recommend this one instead of Update for `checkstyle.xml` and
+  `spotbugs-exclude.xml`, which are the project's own rulesets.
+- **Replace** — regenerate from the template; every customization in the file is lost (recoverable only from git
+  history).
+- **Stop** — end this skill now without writing anything (offered only on the root pom question). An existing
+  root pom that isn't `pom`-packaged (a single-module project) can't simply be updated into a reactor — say so,
+  and recommend Stop there instead of Update.
+
+If the root pom ends up kept as is (or the run stops), say so prominently in Step 8: `iru-setup-java-springboot`
+needs a usable reactor root to continue.
 
 ## Step 1 — Root `pom.xml`
 
@@ -589,6 +616,11 @@ Notes on filling this in:
     Server-multi-tenant specific), so omit the `<sonar.organization>` property unless the manifest actually set
     `sonar.organization` (i.e. the user confirmed that server has organizations enabled in
     `iru-setup-java-springboot`'s Step 3b) — don't emit an empty or guessed value.
+  - The manifest's `ci:` block doesn't change any of this: with `ci.enabled: false` and a `sonar.mode` other than
+    `none` (the user kept Sonar despite having no CI), still write the properties and plugin exactly as above —
+    they're what a manual `mvn sonar:sonar -Dsonar.token=…` run needs — and add an XML comment above the
+    `sonar.*` block saying no CI workflow sends reports. `ci.tests: unit` only affects coverage content (the
+    aggregate then holds unit-test data in CI), not the report paths.
 - Look up the current version for every `<latest>` marker (Maven Central's search API) rather than guessing —
   and record what you resolved, so Step 8 can report it.
 - Also write `spotbugs-exclude.xml` at the repository root, excluding the generated-source packages (the
@@ -888,11 +920,13 @@ module with no sources yet is valid and builds cleanly.
 
 ## Step 5 — Write the shared analysis configuration
 
-- **`checkstyle.xml`** at the repository root, if absent. Start from Sun or Google checks with the rules a Spring
+- **`checkstyle.xml`** at the repository root, if absent (an existing one follows Step 0's answer — Keep by
+  default). Start from Sun or Google checks with the rules a Spring
   Boot service realistically can't satisfy relaxed (line length raised to 120, `JavadocPackage`/`HideUtilityClassConstructor`
   dropped, `FinalParameters` dropped). A ruleset the build immediately fails on gets disabled by the first
   developer who hits it, which is worse than a lenient one that stays enabled.
-- **`spotbugs-exclude.xml`** at the repository root, if absent, excluding the generated-source packages:
+- **`spotbugs-exclude.xml`** at the repository root, if absent (an existing one follows Step 0's answer — Keep by
+  default; on Update, add the generated-source matches below if missing), excluding the generated-source packages:
 
   ```xml
   <FindBugsFilter>
@@ -944,14 +978,18 @@ than quietly relaxing the enforcer rule to make the build pass.
 
 ## Step 8 — Report
 
-Summarize: the reactor's module list in build order; every version pinned in the root pom (separating those copied
+Summarize: whether the reactor was generated from scratch or updated, and per file the action taken (**created /
+updated / replaced / kept as is**), with every mismatch left in a kept file; the reactor's module list in build order; every version pinned in the root pom (separating those copied
 from the Initializr reference pom from those looked up on Maven Central); which module each significant dependency
 landed in; any dependency that couldn't be placed and therefore went to `boot`; whether `checkstyle.xml` and
 `spotbugs-exclude.xml` were created or already present; the result of Step 6's three commands; and any hexagon
 violation from Step 7. If an existing root pom was regenerated, list what was carried over from it so the user can
 confirm nothing was lost. State how `sonar.mode` was wired: `none` (no `sonar.*` properties, no
 `sonar-maven-plugin`), `cloud` (SonarCloud, with the resolved `sonar.organization`/`sonar.projectKey`), or
-`self-hosted` (the resolved `sonar.host.url`, and whether `sonar.organization` was included or omitted). State how
+`self-hosted` (the resolved `sonar.host.url`, and whether `sonar.organization` was included or omitted). If the
+manifest's `ci.enabled` is `false` while `sonar.mode` isn't `none`, say that the Sonar properties/plugin are
+build-side configuration only — no CI step sends reports, so analysis runs only when someone runs `mvn
+sonar:sonar` manually with a token. State how
 `frontend` was wired: `none` (no Vaadin properties/BOM/plugin/profile at all) or `hilla` (the resolved
 `vaadin.version`, and that the `vaadin-bom` import, `vaadin-maven-plugin` `pluginManagement` entry, `production`
 profile, and `vaadin.skip` property were all written — noting that `iru-setup-java-springboot-hilla` is what

@@ -4,18 +4,23 @@ description: End-to-end bootstrap for an npm/TypeScript repository of any of fiv
   (`library`/`react`/`angular`/`react-native`/`ionic`, asked via `AskUserQuestion` in two short rounds when
   absent), the project's identity (name/slug/scope/app-id, description, license, developer name/email/organization
   URL), and the shared pipeline parameters (`open-source`, `publish` for libraries, `distribution` for apps, `sonar`
-  plus its detail keys, `integration-branch`, `stable-branch`, `node-version`, `package-manager`) once, then
+  plus its detail keys, `visibility`, `ci`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`,
+  `node-version`, `package-manager`) once, then
   orchestrates the flavor's scaffold skill (`iru-setup-typescript-library` / `iru-setup-react-web` /
   `iru-setup-angular-web` / `iru-setup-react-native-app` / `iru-setup-ionic-app`) → `iru-setup-antora` →
   `iru-setup-typescript-gitignore` → `iru-setup-typescript-github-workflows` → `iru-setup-changelog` →
-  `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is asked twice. Invoke as
+  `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is asked twice (the workflows
+  step is skipped entirely when `ci` is `no`). Invoke as
   `/iru-setup-typescript-repository`, optionally with `args` (`key`/`value` lines) to pre-resolve `flavor`, `mode`
   (`new`/`existing`), `open-source`, `publish`, `distribution`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `native-builds` (react-native), `framework` (ionic's own Angular/React choice),
   `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`),
-  `package-manager` (default `npm`), and every identity field, skipping the matching question. In `mode=existing`
-  it skips regenerating an already-present `package.json` and tells the CI-workflow step to take its own
-  update/gap-fill path. Use whenever bootstrapping (or catching up) a new npm/TypeScript repository's full
+  `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when absent),
+  `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/
+  `replace`, forwarded only when supplied), and every identity field, skipping the matching question. Starts by
+  announcing whether it is setting up from scratch or updating an existing repository (with an inventory of
+  every component it owns marked absent/present/partial); each sub-skill then warns and asks keep/update/replace
+  for whatever it finds already present, and the final report lists the action taken per component. Use whenever bootstrapping (or catching up) a new npm/TypeScript repository's full
   scaffold/docs/gitignore/CI/changelog/README pipeline in one pass, whatever its flavor, instead of running five to
   six skills separately and re-answering the same questions each time.
 model: haiku
@@ -53,6 +58,10 @@ sonar: cloud
 sonar-organization: example-github
 sonar-project-key: example_my-library
 sonar-host-url: https://sonarcloud.io
+visibility: public
+ci: yes
+ci-tests: full
+pages: yes
 integration-branch: develop
 stable-branch: main
 node-version: 24
@@ -64,7 +73,9 @@ Recognized keys: `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`), 
 react-native/ionic only), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/
 `sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local` — react-native only), `framework`
 (`angular`/`react` — ionic's own UI framework only), `integration-branch`, `stable-branch`, `node-version`,
-`package-manager`, and every identity field named in Steps 2–3 below (`name`, `scope`, `app-id`, `description`,
+`package-manager`, `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`),
+`pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every
+file-writing sub-skill only when it arrived here via `args`), and every identity field named in Steps 2–3 below (`name`, `scope`, `app-id`, `description`,
 `license`, `developer-name`, `developer-email`, `organization-url`, `directory`, `storybook`). Every key found here
 is resolved — skip the matching question in Steps 1–4. Only keys genuinely missing from `args` still need asking.
 If `args` is absent or doesn't look like this format, treat everything as unset and ask normally.
@@ -94,17 +105,49 @@ Map the resolved `flavor` to its scaffold skill for the rest of this run:
 
 If `mode` wasn't supplied via `args`, don't ask about it as an isolated question — check whether `package.json`
 already exists at the repository root: if it does, default to `existing` and confirm with `AskUserQuestion`
-(`existing` pre-selected; `new` as the other option, noting that "new" re-runs the scaffold and may discard
-project-specific customizations, and that some flavors scaffold into a subdirectory rather than the root — see
-Step 3); if it doesn't, default to `new` without asking further — there's nothing on disk yet to conflict with.
+(`existing` pre-selected; `new` as the other option, noting that "new" treats the repository as a fresh scaffold
+target and that some flavors scaffold into a subdirectory rather than the root — see Step 3); if it doesn't,
+default to `new` without asking further. Any other owned artifact already present (see the inventory below)
+still makes this run an **update for that component**, even under `mode: new` — its sub-skill will warn and ask.
+
+### Setup mode announcement
+
+Right after resolving `mode`, before asking anything else, print a short **Setup mode** statement:
+
+- `mode: new` with no owned artifact present → "Setting up this repository **from scratch** — no prior setup
+  found."
+- Otherwise → "**Updating an existing repository** — prior setup found:" followed by an inventory table of
+  every component this run owns, each marked **absent / present / partial** with the evidence (file paths):
+
+  | Component | Evidence checked |
+  |---|---|
+  | Build manifest / toolchain | `package.json`, lockfile, `tsconfig.json`, flavor config (`angular.json`, `vite.config.*`, `app.json`, `capacitor.config.*`) |
+  | Source layout | `src/` (or the flavor's app directory) |
+  | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
+  | `.gitignore` | `.gitignore` |
+  | CI workflows | each of `.github/workflows/build.yml`, `release.yml`, `sync.yml` (+ `.github/scripts/sync_versions.py`), `security.yml` |
+  | Dependabot | `.github/dependabot.yml` |
+  | Sonar config | `sonar-project.properties` |
+  | Changelog | `CHANGELOG.md` |
+  | README | `README.md` |
+  | License | `LICENSE` (or `LICENSE.md`/`COPYING`) |
+
+  "Partial" means some but not all of a component's files exist (e.g. `docs/antora.yml` without a playbook,
+  `build.yml` without `security.yml`). Then add: "For each component that already exists you'll be asked
+  whether to keep it, update it, or replace it." (If `on-existing` came in via `args`, say instead that its
+  value will be applied to every existing component without asking.)
+
+This orchestrator never asks the keep/update/replace question itself — each sub-skill asks it for the files it
+owns, so nothing is asked twice.
 
 ## Step 2 — Collect the project's identity
 
-**`mode: existing` with the scaffold manifest already on disk** (`package.json` at the repository root, the same
-check Step 5 uses to skip the scaffold): skip every identity question in this step — nothing downstream consumes
-these answers once the scaffold is skipped (`iru-setup-readme` derives identity from the existing build files
-itself), so asking them is a wasted question (verified against an existing repository). Resolve `license` only if `args` supplied it,
-and record in the final report that project identity was taken from the existing files rather than asked.
+**`mode: existing` with the scaffold manifest already on disk** (`package.json` at the repository root): skip
+every identity question in this step — the scaffold sub-skill (Step 5) reads the identity from the existing
+`package.json` when it updates or keeps it, and asks only for anything it genuinely can't find (e.g. if the
+user picks Replace there), while `iru-setup-readme` derives identity from the existing build files itself.
+Resolve `license` only if `args` supplied it, and record in the final report that project identity was taken
+from the existing files rather than asked.
 
 For any field Step 0 already resolved from `args`, use that value directly. For everything else, ask the user
 directly (plain conversation — these are free-text project-identity fields, not a bounded choice):
@@ -166,32 +209,78 @@ already resolved from `args`):
 
 These map directly onto `iru-setup-typescript-github-workflows`'s own placeholders (Step 8) — nothing to translate.
 
-Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driven convention:
+Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driven convention, in this order
+(skip any key Step 0 already resolved):
 
 - **open-source** — is this repository open source? Yes / No. Drives the recommended defaults below.
+- **visibility** — if the repository has a GitHub remote, detect it with `gh repo view --json visibility -q
+  .visibility` (`PUBLIC`/`PRIVATE`/`INTERNAL`, lowercased) and tell the user the detected value; otherwise (no
+  remote yet, `gh` unavailable, not GitHub) ask **Public** / **Private**, recommending **Public** when
+  open-source is Yes, otherwise **Private**. If open-source is Yes but visibility is `private`/`internal`, warn
+  that these contradict each other (an open-source project's repository is normally public; a private one
+  forfeits free Actions minutes and free SonarCloud) and ask which one is right. `internal` is treated like
+  `private` for every cost decision below.
+- **ci** — "Generate GitHub Actions workflows (CI/CD) for this repository?" Public: recommend **Yes** —
+  standard GitHub-hosted runners are free for public repositories. Private/internal: still offer **Yes** first,
+  but state, per GitHub's current pricing (tell the user to double-check their plan), that private
+  repositories consume the account's included minutes — 2,000/month on GitHub Free, 3,000 on Pro and Team,
+  50,000 on Enterprise Cloud — then are billed per minute; for `react-native` (with `native-builds: local`) and
+  `ionic`, add that the iOS release job runs on macOS, whose minutes cost roughly 10× Linux, so a few dozen iOS
+  builds a month can exhaust 2,000 minutes on their own. Offer **No** as "no workflows — build, test, and
+  release locally (re-run `iru-setup-typescript-github-workflows` later to add them)". With `ci: no`, Step 8 is
+  skipped entirely (no `.github/workflows/*`, no `security.yml`, no `.github/dependabot.yml`, no sync script),
+  `ci-tests` and `pages` are not asked, and the report states that the shared security block (Dependabot,
+  dependency-review, CodeQL, OSV-Scanner, gitleaks) was skipped with it.
 - **publish** — **library only**: default **Yes** when open-source is Yes; otherwise ask with **No** recommended
   (publishing to the public npm registry is meant for redistributable packages).
 - **distribution** — **react-native/ionic only**: `none`/`internal`/`store`. Default **`store`** when open-source
   is Yes; otherwise ask with **`internal`** recommended (a closed-source app rarely targets the public stores).
-- **sonar** — `cloud`/`self-hosted`/`none`. Recommend **`cloud`** when open-source is Yes; when not open source,
-  state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend
-  **`none`**, offering **self-hosted SonarQube** as the second option. When `cloud`/`self-hosted` is chosen, also
+- **sonar** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?"
+  `cloud`/`self-hosted`/`none`. Recommend **`cloud`** only when open-source is Yes **and** visibility is
+  `public`; otherwise state that SonarCloud is free only for public open-source projects (a private project
+  needs a paid plan) and recommend **`none`**, offering **self-hosted SonarQube** (Community Build is free, but
+  you run the server) as the second option. When `ci: no`, say plainly that nothing would send reports
+  automatically — analysis would only run when someone runs the scanner manually with a token — and recommend
+  `none`; if the user still picks cloud/self-hosted, the scaffold writes `sonar-project.properties` only and the
+  report notes that no CI step sends reports. When `cloud`/`self-hosted` is chosen, also
   collect `sonar-organization`/`sonar-project-key`/`sonar-host-url` the same way every sub-skill's own Step 2 does
   (SonarCloud: suggest `<owner>-github` / `<owner>_<repo>` / `https://sonarcloud.io`, inferred from `git remote
   get-url origin`; self-hosted: ask for `sonar.host.url` directly, plus `sonar.organization` only if that server has
   organizations enabled, and `sonar.projectKey`).
 
-These values (`open-source`, `publish`/`distribution`, `sonar` + detail keys) are passed through unchanged to Step 5
-(the scaffold skill) and Step 8 (`iru-setup-typescript-github-workflows`) so neither sub-skill re-asks them.
+Then, **only when `ci: yes`**:
+
+- **ci-tests** — "Which tests should CI run?" Only asked for `react`/`angular`/`ionic`, the flavors whose
+  `build.yml` has a Playwright e2e step: **Unit tests only** ("lint, typecheck, unit tests with coverage —
+  cheaper: fewer minutes, faster feedback; Playwright e2e stays local", recommended for private/internal) /
+  **Unit + e2e** (`full` — "also installs Playwright browsers and runs the e2e suite on every build; complete
+  verification, considerably more minutes", recommended for public). For `library`/`react-native` there's no
+  e2e step in this pipeline, so don't ask — leave `ci-tests` unset (unless `args` supplied it) and let the
+  workflows skill default it.
+- **pages** — the Antora docs site (Step 6) is always built, and for `react`/`angular` `release.yml` also
+  deploys the web app itself to GitHub Pages. Public: default **yes** without asking (state it in Step 11).
+  Private/internal: ask **No (Recommended)** ("CI still builds the docs — and for react/angular the release
+  bundle — and uploads them as workflow artifacts; nothing is published") vs **Yes** ("requires GitHub Pro,
+  Team, or Enterprise Cloud; the site will be PUBLIC on the internet unless you're on Enterprise Cloud with
+  private Pages access control"). For `react`/`angular`, add that with **No** the app isn't hosted anywhere by
+  this pipeline — the release produces a downloadable bundle and hosting it elsewhere is the user's follow-up.
+
+These values (`open-source`, `visibility`, `ci`, `publish`/`distribution`, `sonar` + detail keys, `ci-tests`,
+`pages`) are passed through unchanged to the sub-skills that accept them — Step 5 (the scaffold skill), Step 8
+(`iru-setup-typescript-github-workflows`), and Step 10 (`iru-setup-readme`) — so no sub-skill re-asks them.
 
 ## Step 5 — Run the flavor's scaffold skill
 
-If `mode: existing` (Step 1) and `package.json` already exists at the repository root, skip invoking the scaffold
-skill entirely — there's nothing to regenerate, and `mode: existing` means the user already confirmed they don't
-want it replaced. Note in Step 11's report that `package.json` already existed and was left untouched, then
-continue to Step 6 (the existing scaffold is presumed valid enough for the rest of the pipeline to build against).
-Otherwise, format Steps 2–4's answers as `key: value` lines using **exactly** the keys the resolved flavor's skill
-accepts (never an invented key) and invoke via `iru-isolated-skill-executor`. One example per flavor:
+Always invoke the scaffold skill, in both modes — it owns the keep/update/replace decision for its own files.
+When `package.json` (or any other file the scaffold writes) already exists, the scaffold skill announces that it
+is updating, warns, and asks per file whether to **Update** (merge its template in, keeping customizations),
+**Keep as is** (the old `mode: existing` skip), or **Replace** (regenerate, losing customizations) — or applies
+`on-existing` if this orchestrator forwards it. This orchestrator doesn't ask that question itself, so it's
+never asked twice. Format Steps 2–4's answers as `key: value` lines using **exactly** the keys the resolved
+flavor's skill accepts (never an invented key) — always including `mode`, `visibility`, and `ci`, plus
+`on-existing` only if it arrived via Step 0's `args` — and invoke via `iru-isolated-skill-executor`. In
+`mode: existing` with identity questions skipped (Step 2), omit the identity keys; the scaffold reads them from
+the existing files. One example per flavor:
 
 ```
 # flavor: library
@@ -202,9 +291,11 @@ Agent({
     description: <description>\\nlicense: <license>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     publish: <publish>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
-    sonar-host-url: <..., if set>\\nintegration-branch: <integration-branch>\\nmode: <mode>\"}). Report back: whether package.json and the toolchain files
-    were created fresh or already existed (and, if so, whether the user chose to stop), which devDependency
-    versions came from a live registry lookup versus a fallback, and any value it resolved on its own.",
+    sonar-host-url: <..., if set>\\nintegration-branch: <integration-branch>\\nvisibility: <visibility>\\n
+    ci: <ci>\\nmode: <mode>\\non-existing: <on-existing, only if supplied via args>\"}). Report back: per file it owns,
+    whether it was created, updated, replaced, or kept as is (or whether the user chose to stop), which
+    devDependency versions came from a live registry lookup versus a fallback, and any value it resolved on its
+    own.",
   run_in_background: false
 })
 ```
@@ -217,30 +308,36 @@ have no such key — never send it to them.
 The other four flavors follow the same shape, with only the `args` keys and skill name changed:
 
 - **`react`**: `iru-setup-react-web` — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `mode`. No `publish`/`distribution` key
-  exists for this skill — never send one. `keep-oxlint` is deliberately omitted (Step 3) so the sub-skill asks it.
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
+  supplied). No `publish`/`distribution` key exists for this skill — never send one. `keep-oxlint` is deliberately omitted (Step 3) so the sub-skill asks it.
 - **`angular`**: `iru-setup-angular-web` — `name`, `directory`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `mode`. No `description` key exists for
-  this skill — never send one.
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
+  supplied). No `description` key exists for this skill — never send one.
 - **`react-native`**: `iru-setup-react-native-app` — `app-name`, `app-slug`, `app-directory`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ detail keys), `native-builds`,
-  `distribution`, `mode`. No `description` key exists for this skill — never send one.
+  `distribution`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied). No `description` key exists for this
+  skill — never send one.
 - **`ionic`**: `iru-setup-ionic-app` — `framework`, `app-name`, `app-id`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `distribution`, `sonar` (+ detail keys),
-  `mode`. `add-android`/`add-ios` are deliberately omitted (Step 3) so the sub-skill asks them.
+  `visibility`, `ci`, `mode` (+ `on-existing` if supplied). `add-android`/`add-ios` are deliberately omitted (Step 3)
+  so the sub-skill asks them.
 
 Each sub-skill parses these itself (its own Step 0) and only asks the user about anything genuinely left out —
 `AskUserQuestion` surfaces to the user the same way whether invoked directly or from inside this sub-agent. If it
-reports that its own manifest file already existed and the user chose to stop, stop this skill here too — there's
-no coherent project identity to build Antora docs or CI workflows around yet.
+reports that the user chose to **stop** (e.g. its manifest exists but is unusable), stop this skill here too —
+there's no coherent project identity to build Antora docs or CI workflows around yet. If the user chose **Keep
+as is** for `package.json`, continue: the existing scaffold is presumed valid enough for the rest of the
+pipeline to build against.
 
 ## Step 6 — Run `iru-setup-antora`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run setup-antora", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-antora\"}) with no args — it derives the
-Antora component name, title, and version straight from the repository's package.json, so nothing needs to be
-passed through. Report back: which files/pages were created vs. already present, and whether the site build
-succeeded.", run_in_background: false})`.
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-antora\"}) with no args (or, only if
+`on-existing` arrived via Step 0's args, with args \"on-existing: <on-existing>\") — it derives the Antora
+component name, title, and version straight from the repository's package.json. Report back: whether it ran from
+scratch or as an update, the action taken (created / updated / replaced / kept as is), which files/pages were
+created vs. already present, and whether the site build succeeded.", run_in_background: false})`. When the site
+already exists, `iru-setup-antora` itself warns and asks Update (fill gaps) / Keep / Replace.
 
 Run this *before* Step 8, not after, even though the user might expect them in the other order:
 `iru-setup-antora` is quick to detect as "already done", and `iru-setup-typescript-github-workflows`'s own survey
@@ -250,17 +347,24 @@ first means that check finds everything in place instead of flagging a gap.
 ## Step 7 — Run `iru-setup-typescript-gitignore`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run setup-typescript-gitignore", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-typescript-gitignore\"}) with no args — it
-takes none, deriving everything it needs (package manager, framework, Playwright, docs tooling) by exploring the
-repository directly. Report back only whether .gitignore was created fresh or, if it already existed, whether the
-user accepted or skipped the proposed diff.", run_in_background: false})`. Run this after Steps 5–6, not before:
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-typescript-gitignore\"}) with no args (or, only if
+`on-existing` arrived via Step 0's args, with args \"on-existing: <on-existing>\") — it derives everything else it
+needs (package manager, framework, Playwright, docs tooling) by exploring the repository directly. Report back
+only the action taken: created, updated (merged diff accepted), replaced, or kept as is.", run_in_background:
+false})`. If `.gitignore` exists, the sub-skill shows a diff and asks Update / Keep / Replace itself. Run this after Steps 5–6, not before:
 detection depends on the scaffold's lockfile/framework signals and the Antora config Step 6 just wrote. Run it
 *before* Step 8, so `node_modules/`, `dist/`, `coverage/`, and the Antora build output are already ignored before
 CI-generated reports show up locally.
 
 ## Step 8 — Run `iru-setup-typescript-github-workflows`
 
-First derive `docs-tool` from the resolved `flavor` and Step 3's `storybook` answer — checked against what each
+**Skip this step entirely when `ci: no`** (Step 4): don't invoke the sub-skill — no `.github/workflows/*`, no
+`security.yml`, no `.github/dependabot.yml`, no sync script are written, and any workflow files already on disk
+are left untouched. Record "skipped (ci: no)" for the CI workflows and Dependabot components in Step 11's
+report, state that the shared security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) was
+skipped with it, and that re-running `/iru-setup-typescript-github-workflows` later adds it all.
+
+Otherwise, first derive `docs-tool` from the resolved `flavor` and Step 3's `storybook` answer — checked against what each
 scaffold skill actually wires up, not assumed:
 
 | `flavor` | `docs-tool` |
@@ -283,41 +387,49 @@ Agent({
     distribution: <distribution, react-native/ionic only>\\nsonar: <sonar>\\n
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
     native-builds: <native-builds, react-native only>\\nframework: <framework, ionic only>\\n
-    docs-tool: <docs-tool>\\nmode: <mode>\"}). Report back: whether build.yml/release.yml/sync.yml/security.yml and
-    .github/dependabot.yml were created fresh, updated, or already existed (and, if so, whether the user chose to
-    stop), and the full required-secrets table it produced for this flavor/options.",
+    docs-tool: <docs-tool>\\nvisibility: <visibility>\\nci-tests: <ci-tests, if resolved>\\npages: <pages>\\n
+    mode: <mode>\\non-existing: <on-existing, only if supplied via args>\"}). Report back: whether it ran from
+    scratch or as an update, and per file (build.yml/release.yml/sync.yml/security.yml/.github/dependabot.yml)
+    whether it was created, updated, replaced, or kept as is (or whether the user chose to stop), any mismatch it
+    listed for a kept file, and the full required-secrets table it produced for this flavor/options.",
   run_in_background: false
 })
 ```
 
 Omit `publish`/`distribution`/`native-builds`/`framework` entirely when they don't apply to the resolved `flavor`
-(never send a key the flavor doesn't use). `mode` is always passed: with `mode: existing`,
-`iru-setup-typescript-github-workflows` takes its own update/gap-fill path on any workflow file already present
-(its Step 2) without asking the stop-or-update question — this is what makes this orchestrator's `mode:
-existing` promise hold for the CI step; with `mode: new` (or unset) it asks as usual. The four `security-*` keys
+(never send a key the flavor doesn't use), and omit `ci-tests` when Step 4 left it unset (`library`/
+`react-native`). `ci` itself is never forwarded — invoking the workflows skill means CI is wanted. `mode` is
+always passed but is informational there: for every workflow file already present,
+`iru-setup-typescript-github-workflows` announces the update, warns, and asks Update / Keep / Replace / Stop
+per file (its Step 2) unless `on-existing` was forwarded. The four `security-*` keys
 are deliberately never passed — they each default to `yes` inside `iru-setup-typescript-github-workflows` itself,
 and this orchestrator doesn't ask about them separately; note this once in Step 11's report rather than re-asking
-per run. If it reports that the workflow files already existed and the user chose to stop (only possible when
-`mode` isn't `existing`), note that in Step 11's report rather than treating it as a failure of this skill — the
+per run. If it reports that the workflow files already existed and the user chose to stop, note that in Step
+11's report rather than treating it as a failure of this skill — the
 scaffold, the Antora docs, and the `.gitignore` from Steps 5–7 are still valid on their own.
 
 ## Step 9 — Run `iru-setup-changelog`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run setup-changelog", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-changelog\"}) with no args — it takes
-none, working entirely from the repository's own git tag/GitHub Release history. Report back only whether
-CHANGELOG.md was created (and the version range reconstructed) or already existed.", run_in_background: false})`.
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-changelog\"}) with no args (or, only if
+`on-existing` arrived via Step 0's args, with args \"on-existing: <on-existing>\") — it works entirely from the
+repository's own git tag/GitHub Release history. Report back only the action taken (created, updated with
+missing releases, replaced, or kept as is) and the version range reconstructed.", run_in_background: false})`.
 Position relative to Steps 5–8 doesn't matter functionally — it's independent of all of them. If `CHANGELOG.md`
-already exists, it stops immediately and reports that regardless of `mode` — not a failure of this skill, just
-something to note in Step 11's report. Running it before `iru-setup-readme` means the README's Documentation
+already exists, the sub-skill warns and asks Keep (the old skip) / Update (append missing releases only) /
+Replace itself. Running it before `iru-setup-readme` means the README's Documentation
 section sees it already in place.
 
 ## Step 10 — Run `iru-setup-readme`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run setup-readme", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-readme\", args: \"sonar: <sonar>\"}) — `sonar` is the only key it accepts (with `none` it suppresses Sonar badges/links even if Sonar config exists on disk),
-deriving everything it needs by exploring the repository directly (package.json, the Antora docs, .gitignore, the
-workflows and Sonar config, and CHANGELOG.md). Report back only which sections were included vs. omitted and why.",
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-readme\", args: \"sonar: <sonar>\\nci: <ci>\\n
+pages: <pages, if resolved>\\non-existing: <on-existing, only if supplied via args>\"}) — with `sonar: none` it suppresses Sonar
+badges/links even if Sonar config exists on disk, with `ci: no` it omits CI badges, and with `pages: no` it
+doesn't link a github.io documentation site; it derives everything else by exploring the repository directly
+(package.json, the Antora docs, .gitignore, the workflows and Sonar config, and CHANGELOG.md). Report back only
+the action taken (created, updated, replaced, or kept as is) and which sections were included vs. omitted and
+why.",
 run_in_background: false})`. Run this last, after every other skill, so its badges/status-table/documentation-links
 sections see the finished state of Steps 5–9 instead of a sparser mid-run snapshot. In `mode: new`, most
 CI/Sonar/changelog-derived sections will still be sparse or absent (no commits/tags/CI runs yet) — expected;
@@ -325,26 +437,41 @@ CI/Sonar/changelog-derived sections will still be sparse or absent (no commits/t
 
 ## Step 11 — Report
 
-Summarize the outcome of all six delegated skills together: the resolved `flavor` and `mode`, the project identity
-and license, the pipeline parameters used, and which of the scaffold's own files, the Antora docs site, the
-`.gitignore`, the workflow files (`build.yml`/`release.yml`/`sync.yml` where applicable/`security.yml`/
-`.github/dependabot.yml`), `CHANGELOG.md`, and `README.md` were created, updated, or left untouched (per any stop
-choice in Steps 5 or 8, or a `mode: existing` skip in Step 5).
+Summarize the outcome of all six delegated skills together: repeat the **Setup mode** statement from Step 1
+(from scratch vs updating an existing repository), the resolved `flavor` and `mode`, the project identity and
+license, and the pipeline parameters used. Then give a per-component table — the scaffold's own files
+(`package.json` and toolchain config, source skeleton), the Antora docs site, the `.gitignore`, each workflow file
+(`build.yml`/`release.yml`/`sync.yml` where applicable/`security.yml`), `.github/dependabot.yml`,
+`sonar-project.properties`, `CHANGELOG.md`, and `README.md` — with the action actually taken, as each sub-skill
+reported it: **created / updated / replaced / kept as is / skipped (ci: no)** (or "stopped" per a stop choice in
+Step 5 or 8). For every component kept as is, include the mismatches its sub-skill listed against this run's
+choices.
 
 State explicitly which of publishing/distribution and Sonar analysis were wired, or deliberately omitted and why:
 
-- **`open-source`**: yes/no, as resolved in Step 4.
+- **`open-source`** / **`visibility`**: as resolved in Step 4 (and whether visibility was detected via `gh` or
+  asked). When `private`/`internal`, restate the cost context given in Step 4 (included Actions minutes per plan,
+  macOS ~10× for the iOS release job) and tell the user to double-check their plan's current pricing.
+- **`ci`**: yes/no. With `no`, state that no workflows, `security.yml`, or `.github/dependabot.yml` were
+  generated, that the shared security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) was
+  skipped with them, and that `/iru-setup-typescript-github-workflows` can add them later.
+- **`ci-tests`** (when `ci: yes`): `unit`/`full`, or unset for `library`/`react-native`, and whether the
+  Playwright e2e block was included in `build.yml`.
+- **`pages`** (when `ci: yes`): yes (defaulted for a public repository, or chosen) / no (docs — and the
+  `react`/`angular` release bundle — uploaded as workflow artifacts only; for `react`/`angular`, the app isn't
+  hosted anywhere by this pipeline, so hosting it is a follow-up for the user).
 - **`publish`** (library) / **`distribution`** (react-native, ionic): whether the corresponding scaffold config and
   `release.yml` job were included — `yes`/non-`none` unless the user opted out (or the project isn't open source
   and declined it), stated plainly rather than left implicit.
 - **`sonar`**: `cloud`/`self-hosted`/`none`, and whether `sonar-project.properties` and the `Run SonarQube/SonarCloud
-  analysis` workflow step were included — if `none`, note whether that's the expected non-open-source default or a
-  direct user choice.
+  analysis` workflow step were included — if `none`, note whether that's the expected default (not open source,
+  not public, or `ci: no`) or a direct user choice; if cloud/self-hosted with `ci: no`, note that no CI step sends
+  reports.
 - **`docs-tool`**: the value derived in Step 8 and why (flavor, plus the `storybook` answer for `react`).
 
-Reproduce the **consolidated required-secrets/settings table** `iru-setup-typescript-github-workflows` reported in
-Step 8 verbatim (it's already scoped to exactly this flavor/options — don't re-derive or expand it), plus its
-repository-settings notes (GitHub Pages source = GitHub Actions, "Workflow permissions" allowing PR creation for
+Unless Step 8 was skipped (`ci: no`), reproduce the **consolidated required-secrets/settings table**
+`iru-setup-typescript-github-workflows` reported in Step 8 verbatim (it's already scoped to exactly this flavor/options — don't re-derive or expand it), plus its
+repository-settings notes (GitHub Pages source = GitHub Actions when `pages: yes`, "Workflow permissions" allowing PR creation for
 `sync.yml`, the npmjs.com trusted-publisher relationship for `publish: yes`).
 
 List every decision made on the user's behalf: the license question's fixed MIT-first ordering (Step 2), leaving

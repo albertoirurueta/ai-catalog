@@ -15,11 +15,16 @@ description: Scaffold a new native Apple app (iOS/iPadOS/macOS/watchOS, SwiftUI,
   (`xcodegen`/`tuist` — asked when unset, with XcodeGen recommended for a single-target app and Tuist for a
   modular, multi-package app), `min-deployment-target`, `distribution` (`none`/`internal`/`store`), `signing`
   (`fastlane-match`/`api-key`/`none`), `license`, `developer-name`, `developer-email`, `organization-url`,
-  `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), and `mode` (`new`/
-  `existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks
-  `open-source` first and derives the `sonar` question's default from that answer. If `project.yml` or
-  `Project.swift` already exists at the repository root, asks the user whether to stop or regenerate (`mode:
-  existing` skips straight to gap-fill: create only what's missing, never overwrite hand-written app/test source).
+  `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `visibility`
+  (`public`/`private`/`internal`, keying the Sonar recommendation), `ci` (`yes`/`no` — with `no`, Sonar is
+  configured build-side only), `on-existing` (`ask`/`keep`/`update`/`replace`), and `mode` (`new`/`existing`) — so
+  an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks `open-source` first and
+  derives the `sonar` question's default from that answer. Announces whether it is scaffolding from scratch or
+  updating an existing app; for each of its files that already exists (manifest, `Packages/Core/Package.swift`,
+  lint/format config, `fastlane/Fastfile`, `sonar-project.properties`) it warns and asks Update (merge, keep
+  customizations) / Keep as is / Replace (regenerate from template) / Stop, explaining each consequence —
+  `on-existing` answers for every file at once, and `mode: existing` no longer means a silent gap-fill; hand-written
+  app/test source is never overwritten.
   Every generator/tool version is looked up at run time (GitHub releases API, and the Homebrew formula/cask JSON
   API — reachable over plain HTTPS without `brew` itself installed), falling back to the versions recorded in this
   file when a lookup fails. Equivalent to `iru-setup-android-app`/`iru-setup-react-native-app` for the native Apple
@@ -68,6 +73,8 @@ sonar: cloud
 sonar-organization: example-org-github
 sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
+visibility: public
+ci: yes
 mode: new
 ```
 
@@ -82,38 +89,64 @@ plus a slugified `app-name`, e.g. `com.example.myapp`), `platforms` (comma-separ
 looked up in Step 4), `distribution` (`none`/`internal`/`store`), `signing` (`fastlane-match`/`api-key`/`none`),
 `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar`
 (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`, `sonar-organization`/
-`sonar-project-key`/`sonar-host-url`, and `mode` (`new`/`existing`).
+`sonar-project-key`/`sonar-host-url`, `visibility` (`public`/`private`/`internal` — the GitHub repository's
+visibility, only used to key Step 2's Sonar recommendation; `internal` behaves like `private`), `ci` (`yes`/`no` —
+whether GitHub Actions workflows will exist to send Sonar reports; see Step 2's `ci: no` note), `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask` — how Step 1 treats each already-existing file), and `mode`
+(`new`/`existing`).
 
 `mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
-gap-fill: create only whatever files from Step 5 are genuinely missing, and leave every file that already exists
-untouched. `mode: new` or an unset `mode` follows Step 1's normal survey instead.
+is an established repository) that this is an update rather than a from-scratch run. It **no longer means a silent
+gap-fill**: Step 1 still warns about and asks per already-existing file (unless `on-existing` says otherwise).
+`mode: new` or an unset `mode` follows the same Step 1 survey — the files actually on disk decide whether each one
+is created or updated.
 
 ## Step 1 — Survey the repository
 
-Check for `project.yml` and `Project.swift` at the repository root.
+Check, at the repository root, for this skill's owned files: the manifest (`project.yml`, or `Project.swift` +
+`Tuist.swift`), `Packages/Core/Package.swift`, `.swiftlint.yml`, `.swift-format`, `fastlane/Fastfile`, and
+`sonar-project.properties`; plus the source skeleton (`Packages/Core/Sources`/`Tests`, `Targets/*/Sources`,
+`Targets/*/Tests`, `Targets/*/UITests`) and any hand-maintained `*.xcodeproj`/`*.xcworkspace`. Then tell the user,
+before anything else, which of the two this run is:
 
-- **Neither exists**: skip straight to Step 2. There is nothing to preserve.
-- **One of them exists**: this skill (or a hand-written equivalent) already owns this scaffold. Warn the user it
-  will be regenerated, then:
-  - **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: create only
-    the files from Step 5 that are genuinely missing (never touch an existing SwiftUI view, an existing test file,
-    or hand-added target sources beyond the one placeholder app entry point/test this skill creates originally);
-    note in Step 8's report which files were left alone because they already existed.
-  - **Otherwise**: use `AskUserQuestion` with two options:
-    - **Stop** — leave everything untouched. Report this and end here.
-    - **Update** — regenerate the manifest (`project.yml` or `Project.swift`+`Tuist.swift`), `Packages/Core/Package.swift`,
-      `.swiftlint.yml`, `.swift-format`, `fastlane/Fastfile`, and `sonar-project.properties` from this skill's
-      templates, but never touch any file under `Targets/*/Sources`, `Targets/*/Tests`, `Targets/*/UITests`, or
-      `Packages/Core/Sources`/`Packages/Core/Tests` beyond the placeholder files this skill created originally
-      (detect by exact content match against Step 5's templates before overwriting any Swift file). Tell the user
-      up front that regenerating the manifest replaces the whole file — any target, scheme, or build-setting
-      customization beyond what Step 5 shows will be lost unless re-added afterward (call this out again in Step 8).
+- **Nothing exists**: "**Scaffolding the Apple app from scratch** — none of this skill's files exist yet." Skip
+  straight to Step 2; every Step 5 file is *created*.
 - **Only a hand-maintained `.xcodeproj`/`.xcworkspace` exists, with neither `project.yml` nor `Project.swift`**:
   this isn't this skill's scaffold — it's a project that predates any generator. Warn the user explicitly and ask
   whether to adopt XcodeGen/Tuist going forward (this skill can then write a manifest describing the *existing*
   targets as a starting point, best-effort) or stop. Don't attempt to reverse-engineer the `.xcodeproj` file
-  automatically — confirm the target list with the user first.
+  automatically — confirm the target list with the user first. The remaining owned files then follow the per-file
+  rule below.
+- **Any owned file exists**: "**Updating an existing Apple app** — found: <list of paths>." For each existing owned
+  file, **warn** and resolve what to do with it. If `on-existing` is `keep`/`update`/`replace`, apply it to every
+  existing file without asking (still print the warning and the list). Otherwise (`on-existing: ask` or unset —
+  and regardless of `mode`), ask with `AskUserQuestion`, one question per file, batching up to four per call, with
+  these consequences stated in the option descriptions:
+  - **Update (Recommended)** — merge: add what's missing and correct outdated parts using Step 5's template as
+    reference (e.g. a missing platform target triple, `SWIFT_STRICT_CONCURRENCY = complete`, a Fastfile lane now
+    gated in by `signing`/`distribution`, stale `sonar.*` keys), keeping every target, scheme, build setting, lane
+    or key this skill doesn't own. You review a diff before it's written; customizations survive, but a part this
+    skill owns may be rewritten.
+  - **Keep as is** — leave the file untouched. Nothing customized changes, but it may stay out of date or disagree
+    with this run's choices — say so concretely in the question when it does (e.g. "`fastlane/Fastfile` has a
+    `release` lane but you chose `distribution: internal`", "`sonar-project.properties` exists but you chose
+    `sonar: none`", "`project.yml` has no watchOS target but you selected `watchos`"); Step 8 lists each mismatch.
+  - **Replace** — regenerate from Step 5's template. The result matches this house pattern exactly, but every
+    target, scheme, build-setting, lane or key customization in that file is lost — recoverable only from git
+    history. Never recommended by default. When the manifest is replaced, first read its current app name, bundle
+    id prefix, platforms and deployment target and offer them as the defaults for whichever Step 2 question Step 0
+    didn't already resolve via `args`.
+  - **Stop** — end this skill now without changing anything. Report this and end here.
+
+  Questions about `fastlane/Fastfile`/`sonar-project.properties` whose expected content depends on Step 2's
+  `signing`/`distribution`/`sonar` answers are asked after Step 2 resolves those (or now, if `args` already did).
+
+  The source skeleton is never part of this question: whatever the decision, never touch any existing file under
+  `Targets/*/Sources`, `Targets/*/Tests`, `Targets/*/UITests`, or `Packages/Core/Sources`/`Packages/Core/Tests`
+  beyond the placeholder files this skill creates originally (detect by exact content match against Step 5's
+  templates before overwriting any Swift file) — missing placeholder files for a newly selected platform are
+  created. Record each file's decision; Step 6 applies it and Step 8 reports it as **created / updated / replaced /
+  kept as is**.
 
 ## Step 2 — Collect the required inputs
 
@@ -174,9 +207,14 @@ yes/no) and derive the recommended default for `sonar` from that answer, per thi
 - **open-source** — is this repository open source? Yes / No.
 - **sonar** — whether to wire up a SonarQube/SonarCloud scan (`sonar-project.properties`, typically consumed by a
   CI workflow such as `iru-setup-swift-github-workflows`, so it's worth setting up here even if that workflow comes
-  later). Recommend **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that SonarCloud
-  is free only for open-source projects (a paid plan is required otherwise) and recommend **None** (`none`),
-  offering **self-hosted SonarQube** as the second option:
+  later). Recommend **SonarCloud** (`cloud`) only when open-source is Yes **and** `visibility` is `public` (or
+  unknown — `visibility` isn't asked by this skill; it only arrives via `args`); otherwise state that SonarCloud
+  (SonarQube Cloud) is free only for public/open-source projects — a private project needs a paid plan, per its
+  current pricing — and recommend **None** (`none`), offering **self-hosted SonarQube** (Community Build is free,
+  but you run the server) as the second option. **When `ci: no` arrived via `args`**, say plainly that no workflow
+  will send analysis or coverage reports automatically — analysis would only run when someone runs the scanner
+  manually with a token — and recommend `none`; if the user still picks `cloud`/`self-hosted`, write
+  `sonar-project.properties` (the build-side config) only and note in Step 8 that no CI step sends reports:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
     suggested default. Default `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url` to
     `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
@@ -841,8 +879,11 @@ without organizations enabled (per Step 2).
 
 ## Step 6 — Scaffold the project
 
-Skip any individual file this step would write if Step 1 resolved gap-fill (`mode: existing` or the "Update"
-choice) and that exact file already exists — never overwrite it.
+Apply Step 1's per-file decision to every file below: write a file that doesn't exist yet (*created*); for an
+existing one, merge per **Update** (show the diff first, e.g. `git diff --no-index <current> <draft>`, and write
+on approval — *updated*), leave it untouched per **Keep as is** (*kept as is*), or overwrite it from Step 5's
+template per **Replace** (*replaced*). Existing hand-written source under `Targets/`/`Packages/Core` is never
+overwritten (Step 1).
 
 1. Write the manifest — `project.yml` (XcodeGen) or `Project.swift` + `Tuist.swift` (Tuist), per Step 2's
    `generator` choice — with Step 2/3/4's values substituted, one `targets`/`Target.target(...)` triple per
@@ -906,8 +947,8 @@ Report pass/fail and any error output verbatim for a failure; don't dump a succe
 
 Summarize what was generated: the resolved `app-name`/`bundle-id-prefix`/`<bundle-id>`, `platforms` selected (and
 how `ipados` combined with `ios`, if relevant), `min-deployment-target`, `generator`, the license chosen (or
-"none"), and whether Step 6's scaffold ran fresh, was skipped in favor of gap-fill/update (per Step 1), or the user
-chose to stop.
+"none"), and the mode announced in Step 1 — scaffolded from scratch, updated an existing app, or the user chose
+to stop.
 
 State explicitly what was included versus omitted, and why:
 
@@ -922,8 +963,11 @@ State explicitly what was included versus omitted, and why:
   collects or stores any of them.
 - Which Step 4 versions came from a live lookup versus this skill's recorded fallback.
 
-Then report which of Step 5's files were created fresh, left untouched (gap-fill/`mode: existing`), or replaced
-(update). If existing files were replaced, explicitly list what could have been lost — any target, scheme, or
+Then report, per Step 5 file, the action actually taken — **created / updated / replaced / kept as is** — and for
+every file kept as is, each concrete mismatch with this run's choices (e.g. a Fastfile lane no longer backed by
+`signing`/`distribution`, a leftover `sonar-project.properties` after `sonar: none`). If `visibility` or `ci`
+arrived via `args`, say how they shaped the `sonar` recommendation (and, for `ci: no` with Sonar configured, that
+no CI step sends reports). If existing files were replaced, explicitly list what could have been lost — any target, scheme, or
 build-setting customization beyond what Step 5's templates show — and tell the user to check `git diff` for
 anything they need to re-add.
 

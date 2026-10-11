@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-apis
-description: Set up the contract-first API layer of a Spring Boot service — the single `apis/` directory at the repository root holding every contract (`apis/rest-server/` OpenAPI specs, `apis/grpc-server/` protobuf definitions, `apis/graphql-server/` SDL schemas, `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and `apis/graphql-client/<name>/` per downstream service, `apis/messaging/` AVRO schemas *and* the AsyncAPI specification that describes the topics carrying them), a starter spec for each one, and the code-generation plugin executions wired into the module that consumes each contract — `openapi-generator-maven-plugin` (Spring server interfaces + DTOs for the REST server, client + DTOs per REST client, and HTML documentation), `protobuf-maven-plugin` (gRPC service base classes and stubs, plus HTML documentation via `protoc-gen-doc`), `graphql-codegen-maven-plugin` (resolver interfaces + model types for the GraphQL server, request/response/projection classes per GraphQL client, plus the SDL copied onto the runtime classpath Spring for GraphQL loads it from, and `spectaql`/`graphql-voyager` run from the Maven build for its static HTML reference and schema graph), `avro-maven-plugin` (Java classes from the AVRO schemas), and `@asyncapi/html-template` run from the Maven build via `frontend-maven-plugin` (HTML documentation from the AsyncAPI specification). Adds a linting/compatibility check per contract kind and keeps generated sources out of version control and out of static analysis. Reads `springboot-stack.yml` for which contracts the service actually needs and writes no version numbers, inheriting them all from the root pom. Invoke as `/iru-setup-java-springboot-apis`, or with `args` (`stack-file:` line) when called from `iru-setup-java-springboot`. Use after the reactor and module sources exist, whenever a Spring Boot service needs its OpenAPI/protobuf/GraphQL/AVRO/AsyncAPI contracts and their generators set up instead of hand-configuring five code generators across several module poms.
+description: Set up the contract-first API layer of a Spring Boot service — the single `apis/` directory at the repository root holding every contract (`apis/rest-server/` OpenAPI specs, `apis/grpc-server/` protobuf definitions, `apis/graphql-server/` SDL schemas, `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and `apis/graphql-client/<name>/` per downstream service, `apis/messaging/` AVRO schemas *and* the AsyncAPI specification that describes the topics carrying them), a starter spec for each one, and the code-generation plugin executions wired into the module that consumes each contract — `openapi-generator-maven-plugin` (Spring server interfaces + DTOs for the REST server, client + DTOs per REST client, and HTML documentation), `protobuf-maven-plugin` (gRPC service base classes and stubs, plus HTML documentation via `protoc-gen-doc`), `graphql-codegen-maven-plugin` (resolver interfaces + model types for the GraphQL server, request/response/projection classes per GraphQL client, plus the SDL copied onto the runtime classpath Spring for GraphQL loads it from, and `spectaql`/`graphql-voyager` run from the Maven build for its static HTML reference and schema graph), `avro-maven-plugin` (Java classes from the AVRO schemas), and `@asyncapi/html-template` run from the Maven build via `frontend-maven-plugin` (HTML documentation from the AsyncAPI specification). Adds a linting/compatibility check per contract kind and keeps generated sources out of version control and out of static analysis. Reads `springboot-stack.yml` for which contracts the service actually needs and writes no version numbers, inheriting them all from the root pom. Announces whether it is creating the API layer from scratch or updating an existing one; for every contract file, documentation toolchain, and generator execution it owns that already exists warns and asks Update / Keep as is / Replace (never overwriting a real contract by default) — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-apis`, or with `args` (`stack-file:`, `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use after the reactor and module sources exist, whenever a Spring Boot service needs its OpenAPI/protobuf/GraphQL/AVRO/AsyncAPI contracts and their generators set up instead of hand-configuring five code generators across several module poms.
 model: sonnet
 ---
 
@@ -17,8 +17,10 @@ Wire up the contract-first API layer. Two invariants:
 
 ## Step 0 — Resolve inputs
 
-Parse `args` for `stack-file: <path>`, defaulting to `springboot-stack.yml`. Read it and determine exactly which
-contracts are needed:
+Parse `args` for `key: value` lines: `stack-file: <path>`, defaulting to `springboot-stack.yml`; `mode`
+(`new`/`existing`, informational — it never means "update silently"); and `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask`). Read the manifest and determine exactly which contracts are
+needed:
 
 | Manifest field | Contract directory | Generated into | Generator |
 |---|---|---|---|
@@ -40,6 +42,22 @@ and skip that contract rather than creating a module here.
 Read the root `pom.xml` to confirm the generator plugins are already version-managed in `<pluginManagement>` (the
 pom skill puts them there). **Declare no `<version>` in any module pom below** — if a version is missing from
 `pluginManagement`, add it to the root pom rather than inline in the module.
+
+Say whether this run is **creating the API layer from scratch** (no `apis/` tree, no generator executions) or
+**updating an existing one** (list what exists: contract files per directory, `apis/messaging/docs/` and
+`apis/graphql-server/docs/` toolchains, generator executions already in module poms). For each pre-existing
+artifact this skill owns, warn and — unless `on-existing` says otherwise — ask with `AskUserQuestion` (up to 4 per
+call, one question each; group "all existing contract files" into one question when there are many):
+
+- **Update (Recommended)** — add what's missing (a directory/starter spec for a newly added API or client, a
+  missing generator execution, a missing documentation step) and correct generator configuration this skill owns;
+  **existing contract files are never rewritten** — a contract is the service's real API, not a template. Your
+  customizations survive, but a customized generator execution this skill owns may be rewritten.
+- **Keep as is** — leave it untouched; it may lag behind the manifest (e.g. no contract for a newly added client)
+  — Step 10 lists each gap.
+- **Replace** — regenerate from this skill's templates. For a generator execution or documentation toolchain this
+  only loses its customizations; for a **contract file** it replaces a real API definition with a placeholder, so
+  only offer it for contracts after stating that explicitly, and never recommend it.
 
 ## Step 1 — Create the `apis/` tree
 
@@ -864,6 +882,8 @@ report what you added:
 
 Summarize:
 
+- Whether the API layer was created from scratch or updated, and per pre-existing artifact the action taken
+  (**created / updated / replaced / kept as is**), with each gap left in a kept artifact.
 - Every contract file created, with its path and what it describes.
 - Every generator execution added, to which module pom, generating into which package, and where its HTML
   documentation lands.

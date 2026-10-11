@@ -1,6 +1,6 @@
 ---
 name: iru-update-java-springboot-documentation
-description: Set up and keep current the Antora documentation site for a DDD/hexagonal Spring Boot service — bootstraps the site via `iru-setup-antora` if absent, adds the Kroki extension alongside Mermaid, and creates or refreshes the service's full page set from the codebase as it actually is: service overview, service architecture (with dependency diagrams and the reactive-versus-blocking rationale), one section per use case (flow diagram, dependencies touched, exceptions raised), the database model (entities, fields, types, indexes, mandatory fields, constraints, relationships, plus generated diagrams), REST/gRPC/GraphQL/messaging API pages derived from the contracts in `apis/` (versions, entities and fields with descriptions and constraints, deprecations, endpoints with methods/paths/headers/authorization and every documented error, and a prominent link from each API page to its own generated reference published on GitHub Pages — OpenAPI HTML from `apis/rest.adoc`, protobuf HTML from `apis/grpc.adoc`, AsyncAPI HTML from `apis/messaging.adoc`, and the SpectaQL reference plus optional Voyager schema graph from `apis/graphql.adoc` — resolved through a single `api-docs-url` attribute in `docs/antora.yml`), a configuration property table (default, dynamically-changeable, criticality flags), and a metrics table (type, tags, meaning). Reads `springboot-stack.yml`, the module sources, the `apis/` contracts, and the `@ConfigurationProperties`/Micrometer code rather than inventing content, and marks anything it cannot derive as an explicit TODO instead of filling it with plausible prose. Idempotent — safe to re-run after any change, and intended to be re-run as part of the normal change cycle. Invoke as `/iru-update-java-springboot-documentation` to cover the whole service, or `/iru-update-java-springboot-documentation <page-or-area>` to refresh one page. Use whenever a Spring Boot service's documentation needs creating or bringing back in line with its code, instead of hand-maintaining ten interdependent pages.
+description: Set up and keep current the Antora documentation site for a DDD/hexagonal Spring Boot service — bootstraps the site via `iru-setup-antora` if absent, adds the Kroki extension alongside Mermaid, and creates or refreshes the service's full page set from the codebase as it actually is: service overview, service architecture (with dependency diagrams and the reactive-versus-blocking rationale), one section per use case (flow diagram, dependencies touched, exceptions raised), the database model (entities, fields, types, indexes, mandatory fields, constraints, relationships, plus generated diagrams), REST/gRPC/GraphQL/messaging API pages derived from the contracts in `apis/` (versions, entities and fields with descriptions and constraints, deprecations, endpoints with methods/paths/headers/authorization and every documented error, and a prominent link from each API page to its own generated reference published on GitHub Pages — OpenAPI HTML from `apis/rest.adoc`, protobuf HTML from `apis/grpc.adoc`, AsyncAPI HTML from `apis/messaging.adoc`, and the SpectaQL reference plus optional Voyager schema graph from `apis/graphql.adoc` — resolved through a single `api-docs-url` attribute in `docs/antora.yml`), a configuration property table (default, dynamically-changeable, criticality flags), and a metrics table (type, tags, meaning). Reads `springboot-stack.yml`, the module sources, the `apis/` contracts, and the `@ConfigurationProperties`/Micrometer code rather than inventing content, and marks anything it cannot derive as an explicit TODO instead of filling it with plausible prose. Idempotent — safe to re-run after any change, and intended to be re-run as part of the normal change cycle. Announces whether it is creating the page set from scratch or updating existing pages, and when pages already exist warns and asks Update (refresh derived parts, keep hand-written prose) / Keep as is (only create missing pages) / Replace (regenerate, losing hand-written prose) — or applies `on-existing` from `args`. Honours the manifest's `ci.enabled`/`ci.pages`: when the docs aren't deployed to GitHub Pages, API pages point at the CI `documentation` workflow artifact (or the local build output) instead of dead github.io links. Invoke as `/iru-update-java-springboot-documentation` to cover the whole service, or `/iru-update-java-springboot-documentation <page-or-area>` to refresh one page, optionally with `mode` (`new`/`existing`) and `on-existing` (`ask`/`keep`/`update`/`replace`) as key/value lines. Use whenever a Spring Boot service's documentation needs creating or bringing back in line with its code, instead of hand-maintaining ten interdependent pages.
 model: sonnet
 ---
 
@@ -22,9 +22,26 @@ re-checks it.
 
 Parse the argument: absent means every page; a page name or area (`architecture`, `use-cases`,
 `database-model`, `apis/rest`, `apis/grpc`, `apis/graphql`, `apis/messaging`, `configuration`, `metrics`,
-`overview`) means just that one.
+`overview`) means just that one. The argument may also carry `key: value` lines (as `iru-setup-java-springboot`
+sends them): `mode` (`new`/`existing`, informational — it never means "update silently") and `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask`). Ignore any other key.
 
-Read `springboot-stack.yml` for the declared stack. Treat it as **intent**, not truth: the code is truth. Where
+**Announce the mode before writing anything.** If none of the Step 2 pages exist yet, say this run is **creating
+the documentation page set from scratch**. Otherwise say it is **updating existing documentation**, list the
+pages found, and — unless `on-existing` is `keep`/`update`/`replace`, in which case apply it to every page and
+just print the warning — ask once with `AskUserQuestion` (one question covering the existing pages):
+
+- **Update (Recommended)** — "Refresh the derived parts (tables, diagrams, endpoint/property/metric lists) and
+  keep hand-written prose, per Step 2's re-run rule. Contradictions between prose and code are listed, not
+  silently overwritten."
+- **Keep as is** — "Don't touch existing pages; only create pages that are missing. Existing pages may stay out
+  of date with the code — the report lists which ones this run would have changed."
+- **Replace** — "Regenerate every existing page from the code. Pages match the code exactly, but every
+  hand-written sentence (the 'why' sections only a human can supply) is lost — recoverable only from git."
+- **Stop** — "End now without changing anything."
+
+Read `springboot-stack.yml` for the declared stack, including its `ci:` block (`enabled`, `pages`) — Step 7
+uses it to decide where the API reference links point. Treat it as **intent**, not truth: the code is truth. Where
 they disagree (a database in the manifest with no adapter module, an adapter for something the manifest doesn't
 list), say so in the report — that's a real finding about the repository, not a documentation problem.
 
@@ -122,10 +139,12 @@ Every page carries this immediately after its `= Title` heading, matching the re
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 ```
 
-On a re-run, **update pages rather than rewriting them**: preserve hand-written prose (especially the "why"
+On a re-run (Step 0's **Update**, the default), **update pages rather than rewriting them**: preserve hand-written prose (especially the "why"
 sections that only a human can supply) and refresh the derived parts — tables, diagrams, endpoint lists, property
 lists. If a hand-written statement now contradicts the code, don't silently overwrite it: update it and list the
-contradiction in the report, since it may mean the code changed without the intent changing.
+contradiction in the report, since it may mean the code changed without the intent changing. With **Keep as is**,
+existing pages are left byte-for-byte untouched and only missing pages (and their `nav.adoc` entries) are added;
+with **Replace**, existing pages are regenerated in full.
 
 ## Step 3 — `index.adoc` — service overview
 
@@ -284,6 +303,17 @@ Resolve that value rather than guessing it:
   file in the published output or a configured custom domain before settling on it.
 - If GitHub Pages isn't set up yet, still write the attribute with the derived URL, and say in the report that the
   links stay dead until Pages is enabled and the build workflow has run once on the main branch.
+- **When the manifest says docs are not deployed to Pages** (`ci.pages: false`, or `ci.enabled: false`), don't
+  write a github.io `api-docs-url` at all — that site will never exist. Instead:
+  - with `ci.enabled: true` and `ci.pages: false`, the build workflow uploads the merged docs as a `documentation`
+    workflow artifact: replace each `{api-docs-url}/...` link with a sentence telling the reader the generated
+    reference is in that artifact under the same relative path (e.g. `api/rest-server/v1/index.html`), and link the
+    repository's Actions page for the workflow;
+  - with `ci.enabled: false`, tell the reader to build it locally (the module's documentation execution writes it
+    under `target/generated-docs/`) and name the Maven command;
+  - in both cases still link the source contract (below), and say in the report which variant was used and that a
+    private repository on a paid plan can switch to Pages later by setting `ci.pages: true` and re-running this
+    skill.
 
 Then link per contract version — `v1` and `v2` each get their own line, since each generates its own page:
 
@@ -512,7 +542,11 @@ Summarize:
 
 - Pages created, pages updated, pages omitted (and why).
 - Whether Kroki had to be installed and the playbook amended.
-- The `api-docs-url` value resolved, how it was resolved (the Pages API, the git remote, or a custom domain), and
+- Whether this run created the page set from scratch or updated it, the option chosen in Step 0 (Update / Keep
+  as is / Replace, asked or from `on-existing`), and per page: created / updated / replaced / kept as is.
+- The `api-docs-url` value resolved, how it was resolved (the Pages API, the git remote, or a custom domain) — or,
+  with `ci.pages: false`/`ci.enabled: false`, that no Pages URL was written and which artifact/local-build wording
+  replaced the links — and
   the generated-reference link written on each API page. Call out explicitly any API page whose reference isn't
   generated at all — a gRPC documentation execution that was never wired, or messaging documentation missing
   because the AsyncAPI step was skipped — and whether GitHub Pages has published yet, since until it has, every one

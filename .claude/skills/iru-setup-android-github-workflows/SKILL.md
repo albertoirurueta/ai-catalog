@@ -1,6 +1,6 @@
 ---
 name: iru-setup-android-github-workflows
-description: Create or update the `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only) GitHub Actions workflows plus `.github/dependabot.yml` and `security.yml` for an Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-android-app` — build, unit test, optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, lint with SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-`jacococli.jar` fallback), an optional SonarQube/SonarCloud scan (`:lib:sonar`/`:app:sonar`), a Dokka + Antora documentation build published to GitHub Pages, and — for the `library` flavor — an optional Maven Central publish, or — for the `app` flavor — a signed release build uploaded to Google Play or Firebase App Distribution. Invoke as `/iru-setup-android-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `branching` (`gitflow`/`main-only`, default `gitflow`), `integration-branch` (default `develop`), `stable-branch` (default `main`), `java-version` (default `17`), `run-instrumented-tests` (`yes`/`no`), `api-level` (default `35`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar` (`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), and the four `security-*` opt-outs plus two security opt-ins — so an orchestrating skill can supply them without re-prompting. Ships with generic example templates (genericized, no real repo/org/person names) derived from a real Android library repository's actual `main.yml`/`publish.yml` (linked in Step 3) — see Step 6 for how they were adapted into the `gitflow` variant's `develop.yml`/`main.yml`/`sync.yml`. Creates all workflows (and the sync/security scripts) from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference, preserving any step/job this skill doesn't own. Use whenever an Android/Gradle repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only) GitHub Actions workflows plus `.github/dependabot.yml` and `security.yml` for an Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-android-app` — build, unit test, optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, lint with SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-`jacococli.jar` fallback), an optional SonarQube/SonarCloud scan (`:lib:sonar`/`:app:sonar`), a Dokka + Antora documentation build published to GitHub Pages (or, with `pages: no`, still built and uploaded as a workflow artifact instead), and — for the `library` flavor — an optional Maven Central publish, or — for the `app` flavor — a signed release build uploaded to Google Play or Firebase App Distribution. Invoke as `/iru-setup-android-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `branching` (`gitflow`/`main-only`, default `gitflow`), `integration-branch` (default `develop`), `stable-branch` (default `main`), `java-version` (default `17`), `run-instrumented-tests` (`yes`/`no`), `api-level` (default `35`), plus this catalog's shared workflow-args vocabulary — `open-source`, `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`, mapped onto `run-instrumented-tests` unless that key is given explicitly), `pages` (`yes`/`no`), `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar` (`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`), and the four `security-*` opt-outs plus two security opt-ins — so an orchestrating skill can supply them without re-prompting; when run standalone it resolves `visibility` itself (`gh repo view`) and asks `sonar`/`ci-tests`/`pages` with the GitHub Actions-minutes, SonarCloud and Pages cost facts for that visibility. Ships with generic example templates (genericized, no real repo/org/person names) derived from a real Android library repository's actual `main.yml`/`publish.yml` (linked in Step 3) — see Step 6 for how they were adapted into the `gitflow` variant's `develop.yml`/`main.yml`/`sync.yml`. Announces whether it is creating the workflows from scratch or updating an existing pipeline; for every workflow/script/Dependabot file that already exists it warns and asks Update (merge, preserving any step/job this skill doesn't own) / Keep as is / Replace (regenerate from the template) / Stop, naming any concrete mismatch with this run's choices, unless `on-existing` decides. Use whenever an Android/Gradle repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -59,11 +59,16 @@ java-version: 17
 run-instrumented-tests: yes
 api-level: 35
 open-source: yes
+visibility: public
+ci-tests: full
+pages: yes
 publish: yes
 sonar: cloud
 sonar-organization: example-org
 sonar-project-key: example-org_example-library
 sonar-host-url: https://sonarcloud.io
+mode: new
+on-existing: ask
 security-dependency-review: yes
 security-codeql: yes
 security-osv: yes
@@ -75,7 +80,7 @@ security-mobsfscan: no
 Parse any such lines first; for each key found there, use that value directly and skip the matching
 fact-finding step below. If `args` is absent or doesn't look like this format, treat everything as unset and
 gather every fact via Step 1's survey / `AskUserQuestion` instead. Bounded choices (`flavor`, `branching`,
-`sonar`, `publish`/`distribution`, the `security-*` toggles) go through `AskUserQuestion` with at most four
+`visibility`, `ci-tests`, `pages`, `sonar`, `publish`/`distribution`, the `security-*` toggles) go through `AskUserQuestion` with at most four
 options per question when not resolved by `args` or Step 1's survey; free-text values (branch names, the
 Sonar organization/key/host, `java-version`, `api-level`) are asked as plain conversation.
 
@@ -86,21 +91,60 @@ Sonar organization/key/host, `java-version`, `api-level`) are asked as plain con
 | `integration-branch` | Branch `develop.yml` pushes on (gitflow only) | `develop` |
 | `stable-branch` | Branch releases are published from | `main` |
 | `java-version` | JDK version for `actions/setup-java` | `17` (matches the reference repository, and `iru-setup-android-library`/`-app`'s `sourceCompatibility`) |
-| `run-instrumented-tests` | Whether to run `connectedAndroidTest` on an emulator | Ask — instrumented tests need KVM/emulator time and are slower; default recommendation `no` for a first setup, `yes` once the module actually has instrumented tests under `src/androidTest` |
+| `run-instrumented-tests` | Whether to run `connectedAndroidTest` on an emulator | An explicit value in `args` always wins. Otherwise derived from `ci-tests` (`full` ⇒ `yes`, `unit` ⇒ `no`). Neither supplied ⇒ resolve `ci-tests` per "Standalone resolution" below |
+| `ci-tests` | `unit`/`full` — `unit` = JVM unit tests (`test`) only; `full` = unit + instrumented `connectedAndroidTest` on an emulator | Only consulted to derive `run-instrumented-tests` when that key wasn't supplied; ask per "Standalone resolution" below if neither was |
+| `visibility` | `public`/`private`/`internal` — GitHub repository visibility, drives the cost-sensitive recommendations below | Per "Standalone resolution" below |
+| `pages` | `yes`/`no` — whether the docs are deployed to GitHub Pages (`yes`) or only built and uploaded as a workflow artifact (`no`) | Public: `yes` without asking. Private/internal: ask, `no` recommended. Irrelevant (not asked) when no `lib/` module exists — the app flavor has no docs job |
 | `api-level` | Emulator API level for `reactivecircus/android-emulator-runner` | `35` (matches the reference repository; independent of `compileSdk` — see Step 12) |
 | `open-source` | `yes`/`no` | `gh repo view --json isPrivate` if unresolved otherwise |
 | `publish` (library only) | `yes`/`no` — gates the Maven Central publish steps | `yes` only when `open-source: yes`; otherwise ask, `no` recommended |
 | `distribution` (app only) | `none`/`internal`/`store` — gates the release upload step | `store` only when `open-source: yes`; otherwise ask, `none` recommended |
-| `sonar` | `cloud`/`self-hosted`/`none` | `cloud` when `open-source: yes`. When not open source, state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend `none`, offering self-hosted SonarQube (`self-hosted`) as the second option — the same wording `iru-setup-android-library`/`-app` use in their Step 2 |
+| `sonar` | `cloud`/`self-hosted`/`none` | `cloud` only when `open-source: yes` **and** `visibility: public`. Otherwise state that SonarCloud is free only for public/open-source projects (a private project needs a paid plan) and recommend `none`, offering self-hosted SonarQube (`self-hosted`, free Community Build, but you run the server) as the second option — the same wording `iru-setup-android-library`/`-app` use in their Step 2 |
 | `sonar-organization` / `sonar-project-key` / `sonar-host-url` | Sonar coordinates | Only asked when `sonar` isn't `none`; read from `lib/build.gradle.kts`'s or `app/build.gradle.kts`'s existing `sonar {}` block first (Step 1) |
-| `mode` | `new`/`existing` | Whether this is a first-time setup or a re-run against an existing pipeline; if `existing`, go straight to Step 1's stop-or-update path |
+| `mode` | `new`/`existing` | Whether this is a first-time setup or a re-run against an existing pipeline. Informational only: Step 1 still checks every file on disk, and `mode: existing` does **not** mean "update silently" — each pre-existing file still goes through Step 1's Update / Keep / Replace / Stop question |
+| `on-existing` | `ask`/`keep`/`update`/`replace` | `ask` (default) — one question per pre-existing file in Step 1. `keep`/`update`/`replace` applies that choice to every pre-existing file without asking (the warning is still printed). Only for scripted runs |
 | `security-dependency-review` / `security-codeql` / `security-osv` / `security-gitleaks` | `yes`/`no`, each gates one `security.yml` job | `yes` |
 | `security-owasp-dependency-check` | `yes`/`no` — opt-in OWASP Dependency-Check job | `no` |
 | `security-mobsfscan` | `yes`/`no` — opt-in `MobSF/mobsfscan` job, **app flavor only** | `no` |
 | `license` / `developer-name` / `developer-email` / `organization-url` | This catalog's shared scaffold-args vocabulary | **Not used by this skill's generated files** — accepted only so an orchestrator can pass its full shared-args set without this skill erroring on unrecognized keys; note this in the final report if any were supplied |
 
 `.github/dependabot.yml` has no opt-out key — it's always generated/updated, same as the Java/TypeScript
-siblings.
+siblings. There is no `ci` key: invoking this skill means CI is wanted (an orchestrator that resolved `ci: no`
+skips this skill entirely rather than calling it).
+
+### Standalone resolution of `visibility`, `sonar`, `ci-tests` and `pages`
+
+When this skill runs without an orchestrator (or one left some of these keys unset), resolve them in this order
+after `open-source`, skipping any key `args` already supplied. Quote the cost facts below "per GitHub's current
+pricing" (verified October 2026 against docs.github.com) and tell the user to double-check their own plan:
+
+1. **`visibility`** — if not in `args` and the repository has a GitHub remote, run
+   `gh repo view --json visibility -q .visibility` (returns `PUBLIC`/`PRIVATE`/`INTERNAL`; lowercase it) and tell
+   the user the detected value. No remote / `gh` unavailable / not GitHub → `AskUserQuestion` **Public** /
+   **Private**, recommending Public when `open-source: yes`, otherwise Private. If `open-source: yes` but
+   `visibility` is `private`/`internal`, warn that this is contradictory (an open-source project's repository is
+   normally public, and a private repository forfeits the free-for-public pricing below) and ask which is right.
+   `internal` behaves like `private` for every decision below.
+2. **`sonar`** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?" with the
+   defaults in the table above (SonarCloud is free for public/open-source projects; a private project needs a
+   paid plan; self-hosted SonarQube Community Build is free but you run the server). Skipped when Step 1 finds an
+   existing `sonar {}` block (it already answers this).
+3. **`ci-tests`** (only when neither `run-instrumented-tests` nor `ci-tests` was supplied) — `AskUserQuestion`:
+   - **Unit tests only** (`unit`, recommended for private/internal) — "JVM unit tests (`./gradlew test`) only:
+     fewer minutes, faster feedback. Instrumented `src/androidTest` tests stay local."
+   - **Unit + instrumented** (`full`, recommended for public) — "Also boots an Android emulator
+     (`reactivecircus/android-emulator-runner`, Linux runner with KVM) and runs `connectedAndroidTest` — complete
+     verification, but the emulator boot plus the test run adds several minutes to every CI run."
+   For a private/internal repository, state that GitHub-hosted Linux runner minutes are free only for public
+   repositories; private/internal ones consume the account's included minutes — 2,000/month on GitHub Free,
+   3,000 on Pro and Team, 50,000 on Enterprise Cloud — then are billed per minute (Linux 2-core $0.006/min). This
+   pipeline runs entirely on Linux runners, so the macOS ~10× / Windows ~1.7× multipliers don't apply here.
+4. **`pages`** (only when a `lib/` module exists — the docs job is library-only):
+   - Public → `yes` without asking (state it in the report).
+   - Private/internal → `AskUserQuestion`: **No (Recommended)** — "CI still builds the Dokka + Antora docs and
+     uploads them as a workflow artifact; nothing is published." / **Yes** — "Requires GitHub Pro, Team, or
+     Enterprise Cloud (Pages isn't available for private repositories on GitHub Free); the site will be PUBLIC on
+     the internet unless you're on Enterprise Cloud with private Pages access control."
 
 ## Step 1 — Survey the target repository
 
@@ -167,30 +211,56 @@ update:
   `.github/workflows/security.yml`, and `.github/dependabot.yml` already exist (only the subset relevant to
   the resolved `branching`, plus the two always-present files).
 
-### Stop or update
+### Prior setup — Update / Keep / Replace
 
-- **None of the relevant files exist** (or `mode: new`): skip straight to Step 2 — create everything from
-  scratch.
-- **Any relevant file already exists** (or `mode: existing`): use `AskUserQuestion` to ask whether to (a) stop
-  here and leave everything untouched, or (b) continue and attempt to update the existing file(s) using this
-  skill's templates as reference.
-  - **Stop**: report which file(s) already exist and end here — make no changes.
-  - **Continue**: proceed to Step 11, but treat each existing file as the base to edit, not something to
-    overwrite wholesale:
-    - For `develop.yml`/`main.yml` (gitflow) or `main.yml` (main-only): preserve any step/job this skill
-      doesn't own (build/test/lint/coverage/SARIF-upload/optional-Sonar/optional-Dokka-Antora-Pages/optional-
-      publish-or-release) — e.g. a Slack notification step, an extra matrix entry, or an additional module's
-      build step stays untouched. Only add missing stages or correct outdated ones (wrong action version,
-      wrong task name, a stage that should now be gated on/off per `sonar`/`publish`/`distribution`/
-      `run-instrumented-tests`), and don't reorder foreign steps.
-    - For `sync.yml`/`sync_versions.py` (gitflow) or `publish.yml` (main-only): preserve any file the script
-      updates beyond `lib/build.gradle.kts`/`app/build.gradle.kts`/`README.md`/the Antora docs that a prior
-      customization added, and preserve any extra workflow step the same way.
-    - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
-      dependency-review/CodeQL/OSV-Scanner/gitleaks/OWASP-dependency-check/mobsfscan jobs per the resolved
-      `security-*` args.
-    - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage
-      (e.g. `npm` for `docs/`); only add/update the `gradle` and `github-actions` entries.
+Tell the user which of the two this run is doing:
+
+- **Creating from scratch** — none of the relevant files exist: skip straight to Step 2 and create everything.
+- **Updating an existing pipeline** — at least one relevant file exists: warn the user, listing each existing
+  file by path (files that don't exist yet are still created from scratch alongside). `mode: existing` alone
+  doesn't skip this — every pre-existing file is still decided individually.
+
+For each pre-existing file, unless `on-existing` (Step 0) is `keep`/`update`/`replace` — in which case apply it
+to every such file without asking, still printing the warning — ask with `AskUserQuestion`, one question per
+file (batch up to 4 per call; a further call for the rest). Before asking, compare the file against this run's
+resolved choices and name every concrete mismatch in the question, e.g. "your current `develop.yml` boots an
+emulator for `connectedAndroidTest` but you chose `ci-tests: unit`", "`main.yml` deploys to GitHub Pages but you
+chose `pages: no`", "`develop.yml` still runs `:lib:sonar` but `sonar` is `none`", "`main.yml` publishes to Maven
+Central but `publish` is `no`". Options, with the consequence in each description:
+
+- **Update (Recommended)** — "Merge: add what's missing and correct outdated parts (action versions, gated
+  steps, stale values) using this skill's template as reference; keep everything this skill doesn't own (custom
+  steps/jobs/entries). You review a diff; your customizations survive, but a customized part this skill owns may
+  be rewritten."
+- **Keep as is** — "Leave the file untouched. Nothing you customized changes, but it may stay out of date or
+  disagree with this run's choices (the mismatches named above) — the report will list each one." Recommend
+  this instead of Update only for `.github/dependabot.yml` when it already has `gradle` and `github-actions`
+  entries.
+- **Replace** — "Regenerate from this skill's template. Result matches this house pattern exactly, but every
+  customization in the file is lost (recoverable only from git history)." Never recommended by default.
+- **Stop** — "End this skill now without changing any file" (offer it on the first question only; choosing it
+  for any file means no file is written at all). Report which file(s) already exist and end here.
+
+How each choice is applied in Step 12:
+
+- **Update** — treat the existing file as the base to edit, not something to overwrite wholesale:
+  - For `develop.yml`/`main.yml` (gitflow) or `main.yml` (main-only): preserve any step/job this skill doesn't
+    own (build/test/lint/coverage/SARIF-upload/optional-Sonar/optional-Dokka-Antora-Pages-or-artifact/optional-
+    publish-or-release) — e.g. a Slack notification step, an extra matrix entry, or an additional module's build
+    step stays untouched. Only add missing stages or correct outdated ones (wrong action version, wrong task
+    name, a stage that should now be gated on/off per `sonar`/`publish`/`distribution`/`run-instrumented-tests`/
+    `pages`), and don't reorder foreign steps.
+  - For `sync.yml`/`sync_versions.py` (gitflow) or `publish.yml` (main-only): preserve any file the script
+    updates beyond `lib/build.gradle.kts`/`app/build.gradle.kts`/`README.md`/the Antora docs that a prior
+    customization added, and preserve any extra workflow step the same way.
+  - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
+    dependency-review/CodeQL/OSV-Scanner/gitleaks/OWASP-dependency-check/mobsfscan jobs per the resolved
+    `security-*` args.
+  - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage
+    (e.g. `npm` for `docs/`); only add/update the `gradle` and `github-actions` entries.
+  Show the user the diff of each updated file before writing it.
+- **Keep as is** — don't write the file; record each mismatch with this run's choices for Step 14's report.
+- **Replace** — write the filled-in template from Steps 4–8 over the file.
 
 ## Step 2 — Look up action versions at run time
 
@@ -210,8 +280,9 @@ verification pass — see Step 12 for the two that don't have a floating major t
 | `reactivecircus/android-emulator-runner` | `v2` | yes | only when `run-instrumented-tests: yes` |
 | `EnricoMi/publish-unit-test-result-action` | `v2` | yes | |
 | `github/codeql-action` (`init`/`analyze`/`upload-sarif`) | `v4` | yes | resolve via `.../tags`, not `.../releases/latest` — that endpoint returns the unrelated `codeql-bundle-*` tag |
-| `actions/upload-pages-artifact` | `v5` | yes | |
-| `actions/deploy-pages` | `v5` | yes | |
+| `actions/upload-pages-artifact` | `v5` | yes | only when `pages: yes` |
+| `actions/deploy-pages` | `v5` | yes | only when `pages: yes` |
+| `actions/upload-artifact` | `v7` | yes | only when `pages: no` (replaces the Pages upload/deploy); fallback matches the TypeScript/Swift siblings' — not part of this skill's own September 2026 `git ls-remote` pass, so resolve it live |
 | `actions/setup-node` | `v7` | yes | used only for the Antora build step |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
 | `actions/dependency-review-action` | **`v5.0.0`** | **no** | this action has never published a floating `v5` tag — only exact-version tags (`v5.0.0`, `v4.9.0`, …); pin the exact version and re-check at generation time whether a floating major now exists |
@@ -392,9 +463,18 @@ jobs:
           mkdir -p ./docs/build/site/api
           cp -r ./<lib-module>/build/dokka/html/. ./docs/build/site/api/
 
+      # pages: yes — feeds the deploy-docs job below.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
+          path: ./docs/build/site
+
+      # pages: no — replaces the step above: the docs are still built (which validates them) but only kept as a
+      # downloadable workflow artifact; nothing is published, and the deploy-docs job below is omitted.
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
           path: ./docs/build/site
       # End of the flavor: app omission block
 
@@ -409,7 +489,8 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_MEMORY_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
 
-  # Omit this whole job if flavor: app (no docs to deploy).
+  # Omit this whole job if flavor: app (no docs to deploy) or pages: no (docs only uploaded as an artifact) —
+  # its pages: write / id-token: write permissions exist only for this deploy and go with it.
   deploy-docs:
     name: Deploy docs to GitHub Pages
     needs: build
@@ -432,6 +513,8 @@ Notes specific to this template:
   the matching one and drop the other, plus the `Enable KVM` step when `no`.
 - Only **one** of the two `Convert unit tests coverage results` steps applies (Step 1's vendored-jar survey) —
   keep the AGP-path step unless a vendored `jacococli.jar` was actually found.
+- Only **one** of `Upload Pages artifact` (`pages: yes`, plus the `deploy-docs` job) and `Upload docs artifact`
+  (`pages: no`, no `deploy-docs` job and therefore no `pages: write`/`id-token: write` anywhere) applies.
 - `<lib-module>:dokkaGenerate` and the app's own lint SARIF upload are both present in the same `Run tests`
   script regardless of `flavor` when both `lib/` and `app/` modules exist (the `iru-setup-android-library`
   sample-app shape) — only drop the `app/**`-scoped steps entirely when no `app/` module exists at all, and
@@ -520,7 +603,8 @@ jobs:
           groups: internal-testers
           file: <app-module>/build/outputs/bundle/release/<app-module>-release.aab
 
-  # Same deploy-docs job as develop.yml (flavor: library only) — omitted here for brevity, copy verbatim.
+  # Same deploy-docs job as develop.yml (flavor: library, pages: yes only) — omitted here for brevity, copy
+  # verbatim.
 ```
 
 Notes specific to this template:
@@ -914,10 +998,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ... identical to develop.yml's `build` job steps in Step 4, up to and including the
-      # `deploy-docs`-feeding `Upload Pages artifact` step — NO publish/release step here, that only happens
-      # in publish.yml below ...
+      # `deploy-docs`-feeding `Upload Pages artifact` step (or `Upload docs artifact` when pages: no) — NO
+      # publish/release step here, that only happens in publish.yml below ...
 
-  # Same deploy-docs job as Step 4's develop.yml (flavor: library only).
+  # Same deploy-docs job as Step 4's develop.yml (flavor: library, pages: yes only).
 ```
 
 ### `publish.yml`
@@ -1158,7 +1242,7 @@ updates:
 ```
 
 If `.github/dependabot.yml` already exists with entries for other ecosystems (e.g. `npm` for `docs/`),
-preserve them — only add or update the `gradle` and `github-actions` entries above (see Step 1's stop-or-update
+preserve them — only add or update the `gradle` and `github-actions` entries above (see Step 1's Update
 path).
 
 ## Step 9 — Placeholder resolution table
@@ -1175,7 +1259,7 @@ path).
 | `<artifact-id>` | `lib/build.gradle.kts`'s `mavenPublishing { coordinates(...) }` (library) or the app's project name (OWASP Dependency-Check `project:` field) |
 | `<owner>` / `<repo>` | The current repository's `git remote` (for report text only — no template above embeds a real repo/org name) |
 
-Apply the `flavor`/`sonar`/`publish`/`distribution`/`run-instrumented-tests`/`branching`/vendored-jar gating
+Apply the `flavor`/`sonar`/`publish`/`distribution`/`run-instrumented-tests`/`pages`/`branching`/vendored-jar gating
 resolved in Steps 0–1: drop every block the templates above mark with an "Omit this … if …" comment (and that
 comment itself) when the matching value doesn't apply.
 
@@ -1185,7 +1269,9 @@ comment itself) when the matching value doesn't apply.
 |---|---|
 | `Enable KVM` + emulator-based `Run tests` step | `run-instrumented-tests: yes` |
 | Plain (non-emulator) `Run tests` step | `run-instrumented-tests: no` |
-| `<lib-module>:dokkaGenerate` in the test script, Sonar-on-lib, Antora/Dokka merge, Pages upload, `deploy-docs` job | a `lib/` module exists (library flavor, or a library+sample-app combined repo) |
+| `<lib-module>:dokkaGenerate` in the test script, Sonar-on-lib, Antora/Dokka merge | a `lib/` module exists (library flavor, or a library+sample-app combined repo) |
+| `Upload Pages artifact` step + `deploy-docs` job (with its `pages: write`/`id-token: write`) | a `lib/` module exists and `pages: yes` |
+| `Upload docs artifact` (`actions/upload-artifact`) step, no `deploy-docs` job | a `lib/` module exists and `pages: no` |
 | `<app-module>/**` test-result/SARIF globs, `:<app-module>:sonar` | an `app/` module exists |
 | AGP-path coverage-conversion step targeting `<lib-module>` (`flavor: library`) or `<app-module>` (`flavor: app`) | default — no vendored `jacococli.jar` found (Step 1); targets only the module with `enableUnitTestCoverage = true` (Step 1 survey) — never both |
 | Vendored-`jacococli.jar` fallback conversion step | a `jacoco-*/lib/jacococli.jar` was found, or the user asked for it |
@@ -1209,8 +1295,9 @@ comment itself) when the matching value doesn't apply.
 
 ## Step 12 — Write the files
 
-Write (or, per Step 1's stop-or-update decision, carefully update) every file from Step 11's matrix with the
-filled-in templates from Steps 4–8. `sync.yml` and `sync_versions.py` are written together — never write one
+Write every file from Step 11's matrix with the filled-in templates from Steps 4–8 — or, for a file that already
+existed, apply Step 1's per-file choice (Update: carefully merge; Replace: overwrite; Keep as is: leave
+untouched). `sync.yml` and `sync_versions.py` are written together — never write one
 without the other, and never write either for `main-only`. `security.yml` and `.github/dependabot.yml` are
 always written (or updated), independent of `flavor`/`branching`/`publish`/`distribution`/`sonar` — only their
 own `security-*` args gate individual jobs within `security.yml`, and `.github/dependabot.yml` has no gate at
@@ -1320,8 +1407,10 @@ change was warranted:
 
 ## Step 14 — Report
 
-Summarize what happened: whether each file in Step 11's matrix was created fresh, updated in place, or left
-untouched (Step 1's stop path); any open gaps noted along the way (missing `docs/antora.yml`, a
+Summarize what happened: whether this run created the pipeline from scratch or updated an existing one, and,
+per file in Step 11's matrix, the action actually taken — **created / updated / replaced / kept as is** (or
+nothing written, if the user chose Stop) — and whether it came from the user's answer or `on-existing`; for every
+file kept as is, list each mismatch with this run's choices (Step 1); any open gaps noted along the way (missing `docs/antora.yml`, a
 `com.github.triplet.play` plugin found and used instead of the workflow-level upload action, README/Antora
 wording that didn't match `sync_versions.py`'s default regexes, a vendored `jacococli.jar` found and used
 instead of the AGP-path default, any shared-`args` key supplied but unused by this skill).
@@ -1332,8 +1421,14 @@ State explicitly what was wired versus omitted, and why:
   signing-and-store) was generated.
 - **`branching`**: `gitflow` (`develop.yml`/`main.yml`/`sync.yml`) or `main-only` (`main.yml`/`publish.yml`,
   no `sync.yml` — state this omission plainly).
+- **`visibility`**: `public`/`private`/`internal`, and whether it came from `args`, `gh repo view`, or a question.
 - **`run-instrumented-tests`**: yes/no — which `Run tests` step variant was used, and whether the `Enable KVM`
-  step was included.
+  step was included; say whether it came from an explicit `run-instrumented-tests`, from `ci-tests`
+  (`full`/`unit`), or from the standalone question.
+- **`pages`** (library only): `yes` — Dokka + Antora deployed to GitHub Pages via `deploy-docs`; `no` — docs
+  still built but only uploaded as the `docs-site` workflow artifact, no `deploy-docs` job, no Pages
+  permissions. State whether `yes` was the public-repository default or a user choice on a private repository
+  (and, if so, the plan requirement and the site's public visibility).
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if not `none`, the Sonar step and `SONAR_TOKEN` row were
   included; if `none`, both were omitted, and note whether that's because the project isn't open source or a
   direct user choice.
@@ -1360,8 +1455,10 @@ generated (an omitted row is one fewer secret the user needs to create):
 
 `sync.yml` also needs the repository setting under Settings → Actions → General → "Workflow permissions" set
 to allow GitHub Actions to create pull requests — the `permissions:` block in the workflow itself is not
-sufficient on its own. The Pages deploy jobs need Settings → Pages → "Build and deployment" → Source set to
-**GitHub Actions**. Call all of this out explicitly, since each is easy to miss and fails on the very first
+sufficient on its own. With `pages: yes`, the Pages deploy jobs need Settings → Pages → "Build and deployment" →
+Source set to **GitHub Actions** (and, for a private/internal repository, a GitHub Pro/Team/Enterprise Cloud plan;
+the site is public unless Enterprise Cloud private access control is used); with `pages: no` there is no Pages
+setting to change. Call all of this out explicitly, since each is easy to miss and fails on the very first
 real run without it.
 
 **Warn explicitly:**

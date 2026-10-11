@@ -5,9 +5,10 @@ description: Create or update the root `.gitignore` file for a TypeScript/npm pr
   files (keeping `.env.example`), OS and editor noise — and, when detected, framework-specific generated paths for
   Angular, React (Vite/Storybook), React Native/Expo, Ionic/Capacitor native projects, Antora docs, TypeDoc/Compodoc
   API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as
-  `/iru-setup-typescript-gitignore`. Only creates `.gitignore` when one doesn't exist yet — if one already exists,
-  this skill never overwrites it silently: it proposes an updated version, shows the user a diff, and only writes it
-  on explicit approval. Mirrors the `iru-setup-java-gitignore` skill's contract for the npm/TypeScript ecosystem.
+  `/iru-setup-typescript-gitignore`, optionally with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace`
+  (default `ask`) for scripted runs. Announces whether it is creating `.gitignore` from scratch or updating an existing one;
+  if one already exists it never overwrites it silently — it warns, shows the proposed merge as a diff, and asks
+  Update (merge, keeping hand-added entries) / Keep as is / Replace (template only, hand-added entries lost). Mirrors the `iru-setup-java-gitignore` skill's contract for the npm/TypeScript ecosystem.
   Use whenever a TypeScript, React, Angular, React Native, or Ionic project needs a `.gitignore` bootstrapped from
   scratch, or an existing one checked against this house template without touching it unless the user approves.
 model: haiku
@@ -19,14 +20,24 @@ Create or refresh the root `.gitignore` for a TypeScript/npm project. Never over
 without showing the user exactly what would change and getting explicit approval first — a `.gitignore` can carry
 hand-added, project-specific entries that must not be silently dropped.
 
+## Step 0 — Parse `args`
+
+This skill takes a single optional key, as a `key: value` line in `args`: `on-existing` (`ask`/`keep`/`update`/
+`replace`, default `ask`) — how to treat an existing `.gitignore` in scripted runs (an orchestrator forwards it
+only if its own `args` received it). Ignore any other key (orchestrators may pass shared keys such as `mode`;
+`mode: existing` alone doesn't skip Step 5's question). If `args` is absent or unparseable, treat `on-existing`
+as `ask`.
+
 ## Step 1 — Check whether `.gitignore` already exists at the repository root
 
-- **Not found**: continue to Step 2. Because there's nothing to lose, the final write in Step 5 happens without
-  needing approval — go straight from composing the content to writing it, then report in Step 6.
-- **Found**: read its current content now — it matters later, both to avoid proposing duplicate entries and
-  because Step 4 must preserve any hand-written, project-specific lines this skill doesn't know how to regenerate.
-  Warn the user up front that a `.gitignore` already exists and this skill will propose changes for them to review
-  rather than overwrite it silently. Continue to Step 2.
+- **Not found**: tell the user "Creating `.gitignore` **from scratch** — none found." Continue to Step 2.
+  Because there's nothing to lose, the final write happens without needing approval — go straight from
+  composing the content to writing it, then report in Step 6.
+- **Found**: tell the user "**Updating existing `.gitignore`**" and warn that one already exists, so this skill
+  will propose changes for them to review rather than overwrite it silently. Read its current content now — it
+  matters later, both to avoid proposing duplicate entries and because Step 4 must preserve any hand-written,
+  project-specific lines this skill doesn't know how to regenerate. If `on-existing: keep`, stop here: leave the
+  file untouched and go straight to Step 6's report. Otherwise continue to Step 2.
 
 ## Step 2 — The universal base template
 
@@ -236,28 +247,43 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
 
 Concatenate Step 2's base template with whichever Step 3 sections actually matched, each under its own comment
 header for readability (e.g. `# Angular`, `# Playwright`, `# Vaadin Hilla frontend`). If Step 1 found an existing
-`.gitignore`, merge rather than duplicate: keep any of its lines that aren't already covered by the composed
-template (hand-added project-specific ignores must survive), and don't repeat a line that's already present
-verbatim.
+`.gitignore`, compose two drafts:
+
+- **Merged** (the Update draft): keep any of the existing file's lines that aren't already covered by the
+  composed template (hand-added project-specific ignores must survive), and don't repeat a line that's already
+  present verbatim.
+- **Template-only** (the Replace draft): exactly the composed template, without the existing file's extra
+  lines. Note which of the existing lines it would drop, for Step 5.
 
 ## Step 5 — If `.gitignore` already existed, get approval before writing
 
 Skip this step entirely if Step 1 found no existing file — proceed straight to Step 6's write.
 
-- Show the user the proposed new `.gitignore` content as a diff against the current file (writing the draft to a
-  temp path and running `git diff --no-index <current> <draft>` gives a clean unified diff).
-- Ask via `AskUserQuestion` whether to: (a) accept and write the proposed content, (b) skip and leave the existing
-  `.gitignore` untouched. There is no partial-apply option here — if the user wants only some of the proposed
-  lines, let them say so in free text and revise the draft before writing.
-- Only proceed to Step 6 on explicit acceptance.
+- Show the user the merged draft as a diff against the current file (writing the draft to a temp path and
+  running `git diff --no-index <current> <draft>` gives a clean unified diff). If the merged draft is identical
+  to the current file, say so, treat the outcome as "kept as is", and skip the question.
+- If `on-existing` is `update` or `replace`, apply it without asking (still show the diff of what is being
+  written). Otherwise ask via `AskUserQuestion` (header `.gitignore`), with these consequences in the option
+  descriptions:
+  - **Update (Recommended)** — "Write the merged draft: add the missing entries from this skill's template and
+    keep every line you added by hand. You've seen the diff; nothing you customized is dropped."
+  - **Keep as is** — "Leave `.gitignore` untouched. Your entries stay exactly as they are, but build/coverage/
+    tooling output the template would ignore (listed in the diff) may show up as untracked files."
+  - **Replace** — "Write the template-only draft. Matches this house template exactly, but the hand-added lines
+    listed below are lost (recoverable only from git history)." — list those lines in the question text.
+  There is no partial-apply option — if the user wants only some of the proposed lines, let them say so in
+  free text and revise the draft before writing.
+- Only proceed to Step 6's write on **Update** or **Replace**; on **Keep as is**, write nothing.
 
 ## Step 6 — Write `.gitignore` and report
 
-Write the composed content (Step 4, incorporating any edits from Step 5's review) to `.gitignore` at the repository
-root. Then summarize: whether the file was newly created or updated, which conditional sections from Step 3 were
+Write the chosen draft (Step 4's merged or template-only draft per Step 5's decision, incorporating any edits from
+Step 5's review) to `.gitignore` at the repository root — or nothing, if it was kept as is. Then summarize: whether
+this run was from scratch or an update, the action taken (**created / updated / replaced / kept as is**, and
+whether that came from the user's answer or from `on-existing`), which conditional sections from Step 3 were
 included versus skipped and why (e.g. "no Playwright section — no `playwright.config.ts` or `@playwright/test`
 found", "no Hilla section — no `src/main/frontend/` and no Hilla dependency in `pom.xml`"), and — if `.gitignore`
-already existed — whether the user accepted or skipped the proposed changes.
+already existed — which hand-added lines were preserved (Update) or dropped (Replace).
 
 **Warn explicitly**:
 

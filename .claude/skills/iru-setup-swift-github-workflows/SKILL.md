@@ -1,6 +1,6 @@
 ---
 name: iru-setup-swift-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, `xcodegen generate`/`tuist generate` plus one `xcodebuild test -enableCodeCoverage YES -resultBundlePath` per selected platform destination (piped through `xcbeautify`, `.xcresult` uploaded as a build artifact, coverage converted via SonarSource's `xccov-to-sonarqube-generic.sh`) for the app flavor, an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: `xcodebuild archive` + `-exportArchive`, signed via `fastlane match` or an App Store Connect API key, uploaded to TestFlight, and — for macOS — exported with Developer ID, notarized and stapled), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, and the four `security-*` opt-outs — so an orchestrating skill can supply them without re-prompting. Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Creates all workflows from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, `xcodegen generate`/`tuist generate` plus one `xcodebuild test -enableCodeCoverage YES -resultBundlePath` per selected platform destination (piped through `xcbeautify`, `.xcresult` uploaded as a build artifact, coverage converted via SonarSource's `xccov-to-sonarqube-generic.sh`) for the app flavor, an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: `xcodebuild archive` + `-exportArchive`, signed via `fastlane match` or an App Store Connect API key, uploaded to TestFlight, and — for macOS — exported with Developer ID, notarized and stapled), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, the four `security-*` opt-outs, `visibility` (`public`/`private`/`internal` — drives the Actions-minutes, SonarCloud and Pages cost guidance), `ci-tests` (`unit` — unit-test targets only, the app flavor's XCUITest bundle skipped, every macOS minute costing ~10× Linux — or `full` — unit + UI tests on every selected destination), `pages` (`yes`/`no` — `no` keeps the DocC + Antora build but uploads it as a workflow artifact instead of deploying to GitHub Pages), and `on-existing` (`ask`/`keep`/`update`/`replace`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it resolves `visibility` itself (`gh repo view`, else asks) and asks `sonar`/`ci-tests`/`pages` with that visibility's cost facts (never `ci` — invoking it means CI is wanted). Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Announces whether it is creating the pipeline from scratch or updating an existing one; creates every workflow that doesn't exist, and for each one that already exists warns and asks Update (merge using the templates as reference, keeping foreign steps/jobs) / Keep as is (listing every mismatch with this run's choices) / Replace (regenerate, customizations lost) / Stop, explaining each consequence (`on-existing` answers for every file at once). Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -13,7 +13,8 @@ XcodeGen/Tuist-generated native app, `flavor: app`):
 - **`build.yml`** — runs on every push to the integration/stable branches and every pull request: lint
   (SwiftLint + `swift format lint --strict`), build, test with coverage, an optional SonarQube/SonarCloud scan,
   a DocC + Antora documentation build published to GitHub Pages (only when the push lands on the stable
-  branch). The flavor changes what "build/test" means underneath (Step 4/5).
+  branch; with `pages: no` it is still built but uploaded as a workflow artifact instead). `ci-tests` decides
+  whether the app flavor's XCUITest bundle runs in CI. The flavor changes what "build/test" means underneath (Step 4/5).
 - **`release.yml`** — triggered when a GitHub Release is published. For a library this verifies the release is
   sound (semver tag, a manifest that still parses) rather than publishing anywhere — a SwiftPM package's actual
   release artifact is the git tag itself, nothing this workflow uploads (Step 6). For an app it archives, signs,
@@ -70,13 +71,16 @@ security-dependency-review: yes
 security-codeql: yes
 security-osv: yes
 security-gitleaks: yes
+visibility: public
+ci-tests: full
+pages: yes
 ```
 
 Parse any such lines first; for each key found there, use that value directly and skip the matching
 fact-finding step below. If `args` is absent or doesn't look like this format, treat everything as unset and
 gather every fact via Step 1's survey / `AskUserQuestion` instead. Bounded choices (`flavor`, `runner`,
 `branching`, `generator`, `signing`, `sonar`, `publish`/`distribution`, `release-please`, the `security-*`
-toggles) go through `AskUserQuestion` with at most four options per question when not resolved by `args` or
+toggles, `visibility`, `ci-tests`, `pages`, the per-file existing-workflow question) go through `AskUserQuestion` with at most four options per question when not resolved by `args` or
 Step 1's survey; free-text values (branch names, the Sonar organization/key/host, `xcode-version`) are asked as
 plain conversation.
 
@@ -95,9 +99,13 @@ plain conversation.
 | `open-source` | `yes`/`no` | `gh repo view --json isPrivate` if unresolved otherwise |
 | `publish` (library only) | `yes`/`no` — informational only for this skill (gates nothing here; a SwiftPM library "publishes" by existing at a tagged git URL, per `iru-setup-swift-library`) | Accepted so an orchestrator can pass its full shared-args set without error; noted in the final report if supplied |
 | `distribution` (app only) | `none`/`internal`/`store` — gates `release.yml`'s TestFlight/App Store steps | `store` only when `open-source: yes`; otherwise ask, `none` recommended |
-| `sonar` | `cloud`/`self-hosted`/`none` | `cloud` when `open-source: yes`; otherwise ask, `none` recommended, with the paid-plan caveat stated |
+| `sonar` | `cloud`/`self-hosted`/`none` | `cloud` when `open-source: yes` **and** `visibility: public`; otherwise ask (see "Standalone resolution" below), `none` recommended, with the paid-plan caveat stated |
 | `sonar-organization` / `sonar-project-key` / `sonar-host-url` | Sonar coordinates | Only asked when `sonar` isn't `none`; read from an existing `sonar-project.properties` first (Step 1) |
-| `mode` | `new`/`existing` | Whether this is a first-time setup or a re-run against an existing pipeline; if `existing`, go straight to Step 1's stop-or-update path |
+| `mode` | `new`/`existing` | Informational: whether the caller considers this a first-time setup or a re-run. It no longer short-circuits anything — the workflow files actually on disk decide, per file, whether Step 1's warn-and-ask applies (`mode: existing` still asks per existing file unless `on-existing` says otherwise) |
+| `visibility` | `public`/`private`/`internal` — the GitHub repository's visibility; `internal` behaves like `private` for every cost decision | See "Standalone resolution" below |
+| `ci-tests` | `unit`/`full` — which tests `build.yml` runs (Step 4/5) | Public: `full`; private/internal: ask, `unit` recommended (see below) |
+| `pages` | `yes`/`no` — deploy the DocC + Antora site to GitHub Pages (`yes`), or only build it and upload it as a workflow artifact (`no`) | Public: `yes` without asking (stated in the report); private/internal: ask, `no` recommended (see below) |
+| `on-existing` | `ask`/`keep`/`update`/`replace` — how Step 1 treats each workflow file that already exists | `ask` |
 | `security-dependency-review` / `security-codeql` / `security-osv` / `security-gitleaks` | `yes`/`no`, each gates one `security.yml` job | `yes` |
 | `license` / `developer-name` / `developer-email` / `organization-url` | This catalog's shared scaffold-args vocabulary | **Not used by this skill's generated files** — accepted only so an orchestrator can pass its full shared-args set without this skill erroring on unrecognized keys; note this in the final report if any were supplied |
 
@@ -127,6 +135,41 @@ image's own `### Xcode` table (available versions, which one is `(default)`) and
 under `### Linters` — resolve `xcode-version`'s default from whichever `(default)`-marked row applies to the
 chosen `<runner>`.
 
+**Standalone resolution of `visibility`, `sonar`, `ci-tests`, `pages`.** When an orchestrator
+(`iru-setup-swift-repository`, the `iru-setup-repository` front door) invoked this skill it has already resolved
+these and passed them in `args` — use them. When invoked stand-alone, resolve whichever are missing, in this order,
+after `open-source` (never ask `ci` — invoking this skill means CI is wanted):
+
+1. **`visibility`**: if the repository has a GitHub remote, run `gh repo view --json visibility -q .visibility`
+   (returns `PUBLIC`/`PRIVATE`/`INTERNAL` — lowercase it) and tell the user the detected value; otherwise (no
+   remote yet, `gh` unavailable, not GitHub) ask with `AskUserQuestion` — **Public** / **Private** — recommending
+   **Public** when `open-source: yes`, otherwise **Private**. If `open-source: yes` but `visibility` is `private`/
+   `internal`, warn that the two contradict (an open-source project's repository is normally public, and a private
+   repository forfeits the free-for-public-repos pricing below) and ask which one is right.
+2. **`sonar`** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?" Recommend
+   **`cloud`** only when the repository is public **and** open source; otherwise recommend **`none`**, with
+   **self-hosted** as the alternative, stating that SonarCloud (SonarQube Cloud) is free for public/open-source
+   projects but a private project needs a paid plan, while self-hosted SonarQube Community Build is free but you
+   run the server.
+3. **`ci-tests`** — "Which tests should CI run?" Options: **Unit tests only** — "unit-test targets only (cheaper:
+   fewer macOS minutes, faster feedback); the app's XCUITest UI-test bundle, and any library integration-test
+   target, stay local" (recommended for private/internal) / **Unit + UI tests** — "unit tests plus XCUITest UI
+   tests on every selected simulator/platform destination (complete verification, uses considerably more macOS
+   minutes — each UI-test run boots a simulator and launches the app)" (recommended for public).
+4. **`pages`** (the DocC + Antora site): public → `yes` without asking (say so in the report). Private/internal →
+   ask: **No (Recommended)** — "CI still builds the docs (validating them) and uploads them as a workflow
+   artifact; nothing is published" / **Yes** — "requires GitHub Pro, Team, or Enterprise Cloud (not GitHub Free);
+   the site will be PUBLIC on the internet unless you're on Enterprise Cloud with private Pages access control".
+
+State the cost facts in these questions (per GitHub's current pricing — tell the user to double-check their own
+plan): standard GitHub-hosted runners are **free for public repositories**; private/internal repositories consume
+the account's included minutes — **2,000/month on GitHub Free, 3,000 on Pro and Team, 50,000 on Enterprise
+Cloud** — then are billed per minute, and **macOS runner minutes cost roughly 10× Linux minutes** (per-minute
+rates: Linux 2-core $0.006, macOS $0.062). Nearly every job this skill generates runs on macOS, so for a private
+repository state plainly that a few dozen macOS builds a month (each `build.yml` run being tens of macOS minutes,
+×10 against the budget) can exhaust 2,000 included minutes — `ci-tests: unit` is the main lever this skill offers
+against that. Dependabot version/security update runs on standard hosted runners are free.
+
 ## Step 1 — Survey the target repository
 
 Gather every fact Step 0 didn't already resolve via `args`, and decide whether this is a fresh setup or an
@@ -145,6 +188,10 @@ update:
   blocks (one entry per selected platform, per `iru-setup-apple-app`'s own template shape).
 - **`generator`** (app only, skip if supplied via `args`): `project.yml` present → `xcodegen`; `Project.swift`
   present → `tuist`. If both are present (a mid-migration repository), ask which one CI should drive.
+- **Test targets** (for `ci-tests`): library — list `Package.swift`'s `.testTarget(...)` names and flag any
+  integration-test target (name containing `IntegrationTests`, or one the user identifies as such); app — read
+  each platform's UI-test target name from the manifest (`<AppName>UITests-<Platform>` in
+  `iru-setup-apple-app`'s scaffold) so `-skip-testing:` names the real target.
 - **`signing`/`distribution`** (app only, skip whichever is supplied via `args`): grep `fastlane/Fastfile` for
   `sync_signing`/`match(` (→ `signing: fastlane-match`) or `connect_api_key`/`app_store_connect_api_key(` (→
   `signing: api-key`); for `distribution`, a `release`/`upload_to_app_store` lane implies `store`, a `beta`/
@@ -169,26 +216,44 @@ update:
   `.github/scripts/sync_versions.py`, `security.yml`, and `.github/dependabot.yml` already exist (only the
   subset relevant to the resolved `branching`, plus the three always-present files).
 
-### Stop or update
+### Announce the mode, then warn and ask per existing file
 
-- **None of the relevant files exist** (or `mode: new`): skip straight to Step 2 — create everything from
-  scratch.
-- **Any relevant file already exists** (or `mode: existing`): use `AskUserQuestion` to ask whether to (a) stop
-  here and leave everything untouched, or (b) continue and attempt to update the existing file(s) using this
-  skill's templates as reference.
-  - **Stop**: report which file(s) already exist and end here — make no changes.
-  - **Continue**: proceed to Step 13, but treat each existing file as the base to edit, not something to
-    overwrite wholesale:
+Tell the user which of the two this run is before writing anything:
+
+- **None of the relevant files exist**: "**Creating the CI/CD pipeline from scratch** — no workflow files found."
+  Skip straight to Step 2; every Step 12 file is *created*.
+- **Any relevant file already exists**: "**Updating an existing CI/CD pipeline** — found: <list of paths>." For
+  each existing file, **warn** and resolve what to do with it. If `on-existing` is `keep`/`update`/`replace`, apply
+  it to every existing file without asking (still print the warning and the list). Otherwise (`on-existing: ask`
+  or unset — and regardless of `mode`), ask with `AskUserQuestion`, one question per file, batching up to four
+  files per call (`sync.yml` + `sync_versions.py` count as one artifact). When an existing file contradicts this
+  run's choices, say so concretely in its question — e.g. "your current `build.yml` runs the `<AppName>UITests-iOS`
+  bundle but you chose `ci-tests: unit`", "your current `build.yml` deploys to Pages but you chose `pages: no`",
+  "your current `build.yml` still runs a Sonar scan but you chose `sonar: none`". Options, with these consequences
+  stated in their descriptions:
+  - **Update (Recommended)** — merge: add what's missing and correct outdated parts using this skill's templates as
+    reference, keeping everything this skill doesn't own; you review a diff before it's written. Customizations
+    survive, but a customized part this skill owns may be rewritten. Concretely:
     - For `build.yml`/`release.yml`: preserve any step/job this skill doesn't own (a Slack notification, an
       extra matrix entry, a hand-added deployment target) — only add missing stages or correct outdated ones
       (wrong action version, wrong path, a stage that should now be gated on/off per `sonar`/`distribution`/
-      `signing`/`release-please`), and don't reorder foreign steps.
+      `signing`/`release-please`/`ci-tests`/`pages`), and don't reorder foreign steps.
     - For `sync.yml`/`sync_versions.py`: preserve any file the script updates beyond what Step 8's template
       touches, and preserve any extra workflow step the same way.
     - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
       dependency-review/CodeQL/OSV-Scanner/gitleaks jobs per the resolved `security-*` args.
     - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage;
       only add/update the `swift` and `github-actions` entries.
+  - **Keep as is** — leave the file untouched. Nothing customized changes, but it may stay out of date or disagree
+    with this run's choices (e.g. still runs UI tests after `ci-tests: unit`, still deploys to Pages after
+    `pages: no`, still runs a Sonar step after `sonar: none`) — Step 14 lists each mismatch.
+  - **Replace** — regenerate from this skill's template. The result matches this house pattern exactly, but every
+    customization in the file is lost (recoverable only from git history). Never recommended by default.
+  - **Stop** — end this skill now without changing any file (including ones already decided). Report which
+    file(s) already exist and end here.
+
+Record each file's decision; Step 13 applies it and Step 14 reports it as **created / updated / replaced / kept
+as is**.
 
 ## Step 2 — Look up action/tool versions at run time
 
@@ -301,8 +366,11 @@ jobs:
       # No separate `swift build` first: --enable-code-coverage changes the compiler flags, so a plain build
       # followed by a coverage test run compiles the whole package twice on a paid macOS runner. `swift test`
       # builds everything it needs itself.
+      # <skip-integration-tests>: empty for ci-tests: full, and also for ci-tests: unit when Package.swift
+      # declares no integration-test target (the iru-setup-swift-library scaffold has none). For ci-tests: unit
+      # with such a target (e.g. a `<Name>IntegrationTests` testTarget), `--skip <Name>IntegrationTests`.
       - name: Build and test with coverage
-        run: swift test --enable-code-coverage --parallel
+        run: swift test --enable-code-coverage --parallel <skip-integration-tests>
 
       - name: Export lcov coverage
         run: |
@@ -374,11 +442,23 @@ jobs:
           mkdir -p ./docs/build/site/api
           cp -r ./docc-output/. ./docs/build/site/api/
 
+      # pages: yes only. With pages: no, emit the "Upload docs artifact" step below instead and omit the whole
+      # deploy-docs job (and with it the pages: write / id-token: write permissions only the deploy needs) — the
+      # DocC + Antora build above still runs, validating the docs, but nothing is published.
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/<stable-branch>'
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./docs/build/site
+
+      # pages: no only — replaces "Upload Pages artifact" above.
+      - name: Upload docs artifact
+        if: github.ref == 'refs/heads/<stable-branch>'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: ./docs/build/site
+          retention-days: 14
 
   # Omit this whole job unless the package's own Sources/ are confirmed free of Apple-only imports (Foundation
   # extras, UIKit/SwiftUI, Combine's Apple-platform-only pieces, etc.) — Step 1's survey. Runs on ubuntu-latest
@@ -400,9 +480,9 @@ jobs:
             linux-spm-
       # `swift test` builds the package and its tests itself — a preceding `swift build` would just compile twice.
       - name: Build and test
-        run: swift test --parallel
+        run: swift test --parallel <skip-integration-tests>
 
-  # Omit this whole job if github.ref != refs/heads/<stable-branch> was already the deploy job's own gate above —
+  # Omit this whole job when pages: no (Step 0). Omit this whole job if github.ref != refs/heads/<stable-branch> was already the deploy job's own gate above —
   # this job still needs its own `if:`, since a job-level condition (not a step-level one) is what actually skips
   # the whole runner spin-up when the push isn't on the stable branch.
   deploy-docs:
@@ -474,6 +554,9 @@ Same job name/trigger shape as Step 4's `build-test` job, replacing every step f
       # One block per selected platform (Step 1's platforms survey) — shown here for iOS/iPadOS. Resolves the
       # first available simulator the same way iru-swift-test/iru-setup-apple-app's own Fastfile does; macOS
       # needs no destination resolution (`platform=macOS` is fixed).
+      # <skip-ui-tests-iOS>: for ci-tests: unit, `-skip-testing:<AppName>UITests-iOS` — only the unit-test
+      # bundle(s) run, the XCUITest bundle is neither built-and-launched nor counted; for ci-tests: full, empty
+      # (unit + UI tests both run). Same rule per platform (`<AppName>UITests-macOS`, `<AppName>UITests-watchOS`).
       - name: Test <AppName>-iOS
         run: |
           set -o pipefail
@@ -485,13 +568,13 @@ Same job name/trigger shape as Step 4's `build-test` job, replacing every step f
                   print(devices[0]['name']); break
           ")
           xcodebuild test -scheme <AppName>-iOS -destination "platform=iOS Simulator,name=$DEVICE" \
-            -enableCodeCoverage YES -resultBundlePath <AppName>-iOS.xcresult | xcbeautify
+            <skip-ui-tests-iOS> -enableCodeCoverage YES -resultBundlePath <AppName>-iOS.xcresult | xcbeautify
 
       # macOS platform variant
       - name: Test <AppName>-macOS
         run: |
           set -o pipefail
-          xcodebuild test -scheme <AppName>-macOS -destination 'platform=macOS' \
+          xcodebuild test -scheme <AppName>-macOS -destination 'platform=macOS' <skip-ui-tests-macOS> \
             -enableCodeCoverage YES -resultBundlePath <AppName>-macOS.xcresult | xcbeautify
 
       - name: Upload xcresult bundles
@@ -540,18 +623,26 @@ Same job name/trigger shape as Step 4's `build-test` job, replacing every step f
             --hosting-base-path <repo>/api --output-path docc-output
       # (--hosting-base-path is <repo>/api, not <repo>, for the same reason as Step 4: the archive is merged
       # into the Pages site under api/, and DocC bakes the base path into its absolute asset links.)
-      # ... Set up Node / Install Antora / Build Antora docs / Merge DocC API docs / Upload Pages artifact:
-      # identical to Step 4, copy verbatim.
+      # ... Set up Node / Install Antora / Build Antora docs / Merge DocC API docs / Upload Pages artifact
+      # (or, for pages: no, Upload docs artifact): identical to Step 4, copy verbatim.
 ```
 
 `deploy-docs` (needs: `build-test`, gated the same way) is identical to Step 4's — copy it verbatim, including
-its own `if: github.ref == 'refs/heads/<stable-branch>'` job-level gate. There is no `ubuntu-latest` matrix leg
+its own `if: github.ref == 'refs/heads/<stable-branch>'` job-level gate; omit it entirely when `pages: no`. There is no `ubuntu-latest` matrix leg
 for the app flavor — an Xcode app target has no meaningful Linux build.
 
 Notes specific to this template:
 
 - Only the platform-specific `Test <AppName>-<Platform>` steps for the platforms actually selected (Step 1) are
   emitted — drop every other platform's block entirely, don't comment it out.
+- **`ci-tests` maps onto `-skip-testing:`.** `iru-setup-apple-app`'s schemes include both the
+  `<AppName>Tests-<Platform>` unit-test target and the `<AppName>UITests-<Platform>` XCUITest target in their test
+  action, so `ci-tests: full` needs no flag; `ci-tests: unit` adds `-skip-testing:<AppName>UITests-<Platform>` to
+  each `xcodebuild test`. UI tests are the slowest part of this job (simulator boot plus app launch per test), and
+  every one of those minutes is a macOS minute billed at roughly 10× Linux on a private repository. For an
+  existing project whose UI-test target is named differently, read the real name from the manifest (Step 1)
+  rather than assuming this convention. Coverage converted for Sonar then reflects unit tests only — say so in the
+  report.
 - `xcodebuild test`'s exit code must survive the `xcbeautify` pipe — `set -o pipefail` at the top of every such
   `run:` block is required (bash's default `on error` behavior doesn't propagate a failing left-hand command
   through a pipe otherwise, which would silently report a failed test run as a green step).
@@ -1344,7 +1435,7 @@ ecosystem (`Package.swift`'s own `dependencies:`, and, for an app, `Packages/Cor
 `swift` ecosystem support scans every `Package.swift` it finds under `directory: /` recursively, no separate
 entry needed per nested package) and for the workflows this skill itself just wrote (`github-actions`). If
 `.github/dependabot.yml` already exists with entries for other ecosystems, preserve them — only add or update
-the `swift` and `github-actions` entries above (see Step 1's stop-or-update path).
+the `swift` and `github-actions` entries above (see Step 1's per-file Update path).
 
 ### `.github/scripts/lcov_to_sonar_generic.py`
 
@@ -1418,8 +1509,10 @@ needs no adaptation for this catalog's use — see Step 5).
 | `<team-id>` | Asked directly (Step 7) — no run-time signal for it |
 | `<sonar-host-url>` / `<sonar-organization>` / `<sonar-project-key>` | Step 0/1 Sonar survey / `args`; only needed when `sonar` isn't `none` |
 | `<generator>` | Step 1 (`project.yml` vs. `Project.swift`) |
+| `<skip-ui-tests-<Platform>>` | App: `-skip-testing:<AppName>UITests-<Platform>` when `ci-tests: unit`, empty when `full` (Step 0) |
+| `<skip-integration-tests>` | Library: `--skip <integration-test target>` only when `ci-tests: unit` **and** Step 1 finds an integration-test `testTarget` in `Package.swift` (e.g. `<Name>IntegrationTests`); empty otherwise. `swift test --skip` takes a test-identifier regex — confirm the flag against the target toolchain when first emitting it |
 
-Apply the `flavor`/`sonar`/`distribution`/`signing`/`release-please`/`branching` gating resolved in Steps 0–1:
+Apply the `flavor`/`sonar`/`distribution`/`signing`/`release-please`/`branching`/`ci-tests`/`pages` gating resolved in Steps 0–1:
 drop every block the templates above mark with an "Omit this … if …" comment (and that comment itself) when the
 matching value doesn't apply.
 
@@ -1428,7 +1521,11 @@ matching value doesn't apply.
 | Block | Appears when |
 |---|---|
 | `build-test-linux` job (Step 4) | `flavor: library`, and Step 1 confirms the package's `Sources/` has no Apple-only imports |
-| DocC/Antora/Pages steps + `deploy-docs` job | Any push landing on `<stable-branch>` — both flavors |
+| DocC/Antora build steps | Any push landing on `<stable-branch>` — both flavors, regardless of `pages` |
+| `Upload Pages artifact` step + `deploy-docs` job | The above, and `pages: yes` |
+| `Upload docs artifact` step (`actions/upload-artifact`) | The above, and `pages: no` |
+| `-skip-testing:<AppName>UITests-<Platform>` flags | `flavor: app`, `ci-tests: unit` |
+| `--skip <integration-test target>` | `flavor: library`, `ci-tests: unit`, and an integration-test target exists |
 | `Run SonarQube analysis` step + its coverage-conversion step | `sonar` is `cloud` or `self-hosted` |
 | `lcov_to_sonar_generic.py` (vendored file) | `flavor: library`, `sonar` isn't `none` |
 | `xccov-to-sonarqube-generic.sh` (fetched at CI time) | `flavor: app`, `sonar` isn't `none` |
@@ -1455,8 +1552,9 @@ matching value doesn't apply.
 
 ## Step 13 — Write the files, then verify
 
-Write (or, per Step 1's stop-or-update decision, carefully update) every file from Step 12's matrix with the
-filled-in templates from Steps 4–9. `sync.yml` and `sync_versions.py` are written together — never write one
+Apply Step 1's per-file decision to every file from Step 12's matrix, using the filled-in templates from Steps
+4–9: write a file that doesn't exist (*created*); merge an existing one per **Update** after showing the diff
+(*updated*); leave it untouched per **Keep as is** (*kept as is*); or overwrite it per **Replace** (*replaced*). `sync.yml` and `sync_versions.py` are written together — never write one
 without the other, and never write either for `main-only`. `security.yml` and `.github/dependabot.yml` are
 always written (or updated), independent of `flavor`/`branching`/`sonar`/`distribution` — only their own
 `security-*` args gate individual jobs within `security.yml`.
@@ -1465,7 +1563,8 @@ Run through the `iru-gate-runner` agent where output could be long. Verification
 `$TMPDIR/iru-verify/swift/workflows/` (created fresh; never inside this repository):
 
 1. Render both the `library` and `app` variants of every YAML file to disk (every combination of `sonar`/
-   `distribution`/`signing`/`branching`/`release-please` that changes which blocks appear at least once each).
+   `distribution`/`signing`/`branching`/`release-please`/`ci-tests`/`pages` that changes which blocks appear at
+   least once each).
 2. YAML-validate every rendered file: `ruby -ryaml -e 'YAML.load_file(ARGV[0])' <file>` (Ruby ships with macOS,
    confirmed present in this environment) — or `python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))"`
    if PyYAML is available. The top-level `on:` key round-tripping as the boolean `True` under YAML 1.1's
@@ -1580,8 +1679,11 @@ Run through the `iru-gate-runner` agent where output could be long. Verification
 
 ## Step 14 — Report
 
-Summarize what happened: whether each file in Step 12's matrix was created fresh, updated in place, or left
-untouched (Step 1's stop path); any open gaps noted along the way (missing `docs/antora.yml`, a `Packages/Core`
+Summarize what happened: the mode announced in Step 1 (from scratch vs updating an existing pipeline), and for
+each file in Step 12's matrix the action actually taken — **created / updated / replaced / kept as is** (or that
+the user chose Stop) — listing, for every file kept as is, each concrete mismatch with this run's choices (e.g.
+still runs UI tests after `ci-tests: unit`, still deploys to Pages after `pages: no`, still runs Sonar after
+`sonar: none`); any open gaps noted along the way (missing `docs/antora.yml`, a `Packages/Core`
 with no `swift-docc-plugin` dependency for the app flavor's DocC step, README/version wording that didn't match
 `sync_versions.py`'s default regexes, a `<team-id>` the user still needs to supply).
 
@@ -1596,6 +1698,14 @@ State explicitly what was wired versus omitted, and why:
 - **`distribution`**/**`signing`** (app only): which `release.yml` steps and secrets are actually needed as a
   result.
 - **`release-please`** (library only): whether the optional job was included.
+- **`visibility`**: `public`/`private`/`internal`, and whether it came from `args`, `gh repo view`, or the user —
+  restate the Actions-minutes consequence (free on public; for private/internal, the plan's included minutes with
+  every macOS minute counting roughly 10×).
+- **`ci-tests`**: `unit` (app: `-skip-testing:` per UI-test target; library: any integration-test target skipped,
+  or "no effect — no integration-test target") or `full` (unit + XCUITest on every selected destination); note
+  that Sonar coverage then reflects only the tests CI ran.
+- **`pages`**: `yes` (deployed to GitHub Pages; for public repos defaulted without asking) or `no` (docs built
+  and uploaded as the `docs-site` workflow artifact, no Pages deploy, no github.io site to link).
 - **Security block**: which of the four `security-*` jobs were included versus omitted, and confirm
   `.github/dependabot.yml` was written regardless.
 
@@ -1612,8 +1722,10 @@ generated:
 | `GITHUB_TOKEN` | `sync.yml`'s `gh` calls, `security.yml`'s CodeQL/gitleaks jobs | Automatic — no setup needed |
 
 `sync.yml` also needs the repository setting under Settings → Actions → General → "Workflow permissions" set to
-allow GitHub Actions to create pull requests. The Pages deploy job needs Settings → Pages → "Build and
-deployment" → Source set to **GitHub Actions**. Call both out explicitly.
+allow GitHub Actions to create pull requests. When `pages: yes`, the Pages deploy job needs Settings → Pages →
+"Build and deployment" → Source set to **GitHub Actions** (and, for a private/internal repository, a GitHub Pro,
+Team, or Enterprise Cloud plan — the published site is public unless Enterprise Cloud private access control is
+used). Call out whichever apply explicitly.
 
 **Warn explicitly:**
 

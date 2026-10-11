@@ -1,6 +1,7 @@
 ---
 name: iru-setup-repository
-description: End-to-end bootstrap front door for this entire catalog — invoke as `/iru-setup-repository` and use
+description: >-
+  End-to-end bootstrap front door for this entire catalog — invoke as `/iru-setup-repository` and use
   it as THE one entry point new users should reach for to bootstrap any repository, instead of hunting for which
   of this catalog's stack-specific orchestrators applies. Covers all twelve project types this catalog can
   scaffold — `java-library`, `java-springboot`, `java-springboot-hilla`, `typescript-library`, `react-web`,
@@ -10,13 +11,19 @@ description: End-to-end bootstrap front door for this entire catalog — invoke 
   the detected/chosen type still needs, then delegating the actual scaffold to the matching stack orchestrator
   (`iru-setup-java-library-repository`, `iru-setup-java-springboot`, `iru-setup-typescript-repository`,
   `iru-setup-android-repository`, or `iru-setup-swift-repository`) via `iru-isolated-skill-executor`. Accepts
-  `args` (`key: value` lines) to pre-resolve `project-type`, `open-source`, `publish`, `distribution`, `sonar`
-  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `flavor`, `platforms`,
-  `framework`, `native-builds`, `integration-branch`, `stable-branch`, `license`, `developer-name`,
-  `developer-email`, and `organization-url` — forwarding each only to the delegated orchestrator(s) whose own
-  `args` contract actually accepts it, and never asking a question `args` already answered. Run against a
-  repository that already has code on disk, it runs `iru-explore` first and forces `mode: existing` on every
-  delegated skill so each one takes its own gap-fill/update path instead of assuming a blank slate. Use whenever a
+  `args` (`key: value` lines) to pre-resolve `project-type`, `open-source`, `visibility`
+  (`public`/`private`/`internal`, otherwise detected via `gh repo view` or asked), `ci` (`yes`/`no`), `ci-tests`
+  (`unit`/`full`), `pages` (`yes`/`no`), `publish`, `distribution`, `sonar`
+  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
+  (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, `platforms`, `framework`, `native-builds`, `integration-branch`,
+  `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` — forwarding each only
+  to the delegated orchestrator(s) whose own `args` contract actually accepts it, and never asking a question
+  `args` already answered. Asks whether CI workflows are wanted, whether Sonar receives CI reports, whether CI runs
+  unit-only or the full test suite, and (private repos) whether docs go to GitHub Pages, stating the Actions-minutes
+  / SonarCloud / Pages cost differences between public and private repositories. Announces whether it is setting up
+  from scratch or updating an existing repository (with an inventory of the prior setup it found); on an existing
+  repository it runs `iru-explore` first and forces `mode: existing`, and every delegated component then warns about
+  each pre-existing artifact and asks whether to keep, update, or replace it. Use whenever a
   user wants to bootstrap (or catch up) a repository and either doesn't know or shouldn't have to know which of
   this catalog's five stack-specific setup orchestrators to invoke directly.
 model: sonnet
@@ -26,8 +33,8 @@ model: sonnet
 
 The catalog's single bootstrap front door. This skill does not scaffold anything itself — it detects or asks which
 of the twelve supported project types the repository is (or should become), collects the handful of questions that
-are genuinely shared across every stack (open source, publish/distribution, Sonar, and a few flavor-specific
-inputs), and then hands off to exactly one of five existing stack orchestrators, each of which asks its own
+are genuinely shared across every stack (open source, repository visibility, CI/CD and its test scope, Sonar,
+GitHub Pages, publish/distribution, and a few flavor-specific inputs), and then hands off to exactly one of five existing stack orchestrators, each of which asks its own
 project-identity questions (groupId/artifactId, package/app name, etc.) and does the actual scaffolding.
 
 ## Step 0 — Resolve inputs
@@ -40,6 +47,10 @@ line, e.g.:
 project-type: android-app
 mode: new
 open-source: yes
+visibility: public
+ci: yes
+ci-tests: full
+pages: yes
 distribution: store
 sonar: cloud
 sonar-organization: example-org-github
@@ -48,9 +59,15 @@ sonar-host-url: https://sonarcloud.io
 ```
 
 Recognized keys: `project-type` (any value from the vocabulary in Step 1), `mode` (`new`/`existing`),
-`open-source` (`yes`/`no`), `publish` (`yes`/`no` — library types only), `distribution`
-(`none`/`internal`/`store` — app types only), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set,
-`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `flavor` (only meaningful for the typescript orchestrator
+`open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal` — the GitHub repository's visibility;
+`internal` is treated like `private` for every cost decision), `ci` (`yes`/`no` — whether GitHub Actions workflows
+are generated/updated at all), `ci-tests` (`unit`/`full` — only meaningful with `ci: yes`), `pages` (`yes`/`no` —
+whether docs are deployed to GitHub Pages from CI; only meaningful with `ci: yes`), `on-existing`
+(`ask`/`keep`/`update`/`replace` — how every component treats prior setup it finds; default `ask`; meant for
+scripted runs, so this skill never asks it and forwards it only when it arrived here), `publish` (`yes`/`no` —
+library types only), `distribution` (`none`/`internal`/`store` — app types only), `sonar`
+(`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`,
+`flavor` (only meaningful for the typescript orchestrator
 — see Step 2's table; usually redundant with `project-type` and can be left unset), `platforms` (Apple app / Swift
 library), `framework` (Ionic's `angular`/`react`), `native-builds` (React Native's `eas`/`local`), plus the
 pass-through-only keys `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`,
@@ -105,6 +122,37 @@ to its Step 2 option (see that step's table for the full project-type → option
   pre-selection; a stack `iru-explore` couldn't place isn't one this skill can guess a delegated orchestrator for
   either.
 
+### Announce the setup mode
+
+Right after the survey (and before asking anything in Steps 2–3), tell the user which of the two this run is doing:
+
+- **`mode: new`** → "Setting up this repository **from scratch** — no prior setup found."
+- **`mode: existing`** → "**Updating an existing repository** — prior setup found:" followed by an inventory table
+  of every component the delegated pipeline owns, each marked **absent** / **present** / **partial** with the
+  evidence (file paths) — a shallow `ls`/`find` per row is enough, no deep reads:
+
+  | Component | Evidence to check |
+  |---|---|
+  | Build manifest | `pom.xml`, `build.gradle(.kts)`/`settings.gradle(.kts)`, `package.json`, `Package.swift`, `*.xcodeproj`/`project.yml`/`Project.swift` |
+  | Source layout | `src/`, `lib/`/`app/` modules, `Sources/`/`Tests/` |
+  | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
+  | `.gitignore` | `.gitignore` |
+  | CI workflows | each file under `.github/workflows/` (listed individually) |
+  | Dependabot | `.github/dependabot.yml` |
+  | Sonar config | `sonar-project.properties`, `sonar.*` properties in `pom.xml`, a `sonar {}` block in Gradle |
+  | Changelog | `CHANGELOG.md` (or `CHANGELOG.rst`/`CHANGELOG.txt`/`HISTORY.md`) |
+  | README | `README.md` |
+  | License | `LICENSE`/`LICENSE.txt`/`LICENSE.md`/`COPYING` |
+
+  Then: "For each component that already exists you'll be asked whether to keep it, update it, or replace it." (or,
+  when `on-existing` arrived in `args` with `keep`/`update`/`replace`, say that value will be applied to every
+  existing component without asking).
+
+`mode` itself stays as detected above, but **any** owned artifact present — not just the build manifest — means
+the run is an update for that component, so even a `mode: new` run lists in the announcement any stray component it
+did find (e.g. a GitHub-created `README.md`/`LICENSE`) as present. Keep the inventory: Step 5 repeats it with the
+action actually taken per component.
+
 ## Step 2 — Ask the project type
 
 Skip this step entirely when `project-type` was already resolved — either supplied via `args`, or detected in
@@ -147,12 +195,79 @@ instead of walking them through the remaining rounds.
 ## Step 3 — Ask the shared inputs once
 
 Ask only what the resolved `project-type` actually needs, skipping anything already resolved by `args` or by
-Step 1's detection. Every question here uses `AskUserQuestion` and follows this catalog's shared open-source-driven
-convention (see any of the five delegated orchestrators' own Step 2/3/4 for the identical wording this mirrors).
+Step 1's detection. Every question here uses `AskUserQuestion` (header ≤ 12 characters, 2–4 options, recommended
+option first and labeled "(Recommended)") and follows this catalog's shared open-source- and visibility-driven
+convention (see any of the five delegated orchestrators' own Step 0–4 for the identical wording this mirrors). Ask
+them in the order below — `visibility` and `ci` change the recommendations of everything after them.
 
 1. **open-source** — is this repository open source? Yes / No, asked directly with no default. Drives the
    recommended defaults for every question below.
-2. **publish** or **distribution**, depending on whether the resolved type is a library or an app-shaped
+2. **visibility** — the GitHub repository's visibility, resolved (not necessarily asked) in this order:
+   1. `args` supplied it — use it.
+   2. The repository has a GitHub remote (`git remote get-url origin` matches `github.com`) and `gh` is available:
+      run `gh repo view --json visibility -q .visibility` (returns `PUBLIC`/`PRIVATE`/`INTERNAL`; lowercase it) and
+      tell the user the detected value.
+   3. Otherwise (no remote yet, `gh` unavailable/unauthenticated, or not GitHub): ask with `AskUserQuestion` —
+      **Public** / **Private** — recommending **Public** when `open-source: yes`, otherwise **Private**.
+   4. Consistency check: `open-source: yes` with `visibility: private|internal` is contradictory — warn and ask the
+      user which one is right (an open-source project's repository is normally public; a private repository
+      forfeits the free-for-public-repositories pricing stated below). `internal` behaves like `private` for every
+      cost decision in this step.
+
+   Every cost statement in questions 3–6 below is **per GitHub's current pricing** (verified October 2026 against
+   docs.github.com) — say so, and tell the user to double-check their own plan:
+   - **Actions minutes**: standard GitHub-hosted runners are free for public repositories. Private/internal
+     repositories consume the account's included minutes — 2,000/month on GitHub Free, 3,000 on Pro and Team, 50,000
+     on Enterprise Cloud — then are billed per minute. macOS runner minutes cost roughly 10× Linux minutes, Windows
+     roughly 1.7× (per-minute rates: Linux 2-core $0.006, Windows 2-core $0.010, macOS $0.062). Dependabot
+     version/security update runs on standard hosted runners are free.
+   - **SonarCloud (SonarQube Cloud)** is free for public/open-source projects; a private project needs a paid plan.
+     Self-hosted SonarQube Community Build is free, but you run the server.
+   - **GitHub Pages** is available for public repositories on every plan; for private/internal repositories it
+     requires GitHub Pro, Team, or Enterprise Cloud (not GitHub Free), and a Pages site published from a private
+     repository is **publicly accessible on the internet** unless the organization is on Enterprise Cloud and
+     publishes it with private access control.
+3. **ci** — "Generate GitHub Actions workflows (CI/CD) for this repository?"
+   - **Public**: recommend **Yes** — standard runners are free for public repositories.
+   - **Private/internal**: still offer **Yes** first, but state the included-minutes budget for their plan, and —
+     when the resolved type builds on macOS (`swift-library`, `apple-app`, `react-native-app` with
+     `native-builds: local` — question 8 hasn't been asked yet, so state it conditionally unless `args` resolved
+     it — and `ionic-app` iOS builds) — the ~10× macOS multiplier, estimating plainly that a few
+     dozen macOS builds a month can exhaust 2,000 included minutes. Offer **No** as "no workflows — build, test, and
+     release locally (re-run the stack's `-github-workflows` skill later to add them)".
+   - `ci: no` means the delegated orchestrator skips its workflows step entirely (no `.github/workflows/*`, no
+     `security.yml`, no `.github/dependabot.yml`, no sync script) — and with it the shared security block
+     (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks); for `java-springboot`/`java-springboot-hilla`
+     that also means no deploy/undeploy workflows, so deployment has to be done manually. Questions 5 and 6 are then
+     not asked.
+4. **sonar** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?"
+   `cloud`/`self-hosted`/`none`. Recommend **`cloud`** only when the repository is **public AND open source**.
+   Otherwise state plainly that SonarCloud is free only for public/open-source projects (a private project needs a
+   paid plan) and recommend **`none`**, offering **self-hosted SonarQube** as the second option. When `ci: no`, say
+   plainly that nothing would send reports automatically — analysis would only run when someone runs the scanner
+   manually with a token — and recommend **`none`**; if the user still picks `cloud`/`self-hosted`, the delegated
+   skills configure only the build-side Sonar properties/plugin and Step 5 reports that no CI step sends reports.
+   When `cloud`/`self-hosted` is chosen, also collect `sonar-organization`/`sonar-project-key` (cloud) or
+   `sonar-host-url`/`sonar-project-key` (self-hosted), the same way every delegated orchestrator's own Sonar
+   question does.
+5. **ci-tests** (only when `ci: yes`) — "Which tests should CI run?" Name the concrete test kinds for the resolved
+   type in the option descriptions: Maven Failsafe `*IT` integration tests (`java-library`); Failsafe +
+   Testcontainers/Docker integration tests (`java-springboot`/`java-springboot-hilla`); emulator-backed
+   instrumented tests (`android-library`/`android-app` — the emulator job runs on Linux with KVM, and emulator time
+   is billed minutes on a private repository); Playwright e2e (`react-web`/`angular-web`, and any e2e suite of
+   `react-native-app`/`ionic-app`); XCUITest UI tests on every selected destination (`apple-app`, every macOS minute
+   ~10×); an integration-test target if one exists (`swift-library`, `typescript-library`).
+   - **`unit`** — "Unit tests only (cheaper: fewer minutes, faster feedback). Integration / instrumentation / e2e
+     tests stay local." Recommend for private/internal repositories.
+   - **`full`** — "Unit + integration / instrumentation / e2e tests (complete verification, uses considerably more
+     minutes — emulators, containers, browsers, simulators)." Recommend for public repositories.
+6. **pages** (only when `ci: yes` — every delegated pipeline builds an Antora docs site that its workflows can
+   publish to GitHub Pages):
+   - **Public**: default **`yes`** without asking (Step 5 states it).
+   - **Private/internal**: ask — **No (Recommended)** ("CI still builds the docs and uploads them as a workflow
+     artifact; nothing is published") vs **Yes** ("requires GitHub Pro/Team/Enterprise Cloud; the site will be
+     PUBLIC on the internet unless you're on Enterprise Cloud with private Pages access control").
+7. **publish** or **distribution**, depending on whether the resolved type is a library or an app-shaped
    deliverable — never ask both, and skip entirely for `java-springboot`/`java-springboot-hilla` (a service isn't
    published or distributed the way a library or an installable app is, and neither's own orchestrator accepts
    either key) and for `react-web`/`angular-web` (`iru-setup-typescript-repository` accepts neither key for these
@@ -164,12 +279,7 @@ convention (see any of the five delegated orchestrators' own Step 2/3/4 for the 
    - **`distribution`** — app types (`android-app`, `apple-app`, `react-native-app`, `ionic-app`):
      `none`/`internal`/`store`. Default **`store`** only when open source; otherwise ask with **`internal`**
      recommended, `none` as the local-install-only alternative.
-3. **sonar** — `cloud`/`self-hosted`/`none`. Recommend **`cloud`** when open source is Yes. When it's No, state
-   plainly that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend
-   **`none`**, offering **self-hosted SonarQube** as the second option. When `cloud`/`self-hosted` is chosen, also
-   collect `sonar-organization`/`sonar-project-key` (cloud) or `sonar-host-url`/`sonar-project-key` (self-hosted),
-   the same way every delegated orchestrator's own Sonar question does.
-4. **Conditional, per resolved type**:
+8. **Conditional, per resolved type**:
    - **Apple app / Swift library** — Apple platforms (`AskUserQuestion`, multi-select, at least one required):
      `ios` / `ipados` / `macos` / `watchos`. Pre-fill from Step 1's detected `apple-app (…)` parenthetical when
      present. For a **Swift library only**, follow up with a second multi-select question — "Also target tvOS /
@@ -207,7 +317,10 @@ the table above once actually invoking:
 
 Then delegate via `iru-isolated-skill-executor`, exactly one of the five, always passing `mode` and every shared
 input Step 3 resolved (omitting any key the target skill's own Step 0 doesn't recognize — never send an invented
-key):
+key). All five orchestrators accept the cost/CI keys `visibility`, `ci`, `ci-tests`, and `pages`, plus
+`on-existing`: always send `visibility` and `ci`; send `ci-tests` and `pages` only when `ci: yes` (they're
+meaningless otherwise); send `on-existing` **only** when it arrived via this skill's own `args` — never invent a
+value, so an interactive run leaves every component free to warn and ask per pre-existing artifact:
 
 ```
 # project-type: android-app
@@ -215,56 +328,90 @@ Agent({
   description: "Run iru-setup-android-repository",
   subagent_type: "iru-isolated-skill-executor",
   prompt: "Invoke Skill({skill: \"iru-setup-android-repository\", args: \"flavor: app\\nmode: <mode>\\n
-    open-source: <open-source>\\ndistribution: <distribution>\\nsonar: <sonar>\\n
-    sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
-    integration-branch: <..., if set>\\nstable-branch: <..., if set>\\nlicense: <..., if set>\\n
-    developer-name: <..., if set>\\ndeveloper-email: <..., if set>\\norganization-url: <..., if set>\"}).
-    Report back: whether the scaffold, Antora docs, .gitignore, workflow files, CHANGELOG.md and README.md were
-    created, updated, or left untouched (and, if so, whether the user chose to stop at any point), the full
-    required-secrets/settings table it produced, and any open gap it flagged.",
+    open-source: <open-source>\\nvisibility: <visibility>\\nci: <ci>\\nci-tests: <..., if ci: yes>\\n
+    pages: <..., if ci: yes>\\non-existing: <..., only if supplied via args>\\ndistribution: <distribution>\\n
+    sonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
+    sonar-host-url: <..., if set>\\nintegration-branch: <..., if set>\\nstable-branch: <..., if set>\\n
+    license: <..., if set>\\ndeveloper-name: <..., if set>\\ndeveloper-email: <..., if set>\\n
+    organization-url: <..., if set>\"}).
+    Report back: the setup mode it announced, and per component (scaffold/build manifest, Antora docs, .gitignore,
+    each workflow file, CHANGELOG.md, README.md) the action actually taken — created / updated / replaced / kept as
+    is / skipped (ci: no) — and whether the user chose to stop at any point; every mismatch it reported between a
+    kept file and this run's choices; the full required-secrets/settings table it produced; and any open gap it
+    flagged.",
   run_in_background: false
 })
 ```
 
 The other four project types follow the same shape — one delegation, one `iru-isolated-skill-executor` call —
-with only the skill name and `args` changed:
+with only the skill name and `args` changed. Every list below implicitly includes `visibility`, `ci`, `ci-tests`
+and `pages` (when `ci: yes`), and `on-existing` (when supplied via `args`), per the rule above:
 
-- **`java-library`** → `iru-setup-java-library-repository`, `args`: `mode`, `open-source`, `publish`, `sonar`
-  (+ detail keys) only — its own Step 0 recognizes nothing else, so `integration-branch`/`license`/developer
-  identity are never sent here even if the user supplied them via this skill's own `args`.
+- **`java-library`** → `iru-setup-java-library-repository`, `args`: `mode`, `open-source`, the cost/CI keys,
+  `publish`, `sonar` (+ detail keys) only — its own Step 0 recognizes nothing else, so `integration-branch`/
+  `license`/developer identity are never sent here even if the user supplied them via this skill's own `args`.
 - **`java-springboot`** / **`java-springboot-hilla`** → `iru-setup-java-springboot`, `args`: `mode`,
-  `open-source`, `sonar` (+ detail keys), and `frontend` (`none` for `java-springboot`, `hilla` for
-  `java-springboot-hilla`) — no `publish`/`distribution`/branch/license/developer keys exist on this skill either.
+  `open-source`, the cost/CI keys, `sonar` (+ detail keys), and `frontend` (`none` for `java-springboot`, `hilla`
+  for `java-springboot-hilla`) — no `publish`/`distribution`/branch/license/developer keys exist on this skill
+  either. It records `ci`/`ci-tests`/`pages` in its `springboot-stack.yml` manifest for its sub-skills.
 - **`typescript-library`** / **`react-web`** / **`angular-web`** / **`react-native-app`** / **`ionic-app`** →
   `iru-setup-typescript-repository`, `args`: `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`), `mode`,
-  `open-source`, `publish` (library only), `distribution` (react-native/ionic only), `sonar` (+ detail keys),
-  `native-builds` (react-native only), `framework` (ionic only), plus `integration-branch`/`stable-branch`/
-  `license`/`developer-name`/`developer-email`/`organization-url` when this skill's own `args` supplied them.
-- **`android-library`** → `iru-setup-android-repository`, `args`: `flavor: library`, `mode`, `open-source`,
-  `publish`, `sonar` (+ detail keys), plus the same pass-through branch/license/developer keys when supplied.
+  `open-source`, the cost/CI keys, `publish` (library only), `distribution` (react-native/ionic only), `sonar`
+  (+ detail keys), `native-builds` (react-native only), `framework` (ionic only), plus `integration-branch`/
+  `stable-branch`/`license`/`developer-name`/`developer-email`/`organization-url` when this skill's own `args`
+  supplied them.
+- **`android-library`** → `iru-setup-android-repository`, `args`: `flavor: library`, `mode`, `open-source`, the
+  cost/CI keys, `publish`, `sonar` (+ detail keys), plus the same pass-through branch/license/developer keys when
+  supplied.
 - **`swift-library`** / **`apple-app`** → `iru-setup-swift-repository`, `args`: `flavor` (`library`/`app`),
-  `mode`, `platforms` (comma-separated), `open-source`, `publish` (library) / `distribution` (app), `sonar`
-  (+ detail keys), plus the same pass-through branch/license/developer keys when supplied. Neither `flavor` needs
-  `branching` sent — `iru-setup-swift-repository` asks that itself, as it isn't one of this skill's `args` keys.
+  `mode`, `platforms` (comma-separated), `open-source`, the cost/CI keys, `publish` (library) / `distribution`
+  (app), `sonar` (+ detail keys), plus the same pass-through branch/license/developer keys when supplied. Neither
+  `flavor` needs `branching` sent — `iru-setup-swift-repository` asks that itself, as it isn't one of this skill's
+  `args` keys.
+
+If the on-disk Step 0 of the target orchestrator turns out **not** to recognize one of the cost/CI keys (e.g. an
+older copy of it was installed), don't send that key — instead tell the user the orchestrator will ask that
+question itself (or, if it has no such question, that the choice can't be applied by it), and list it in Step 5.
 
 Each delegated orchestrator parses its own `args` (its own Step 0) and asks the user about anything genuinely left
 out — its own project identity, its own `mode`-driven survey, `branching`/`generator`/`signing`/toolchain toggles,
 and (for `java-library`/`java-springboot`) branch/license/developer identity that this front door never collects.
 `AskUserQuestion` surfaces to the user the same way whether invoked directly or from inside the isolated
-sub-agent. Ask the executor to report back: which files were created/updated/left untouched (and any point where
-the user chose to stop), the full required-secrets/settings table the delegated orchestrator produced, and any
-open gap it flagged — a short structured summary, not the delegated run's full transcript.
+sub-agent — including each component's own keep/update/replace question for a pre-existing artifact, which this
+front door never asks on the components' behalf (so the user is never asked the same question twice). Ask the
+executor to report back: the per-component action actually taken (created / updated / replaced / kept as is /
+skipped (ci: no)) and any point where the user chose to stop, every mismatch reported between a kept file and this
+run's choices, the full required-secrets/settings table the delegated orchestrator produced, and any open gap it
+flagged — a short structured summary, not the delegated run's full transcript.
 
 ## Step 5 — Report
 
 Summarize for the user:
 
 - The resolved `project-type` (and, for `apple-app`/`ionic-app`, the platforms/framework that came with it), the
-  resolved `mode` (`new`/`existing`, and whether it came from Step 1's survey or an explicit `args`/user answer),
-  and every shared input from Step 3 as actually applied (`open-source`, `publish`/`distribution`, `sonar` +
-  detail keys, and any conditional flavor-specific input).
-- What the delegated orchestrator (named explicitly) reported creating, updating, or leaving untouched — reproduce
-  its file list rather than re-deriving one.
+  setup mode restated as in Step 1's announcement ("set up from scratch" / "updated an existing repository") with
+  whether `mode` came from Step 1's survey or an explicit `args`/user answer, and every shared input from Step 3 as
+  actually applied (`open-source`, `visibility` and whether it was supplied/detected via `gh`/asked, `ci`,
+  `ci-tests`, `pages` — noting when `pages: yes` was defaulted because the repository is public —
+  `publish`/`distribution`, `sonar` + detail keys, `on-existing` if supplied, and any conditional flavor-specific
+  input).
+- A **per-component table** — the Step 1 inventory's rows, each with what the delegated orchestrator (named
+  explicitly) reported doing: **created / updated / replaced / kept as is / skipped (ci: no)** and the file paths
+  involved. Reproduce its report rather than re-deriving one, and list under it every mismatch it flagged between a
+  kept-as-is file and this run's choices (e.g. a kept `build.yml` that still runs a Sonar step after `sonar: none`,
+  still deploys to Pages after `pages: no`, or still runs integration/e2e tests after `ci-tests: unit`).
+- **Cost notes**, tied to the resolved `visibility` and stated as per GitHub's current pricing (the user should
+  double-check their plan): for a public repository, that standard Actions runners and SonarCloud are free; for a
+  private/internal one, the included-minutes budget, the macOS ~10× multiplier when the stack builds on macOS, that
+  `ci-tests: full` uses considerably more minutes, that SonarCloud requires a paid plan for a private project when
+  `sonar: cloud`, and — when `pages: yes` — that Pages needs Pro/Team/Enterprise Cloud and the site is public unless
+  on Enterprise Cloud with private access control (with `pages: no`, the docs are uploaded as a workflow artifact
+  instead).
+- When `ci: no`: that no workflows were generated, that the shared security block (Dependabot, dependency-review,
+  CodeQL, OSV-Scanner, gitleaks) was skipped with them (and, for Spring Boot, the deploy/undeploy workflows), that
+  any Sonar configuration is build-side only with no CI step sending reports, and that re-running the stack's
+  `-github-workflows` skill (e.g. `/iru-setup-android-github-workflows`) adds them later.
+- Any key Step 4 couldn't forward because the target orchestrator's on-disk Step 0 didn't recognize it.
 - One **consolidated secrets/environments table**, merged from the delegated orchestrator's own table (repository
   secrets such as `SONAR_TOKEN`, publish/store credentials, signing material, and any CI environment it named) —
   don't re-derive or expand it, just merge duplicates if this run somehow touched more than one delegated skill
@@ -275,8 +422,9 @@ Summarize for the user:
     the Swift Package Index) / store account (App Store Connect, Google Play Console, Firebase) named there, must
     already exist before CI can pass — nothing in this pipeline creates or stores any account or credential.
   - Which values were **inferred** rather than asked — anything Step 1's `iru-explore` run detected and this skill
-    pre-selected or pre-filled, and every default this skill or a delegated orchestrator applied silently (e.g.
-    `distribution: store` only because the project is open source) — so the user can correct a wrong guess before
+    pre-selected or pre-filled, `visibility` when it was detected via `gh repo view`, and every default this skill
+    or a delegated orchestrator applied silently (e.g. `distribution: store` only because the project is open
+    source, `pages: yes` only because the repository is public) — so the user can correct a wrong guess before
     relying on it.
 
 If Step 1 or Step 2 ended on `dotnet`/`other`/no orchestrator available, report that outcome plainly instead of

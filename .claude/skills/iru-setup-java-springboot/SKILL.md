@@ -1,12 +1,13 @@
 ---
 name: iru-setup-java-springboot
-description: End-to-end bootstrap for a brand-new Spring Boot service repository built on DDD + hexagonal architecture as a Maven multi-module reactor (`boot`, `application`, `domain`, `infrastructure/*`, `api/*`). Collects the project's identity (groupId, artifactId, base Java package), the target cloud (AWS or Google Cloud), the concurrency model (reactive/blocking/both), and every technology choice (databases + index/migration tooling, caches, security, Kafka via Spring Cloud Stream + AVRO, REST/gRPC/GraphQL servers and clients, the API mocking tool backing those clients in tests — Microcks or WireMock — logging, metrics, tracing, Spring AI, dynamic configuration), resolving the latest Spring Boot version and validating every dependency id against the live Spring Initializr metadata API (`https://start.spring.io/metadata/client`) rather than a hardcoded list. Records all of it in a `springboot-stack.yml` manifest, then orchestrates `iru-setup-java-springboot-pom` (root reactor pom with Javadoc/Checkstyle/PMD/SpotBugs/Surefire/Failsafe/JaCoCo/JXR/site/groovy build-info/Sonar plugins), `iru-setup-java-springboot-modules` (module tree, ports/adapters skeleton, configuration), `iru-setup-java-springboot-apis` (the `apis/` spec tree plus OpenAPI/protobuf/GraphQL-SDL/AVRO code generation and AsyncAPI documentation generation), `iru-setup-java-springboot-testcontainers` (docker compose + Testcontainers integration-test harness), `iru-setup-java-springboot-platform` (OpenTofu deployment), `iru-setup-java-springboot-github-workflows` (test/publish, deploy and undeploy workflows), and `iru-update-java-springboot-documentation` (Antora site with Mermaid + Kroki and the full template page set). Also asks whether the project is open source, which SonarCloud/self-hosted SonarQube/no Sonar analysis it runs, and whether a Hilla frontend is part of the service — when it is, `iru-setup-java-springboot-hilla` scaffolds the Vaadin/Hilla React frontend (BOM, starters, `vaadin-maven-plugin`, `src/main/frontend/`, Vitest, ESLint/Prettier) into the `boot` module right after `iru-setup-java-springboot-apis` — recording all three in the manifest for the sub-skills to read. Enforces Java 21 as a minimum. Invoke as `/iru-setup-java-springboot`, optionally with `args` (`key`/`value` lines) to pre-resolve `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when set), and `frontend` (`none`/`hilla`), skipping the matching interview question. Use when starting a new Spring Boot microservice from nothing and you want the whole hexagonal reactor, CI/CD, infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and re-answering the same questions each time.
+description: End-to-end bootstrap for a new (or older/partially set-up) Spring Boot service repository built on DDD + hexagonal architecture as a Maven multi-module reactor (`boot`, `application`, `domain`, `infrastructure/*`, `api/*`). Collects the project's identity (groupId, artifactId, base Java package), the target cloud (AWS or Google Cloud), the concurrency model (reactive/blocking/both), and every technology choice (databases + index/migration tooling, caches, security, Kafka via Spring Cloud Stream + AVRO, REST/gRPC/GraphQL servers and clients, the API mocking tool backing those clients in tests — Microcks or WireMock — logging, metrics, tracing, Spring AI, dynamic configuration), resolving the latest Spring Boot version and validating every dependency id against the live Spring Initializr metadata API (`https://start.spring.io/metadata/client`) rather than a hardcoded list. Records all of it in a `springboot-stack.yml` manifest, then orchestrates `iru-setup-java-springboot-pom` (root reactor pom with Javadoc/Checkstyle/PMD/SpotBugs/Surefire/Failsafe/JaCoCo/JXR/site/groovy build-info/Sonar plugins), `iru-setup-java-springboot-modules` (module tree, ports/adapters skeleton, configuration), `iru-setup-java-springboot-apis` (the `apis/` spec tree plus OpenAPI/protobuf/GraphQL-SDL/AVRO code generation and AsyncAPI documentation generation), `iru-setup-java-springboot-testcontainers` (docker compose + Testcontainers integration-test harness), `iru-setup-java-springboot-platform` (OpenTofu deployment), `iru-setup-java-springboot-github-workflows` (test/publish, deploy and undeploy workflows), and `iru-update-java-springboot-documentation` (Antora site with Mermaid + Kroki and the full template page set). Also asks whether the project is open source, the GitHub repository's visibility (detected via `gh` when possible), whether GitHub Actions workflows are wanted at all (`ci` set to `no` skips the github-workflows sub-skill — build, deploy and undeploy workflows and the security block alike), which tests CI runs (`unit` = Surefire only, `full` = plus Failsafe/Testcontainers integration tests), whether docs are deployed to GitHub Pages, which SonarCloud/self-hosted SonarQube/no Sonar analysis it runs — stating the Actions-minutes, SonarCloud and Pages cost differences for private repositories — and whether a Hilla frontend is part of the service — when it is, `iru-setup-java-springboot-hilla` scaffolds the Vaadin/Hilla React frontend (BOM, starters, `vaadin-maven-plugin`, `src/main/frontend/`, Vitest, ESLint/Prettier) into the `boot` module right after `iru-setup-java-springboot-apis` — recording all of it (including a `visibility` field and a `ci:` block with `enabled`/`tests`/`pages`) in the manifest for the sub-skills to read. Announces up front whether it is setting the repository up from scratch or updating an existing one (with an inventory of every component it owns), and each sub-skill then warns and asks Update / Keep as is / Replace per pre-existing artifact instead of a blanket stop; only a genuinely incompatible repository (e.g. a Gradle build or a non-reactor pom) gets a hard stop question. Enforces Java 21 as a minimum. Invoke as `/iru-setup-java-springboot`, optionally with `args` (`key`/`value` lines) to pre-resolve `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when set), `frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), and `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded to every file-writing sub-skill only when supplied), skipping the matching interview question. Use when starting a new Spring Boot microservice from nothing and you want the whole hexagonal reactor, CI/CD, infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and re-answering the same questions each time.
 model: sonnet
 ---
 
 # Setup Java Spring Boot Service
 
-Bootstrap a brand-new Spring Boot service repository in one pass. This skill is the **interviewer and
+Bootstrap a Spring Boot service repository in one pass — from scratch, or by updating a repository that already
+has an older or partial setup. This skill is the **interviewer and
 orchestrator**: it asks every question exactly once, resolves the Spring Boot version and dependency ids against
 the live Spring Initializr API, writes the resolved answers to a `springboot-stack.yml` manifest at the repository
 root, and then delegates the actual file generation to seven sub-skills (eight when `frontend: hilla`) that each
@@ -57,7 +58,7 @@ Only the modules the user's technology choices actually call for are created —
 specification describing the topics that carry them) that the code-generation and documentation generators read.
 See `iru-setup-java-springboot-apis`.
 
-## Step 0 — Check the repository is a safe starting point
+## Step 0 — Parse inputs, detect the setup mode, and check the repository is a safe starting point
 
 This skill can be invoked stand-alone (`/iru-setup-java-springboot`) or driven by another orchestrator, so parse
 `args` first, as `key: value` lines, one per line, e.g.:
@@ -70,26 +71,65 @@ sonar-organization: example-github
 sonar-project-key: example_orders-service
 sonar-host-url: https://sonarcloud.io
 frontend: none
+visibility: public
+ci: yes
+ci-tests: full
+pages: yes
+on-existing: ask
 ```
 
 Recognized keys: `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`), and
 — only when `sonar` is `cloud` or `self-hosted` — `sonar-organization`, `sonar-project-key`, `sonar-host-url`, plus
-`frontend` (`none`/`hilla`). Every key found here is resolved — skip the matching question in Step 3. If `args` is
-absent or doesn't look like this format, treat everything as unset and ask normally.
+`frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
+(`unit`/`full`, only meaningful when `ci: yes`), `pages` (`yes`/`no`, only meaningful when `ci: yes`), and
+`on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key found here is resolved — skip the matching
+question in Step 3b. If `args` is absent or doesn't look like this format, treat everything as unset and ask
+normally. `on-existing` is never asked: it exists for scripted runs, and this skill forwards it to its sub-skills
+**only** when it arrived here via `args` — otherwise every sub-skill asks per artifact itself.
 
-- If `pom.xml` already exists at the repository root, this repository has already been bootstrapped (by this skill
-  or otherwise).
-  - If `mode` was supplied via `args`, trust it: `existing` goes straight to **continue anyway** (every sub-skill
-    is told to treat existing files as gaps-to-fill and never to overwrite a file containing hand-written code)
-    without asking; `new` still asks, since regenerating on purpose over real code needs a human's confirmation
-    even when the caller expected a fresh repository.
-  - Otherwise use `AskUserQuestion` to ask whether to **stop** (recommended — re-running the whole bootstrap over
-    an existing reactor risks clobbering real code) or **continue anyway**, with the same gaps-to-fill instruction
-    to every sub-skill.
+**Detect the mode.** `mode` from `args` wins; otherwise a root `pom.xml` means `existing`, and so does **any**
+other artifact this run owns being present (it is an update for that component even when there's no pom yet).
+Then, before asking anything else, print a short **Setup mode** statement:
+
+- `mode: new` → "Setting up this repository **from scratch** — no prior setup found."
+- `mode: existing` → "**Updating an existing repository** — prior setup found:" followed by an inventory table of
+  every component this run owns, each marked **absent / present / partial** with the evidence (file paths):
+
+  | Component | Owner | Evidence to look for |
+  |---|---|---|
+  | Manifest | this skill | `springboot-stack.yml` |
+  | Root reactor pom + module poms | `iru-setup-java-springboot-pom` | `pom.xml`, `*/pom.xml` (partial: modules listed but missing on disk, or vice versa) |
+  | Module tree / source skeleton | `iru-setup-java-springboot-modules` | `domain/`, `application/`, `boot/`, `infrastructure/*`, `api/*`, `coverage/`, `application*.yml` |
+  | API contracts + generators | `iru-setup-java-springboot-apis` | `apis/**` |
+  | Hilla frontend (only when `frontend: hilla`) | `iru-setup-java-springboot-hilla` | `boot/src/main/frontend/`, `boot/package.json`, `vitest.config.ts` |
+  | Compose stack + IT harness | `iru-setup-java-springboot-testcontainers` | `compose.yaml`/`docker-compose.yml`, the IT base class |
+  | OpenTofu platform | `iru-setup-java-springboot-platform` | `infra/**` |
+  | Workflows + security block | `iru-setup-java-springboot-github-workflows` | each of `.github/workflows/build.yml`, `deploy.yml`, `undeploy.yml`, `security.yml`, and `.github/dependabot.yml` |
+  | Antora docs | `iru-update-java-springboot-documentation` | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
+  | Sonar config | `iru-setup-java-springboot-pom` | `sonar.*` properties / `sonar-maven-plugin` in `pom.xml` |
+  | `.gitignore` | `iru-setup-java-gitignore` | `.gitignore` |
+  | `README.md` / `CHANGELOG.md` | `iru-setup-readme` / `iru-setup-changelog` | the files |
+  | `checkstyle.xml` / `LICENSE` | this skill (Step 9) | the files |
+
+  Then: "For each component that already exists you'll be asked whether to keep it, update it, or replace it."
+  Each sub-skill asks that itself, per artifact it owns, when it runs (unless `on-existing` was forwarded) — this
+  skill does not ask the same question again on its behalf.
+
+**Hard stop only for a genuinely incompatible repository.** If the root build is not something this reactor can
+be laid over — a Gradle build (`build.gradle`/`build.gradle.kts`/`settings.gradle*`), or a `pom.xml` that is a
+single-module `jar`/`war` project with its own `src/main/java` at the root (re-parenting it under a `pom`-packaged
+reactor would move or overwrite real code) — use `AskUserQuestion` to ask **Stop (Recommended)** — "end now,
+nothing written; this repository's build can't host a DDD/hexagonal reactor without a manual migration" — or
+**Continue anyway** — "the sub-skills will still ask per file, but expect them to propose replacing the root build
+and to leave the existing root sources orphaned outside every module". This applies even when `mode: existing`
+came via `args`. An existing `pom`-packaged reactor (from this skill or similar) is **not** incompatible — it's a
+normal update run.
+
 - If `springboot-stack.yml` already exists, read it and offer its values as the defaults for every question below,
-  so a re-run is a cheap "add one more database/client" pass rather than a full re-interview.
+  so a re-run is a cheap "add one more database/client" pass rather than a full re-interview. Whether the manifest
+  itself is then rewritten is asked in Step 6, not here.
 - Verify prerequisites and report any that are missing before asking anything (a missing one is not a hard stop —
-  the generated files are still correct, they just can't be verified in Step 12):
+  the generated files are still correct, they just can't be verified in Step 10):
   `java -version` (must be 21+), `mvn -v`, `docker info` (needed by Testcontainers), `curl --version`,
   `git rev-parse --show-toplevel`.
 
@@ -177,17 +217,42 @@ settled first:
 Record the answer as `stack.concurrency: blocking | reactive | both`. For every technology below, "the matching
 starter" means: blocking → the plain starter; reactive → the `-reactive`/`r2dbc` starter; both → both.
 
-## Step 3b — Open source, Sonar, and frontend
+## Step 3b — Open source, visibility, CI, Sonar, and frontend
 
-Resolve three more choices, skipping any already answered by Step 0's `args`. Use `AskUserQuestion` for each.
+Resolve these choices **in this order**, skipping any already answered by Step 0's `args` (or offered as a default
+from an existing manifest). Use `AskUserQuestion` for each (header ≤ 12 chars, recommended option first). The cost
+facts below are per GitHub's current pricing — say so and tell the user to double-check their plan.
 
 - **Open source** (`openSource`) — is this repository open source? Yes / No, asked directly with no default. This
-  answer drives the recommended default for the Sonar question right after it, per this catalog's shared
+  answer drives the recommended defaults for the visibility and Sonar questions, per this catalog's shared
   convention (see `iru-setup-java-library-repository`).
-- **Sonar** (`sonar.mode`) — recommend **SonarCloud** (`cloud`) when open source is Yes; when not open source,
-  state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend
-  **None** (`none`), offering **self-hosted SonarQube** (`self-hosted`) as the second option. When `cloud` or
-  `self-hosted` is chosen, also collect:
+- **Visibility** (`visibility`) — if the repository has a GitHub remote, detect it with
+  `gh repo view --json visibility -q .visibility` (lowercase the `PUBLIC`/`PRIVATE`/`INTERNAL` result) and tell the
+  user the detected value; otherwise (no remote yet, `gh` unavailable, not GitHub) ask **Public** / **Private**,
+  recommending Public when open source is Yes, otherwise Private. If open source is Yes but visibility is
+  `private`/`internal`, warn that this is contradictory (an open-source project's repository is normally public,
+  and a private repo forfeits the free-for-public-repos pricing below) and ask which one is right. `internal`
+  behaves like `private` for every cost decision below.
+- **CI** (`ci.enabled`) — "Generate GitHub Actions workflows (CI/CD) for this repository?"
+  - Public: recommend **Yes** — standard GitHub-hosted runners are free for public repositories.
+  - Private/internal: still offer **Yes** first, but state that every run consumes the account's included
+    minutes — 2,000/month on GitHub Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud — then is billed per
+    minute (Linux 2-core $0.006/min; this stack's workflows all run on Linux runners, so the macOS ~10× and
+    Windows ~1.7× multipliers don't apply). Offer **No** — "no workflows: build, test, deploy and release locally;
+    re-run `/iru-setup-java-springboot-github-workflows` later to add them".
+  - `ci: no` ⇒ Step 8 skips `iru-setup-java-springboot-github-workflows` entirely — **no `build.yml`, and no
+    `deploy.yml`/`undeploy.yml` either, so deploying and tearing down the OpenTofu environments becomes a manual
+    `tofu apply`/`tofu destroy`**; no `security.yml` and no `.github/dependabot.yml` (the shared security block —
+    Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks — is skipped with it). `ci-tests` and `pages` are
+    not asked.
+- **Sonar** (`sonar.mode`) — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?"
+  Recommend **SonarCloud** (`cloud`) only when the repository is public **and** open source; otherwise state that
+  SonarCloud is free only for public/open-source projects (a private project needs a paid plan) and recommend
+  **None** (`none`), offering **self-hosted SonarQube** (`self-hosted`, free Community Build, but you run the
+  server) as the second option. When `ci: no`, say plainly that nothing would send reports automatically —
+  analysis would only run when someone runs `mvn sonar:sonar` manually with a token — and recommend `none`; if the
+  user still picks `cloud`/`self-hosted`, the root pom still gets its Sonar properties/plugin, and Step 11 reports
+  that no CI step sends reports. When `cloud` or `self-hosted` is chosen, also collect:
   - `sonar.organization` — for `cloud`, suggest `<owner>-github` (the owner parsed in Step 2) as the default,
     since that's the key SonarCloud assigns by default when an organization is created by importing from GitHub;
     for `self-hosted`, ask only if that server has organizations enabled.
@@ -197,6 +262,20 @@ Resolve three more choices, skipping any already answered by Step 0's `args`. Us
   - When `sonar.mode: none`, leave `organization`/`projectKey`/`hostUrl` unset — `iru-setup-java-springboot-pom`
     and `iru-setup-java-springboot-github-workflows` both read `sonar.mode` and omit every Sonar plugin, property,
     and CI step accordingly.
+- **CI tests** (`ci.tests`, only when `ci: yes`) — "Which tests should CI run?"
+  - **Unit tests only** (`unit`) — "Surefire `*Test` only (cheaper: fewer minutes, faster feedback). Failsafe
+    `*IT` integration tests against the Testcontainers/docker compose stack stay local." Recommend for
+    private/internal repositories.
+  - **Unit + integration** (`full`) — "Surefire plus Failsafe integration tests against the Testcontainers stack
+    (databases, Kafka + Schema Registry, the API mock, …) — complete verification, considerably more minutes."
+    Recommend for public repositories.
+- **Pages** (`ci.pages`, only when `ci: yes`) — the build workflow publishes the Antora site, Maven site and
+  generated API docs to GitHub Pages.
+  - Public: `yes` without asking (state it in Step 11's report).
+  - Private/internal: ask — **No (Recommended)** — "CI still builds the docs and uploads them as a workflow
+    artifact; nothing is published" — versus **Yes** — "requires GitHub Pro, Team, or Enterprise Cloud (not GitHub
+    Free); the site will be **public on the internet** unless you're on Enterprise Cloud with private Pages access
+    control".
 - **Frontend** (`frontend`) — does this service ship a Hilla frontend alongside the Spring Boot backend? **None**
   (recommended default) or **Hilla**. Recording `frontend: hilla` here drives three downstream sub-skills: Step 8
   runs `iru-setup-java-springboot-hilla` (right after `iru-setup-java-springboot-apis`) to actually scaffold the
@@ -485,8 +564,9 @@ MapStruct has no Initializr id — it's added explicitly in the root pom togethe
 ## Step 5 — Confirm the whole plan before writing anything
 
 Present a single compact summary: project identity, Boot and Java versions, platform, concurrency model, whether
-the project is open source, the Sonar mode (and organization/project key/host URL when not `none`), the frontend
-choice, every selected technology with the dependency ids it resolved to, the migration tool per database, the
+the project is open source, the repository visibility, the CI choices (`ci`, and when `yes` the `ci-tests` scope
+and whether docs go to GitHub Pages), the Sonar mode (and organization/project key/host URL when not `none`), the
+frontend choice, every selected technology with the dependency ids it resolved to, the migration tool per database, the
 client names and the mocking tool chosen for them,
 the exact list of Maven modules that will be created, and the docker compose services the integration-test stack
 will run. Ask for explicit confirmation, or for corrections, and loop back to the relevant part of Step 4 if the
@@ -497,6 +577,17 @@ user changes something. **No file is written before this confirmation.**
 Write the confirmed answers to `springboot-stack.yml` at the repository root. Every sub-skill reads this file
 instead of re-asking, and `iru-update-java-springboot-documentation` reads it later to know what the service is
 built from. It is meant to be committed.
+
+If `springboot-stack.yml` already existed (Step 0), warn and — unless `on-existing` arrived via `args`, in which
+case apply it — ask with `AskUserQuestion`:
+
+- **Update (Recommended)** — "Rewrite it with this run's confirmed answers (whose defaults came from the existing
+  file), keeping any key this skill doesn't know about. Sub-skills then generate against the updated stack."
+- **Keep as is** — "Leave the file untouched. Sub-skills read the *old* manifest, so any answer you changed in
+  this run (e.g. the CI choices) is ignored by them — Step 11 lists each difference." (Today's re-run behaviour
+  when the stack hasn't changed.)
+- **Replace** — "Write a fresh manifest from this run's answers only; unknown keys and comments in the old file
+  are lost (recoverable from git history)."
 
 ```yaml
 # Generated by /iru-setup-java-springboot. Records the technology choices this service was scaffolded with.
@@ -525,6 +616,11 @@ sonar:                           # from Step 3b — mode is the source of truth 
   projectKey: example_orders-service   # unset when mode: none
   hostUrl: https://sonarcloud.io # unset when mode: none; the self-hosted server URL when mode: self-hosted
 frontend: none                   # none | hilla — hilla scaffolds a Hilla React frontend via iru-setup-java-springboot-hilla, see Step 3b
+visibility: public               # public | private | internal — from Step 3b (detected via gh when possible)
+ci:                              # from Step 3b — read by iru-setup-java-springboot-github-workflows (args may override)
+  enabled: true                  # false ⇒ no workflows at all: no build/deploy/undeploy/security.yml, no dependabot.yml
+  tests: full                    # unit (Surefire only, -DskipITs, no Testcontainers in CI) | full (Surefire + Failsafe + Testcontainers); omitted when enabled: false
+  pages: true                    # false ⇒ docs built in CI and uploaded as a workflow artifact, not deployed to GitHub Pages; omitted when enabled: false
 stack:
   concurrency: blocking          # blocking | reactive | both
   cloud: aws                     # aws | gcp
@@ -619,7 +715,11 @@ Run the sub-skills **in this order** (seven always, plus `iru-setup-java-springb
 the manifest's `frontend: hilla`), each via the `iru-isolated-skill-executor` agent so its own file reads,
 template expansion, and build output stay out of this orchestrator's context. Every sub-skill reads
 `springboot-stack.yml` itself, so each prompt only needs to point it at that file and at the saved Initializr pom,
-and to name what should come back.
+and to name what should come back. Add `mode: <new|existing>` to every sub-skill's `args`, and
+`on-existing: <value>` **only when it arrived in this skill's own `args`** — otherwise leave it out so each
+sub-skill announces scratch-vs-update and asks Update / Keep as is / Replace per artifact it owns. Since a
+sub-skill run through `iru-isolated-skill-executor` still asks its `AskUserQuestion`s, tell the executor to let
+those questions through to the user rather than answering them itself.
 
 Order matters: poms before modules (a module needs its parent to exist), modules before APIs (generated sources
 need a module to land in), APIs before Hilla (the `boot` module the frontend lands in must already exist, and the
@@ -632,8 +732,10 @@ Agent({
   description: "Run springboot pom setup",
   subagent_type: "iru-isolated-skill-executor",
   prompt: "Invoke Skill({skill: \"iru-setup-java-springboot-pom\", args: \"stack-file: springboot-stack.yml\\n
-    initializr-pom: <scratchpad-path-to-initializr-pom.xml>\"}). Report back: the modules declared in the
-    reactor, the dependency and plugin versions pinned in the root pom, and any dependency it could not place.",
+    initializr-pom: <scratchpad-path-to-initializr-pom.xml>\\nmode: <mode>[\\non-existing: <value>]\"}).
+    Report back: whether it created or updated each file and what the user chose per pre-existing file, the
+    modules declared in the reactor, the dependency and plugin versions pinned in the root pom, and any dependency
+    it could not place.",
   run_in_background: false
 })
 ```
@@ -667,28 +769,39 @@ Repeat that shape for, in order:
    resources it will manage, what it deliberately left to the user, and every secret/variable that must be
    provided out-of-band.
 6. **`iru-setup-java-springboot-github-workflows`** — the test/analyse/publish workflow, the deploy workflow, and
-   the undeploy workflow. Report back: workflow files written, required repository secrets and environments, and
-   any gap.
+   the undeploy workflow, plus `security.yml` and `.github/dependabot.yml`. It reads `visibility`, `ci.tests`, and
+   `ci.pages` from the manifest, so they needn't be forwarded (only `mode`, and `on-existing` when applicable).
+   Report back: workflow files created/updated/replaced/kept, required repository secrets and environments, and
+   any gap. **Skipped entirely when the manifest's `ci.enabled: false`** — record it as "skipped (ci: no)" and
+   note in Step 11 that the deploy/undeploy workflows were skipped with it (deployment and teardown are manual
+   `tofu apply`/`tofu destroy` runs) along with the shared security block.
 7. **`iru-update-java-springboot-documentation`** — the Antora site (Mermaid **and** Kroki) with the full
    template page set. Report back: pages created versus already present, and whether the site built.
 
-If any sub-skill reports that it stopped (e.g. because a file it owns already exists and the user chose not to
-overwrite it), don't treat that as a failure of this skill — carry on with the remaining sub-skills and record it
-in Step 11's report. The one exception is `iru-setup-java-springboot-pom`: if the root pom wasn't written there is
-no reactor for anything else to attach to, so stop the run there and report why.
+If any sub-skill reports that it stopped, or that the user chose **Keep as is** for a file it owns, don't treat
+that as a failure of this skill — carry on with the remaining sub-skills and record it in Step 11's report. The
+one exception is `iru-setup-java-springboot-pom`: if no usable root reactor pom exists after it ran (it stopped on
+a brand-new repository, or the existing pom was kept but isn't a `pom`-packaged reactor) there is no reactor for
+anything else to attach to, so stop the run there and report why.
 
 ## Step 9 — Supporting repository files
 
 After the sub-skills, fill in the repository-level files they don't own:
 
+Forward `on-existing` to each of these skills only when it arrived in this skill's own `args`; otherwise each one
+announces scratch-vs-update and asks Update / Keep as is / Replace for its own file itself.
+
 - **`.gitignore`** — invoke `iru-setup-java-gitignore` if available. Regardless, make sure `target/`,
   `docs/build/`, `.env`, `*.tfstate`, `*.tfstate.*`, `.terraform/`, `*.tfvars` (except `*.tfvars.example`), and
   IDE directories are ignored. The tfstate and tfvars entries matter: both routinely contain credentials.
-- **`README.md`** — invoke `iru-setup-readme` if available, passing `args: sonar: <manifest sonar.mode>` so the
-  README's Sonar badges and dashboard links match the choice recorded in `springboot-stack.yml`.
-- **`CHANGELOG.md`** — invoke `iru-setup-changelog` if available.
-- **`checkstyle.xml`** — the root pom's `maven-checkstyle-plugin` points at it; if no ruleset exists, write a
-  starting one (Sun or Google checks with the line-length and Javadoc rules relaxed to what a Spring Boot service
+- **`README.md`** — invoke `iru-setup-readme` if available, passing `args` lines `sonar: <manifest sonar.mode>`,
+  `ci: <yes|no from ci.enabled>`, and — when `ci: yes` — `pages: <yes|no from ci.pages>` (plus `on-existing` when
+  applicable), so the README's Sonar badges/dashboard links, CI badges, and documentation-site link match the
+  choices recorded in `springboot-stack.yml` (no CI badge when `ci: no`, no github.io link when Pages is off).
+- **`CHANGELOG.md`** — invoke `iru-setup-changelog` if available (forwarding `on-existing` when applicable).
+- **`checkstyle.xml`** — the root pom's `maven-checkstyle-plugin` points at it; if one already exists, keep it
+  (it's a project's own ruleset — mention it in the report, and only offer to replace it if it's clearly broken);
+  if no ruleset exists, write a starting one (Sun or Google checks with the line-length and Javadoc rules relaxed to what a Spring Boot service
   can realistically satisfy) rather than leaving the build referencing a missing file.
 - **`LICENSE`** — ask whether the service needs one. Services often don't, unlike libraries. If one is added,
   `/iru-check-license` can backfill the file headers.
@@ -702,6 +815,9 @@ mvn -q clean verify -DskipTests   # compiles every module and runs all code gene
 mvn -q test                       # unit tests (Surefire)
 mvn -q verify                     # integration tests (Failsafe + Testcontainers) — needs Docker running
 ```
+
+Run all three regardless of `ci.tests`: `unit` only changes what CI runs, and the integration tests are exactly
+what still has to be verified locally then.
 
 Delegate each of these to the `iru-gate-runner` agent rather than running them inline, so a multi-module Maven log
 doesn't flood this orchestrator's context — ask it back for a compact pass/fail plus the first real error.
@@ -720,7 +836,18 @@ If `frontend: hilla`, note that the plain `mvn clean verify -DskipTests` above a
 
 Summarize:
 
+- The setup mode (from scratch / updating an existing repository) and, per component from Step 0's inventory, the
+  action actually taken: **created / updated / replaced / kept as is / skipped (ci: no)** — plus, for every
+  component kept as is, each mismatch with this run's choices the sub-skill reported.
 - The resolved identity, Boot version, Java version, platform, and concurrency model.
+- The repository visibility (and whether it was detected via `gh` or asked), and the CI choices: `ci` (when `no`,
+  that the build/deploy/undeploy workflows and the shared security block — Dependabot, dependency-review, CodeQL,
+  OSV-Scanner, gitleaks — were skipped, that deployment is a manual `tofu apply`, and that
+  `/iru-setup-java-springboot-github-workflows` adds them later), `ci.tests` (when `unit`, that integration tests
+  run only locally), and `ci.pages` (when `no`, that the docs are uploaded as a workflow artifact and no github.io
+  site exists; when public, that `yes` was applied without asking). For a private/internal repository, repeat the
+  included-minutes budget, and if `sonar.mode` is `cloud`, that SonarCloud needs a paid plan for it. If
+  `ci: no` with a Sonar mode other than `none`, say no CI step sends reports.
 - Whether the project is open source, the Sonar mode wired (`cloud`/`self-hosted`/`none`, plus organization/project
   key/host URL when not `none`), and the frontend choice (`none`/`hilla` — when `hilla`, what
   `iru-setup-java-springboot-hilla` reported back: the resolved Vaadin version, whether the frontend gates passed,
@@ -730,7 +857,7 @@ Summarize:
 - Which sub-skills completed, which stopped and why.
 - The build result from Step 10 for each of the three commands.
 - **Every secret and variable that must be provided out-of-band**, consolidated into one table from what the
-  workflow and platform sub-skills reported — GitHub Actions secrets, the cloud OIDC role/workload-identity
+  workflow (when `ci: yes`) and platform sub-skills reported — GitHub Actions secrets, the cloud OIDC role/workload-identity
   binding, the Sonar token (only when `sonar.mode` is not `none`), the security-block secrets
   (`GITLEAKS_LICENSE` if a Pro key is used), and any LLM API key. State again that none of them belong in the
   repository, and that the OpenTofu state backend must be remote and encrypted since state files contain resource
@@ -740,7 +867,7 @@ Summarize:
 
 Finish with an explicit warning: **review every generated file before committing, building against real
 infrastructure, or running a deploy.** In particular — the OpenTofu configuration will create billable cloud
-resources, so run `tofu plan` and read it in full before any `apply`; the undeploy workflow destroys
-infrastructure, so confirm its guards match the intended blast radius; and the generated architecture, use-case,
+resources, so run `tofu plan` and read it in full before any `apply`; the undeploy workflow (when `ci: yes`)
+destroys infrastructure, so confirm its guards match the intended blast radius; and the generated architecture, use-case,
 and API documentation pages are templates describing an empty service — they must be filled in as real code
 lands, which is what `/iru-update-java-springboot-documentation` is for.

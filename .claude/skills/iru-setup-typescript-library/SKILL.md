@@ -1,6 +1,6 @@
 ---
 name: iru-setup-typescript-library
-description: Generate `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `typedoc.json`, and (when opted in) `sonar-project.properties`/`.changeset/config.json` at the repository root for a new npm/TypeScript library, plus a `src/index.ts` + `test/index.test.ts` skeleton — asks for the package name, npm scope, description, license, developer name/email/organization URL, whether the project is open source, whether it publishes to npm (`publish`, gating `publishConfig`/`private`/the changeset config), and whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`), then looks up every devDependency's current version from the npm registry (falling back to the versions recorded in Step 4 if the registry is unreachable) and runs `npm install`. Invoke as `/iru-setup-typescript-library`. Ships with an explicit example `package.json`/`tsconfig.json`/`vitest.config.ts`/`eslint.config.js` embedded in this skill file (genericized, no real org/person names) — ESM-only, `moduleResolution: bundler`, Vitest with v8 coverage and an 80%-lines threshold, ESLint 10 flat config (`@eslint/js` + `typescript-eslint` recommended + `eslint-config-prettier`, plus a `@tony.ganchev/eslint-plugin-header` license-header rule when a license was chosen), Typedoc with `treatWarningsAsErrors`. If `package.json` already exists, surveys every file this skill owns and asks whether to stop, fill gaps only (create only what's missing, touch nothing already present), or regenerate everything. Accepts pre-resolved inputs via `args` (`key: value` lines) — `package-name`, `scope`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `publish`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `integration-branch` (the `baseBranch` written into `.changeset/config.json` when `publish: yes`; default `main`), and `mode` (`new`/`existing` — `existing` skips the stop-or-regenerate question and goes straight to gap-fill, per this catalog's shared front-door convention) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `publish`/`sonar` question defaults from that answer. Use whenever a new npm/TypeScript library repository needs its build/test/lint/docs toolchain bootstrapped from this house template, instead of hand-writing each config file.
+description: Generate `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `typedoc.json`, and (when opted in) `sonar-project.properties`/`.changeset/config.json` at the repository root for a new npm/TypeScript library, plus a `src/index.ts` + `test/index.test.ts` skeleton — asks for the package name, npm scope, description, license, developer name/email/organization URL, whether the project is open source, whether it publishes to npm (`publish`, gating `publishConfig`/`private`/the changeset config), and whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`), then looks up every devDependency's current version from the npm registry (falling back to the versions recorded in Step 4 if the registry is unreachable) and runs `npm install`. Invoke as `/iru-setup-typescript-library`. Ships with an explicit example `package.json`/`tsconfig.json`/`vitest.config.ts`/`eslint.config.js` embedded in this skill file (genericized, no real org/person names) — ESM-only, `moduleResolution: bundler`, Vitest with v8 coverage and an 80%-lines threshold, ESLint 10 flat config (`@eslint/js` + `typescript-eslint` recommended + `eslint-config-prettier`, plus a `@tony.ganchev/eslint-plugin-header` license-header rule when a license was chosen), Typedoc with `treatWarningsAsErrors`. Announces whether it is creating the toolchain from scratch or updating an existing setup; for every file it owns that already exists, warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Accepts pre-resolved inputs via `args` (`key: value` lines) — `package-name`, `scope`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `publish`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `integration-branch` (the `baseBranch` written into `.changeset/config.json` when `publish: yes`; default `main`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar since no CI would send reports), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — applies one answer to every pre-existing file for scripted runs), and `mode` (`new`/`existing` — `existing` marks an update run but still asks per pre-existing file unless `on-existing` says otherwise) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `publish`/`sonar` question defaults from that answer. Use whenever a new npm/TypeScript library repository needs its build/test/lint/docs toolchain bootstrapped from this house template, instead of hand-writing each config file.
 model: haiku
 ---
 
@@ -35,6 +35,9 @@ sonar-organization: example-org-github
 sonar-project-key: example-org_my-library
 sonar-host-url: https://sonarcloud.io
 integration-branch: develop
+visibility: public
+ci: yes
+on-existing: ask
 mode: new
 ```
 
@@ -49,43 +52,71 @@ publish to the public npm registry), `sonar` (`cloud`/`self-hosted`/`none`) plus
 `self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch` (the branch
 Changesets compares against in `.changeset/config.json`'s `baseBranch` — only consulted when `publish: yes`;
 default `main`, but an orchestrator running this catalog's `develop`/`main` branching model passes `develop` so
-the config agrees with the workflows `iru-setup-typescript-github-workflows` generates), and `mode`
-(`new`/`existing`).
+the config agrees with the workflows `iru-setup-typescript-github-workflows` generates), `visibility`
+(`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
+recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
+only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
+Step 1 treats each pre-existing file this skill owns; meant for scripted runs), and `mode` (`new`/`existing`).
 
-`mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
-gap-fill: create only whatever files from Step 5 are genuinely missing, and leave every file that already exists
-untouched. `mode: new` or an unset `mode` follows Step 1's normal survey instead.
+`mode: existing` is this catalog's shared signal (set by a front door or orchestrator that already knows this is an
+established repository) that this run is an **update**: Step 1 announces it as such, but it still warns and asks
+per pre-existing file (Update / Keep / Replace) unless `on-existing` says otherwise — `mode: existing` alone never
+means "update silently". `mode: new` or an unset `mode` follows the same survey; the mode only changes the
+announcement when no owned file exists yet.
 
-## Step 1 — Survey the repository
+## Step 1 — Survey the repository and decide per existing file
 
 Check, at the repository root, which of this skill's files already exist: `package.json`, `tsconfig.json`,
-`vitest.config.ts`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `typedoc.json`, `sonar-project.properties`
-(only relevant once `sonar` is resolved in Step 2), `.changeset/config.json` (only relevant once `publish` is
-resolved in Step 2), `src/index.ts`, `test/index.test.ts`.
+`vitest.config.ts`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `typedoc.json`, `sonar-project.properties`,
+`.changeset/config.json`, `src/index.ts`, `test/index.test.ts`.
 
-- **None exist**: skip straight to Step 2. There is nothing to preserve.
-- **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: create only
-  the files that are missing; leave every file that already exists completely untouched (including `package.json`
-  — merge nothing into it). Note in Step 8's report which files were left alone because they already existed.
-- **Otherwise, and at least one file already exists** (most commonly just `package.json` from a prior run, or a
-  hand-started repository): warn the user which files were found, then use `AskUserQuestion` with three options:
-  - **Stop** — leave every existing file untouched; make no changes at all. Report this and end here.
-  - **Fill gaps only** (recommended when `package.json` already has real dependencies/scripts beyond this
-    skill's own) — create only the files that are missing; don't overwrite anything already present. This is the
-    same effective behavior as `mode: existing`.
-  - **Regenerate everything** — before asking Step 2's questions, read the existing `package.json` (if present)
-    and use its current `name`, `description`, `license`, `author`, and any already-resolved `open-source`-style
-    hints (e.g. an existing `publishConfig` implies `publish: yes`) as the *defaults* offered for whichever Step 2
-    question Step 0 didn't already resolve via `args` — a value supplied via `args` always wins. Tell the user
-    up front that regenerating replaces every one of this skill's files wholesale; any customization added to them
-    since the last run (extra scripts, extra ESLint rules, extra TSDoc options) will be lost unless re-added
-    afterward (call this out again in Step 8).
+Announce which of the two situations this is before asking anything else:
+
+- **None exist**: say "Creating the TypeScript library toolchain **from scratch** — none of this skill's files
+  exist yet." and skip straight to Step 2. There is nothing to preserve.
+- **At least one exists** (most commonly `package.json` from a prior run or a hand-started repository): say
+  "**Updating an existing setup** — found: <list of files>." and warn that each of them will be handled
+  individually. Then resolve one action per existing file:
+  - **`on-existing` is `keep`/`update`/`replace`** (from Step 0): apply that action to every existing file without
+    asking — the warning above is still printed.
+  - **Otherwise** (`ask`, the default): ask with `AskUserQuestion`, batching up to 4 files per call (one question
+    each), with these options — explain the consequence of each in its description, and name any concrete
+    contradiction with this run's choices in the question (e.g. "your `package.json` has `publishConfig` but you
+    chose `publish: no`"):
+    - **Update (Recommended)** — merge: add what's missing and correct outdated parts using Step 5's template as
+      reference (e.g. for `package.json`: missing scripts/devDependencies/`engines`/`exports`, `publishConfig` vs
+      `"private": true` per `publish`; for config files: missing options/ignores), keep everything this skill
+      doesn't own (extra scripts, dependencies, ESLint rules, TypeDoc options). The user reviews a diff;
+      customizations survive, but a customized part this skill owns may be rewritten.
+    - **Keep as is** — leave the file untouched. Nothing customized changes, but it may stay out of date or
+      disagree with this run's choices (e.g. a `sonar-project.properties` left behind after `sonar: none`) — Step
+      8's report lists each mismatch.
+    - **Replace** — regenerate from Step 5's template. Matches this house pattern exactly, but every customization
+      in the file is lost (recoverable only from git history).
+    - **Stop** (first batch only) — end this skill now without changing anything; report this and end here.
+
+    For the placeholder source files (`src/index.ts`, `test/index.test.ts`) recommend **Keep as is** instead —
+    they are real library code once the project exists, Update has nothing meaningful to merge, and Replace would
+    overwrite actual source with the `add()` placeholder (say so in the question).
+  - Ask about `sonar-project.properties` and `.changeset/config.json` only once Step 2 has resolved `sonar` and
+    `publish` (a second, small batch after Step 2), so the question can say whether this run still wants the file:
+    with `sonar: none` / `publish: no`, **Update**/**Replace** mean *removing* the file and **Keep** leaves it in
+    place as a reported mismatch.
+
+  When any file is to be updated or replaced, read the existing `package.json` (if present) first and use its
+  current `name`, `description`, `license`, `author`, and any already-resolved `open-source`-style hints (e.g. an
+  existing `publishConfig` implies `publish: yes`) as the *defaults* offered for whichever Step 2 question Step 0
+  didn't already resolve via `args` — a value supplied via `args` always wins.
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
-everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if regenerating):
+everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if updating or
+replacing):
+
+When an existing `package.json` (or app config such as `app.json`/`angular.json`) already supplies an identity
+value Step 0 didn't — typical in `mode: existing`, where orchestrators omit identity keys — use it as resolved and
+confirm it in one line instead of asking.
 
 - **package-name** — the unscoped npm package name, e.g. `my-library`.
 - **scope** — the npm scope without the leading `@`, e.g. `example-org` (optional — ask whether the package should
@@ -123,9 +154,19 @@ derive the recommended defaults for the other two from that answer, per this cat
   **not** affect or break a local `npm install`, confirmed while building this skill).
 - **sonar** — whether to wire up a SonarQube/SonarCloud scan (`sonar-project.properties`, typically consumed by a
   CI workflow such as `iru-setup-typescript-github-workflows`, so it's worth setting up here even if that workflow
-  comes later). Recommend **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that
-  SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend **None**
-  (`none`), offering **self-hosted SonarQube** as the second option:
+  comes later). The recommendation keys on both `open-source` and `visibility`. If `visibility` wasn't supplied via
+  `args`, resolve it only now (only when this question is actually asked): `gh repo view --json visibility -q
+  .visibility` when the repository has a GitHub remote (lowercase the result and tell the user the detected
+  value), otherwise ask **Public** / **Private** with `AskUserQuestion` (Public recommended when open source,
+  Private otherwise); `internal` counts as private. If `open-source: yes` but `visibility` is `private`/`internal`,
+  warn that the two contradict each other and ask which one is right. Then recommend **SonarCloud** (`cloud`) only
+  when the repository is public **and** open source; otherwise state that SonarCloud is free only for public
+  open-source projects (per its current pricing — a private project needs a paid plan) and recommend **None**
+  (`none`), offering **self-hosted SonarQube** (free Community Build, but you run the server) as the second option.
+  If `ci: no` was supplied via `args`, say plainly that no CI workflow would send analysis or coverage reports —
+  analysis would only run when someone runs the scanner manually with a token — and recommend **None**; if the
+  user still picks `cloud`/`self-hosted`, write `sonar-project.properties` anyway and say in Step 8 that no CI step
+  sends reports:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
     suggested default. Default `sonar.projectKey` to `<owner>_<repo>` (also from Step 3) and `sonar.host.url` to
     `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
@@ -528,13 +569,22 @@ out of the box.
 
 ## Step 6 — Write the files
 
-Apply Step 1's decision (regenerate / fill gaps only / gap-fill from `mode: existing`) file by file:
+Apply Step 1's per-file decision:
 
-- Write `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`, `.prettierignore`,
-  `typedoc.json`, `src/index.ts`, `test/index.test.ts` — always, unless "fill gaps only"/`mode: existing` found
-  that specific file already present, in which case leave it untouched.
-- Write `sonar-project.properties` only when `sonar` ≠ `none` (same existing-file rule).
-- Write `.changeset/config.json` only when `publish: yes` (same existing-file rule).
+- **File absent** — create it from Step 5's template.
+- **Update** — merge Step 5's template into the existing file as described in Step 1 (add missing
+  keys/scripts/devDependencies/options, correct outdated values this skill owns, keep everything else), and show
+  the user the diff before writing it.
+- **Keep as is** — leave the file untouched; record any mismatch with this run's choices for Step 8.
+- **Replace** — overwrite it with Step 5's template.
+
+This applies to `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`,
+`.prettierignore`, `typedoc.json`, `src/index.ts`, `test/index.test.ts`, and:
+
+- `sonar-project.properties` — written only when `sonar` ≠ `none`; with `sonar: none`, an existing file is removed
+  on Update/Replace and left in place on Keep.
+- `.changeset/config.json` — written only when `publish: yes`; with `publish: no`, an existing file is removed on
+  Update/Replace and left in place on Keep.
 - Create `src/` and `test/` directories as needed — don't touch any other file already inside them.
 
 ## Step 7 — Install dependencies
@@ -544,13 +594,14 @@ installs `node_modules/`. If it fails with an `ERESOLVE` peer-dependency error m
 Step 4's TypeScript version caveat — it means a too-new `typescript` was picked despite the lookup instructions.
 
 If a different package manager is clearly already in use in this repository (a `pnpm-lock.yaml` or `yarn.lock`
-already present, or `packageManager` already set in an existing `package.json` from a "fill gaps only" run), use
+already present, or `packageManager` already set in an existing `package.json` that was kept or updated), use
 that package manager's install command instead (`pnpm install` / `yarn install`) rather than introducing a second
 lockfile — but default to `npm install` for a genuinely new scaffold, matching this skill's own template scripts.
 
 ## Step 8 — Report
 
-Summarize what was generated: the resolved package name (with scope, if any), version (`1.0.0-dev.0`), license (or
+Start by repeating the mode announced in Step 1 (**created from scratch** or **updated an existing setup**).
+Then summarize what was generated: the resolved package name (with scope, if any), version (`1.0.0-dev.0`), license (or
 "none"/`UNLICENSED`), and the repository info inferred in Step 3.
 
 State explicitly what was included versus omitted, and why:
@@ -559,17 +610,20 @@ State explicitly what was included versus omitted, and why:
 - **`publish`**: yes/no — if `yes`, `publishConfig`, `.changeset/config.json`, and the `@changesets/cli`
   devDependency were included; if `no`, `"private": true` was set and all three were omitted.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, `sonar-project.properties` was written with
-  the resolved `sonar.organization`/`sonar.projectKey`; if `none`, note that this is expected when the project
-  isn't open source (SonarCloud is free only for open-source projects) unless the user explicitly chose it.
+  the resolved `sonar.organization`/`sonar.projectKey`; if `none`, note that this is expected when the repository
+  isn't public and open source (SonarCloud is free only for public open-source projects) unless the user explicitly
+  chose it. State the `visibility` used and whether it came from `args`, `gh`, or the user. If `ci: no` was
+  supplied and Sonar was still configured, say that no CI step sends reports — the scanner has to be run manually.
 - Which devDependency versions came from a live `npm view` lookup versus this skill's recorded fallback, and
   whether the TypeScript-version caveat (Step 4) resulted in a `typescript` version older than the registry's bare
   `latest` tag — if so, say so plainly and name the two packages (`typescript-eslint`, `typedoc`) whose peer ranges
   forced that choice, so the user can re-run this skill later once the ecosystem catches up to TypeScript 7.
 
-Then report which of Step 5's files were created fresh, left untouched (fill-gaps/`mode: existing`), or replaced
-(regenerate), and whether `npm install` succeeded. If Step 1's existing files were replaced, explicitly list what
-could have been lost — any script, dependency, or config option beyond what Step 5's templates show — and tell the
-user to check `git diff` for anything they need to re-add.
+Then report, per file, the action actually taken — **created / updated / replaced / kept as is / removed** — and
+whether `npm install` succeeded. For every kept file, list each mismatch with this run's choices (e.g. a
+`publishConfig` still present after `publish: no`, a `sonar-project.properties` left after `sonar: none`). If any
+file was replaced, explicitly list what could have been lost — any script, dependency, or config option beyond what
+Step 5's templates show — and tell the user to check `git diff` for anything they need to re-add.
 
 Finish with an explicit **Warn explicitly** block:
 

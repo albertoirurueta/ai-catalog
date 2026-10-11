@@ -5,10 +5,11 @@ description: Create or update the root `.gitignore` (Gradle/Android Studio noise
   module in an Android library/app project — `lib`, `app`, or whatever `settings.gradle.kts` actually includes.
   Invoke as `/iru-setup-android-gitignore`, optionally with `args`: `mode: new|existing` (default: detected from
   whether a root `.gitignore` already exists) and `modules: <comma/space-separated list>` (default: every
-  `include(":…")` entry in `settings.gradle.kts`, falling back to `lib`/`app` when neither exists). Only creates a
-  `.gitignore` when one doesn't exist yet — if a root or per-module `.gitignore` already exists, this skill never
-  overwrites it silently: it merges in whatever's missing (`mode: existing`), shows the user a diff, and only
-  writes on explicit approval. Templates are genericized from
+  `include(":…")` entry in `settings.gradle.kts`, falling back to `lib`/`app` when neither exists) and
+  `on-existing: ask|keep|update|replace` (default `ask`). Announces whether it is creating from scratch or updating
+  existing files; if a root or per-module `.gitignore` already exists it never overwrites it silently — it warns,
+  shows a diff, and asks per file whether to Update (merge in what's missing, keep hand-added lines), Keep as is,
+  or Replace (regenerate from the template, dropping customizations), unless `on-existing` decides. Templates are genericized from
   https://github.com/albertoirurueta/irurueta-android-glutils's own `.gitignore`, `lib/.gitignore` and
   `app/.gitignore`. Always ignores the Kotlin 2.x compiler's root-level `.kotlin/` cache directory, and deliberately
   does **not** ignore a vendored `jacoco-<ver>/` JaCoCo CLI directory if the repository vendors one (as the
@@ -36,7 +37,12 @@ must not be silently dropped.
 Parse `args` as `key: value` lines, skipping any question already answered:
 
 - `mode: new|existing` — if omitted, detect it: a root `.gitignore` already present at the repository root means
-  `existing` (gap-fill only, never a silent overwrite); its absence means `new`.
+  `existing`; its absence means `new`. `mode: existing` never means "update silently" — every pre-existing file
+  still goes through Step 6's Update / Keep / Replace question (unless `on-existing` decides it).
+- `on-existing: ask|keep|update|replace` — how Step 6 treats each `.gitignore` that already exists. Default `ask`
+  (one question per file). `keep`/`update`/`replace` applies that choice to every pre-existing file without asking
+  (the warning is still printed). Only meant for scripted runs; an orchestrator passes it only if its own `args`
+  received it.
 - `modules: <list>` — comma- or space-separated module directory names to give their own `.gitignore` (e.g. `lib`,
   `app`). If omitted:
   1. If `settings.gradle.kts` (or `settings.gradle`) exists at the repository root, derive the list from every
@@ -58,10 +64,14 @@ Parse `args` as `key: value` lines, skipping any question already answered:
   front that changes will be proposed rather than silently applied).
 - **Per module**: for each module resolved in Step 0, read `<module>/.gitignore` if present. Each module's
   `.gitignore` is tracked and merged independently from the root one and from every other module's.
-- If **nothing** exists anywhere (no root `.gitignore`, no module `.gitignore`), the final writes in Step 6 happen
-  without needing approval — go straight from composing content to writing it, then report in Step 7. If
-  **anything** already exists (root and/or any module), warn the user up front that this skill will propose
-  changes for them to review rather than overwrite anything silently, and continue.
+- Tell the user which of the two this run is doing:
+  - **Creating from scratch** — nothing exists anywhere (no root `.gitignore`, no module `.gitignore`): the final
+    writes in Step 7 happen without needing approval — go straight from composing content to writing it, then
+    report in Step 7.
+  - **Updating existing** — **anything** already exists (root and/or any module): warn the user up front, listing
+    each existing file by path, that Step 6 will ask per file whether to Update, Keep, or Replace it (or apply
+    `on-existing` if supplied) rather than overwrite anything silently, and continue. Files absent alongside
+    existing ones are still created from scratch.
 
 ## Step 2 — The root `.gitignore` base template
 
@@ -200,20 +210,31 @@ varies per project.
   missing — most module `.gitignore` files that already exist for an Android module will already have this exact
   line, in which case there is nothing to change and this module is skipped from Step 6's writes/diffs entirely).
 
-## Step 6 — If anything already existed, get approval before writing
+## Step 6 — If anything already existed, warn and ask Update / Keep / Replace
 
 Skip entirely for any file (root or a given module) that Step 1 found absent — write that one straight away, no
 approval needed, since there's nothing to lose.
 
 For every file that did already exist and whose proposed content differs from what's on disk:
 
-- Show the user the proposed new content as a diff against the current file (writing the draft to a temp path and
-  running `git diff --no-index <current> <draft>` gives a clean unified diff) — do this for the root `.gitignore`
-  and each affected module `.gitignore` together, in one batch, rather than one approval round-trip per file.
-- Ask via `AskUserQuestion` whether to: (a) accept and write every proposed change, (b) skip and leave every
-  existing file untouched. There is no partial-apply option here — if the user wants only some of the proposed
-  lines, let them say so in free text and revise the draft before writing.
-- Only proceed to Step 7's writes for files the user accepted.
+- Show the user the proposed **Update** content as a diff against the current file (writing the draft to a temp
+  path and running `git diff --no-index <current> <draft>` gives a clean unified diff) — do this for the root
+  `.gitignore` and each affected module `.gitignore` together, in one batch. If any file has hand-added lines that
+  aren't in this skill's template, also say which lines a **Replace** would drop.
+- Unless `on-existing` (Step 0) is `keep`/`update`/`replace` — in which case apply it to every such file, still
+  printing the warning and the diff — ask via `AskUserQuestion`, one question per file (batch up to 4 files per
+  call; a further call for any beyond that), with these options and consequences in their descriptions:
+  - **Update (Recommended)** — "Merge: add the template lines this file is missing (Step 5's composed content);
+    keep every hand-added, project-specific line. Your customizations survive."
+  - **Keep as is** — "Leave the file untouched. Nothing you customized changes, but the missing lines shown in the
+    diff (e.g. `.kotlin/`, `docs/build/`) stay unignored — the report will list them."
+  - **Replace** — "Overwrite the file with this skill's template only (Step 2 + Step 4 for the root, Step 3 for a
+    module). Matches the house pattern exactly, but every hand-added line is lost (recoverable only from git
+    history)."
+  If the user wants only some of the proposed lines, let them say so in free text and revise the draft before
+  writing.
+- Proceed to Step 7's writes only for files whose choice was Update or Replace; for Replace, write the bare
+  template (no merged-in existing lines), still applying Step 2's vendored-`jacoco-<ver>/` rule.
 
 ## Step 7 — Write and report
 
@@ -230,7 +251,9 @@ repository root and to `<module>/.gitignore` for each module in the resolved lis
   repository vendors one, as the reference repository does — if it was found already tracked in the target
   repository, confirm it still shows as tracked via `git check-ignore jacoco-*/lib/jacococli.jar; echo $?`
   returning `1`, i.e. not ignored).
-- If any file already existed: whether the user accepted or skipped the proposed changes, per file.
+- Whether this run created from scratch or updated existing files, and, per pre-existing file, the action actually
+  taken — **updated / replaced / kept as is** — and whether it came from the user's answer or from `on-existing`.
+  For each file kept as is, list the template lines it is still missing.
 
 **Warn explicitly**:
 

@@ -14,11 +14,16 @@ description: Scaffold a new Expo-managed React Native app at the repository root
   credentials called out in the report). Invoke as `/iru-setup-react-native-app`. Ships with explicit templates
   embedded in this skill (Step 5), genericized with `<placeholder>` markers, verified end-to-end while building
   this skill (`npm test -- --coverage`, `npx expo lint`, `npx expo export --platform web` all run clean against
-  them). If `package.json` already exists at the target directory, surveys which of this skill's files are already
-  present and asks whether to stop, fill gaps only, or regenerate. Accepts pre-resolved inputs via `args`
+  them). Announces whether it is scaffolding from scratch or updating an existing Expo app; for every tooling file
+  it owns that already exists (`jest.config.js`, `eslint.config.js`, Prettier files, `eas.json`, the Maestro flow,
+  `sonar-project.properties`, the `package.json`/`tsconfig.json` merges) warns and asks Update (merge, keep
+  customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences;
+  never touches application source, and still stops on a non-Expo project. Accepts pre-resolved inputs via `args`
   (`key: value` lines) — `app-name`, `app-slug`, `app-directory`, `license`, `developer-name`, `developer-email`,
   `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`),
-  `native-builds`, `distribution`, and `mode` (`new`/`existing`) — so an orchestrating skill can supply them
+  `native-builds`, `distribution`, `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
+  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar),
+  `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`), and `mode` (`new`/`existing`) — so an orchestrating skill can supply them
   without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `sonar` question's default
   from that answer. Targets Expo SDK 57 / React Native's New Architecture only (no legacy-architecture toggle
   exists to opt out of) and produces no Cordova/Capacitor artifacts — for a Capacitor-based hybrid app use
@@ -62,6 +67,9 @@ sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
 native-builds: eas
 distribution: store
+visibility: public
+ci: yes
+on-existing: ask
 mode: new
 ```
 
@@ -73,12 +81,16 @@ Recognized keys: `app-name`, `app-slug` (kebab-case; defaults to a slugified `ap
 `app-directory` (the subdirectory to scaffold into — see Step 1 if unset), `license`, `developer-name`,
 `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus,
 only when `sonar` is `cloud` or `self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`,
-`native-builds` (`eas`/`local`), `distribution` (`none`/`internal`/`store`), and `mode` (`new`/`existing`).
+`native-builds` (`eas`/`local`), `distribution` (`none`/`internal`/`store`), `visibility`
+(`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
+recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
+only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
+Step 1 treats each pre-existing tooling file; meant for scripted runs), and `mode` (`new`/`existing`).
 
-`mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
-gap-fill: create only whatever files from Step 5 are genuinely missing at the resolved `app-directory`, and leave
-every file that already exists untouched. `mode: new` or an unset `mode` follows Step 1's normal survey instead.
+`mode: existing` is this catalog's shared signal (set by a front door or orchestrator that already knows this is an
+established repository) that this run is an **update**: Step 1 announces it as such, but still warns and asks per
+pre-existing file at the resolved `app-directory` unless `on-existing` says otherwise — `mode: existing` alone never
+means "update silently". `mode: new` or an unset `mode` follows the same survey.
 
 ## Step 1 — Survey the repository
 
@@ -94,30 +106,47 @@ First resolve **where** to scaffold, unless `app-directory` was already supplied
 
 Then check, at that `app-directory`, whether `package.json` already exists:
 
-- **Doesn't exist**: skip straight to Step 2. There is nothing to preserve.
-- **Exists and its `dependencies` include `expo`**: this skill owns this scaffold. Warn the user it will be
-  regenerated, then:
-  - **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: create
-    only the files from Step 5 that are missing at `app-directory` (never touch `App.tsx`, `app.json`, `assets/`,
-    or any file already there); note in Step 8's report which files were left alone because they already existed.
-  - **Otherwise**: use `AskUserQuestion` with two options:
-    - **Stop** — leave `app-directory` untouched entirely. Report this and end here.
-    - **Update** — re-run only this skill's *tooling* files (Step 5's `jest.config.js`, the `tsconfig.json`
-      `types` merge, `__tests__/App.test.tsx` if missing, `eslint.config.js`, `.prettierrc`/`.prettierignore`,
-      `eas.json`, `.maestro/smoke.yaml`, `sonar-project.properties`) — never re-run `create-expo-app` itself and
-      never touch `App.tsx`/`app.json`/`assets/`/any other application source. Tell the user up front that any
-      hand customization already made to the tooling files listed above will be lost unless re-added afterward
-      (call this out again in Step 8).
+- **Doesn't exist**: say "Scaffolding the Expo app **from scratch** at `<app-directory>`." and skip straight to
+  Step 2. There is nothing to preserve.
+- **Exists and its `dependencies` include `expo`**: this skill owns this scaffold's tooling. Say "**Updating an
+  existing Expo app** at `<app-directory>` — found: <list of this skill's files present>." `create-expo-app` (Step
+  6) is never re-run, and `App.tsx`/`app.json`/`assets/`/any other application source is never touched. Survey
+  Step 5's tooling files — the `package.json` scripts/devDependencies merge, `jest.config.js`, the `tsconfig.json`
+  `types` merge, `__tests__/App.test.tsx`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `eas.json`,
+  `.maestro/smoke.yaml`, `sonar-project.properties` — and resolve one action per file that already exists:
+  - **`on-existing` is `keep`/`update`/`replace`** (from Step 0): apply it to every existing file without asking
+    (still print the warning).
+  - **Otherwise**: ask with `AskUserQuestion`, batching up to 4 files per call (one question each), naming any
+    concrete contradiction with this run's choices (e.g. "your `eas.json` has a `submit` block but you chose
+    `distribution: internal`", "`tsconfig.json` lacks a `types` entry for Jest"):
+    - **Update (Recommended)** — merge: add what's missing and correct outdated parts using Step 5's template as
+      reference (missing scripts/devDependencies, the `types: ["jest"]` line, the `coverage/*` ESLint ignore,
+      `eas.json` profiles and the `submit` block per `distribution`), keeping everything this skill doesn't own.
+      The user reviews a diff; customizations survive, but a customized part this skill owns may be rewritten.
+    - **Keep as is** — leave the file untouched. Nothing customized changes, but it may stay out of date or
+      disagree with this run's choices — Step 8 lists each mismatch.
+    - **Replace** — regenerate from Step 5's template; every customization in the file is lost (recoverable only
+      from git history). For `__tests__/App.test.tsx` recommend **Keep** instead — once the app has real tests,
+      Replace would overwrite them with the placeholder test.
+    - **Stop** (first batch only) — leave `app-directory` untouched entirely; report this and end here.
+  - Defer the `sonar-project.properties` and `eas.json` questions until Step 2 resolves `sonar`/`distribution`, so
+    they can name any contradiction; with `sonar: none`, Update/Replace of `sonar-project.properties` mean
+    removing it and Keep leaves it as a reported mismatch.
+  - Pre-fill Step 2's defaults from the existing `app.json`/`package.json` (name, slug, license, author).
 - **Exists but has no `expo` dependency** (a bare React Native CLI project, or an unrelated Node project already
   living at that path): this skill only supports Expo-managed apps — warn the user explicitly and ask whether to
   scaffold into a different subdirectory instead, or stop. Don't attempt to convert or merge into a non-Expo
-  project.
+  project (this hard stop applies regardless of `on-existing` — no Update/Keep/Replace is offered here).
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
 everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if updating an
 existing scaffold):
+
+When an existing `package.json` (or app config such as `app.json`/`angular.json`) already supplies an identity
+value Step 0 didn't — typical in `mode: existing`, where orchestrators omit identity keys — use it as resolved and
+confirm it in one line instead of asking.
 
 - **app-name** — the display name, e.g. `My App` (written to `app.json`'s `expo.name`).
 - **app-slug** — kebab-case, e.g. `my-app` (written to `app.json`'s `expo.slug` and `package.json`'s `name`;
@@ -145,9 +174,17 @@ shared convention:
 - **open-source** — is this repository open source? Yes / No.
 - **sonar** — whether to wire up a SonarQube/SonarCloud scan (`sonar-project.properties`, typically consumed by a
   CI workflow such as `iru-setup-typescript-github-workflows`, so it's worth setting up here even if that workflow
-  comes later). Recommend **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that
-  SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend **None**
-  (`none`), offering **self-hosted SonarQube** as the second option:
+  comes later). The recommendation keys on both `open-source` and `visibility`. If `visibility` wasn't supplied via
+  `args`, resolve it only now (only when this question is actually asked): `gh repo view --json visibility -q
+  .visibility` when the repository has a GitHub remote (lowercase the result and tell the user), otherwise ask
+  **Public** / **Private** (Public recommended when open source); `internal` counts as private. If `open-source:
+  yes` but `visibility` is `private`/`internal`, warn about the contradiction and ask which is right. Recommend
+  **SonarCloud** (`cloud`) only when the repository is public **and** open source; otherwise state that SonarCloud
+  is free only for public open-source projects (per its current pricing — a private project needs a paid plan) and
+  recommend **None** (`none`), offering **self-hosted SonarQube** as the second option. If `ci: no` was supplied via
+  `args`, say plainly that no CI workflow would send reports — analysis would only run when someone runs the
+  scanner manually with a token — and recommend **None**; if the user still picks `cloud`/`self-hosted`, write
+  `sonar-project.properties` anyway and say so in Step 8:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
     suggested default. Default `sonar.projectKey` to `<owner>_<repo>` (also from Step 3) and `sonar.host.url` to
     `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
@@ -485,8 +522,8 @@ build materializes them.
 
 ## Step 6 — Scaffold the Expo project
 
-Skip this entire step if Step 1 resolved **Update**/gap-fill on an already-existing scaffold — go straight to
-Step 7 with only the missing tooling files.
+Skip this entire step if Step 1 found an already-existing Expo scaffold — go straight to the last bullet below
+(writing the tooling files per Step 1's per-file decisions) and then Step 7.
 
 Otherwise, from the repository root:
 
@@ -526,7 +563,9 @@ Then, at `<app-directory>`:
 - Write `jest.config.js`, merge the `tsconfig.json` fragment, create `__tests__/App.test.tsx`, write
   `.prettierrc`/`.prettierignore`, write `eas.json` (gated per Step 2's `distribution` answer), create
   `.maestro/smoke.yaml`, and write `sonar-project.properties` (only when `sonar` ≠ `none`) — all from Step 5.
-  Skip any individual file Step 1's gap-fill path found already present.
+  For a file that already existed, apply Step 1's decision: **Update** merges and shows the diff, **Keep as is**
+  leaves it untouched, **Replace** overwrites it (with `sonar: none`, Update/Replace remove an existing
+  `sonar-project.properties`).
 
 ## Step 7 — Install dependencies and generate the ESLint config
 
@@ -558,16 +597,17 @@ From `<app-directory>`:
 ## Step 8 — Report
 
 Summarize what was generated: the resolved `app-name`/`app-slug`/`app-directory`, the license chosen (or "none"),
-and whether Step 6's scaffold ran fresh, was skipped in favor of gap-fill/update (per Step 1), or the user chose
-to stop.
+and the mode announced in Step 1 — **scaffolded from scratch**, **updated an existing Expo app** (Step 6 skipped),
+or the user chose to stop.
 
 State explicitly what was included versus omitted, and why:
 
 - **`open-source`**: yes/no, as resolved in Step 2.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, `sonar-project.properties` was written
   with the resolved `sonar.organization`/`sonar.projectKey`; if `none`, note that this is expected when the
-  project isn't open source (SonarCloud is free only for open-source projects) unless the user explicitly chose
-  it.
+  repository isn't public and open source (SonarCloud is free only for public open-source projects) unless the
+  user explicitly chose it. State the `visibility` used and where it came from (`args`, `gh`, or the user); if
+  `ci: no` was supplied and Sonar was still configured, say no CI step sends reports.
 - **`native-builds`**: `eas`/`local` — restate the EAS free-tier cap (15 builds/platform/month) if `eas` was
   chosen, or the native-toolchain requirement if `local` was chosen.
 - **`distribution`**: `none`/`internal`/`store` — if `store`, list the exact secrets
@@ -578,8 +618,9 @@ State explicitly what was included versus omitted, and why:
   whether the `eslint` version caveat (Step 4) resulted in a version older than the registry's bare `latest` tag —
   if so, say so plainly and name `eslint-config-expo` as the package whose own installer pins that older line.
 
-Then report which of Step 5's files were created fresh, left untouched (gap-fill/`mode: existing`), or replaced
-(update). If Step 1's existing tooling files were replaced, explicitly list what could have been lost — any script
+Then report, per Step 5 file, the action actually taken — **created / updated / replaced / kept as is /
+removed** — and, for every kept file, each mismatch with this run's choices (e.g. a `submit` block still present
+after `distribution: internal`). If any existing tooling file was replaced, explicitly list what could have been lost — any script
 or config option beyond what Step 5's templates show — and tell the user to check `git diff` for anything they
 need to re-add.
 

@@ -10,10 +10,12 @@ description: Create or update the root `.gitignore` for a Swift package/library 
   `*.cer`), `.DS_Store`, and, when detected, Antora docs build output (`docs/build/`) and DocC-generated API
   reference (`docs/api/`). Invoke as `/iru-setup-swift-gitignore`, optionally with `args`: `mode: new|existing`
   (default: detected from whether a root `.gitignore` already exists), `flavor: library|app` and
-  `package-resolved: commit|ignore` (pre-resolved answers so `iru-setup-swift-library`/`iru-setup-apple-app`/a
-  future orchestrator can pass them straight through instead of triggering the `AskUserQuestion` prompt). Only
-  creates `.gitignore` when one doesn't exist yet — if one already exists, this skill never overwrites it silently:
-  it proposes an updated version, shows the user a diff, and only writes it on explicit approval. Mirrors the
+  `package-resolved: commit|ignore` (pre-resolved answers so `iru-setup-swift-library`/`iru-setup-apple-app`/
+  `iru-setup-swift-repository` can pass them straight through instead of triggering the `AskUserQuestion` prompt),
+  plus `on-existing: ask|keep|update|replace` for scripted runs. Announces whether it is creating `.gitignore`
+  from scratch or updating an existing one — if one already exists, it warns and, after showing the proposed
+  merge as a diff, asks Update (merge, keeping every hand-added entry) / Keep as is / Replace (template only,
+  hand-added entries lost), explaining each consequence; it never overwrites the file silently. Mirrors the
   `iru-setup-java-gitignore`/`iru-setup-typescript-gitignore`/`iru-setup-android-gitignore` skills' diff-and-approve
   contract for the Swift/Xcode ecosystem. Use whenever a Swift package or Apple (iOS/macOS/watchOS/tvOS) app project
   needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this house template without
@@ -32,7 +34,9 @@ Create or refresh the root `.gitignore` for a Swift package or Apple app project
 Parse `args` as `key: value` lines, skipping any question already answered:
 
 - `mode: new|existing` — if omitted, detect it: a root `.gitignore` already present at the repository root means
-  `existing` (gap-fill only, never a silent overwrite); its absence means `new`.
+  `existing`; its absence means `new`. Either way the file actually on disk decides the path: an existing
+  `.gitignore` always goes through Step 5's warn-and-ask (unless `on-existing` says otherwise), even under
+  `mode: new`.
 - `flavor: library|app` — if omitted, infer it before Step 4 needs it: a `Package.swift` whose top-level `Package`
   declares only `.library(...)` products (no `.executable(...)`, and no `.xcodeproj`/`.xcworkspace` for an iOS/macOS
   app target) means `library`; an `.xcodeproj`/`.xcworkspace` at the root, an `Info.plist` with an
@@ -42,6 +46,9 @@ Parse `args` as `key: value` lines, skipping any question already answered:
   it together with `package-resolved`.
 - `package-resolved: commit|ignore` — if omitted, resolve it in Step 4 via `AskUserQuestion` (informed by
   `flavor` above when known).
+- `on-existing: ask|keep|update|replace` (default `ask`) — how Step 5 treats an existing `.gitignore`: `ask` shows
+  the diff and asks; `keep`/`update`/`replace` apply that choice without asking (the warning and the diff are still
+  printed). Only meant for scripted runs — orchestrators forward it only when their own `args` received it.
 
 ## Step 1 — Survey the target repository
 
@@ -61,9 +68,10 @@ Detect the following before composing content — every one of these gates a Ste
   `plugins`, or a `docs/api`-shaped output path configured for `iru-swift-docc` → DocC-generated API reference is
   produced for this project.
 
-If Step 0 found no existing `.gitignore`, continue straight to Step 2. If one exists, read its current content now
-— it matters for Step 4's merge, and warn the user up front that a `.gitignore` already exists and this skill will
-propose changes for them to review rather than overwrite it silently.
+Then announce which path this run takes. If no `.gitignore` exists: "**Creating `.gitignore` from scratch**" and
+continue straight to Step 2. If one exists: "**Updating the existing `.gitignore`**" — read its current content now
+(it matters for Step 4's merge) and warn the user up front that a `.gitignore` already exists and this skill will
+propose changes for them to choose from (Step 5) rather than overwrite it silently.
 
 ## Step 2 — The universal base template
 
@@ -179,29 +187,43 @@ ignores must survive), and don't repeat a line that's already present verbatim. 
 existing file predates one of these additions (e.g. it has no `.swiftpm/xcode/` line yet), the merge naturally adds
 it — that's the intended gap-fill behavior, not an overwrite.
 
-## Step 5 — If `.gitignore` already existed, get approval before writing
+## Step 5 — If `.gitignore` already existed, warn and ask before writing
 
 Skip this step entirely if Step 1 found no existing file — proceed straight to Step 6's write.
 
-- Show the user the proposed new `.gitignore` content as a diff against the current file (writing the draft to a
-  temp path and running `git diff --no-index <current> <draft>` gives a clean unified diff).
-- Ask via `AskUserQuestion` whether to: (a) accept and write the proposed content, (b) skip and leave the existing
-  `.gitignore` untouched. There is no partial-apply option here — if the user wants only some of the proposed lines,
-  let them say so in free text and revise the draft before writing.
-- Only proceed to Step 6 on explicit acceptance.
+- Show the user the proposed merged `.gitignore` content (Step 4) as a diff against the current file (writing the
+  draft to a temp path and running `git diff --no-index <current> <draft>` gives a clean unified diff). Call out
+  any existing line that conflicts with this run's choices (e.g. an existing `Package.resolved` entry when the
+  decision was **commit**, or `*.xcodeproj` ignored with no generator manifest present).
+- If `on-existing` is `keep`/`update`/`replace`, apply it without asking. Otherwise ask via `AskUserQuestion`,
+  stating each consequence in the option descriptions:
+  - **Update (Recommended)** — write the merged content shown in the diff: missing entries are added, every
+    hand-added project-specific line is kept. Customizations survive; a line this skill owns may be reworded or
+    regrouped under its comment header.
+  - **Keep as is** — leave the existing `.gitignore` untouched. Nothing changes, but entries this run expects may
+    stay missing (e.g. build output or signing material could get committed) — Step 6 lists each missing entry.
+  - **Replace** — write only the composed template (Steps 2–3), dropping every hand-added line not in it. Matches
+    this house pattern exactly, but those custom ignores are lost (recoverable only from git history) and the
+    files they covered may show up as untracked.
+  There is no partial-apply option — if the user wants only some of the proposed lines, let them say so in free
+  text and revise the draft before writing.
+- Only proceed to Step 6's write on Update or Replace; on Keep, skip the write and go to Step 6's report.
 
 ## Step 6 — Write `.gitignore` and report
 
 Write the composed content (Step 4, incorporating any edits from Step 5's review) to `.gitignore` at the repository
 root. Then summarize:
 
-- Whether the file was newly created or updated, and which lines were added.
+- The path announced in Step 1 and the action actually taken — **created / updated / replaced / kept as is** —
+  and which lines were added (or, for kept as is, which expected entries remain missing; for replaced, which
+  hand-added lines were dropped).
 - Which conditional Step 3 sections were included versus skipped and why (e.g. "no XcodeGen/Tuist section — no
   `project.yml`/`Project.swift` found, so `MyApp.xcodeproj` stays tracked", "no Fastlane section — no `fastlane/`
   directory", "no DocC section — no `*.docc` catalog and no DocC plugin dependency").
 - The `Package.resolved` decision: whether it was pre-resolved via `args`, asked via `AskUserQuestion`, or
   defaulted, and which way it went (commit vs. ignore) with the reasoning restated.
-- If `.gitignore` already existed: whether the user accepted or skipped the proposed changes.
+- If `.gitignore` already existed: which of Update / Keep as is / Replace was chosen, and whether it came from the
+  user or from `on-existing`.
 
 **Warn explicitly**:
 
