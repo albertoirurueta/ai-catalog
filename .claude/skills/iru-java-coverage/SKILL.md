@@ -2,7 +2,7 @@
 name: iru-java-coverage
 description: Generate a code coverage report for a JVM (Java or Kotlin) project, scoped to the test selector given (same selector syntax as the `iru-java-test` skill), and report the exact line-coverage percentage for the specific class(es) touched. Maven — `mvn clean jacoco:prepare-agent test jacoco:report`, read from `target/site/jacoco/jacoco.csv`. Gradle (wrapper preferred, Kotlin DSL or Groovy) — JaCoCo via `./gradlew clean test --tests '<pattern>' jacocoTestReport` (CSV/XML under `build/reports/jacoco/test/`, both forced on through a throwaway init script when the build doesn't enable them), or Kover via `koverXmlReport` (`build/reports/kover/report.xml`) when the `org.jetbrains.kotlinx.kover` plugin is applied. Quarkus — also reads the `quarkus-jacoco` extension's report (`target/jacoco-report/` or `build/jacoco-report/`) for `@QuarkusTest` coverage. Falls back to the per-class HTML source report to show which lines/branches are still uncovered, and accounts for Kotlin's compiler-generated classes (`FooKt`, `Foo.Companion`, lambdas). Measures unit tests only — never runs Failsafe/`integrationTest`/`quarkusIntTest`. Invoke as `/iru-java-coverage <selector> [TargetClass1,TargetClass2,...]`, or `/iru-java-coverage` with no argument to run the full unit suite and report whole-project coverage. Use whenever the user wants to check, or verify a coverage bar (e.g. "at least 80% line coverage") for a class or set of classes, instead of eyeballing test output.
 model: haiku
-allowed-tools: Read Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(cat *) Bash(awk *) Bash(grep *) Bash(find *) Bash(ls *) Bash(mkdir *) Bash(python3 *)
+allowed-tools: Read Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(cat *) Bash(awk *) Bash(grep *) Bash(find *) Bash(ls *) Bash(mkdir *) Bash(python3 *) Bash(rm -f */jacoco.exec) Bash(rm -f jacoco.exec) Bash(QUARKUS_DEVSERVICES_ENABLED=false *)
 ---
 
 # Java Coverage
@@ -234,6 +234,20 @@ report from Step 3 covers the plain unit tests. Unless the project merges the tw
 labelled by source — never add them up (overlapping lines would be double-counted), and say that the true combined
 figure is at least the higher of the two. A `@QuarkusTest` that needs Dev Services containers is not a no-container
 unit test: when the caller's gate is "unit tests only", report its contribution separately, for information.
+
+**Quarkus `@QuarkusComponentTest` coverage** (verified on Quarkus 3.40). The ordinary JaCoCo agent reports **0%** for
+a class exercised only by `@QuarkusComponentTest`, whether or not `quarkus-jacoco` is present, because Quarkus
+transforms those classes. From Quarkus 3.31, `quarkus-jacoco` instruments component tests too, but writes their data
+to `<module>/jacoco.exec` (the module directory) and produces no `target/jacoco-report/` unless a `@QuarkusTest` also
+ran. Fold it into the ordinary report: on Maven add `-Djacoco-agent.destfile=target/jacoco.exec` to the Step 3
+command; on Gradle add to the init script, for each project, `tasks.withType<Test>().configureEach { doFirst {
+project.file("jacoco.exec").delete() } }` and `tasks.withType<JacocoReport>().configureEach { executionData(
+project.fileTree(project.projectDir) { include("jacoco.exec") }) }`. Without `quarkus-jacoco` (or on Quarkus < 3.31),
+report such classes as **unmeasured — exercised only by component tests**, never as 0% covered, and suggest adding the
+extension rather than adding it. Delete the stray `<module>/jacoco.exec` afterwards unless the project already
+ignores it. Container-free runs on Gradle disable Dev Services through the environment
+(`QUARKUS_DEVSERVICES_ENABLED=false ./gradlew …`) because `-D` doesn't reach the test JVM; on Maven
+`-Dquarkus.devservices.enabled=false` works.
 
 ## Step 5 — Report results
 

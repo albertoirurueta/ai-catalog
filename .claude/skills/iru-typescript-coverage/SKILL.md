@@ -105,7 +105,7 @@ flags are exactly the ones this skill reads:
   appear at 0% and pull the total from 100% to 58.33%; adding `--coverage.exclude='**/*.module.ts'
   --coverage.exclude='src/main.ts'` removes them. For Jest, append the negated globs to `--collectCoverageFrom`
   (`--collectCoverageFrom='src/**/*.ts' --collectCoverageFrom='!**/*.module.ts' --collectCoverageFrom='!src/main.ts'`,
-  **unverified locally** — no CommonJS Nest scaffold was generated). Say in the report that these were excluded.
+  verified on a CommonJS Nest 12 scaffold generated with `nest g application --type=cjs` and Jest 30 + ts-jest). Say in the report that these were excluded.
 - For a CommonJS project whose scripts invoke Jest as `node --experimental-vm-modules ./node_modules/jest/bin/jest.js`,
   use that same prefix instead of `npx jest`.
 
@@ -251,9 +251,9 @@ user (or another skill, e.g. `iru-code`, `iru-typescript-generate-all-tests`) dr
 - **pnpm and yarn** — only npm was exercised locally for every command above; the coverage commands themselves are
   package-manager-agnostic (they invoke the runner's own binary via `npx`/`pnpm exec`/`yarn`), but this wasn't
   re-run under pnpm/yarn to confirm no wrapper-specific quirk changes the report path.
-- **NestJS CommonJS/Jest and Next.js** — only the NestJS 12 ESM/Vitest scaffold's coverage run (and its
-  `*.module.ts`/`main.ts` exclusion) and a Next.js Vitest run were exercised locally; the CommonJS Jest variant
-  and Jest via `next/jest` were not.
+- **Jest via `next/jest`** — NestJS coverage was exercised on both the ESM/Vitest and the CommonJS/Jest Nest 12
+  scaffolds (including the `*.module.ts`/`main.ts` exclusions), and Next.js only with Vitest; Jest via
+  `next/jest` was not.
 - **React, React Native, Ionic, and Hilla-frontend scaffolds' own coverage config** — this skill's mechanics
   (Vitest/Jest + `coverage-summary.json`/`lcov.info`) were verified against a bare Vitest project, a bare Jest
   project, and a freshly-scaffolded Angular CLI app only; a framework-specific `vitest.config.ts`/`jest.config.js`

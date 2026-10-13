@@ -2,7 +2,7 @@
 name: iru-java-test
 description: Run a JVM (Java or Kotlin) project's JUnit test suite — via the Maven Surefire plugin (`mvn test`) for a Maven build, or via the Gradle `test` task (`./gradlew test --tests '<pattern>'`, wrapper preferred, Kotlin DSL or Groovy) for a Gradle build — optionally scoped to specific test classes, methods, packages, or tags. Covers plain Java/Kotlin libraries, Spring Boot (Java or Kotlin), and Quarkus (Java or Kotlin, where `@QuarkusTest` classes may start Dev Services containers and a Docker-less environment is reported as an environment failure, not a test failure). Invoke as `/iru-java-test` to run the full unit suite, or `/iru-java-test <selector>` where `<selector>` names a class (`FooTest`), a class+method (`FooTest#testSomething`, including a Kotlin backtick name such as `FooTest#should parse input`), a wildcard/package pattern, or a tag expression, optionally prefixed with a module (`:service:FooTest` / `-pl service`). Use whenever the user wants to run, re-run, or narrow down unit tests instead of a full `mvn clean test`/`./gradlew build`.
 model: haiku
-allowed-tools: Read Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(find *) Bash(grep *) Bash(ls *) Bash(python3 *)
+allowed-tools: Read Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(find *) Bash(grep *) Bash(ls *) Bash(python3 *) Bash(QUARKUS_DEVSERVICES_ENABLED=false *)
 ---
 
 # Java Test
@@ -112,7 +112,11 @@ name containing spaces:
   that service, which needs a running Docker/Podman daemon. If the run fails with a container/Docker error
   (e.g. "Could not find a valid Docker environment", "Docker is not running", a Dev Services start-up failure) —
   report it as an **environment failure** (the tests didn't get to run), not as test failures, and don't try to
-  work around it by disabling Dev Services unless the user asks.
+  work around it by disabling Dev Services unless the user (or the calling skill) asks. When asked: Maven takes
+  `-Dquarkus.devservices.enabled=false`; Gradle needs the environment variable instead
+  (`QUARKUS_DEVSERVICES_ENABLED=false ./gradlew test …`), because Gradle's `-D` doesn't reach the test JVM. A test
+  that genuinely needs a container then fails fast at startup (e.g. "Datasource '<default>' was deactivated") —
+  report it as needing the container stage, not as a defect.
 - `@QuarkusIntegrationTest` classes (`*IT`) test the packaged artifact and are **not** part of this skill's default
   run: Maven runs them in `verify` (Failsafe); Gradle in the Quarkus plugin's `quarkusIntTest` task (or a custom
   `integrationTest` task). Only run them — `mvn verify -Dit.test=<FooIT>` / `./gradlew quarkusIntTest --tests
