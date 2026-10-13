@@ -3,7 +3,10 @@
 This catalog's general Java code agreements. They apply to any plain Java/Maven project, and they hold in a
 Spring Boot service too.
 
-Above all: **match the surrounding code.** These are the defaults for new code. If the file you are editing
+The non-negotiable rules — the ones that hold even when the surrounding code does otherwise — live in
+`mandatory-rules.md`, which is always read alongside this file. Everything here is consistent with them.
+
+Beyond those: **match the surrounding code.** These are the defaults for new code. If the file you are editing
 consistently does something else, follow it and note the divergence in the report — don't restyle a file as a
 side effect of an unrelated task.
 
@@ -41,8 +44,8 @@ Keep the explicit type in the few cases where `var` genuinely costs the reader s
 - **The inferred type would be something you can't write down** — an anonymous class, an intersection type, or a
   capture. `var` compiles, but the variable is then hard to reason about and impossible to extract.
 - **A diamond with no other clue.** `var x = new HashMap<>();` infers `HashMap<Object, Object>` and silently
-  loses all type safety. Either give the diamond its arguments (`new HashMap<String, Order>()`) or declare the
-  type.
+  loses all type safety. Give the diamond its arguments (`new HashMap<String, Order>()`) — and for a generic
+  static factory, an explicit type witness (`final var empty = List.<String>of();`) rather than a declared type.
 
 Never write `var` and then immediately cast it, and never use `var` for a variable initialised to `null`.
 
@@ -55,8 +58,8 @@ compile errors instead of misbehaviour at runtime.
 - **Fields**: `private final` for anything set once, in the constructor or at declaration. A non-final field
   should be non-final because it genuinely has to change.
 - **Locals**: `final var` / `final Type` by default, including loop variables and try-with-resources resources.
-- **Parameters**: `final` on parameters too. Reassigning a parameter is one of the easiest ways to write a
-  confusing method, and `final` forbids it.
+- **Parameters**: `final` on every parameter — mandatory, and enforced by Checkstyle's `FinalParameters`.
+  Reassigning a parameter is one of the easiest ways to write a confusing method, and `final` forbids it.
 - **Classes**: `final` unless the class is *designed* to be extended. If it has no protected member, no
   documented extension point, and nothing in the codebase subclasses it, it is not designed for extension —
   make it final. Utility classes (all-static) are final *and* have a private constructor.
@@ -64,7 +67,7 @@ compile errors instead of misbehaviour at runtime.
   A method that a subclass may override is part of the class's contract and needs Javadoc saying what an
   override must preserve (see `javadoc.md`). Don't mark private or static methods final — it's redundant.
 - **Constants**: `private static final` (widen only if callers outside the class genuinely need it), named in
-  `SCREAMING_SNAKE_CASE`.
+  `SCREAMING_SNAKE_CASE` — and every magic number becomes one (`mandatory-rules.md`).
 
 Where `final` is wrong, and why:
 
@@ -76,8 +79,8 @@ Where `final` is wrong, and why:
   on the test classpath before making a collaborator final — a final class that the tests need to mock is a
   compile-time-clean change that breaks the build one gate later.
 - **Retrofitting it across an untouched file.** Adding `final` to every parameter of a class you're editing for
-  one unrelated reason is diff noise. New and rewritten members get it; the rest of the file keeps whatever it
-  has.
+  one unrelated reason is diff noise. New and rewritten members get it (parameters always); the rest of the file
+  keeps whatever it has.
 
 ## Immutability by default
 
@@ -110,7 +113,8 @@ public behaviour that uses it — see `testing.md`).
   loop index or a lambda parameter whose scope is one line.
 - Type parameters: single capital letter (`T`, `K`, `V`, `R`) or a short `UpperCamelCase` word when several
   parameters would otherwise be indistinguishable.
-- Tests: follow the existing convention in the same package — don't introduce a second one.
+- Tests: `<ClassName>Test` for unit tests, `<ClassName>IT` for integration tests, and test methods named
+  `methodBeingTested_whenCondition_expectedResult` (`mandatory-rules.md`).
 
 ## Exceptions and error handling
 
@@ -153,4 +157,8 @@ public behaviour that uses it — see `testing.md`).
 - **Use the standard library** before writing a helper: `Objects`, `Optional`, `Comparator`, `Streams`,
   `String.join`, `Files`, `Math`. Don't add a utility class that duplicates one of them.
 - **Text blocks** (`"""`) for multi-line string literals; `String.format`/`formatted` or a parameterised log
-  statement instead of long `+` chains.
+  statement instead of long `+` chains. Line endings in produced output are always `"\n"` — never `%n` or
+  `System.lineSeparator()` (`mandatory-rules.md`).
+- **Modern Java idioms** — `getFirst()`/`getLast()`, method references, `switch` expressions, stream predicates
+  for simple scans, no redundant `this`, utility predicates for null-and-empty checks — are mandatory, and listed
+  with examples in `mandatory-rules.md`.

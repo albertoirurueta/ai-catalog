@@ -1,6 +1,6 @@
 ---
 name: iru-setup-ionic-app
-description: Scaffold a new Ionic (Angular or React) hybrid mobile app at the repository root using the Ionic CLI's own `start` schematic, then layer on this catalog's house conventions on top of it — Vitest with v8 coverage (the Angular flavor's `@angular/build:unit-test` runner, or Vite's own runner for React), ESLint (the flat config the starter already ships) plus Prettier, Playwright for a web-build smoke test, a Maestro flow skeleton for on-device smoke tests, and `sonar-project.properties` when opted in. Invoke as `/iru-setup-ionic-app`. Ships on an Ionic 9 + Capacitor 8 baseline — no Cordova, no Ionic Appflow — and recommends Capgo or Capawesome for over-the-air updates if the user asks about live updates later. Asks for the framework (`framework`: `angular`/`react`), the app name and reverse-DNS app id, license, whether the project is open source, whether/how it's distributed (`distribution`: `none`/`internal`/`store` — recorded for a later `iru-setup-typescript-github-workflows` run, this skill itself never touches store/signing config), and whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), then asks separately whether to add the Android platform and whether to add the iOS platform (iOS only offered on macOS). Accepts every one of these pre-resolved via `args` (`key: value` lines, plus `mode`: `new`/`existing`) so an orchestrating skill can supply them without re-prompting. If `ionic.config.json`, `capacitor.config.ts`, or a `package.json` with an `@ionic/*` dependency already exists at the repository root, warns the user and asks whether to stop, fill gaps only, or regenerate (`mode: existing` skips straight to fill-gaps). Use whenever a repository needs a new Ionic hybrid app scaffolded with this catalog's full test/lint/e2e/Sonar toolchain wired in from the start, instead of running `ionic start` by hand and bolting each tool on afterward.
+description: Scaffold a new Ionic (Angular or React) hybrid mobile app at the repository root using the Ionic CLI's own `start` schematic, then layer on this catalog's house conventions on top of it — Vitest with v8 coverage (the Angular flavor's `@angular/build:unit-test` runner, or Vite's own runner for React), ESLint (the flat config the starter already ships) plus Prettier, Playwright for a web-build smoke test, a Maestro flow skeleton for on-device smoke tests, and `sonar-project.properties` when opted in. Invoke as `/iru-setup-ionic-app`. Ships on an Ionic 9 + Capacitor 8 baseline — no Cordova, no Ionic Appflow — and recommends Capgo or Capawesome for over-the-air updates if the user asks about live updates later. Asks for the framework (`framework`: `angular`/`react`), the app name and reverse-DNS app id, license, whether the project is open source, whether/how it's distributed (`distribution`: `none`/`internal`/`store` — recorded for a later `iru-setup-typescript-github-workflows` run, this skill itself never touches store/signing config), and whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), then asks separately whether to add the Android platform and whether to add the iOS platform (iOS only offered on macOS). Accepts every one of these pre-resolved via `args` (`key: value` lines, plus `visibility`: `public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository; `ci`: `yes`/`no` — with `ci: no`, `none` is recommended for Sonar; `on-existing`: `ask`/`keep`/`update`/`replace`, default `ask`; and `mode`: `new`/`existing`) so an orchestrating skill can supply them without re-prompting. Announces whether it is scaffolding from scratch or updating an existing Ionic project; when one already exists (`ionic.config.json`, `capacitor.config.ts`, or a `package.json` with an `@ionic/*` dependency) it never re-runs `ionic start` over it, and for every tooling artifact it owns that already exists (coverage config, ESLint ignores, Prettier, Playwright, Maestro flow, `sonar-project.properties`) warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a new Ionic hybrid app scaffolded with this catalog's full test/lint/e2e/Sonar toolchain wired in from the start, instead of running `ionic start` by hand and bolting each tool on afterward.
 model: haiku
 ---
 
@@ -37,6 +37,9 @@ sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
 add-android: yes
 add-ios: yes
+visibility: public
+ci: yes
+on-existing: ask
 mode: new
 ```
 
@@ -49,39 +52,62 @@ Recognized keys: `framework` (`angular`/`react`), `app-name`, `app-id`, `descrip
 catalog's shared app-distribution vocabulary; this skill only records the answer for Step 11's report and for a
 later `iru-setup-typescript-github-workflows` run, since store submission/signing is that skill's job, not this
 one's), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud`/`self-hosted`,
-`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `add-android` (`yes`/`no`), `add-ios` (`yes`/`no`), and
-`mode` (`new`/`existing`).
+`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `add-android` (`yes`/`no`), `add-ios` (`yes`/`no`),
+`visibility` (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
+recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
+only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
+Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode` (`new`/`existing`).
 
-`mode: existing` is this catalog's shared signal that Step 1 should skip its stop-or-regenerate question entirely
-and go straight to gap-fill.
+`mode: existing` is this catalog's shared signal that this run is an **update**: Step 1 announces it as such, but
+still warns and asks per pre-existing artifact unless `on-existing` says otherwise — it never means "update
+silently".
 
 ## Step 1 — Survey the repository
 
 Check, at the repository root, whether `ionic.config.json`, `capacitor.config.ts`/`capacitor.config.json`, or a
 `package.json` that already depends on `@ionic/angular` or `@ionic/react` exists.
 
-- **None exist**: skip straight to Step 2. There is nothing to preserve, and nothing blocks scaffolding directly
-  into the repository root (Step 4 covers the one case that needs care — a non-empty root).
-- **`mode: existing` was resolved in Step 0**: skip the question below — go straight to gap-fill: only add the
-  pieces this skill owns that are genuinely missing (Vitest coverage config, ESLint ignores/Prettier, Playwright,
-  Maestro skeleton, `sonar-project.properties`), leaving the existing scaffold (`package.json`,
-  `capacitor.config.ts`, `src/`) completely untouched. Detect the framework from the existing `package.json`
-  (`@ionic/angular` present → `angular`; `@ionic/react` present → `react`) instead of asking Step 2's framework
-  question.
-- **Otherwise**: warn the user an Ionic project already appears to exist here, then use `AskUserQuestion` with
-  three options:
-  - **Stop** — leave everything untouched. Report this and end here.
-  - **Fill gaps only** (recommended) — same effective behavior as `mode: existing` above.
-  - **Regenerate everything** — warn explicitly that `ionic start` refuses to scaffold into a non-empty directory
-    (see Step 4's note on this), so "regenerate" here really means: back up nothing automatically, tell the user
-    to remove or relocate the existing project files themselves first, then proceed as a fresh scaffold once they
-    confirm it's clear.
+- **None exist**: say "Scaffolding the Ionic app **from scratch**." and skip straight to Step 2. There is nothing
+  to preserve, and nothing blocks scaffolding directly into the repository root (Step 4 covers the one case that
+  needs care — a non-empty root).
+- **Any exists** (or `mode: existing`): say "**Updating an existing Ionic project** — found: <list with paths>."
+  Detect the framework from the existing `package.json` (`@ionic/angular` present → `angular`; `@ionic/react`
+  present → `react`) instead of asking Step 2's framework question. The existing scaffold itself
+  (`package.json`'s dependencies, `ionic.config.json`, `capacitor.config.ts`, `src/`, `android/`/`ios/`) is never
+  regenerated: `ionic start` refuses to scaffold into a non-empty directory (see Step 4), so a genuine fresh
+  scaffold is only possible after the user removes or relocates the existing project files themselves — offer that
+  as a **Stop** option ("end now; clear the project yourself and re-run for a fresh scaffold") rather than doing
+  it. Steps 4–5 are skipped for an existing project. Then survey the tooling artifacts Steps 6–10 own — the
+  coverage config (`angular.json`'s `test` options or `vite.config.ts`'s `test.coverage`) and the
+  `test`/`coverage`/`typecheck`/`format`/`e2e` scripts, `eslint.config.js`'s `ignores` and
+  `eslint-config-prettier` entry, `.prettierrc.json`, `playwright.config.ts`/`e2e/`, `.maestro/smoke.yaml`,
+  `sonar-project.properties` — and resolve one action per artifact that already exists:
+  - **`on-existing` is `keep`/`update`/`replace`**: apply it to every artifact without asking (still print the
+    warning).
+  - **Otherwise**: ask with `AskUserQuestion`, batching up to 4 artifacts per call (one question each), naming any
+    concrete contradiction with this run's choices (e.g. "`eslint.config.js` doesn't ignore `coverage/`", "a
+    `sonar-project.properties` exists but you chose `sonar: none`"):
+    - **Update (Recommended)** — merge: add what's missing and correct outdated parts using this skill's
+      templates as reference (missing coverage reporters, ignores, scripts, the Playwright `webServer` block),
+      keeping everything this skill doesn't own. The user reviews a diff; customizations survive, but a customized
+      part this skill owns may be rewritten.
+    - **Keep as is** — leave it untouched and skip the step that would write it. Nothing customized changes, but
+      it may stay out of date or disagree with this run's choices — Step 11 lists each mismatch.
+    - **Replace** — regenerate it from this skill's template; every customization in it is lost (recoverable only
+      from git history).
+    - **Stop** (first batch only) — as described above; leave everything untouched and end here.
+  - Defer the `sonar-project.properties` question until Step 2 resolves `sonar`: with `sonar: none`,
+    Update/Replace mean removing the file and Keep leaves it as a reported mismatch.
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
 everything else, ask the user directly (plain conversation for free text; `AskUserQuestion` for the bounded
 choices below):
+
+When an existing `package.json` (or app config such as `app.json`/`angular.json`) already supplies an identity
+value Step 0 didn't — typical in `mode: existing`, where orchestrators omit identity keys — use it as resolved and
+confirm it in one line instead of asking.
 
 - **framework** (`AskUserQuestion`, bounded) — **Angular** or **React**. State up front that this skill scaffolds
   on an **Ionic 9 + Capacitor 8 baseline with no Cordova integration and no Ionic Appflow/Live Update dependency**
@@ -122,10 +148,18 @@ convention:
   open source, ask with **`internal`** recommended (a closed-source app is rarely meant for the public stores).
   This skill records the answer only — no store/signing config is generated here; `iru-setup-typescript-github-workflows`
   reads it later to decide whether to generate release/store-upload jobs.
-- **sonar** — whether to wire up a SonarQube/SonarCloud scan via `sonar-project.properties` (Step 10). Recommend
-  **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that SonarCloud is free only for
-  open-source projects (a paid plan is required otherwise) and recommend **None** (`none`), offering **self-hosted
-  SonarQube** as the second option:
+- **sonar** — whether to wire up a SonarQube/SonarCloud scan via `sonar-project.properties` (Step 10). The
+  recommendation keys on both `open-source` and `visibility`. If `visibility` wasn't supplied via `args`, resolve
+  it only now (only when this question is actually asked): `gh repo view --json visibility -q .visibility` when the
+  repository has a GitHub remote (lowercase the result and tell the user), otherwise ask **Public** / **Private**
+  (Public recommended when open source); `internal` counts as private. If `open-source: yes` but `visibility` is
+  `private`/`internal`, warn about the contradiction and ask which is right. Recommend **SonarCloud** (`cloud`)
+  only when the repository is public **and** open source; otherwise state that SonarCloud is free only for public
+  open-source projects (per its current pricing — a private project needs a paid plan) and recommend **None**
+  (`none`), offering **self-hosted SonarQube** as the second option. If `ci: no` was supplied via `args`, say
+  plainly that no CI workflow would send reports — analysis would only run when someone runs the scanner manually
+  with a token — and recommend **None**; if the user still picks `cloud`/`self-hosted`, write
+  `sonar-project.properties` anyway and say so in Step 11:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed from `git remote
     get-url origin`) as the suggested default. Default `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url`
     to `https://sonarcloud.io`, confirming both with the user.
@@ -480,7 +514,8 @@ Step 2).
 
 ## Step 11 — Report and warn
 
-Summarize: the resolved framework, app name, app id (and that it replaced the starter's `io.ionic.starter`
+Start by repeating the mode announced in Step 1 (**scaffolded from scratch** or **updated an existing Ionic
+project**, with Steps 4–5 skipped). Summarize: the resolved framework, app name, app id (and that it replaced the starter's `io.ionic.starter`
 placeholder via `cap init`), license, and whether `open-source`/`distribution`/`sonar` were resolved from `args`
 or asked.
 
@@ -490,7 +525,11 @@ State explicitly what was included versus omitted, and why:
   configuration was generated here, and `iru-setup-typescript-github-workflows` is where that eventually happens.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, confirm `sonar-project.properties` was
   written with the resolved values and the correct per-flavor `lcov` path from Step 10's table; if `none`, note
-  this is expected for a non-open-source project unless the user explicitly chose it.
+  this is expected unless the repository is public and open source (SonarCloud is free only for public open-source
+  projects) or the user explicitly chose it. State the `visibility` used and where it came from (`args`, `gh`, or
+  the user); if `ci: no` was supplied and Sonar was still configured, say no CI step sends reports.
+- **Per artifact** (update runs): the action actually taken for each pre-existing artifact — **created / updated /
+  replaced / kept as is / removed** — and, for every kept one, each mismatch with this run's choices.
 - **Android/iOS platforms**: which were added (Step 5) versus deliberately skipped (No answer, or iOS on a
   non-macOS host) — for anything skipped, repeat the exact two commands needed to add it later.
 

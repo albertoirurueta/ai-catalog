@@ -1,6 +1,6 @@
 ---
 name: iru-setup-antora
-description: Set up an Antora documentation site in a repository that doesn't have one yet — installs Node.js/Antora prerequisites, scaffolds `docs/antora.yml` and `docs/antora-playbook.yml`, and builds a minimal ROOT module with `index.adoc`, `installation.adoc`, and `reference.adoc` pages wired into `nav.adoc`. Invoke as `/iru-setup-antora`. Idempotent: safe to re-run on a repository that already has some or all of this in place — it fills gaps without overwriting existing pages, config, or nav entries. Use whenever a repository needs Antora documentation bootstrapped from scratch, instead of hand-wiring `antora.yml`/`antora-playbook.yml`/the module skeleton one file at a time.
+description: Set up an Antora documentation site in a repository that doesn't have one yet — installs Node.js/Antora prerequisites, scaffolds `docs/antora.yml` and `docs/antora-playbook.yml`, and builds a minimal ROOT module with `index.adoc`, `installation.adoc`, and `reference.adoc` pages wired into `nav.adoc`. Invoke as `/iru-setup-antora`, optionally with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace` (scripted runs; default `ask`). Announces whether it is creating the site from scratch or updating an existing one; when `docs/antora.yml`/the playbook/the ROOT module already exist it warns and asks whether to Update (fill gaps only, never overwriting existing pages, config, or nav entries — safe to re-run), Keep the site as is, or Replace `antora.yml` + the playbook from its template (existing pages kept unless the user explicitly confirms otherwise). Use whenever a repository needs Antora documentation bootstrapped from scratch, instead of hand-wiring `antora.yml`/`antora-playbook.yml`/the module skeleton one file at a time.
 model: haiku
 ---
 
@@ -10,9 +10,18 @@ Bootstrap a minimal, working Antora documentation site for a repository: verify/
 install Antora plus its supported extensions under `docs/`, write `antora.yml` and `antora-playbook.yml`, create
 the `ROOT` module with three starter pages, and confirm the site actually builds. This skill makes no assumptions
 about the repository's language or build system — discover the project name, version, and install instructions
-fresh each run. It is additive: if some or all of this already exists (as it does in this very repository), skip
-what's already in place and only fill genuine gaps, without overwriting existing pages or reordering existing nav
-entries.
+fresh each run. Its default update path is additive: if some or all of this already exists (as it does in this very
+repository), it announces that, asks how to treat the existing site (Step 2), and on **Update** skips what's
+already in place and only fills genuine gaps, without overwriting existing pages or reordering existing nav entries.
+
+## Step 0 — Resolve inputs
+
+This skill takes one optional `args` line, `on-existing: <ask|keep|update|replace>` — passed by an orchestrator
+only when its own `args` received it (scripted runs). Default `ask`. Any other `key: value` line (e.g. `sonar`,
+`mode`, `visibility`) is ignored — this skill only owns the docs site. When `on-existing` is `keep`/`update`/
+`replace`, Step 2 still prints its warning about the existing site but applies that value without asking. `mode:
+existing` alone (if an orchestrator happens to pass it) does **not** mean "update silently" — Step 2 still asks
+unless `on-existing` says otherwise.
 
 ## Step 1 — Verify Node.js is installed
 
@@ -52,9 +61,32 @@ Don't assume a clean slate. Before creating anything, check:
 - Is `docs/package.json` already tracking `antora` and the three extensions from Step 3 as dependencies?
 
 Build a concrete gap list from this survey (e.g. "antora.yml missing", "playbook exists but has no mermaid
-extension", "ROOT module exists with 5 pages already, no page covers installation"). Every later step acts only
-on genuine gaps — a fully-set-up repository (one that already has all of this) should result in Step
-13 reporting "already set up," not in duplicated or overwritten files.
+extension", "ROOT module exists with 5 pages already, no page covers installation").
+
+Then tell the user which of the two this run is doing:
+
+- **None of `docs/antora.yml`, the playbook, or `docs/modules/ROOT/` exists** → "Creating the Antora site **from
+  scratch**." Continue to Step 3 with every gap in scope.
+- **Any of them exists** → "**Updating an existing Antora site** — found: <paths>." Warn that a prior docs setup is
+  present and — unless Step 0's `on-existing` already decided (`keep`/`update`/`replace`, applied without asking) —
+  ask with `AskUserQuestion` (header e.g. "Antora docs"), explaining each option's consequence in its description:
+  - **Update (Recommended)** — "Fill gaps only: add the missing config, extensions, starter pages and nav entries
+    using this skill's template as reference; never overwrite an existing page, existing nav entry, or a correct
+    config section. Your customizations survive; only genuinely wrong/missing fields in `antora.yml`/the playbook
+    are corrected (shown to you first)." — today's additive behaviour, exactly as Steps 3–12 describe.
+  - **Keep as is** — "Leave the docs site untouched (no config, page, or nav change; Step 11's `.gitignore` check
+    and Step 12's build still run as a verification). It may stay out of date — e.g. missing an extension or the
+    local `ui-bundle.zip` — and the report will list each gap left unfilled." Skip Steps 3–10.
+  - **Replace** — "Rewrite `docs/antora.yml` and `docs/antora-playbook.yml` from this skill's template (and
+    re-copy `ui-bundle.zip`). Matches this house pattern exactly, but every customization in those two files is lost
+    (recoverable only from git history). Existing pages and `nav.adoc` are kept." Only if the user, in a separate
+    explicit confirmation, also asks to regenerate the existing starter pages may Steps 7–9 overwrite them — never
+    by default, and never pages outside the three starter roles.
+  - **Stop** — "End this skill now without changing anything."
+
+Every later step acts only on genuine gaps (or, under **Replace**, on the two config files plus gaps) — a
+fully-set-up repository answered with **Update** should result in Step 13 reporting "already set up," not in
+duplicated or overwritten files.
 
 ## Step 3 — Install Antora and its extensions
 
@@ -94,8 +126,9 @@ Determine three values first:
   git tag (`git tag --sort=-v:refname | head -1`), (3) the project manifest's version with any pre-release suffix
   like `-SNAPSHOT` stripped. If none of these resolve, ask the user for a starting version rather than guessing.
 
-Write (or, if `antora.yml` already exists, only correct genuinely wrong fields rather than rewriting the whole
-file):
+Write (or, if `antora.yml` already exists and Step 2's answer was **Update**, only correct genuinely wrong fields
+rather than rewriting the whole file; under **Replace**, rewrite it from this template, carrying over the existing
+`name` unless it's wrong so existing `xref:`s and `start_page` keep resolving):
 
 ```yaml
 name: <project-slug>
@@ -119,8 +152,9 @@ nav:
 
 The `site`/`content` sections are project-specific; the `ui`/`antora.extensions`/`asciidoc` sections are fixed
 boilerplate this skill applies as-is (they wire up the three extensions installed in Step 3) — don't improvise
-alternatives for them. If the file already exists, only add missing pieces (e.g. an extension block) rather than
-rewriting sections that already match this shape.
+alternatives for them. If the file already exists and Step 2's answer was **Update**, only add missing pieces (e.g.
+an extension block) rather than rewriting sections that already match this shape; under **Replace**, rewrite the
+whole file from the template below.
 
 - `site.title`: same human-readable title as Step 4.
 - `site.start_page`: `<component-name>::index.adoc`, using the `name` chosen in Step 4.
@@ -287,7 +321,10 @@ npx antora antora-playbook.yml
 
 ## Step 13 — Report
 
-Summarize, grouped by what Step 2 found already present vs. what this run created or filled in:
+Start by restating the mode from Step 2 — "created from scratch" or "updated an existing site" — and, for an
+existing site, the option applied (**updated** / **kept as is** / **replaced**, and whether it came from the user
+or from `on-existing`; or that the user chose **Stop**, in which case report only that). Then summarize, grouped by
+what Step 2 found already present vs. what this run created or filled in:
 
 - Node.js/Antora/extensions: already present vs. newly installed.
 - `antora.yml` / `antora-playbook.yml`: already present and correct, corrected, or newly written.
@@ -296,6 +333,8 @@ Summarize, grouped by what Step 2 found already present vs. what this run create
   (name it).
 - `nav.adoc` and `.gitignore`: entries added, if any.
 - Build result from Step 12, with the path to the built `index.html`.
+- Under **Keep as is**: every gap from Step 2's list that was left unfilled (missing extension, missing starter
+  page role, missing `ui-bundle.zip`, …), so the user can re-run with **Update** later.
 
 Remind the user to review the generated `index.adoc`/`installation.adoc`/`reference.adoc` content themselves
 before trusting it, and that `docs/build/` and `docs/node_modules/` should stay untracked while `docs/package.json`,

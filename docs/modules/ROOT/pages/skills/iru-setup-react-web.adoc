@@ -69,14 +69,16 @@ asked directly).
 
 |`open-source`
 |No
-|Whether the repository is open source (`yes`/`no`) — informs the `sonar` recommendation.
+|Whether the repository is open source (`yes`/`no`) — informs the `sonar` recommendation together with `visibility`.
 |Asked with `AskUserQuestion`
 
 |`sonar`
 |No
 |`cloud`, `self-hosted`, or `none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when
-`cloud`/`self-hosted`. Controls whether `sonar-project.properties` is written in Step 8.
-|`cloud` recommended if open source, otherwise `none` recommended
+`cloud`/`self-hosted`. Controls whether `sonar-project.properties` is written in Step 8. `cloud` is recommended
+only for a repository that is both public and open source (SonarCloud is free only for public open-source
+projects, per its current pricing); otherwise `none` is recommended, with self-hosted SonarQube as the alternative.
+|`cloud` recommended if public and open source, otherwise `none` recommended
 
 |`keep-oxlint`
 |No
@@ -90,11 +92,25 @@ ESLint entirely.
 config when enabled.
 |`no`
 
+|`visibility`
+|No
+|`public`, `private`, or `internal` — the GitHub repository's visibility, used only to key the `sonar` recommendation. `internal` counts as private. If `open-source: yes` but visibility is private/internal, the skill warns and asks which is right.
+|Resolved only when the `sonar` question is asked: `gh repo view --json visibility -q .visibility`, else asked (Public recommended when open source)
+
+|`ci`
+|No
+|`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
+|`yes` implied
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing artifact. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
+|`ask`
+
 |`mode`
 |No
-|`new` (scaffold fresh) or `existing` (gap-fill only what's missing) — auto-defaulted from whether
-`package.json` already exists if not supplied.
-|Auto-detected from `package.json` presence
+|`new` or `existing`. `existing` marks the run as an *update* of an established repository, but never means "update silently" — Step 1 still warns and asks per pre-existing artifact unless `on-existing` says otherwise.
+|Derived from whether `package.json` exists (absent => `new`, present => `existing`)
 |===
 
 == Outputs
@@ -109,8 +125,11 @@ config when enabled.
 * `.storybook/` and its scripts, only if `storybook: yes`.
 * `sonar-project.properties` at the repository root, only if `sonar` resolved to `cloud` or `self-hosted`.
 * `tsconfig.e2e.json` and an updated `tsconfig.json` reference list, so `tsc -b` type-checks `e2e/` too.
-* A report of what was generated/skipped, every verification command run (typecheck, lint, format, test,
-  coverage, build, e2e) and its result, plus explicit warnings to review generated files, wire `SONAR_TOKEN`
+* A report that opens by repeating the announced mode (scaffolded from scratch or updated an existing setup),
+  lists per owned artifact the action taken (created / updated / replaced / kept as is / removed) and each
+  mismatch left by a kept artifact (e.g. a `sonar-project.properties` left after `sonar: none`, a Playwright
+  config still listing Firefox/WebKit), every verification command run (typecheck, lint, format, test,
+  coverage, build, e2e) and its result, the `visibility` used for Sonar and where it came from, plus explicit warnings to review generated files, wire `SONAR_TOKEN`
   in CI if Sonar was enabled, and provision Playwright browsers in CI.
 
 == Execution flow
@@ -121,25 +140,32 @@ flowchart TD
     A[Start /iru-setup-react-web] --> B{"Step 0: args supplied?"}
     B -- yes --> C[Parse key: value pairs from args]
     B -- no --> D[Treat every field as unset]
-    C --> E["Step 1: Survey repository -\npackage.json? mode new/existing?\nrepo root empty?"]
+    C --> E["Step 1: Survey every owned artifact\n(package.json, Vitest/Jest, linter, Prettier,\nStylelint, Playwright, Storybook, Sonar)"]
     D --> E
-    E -- "package.json exists, mode unresolved" --> F["AskUserQuestion:\nexisting (gap-fill) or new (rescaffold)?"]
-    F -- stop --> G[Report untouched; end]
-    F -- existing/new --> H
-    E -- "no package.json" --> H["Step 2: Collect app-name,\ndescription, developer info,\nlicense, open-source, sonar,\nkeep-oxlint, storybook"]
-    H --> I["Step 3: npm create vite@latest\n--template react-ts; npm install"]
-    I --> J["Step 4: Add Vitest + Testing Library +\njsdom; write App.test.tsx"]
-    J --> K["Step 5: Add ESLint or keep Oxlint;\nPrettier; Stylelint (auto-fix CSS)"]
-    K --> L["Step 6: Add Playwright e2e;\nrename tests/ to e2e/; install Chromium"]
-    L --> M{"Step 7: storybook: yes?"}
-    M -- yes --> N["Run storybook init;\nreconcile vitest.config.ts project split"]
-    M -- no --> O
-    N --> O{"Step 8: sonar cloud/self-hosted?"}
-    O -- yes --> P[Write sonar-project.properties]
-    O -- no --> Q
-    P --> Q["Step 9: Wire npm scripts;\nadd tsconfig.e2e.json;\nfix tsc -b vs tsc --noEmit gotcha"]
-    Q --> R["Run typecheck, lint, format,\ntest, coverage, build, e2e"]
-    R --> S["Step 10: Report + warnings\n(review files, SONAR_TOKEN, CI browsers)"]
+    E -- "nothing exists" --> F[Announce: scaffolding from scratch]
+    E -- "anything exists or mode: existing" --> G[Announce: updating an existing setup; warn]
+    G --> H{"on-existing keep/update/replace?"}
+    H -- yes --> I[Apply it to every existing artifact]
+    H -- no --> J["AskUserQuestion per artifact:\nUpdate / Keep as is / Replace / Stop"]
+    J -- Stop --> K[Report untouched; end]
+    J -- other --> L
+    I --> L["Placement check (only if create-vite will run):\nempty root or subdirectory"]
+    F --> L
+    L --> M["Step 2: Collect app-name, description, developer info,\nlicense, open-source, visibility, sonar, keep-oxlint, storybook"]
+    M --> N["Step 3: npm create vite@latest --template react-ts;\nnpm install (only if no package.json or Replace)"]
+    N --> O["Step 4: Add Vitest + Testing Library + jsdom;\nwrite App.test.tsx (skipped if Jest is kept)"]
+    O --> P["Step 5: Add ESLint or keep Oxlint;\nPrettier; Stylelint (auto-fix CSS)"]
+    P --> Q["Step 6: Add Playwright e2e;\nrename tests/ to e2e/; install Chromium"]
+    Q --> R{"Step 7: storybook: yes?"}
+    R -- yes --> S["Run storybook init;\nreconcile vitest.config.ts project split"]
+    R -- no --> T
+    S --> T{"Step 8: sonar cloud/self-hosted?"}
+    T -- yes --> U[Write sonar-project.properties]
+    T -- no --> V[Remove or flag existing sonar-project.properties]
+    U --> W
+    V --> W["Step 9: Wire npm scripts; add tsconfig.e2e.json;\nfix tsc -b vs tsc --noEmit gotcha"]
+    W --> X["Run typecheck, lint, format,\ntest, coverage, build, e2e"]
+    X --> Y["Step 10: Report per-artifact actions,\nmismatches, warnings"]
 ....
 
 == Dependencies

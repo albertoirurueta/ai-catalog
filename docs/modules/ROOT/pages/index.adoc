@@ -395,7 +395,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-android-gitignore`
 |xref:index.adoc#group-android-bootstrap[Android Bootstrap]
-|Creates or gap-fills root and per-module `.gitignore` files for an Android Gradle project.
+|Creates or updates (Update / Keep / Replace) root and per-module `.gitignore` files for an Android Gradle project.
 |xref:skills/iru-setup-android-gitignore.adoc[]
 
 |`iru-setup-android-library`
@@ -425,7 +425,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-changelog`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|One-time bootstrap of `CHANGELOG.md`, backfilled from git tags/GitHub Releases.
+|Bootstraps `CHANGELOG.md` from git tags/GitHub Releases, or appends missing releases to an existing one (Update / Keep / Replace).
 |xref:skills/iru-setup-changelog.adoc[]
 
 |`iru-setup-ionic-app`
@@ -435,7 +435,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-github-workflows`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Scaffolds/updates the `develop.yml`/`main.yml`/`sync.yml`/`security.yml` GitHub Actions CI/CD pipeline, including the shared Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks security block, gated by open-source/publish/sonar args.
+|Scaffolds/updates the `develop.yml`/`main.yml`/`sync.yml`/`security.yml` GitHub Actions CI/CD pipeline, including the shared Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks security block, gated by open-source/publish/sonar/visibility/ci-tests/pages args.
 |xref:skills/iru-setup-java-github-workflows.adoc[]
 
 |`iru-setup-java-gitignore`
@@ -450,12 +450,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-library-repository`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Orchestrator: bootstraps a brand-new Java library repository end to end in one pass, gated by open-source/publish/sonar args.
+|Orchestrator: bootstraps or updates a Java library repository end to end in one pass, gated by open-source/visibility/ci/publish/sonar args.
 |xref:skills/iru-setup-java-library-repository.adoc[]
 
 |`iru-setup-java-springboot`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Orchestrator: bootstraps a brand-new hexagonal Spring Boot service repository end to end in one pass, with an optional Hilla frontend and Sonar/open-source args.
+|Orchestrator: bootstraps or updates a hexagonal Spring Boot service repository end to end in one pass, with an optional Hilla frontend and Sonar/open-source/visibility/CI args.
 |xref:skills/iru-setup-java-springboot.adoc[]
 
 |`iru-setup-java-springboot-apis`
@@ -672,24 +672,29 @@ file of their own and are instead described together in xref:agents/overview.ado
 [[group-bootstrap]]
 === Repository Bootstrap
 
-Scaffolding a brand-new repository's build, docs, CI/CD, and top-level files from nothing, so a new Java
-library starts out matching the same conventions as every other repository in the catalog.
+Scaffolding a repository's build, docs, CI/CD, and top-level files from nothing — or updating an older or
+partial setup — so a new Java library starts out matching the same conventions as every other repository in the catalog.
 
 [TIP]
 ====
-Reach for this group when standing up a **brand-new repository** — a one-time pass, not something you'd run
-again once the repository already exists. `iru-setup-repository` is the catalog-wide front door: it detects a
+Reach for this group when standing up a **brand-new repository**, or when bringing one with an older or partial
+setup in line with the house pattern. `iru-setup-repository` is the catalog-wide front door: it detects a
 non-empty repository (via `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the
 project type over up to four `AskUserQuestion` rounds of three concrete types each (Java/JVM, Android & Swift,
 mobile apps, Web/Node — each with a "Something in the next group" escape hatch; .NET is detected but has no
-orchestrator to offer), asks the shared `open-source`/`publish`-or-`distribution`/`sonar` inputs once, and
-delegates to exactly one matching stack
+orchestrator to offer), asks the shared inputs once — `open-source`, the repository's `visibility` (detected via
+`gh` when possible), whether GitHub workflows are wanted at all (`ci`), Sonar, whether CI runs unit tests only or
+the full suite (`ci-tests`), GitHub Pages (`pages`), and `publish`-or-`distribution` — quoting the cost
+differences for private repositories (Actions minutes, macOS runners, SonarCloud pricing, Pages availability),
+and delegates to exactly one matching stack
 orchestrator — `iru-setup-java-library-repository`, `iru-setup-java-springboot`,
 xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
 xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`], or
-xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. On an
-existing repository it forces `mode: existing` so that orchestrator takes its gap-fill/update path instead of
-assuming a brand-new repo. `iru-setup-java-library-repository`, the Java library orchestrator below, also runs
+xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. Every
+run announces whether it is setting the repository up **from scratch** or **updating an existing one** (with an
+inventory of what already exists), and each component skill warns about every pre-existing artifact and asks
+**Update** (merge, keep customizations), **Keep as is**, or **Replace** (regenerate) — or applies `on-existing` in
+scripted runs. `iru-setup-java-library-repository`, the Java library orchestrator below, also runs
 standalone and runs the rest of this group in order; each member also works standalone to fill a single gap in a
 repository that already has some of this in place (e.g. just `/iru-setup-antora` to add docs to a repository that
 already has a `pom.xml`).
@@ -698,20 +703,21 @@ already has a `pom.xml`).
 * xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] — catalog-wide front door: detects/asks a
   repository's project type and delegates to one of five stack orchestrators.
 * xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
-  a brand-new Java library repository end to end in one pass.
+  or updates a Java library repository end to end in one pass.
 * xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
   source layout.
 * xref:skills/iru-setup-antora.adoc[`iru-setup-antora`] — scaffolds the Antora documentation site.
 * xref:skills/iru-setup-java-gitignore.adoc[`iru-setup-java-gitignore`] — creates or refreshes the root `.gitignore`.
 * xref:skills/iru-setup-java-github-workflows.adoc[`iru-setup-java-github-workflows`] — scaffolds/updates the CI/CD
   GitHub Actions pipeline.
-* xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] — one-time bootstrap of `CHANGELOG.md`.
+* xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] — bootstraps `CHANGELOG.md` from release history,
+  or appends missing releases to an existing one.
 * xref:skills/iru-setup-readme.adoc[`iru-setup-readme`] — creates or refreshes the root `README.md`.
 
 [[group-service-bootstrap]]
 === Spring Boot Service Bootstrap
 
-Standing up a brand-new Spring Boot **service** — as opposed to a library — with Domain-Driven Design and
+Standing up (or updating) a Spring Boot **service** — as opposed to a library — with Domain-Driven Design and
 hexagonal (ports and adapters) architecture imposed from the first commit: a Maven multi-module reactor, a
 contract-first API layer, reproducible integration tests, infrastructure-as-code, CI/CD, and a documentation
 page set derived from the code.
@@ -765,7 +771,7 @@ the root `pom.xml` and nowhere else, and Java 21 is the enforced minimum.
 [[group-typescript-bootstrap]]
 === TypeScript/Node Bootstrap
 
-Scaffolding a brand-new npm/TypeScript repository end to end — library or one of four app flavors (React,
+Scaffolding (or updating) an npm/TypeScript repository end to end — library or one of four app flavors (React,
 Angular, React Native, Ionic) — so it starts out matching this catalog's conventions the same way a new Java
 library does.
 
@@ -803,7 +809,7 @@ repository to fill a single gap.
 [[group-android-bootstrap]]
 === Android Bootstrap
 
-Scaffolding a brand-new Android/Gradle repository end to end — library or application — matching the house
+Scaffolding (or updating) an Android/Gradle repository end to end — library or application — matching the house
 pattern this catalog's Android skills are genericized from
 (https://github.com/albertoirurueta/irurueta-android-glutils).
 
@@ -828,13 +834,13 @@ existing repository to fill a single gap.
   application module with signing, Compose/Views UI, Sonar, and distribution wiring.
 * xref:skills/iru-setup-android-github-workflows.adoc[`iru-setup-android-github-workflows`] — scaffolds
   gitflow/main-only CI/CD and security GitHub Actions workflows for a library or app repo.
-* xref:skills/iru-setup-android-gitignore.adoc[`iru-setup-android-gitignore`] — creates or gap-fills root and
+* xref:skills/iru-setup-android-gitignore.adoc[`iru-setup-android-gitignore`] — creates or updates root and
   per-module `.gitignore` files.
 
 [[group-swift-bootstrap]]
 === Swift/Apple Bootstrap
 
-Scaffolding a brand-new Swift repository end to end — a SwiftPM library or a native Apple app — matching this
+Scaffolding (or updating) a Swift repository end to end — a SwiftPM library or a native Apple app — matching this
 catalog's conventions from the first commit.
 
 [TIP]
@@ -1624,6 +1630,13 @@ flowchart TD
     F --> G["iru-setup-readme\n(README.md, last — sees everything above)"]
 ....
 
+Before asking anything else it announces whether it is setting the repository up from scratch or updating an
+existing one, with an inventory of every component it found. Each sub-skill then warns about any file it would
+write that already exists and asks **Update / Keep as is / Replace**, explaining what each one costs you. The
+orchestrator also asks the repository's visibility, whether GitHub workflows are wanted at all (with `ci: no` the
+`iru-setup-java-github-workflows` step is skipped entirely), whether CI runs unit tests only or the full suite, and
+whether docs deploy to GitHub Pages — recommending the cheaper options for private repositories.
+
 Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
 `/iru-setup-antora` to add docs to a repository that already has a `pom.xml`).
 
@@ -1640,12 +1653,13 @@ flowchart TD
     A["/iru-setup-java-springboot"] --> B["Interview + Initializr API\n(versions, dependency ids, reference pom)"]
     B --> C["springboot-stack.yml\n(the manifest every sub-skill reads)"]
     C --> D["iru-setup-java-springboot-pom\n(reactor: root pom holds every version)"]
-    D -- root pom not written --> STOP["Stop — no reactor to attach to"]
+    D -- no usable reactor pom --> STOP["Stop — no reactor to attach to"]
     D --> E["iru-setup-java-springboot-modules\n(ports, adapters, profiles, ArchUnit)"]
     E --> F["iru-setup-java-springboot-apis\n(apis/ contracts + code generation)"]
     F --> G["iru-setup-java-springboot-testcontainers\n(compose.yaml + integration-test harness)"]
     G --> H["iru-setup-java-springboot-platform\n(OpenTofu for AWS or Google Cloud)"]
-    H --> I["iru-setup-java-springboot-github-workflows\n(build, deploy, undeploy)"]
+    H -- ci: yes --> I["iru-setup-java-springboot-github-workflows\n(build, deploy, undeploy)"]
+    H -- ci: no --> J
     I --> J["iru-update-java-springboot-documentation\n(Antora site, last — derives from finished code)"]
 ....
 
@@ -1653,7 +1667,11 @@ The order carries real constraints rather than being a preference: poms before m
 modules before APIs (generated sources need somewhere to land), APIs before the container stack (it must know
 whether a schema registry is needed), and everything before the workflows and documentation, both of which survey
 what is actually on disk. Only the first step is fatal if it stops — every later sub-skill that stops is recorded
-in the final report and the run continues.
+in the final report and the run continues. With `ci: no` the workflows sub-skill is skipped, so there are no
+build, deploy, or undeploy workflows — deployment is then a manual `tofu apply`. On a repository that already has
+some of this in place, the run announces an update, and each sub-skill asks Update / Keep as is / Replace for
+every file it owns that already exists; only a genuinely incompatible repository (e.g. a Gradle build) gets a
+hard stop.
 
 Two decision points are worth knowing about before starting. The **concurrency model** (blocking, reactive, or
 both) is asked early because it decides which starter every other technology resolves to, and "both" is flagged as

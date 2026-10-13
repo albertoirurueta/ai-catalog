@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-hilla
-description: Scaffold a Hilla (Vaadin) React frontend into one module of an existing Spring Boot hexagonal reactor — the Vaadin BOM and `hilla-spring-boot-starter`/`vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution wired into that module's pom, `src/main/frontend/` (file-based-routing `views/@index.tsx` + `views/@layout.tsx`, a customized `index.html`), the module-root `vitest.config.ts` extending Vaadin's generated Vite config with `@vitest/coverage-v8` lcov output, a sample `@testing-library/react` test, `eslint.config.js` (flat config, `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-config-prettier`) plus `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format` scripts, the `.gitignore` additions this frontend needs, and — only when the manifest's `sonar.mode` isn't `none` — the `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to the root pom. Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest path, default `springboot-stack.yml` at the repository root). Runs standalone against any reactor built by `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is `hilla`. Reads `springboot-stack.yml` for the module layout and `sonar.mode`, and looks up the Vaadin BOM version and every npm devDependency version live (Maven Central and the npm registry) rather than from memory. The root pom's `vaadin.version` property, `dependencyManagement` import, `pluginManagement` entry, and `production` profile are primarily written by `iru-setup-java-springboot-pom` (see that skill) — this skill only fills that gap itself when running standalone against a reactor where it's missing. Use whenever a Spring Boot service needs its Hilla frontend module actually scaffolded, instead of hand-wiring the Vaadin/Hilla Maven and npm toolchains file by file.
+description: Scaffold a Hilla (Vaadin) React frontend into one module of an existing Spring Boot hexagonal reactor — the Vaadin BOM and `hilla-spring-boot-starter`/`vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution wired into that module's pom, `src/main/frontend/` (file-based-routing `views/@index.tsx` + `views/@layout.tsx`, a customized `index.html`), the module-root `vitest.config.ts` extending Vaadin's generated Vite config with `@vitest/coverage-v8` lcov output, a sample `@testing-library/react` test, `eslint.config.js` (flat config, `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-config-prettier`) plus `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format` scripts, the `.gitignore` additions this frontend needs, and — only when the manifest's `sonar.mode` isn't `none` — the `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to the root pom. Announces whether it is scaffolding the frontend from scratch or updating an existing one, and for every frontend file/pom wiring it owns that already exists warns and asks Update (fill gaps) / Keep as is / Replace / Stop — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`) and `on-existing:` (`ask`/`keep`/`update`/`replace`) lines). Runs standalone against any reactor built by `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is `hilla`. Reads `springboot-stack.yml` for the module layout and `sonar.mode`, and looks up the Vaadin BOM version and every npm devDependency version live (Maven Central and the npm registry) rather than from memory. The root pom's `vaadin.version` property, `dependencyManagement` import, `pluginManagement` entry, and `production` profile are primarily written by `iru-setup-java-springboot-pom` (see that skill) — this skill only fills that gap itself when running standalone against a reactor where it's missing. Use whenever a Spring Boot service needs its Hilla frontend module actually scaffolded, instead of hand-wiring the Vaadin/Hilla Maven and npm toolchains file by file.
 model: haiku
 ---
 
@@ -31,7 +31,12 @@ Parse `args` for `key: value` lines:
 
 ```
 stack-file: springboot-stack.yml
+mode: existing
+on-existing: ask
 ```
+
+`mode` (`new`/`existing`) is informational — it never means "update silently"; `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask`) pre-answers Step 1's existing-frontend question for every file.
 
 `stack-file` defaults to `springboot-stack.yml` at the repository root. Read it in full. Stop and tell the user to
 run `/iru-setup-java-springboot` (or `/iru-setup-java-springboot-modules`) first if it doesn't exist — this skill
@@ -60,10 +65,18 @@ writing anything else, so a later re-run of `iru-setup-java-springboot` sees the
   the root pom was touched by this skill rather than its usual owner.
 - **Existing frontend.** Check for `<web-module>/src/main/frontend/`, `<web-module>/vitest.config.ts`,
   `<web-module>/eslint.config.js`, and an existing `com.vaadin:hilla-spring-boot-starter`/
-  `vaadin-spring-boot-starter` dependency in `<web-module>/pom.xml`. If any exist, use `AskUserQuestion` (max four
-  options: **stop**, **update — fill gaps only**, **update — regenerate the sample view/test**, **regenerate
-  everything**) rather than overwriting hand-written frontend code by default. "Fill gaps only" preserves every
-  file already present and only adds what's missing.
+  `vaadin-spring-boot-starter` dependency in `<web-module>/pom.xml`. Say whether this run is **scaffolding the
+  frontend from scratch** (none of these exist) or **updating an existing frontend** (list which exist). If any
+  exist, warn and — unless `on-existing` says otherwise — ask with `AskUserQuestion` rather than overwriting
+  hand-written frontend code by default:
+  - **Update — fill gaps only (Recommended)** — preserve every file already present and only add what's missing
+    (and correct the pom wiring this skill owns, e.g. a missing `vaadin-maven-plugin` execution). If the user
+    also wants the sample view/test regenerated, ask that as a follow-up rather than assuming it.
+  - **Keep as is** — touch nothing in the frontend; it may disagree with this skill's conventions (e.g. no lcov
+    output for Sonar) — the report lists each mismatch.
+  - **Replace — regenerate everything** — rewrite every file this skill owns from its templates; hand-written
+    views, tests, and config customizations are lost (recoverable only from git history).
+  - **Stop** — end this skill now without changing anything.
 - **Look up current versions**, and record what you resolved for Step "Report":
   - `com.vaadin:vaadin-bom` — `https://repo1.maven.org/maven2/com/vaadin/vaadin-bom/maven-metadata.xml`. Use the
     `<release>` version (skip any `-alpha`/`-beta`/`-rc` suffix even if it's newer — an RC line is not what a
@@ -439,7 +452,8 @@ Summarize:
   `iru-setup-java-springboot-pom`) or had to be filled in by this skill.
 - Every npm package version resolved, separating live lookups from the recorded fallbacks actually used.
 - Whether Flow views were requested, and what that added.
-- Files written versus already present (per Step 1's stop-or-update answer).
+- Whether the frontend was scaffolded from scratch or updated, and files written versus already present per Step
+  1's answer (**created / updated / replaced / kept as is**), with each mismatch left in a kept file.
 - Whether `sonar.mode` triggered the Sonar additions, and to which properties.
 - The result of Step 8's two (or three) gate runs, including the resolved `<web-module>/coverage/lcov.info` path.
 - Whether Node was found globally or the plugin downloaded its own into `~/.vaadin` (first-run CI time cost).

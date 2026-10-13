@@ -1,6 +1,6 @@
 = Setup Changelog
-:description: Bootstraps a root CHANGELOG.md by reconstructing release history from git tags, GitHub Releases, and code diffs in Keep a Changelog format.
-:keywords: iru-setup-changelog, claude code skill, changelog, git tags, github releases, keep a changelog, release history, one-time bootstrap
+:description: Creates or updates a root CHANGELOG.md from git tags, GitHub Releases and code diffs in Keep a Changelog format; asks how to treat an existing one.
+:keywords: iru-setup-changelog, claude code skill, changelog, git tags, github releases, keep a changelog, release history, update, existing changelog
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -14,10 +14,14 @@ reliable for that release: a non-empty GitHub Release body if one exists (lightl
 copied verbatim), or a derived analysis of `git log`/diffs between tags otherwise. It skips changes that don't
 affect users of the project (tooling, CI, formatting-only diffs) unless they're genuinely the entire content of
 a release, in which case it says so plainly rather than inventing something more exciting. This skill is
-explicitly **not idempotent** and is a one-time bootstrap only: Step 1 checks whether `CHANGELOG.md` (or an
-equivalent like `CHANGELOG.rst`/`HISTORY.md`) already exists at the repository root, and if it does, the skill
-stops immediately and makes no changes — it never merges into, extends, or touches an existing changelog, since
-that file may already follow its own format and cadence.
+primarily a bootstrap, and it announces whether it is creating the changelog **from scratch** or **updating an
+existing one**. Step 1 checks whether `CHANGELOG.md` (or an equivalent like `CHANGELOG.rst`/`HISTORY.md`/
+`CHANGELOG.txt`) already exists at the repository root. If it does, the skill warns, lists the tagged releases
+that have no version heading in the file, and asks (unless `on-existing` pre-answers) whether to **Keep as is**
+(the original skip behaviour; recommended when nothing is missing), **Update** (append only the missing releases in
+version order plus their compare links, never rewriting, reordering, or reformatting an existing entry; not offered
+for `.rst`/`.txt` files), or **Replace** (rebuild the whole file from history, losing hand-written entries; for a
+differently-named file it writes a new root `CHANGELOG.md` and leaves the old one for the user to delete).
 
 == Purpose group
 
@@ -30,15 +34,24 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 /iru-setup-changelog
 ----
 
+Optionally followed by an `args` line, e.g. `on-existing: update`, when called by an orchestrator.
+
 == Inputs
 
 [cols="1,1,3,2", options="header"]
 |===
 |Argument |Required |Description |Default
 
-|(none)
+|`on-existing`
 |No
-|This skill takes no arguments — it works entirely from the repository's actual release history: git tags
+|`ask`, `keep`, `update`, or `replace` — how to treat an existing changelog. For scripted runs: Step 1 still prints
+its warning but applies the value without asking. `mode: existing` alone does not mean "update silently"; Step 1
+still asks unless `on-existing` says otherwise.
+|`ask`
+
+|other `key: value` lines
+|No
+|Ignored. The content itself comes entirely from the repository's actual release history: git tags
 (`git for-each-ref`), and, if hosted on GitHub with `gh` available and authenticated, each tag's GitHub Release
 body via `gh release view`.
 |Not applicable.
@@ -49,12 +62,16 @@ body via `gh release view`.
 * `CHANGELOG.md` at the repository root, in Keep a Changelog format, with one `## [<version>] - <date>`
   section per past release (newest first, an empty `## [Unreleased]` at the very top) plus a compare-link
   reference section if the remote is GitHub.
-* **Only produced if `CHANGELOG.md` didn't already exist.** If it did, the skill makes no changes at all and
-  simply reports that an existing changelog was found and left untouched — this is a one-time bootstrap, not an
-  idempotent fill-gaps tool.
+* **When a changelog already exists**, the outcome depends on the option chosen in Step 1: **Keep as is** makes no
+  changes (the report only notes the file was kept and any missing releases); **Update** inserts the missing
+  releases at their newest-first positions, adds their compare links following the file's existing link style, and
+  corrects only the `[Unreleased]` link's base tag, leaving every existing line byte-for-byte unchanged (the diff
+  is shown in the report); **Replace** rebuilds the file as for a from-scratch run.
 * If no git tags exist at all, the skill asks the user whether to create a minimal file with just an
   `## [Unreleased]` section, or stop entirely rather than inventing version numbers.
-* A closing report: how many releases were reconstructed and their version range, which releases used a GitHub
+* A closing report that starts by restating the mode (created from scratch, or kept as is / updated / replaced and
+  whether that came from the user or `on-existing`), then: how many releases were reconstructed (or, under Update,
+  appended) and their version range, which releases used a GitHub
   Release body versus derived commit/diff analysis, any release noted as tooling/docs-only, and whether compare
   links were included or omitted.
 
@@ -63,15 +80,21 @@ body via `gh release view`.
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-changelog] --> B{"CHANGELOG.md (or\nequivalent) already exists?"}
-    B -- yes --> Z["Stop immediately.\nNo changes made."]
-    B -- no --> C["Step 2: Discover release history\n(git tags, GitHub Releases via gh)"]
+    A[Start /iru-setup-changelog] --> A0["Step 0: Resolve on-existing from args\n(default ask)"]
+    A0 --> B{"Step 1: CHANGELOG.md (or\nequivalent) already exists?"}
+    B -- no --> B1["Announce: creating from scratch"]
+    B1 --> C
+    B -- yes --> B2["Announce: updating existing changelog;\nlist missing releases; warn and ask\nKeep / Update / Replace\n(or apply on-existing)"]
+    B2 -- Keep as is --> Z["Stop. No changes made;\nreport missing releases"]
+    B2 -- Update --> U["Read existing file;\nrestrict to missing releases"]
+    U --> C
+    B2 -- Replace --> C["Step 2: Discover release history\n(git tags, GitHub Releases via gh)"]
     C --> D{"Any tags found?"}
     D -- no --> E["Ask user: minimal Unreleased-only\nfile, or stop entirely?"]
     D -- yes --> F["Step 3: For each release,\ndetermine source of content\n(GitHub Release body vs. derived diffs);\nlong tag history fans out to\nchange-summarizer agents"]
     F --> G["Step 4: Compose each release's\nKeep a Changelog subsections"]
     G --> H["Step 5: Determine each version's\ndate and ordering"]
-    H --> I["Step 6: Write CHANGELOG.md"]
+    H --> I["Step 6: Write CHANGELOG.md\n(Update: insert missing sections only)"]
     I --> J["Step 7: Report"]
     E --> J
 ....
@@ -89,8 +112,8 @@ sub-agent it delegates to.
   entirely from the repository's own git tag/GitHub Release history.
 * xref:skills/iru-setup-typescript-repository.adoc[] (Step 9), xref:skills/iru-setup-android-repository.adoc[]
   (Step 8), and xref:skills/iru-setup-swift-repository.adoc[] (Step 9) — each runs it via the
-  `iru-isolated-skill-executor` agent, treating an early "CHANGELOG.md already exists" stop as a note rather than
-  a failure.
+  `iru-isolated-skill-executor` agent, treating a **Keep as is** outcome on an existing changelog as a note rather
+  than a failure.
 
 === Related agents
 

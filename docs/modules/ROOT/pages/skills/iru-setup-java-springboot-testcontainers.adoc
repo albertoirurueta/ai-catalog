@@ -68,6 +68,17 @@ generated from each spec's `examples`, and the OpenAPI validation extension make
 violates the contract fail the test — which is what buys back most of the contract fidelity Microcks gets for
 free.
 
+The skill announces whether it is creating the stack from scratch or updating an existing one. For each file it owns
+that already exists (`compose.yaml`/`docker-compose.yml`, the `*IT` base class(es), the Prometheus/Grafana
+provisioning, the mock's import/mapping configuration) it warns, names concrete drift (a missing service, a
+differently pinned image tag) and asks **Update (Recommended)** / **Keep as is** / **Replace**, unless `on-existing`
+pre-answers. Replace is never offered for an `*IT` class containing real test logic beyond the generated base.
+
+It also reads the manifest's `ci:` block, which only affects what it reports. With `ci.tests: unit` (or
+`ci.enabled: false`) the generated `*IT` tests run locally only: the workflows skill runs Maven with `-DskipITs`, so
+no Docker/Testcontainers stack starts in CI, and the report says so plainly. The CI runner memory-ceiling warning is
+likewise only given when `ci.tests: full`.
+
 == Purpose group
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -91,6 +102,23 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 engine, Redis if cached, Kafka plus a Confluent Schema Registry if messaging is enabled, and Prometheus/Grafana if
 metrics are enabled. Caffeine needs no container and its absence is reported so it doesn't look like an omission.
 |`springboot-stack.yml` at the repository root
+
+|`mode`
+|No
+|`args` `key: value` line, `new` or `existing`. Informational only: it never means "update silently".
+|None
+
+|`on-existing`
+|No
+|`args` `key: value` line, `ask`, `keep`, `update` or `replace`, pre-answering the per-file Update / Keep as is /
+Replace question for scripted runs.
+|`ask`
+
+|`ci.tests` / `ci.enabled`
+|No (manifest fields)
+|Read from the manifest's `ci:` block. Only changes the report: with `unit` (or CI disabled) the `*IT` tests are
+reported as running locally only, and the CI memory-ceiling warning is omitted.
+|Read from the manifest
 
 |`stack.apiMock`
 |No
@@ -140,6 +168,9 @@ are correct regardless — but verification is skipped and the setup is explicit
   the same contract rather than bringing up the whole stack.
 * Test-profile configuration per module, with the module's own migration tooling left enabled so a broken migration
   fails a test rather than a deploy.
+* A report stating whether the stack was created from scratch or updated, the action taken per pre-existing file
+  (created / updated / replaced / kept as is) with mismatches left in kept files, and where the integration tests
+  run per the manifest's `ci:` block (locally only when `ci.tests` is `unit` or CI is disabled).
 * A report covering every service and its pinned tag, which containers each base class starts, whether migrations
   run in tests, and the result of each verification command.
 
@@ -148,7 +179,7 @@ are correct regardless — but verification is skipped and the setup is explicit
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-setup-java-springboot-testcontainers"] --> B["Step 0: Read the manifest;\nbuild the service list; resolve and\npersist image tags; check docker info"]
+    A["Start /iru-setup-java-springboot-testcontainers"] --> B["Step 0: Read the manifest and args;\nbuild the service list; resolve and\npersist image tags; check docker info;\nannounce from scratch vs update and ask\nUpdate / Keep as is / Replace per\nexisting file (or apply on-existing)"]
     B --> B2{"Any REST or\ngRPC client?"}
     B2 -- no --> C["Step 1: Write compose.yaml —\npinned images, healthchecks, depends_on,\nfake dev credentials, observability profile"]
     B2 -- yes --> B3["Resolve stack.apiMock, or ask:\nMicrocks (default with gRPC) vs\nWireMock (default REST-only)"]
@@ -164,7 +195,7 @@ flowchart TD
     I -->|"compose path, Kafka listeners,\nor Elasticsearch memory"| J["Iterate on the usual suspects"]
     J --> I
     I -- Docker unavailable --> K["Report as unverified"]
-    I --> L["Step 7: Report services, base classes,\npersisted tags, and warnings"]
+    I --> L["Step 7: Report actions per file, where ITs run\n(per ci block), services, base classes,\npersisted tags, and warnings"]
     K --> L
 ....
 

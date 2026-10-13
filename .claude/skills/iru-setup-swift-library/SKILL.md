@@ -1,6 +1,6 @@
 ---
 name: iru-setup-swift-library
-description: Generate the standard Swift Package Manager toolchain for a new Swift library at the repository root — runs `swift package init --type library`, then rewrites `Package.swift` (`// swift-tools-version: 6.0`, a `platforms:` array, a `swift-docc-plugin` dependency, `swiftLanguageModes: [.v6]`), `Sources/<Name>/<Name>.swift`, and `Tests/<Name>Tests/` with both a Swift Testing `@Test` example and an XCTest example, plus `.swiftlint.yml` (opt-in strict rules, `excluded: .build`), a `.swift-format` (or `.swiftformat`) config, a DocC catalog page (`Sources/<Name>/<Name>.docc/<Name>.md`), `.spi.yml` (only when `publish: yes`), and `sonar-project.properties` (only when `sonar` is not `none`) — asks for `package-name` (the SPM package identity, e.g. `my-example-lib`; the PascalCase `<Name>` used for the target/product/type/directories is derived from it), `platforms` (a list from `ios`/`ipados`/`macos`/`watchos`/`tvos`/`visionos`/`linux`), `min-deployment-targets` per selected Apple platform, license, developer name/email/organization URL, whether the project is open source, whether it publishes (`publish`, gating `.spi.yml`), whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`, gating `sonar-project.properties`), and `formatter` (`swift-format`, the Swift toolchain's own bundled formatter, invoked as `swift format lint`/`swift format format` — or `swiftformat`, the third-party nicklockwood/SwiftFormat tool, with a different config-file convention). Invoke as `/iru-setup-swift-library`. Ships with explicit example templates embedded in this skill file, verified end-to-end against Swift 6.4/Xcode 27 (`swift build`, `swift test --enable-code-coverage`, `xcrun llvm-cov export -format=lcov`, `swift format lint --strict --recursive Sources`, and `swift package generate-documentation` all run clean against them — see this file's "Known quirks / verification notes"). Every dependency version (`swift-docc-plugin`) is looked up at run time from the GitHub Releases API, with this skill's own September 2026 findings as the fallback. If any of this skill's files already exist, asks whether to stop, fill gaps only, or regenerate (`mode: existing` skips straight to gap-fill, this catalog's shared front-door convention); accepts every input pre-resolved via `args` (`key: value` lines) so an orchestrating skill (e.g. a future `iru-setup-swift-repository`) can supply them without re-prompting. Verifies with `swift build` then `swift test` through the `iru-gate-runner` agent. Equivalent to `iru-setup-java-library`/`iru-setup-typescript-library`/`iru-setup-android-library` for the Swift/SwiftPM stack. Use whenever a new Swift library repository needs its `Package.swift`/source layout/lint/format/docs toolchain scaffolded from this house template, instead of hand-writing each file.
+description: Generate the standard Swift Package Manager toolchain for a new Swift library at the repository root — runs `swift package init --type library`, then rewrites `Package.swift` (`// swift-tools-version: 6.0`, a `platforms:` array, a `swift-docc-plugin` dependency, `swiftLanguageModes: [.v6]`), `Sources/<Name>/<Name>.swift`, and `Tests/<Name>Tests/` with both a Swift Testing `@Test` example and an XCTest example, plus `.swiftlint.yml` (opt-in strict rules, `excluded: .build`), a `.swift-format` (or `.swiftformat`) config, a DocC catalog page (`Sources/<Name>/<Name>.docc/<Name>.md`), `.spi.yml` (only when `publish: yes`), and `sonar-project.properties` (only when `sonar` is not `none`) — asks for `package-name` (the SPM package identity, e.g. `my-example-lib`; the PascalCase `<Name>` used for the target/product/type/directories is derived from it), `platforms` (a list from `ios`/`ipados`/`macos`/`watchos`/`tvos`/`visionos`/`linux`), `min-deployment-targets` per selected Apple platform, license, developer name/email/organization URL, whether the project is open source, whether it publishes (`publish`, gating `.spi.yml`), whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`, gating `sonar-project.properties`), and `formatter` (`swift-format`, the Swift toolchain's own bundled formatter, invoked as `swift format lint`/`swift format format` — or `swiftformat`, the third-party nicklockwood/SwiftFormat tool, with a different config-file convention). Invoke as `/iru-setup-swift-library`. Ships with explicit example templates embedded in this skill file, verified end-to-end against Swift 6.4/Xcode 27 (`swift build`, `swift test --enable-code-coverage`, `xcrun llvm-cov export -format=lcov`, `swift format lint --strict --recursive Sources`, and `swift package generate-documentation` all run clean against them — see this file's "Known quirks / verification notes"). Every dependency version (`swift-docc-plugin`) is looked up at run time from the GitHub Releases API, with this skill's own September 2026 findings as the fallback. Announces up front whether it is creating the package from scratch or updating an existing one, and for every one of its files that already exists warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from template) / Stop, explaining each consequence (`on-existing: ask|keep|update|replace` in `args` answers for every file at once; `mode: existing` no longer means a silent gap-fill); accepts every input pre-resolved via `args` (`key: value` lines, including `visibility` — `public`/`private`/`internal`, so the Sonar recommendation keys on it — and `ci: yes|no`, so Sonar is configured build-side only when no CI will send reports) so an orchestrating skill (`iru-setup-swift-repository`) can supply them without re-prompting. Verifies with `swift build` then `swift test` through the `iru-gate-runner` agent. Equivalent to `iru-setup-java-library`/`iru-setup-typescript-library`/`iru-setup-android-library` for the Swift/SwiftPM stack. Use whenever a new Swift library repository needs its `Package.swift`/source layout/lint/format/docs toolchain scaffolded from this house template, instead of hand-writing each file.
 model: haiku
 ---
 
@@ -41,6 +41,8 @@ sonar-organization: example-org-github
 sonar-project-key: example-org_my-example-lib
 sonar-host-url: https://sonarcloud.io
 formatter: swift-format
+visibility: public
+ci: yes
 mode: new
 ```
 
@@ -56,12 +58,17 @@ selected — `linux` has no deployment-target concept in SwiftPM, see Step 2), `
 `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `publish` (`yes`/`no`), `sonar`
 (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `formatter` (`swift-format`/`swiftformat`, default
-`swift-format`), and `mode` (`new`/`existing`).
+`swift-format`), `visibility` (`public`/`private`/`internal` — the GitHub repository's visibility; only used to
+key Step 2's Sonar recommendation, `internal` behaving like `private`), `ci` (`yes`/`no` — whether GitHub Actions
+workflows will exist to send Sonar reports; see Step 2's `ci: no` note), `on-existing` (`ask`/`keep`/`update`/
+`replace`, default `ask` — how Step 1 treats each file of this skill's that already exists), and `mode`
+(`new`/`existing`).
 
 `mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows
-this is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go
-straight to gap-fill: create only whatever files from Steps 5–9 are genuinely missing, and leave every file that
-already exists untouched. `mode: new` or an unset `mode` follows Step 1's normal survey instead.
+this is an established repository) that this is an update rather than a from-scratch run. It **no longer means a
+silent gap-fill**: Step 1 still warns about and asks per already-existing file (unless `on-existing` says
+otherwise). `mode: new` or an unset `mode` follows the same Step 1 survey — the files actually on disk decide
+whether each one is created or updated.
 
 ## Step 1 — Survey the repository
 
@@ -71,28 +78,46 @@ Check, at the repository root, which of this skill's files already exist: `Packa
 (whichever `formatter` — once resolved — points at), `Sources/*/*.docc/*.md`, `.spi.yml` (only relevant once
 `publish` is resolved in Step 2), `sonar-project.properties` (only relevant once `sonar` is resolved in Step 2).
 
-- **None exist**: skip straight to Step 2. There is nothing to preserve.
-- **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: create only
-  the files that are missing; leave every file that already exists completely untouched (including
-  `Package.swift` — merge nothing into it). Note in the final report which files were left alone because they
-  already existed.
-- **Otherwise, and at least one file already exists**: warn the user which files were found, then use
-  `AskUserQuestion` with three options:
-  - **Stop** — leave every existing file untouched; make no changes at all. Report this and end here.
-  - **Fill gaps only** (recommended once real library code exists under `Sources/<Name>`) — create only the files
-    that are missing; don't overwrite anything already present. Same effective behavior as `mode: existing`.
-  - **Regenerate everything** — before asking Step 2's questions, read the existing `Package.swift` (if present)
-    for its current package name, target name, `platforms:` entries, and whether a `swift-docc-plugin` dependency
-    is already present, and use those as the *defaults* offered for whichever Step 2 question Step 0 didn't
-    already resolve via `args` — a value supplied via `args` always wins. Tell the user up front that regenerating
-    replaces every one of this skill's files wholesale; any customization added since the last run (extra
-    targets, extra dependencies, hand-edited source) will be lost unless re-added afterward (call this out again
-    in the final report).
+Then tell the user, before anything else, which of the two this run is:
+
+- **None exist**: "**Creating the Swift package from scratch** — none of this skill's files exist yet." Skip
+  straight to Step 2; every file in Steps 5–9 is *created*.
+- **At least one exists**: "**Updating an existing Swift package** — found: <list of paths>." Then, for each
+  existing artifact, **warn** and resolve what to do with it. If `on-existing` is `keep`/`update`/`replace`, apply
+  that to every existing file without asking (still print the warning and the list). Otherwise (`on-existing: ask`
+  or unset — and regardless of `mode`), ask with `AskUserQuestion`, one question per artifact, batching up to four
+  artifacts per call (group `Sources/`+`Tests/` placeholder sources as one "source skeleton" artifact so the
+  question count stays small). Each question offers, with these consequences stated in the option descriptions:
+  - **Update (Recommended)** — merge: add what's missing and correct outdated parts using this skill's template as
+    reference, keeping everything this skill doesn't own. For `Package.swift` that means adding a missing
+    `swift-docc-plugin` dependency, missing `platforms:` entries and `swiftLanguageModes: [.v6]` (respecting the
+    compiler-enforced parameter order, Step 5) and raising a pre-6.0 `swift-tools-version` to `6.0` — while
+    keeping every extra target, product, dependency and setting; for `.swiftlint.yml`/the formatter config, adding
+    missing rules/keys without dropping custom ones; for `sonar-project.properties`, correcting stale keys (e.g. a
+    bare `sonar.swiftlint.reportPaths`) and values from Step 2. You review a diff before it's written;
+    customizations survive, but a part this skill owns may be rewritten. For the source skeleton, Update means
+    "create only missing placeholder files" — existing source under `Sources/`/`Tests/` is never edited.
+  - **Keep as is** — leave the file untouched. Nothing customized changes, but it may stay out of date or disagree
+    with this run's choices — say so concretely in the question when it does (e.g. "`sonar-project.properties`
+    exists but you chose `sonar: none`", "`.spi.yml` exists but you chose `publish: no`", "`Package.swift`
+    declares `swift-tools-version: 5.9`, too old for `swiftLanguageModes:`"); Step 14 lists each mismatch.
+    Recommend Keep instead of Update for the source skeleton once real library code exists under `Sources/<Name>`.
+  - **Replace** — regenerate from this skill's template. The result matches this house pattern exactly, but every
+    customization in the file (extra targets, dependencies, hand-edited source) is lost — recoverable only from
+    git history. Never recommended by default. When `Package.swift` is replaced, first read its current package
+    name, target name, `platforms:` entries and whether a `swift-docc-plugin` dependency is present, and use them
+    as the *defaults* for whichever Step 2 question Step 0 didn't already resolve via `args` — a value supplied
+    via `args` always wins.
+  - **Stop** — end this skill now without changing anything. Report this and end here.
+
+  Questions about `.spi.yml`/`sonar-project.properties` whose relevance depends on `publish`/`sonar` are asked
+  after Step 2 resolves those (or now, if `args` already resolved them). Record each file's decision — Step 12
+  applies it and Step 14 reports it as **created / updated / replaced / kept as is**.
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
-everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if regenerating):
+everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if `Package.swift` is being replaced or updated):
 
 - **package-name** — the SwiftPM package identity, e.g. `my-example-lib`. This is exactly what `Package(name:
   ...)` and a consumer's `.package(url: "<repository-url>", from: "1.0.0")` line use to identify the package; it
@@ -159,9 +184,15 @@ derive the recommended defaults for the other two from that answer, per this cat
   dependency on, tagged with semver tags, which this skill doesn't need to configure.
 - **sonar** — whether to wire up a SonarQube/SonarCloud scan (`sonar-project.properties`, Step 9 — typically
   consumed by a CI workflow such as a future `iru-setup-swift-github-workflows`, so it's worth setting up here
-  even if that workflow comes later). Recommend **SonarCloud** (`cloud`) when open-source is Yes; when not open
-  source, state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and
-  recommend **None** (`none`), offering **self-hosted SonarQube** as the second option:
+  even if that workflow comes later). Recommend **SonarCloud** (`cloud`) only when open-source is Yes **and**
+  `visibility` is `public` (or unknown — `visibility` isn't asked by this skill; it only arrives via `args`);
+  otherwise state that SonarCloud (SonarQube Cloud) is free only for public/open-source projects — a private
+  project needs a paid plan, per its current pricing — and recommend **None** (`none`), offering **self-hosted
+  SonarQube** (Community Build is free, but you run the server) as the second option. **When `ci: no` arrived via
+  `args`**, say plainly that no workflow will send analysis or coverage reports automatically — analysis would
+  only run when someone runs the scanner manually with a token — and recommend `none`; if the user still picks
+  `cloud`/`self-hosted`, write `sonar-project.properties` (the build-side config) only and note in Step 14 that no
+  CI step sends reports:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
     suggested default. Default `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url` to
     `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
@@ -668,9 +699,14 @@ filling any template above:
 
 ## Step 12 — Write the files
 
-Apply Step 1's decision (regenerate / fill gaps only / gap-fill from `mode: existing`) file by file, across every
-file listed in Steps 5–9 — write each one unless "fill gaps only"/`mode: existing` found that specific file
-already present, in which case leave it untouched. Create every intermediate directory (`Sources/<Name>/`,
+Apply Step 1's per-file decision across every file listed in Steps 5–9: write each file that didn't exist
+(*created*); for an existing file, merge per **Update** (show the user the diff first, e.g. `git diff --no-index
+<current> <draft>`, and write on approval — *updated*), leave it untouched per **Keep as is** (*kept as is*), or
+overwrite it from the template per **Replace** (*replaced*). Run Step 5's `swift package init` only when
+`Package.swift` doesn't exist yet — when it exists and was resolved Update or Keep, skip the `init` and work from
+the existing manifest; when it was resolved Replace, write Step 5's template over it directly (still without
+`init`, which is designed for an empty directory and would also emit its own `.gitignore`/sources). Create every
+intermediate directory (`Sources/<Name>/`,
 `Sources/<Name>/<Name>.docc/`, `Tests/<Name>Tests/`) as needed — don't touch any other file already inside a
 directory this skill writes into.
 
@@ -781,9 +817,12 @@ State explicitly what was included versus omitted, and why:
 - **`formatter`**: `swift-format` (verified) or `swiftformat` (unverified locally) — which config file was
   written and whether it's confirmed working.
 
-Then report which of Steps 5–9's files were created fresh, left untouched (fill-gaps/`mode: existing`), or
-replaced (regenerate), and whether Step 13's two verification commands succeeded. If Step 1's existing files were
-replaced, explicitly list what could have been lost — any target, dependency, or platform beyond what Steps 5–9's
+Then restate the mode announced in Step 1 (from scratch vs updating an existing package) and report, per file in
+Steps 5–9, the action actually taken — **created / updated / replaced / kept as is** — and whether Step 13's two
+verification commands succeeded. For every file kept as is, list each concrete mismatch with this run's choices
+(e.g. a leftover `sonar-project.properties` after `sonar: none`, an old tools-version). If `visibility` or `ci`
+arrived via `args`, say how they shaped the `sonar` recommendation (and, for `ci: no` with Sonar configured, that
+no CI step sends reports). If Step 1's existing files were replaced, explicitly list what could have been lost — any target, dependency, or platform beyond what Steps 5–9's
 templates show — and tell the user to check `git diff` for anything they need to re-add.
 
 Finish with an explicit **Warn explicitly** block:

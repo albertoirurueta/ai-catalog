@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-testcontainers
-description: Set up the local-execution and integration-test infrastructure for a Spring Boot service — a `compose.yaml` at the repository root with one pinned service per technology the stack uses (MongoDB, Couchbase, PostgreSQL/pgvector, MariaDB, Elasticsearch, Neo4j, Qdrant, Redis, Kafka, Confluent Schema Registry) plus Prometheus and Grafana for viewing metrics during local development, and a Testcontainers integration-test harness that launches that same compose file via `ComposeContainer` so integration tests and local runs share one definition of the environment. Whenever the service has REST, gRPC or GraphQL clients, also adds an API mocking service to that same compose stack, driven by the contracts already in `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and `apis/graphql-client/<name>/` — Microcks (the default when any gRPC client exists, since it mocks gRPC and REST from the same contracts in one container) or WireMock (the default when the service has REST clients only, with its gRPC extension noted as the upgrade path) — so integration tests never call a real downstream service. Writes the shared `*IT` base class, the `@DynamicPropertySource`/`ServiceConnection` wiring that points Spring at the started containers and each client's base URL at the mock, health-check-based readiness gating, and the Maven Failsafe/JaCoCo hookup, and verifies the whole thing by running `mvn verify`. Also wires Spring Boot's own `spring-boot-docker-compose` support so `local` runs start the stack automatically. Reads `springboot-stack.yml` for which services are needed and their pinned image tags. Invoke as `/iru-setup-java-springboot-testcontainers`, or with `args` (`stack-file:` line) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs reproducible integration tests and a runnable local environment instead of hand-wiring containers per test class.
+description: Set up the local-execution and integration-test infrastructure for a Spring Boot service — a `compose.yaml` at the repository root with one pinned service per technology the stack uses (MongoDB, Couchbase, PostgreSQL/pgvector, MariaDB, Elasticsearch, Neo4j, Qdrant, Redis, Kafka, Confluent Schema Registry) plus Prometheus and Grafana for viewing metrics during local development, and a Testcontainers integration-test harness that launches that same compose file via `ComposeContainer` so integration tests and local runs share one definition of the environment. Whenever the service has REST, gRPC or GraphQL clients, also adds an API mocking service to that same compose stack, driven by the contracts already in `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and `apis/graphql-client/<name>/` — Microcks (the default when any gRPC client exists, since it mocks gRPC and REST from the same contracts in one container) or WireMock (the default when the service has REST clients only, with its gRPC extension noted as the upgrade path) — so integration tests never call a real downstream service. Writes the shared `*IT` base class, the `@DynamicPropertySource`/`ServiceConnection` wiring that points Spring at the started containers and each client's base URL at the mock, health-check-based readiness gating, and the Maven Failsafe/JaCoCo hookup, and verifies the whole thing by running `mvn verify`. Also wires Spring Boot's own `spring-boot-docker-compose` support so `local` runs start the stack automatically. Reads `springboot-stack.yml` for which services are needed and their pinned image tags. Announces whether it is creating the compose stack and IT harness from scratch or updating existing ones, and for every file it owns that already exists (`compose.yaml`/`docker-compose.yml`, the `*IT` base class, the Prometheus/Grafana provisioning, the mock's configuration) warns and asks Update / Keep as is / Replace — or applies `on-existing` from `args`. Notes that with the manifest's `ci.tests` set to `unit` (or `ci.enabled` set to `false`) the integration tests it generates run locally only. Invoke as `/iru-setup-java-springboot-testcontainers`, or with `args` (`stack-file:`, `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs reproducible integration tests and a runnable local environment instead of hand-wiring containers per test class.
 model: sonnet
 ---
 
@@ -16,8 +16,10 @@ a time bomb that fails on an unrelated day for an unrelated reason.
 
 ## Step 0 — Resolve inputs and check prerequisites
 
-Parse `args` for `stack-file: <path>`, defaulting to `springboot-stack.yml`. Read it and build the list of
-services needed:
+Parse `args` for `key: value` lines: `stack-file: <path>`, defaulting to `springboot-stack.yml`; `mode`
+(`new`/`existing`, informational — it never means "update silently"); and `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask`). Read the manifest — including its `ci:` block, which only
+affects what Step 7 reports (see there) — and build the list of services needed:
 
 | Manifest | Compose service | Image | Default port |
 |---|---|---|---|
@@ -65,6 +67,23 @@ versions all agree on one number.
 
 Check `docker info` succeeds. If Docker isn't running, still write every file — they're correct regardless — but
 skip Step 6's verification and say clearly in the report that the setup is unverified.
+
+### Existing files
+
+Say whether this run is **creating the stack from scratch** or **updating an existing one** (list which exist of
+`compose.yaml`/`docker-compose.yml`, the `*IT` base class(es), the Prometheus/Grafana provisioning files, and the
+mock's import/mapping configuration). For each one that exists, warn and — unless `on-existing` says otherwise —
+ask with `AskUserQuestion` (up to 4 per call, one question each), naming concrete drift (e.g. "your
+`compose.yaml` has no `redis` service but the manifest now lists Redis", "it pins `mongo:7.0` but the manifest
+records `mongo:8.0`"):
+
+- **Update (Recommended)** — add missing services/healthchecks/properties and align image tags with the manifest;
+  keep every service, volume, env var, and test helper this skill doesn't own. Your customizations survive, but a
+  customized service definition this skill owns may be rewritten.
+- **Keep as is** — leave it untouched; it may lack containers for newly added technologies or pin different tags
+  than the manifest — Step 7 lists each mismatch.
+- **Replace** — regenerate from this skill's templates; every customization in that file is lost (recoverable
+  only from git history). Never offered for an `*IT` class that contains real test logic beyond the generated base.
 
 ## Step 1 — Write `compose.yaml`
 
@@ -391,6 +410,15 @@ should have the Prometheus datasource already provisioned.
 
 Summarize:
 
+- Whether the stack was created from scratch or updated, and per pre-existing file the action taken (**created /
+  updated / replaced / kept as is**), with each mismatch left in a kept file.
+- Where the integration tests run, per the manifest's `ci:` block: with `ci.tests: full`, CI runs them through
+  Failsafe against this same compose stack; with **`ci.tests: unit`** (or `ci.enabled: false`), **the `*IT` tests
+  this skill generates run locally only** — `iru-setup-java-springboot-github-workflows` runs Maven with
+  `-DskipITs`, so no Docker/Testcontainers stack starts in CI and they're verified only when someone runs
+  `mvn verify` locally. Say this plainly so nobody assumes CI exercised them; this is also why Step 5's
+  `*IT`-vs-`*Test` naming discipline matters even more there (a Docker-dependent test misnamed `*Test` would run,
+  and fail, in CI).
 - Every compose service written, with its pinned image tag, its healthcheck, and whether it sits behind the
   `observability` profile. Note that Caffeine intentionally has no container, if it's in the stack.
 - Where the integration-test base class(es) live and which containers each starts.
@@ -411,9 +439,9 @@ Warn explicitly:
 - **Image tags are pinned deliberately.** Bumping them is a decision that belongs in a reviewed commit, not a
   side effect of a rebuild — but they do need periodic bumping, since a pinned tag also pins its CVEs.
 - The container stack needs real memory (Elasticsearch, Couchbase, and Kafka each want hundreds of megabytes);
-  give the figure a developer's Docker VM will actually need, and note that CI runners have a hard ceiling —
-  if the full stack won't fit on a standard GitHub runner, say so now rather than discovering it in the first CI
-  run.
+  give the figure a developer's Docker VM will actually need, and — when `ci.tests: full` — note that CI runners
+  have a hard ceiling: if the full stack won't fit on a standard GitHub runner, say so now rather than discovering
+  it in the first CI run.
 - Integration tests share one environment per JVM, so each test must clean up after itself or use unique keys.
 - `testcontainers.reuse.enable` is a local-only optimisation and must never be set in CI.
 - **A mock proves conformance to the contract, not to the downstream service.** Every test can pass against a

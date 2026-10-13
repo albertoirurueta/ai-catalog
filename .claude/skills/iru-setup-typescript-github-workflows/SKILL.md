@@ -1,6 +1,6 @@
 ---
 name: iru-setup-typescript-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (library/web flavors only), and `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs on every push to the integration/stable branches, every pull request, and `workflow_dispatch`: checkout, Node setup with dependency caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), Playwright e2e for web flavors, a docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific: for `library` it publishes to npm on `release: published` via OIDC trusted publishing plus an optional Changesets version-PR job; for `react`/`angular` it builds and deploys the web bundle (`dist/` for Vite, `dist/<project>/browser/` for Angular) to Pages; for `react-native` it runs EAS or local Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular only) merge the stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0` prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot(`npm`)/dependency-review/CodeQL(`javascript-typescript`, `build-mode: none`)/OSV-Scanner/gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`. Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Creates all workflows (and the sync/security scripts) from scratch if none exist; if any already exists, asks the user whether to stop or attempt an update using the templates as reference. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`, required), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`), `package-manager` (`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only, gates the npm publish job), `distribution` (`none`/`internal`/`store` — react-native/ionic only, gates native store/signing steps), `sonar` (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `mode` (`new`/`existing` — `existing` takes the update/gap-fill path on already-present workflow files without asking, per this catalog's shared front-door convention), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default `yes`), so an orchestrating skill can supply them without re-prompting. Use whenever an npm/TypeScript repository of any of these five flavors needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `build.yml`, `release.yml`, `sync.yml` (library/web flavors only), and `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs on every push to the integration/stable branches, every pull request, and `workflow_dispatch` — checkout, Node setup with dependency caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), Playwright e2e for web flavors, a docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific — for `library` it publishes to npm when a GitHub Release is published, via OIDC trusted publishing plus an optional Changesets version-PR job; for `react`/`angular` it builds and deploys the web bundle (`dist/` for Vite, `dist/<project>/browser/` for Angular) to Pages; for `react-native` it runs EAS or local Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular only) merge the stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0` prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot(`npm`)/dependency-review/CodeQL(`javascript-typescript`, `build-mode` `none`)/OSV-Scanner/gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`. Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Announces whether it is creating the workflows from scratch or updating existing ones; creates all workflows (and the sync/security scripts) from scratch if none exist, and for each one that already exists warns and asks per file whether to update it (merge against the template, keeping customizations), keep it as is, or replace it (or stop), unless `on-existing` pre-answers that. Accepts pre-resolved inputs via `args` (`key`/`value` lines) — `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`, required), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`), `package-manager` (`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only, gates the npm publish job), `distribution` (`none`/`internal`/`store` — react-native/ionic only, gates native store/signing steps), `sonar` (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `visibility` (`public`/`private`/`internal` — detected via `gh` when absent, drives the cost notes and defaults), `ci-tests` (`unit`/`full` — `unit` drops the Playwright e2e step; asked when absent), `pages` (`yes`/`no` — `no` replaces every GitHub Pages deploy, including the react/angular app deploy, with a workflow-artifact upload; defaults to `yes` for public repositories and is asked for private/internal ones, since private-repo Pages need a paid plan and are publicly reachable), `mode` (`new`/`existing` — informational; existing files are still asked about per file), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default `yes`), so an orchestrating skill can supply them without re-prompting. Use whenever an npm/TypeScript repository of any of these five flavors needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -12,12 +12,14 @@ repository, for whichever `flavor` the repository actually is:
 - **`build.yml`** — runs on every push to the integration branch, every push to the stable branch, every pull
   request, and `workflow_dispatch`. Install, lint, format check, typecheck, unit tests with coverage, an
   optional SonarQube/SonarCloud scan (gated by `sonar`, skipped on pull requests from a fork), Playwright e2e
-  for the web flavors (`react`, `angular`, `ionic`), a docs build gated by `docs-tool` merged with an Antora
-  build, and a GitHub Pages deploy of the merged docs site — the Pages deploy only runs on a push to the
-  stable branch.
+  for the web flavors (`react`, `angular`, `ionic`, only when `ci-tests: full`), a docs build gated by
+  `docs-tool` merged with an Antora build, and a GitHub Pages deploy of the merged docs site (only when
+  `pages: yes`; with `pages: no` the merged site is uploaded as a workflow artifact instead) — the deploy/upload
+  only runs on a push to the stable branch.
 - **`release.yml`** — flavor-specific; see Step 3. Always triggered by `release: [published]` (plus
   `workflow_dispatch` for a manual re-run) so a continuous-deployment push to the stable branch never
-  accidentally re-publishes or re-signs a release artifact.
+  accidentally re-publishes or re-signs a release artifact. For `react`/`angular` it deploys the web app to
+  Pages only when `pages: yes`; with `pages: no` it builds the bundle and uploads it as an artifact only.
 - **`sync.yml`** — **library/react/angular flavors only** (the three that keep a version in `package.json`
   meaningfully bumped between releases; `react-native`/`ionic` app versions are usually driven by store
   submission tooling instead — see Step 1). Triggered when a GitHub Release is published from the stable
@@ -67,6 +69,10 @@ sonar-organization: example-github
 sonar-project-key: example_my-library
 sonar-host-url: https://sonarcloud.io
 docs-tool: typedoc
+visibility: public
+ci-tests: full
+pages: yes
+on-existing: ask
 security-dependency-review: yes
 security-codeql: yes
 security-osv: yes
@@ -78,10 +84,40 @@ corresponding fact-finding bullet below entirely for it. If `args` is absent or 
 format, treat everything as unset and gather every fact below as usual.
 
 - **`mode`** (`new`/`existing`, only ever supplied via `args` — never surveyed or asked): this catalog's shared
-  front-door signal. `mode: existing` (set by `iru-setup-typescript-repository`/`iru-setup-repository` after
-  `iru-explore` found an established repository) tells Step 2 to take its **continue/update** branch without
-  asking — every workflow file that already exists is treated as the base to edit, and every missing one is
-  created. `mode: new` or an unset `mode` leaves Step 2's stop-or-update question in place.
+  front-door signal, set by `iru-setup-typescript-repository`/`iru-setup-repository`. It is informational
+  only: `mode: existing` no longer means "update silently" — Step 2 still announces and asks per existing file
+  unless `on-existing` says otherwise. It's echoed in Step 8's report.
+- **`on-existing`** (`ask`/`keep`/`update`/`replace`, only ever supplied via `args`; default `ask`): how Step 2
+  treats a workflow file that already exists. `ask` asks per file; any other value is applied to every existing
+  file without asking (the warning is still printed).
+- **`visibility`** (skip if supplied via `args`): if the repository has a GitHub remote, run `gh repo view --json
+  visibility -q .visibility` (returns `PUBLIC`/`PRIVATE`/`INTERNAL` — lowercase it) and tell the user the
+  detected value. Otherwise (no remote yet, `gh` unavailable, not GitHub) ask with `AskUserQuestion` —
+  **Public** / **Private** — recommending **Public** when `open-source: yes`, otherwise **Private**. If
+  `open-source: yes` but `visibility` is `private`/`internal`, warn that the two contradict each other (an
+  open-source project's repository is normally public, and a private one forfeits free Actions minutes and free
+  SonarCloud) and ask which one is right. `internal` is treated exactly like `private` for every cost decision
+  below.
+- **`ci-tests`** (skip if supplied via `args`): ask with `AskUserQuestion` (header `CI tests`):
+  - **Unit tests only** — "Lint, typecheck, and unit tests with coverage (Vitest/Jest/Karma) only — fewer
+    minutes, faster feedback. Playwright e2e browser tests stay local." Recommend for private/internal repos.
+  - **Unit + e2e** (`full`) — "Also installs Playwright browsers and runs the e2e suite on every build (web
+    flavors) — complete verification, considerably more minutes." Recommend for public repos.
+  For `library`/`react-native` (no e2e step in this pipeline) the choice has no effect on `build.yml` — say so
+  and default to `unit` without asking unless a Playwright config or another e2e runner (Detox, Maestro) is
+  actually configured in the repository.
+- **`pages`** (skip if supplied via `args`; only relevant when this run would deploy anything to Pages, i.e.
+  `docs-tool` isn't `none` or the Antora docs exist, or `flavor` is `react`/`angular`): `visibility: public` ⇒
+  `pages: yes` without asking (state it in Step 8). `private`/`internal` ⇒ ask with `AskUserQuestion` (header
+  `Pages`):
+  - **No (Recommended)** — "CI still builds the docs (and, for react/angular, the production web bundle) and
+    uploads them as workflow artifacts; nothing is published."
+  - **Yes** — "Per GitHub's current pricing, Pages on a private/internal repository requires GitHub Pro, Team,
+    or Enterprise Cloud (not GitHub Free), and the site is PUBLIC on the internet unless the organization is on
+    Enterprise Cloud and publishes it with private access control."
+  For `react`/`angular`, say explicitly that `release.yml` deploys the *web app itself* to Pages, so `pages: no`
+  means the release workflow only builds and uploads the bundle — hosting the app elsewhere (Netlify, Vercel,
+  Cloudflare Pages, S3/CloudFront, an internal server, …) is left to the user and out of this skill's scope.
 
 - **`flavor`** (skip if supplied via `args`): if not given, detect it with the same rule Tasks 12–17 of this
   catalog's TypeScript group share — inspect `package.json`: `@vaadin/hilla`/`hilla-spring-boot-starter` in a
@@ -101,9 +137,8 @@ format, treat everything as unset and gather every fact below as usual.
   scaffold skills write into a generated `package.json`. Whenever `engines.node` differs from `24`, use what
   `package.json` says (CI must build what the project actually targets) and note the difference in Step 8's
   report.
-- **`open-source`** (skip if supplied via `args`): check whether the GitHub repository is public
-  (`gh repo view --json isPrivate`) if unresolved otherwise; ask the user only if that's inconclusive
-  (e.g. no `gh` remote configured).
+- **`open-source`** (skip if supplied via `args`): default from `visibility` (public ⇒ likely open source) and
+  confirm with the user; ask directly if `visibility` itself was asked rather than detected.
 - **`publish`** (library flavor only; skip entirely if supplied via `args`): grep `package.json` for
   `"private": true` (implies `publish: no`) or a `publishConfig` block (implies `publish: yes`). If neither
   is conclusive, default to `publish: no` rather than stopping — tell the user npm publishing isn't wired up
@@ -129,8 +164,11 @@ format, treat everything as unset and gather every fact below as usual.
   the config lives there, not inline in the workflow. If present, treat that as `sonar: cloud` (when
   `sonar.host.url` is `https://sonarcloud.io` or unset) or `sonar: self-hosted` (any other host). If absent,
   default to `sonar: none` (omit the scan step entirely) rather than generating a step that can't succeed;
-  ask the user only if they want Sonar wired up now instead — recommend `cloud` only when `open-source: yes`
-  (SonarCloud is free only for open-source projects), otherwise flag the paid-plan caveat.
+  ask the user ("Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?") only if
+  they want Sonar wired up now instead — recommend `cloud` only when the repository is public **and**
+  `open-source: yes` (SonarCloud/SonarQube Cloud is free for public open-source projects; a private project
+  needs a paid plan), otherwise recommend `none` and offer self-hosted SonarQube (Community Build is free, but
+  you run the server) as the alternative.
 - **Antora docs**: check for `docs/antora.yml`, `docs/antora-playbook.yml`, **and** `docs/package.json` +
   `docs/package-lock.json`. `iru-setup-antora` produces all four (its Step 3 installs Antora and the
   lunr/mermaid/mathjax extensions into `docs/package.json`, and its Step 11 keeps `docs/package.json` and
@@ -172,47 +210,87 @@ format, treat everything as unset and gather every fact below as usual.
   `<ios-workspace>`/`<ios-scheme>` by running `npx expo prebuild --platform ios` once locally (or `--no-install`
   when CocoaPods isn't available) and reading the basename of `ios/*.xcworkspace`; if prebuild can't be run
   here, derive the name from `expo.name` and flag it as unverified in Step 8's report.
-- **Playwright** (`react`/`angular`/`ionic` only): check for a `playwright.config.ts` and an `e2e`/`e2e:ci`
-  script. If absent, the e2e step in `build.yml` has nothing to run — note this as an open gap; the scaffold
-  skills for these flavors are expected to have wired it already.
+- **Playwright** (`react`/`angular`/`ionic` only, and only when `ci-tests: full`): check for a
+  `playwright.config.ts` and an `e2e`/`e2e:ci` script. If absent, the e2e step in `build.yml` has nothing to
+  run — note this as an open gap; the scaffold skills for these flavors are expected to have wired it already.
+  With `ci-tests: unit` the e2e step isn't generated, so skip this check.
+
+**Ordering and cost context.** Resolve `visibility` before asking `sonar`, `ci-tests`, or `pages`, and ask
+those three in the order `sonar` → `ci-tests` → `pages`. This skill never asks whether CI is wanted at all —
+invoking it means it is (an orchestrator that resolved `ci: no` skips this skill entirely). When `visibility`
+is `private`/`internal`, state once, per GitHub's current pricing (tell the user to double-check their plan):
+standard GitHub-hosted runners are free for public repositories, while private/internal ones consume the
+account's included minutes (2,000/month on GitHub Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud) and
+are then billed per minute; **macOS runner minutes cost roughly 10× Linux** (Linux 2-core $0.006/min, macOS
+$0.062/min). That matters here for the `react-native` (`native-builds: local`) and `ionic` flavors, whose
+`release.yml` `ios` job runs on `macos-latest`: a single iOS archive often takes 15–30 minutes, which at the ~10× macOS
+rate is roughly 150–300 Linux-equivalent minutes each (an estimate — check your plan's billing page), so a few
+dozen iOS builds a month can exhaust a 2,000-minute Free budget on their own (EAS builds run on Expo's infrastructure, not on Actions minutes). Dependabot update runs on standard
+hosted runners are free.
 
 The four `security-*` keys each default to `yes` when not supplied via `args` and are not otherwise
 surveyed — this skill always adds/keeps the corresponding `security.yml` job unless the user (or an
 orchestrator's `args`) explicitly opts out. `.github/dependabot.yml` has no matching opt-out key — it's
 always generated/updated.
 
-## Step 2 — Decide how to proceed if workflows already exist
+## Step 2 — Announce scratch vs update, and decide per existing file
 
 Check whether `.github/workflows/build.yml`, `.github/workflows/release.yml`, `.github/workflows/sync.yml`,
 `.github/scripts/sync_versions.py`, `.github/workflows/security.yml`, and `.github/dependabot.yml` already
 exist (skip the `sync.yml`/script check entirely for the `react-native`/`ionic` flavors, which never get
 one). Treat `sync.yml` and its script as one unit for this check — either both exist or neither should.
 
-- **None exist**: skip this step and go straight to Step 4 — create everything from scratch.
-- **Any exists and `mode: existing` was resolved in Step 1**: don't ask — take the **Continue** branch below
-  directly (the front door already confirmed with the user that this is an established repository to catch
-  up, not one to leave untouched), and note in Step 8's report which files were updated in place because of
-  `mode: existing`.
-- **Any exists** (and `mode` is `new`/unset): use `AskUserQuestion` to ask whether to (a) stop here and leave
-  everything untouched, or (b) continue and attempt to update the existing file(s) using this skill's
-  templates as reference.
-  - **Stop**: report which file(s) already exist and end here — make no changes.
-  - **Continue**: proceed to Step 4, but treat each existing file as the base to edit, not as something to
-    overwrite wholesale.
-    - For `build.yml`: preserve any step that isn't one of the pipeline stages this skill owns
-      (install/lint/format/typecheck/test/coverage, optional Sonar, optional e2e, docs build, Pages deploy) —
-      e.g. a Slack notification step or an extra matrix entry stays untouched. Only add missing stages or
-      correct outdated ones (wrong action version, wrong script name, a stage that should now be gated
-      on/off per `sonar`/`docs-tool`, etc.), and don't reorder steps this skill doesn't own.
-    - For `release.yml`: preserve any job/step outside this flavor's owned jobs; only correct the
-      publish/build/signing jobs per the resolved `publish`/`distribution`/`native-builds` `args`.
-    - For `sync.yml`/`sync_versions.py`: preserve any file the script updates beyond
-      `package.json`/`README.md`/the Antora docs that a prior customization added, and preserve any extra
-      workflow step the same way. Only correct the pipeline stages this skill owns.
-    - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
-      `dependency-review`/CodeQL/OSV-Scanner/gitleaks jobs per the resolved `security-*` `args` (Step 1).
-    - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage
-      (e.g. `maven` for a sibling backend); only add/update the `npm` and `github-actions` entries.
+Tell the user which of the two this run is doing:
+
+- **None exist**: "Creating the CI/CD workflows **from scratch** — no prior workflow files found." Skip the
+  rest of this step and go straight to Step 4.
+- **Any exists**: "**Updating existing CI/CD setup** — found: <list of the files above that exist>." Then, for
+  each existing file, **warn** and decide what to do with it:
+  - If `on-existing` is `keep`/`update`/`replace` (Step 1), apply that to every existing file without asking
+    (still print the warning listing them).
+  - Otherwise ask with `AskUserQuestion` — batch up to 4 files per call, one question each (header = the file
+    name, shortened to ≤ 12 characters, e.g. `build.yml`, `dependabot`). Before asking, compare the file with
+    this run's resolved choices and name any concrete contradiction in the question text (e.g. "your current
+    `build.yml` runs Playwright e2e but you chose `ci-tests: unit`", "your `build.yml`/`release.yml` deploys to
+    Pages but you chose `pages: no`", "your `build.yml` runs a Sonar scan but `sonar: none`"). Options, with
+    these consequences in their descriptions:
+    - **Update (Recommended)** — "Merge: add what's missing and correct outdated parts (action versions, gated
+      steps, stale values) using this skill's template as reference; keep everything this skill doesn't own
+      (custom steps/jobs/entries). You review a diff; your customizations survive, but a customized part this
+      skill owns may be rewritten."
+    - **Keep as is** — "Leave the file untouched. Nothing you customized changes, but it may stay out of date
+      or disagree with this run's choices (e.g. still runs a Sonar step after `sonar: none`, still deploys to
+      Pages after `pages: no`, still runs e2e after `ci-tests: unit`) — the report will list each mismatch."
+    - **Replace** — "Regenerate from this skill's template. Result matches this house pattern exactly, but every
+      customization in the file is lost (recoverable only from git history)."
+    - **Stop** — "End this skill now without changing any file." If chosen for any file, make no changes at
+      all, report which files exist, and end here.
+  - `mode: existing` alone does **not** skip this question — it only confirms an update run is expected.
+
+Per-file handling once decided:
+
+- **Keep as is**: don't touch the file; in Step 8 list every point where it disagrees with this run's
+  resolved `sonar`/`ci-tests`/`pages`/`publish`/`distribution`/`docs-tool`/`security-*` values.
+- **Replace**: write the filled-in template from Step 4 over it, as for a new file.
+- **Update**: proceed to Step 4 treating the existing file as the base to edit, not something to overwrite
+  wholesale, and show the user the resulting diff (`git diff --no-index <current> <draft>`) before writing:
+  - For `build.yml`: preserve any step that isn't one of the pipeline stages this skill owns
+    (install/lint/format/typecheck/test/coverage, optional Sonar, optional e2e, docs build, Pages deploy or
+    docs-artifact upload) — e.g. a Slack notification step or an extra matrix entry stays untouched. Only add
+    missing stages or correct outdated ones (wrong action version, wrong script name, a stage that should now
+    be gated on/off per `sonar`/`docs-tool`/`ci-tests`/`pages`, etc.), and don't reorder steps this skill
+    doesn't own.
+  - For `release.yml`: preserve any job/step outside this flavor's owned jobs; only correct the
+    publish/build/signing/deploy jobs per the resolved `publish`/`distribution`/`native-builds`/`pages` values.
+  - For `sync.yml`/`sync_versions.py`: preserve any file the script updates beyond
+    `package.json`/`README.md`/the Antora docs that a prior customization added, and preserve any extra
+    workflow step the same way. Only correct the pipeline stages this skill owns.
+  - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
+    `dependency-review`/CodeQL/OSV-Scanner/gitleaks jobs per the resolved `security-*` `args` (Step 1).
+  - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage
+    (e.g. `maven` for a sibling backend); only add/update the `npm` and `github-actions` entries.
+
+Missing files are always created from the template, whatever was decided for the existing ones.
 
 ## Step 3 — Reference templates
 
@@ -323,7 +401,8 @@ jobs:
           SONAR_HOST_URL: <sonar-host-url>
 
       # Omit this whole block if flavor is not one of: react, angular, ionic (react-native has no web build to
-      # drive a browser against; library has no UI at all)
+      # drive a browser against; library has no UI at all) — and also omit it when ci-tests: unit (Step 1): e2e
+      # then stays a local-only suite, and unit tests + coverage above remain the CI gate
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
@@ -367,12 +446,26 @@ jobs:
           # docs-tool: storybook — merged under a sibling path instead, since Storybook isn't an API reference
           mkdir -p ./docs/build/site/storybook && cp -r ./storybook-static/. ./docs/build/site/storybook/
 
+      # pages: yes only (Step 1). With pages: no, replace this step with the "Upload docs artifact" step below
+      # and drop the whole deploy-docs job
       - name: Upload Pages artifact
         if: github.ref == format('refs/heads/{0}', '<stable-branch>') && github.event_name == 'push'
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./docs/build/site
 
+      # pages: no only — the docs are still built (which validates them) and kept as a downloadable workflow
+      # artifact; nothing is published
+      - name: Upload docs artifact
+        if: github.ref == format('refs/heads/{0}', '<stable-branch>') && github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: ./docs/build/site
+          retention-days: 30
+
+  # Omit this whole job if pages: no (Step 1) — together with its pages: write / id-token: write permissions,
+  # which only the deploy needs
   deploy-docs:
     name: Deploy docs to GitHub Pages
     needs: build
@@ -410,6 +503,14 @@ Notes specific to this template:
 - `actions/upload-pages-artifact`/`actions/deploy-pages` need the repository's Settings → Pages → "Build and
   deployment" → Source set to **GitHub Actions** (not "Deploy from a branch") — `deploy-pages` fails outright
   if that setting still points at a branch. Call this out in Step 7/8.
+- **`pages: no`** keeps every docs build step (so a broken page or a TypeDoc warning still fails CI) but swaps
+  `Upload Pages artifact` for `Upload docs artifact` and drops `deploy-docs` entirely. The artifact is kept for
+  `retention-days` (30 here) and can be downloaded from the run's summary page. Nothing in this file then needs
+  the Pages setting, the `github-pages` environment, or a paid plan on a private repository.
+- **`ci-tests: unit`** drops only the three Playwright steps (`Install Playwright browsers`, `Run e2e tests`,
+  `Upload Playwright report`); lint/format/typecheck/unit tests with coverage and the optional Sonar scan stay
+  unchanged. Browser installation alone is a noticeable share of a web flavor's build time, so this is the
+  main minutes saving on private repositories.
 - The `concurrency` group on `deploy-pages`-style jobs matters: without it, two pushes to the stable branch in
   quick succession can race and leave Pages showing an older deploy that finished last. The `build` job's own
   `concurrency` group (workflow-level, keyed on `ref`) already serializes runs on the same branch, which is
@@ -515,6 +616,13 @@ Notes specific to this template:
 
 ### `release.yml` template — `react`/`angular` flavors
 
+This flavor's release *deploys the web app itself* to GitHub Pages, so `pages` (Step 1) changes its shape:
+`pages: yes` → the template below as written; `pages: no` → keep the job but rename it `Build production
+bundle`, drop its `pages: write`/`id-token: write` permissions and `environment:` block, keep `Upload build
+artifact`, and drop the three Pages steps (`Configure Pages`, `Upload Pages artifact`, `Deploy to GitHub
+Pages`). The release then produces a downloadable, versioned bundle and nothing is hosted — see the notes
+below the template for what to tell the user.
+
 ```yaml
 name: Release
 
@@ -560,6 +668,7 @@ jobs:
           path: <web-dist-dir>/ # react (Vite): dist/ ; angular: dist/<project>/browser/ (see Step 4)
           retention-days: 30
 
+      # pages: yes only — omit these three steps (and the permissions/environment above) when pages: no
       - name: Configure Pages
         uses: actions/configure-pages@v6
       - name: Upload Pages artifact
@@ -578,7 +687,7 @@ Notes specific to this template:
   when SSR is on and a `3rdpartylicenses.txt` beside them) — uploading the bare `dist/` on Angular publishes a
   Pages root with no `index.html`. Resolve it from `angular.json` per Step 1's survey / Step 4's table.
 
-- **Decision made (no ambiguity worth blocking on):** this job deploys the built app to the *same* GitHub
+- **Decision made (no ambiguity worth blocking on, `pages: yes` only):** this job deploys the built app to the *same* GitHub
   Pages site `build.yml`'s `deploy-docs` job publishes the Antora/API docs to, and each workflow's own Pages
   deploy fully replaces whatever the other last published — there is no single-site "merge" between the two
   workflows across separate runs. Recommend the app deploy publish under the site root and treat the docs
@@ -587,7 +696,16 @@ Notes specific to this template:
   both live at once; flag this explicitly in Step 8's report as a design choice the user should confirm rather
   than something this skill resolves silently.
 - `actions/upload-artifact` here is a convenience for downloading the exact bundle that was deployed (e.g. for
-  a manual smoke test) — it isn't consumed by any later job in this workflow.
+  a manual smoke test) — it isn't consumed by any later job in this workflow. With `pages: no` it becomes the
+  release's only output.
+- **`pages: no` on a private/internal repository** (the recommended choice there): explain to the user that
+  GitHub Pages is the only host this skill wires up, that a Pages site from a private repository needs a paid
+  plan and is publicly reachable unless they're on Enterprise Cloud with private Pages access control, and
+  that the release therefore stops at a built, downloadable bundle. Hosting it is their call — e.g. adding a
+  deploy step for Netlify/Vercel/Cloudflare Pages/S3+CloudFront/an internal server to this same job after
+  `Upload build artifact`. That step and its credentials are out of this skill's scope; list it as a follow-up
+  in Step 8 rather than improvising one. The decision about sharing one Pages site with `build.yml`'s docs
+  (next bullet) no longer applies in that case.
 
 ### `release.yml` template — `react-native` flavor, `native-builds: eas`
 
@@ -776,6 +894,12 @@ jobs:
 ```
 
 Notes specific to both `react-native` variants:
+
+- **Runner cost**: the `local` variant's `ios` job runs on `macos-latest`, whose minutes cost roughly 10×
+  Linux per GitHub's current pricing — free on a public repository, but on a private/internal one each iOS
+  archive draws heavily on the included-minutes budget (see Step 1's cost context). The `eas` variant runs only
+  a short `ubuntu-latest` job; the builds themselves happen on Expo's infrastructure, metered by the EAS plan
+  instead of Actions minutes. Mention this in Step 8 when `visibility` isn't `public`.
 
 - `ExportOptions.plist` is a project-specific file this skill doesn't generate (it encodes the team id and
   export method) — note in Step 8 that the user must add it under `ios/` before this workflow can export an
@@ -986,6 +1110,10 @@ Notes specific to this template:
   `chmod` while keeping the artifact download.
 - `<android-package-name>`: the Android application id from `android/app/build.gradle` (Capacitor's default
   project layout) — resolved in Step 1's survey when `distribution: store`.
+- **Runner cost**: the `ios` job runs on `macos-latest` (roughly 10× Linux minute cost per GitHub's current
+  pricing) on every published release. Free on a public repository; on a private/internal one, flag the
+  included-minutes impact in Step 8 (Step 1's cost context), and mention that a team that rarely ships iOS
+  can drop the `ios` job here and archive locally in Xcode instead.
 
 ### `sync.yml` template (library/react/angular flavors only)
 
@@ -1414,11 +1542,15 @@ user or note it as an open gap in Step 8's report instead of silently guessing.
 | `<ios-workspace>` / `<ios-scheme>` | `react-native` with `native-builds: local` only: the basename of `ios/*.xcworkspace` after `npx expo prebuild --platform ios` (both share the name — `expo prebuild` derives it from `app.json`'s `expo.name` with non-alphanumeric characters stripped), per Step 1's survey. Not used by `ionic`, whose Capacitor project is always `ios/App/App.xcworkspace` + scheme `App` |
 | `<android-package-name>` | `android/app/build.gradle`'s `applicationId`, only when `flavor: ionic` and `distribution: store` |
 
-Also apply the `sonar`/`docs-tool`/`publish`/`distribution`/`native-builds`/`flavor` gating resolved in Step 1:
+Also apply the `sonar`/`docs-tool`/`publish`/`distribution`/`native-builds`/`flavor`/`ci-tests`/`pages` gating
+resolved in Step 1:
 drop every block the templates above mark with an "Omit this … if …" comment when the matching value is
 `no`/`none`/doesn't apply to this flavor, and drop that same comment itself — it's guidance for filling the
-template, not part of the generated workflow file. GitHub Pages publishing in `build.yml` is never gated on
-`sonar`/`publish` — it applies regardless.
+template, not part of the generated workflow file. GitHub Pages publishing (in `build.yml`, and in
+`release.yml` for `react`/`angular`) is gated only by `pages` — never by `sonar`/`publish`: `pages: yes` keeps
+the deploy steps/jobs; `pages: no` swaps them for `actions/upload-artifact` steps and drops the
+`pages: write`/`id-token: write` permissions and `github-pages` environment only the deploy needed.
+`ci-tests: unit` drops the Playwright e2e block from `build.yml`.
 
 ## Step 5 — Handle missing supporting files
 
@@ -1466,7 +1598,7 @@ Before writing the workflows, make sure the files they depend on exist:
 
 ## Step 6 — Write the workflow files
 
-Write (or, per Step 2, carefully update) `.github/workflows/build.yml`, `.github/workflows/release.yml`, and
+Write (or, per Step 2's per-file decision, carefully update or replace — and never touch a file kept as is) `.github/workflows/build.yml`, `.github/workflows/release.yml`, and
 `.github/workflows/security.yml` with the filled-in templates from Step 4, plus `.github/dependabot.yml` and
 any supporting files created in Step 5. For `library`/`react`/`angular` flavors only, also write
 `.github/workflows/sync.yml` together with `.github/scripts/sync_versions.py` — never write one without the
@@ -1495,8 +1627,12 @@ the user needs to go create:
 `security.yml`'s `gitleaks`/CodeQL jobs. `sync.yml` also needs the repository setting under Settings → Actions
 → General → "Workflow permissions" set to allow GitHub Actions to create pull requests — the
 `permissions: contents: write / pull-requests: write` block in the workflow itself is not sufficient on its
-own. `build.yml`'s Pages deploy needs Settings → Pages → "Build and deployment" → Source set to
-**GitHub Actions**. `release.yml`'s `library` flavor `publish` job needs the trusted-publisher relationship
+own. When `pages: yes`, `build.yml`'s Pages deploy (and the `react`/`angular` `release.yml` deploy) needs
+Settings → Pages → "Build and deployment" → Source set to **GitHub Actions** — and on a private/internal
+repository, a GitHub Pro, Team, or Enterprise Cloud plan (Pages isn't available for private repositories on
+GitHub Free), with the published site publicly reachable unless the organization uses Enterprise Cloud's
+private Pages access control. With `pages: no`, none of this applies — omit the Pages notes.
+`release.yml`'s `library` flavor `publish` job needs the trusted-publisher relationship
 configured on npmjs.com for this package (Package settings → Trusted Publisher → GitHub Actions), naming this
 repository, the `release.yml` workflow file, and the `publish` job/environment exactly — publish will
 otherwise fail with an authentication error even though `id-token: write` is set correctly here. Call all of
@@ -1505,9 +1641,13 @@ without it.
 
 ## Step 8 — Report and warn
 
-Summarize what happened: whether `build.yml`/`release.yml`/`sync.yml` (+`sync_versions.py`, when
-applicable)/`security.yml` and `.github/dependabot.yml` were created fresh, updated in place, or left
-untouched (Step 2's stop path — or updated in place without asking because `mode: existing` was supplied);
+Summarize what happened: whether this run created the workflows from scratch or updated an existing setup
+(Step 2's announcement, plus `mode` if supplied), and per file — `build.yml`/`release.yml`/`sync.yml`
+(+`sync_versions.py`, when applicable)/`security.yml` and `.github/dependabot.yml` — the action taken:
+**created / updated / replaced / kept as is**, or none at all on Step 2's stop path (say whether the choice was
+asked or came from `on-existing`). For every file **kept as is**, list each point where it disagrees with this
+run's choices (e.g. still runs e2e after `ci-tests: unit`, still deploys to Pages after `pages: no`, still
+scans with Sonar after `sonar: none`);
 whether `sonar-project.properties`/`.changeset/config.json` were added versus already present; and any open
 gaps noted in Steps 1/4/5 (missing Playwright config, missing `ExportOptions.plist`, an `<ios-workspace>`
 derived from `expo.name` rather than read from a real `expo prebuild` run, README/Antora wording that didn't
@@ -1515,10 +1655,21 @@ match `sync_versions.py`'s default regexes, non-patch-level releases the bump de
 
 State explicitly what was wired versus omitted, and why:
 
+- **`visibility`**: the value and whether it was detected via `gh` or asked; when `private`/`internal`,
+  repeat the cost context from Step 1 (included minutes per plan, macOS ~10×) and which generated jobs run on
+  `macos-latest` (the `ios` release job for `react-native`/`local` and `ionic`), telling the user to
+  double-check their plan's current pricing.
+- **`ci-tests`**: `unit` or `full`, and whether that removed the Playwright e2e block (web flavors) or had no
+  effect (`library`/`react-native`, which have no e2e step here).
+- **`pages`**: `yes` (deploy to GitHub Pages — defaulted without asking for a public repository, or chosen by
+  the user for a private one) or `no` (docs, and for `react`/`angular` the release bundle, uploaded as workflow
+  artifacts only). For `react`/`angular` with `pages: no`, state plainly that the app is not hosted anywhere by
+  this pipeline and list adding a deploy step for the user's chosen host as a follow-up.
+
 - **`flavor`**: which of the five flavor-specific `release.yml` variants was generated.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if not `none`, the Sonar step and `SONAR_TOKEN` row were
-  included; if `none`, both were omitted, and note whether that's because the project isn't open source or a
-  direct user choice.
+  included; if `none`, both were omitted, and note whether that's because the project isn't open source / the
+  repository isn't public (SonarCloud needs a paid plan for private projects) or a direct user choice.
 - **`publish`** (library only): yes/no — if `yes`, the `publish` job and (if `.changeset/config.json` exists)
   the `version-pr` job were generated; if `no`, both were omitted and `release.yml` was not written for the
   library flavor (no jobs would remain) — say so explicitly rather than listing it among the created files.
@@ -1527,7 +1678,8 @@ State explicitly what was wired versus omitted, and why:
   signed iOS job, state that it relies on `xcodebuild`'s automatic cloud-managed signing (API key with the App
   Manager/Admin role, `-allowProvisioningUpdates`) and that a team using a manually managed distribution
   certificate needs the keychain-import alternative described under the react-native template instead.
-- **`<web-dist-dir>`** (react/angular only): the directory `release.yml` deploys to Pages (`dist` or
+- **`<web-dist-dir>`** (react/angular only): the directory `release.yml` deploys to Pages, or uploads as the
+  release artifact when `pages: no` (`dist` or
   `dist/<project>/browser`) and where it was read from.
 - **`docs-tool`**: which tool's build step was wired into `build.yml`, and whether its output merges under
   `docs/build/site/api/` or a sibling `storybook/` path.

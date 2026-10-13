@@ -1,11 +1,11 @@
 = Setup Java Library
-:description: Generates pom.xml for a new Java library from a house template with JUnit/Mockito deps, conditional publish/sonar wiring, scaffolding Maven source folders.
-:keywords: iru-setup-java-library, claude code skill, java, maven, pom.xml, junit, mockito, source layout, license, open source, publish, maven central, sonar, sonarcloud, sonarqube
+:description: Creates or updates a Java library pom.xml from a house template with conditional publish and Sonar wiring, and scaffolds the Maven source folders.
+:keywords: iru-setup-java-library, claude code skill, java, maven, pom.xml, junit, mockito, source layout, license, open source, publish, maven central, sonar, sonarcloud, sonarqube, visibility, update existing
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Generate `pom.xml` at the repository root for a new Java library from an explicit, genericized example template,
-and scaffold the standard Maven source layout for the library's base package.
+Generate (or update) `pom.xml` at the repository root for a Java library from an explicit, genericized example
+template, and scaffold the standard Maven source layout for the library's base package.
 
 == Purpose
 
@@ -15,7 +15,13 @@ mockito-junit-jupiter), the same `build-extras` profile, and the same build/repo
 the project-identity fields filled in per repository. Whether the repository is open source, whether it publishes
 to Maven Central (gating the `sign` profile and the `central-publishing-maven-plugin`), and whether to wire up a
 SonarQube/SonarCloud scan (gating the `sonar.*` properties and the `sonar-maven-plugin`) are also resolved — asked
-interactively, deriving `publish`/`sonar` recommendations from the `open-source` answer, or pre-supplied via `args`.
+interactively, deriving `publish`/`sonar` recommendations from the `open-source` answer (and, for Sonar, the
+repository's `visibility`), or pre-supplied via `args`.
+
+The skill announces whether it is creating `pom.xml` from scratch or updating an existing setup. If a `pom.xml`
+already exists it warns, names any contradiction between the file and this run's answers, and asks Update (merge the
+template in, keeping custom dependencies/plugins), Keep as is, Replace from the example, or Stop — unless
+`on-existing` in `args` decides. Existing source folders are always left untouched.
 It also creates the `src/main/java/<package>`, `src/main/resources/<package>`, and `src/test/java/<package>`
 folders for the library's base package.
 
@@ -40,8 +46,9 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |No
 |Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-java-library-repository.adoc[])
 as newline-separated `key: value` lines — `groupId`, `artifactId`, `package`, `developer-name`,
-`developer-email`, `organization-url`, `license`, `java-version`, `open-source`, `publish`, `sonar` (+
-`sonar-organization`/`sonar-project-key`/`sonar-host-url`) — parsed in Step 0 so this skill doesn't ask
+`developer-email`, `organization-url`, `license`, `java-version`, `open-source`, `visibility`, `ci`, `publish`,
+`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `on-existing` — other keys (e.g. `mode`,
+`ci-tests`, `pages`) are ignored — parsed in Step 0 so this skill doesn't ask
 about any field already resolved this way.
 |None — if absent or unrecognized, every field is asked interactively.
 
@@ -57,11 +64,30 @@ recommended defaults offered for `publish` and `sonar`.
 `central-publishing-maven-plugin` plugin entry.
 |`yes` recommended when open source, otherwise `no` recommended
 
+|visibility
+|No
+|`public`, `private`, or `internal` (behaves like `private`). Only used to pick the recommended Sonar answer; if
+absent and `sonar` must be asked, resolved via `gh repo view --json visibility`, otherwise asked (Public/Private).
+Flags a contradiction if open source but private/internal.
+|Detected or asked
+
+|ci
+|No
+|`yes` or `no`. With `ci: no`, nothing would send Sonar reports automatically, so the Sonar question recommends
+`none` and the report notes analysis only runs via a manual `mvn sonar:sonar`. This skill never asks it.
+|`yes` when absent
+
+|on-existing
+|No
+|`ask`, `keep`, `update`, or `replace`: how an existing `pom.xml` is treated without asking (the warning is still
+printed). Scripted runs only.
+|`ask`
+
 |sonar
 |No (unless resolved via `args`)
 |Whether to wire up a SonarQube/SonarCloud scan via the `sonar-maven-plugin` (`cloud`/`self-hosted`/`none`),
 gating the four `sonar.*` properties and the plugin entry.
-|`cloud` recommended when open source, otherwise `none` recommended
+|`cloud` recommended when open source and public, otherwise `none` recommended (SonarCloud is free only for public projects)
 
 |sonar-organization / sonar-project-key / sonar-host-url
 |Only when `sonar` is `cloud` or `self-hosted`
@@ -110,16 +136,19 @@ and URL directly).
 
 == Outputs
 
-* `pom.xml` at the repository root, generated fresh or entirely replaced if one already existed and the user
-  chose to continue.
+* `pom.xml` at the repository root: created fresh, updated in place (merging the template into the existing file,
+  shown as a diff for approval before writing), replaced entirely, or left as is, depending on the Step 1 choice.
 ** Conditional blocks: the `sign` profile and the `central-publishing-maven-plugin` plugin entry are included only
    when `publish: yes` (the `build-extras` profile is always kept, regardless of `publish`); the four `sonar.*`
    properties and the `sonar-maven-plugin` plugin entry are included only when `sonar` is `cloud` or `self-hosted`,
    omitted entirely when `sonar: none`.
 * `src/main/java/<package>`, `src/main/resources/<package>`, and `src/test/java/<package>` created if not
   already present (empty directories won't show up in `git status` until they contain a file).
-* A report of the resolved groupId/artifactId/version, the license chosen (or "none"), the inferred repository
-  information, and which source folders were created versus already present, plus an explicit statement of which
+* A report starting with whether the run created from scratch or updated, and the action on `pom.xml` (created,
+  updated, replaced, kept as is, or stopped; user answer or `on-existing`), then the resolved groupId/artifactId/version, the license chosen (or "none"), the inferred repository
+  information, and which source folders were created versus already present (existing ones reported as kept as is), each mismatch
+  between a kept `pom.xml` and this run's values, a note that no CI step sends Sonar reports if `ci: no` with Sonar
+  configured, plus an explicit statement of which
   conditional blocks were included versus omitted (`open-source`, `publish`, `sonar`) and why — plus an explicit
   warning to review the generated `pom.xml` before building or committing.
 
@@ -129,21 +158,28 @@ and URL directly).
 ....
 flowchart TD
     A[Start /iru-setup-java-library] --> B{"Step 0: args supplied?"}
-    B -- yes --> C[Parse key: value pairs from args]
+    B -- yes --> C["Parse key: value pairs from args\n(incl. visibility, ci, on-existing)"]
     B -- no --> D[Treat every field as unset]
     C --> E{"Step 1: pom.xml already exists?"}
     D --> E
-    E -- yes --> F["Warn user; AskUserQuestion:\nstop or continue?"]
-    F -- stop --> G[Report pom.xml untouched; end]
-    F -- continue --> H["Read existing pom.xml values\nas defaults for unresolved fields"]
-    E -- no --> I["Step 2: Collect remaining inputs\n(groupId, artifactId, version, package,\ndeveloper info, license)"]
-    H --> I
-    I --> I2["Step 2: Ask open-source first,\nderive publish/sonar defaults;\nresolve publish and sonar"]
+    E -- no --> E2["Announce: creating from scratch"]
+    E -- yes --> F["Announce: updating existing setup; warn;\nread pom.xml and name contradictions"]
+    F --> F2{"on-existing set?"}
+    F2 -- yes --> F3["Apply keep/update/replace\nwithout asking"]
+    F2 -- no --> F4["AskUserQuestion:\nUpdate / Keep as is / Replace / Stop"]
+    F3 --> FC
+    F4 --> FC{"Choice"}
+    FC -- stop --> G[Report pom.xml untouched; end]
+    FC -- keep --> M["Step 7: Scaffold source folders\n(package from args or existing layout)"]
+    FC -- update or replace --> H["Use existing pom.xml values\nas defaults for unresolved fields"]
+    E2 --> I
+    H --> I["Step 2: Collect remaining inputs\n(groupId, artifactId, version, package,\ndeveloper info, license)"]
+    I --> I2["Step 2: Ask open-source first,\nresolve visibility, derive publish/sonar defaults;\nresolve publish and sonar"]
     I2 --> J["Step 3: Infer repository info\n(owner/repo/host, description,\ninception year) from git/gh"]
     J --> K["Step 4-5: Fill pom.xml template;\nomit sign profile &amp;amp; central-publishing\nplugin if publish: no, omit sonar.*\nproperties &amp;amp; plugin if sonar: none"]
-    K --> L["Step 6: Write pom.xml"]
-    L --> M["Step 7: Scaffold src/main/java,\nsrc/main/resources, src/test/java folders"]
-    M --> N["Step 8: Report + warn:\nreview before building"]
+    K --> L["Step 6: Write pom.xml\n(new/replace: write; update: merge,\nshow diff, write on approval)"]
+    L --> M
+    M --> N["Step 8: Report action taken + warn:\nreview before building"]
 ....
 
 == Dependencies
@@ -154,8 +190,10 @@ None — `iru-setup-java-library` is a leaf skill; it does not call any other sk
 
 === Invoked by
 
-* xref:skills/iru-setup-java-library-repository.adoc[] — Step 3 runs `iru-setup-java-library` first, passing the
-  pre-resolved groupId, artifactId, package, developer name/email/organizationUrl, and license via `args` as
+* xref:skills/iru-setup-java-library-repository.adoc[] — Step 3 runs `iru-setup-java-library` first (always, even
+  for an existing repository), passing the pre-resolved groupId, artifactId, package, developer
+  name/email/organizationUrl, license, Java version, `open-source`/`publish`/`sonar`, `visibility`, `ci`, and (when
+  supplied) `on-existing` via `args` as
   `key: value` lines so this skill's own Step 2 questions are skipped and the user isn't asked twice.
 
 === Related agents

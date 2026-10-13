@@ -1,6 +1,6 @@
 ---
 name: iru-setup-readme
-description: Create or update the root `README.md` for a repository — a brief description, badges (CI status, SonarCloud/SonarQube, npm, Maven Central, Swift Package Index, etc.), a project status table (language, versions, platforms, license, CI, quality tools), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC, CHANGELOG), installation instructions (Maven/Gradle/npm/SwiftPM/etc. dependency snippets, or a "run it locally"/store-listing section for apps, matched to the project's actual stack and build tool), and a short "how it works" section with a runnable example. Invoke as `/iru-setup-readme`, or `/iru-setup-readme sonar: none` (an `args` line — the only key it accepts) to suppress Sonar badges and dashboard links even when a `sonar {}` block or `sonar-project.properties` exists, so an orchestrator that resolved `sonar: none` gets a README matching that choice. Explores the repository's actual state (`pom.xml`/`build.gradle`/`package.json`/`Package.swift`/Android Gradle modules/Xcode or Tuist project files/etc., git remote, GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled with placeholders or invented content. If `README.md` already exists, warns the user and shows the proposed new content as a diff before writing anything, so they can accept or skip the changes. Use whenever a repository needs a README bootstrapped or refreshed from what's actually there, instead of hand-writing it.
+description: Create or update the root `README.md` for a repository — a brief description, badges (CI status, SonarCloud/SonarQube, npm, Maven Central, Swift Package Index, etc.), a project status table (language, versions, platforms, license, CI, quality tools), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC, CHANGELOG), installation instructions (Maven/Gradle/npm/SwiftPM/etc. dependency snippets, or a "run it locally"/store-listing section for apps, matched to the project's actual stack and build tool), and a short "how it works" section with a runnable example. Invoke as `/iru-setup-readme`, optionally with `args` (one key/value pair per line, all optional) — `sonar` set to `none` suppresses Sonar badges and dashboard links even when a `sonar {}` block or `sonar-project.properties` exists, `ci` set to `no` omits CI status badges, `pages` set to `no` avoids linking a github.io documentation site that won't be published, and `on-existing` (`ask`/`keep`/`update`/`replace`, scripted runs, default `ask`) pre-answers the existing-README question — so an orchestrator's resolved choices produce a README matching them. Explores the repository's actual state (`pom.xml`/`build.gradle`/`package.json`/`Package.swift`/Android Gradle modules/Xcode or Tuist project files/etc., git remote, GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled with placeholders or invented content. Announces whether it is creating the README from scratch or updating an existing one; if `README.md` already exists, warns the user and shows the proposed content as a diff before writing anything, asking whether to Update it (merged draft, hand-written sections kept), Keep it as is, or Replace it (regenerated, hand-written sections dropped). Use whenever a repository needs a README bootstrapped or refreshed from what's actually there, instead of hand-writing it.
 model: sonnet
 ---
 
@@ -13,22 +13,38 @@ that don't correspond to something actually present.
 
 ## Step 0 — Resolve inputs
 
-This skill takes a single optional `args` line, `sonar: <cloud|self-hosted|none>`, passed by this catalog's
-`iru-setup-*-repository` orchestrators with the value they resolved. Only `none` changes behaviour: Step 3 then
-skips every SonarCloud/SonarQube badge and Step 5 the dashboard link, even if Sonar configuration is present on
-disk (a `mode: existing` repository may carry a `sonar {}` block the user has just chosen not to wire up —
-without this line, a README otherwise gains a full set of SonarCloud badges for a project the run had explicitly
-declined). Any other value, or no `args` at all, means "detect from the repository" as Step 3 describes. Record
-in Step 11 when badges were suppressed because of this line.
+This skill takes optional `args` (`key: value` lines, one per line), passed by this catalog's setup orchestrators
+with the values they resolved. Every key is optional; any other key (e.g. `mode`, `visibility`) is ignored:
+
+- **`sonar: <cloud|self-hosted|none>`** — only `none` changes behaviour: Step 3 then skips every
+  SonarCloud/SonarQube badge and Step 5 the dashboard link, even if Sonar configuration is present on disk (a
+  `mode: existing` repository may carry a `sonar {}` block the user has just chosen not to wire up — without this
+  line, a README otherwise gains a full set of SonarCloud badges for a project the run had explicitly declined).
+- **`ci: <yes|no>`** — only `no` changes behaviour: Step 3 skips every CI status badge and Step 4 the CI row, even
+  if stale `.github/workflows/*.yml` files exist on disk (the run chose no workflows, so a badge would point at a
+  pipeline that isn't maintained — or, on a fresh repository, doesn't exist). `ci: no` also implies `pages: no`.
+- **`pages: <yes|no>`** — only `no` changes behaviour: Step 5 never links a `https://<owner>.github.io/<repo>` URL
+  (Antora site, Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC), because nothing publishes there — CI
+  only uploads the built docs as a workflow artifact. Point readers at the docs sources instead (`docs/` in the
+  repository, built locally with `cd docs && npx antora antora-playbook.yml`) when an Antora site exists.
+- **`on-existing: <ask|keep|update|replace>`** — default `ask`. How Step 9 treats an existing `README.md`: `keep`/
+  `update`/`replace` apply that option without asking (Step 1 still prints its warning). `mode: existing` alone
+  does **not** mean "update silently" — Step 9 still asks unless `on-existing` says otherwise.
+
+Any other value, or no `args` at all, means "detect from the repository" as Steps 3–5 describe. Record in Step 11
+every badge/link suppressed because of one of these lines.
 
 ## Step 1 — Check whether `README.md` already exists
 
 Look at the repository root for `README.md`.
 
-- **Not found**: continue to Step 2; the final write in Step 10 happens without needing approval first (there is
-  nothing to lose), though the composed content is still worth a quick summary in Step 11.
-- **Found**: warn the user up front that a `README.md` already exists and this skill will propose changes for
-  them to review rather than overwriting it silently. Read it now — its content matters later: Step 9 shows a
+- **Not found**: tell the user "Creating `README.md` **from scratch**" and continue to Step 2; the final write in
+  Step 10 happens without needing approval first (there is nothing to lose), though the composed content is still
+  worth a quick summary in Step 11.
+- **Found**: tell the user "**Updating an existing `README.md`**" and warn up front that a `README.md` already
+  exists and this skill will propose changes for them to review rather than overwriting it silently (Step 9's
+  Update / Keep / Replace choice). If Step 0's `on-existing` is `keep`, stop here — leave the file untouched and
+  report that in Step 11 without composing a draft. Otherwise read it now — its content matters later: Step 9 shows a
   diff against it, and any hand-written section that doesn't map onto Steps 3–8 (e.g. a "Contributing" or
   "Acknowledgements" section unrelated to this skill's scope) should be preserved in the proposed version rather
   than dropped. Continue to Step 2.
@@ -85,7 +101,7 @@ Look at the repository root for `README.md`.
 Only include a badge when its underlying resource actually exists — don't fabricate a badge for a CI workflow or
 SonarCloud project that isn't configured yet.
 
-- **CI status**: list `.github/workflows/*.yml`. For each workflow that looks like a build/test pipeline (not,
+- **CI status** (skip entirely when Step 0 resolved `ci: no`): list `.github/workflows/*.yml`. For each workflow that looks like a build/test pipeline (not,
   say, a stale/dependabot-only workflow), add a status badge:
   `https://github.com/<owner>/<repo>/actions/workflows/<file>/badge.svg`, linking to
   `https://github.com/<owner>/<repo>/actions/workflows/<file>`.
@@ -137,7 +153,7 @@ Compose a small table from whatever Steps 2–3 actually resolved; omit rows wit
 | TypeScript | TypeScript projects only: the `typescript` version pinned in `package.json`/`package-lock.json`                               |
 | Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, etc.)                                            |
 | License | The license identified in Step 2, if any                                                                                       |
-| CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds")                               |
+| CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds"); omitted when Step 0 resolved `ci: no` |
 | Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Checkstyle, SpotBugs, PMD, ESLint, Detekt, SwiftLint, etc.) |
 
 Omit every row in this extended set (platforms through framework) that doesn't apply to the detected stack — a
@@ -146,6 +162,10 @@ plain Java/Maven library still shows only the original rows.
 ## Step 5 — Gather documentation links
 
 Include a link only when the thing it points to actually exists in the repository (or is confirmed published):
+
+Under Step 0's `pages: no` (or `ci: no`), never emit a `https://<owner>.github.io/<repo>…` link anywhere in this
+step — those URLs won't exist. Link the Antora sources and the local build command instead, as Step 0 describes,
+and skip the published API-docs links below.
 
 - **Antora documentation site**: if `docs/antora.yml` and `docs/antora-playbook.yml` exist, link to the published
   site. If a GitHub Pages workflow step publishes it (grep workflows for `gh-pages`/`ghaction-github-pages`), the
@@ -252,22 +272,38 @@ Skip this step entirely if Step 1 found no existing file — proceed straight to
 
 - Show the user the full proposed new `README.md` content (or a diff against the current file — writing the
   draft to a temp path and running `git diff --no-index <current> <draft>` gives a clean unified diff) so they
-  can see exactly what would change section by section.
-- Ask via `AskUserQuestion` whether to: (a) accept and write the proposed content, (b) skip and leave the
-  existing `README.md` untouched. There is no partial-apply option here — if the user wants to keep some sections
-  and change others, let them say so in free text and revise the draft before writing.
-- Only proceed to Step 10 on explicit acceptance.
+  can see exactly what would change section by section. Also list the hand-written sections Step 8 preserved.
+  When the existing file contradicts this run's choices, say so concretely (e.g. "your current README shows
+  SonarCloud badges but this run chose `sonar: none`", or "it links a github.io docs site but `pages: no`").
+- Unless Step 0's `on-existing` already decided (`update`/`replace`, applied without asking — the diff is still
+  shown), ask via `AskUserQuestion` (header e.g. "README"), explaining each consequence:
+  - **Update (Recommended)** — "Write the draft shown: regenerated sections are refreshed from the repository's
+    current state, and every hand-written section this skill doesn't own (e.g. Contributing, Acknowledgements) is
+    kept in place. Your customizations outside those sections survive, but a customized section this skill owns
+    (badges, status table, installation, …) may be rewritten."
+  - **Keep as is** — "Leave the existing `README.md` untouched. Nothing you wrote changes, but it may stay out of
+    date or disagree with this run's choices (stale badges, a docs link that won't exist) — the report will list
+    each mismatch."
+  - **Replace** — "Write only this skill's generated sections, dropping the hand-written sections listed above.
+    Result matches this house pattern exactly, but those sections are lost (recoverable only from git history)."
+  There is no partial-apply option here — if the user wants to keep some sections and change others, let them say
+  so in free text and revise the draft before writing.
+- Only proceed to Step 10 on an explicit **Update** or **Replace** (from the user or `on-existing`). Under
+  **Replace**, drop the preserved hand-written sections from the draft before writing.
 
 ## Step 10 — Write `README.md`
 
-Write the composed content (Step 8, incorporating any edits from Step 9's review) to `README.md` at the
-repository root.
+Write the composed content (Step 8, incorporating any edits from Step 9's review, and minus the preserved
+hand-written sections under **Replace**) to `README.md` at the repository root.
 
 ## Step 11 — Report
 
-Summarize: which sections were included versus omitted and why (e.g. "no Installation section — no build/package
+Start by restating the mode — "created from scratch", or for an existing `README.md` the option applied
+(**updated** / **kept as is** / **replaced**, and whether it came from the user or from `on-existing`); under
+**Keep as is**, list each mismatch between the kept file and this run's choices (`sonar`/`ci`/`pages`). Then
+summarize: which sections were included versus omitted and why (e.g. "no Installation section — no build/package
 config found", "no CI badges — no GitHub Actions workflows present"), any fact that had to be inferred rather than
-confirmed (e.g. an Antora Pages URL assumed from convention), and — if `README.md` already existed — whether the
-user accepted or skipped the proposed changes. Remind the user to double-check the "How It Works"/example section
+confirmed (e.g. an Antora Pages URL assumed from convention), and every badge/link suppressed by Step 0's
+`sonar: none`/`ci: no`/`pages: no`. Remind the user to double-check the "How It Works"/example section
 specifically, since it's the part most dependent on this skill's reading of the current API rather than on
 mechanically-derived facts like versions or badge URLs.

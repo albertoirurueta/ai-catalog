@@ -80,9 +80,11 @@ repository this catalog supports: it detects a non-empty repository by running `
 `Project type:` line to pre-select a stack, or, on an empty one, asks the project type over up to four
 `AskUserQuestion` rounds of three concrete types each, every round ending in a "Something in the next group"
 escape hatch (Java/JVM, Android & Swift, mobile apps, Web/Node — twelve types in total), asks the shared inputs
-(`open-source`, `publish`/`distribution`, `sonar`, …) once, and delegates to the matching stack orchestrator via
-`iru-isolated-skill-executor`. On an existing repository it forces `mode: existing` on that delegation so every
-sub-skill takes its own gap-fill/update path instead of assuming a brand-new repo.
+(`open-source`, `visibility`, `ci`, `sonar`, `ci-tests`, `pages`, `publish`/`distribution`, …) once, and delegates
+to the matching stack orchestrator via `iru-isolated-skill-executor`. It first announces the setup mode (from
+scratch, or updating an existing repository with an inventory of the prior setup found); on an existing repository
+it forces `mode: existing` on that delegation, and every component sub-skill then warns about each pre-existing
+artifact it owns and asks Update / Keep as is / Replace instead of assuming a brand-new repo.
 
 Underneath the front door, each stack has its own orchestrator. The four `*-repository` orchestrators —
 `iru-setup-java-library-repository`, `iru-setup-typescript-repository`, `iru-setup-android-repository`,
@@ -229,10 +231,17 @@ order it's usually easiest to work through:
   every cross-reference to it (xref:guides/creating-skills-and-agents.adoc[]); a stack's skills share the same
   `<key>` throughout (`iru-<key>-code-one-task`, `iru-<key>-bump-version`, `iru-setup-<key>-gitignore`, …).
 . **Shared `args` vocabulary** — accept the same keys every other orchestrator/scaffold/workflows skill does:
-  `open-source: yes|no`, `publish: yes|no` (libraries) or `distribution: none|internal|store` (apps),
-  `sonar: cloud|self-hosted|none` (+ its detail keys), and `mode: new|existing` — with the same defaults (`sonar`
-  defaults to `cloud` for open source, otherwise asked with `none` recommended; `publish`/`distribution` default
-  to `yes`/`store` only when open source). Add a `flavor` key only when the stack itself has more than one shape
+  `open-source: yes|no`, `visibility: public|private|internal`, `ci: yes|no`, `ci-tests: unit|full`,
+  `pages: yes|no`, `publish: yes|no` (libraries) or `distribution: none|internal|store` (apps),
+  `sonar: cloud|self-hosted|none` (+ its detail keys), `mode: new|existing`, and `on-existing: ask|keep|update|replace`
+  — with the same defaults (`visibility` from `args`, else `gh repo view`, else asked; `sonar` recommended as
+  `cloud` only for a public, open-source repository, otherwise `none`, and `none` whenever `ci: no`; `ci-tests`
+  `unit` for private / `full` for public; `pages` defaulted to `yes` for public and asked with `no` recommended for
+  private; `on-existing` defaults to `ask` and is forwarded only when it arrived via `args`; `publish`/
+  `distribution` default to `yes`/`store` only when open source). Map `ci-tests: unit` onto whatever the stack's
+  integration / instrumentation / e2e tests are, make `pages: no` replace the Pages deploy with an
+  `actions/upload-artifact` step, and have every file-writing skill announce scratch vs update and ask
+  Update / Keep as is / Replace for each pre-existing artifact it owns. Add a `flavor` key only when the stack itself has more than one shape
   (library vs. app, or several app frameworks) the way `iru-setup-typescript-repository` does.
 . **Model tier** — pick the frontmatter `model` by what the skill actually does, matching this catalog's existing
   split: `haiku` for setup/gitignore/workflows/orchestrator/test/coverage/code-quality/bump-version skills (their

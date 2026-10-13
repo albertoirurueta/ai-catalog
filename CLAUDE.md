@@ -54,7 +54,15 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `AskUserQuestion` rounds of three concrete types each (Java/JVM, Android & Swift, mobile apps, Web/Node), every
   round ending in a "Something in the next group" escape hatch, asks the shared inputs once, and delegates to the
   matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
-  so every sub-skill takes its gap-fill/update path instead of assuming a brand-new repo. The four `*-repository`
+  so every sub-skill takes its update path instead of assuming a brand-new repo. The front door and every
+  orchestrator first announce the **setup mode** — "from scratch" or "updating an existing repository" plus an
+  inventory of each owned component (build manifest, sources, Antora docs, `.gitignore`, each workflow file,
+  Dependabot, Sonar config, `CHANGELOG.md`, `README.md`, `LICENSE`) marked absent/present/partial — and every
+  component skill that finds a prior artifact it owns warns and asks **Update** (merge, keep customizations) /
+  **Keep as is** (report mismatches with this run's choices) / **Replace** (regenerate, customizations lost), with
+  a **Stop** option where it makes sense; `mode: existing` alone never means "update silently" — only an explicit
+  `on-existing` does. Final reports repeat the mode and the per-component action (created / updated / replaced /
+  kept as is / skipped (ci: no)). The four `*-repository`
   stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-typescript-repository`,
   `iru-setup-android-repository`, `iru-setup-swift-repository` — each also run standalone, and each chains the
   same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
@@ -65,12 +73,25 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   github-workflows) plus `iru-update-java-springboot-documentation` for the Antora site, and only then fills the
   remaining repository-level files (`iru-setup-java-gitignore`, `iru-setup-readme`, `iru-setup-changelog`) directly.
 - **Shared bootstrap inputs**: the front door and the orchestrators share one `args` vocabulary —
-  `open-source: yes|no`, `publish: yes|no` (libraries), `distribution: none|internal|store` (apps),
-  `sonar: cloud|self-hosted|none` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), and `mode: new|existing`
-  — so a value collected once by a front door or orchestrator never needs re-asking downstream; each downstream
-  scaffold/workflows skill parses only the subset of those keys its own Step 0 lists and ignores the rest. Defaults:
-  `sonar` is `cloud` when open source, otherwise asked with `none` recommended (SonarCloud is free only for open
-  source); `publish`/`distribution` default to `yes`/`store` only when the project is open source.
+  `open-source: yes|no`, `visibility: public|private|internal`, `ci: yes|no`, `ci-tests: unit|full`, `pages: yes|no`,
+  `publish: yes|no` (libraries), `distribution: none|internal|store` (apps), `sonar: cloud|self-hosted|none`
+  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode: new|existing`, and
+  `on-existing: ask|keep|update|replace` — so a value collected once by a front door or orchestrator never needs
+  re-asking downstream; each downstream scaffold/workflows skill parses only the subset of those keys its own Step 0
+  lists and ignores the rest. `visibility` comes from `args`, else `gh repo view --json visibility`, else is asked
+  (Public recommended when open source); `internal` counts as `private` for every cost decision, and open source +
+  private is flagged as contradictory. Because GitHub Actions minutes (free on public repos; included-minutes budget
+  on private, macOS ~10×), SonarCloud (free only for public/open-source projects), and GitHub Pages (private repos
+  need Pro/Team/Enterprise Cloud, and the site is public unless Enterprise Cloud private Pages) cost differently, the
+  entry point asks, in order: `ci` (Yes recommended; `ci: no` skips the whole workflows step including the shared
+  security block), `sonar` ("send CI reports to SonarCloud/SonarQube?" — `cloud` recommended only for a public,
+  open-source repo, otherwise `none`; with `ci: no`, `none` is recommended since nothing would send reports),
+  `ci-tests` (only with `ci: yes`; `unit` recommended for private repos, `full` for public), and `pages` (only with
+  `ci: yes`; defaulted to `yes` for public repos, asked with `no` recommended for private — `pages: no` keeps the
+  docs build but uploads it as a workflow artifact). A standalone workflows skill resolves `visibility` and asks
+  `ci-tests`/`pages`/`sonar` itself (never `ci`). `on-existing` defaults to `ask` and is only for scripted runs —
+  orchestrators forward it only when their own `args` received it. Defaults: `publish`/`distribution` default to
+  `yes`/`store` only when the project is open source.
 - **Ticket intake**: `iru-create-github-issue` / `iru-create-jira-ticket` ground a draft in the codebase via
   `iru-explore` before filing.
 - **Release**: `iru-release` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —

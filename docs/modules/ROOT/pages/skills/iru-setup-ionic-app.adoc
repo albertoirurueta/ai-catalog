@@ -76,7 +76,7 @@ via a `cap init` re-run.
 |`open-source`
 |No
 |Whether the repository is open source (`yes`/`no`); drives the recommended defaults for `distribution` and
-`sonar`.
+`sonar` (the latter together with `visibility`).
 |None — asked first when unresolved
 
 |`distribution`
@@ -87,8 +87,8 @@ via a `cap init` re-run.
 
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No
-|Whether/how to wire up `sonar-project.properties` in Step 10: `cloud`, `self-hosted`, or `none`.
-|`cloud` when open source; otherwise asked with `none` recommended
+|Whether/how to wire up `sonar-project.properties` in Step 10: `cloud`, `self-hosted`, or `none`. `cloud` is recommended only for a repository that is both public and open source (SonarCloud is free only for public open-source projects, per its current pricing); otherwise `none` is recommended, with self-hosted SonarQube as the alternative.
+|`cloud` when public and open source; otherwise asked with `none` recommended
 
 |`add-android`
 |No
@@ -100,10 +100,24 @@ via a `cap init` re-run.
 |Whether to run `npx cap add ios` in Step 5. Only offered on macOS; silently skipped elsewhere.
 |Asked with Yes recommended (macOS only)
 
+|`visibility`
+|No
+|`public`, `private`, or `internal` — the GitHub repository's visibility, used only to key the `sonar` recommendation. `internal` counts as private. If `open-source: yes` but visibility is private/internal, the skill warns and asks which is right.
+|Resolved only when the `sonar` question is asked: `gh repo view --json visibility -q .visibility`, else asked (Public recommended when open source)
+
+|`ci`
+|No
+|`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
+|`yes` implied
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing artifact. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
+|`ask`
+
 |`mode`
 |No
-|`new` or `existing`. `existing` skips Step 1's stop-or-regenerate question and goes straight to filling gaps
-in an already-scaffolded project.
+|`new` or `existing`. `existing` marks the run as an *update* of an established repository, but never means "update silently" — Step 1 still warns and asks per pre-existing artifact unless `on-existing` says otherwise.
 |`new`
 |===
 
@@ -121,7 +135,7 @@ in an already-scaffolded project.
 * `.maestro/smoke.yaml`, an unverified on-device smoke-flow skeleton.
 * `sonar-project.properties` at the repository root, only when `sonar` is `cloud` or `self-hosted`.
 * `android/` and/or `ios/` native platform folders, for whichever of `add-android`/`add-ios` was Yes.
-* A report of every resolved value, what was included versus omitted and why, and explicit warnings to review
+* A report that opens by repeating the announced mode (from scratch or updating an existing setup), lists per owned artifact the action taken (created / updated / replaced / kept as is / removed) and each mismatch a kept artifact leaves with this run's choices, the `visibility` used for Sonar and where it came from, every resolved value, what was included versus omitted and why, and explicit warnings to review
   generated files and provision Sonar/store credentials before relying on CI.
 
 == Execution flow
@@ -134,34 +148,35 @@ flowchart TD
     B -- no --> D[Treat every field as unset]
     C --> E{"Step 1: Ionic project\nalready exists at root?"}
     D --> E
-    E -- no --> F["Step 2: Collect inputs\n(framework, app-name/id, description,\ndeveloper info, license, open-source,\ndistribution, sonar, add-android/ios)"]
-    E -- "mode: existing" --> G["Gap-fill only:\ndetect framework from package.json,\nskip Step 2 questions"]
-    E -- otherwise --> H["Warn user; AskUserQuestion:\nstop / fill gaps / regenerate"]
-    H -- stop --> I[Report nothing changed; end]
-    H -- "fill gaps" --> G
-    H -- regenerate --> J["Ask user to clear the root first,\nthen scaffold fresh"]
-    J --> F
-    G --> K["Step 3: Look up dependency versions\n(&amp;lt;npm view&amp;gt;, Capacitor/Vitest\nversion-matching caveats)"]
-    F --> K
-    K --> L["Step 4: Scaffold via ionic start\n(temp-dir workaround if root non-empty);\ncap init with real app-id;\nupdate package.json"]
-    L --> M{"Step 5: add-android /\nadd-ios resolved Yes?"}
-    M -- android --> N["npm install @capacitor/android;\nnpx cap add android"]
-    M -- ios --> O["npm install @capacitor/ios;\nnpx cap add ios (macOS only)"]
-    M -- neither --> P[Note both can be added later]
-    N --> Q
-    O --> Q
-    P --> Q["Step 6: Wire Vitest + v8 coverage\nper flavor"]
-    Q --> R["Step 7: Extend ESLint ignores;\ninstall Prettier + config"]
-    R --> S{"Step 8: React + Cypress present?"}
-    S -- yes --> T["AskUserQuestion:\nreplace Cypress with Playwright\nor keep both"]
-    S -- no --> U[Install Playwright + http-server;\nwrite config + smoke test]
-    T --> U
-    U --> V["Step 9: Write .maestro/smoke.yaml\nskeleton"]
-    V --> W{"Step 10: sonar resolved\ncloud or self-hosted?"}
-    W -- yes --> X[Write sonar-project.properties\nwith per-flavor lcov path]
-    W -- none --> Y[Skip Step 10]
-    X --> Z["Step 11: Report resolved values,\nincluded/omitted items, and warnings"]
-    Y --> Z
+    E -- no --> F[Announce: scaffolding from scratch]
+    E -- "yes or mode: existing" --> G["Announce: updating an existing Ionic project;\ndetect framework from package.json;\nSteps 4-5 skipped"]
+    G --> H{"on-existing keep/update/replace?"}
+    H -- yes --> I[Apply it to every existing artifact]
+    H -- no --> J["AskUserQuestion per artifact:\nUpdate / Keep as is / Replace / Stop"]
+    J -- Stop --> K[Report nothing changed; end]
+    J -- other --> L
+    I --> L
+    F --> L["Step 2: Collect inputs (framework, app-name/id,\ndescription, developer info, license, open-source,\ndistribution, visibility, sonar, add-android/ios)"]
+    L --> M["Step 3: Look up dependency versions\n(npm view, Capacitor/Vitest\nversion-matching caveats)"]
+    M --> N["Step 4: Scaffold via ionic start\n(temp-dir workaround if root non-empty);\ncap init with real app-id;\nupdate package.json"]
+    N --> O{"Step 5: add-android /\nadd-ios resolved Yes?"}
+    O -- android --> P["npm install @capacitor/android;\nnpx cap add android"]
+    O -- ios --> Q["npm install @capacitor/ios;\nnpx cap add ios (macOS only)"]
+    O -- neither --> R[Note both can be added later]
+    P --> S
+    Q --> S
+    R --> S["Step 6: Wire Vitest + v8 coverage\nper flavor"]
+    S --> T["Step 7: Extend ESLint ignores;\ninstall Prettier + config"]
+    T --> U{"Step 8: React + Cypress present?"}
+    U -- yes --> V["AskUserQuestion:\nreplace Cypress with Playwright\nor keep both"]
+    U -- no --> W[Install Playwright + http-server;\nwrite config + smoke test]
+    V --> W
+    W --> X["Step 9: Write .maestro/smoke.yaml\nskeleton"]
+    X --> Y{"Step 10: sonar resolved\ncloud or self-hosted?"}
+    Y -- yes --> Z[Write sonar-project.properties\nwith per-flavor lcov path]
+    Y -- none --> AA[Skip, or remove/flag an existing file]
+    Z --> AB["Step 11: Report per-artifact actions,\nmismatches, and warnings"]
+    AA --> AB
 ....
 
 == Dependencies

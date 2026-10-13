@@ -32,6 +32,14 @@ cannot reach a private Cloud SQL or Memorystore instance without a Serverless VP
 right answer is a third-party managed service (MongoDB Atlas, Couchbase Capella, Neo4j Aura, Qdrant Cloud, Elastic
 or Confluent Cloud), it says so and notes that each needs its own account, billing, and provider credential.
 
+The skill announces whether it is generating `infra/` from scratch or updating an existing one (listing the modules
+and `envs/*` found) and never touches a `.tfstate`. For each existing file group it owns (per module, per
+environment, the backend configuration) it warns and asks **Update (fill gaps) (Recommended)** / **Keep as is** /
+**Replace**, unless `on-existing` pre-answers. Replace can produce a destructive plan against live infrastructure
+(renamed addresses mean destroy-and-recreate), so it is offered only with that warning and needs an explicit second
+confirmation for any environment with remote state; an `on-existing: replace` from `args` is treated as Update for
+those environments, so a scripted run can never replace live-resource configuration unattended.
+
 == Purpose group
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -55,6 +63,17 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 messaging, observability, dynamic configuration, and which API surfaces the service exposes — that determines what
 infrastructure is needed.
 |`springboot-stack.yml` at the repository root
+
+|`mode`
+|No
+|`args` `key: value` line, `new` or `existing`. Informational only: it never means "update silently".
+|None
+
+|`on-existing`
+|No
+|`args` `key: value` line, `ask`, `keep`, `update` or `replace`, pre-answering the per-group Update / Keep as is /
+Replace question. `replace` is downgraded to Update for environments that have remote state.
+|`ask`
 
 |Environments
 |Yes
@@ -106,6 +125,11 @@ NAT gateways, load balancers, Kafka clusters, provisioned OpenSearch).
 
 == Outputs
 
+* A report stating whether `infra/` was generated from scratch or updated, and per file group the action taken
+  (created / updated / replaced / kept as is) with each gap left in a kept group. It also warns that when the
+  manifest's `ci.enabled` is `false` no deploy/undeploy workflow exists, so every `tofu apply`/`tofu destroy` is a
+  manual run, deletion-protection advice applies to whoever runs it, and the CI OIDC identity is not needed until
+  workflows are added.
 * `infra/README.md` — the bootstrap order, what every variable means and its blast radius, how to destroy an
   environment safely, what has deletion protection on purpose, and **every step OpenTofu cannot perform** with
   concrete instructions: domain registration or subdomain delegation, populating each secret's value, the
@@ -126,8 +150,8 @@ NAT gateways, load balancers, Kafka clusters, provisioned OpenSearch).
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-setup-java-springboot-platform"] --> B["Step 0: Read the manifest;\ncheck for tofu and an existing infra/"]
-    B -- infra/ exists --> C["Treat as gap-filling; never overwrite\na .tf managing live resources"]
+    A["Start /iru-setup-java-springboot-platform"] --> B["Step 0: Read the manifest and args;\ncheck for tofu and an existing infra/"]
+    B -- infra/ exists --> C["Announce update; per file group ask\nUpdate fill gaps / Keep as is / Replace\n(or apply on-existing); never touch .tfstate;\nnever replace live-resource .tf unattended"]
     B --> D["Step 1: Ask what cannot be inferred —\nenvironments, region, sizing, runtime,\nnew vs existing, exposure, state backend"]
     C --> D
     D -- kubernetes config + non-Kubernetes runtime --> E["Flag the contradiction;\nuser resolves it"]
@@ -140,7 +164,7 @@ flowchart TD
     J --> K["Step 6: tofu init -backend=false,\nvalidate, fmt — never apply"]
     K -- schema error --> L["Fix against the provider docs"]
     L --> K
-    K --> M["Step 7: Report resources, caveats,\nsecrets to populate, manual steps"]
+    K --> M["Step 7: Report actions per group, resources,\ncaveats, secrets to populate, manual steps"]
 ....
 
 == Dependencies

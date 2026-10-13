@@ -7,18 +7,24 @@ description: End-to-end bootstrap for a Swift repository of either flavor — co
   name/email/organization URL), the flavor-specific inputs (`platforms`, `min-deployment-targets`/
   `min-deployment-target`, `generator` and `signing` for an app), and the shared pipeline parameters
   (`integration-branch` `develop`, `stable-branch` `main`, `runner` `macos-26`, `open-source`, `publish` for
-  libraries, `distribution` for apps, `sonar` plus its detail keys) once, then orchestrates the flavor's scaffold
+  libraries, `distribution` for apps, `visibility`, `ci`, `ci-tests`, `pages`, `sonar` plus its detail keys — asked
+  with visibility-aware cost guidance, stressing that macOS runner minutes cost ~10× Linux on private repositories)
+  once, then orchestrates the flavor's scaffold
   skill (`iru-setup-swift-library` / `iru-setup-apple-app`) → `iru-setup-antora` → `iru-setup-swift-gitignore` →
-  `iru-setup-swift-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
+  `iru-setup-swift-github-workflows` (skipped entirely when `ci: no`) → `iru-setup-changelog` → `iru-setup-readme`,
+  in that order, via
   `iru-isolated-skill-executor`, so nothing is asked twice and no sub-skill receives a key its own Step 0 doesn't
   accept. Invoke as `/iru-setup-swift-repository`, optionally with `args` (`key: value` lines) to pre-resolve
   `flavor`, `branching`, `mode` (`new`/`existing`), `platforms`, `generator`, `signing`, `open-source`, `publish`,
-  `distribution`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `integration-branch`,
+  `distribution`, `visibility`, `ci`, `ci-tests`, `pages`, `on-existing`, `sonar` (+ `sonar-organization`/
+  `sonar-project-key`/`sonar-host-url`), `integration-branch`,
   `stable-branch`, `runner`, `xcode-version`, `release-please`, `formatter`, `min-deployment-targets`/
-  `min-deployment-target`, `package-resolved`, and every identity field, skipping the matching question. In
-  `mode: existing` it skips the scaffold when `Package.swift` or a generator manifest (`project.yml`/
-  `Project.swift`) already exists and tells every downstream step to take its own update/gap-fill path instead
-  of assuming a brand-new repository. Use whenever bootstrapping (or catching up) a Swift package or Apple app
+  `min-deployment-target`, `package-resolved`, and every identity field, skipping the matching question. Announces
+  up front whether it is setting the repository up from scratch or updating an existing one (with an inventory of
+  every component it owns marked absent/present/partial); each sub-skill then warns about and asks Update / Keep
+  as is / Replace for every pre-existing file it owns (`on-existing` answers for all of them in scripted runs),
+  and the final report states per component whether it was created, updated, replaced, kept as is, or skipped
+  (`ci: no`). Use whenever bootstrapping (or catching up) a Swift package or Apple app
   repository's full scaffold/docs/gitignore/CI/changelog/README pipeline in one pass, whichever flavor it is,
   instead of running six skills separately and re-answering the same questions each time.
 model: haiku
@@ -62,6 +68,10 @@ sonar-host-url: https://sonarcloud.io
 integration-branch: develop
 stable-branch: main
 runner: macos-26
+visibility: public
+ci: yes
+ci-tests: full
+pages: yes
 ```
 
 Recognized keys:
@@ -70,7 +80,12 @@ Recognized keys:
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `publish` (`yes`/`no` — `library` only),
   `distribution` (`none`/`internal`/`store` — `app` only), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when
   set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`, `runner`
-  (`macos-26`/`xcode-27`), `xcode-version`, `release-please` (`yes`/`no` — `library` only).
+  (`macos-26`/`xcode-27`), `xcode-version`, `release-please` (`yes`/`no` — `library` only), `visibility`
+  (`public`/`private`/`internal` — `internal` behaves like `private` for every cost decision), `ci` (`yes`/`no` —
+  whether GitHub Actions workflows are generated/updated at all), `ci-tests` (`unit`/`full` — only meaningful when
+  `ci: yes`), `pages` (`yes`/`no` — only meaningful when `ci: yes`), `on-existing` (`ask`/`keep`/`update`/
+  `replace` — how every component sub-skill treats prior setup it finds; never asked, and forwarded only when it
+  arrived here via `args`).
 - **Flavor-specific inputs** named in Step 3: `platforms`, `min-deployment-targets` (`library`),
   `min-deployment-target` (`app`), `generator` (`xcodegen`/`tuist` — `app` only), `signing`
   (`fastlane-match`/`api-key`/`none` — `app` only).
@@ -126,18 +141,46 @@ Unless `branching` was already supplied via `args`, resolve it with `AskUserQues
 If `mode` wasn't supplied via `args`, don't ask about it as an isolated question — check whether the resolved
 flavor's scaffold manifest (`Package.swift` for `library`; `project.yml` or `Project.swift` for `app`) already
 exists at the repository root: if it does, default to `existing` and confirm with `AskUserQuestion` (`existing`
-pre-selected; `new` as the other option, noting that "new" re-runs the scaffold's own stop/gap-fill/regenerate
-survey and that regenerating replaces `Package.swift` or the generator manifest wholesale, discarding hand-added
-targets, dependencies and build settings); if it doesn't, default to `new` without asking further — there's
-nothing on disk yet to conflict with.
+pre-selected; `new` as the other option); if it doesn't, default to `new` without asking further. Either way,
+`mode` no longer decides what happens to individual files: **any** owned artifact already on disk (not just the
+build manifest) makes the run an update *for that component*, and the sub-skill that owns it warns and asks
+Update / Keep as is / Replace for it (unless `on-existing` says otherwise).
+
+### Setup mode announcement
+
+Right after `mode` is resolved — before Step 2's questions — print a short **"Setup mode"** statement:
+
+- `mode: new` with nothing owned on disk → "Setting up this repository **from scratch** — no prior setup found."
+- Otherwise → "**Updating an existing repository** — prior setup found:" followed by an inventory table of every
+  component this run owns, each marked **absent / present / partial** with the evidence (file paths):
+
+  | Component | Evidence checked |
+  |---|---|
+  | Scaffold manifest | `Package.swift` (library) / `project.yml` or `Project.swift` + `Tuist.swift` (app) |
+  | Source layout | `Sources/<Name>/` + `Tests/<Name>Tests/` (library) / `Packages/Core/` + `Targets/<Platform>/` (app) |
+  | Lint/format config | `.swiftlint.yml`, `.swift-format`/`.swiftformat` |
+  | Sonar config | `sonar-project.properties` |
+  | Publishing/distribution config | `.spi.yml` (library) / `fastlane/Fastfile` (app) |
+  | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
+  | `.gitignore` | root `.gitignore` |
+  | Workflows | each of `.github/workflows/build.yml`, `release.yml`, `sync.yml` (+ `.github/scripts/sync_versions.py`), `security.yml` |
+  | Dependabot | `.github/dependabot.yml` |
+  | `CHANGELOG.md` / `README.md` / `LICENSE` | each at the root |
+
+  Mark a component **partial** when only some of its files exist (e.g. `Package.swift` without `Sources/`, or
+  `build.yml` without `security.yml`). Then: "For each component that already exists you'll be asked whether to
+  keep it, update it, or replace it." (or, when `on-existing` arrived via `args`: "…each existing component will
+  be handled with `on-existing: <value>` without asking.")
 
 ## Step 2 — Collect the project's identity
 
-**`mode: existing` with the scaffold manifest already on disk** (`Package.swift` (or the flavor's generator manifest) at the repository root, the same
-check Step 5 uses to skip the scaffold): skip every identity question in this step — nothing downstream consumes
-these answers once the scaffold is skipped (`iru-setup-readme` derives identity from the existing build files
-itself), so asking them is a wasted question (verified against an existing repository). Resolve `license` only if `args` supplied it,
-and record in the final report that project identity was taken from the existing files rather than asked.
+**`mode: existing` with the scaffold manifest already on disk** (`Package.swift` (or the flavor's generator
+manifest) at the repository root): skip every identity question in this step — the scaffold sub-skill reads
+identity from the existing manifest itself (its Update and Keep paths need nothing new, and its Replace path
+offers the existing manifest's values as defaults and asks for anything missing), and `iru-setup-readme` derives
+identity from the existing build files, so asking them here is a wasted question (verified against an existing
+repository). Resolve `license` only if `args` supplied it, and record in the final report that project identity
+was taken from the existing files rather than asked.
 
 For any field Step 0 already resolved from `args`, use that value directly. For everything else, ask the user
 directly (plain conversation — these are free-text project-identity fields, not a bounded choice). Only ask what
@@ -245,6 +288,13 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
 already resolved):
 
 - **open-source** — is this repository open source? Yes / No. Drives the recommended defaults below.
+- **visibility** — the GitHub repository's visibility, resolved right after `open-source`: if `args` supplied it,
+  use it; else, if the repository has a GitHub remote, run `gh repo view --json visibility -q .visibility`
+  (returns `PUBLIC`/`PRIVATE`/`INTERNAL` — lowercase it) and tell the user the detected value; else (no remote yet,
+  `gh` unavailable, not GitHub) ask **Public** / **Private**, recommending **Public** when open-source is Yes,
+  otherwise **Private**. If open-source is Yes but `visibility` is `private`/`internal`, warn that the two
+  contradict (an open-source project's repository is normally public; a private repository forfeits the
+  free-for-public-repos pricing below) and ask which one is right. `internal` behaves like `private` from here on.
 - **publish** — **`library` only**: does this package get distributed for other projects to depend on (a tagged
   git URL, optionally listed on the Swift Package Index via `.spi.yml`)? Default **Yes** when open-source is Yes;
   otherwise ask with **No** recommended (the Swift Package Index is a public catalog for redistributable
@@ -261,28 +311,54 @@ already resolved):
   signing; only a `test` lane). When `distribution: none`, offer `none` as the default and confirm rather than
   assuming — a signed local archive is still a valid, if unusual, wish. Warn that `signing: none` with a
   non-`none` `distribution` means nothing will produce a distributable build automatically.
-- **sonar** — `cloud`/`self-hosted`/`none`. Recommend **`cloud`** when open-source is Yes; when not open source,
-  state that SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend
-  **`none`**, offering **self-hosted SonarQube** as the second option. When `cloud`/`self-hosted` is chosen, also
+- **ci** — "Generate GitHub Actions workflows (CI/CD) for this repository?" State the cost facts per GitHub's
+  current pricing (and tell the user to double-check their plan): standard GitHub-hosted runners are **free for
+  public repositories**; private/internal repositories consume the account's included minutes — **2,000/month on
+  GitHub Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud** — then are billed per minute. **Stress that
+  this stack's CI runs almost entirely on macOS runners, whose minutes cost roughly 10× Linux minutes** ($0.062 vs
+  $0.006 per minute) and count ~10× against the included budget: every `build.yml` run (Xcode build, tests,
+  SwiftLint, DocC) and every `release.yml` archive/sign/notarize run is macOS — only the library's optional Linux
+  leg avoids it — so on a private repository **a few dozen builds a month can exhaust 2,000 included minutes**.
+  Public: recommend **Yes** — standard runners are free. Private/internal: still offer **Yes** first (noting
+  `ci-tests: unit` below as the main cost lever) and offer **No** as "no workflows — build, test, and release
+  locally (re-run `iru-setup-swift-github-workflows` later to add them)". With `ci: no`, Step 8 is skipped entirely
+  (no `.github/workflows/*`, no `security.yml`, no `.github/dependabot.yml`, no `sync_versions.py`), and
+  `ci-tests`/`pages` are not asked.
+- **sonar** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?" —
+  `cloud`/`self-hosted`/`none`. Recommend **`cloud`** only when the repository is public **and** open source;
+  otherwise state that SonarCloud (SonarQube Cloud) is free for public/open-source projects but a private project
+  needs a paid plan, and recommend **`none`**, offering **self-hosted SonarQube** (Community Build is free, but you
+  run the server) as the second option. When `ci: no`, say plainly that nothing would send reports automatically —
+  analysis would only run when someone runs the scanner manually with a token — and recommend `none`; if the user
+  still picks `cloud`/`self-hosted`, the scaffold writes `sonar-project.properties` only and Step 11 reports that
+  no CI step sends reports. When `cloud`/`self-hosted` is chosen, also
   collect `sonar-organization`/`sonar-project-key`/`sonar-host-url` the same way both scaffold skills' own Step 2
   does (SonarCloud: suggest `<owner>-github` / `<owner>_<repo>` / `https://sonarcloud.io`, inferred from
   `git remote get-url origin`; self-hosted: ask for `sonar.host.url` directly, plus `sonar.organization` only if
   that server has organizations enabled, and `sonar.projectKey`).
+- **ci-tests** (only when `ci: yes`) — "Which tests should CI run?" **Unit tests only** — "unit-test targets only
+  (cheaper: fewer macOS minutes, faster feedback); the app's XCUITest UI-test bundle and any library
+  integration-test target stay local" (recommended for private/internal) / **Unit + UI tests** — "unit tests plus
+  XCUITest UI tests on every selected simulator/platform destination (complete verification, uses considerably more
+  macOS minutes — each UI-test run boots a simulator and launches the app)" (recommended for public).
+- **pages** (only when `ci: yes`; the DocC + Antora site) — public: **`yes`** without asking (state it in Step
+  11). Private/internal: ask — **No (Recommended)** — "CI still builds the docs and uploads them as a workflow
+  artifact; nothing is published" / **Yes** — "requires GitHub Pro, Team, or Enterprise Cloud (not GitHub Free);
+  the site will be PUBLIC on the internet unless you're on Enterprise Cloud with private Pages access control".
 
-These values (`open-source`, `publish`/`distribution`, `signing`, `sonar` + detail keys) are passed through
-unchanged to Step 5 (the scaffold skill) and Step 8 (`iru-setup-swift-github-workflows`) so neither sub-skill
-re-asks them — and so the workflows never contain a Sonar scan step for a repository with no
+These values (`open-source`, `publish`/`distribution`, `signing`, `sonar` + detail keys, plus `visibility`/`ci`
+for the scaffold and `visibility`/`ci-tests`/`pages` for the workflows) are passed to Step 5 (the scaffold skill)
+and Step 8 (`iru-setup-swift-github-workflows`) so neither sub-skill re-asks them — and so the workflows never contain a Sonar scan step for a repository with no
 `sonar-project.properties`, or a TestFlight upload for a `fastlane/Fastfile` with no `beta` lane.
 
 ## Step 5 — Run the flavor's scaffold skill
 
-If `mode: existing` (Step 1) and the flavor's scaffold manifest already exists at the repository root
-(`Package.swift` for `library`; `project.yml` or `Project.swift` for `app`), skip invoking the scaffold skill
-entirely — there's nothing to regenerate, and `mode: existing` means the user already confirmed they don't want
-it replaced. Note in Step 11's report that the scaffold already existed and was left untouched, then continue to
-Step 6 (the existing scaffold is presumed valid enough for the rest of the pipeline to build against). Otherwise,
-format Steps 2–4's answers as `key: value` lines using **exactly** the keys the resolved flavor's skill accepts
-(never an invented key) and invoke via `iru-isolated-skill-executor`:
+Always invoke the scaffold skill — even in `mode: existing` with the scaffold manifest on disk. It owns the
+question of what to do with its pre-existing files: it announces creating vs updating, then warns and asks Update /
+Keep as is / Replace (/ Stop) per existing file (or applies `on-existing`), where **Keep** is the old "leave the
+existing scaffold untouched" behaviour. This orchestrator therefore never asks that question itself, so it is
+never asked twice. Format Steps 2–4's answers as `key: value` lines using **exactly** the keys the resolved
+flavor's skill accepts (never an invented key) and invoke via `iru-isolated-skill-executor`:
 
 ```
 # flavor: library
@@ -294,10 +370,12 @@ Agent({
     license: <license display name, or 'none'>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     publish: <publish>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
-    sonar-host-url: <..., if set>\\nformatter: <..., only if supplied>\\nmode: <mode>\"}).
-    Report back: whether Package.swift, Sources/<Name>/, Tests/<Name>Tests/, .swiftlint.yml, the formatter config,
-    the DocC catalog, .spi.yml and sonar-project.properties were created fresh, gap-filled, or already existed
-    (and, if so, whether the user chose to stop), the PascalCase <Name> it derived, which formatter it resolved,
+    sonar-host-url: <..., if set>\\nformatter: <..., only if supplied>\\nvisibility: <visibility>\\nci: <ci>\\n
+    on-existing: <..., only if supplied>\\nmode: <mode>\"}).
+    Report back: whether it ran from scratch or as an update, and for each of Package.swift, Sources/<Name>/,
+    Tests/<Name>Tests/, .swiftlint.yml, the formatter config, the DocC catalog, .spi.yml and
+    sonar-project.properties whether it was created, updated, replaced or kept as is (with any mismatch it listed
+    for a kept file), or whether the user chose to stop, the PascalCase <Name> it derived, which formatter it resolved,
     whether the swift-docc-plugin version came from a live lookup versus the recorded fallback, whether its
     swift build / swift test verification passed, and any value it resolved on its own (repository URL,
     inception year).",
@@ -316,11 +394,13 @@ Agent({
     license: <license display name, or 'none'>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     sonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
-    sonar-host-url: <..., if set>\\nmode: <mode>\"}).
-    Report back: whether the generator manifest (project.yml, or Project.swift + Tuist.swift), Packages/Core,
-    the per-platform Targets/, .swiftlint.yml, .swift-format, fastlane/Fastfile and sonar-project.properties were
-    created fresh, gap-filled, or already existed (and, if so, whether the user chose to stop or to adopt a
-    generator over a hand-maintained .xcodeproj), the bundle id and min-deployment-target it resolved, which
+    sonar-host-url: <..., if set>\\nvisibility: <visibility>\\nci: <ci>\\non-existing: <..., only if supplied>\\n
+    mode: <mode>\"}).
+    Report back: whether it ran from scratch or as an update, and for each of the generator manifest (project.yml,
+    or Project.swift + Tuist.swift), Packages/Core, the per-platform Targets/, .swiftlint.yml, .swift-format,
+    fastlane/Fastfile and sonar-project.properties whether it was created, updated, replaced or kept as is (with
+    any mismatch it listed for a kept file), or whether the user chose to stop or to adopt a generator over a
+    hand-maintained .xcodeproj, the bundle id and min-deployment-target it resolved, which
     Fastfile lanes it wrote as a result of distribution/signing, which generator/tool versions came from a live
     lookup versus the recorded fallback, whether its Packages/Core swift build / swift test verification passed,
     and whether xcodegen/tuist was actually available to run generate locally.",
@@ -329,14 +409,18 @@ Agent({
 ```
 
 Omit every `only if supplied` line whose value wasn't resolved (never send an empty key). Neither scaffold skill
-accepts `branching`, `integration-branch`, `stable-branch`, `runner`, `xcode-version`, `release-please` or
-`package-resolved` — those are Steps 7–8's alone, so never send them here. `publish` and `formatter` are sent
+accepts `branching`, `integration-branch`, `stable-branch`, `runner`, `xcode-version`, `release-please`,
+`package-resolved`, `ci-tests` or `pages` — those are Steps 7–8's alone, so never send them here. `visibility` and
+`ci` are always sent (both scaffolds use them only to shape the Sonar recommendation and the `ci: no` Sonar note);
+`on-existing` only when it arrived via this skill's own `args`. `publish` and `formatter` are sent
 only for `library`; `generator`, `signing`, `distribution` and `min-deployment-target` only for `app`.
 
 Each scaffold skill parses these itself (its own Step 0) and only asks the user about anything genuinely left
 out — `AskUserQuestion` surfaces to the user the same way whether invoked directly or from inside this
-sub-agent. If it reports that its files already existed and the user chose to stop, stop this skill here too —
-there's no coherent package or project to build Antora docs or CI workflows around yet. For `app`, warn the user
+sub-agent. If it reports that the user chose **Stop** and no scaffold manifest exists on disk, stop this skill
+here too — there's no coherent package or project to build Antora docs or CI workflows around yet. If the user
+chose Stop but the manifest already exists, treat the scaffold as **kept as is** and continue to Step 6 (the
+existing scaffold is presumed valid enough for the rest of the pipeline to build against), noting it in Step 11. For `app`, warn the user
 before launching it that `xcodegen`/`tuist` are typically installed via `brew`, and that the scaffold verifies
 only the shared `Packages/Core` package with `swift build`/`swift test` when the generator isn't available
 locally — a real `.xcodeproj` build is then first exercised in CI.
@@ -344,10 +428,14 @@ locally — a real `.xcodeproj` build is then first exercised in CI.
 ## Step 6 — Run `iru-setup-antora`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run iru-setup-antora", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-antora\"}) with no args — it takes none,
-deriving the Antora component name, title, and version itself from the repository (the name: in Package.swift or
-in the XcodeGen/Tuist manifest, a README heading if one exists, git tags/GitHub releases). Report back: which
-files/pages were created vs. already present, and whether the site build succeeded.", run_in_background: false})`.
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-antora\"}) with no args — or, only when `on-existing` arrived via
+this skill's own `args`, with args \"on-existing: <on-existing>\" (the only key it accepts) — deriving the Antora
+component name, title, and version itself from the repository (the name: in Package.swift or in the
+XcodeGen/Tuist manifest, a README heading if one exists, git tags/GitHub releases). Report back: whether it ran
+from scratch or as an update, whether the existing site was updated (gaps filled), kept as is, or had
+antora.yml + the playbook replaced, which files/pages were created vs. already present, and whether the site build
+succeeded.", run_in_background: false})`. When the site already exists, `iru-setup-antora` itself warns and asks
+Update / Keep / Replace — this orchestrator doesn't ask that question.
 
 Run this *before* Step 8, not after: `iru-setup-antora` is quick to detect as "already done", and
 `iru-setup-swift-github-workflows`'s own survey (Step 1 there) checks whether `docs/antora.yml`/
@@ -360,10 +448,11 @@ releases yet, `iru-setup-antora` may ask for a starting version; answer `1.0.0` 
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run iru-setup-swift-gitignore", subagent_type:
 "iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-swift-gitignore\", args: \"flavor:
-<flavor>\\npackage-resolved: <..., only if supplied>\"}) — it detects mode itself from whether a root .gitignore
-already exists, and detects the generator manifest, fastlane/, the Antora config and the DocC catalog directly
-from disk. Report back only whether .gitignore was created fresh or, if it already existed, whether the user
-accepted or skipped the proposed diff, and which package-resolved choice was applied.",
+<flavor>\\npackage-resolved: <..., only if supplied>\\non-existing: <..., only if supplied>\"}) — it detects mode
+itself from whether a root .gitignore already exists, and detects the generator manifest, fastlane/, the Antora
+config and the DocC catalog directly from disk. Report back only whether .gitignore was created, updated,
+replaced or kept as is (and whether that choice came from the user or from on-existing), and which
+package-resolved choice was applied.",
 run_in_background: false})`.
 
 `flavor` is passed so the skill's `Package.resolved` question (commit it for an app, ignore it for a library)
@@ -379,7 +468,14 @@ Antora build output are already ignored before CI-generated reports show up loca
 
 ## Step 8 — Run `iru-setup-swift-github-workflows`
 
-Format Steps 1–4's answers as `key: value` lines and invoke via `iru-isolated-skill-executor`:
+**`ci: no` ⇒ skip this step entirely** — don't invoke the sub-skill at all: no `.github/workflows/*`, no
+`security.yml`, no `.github/dependabot.yml`, no `.github/scripts/sync_versions.py`. Record it in Step 11 as
+**skipped (ci: no)**, and say there that the shared security block (Dependabot, dependency-review, CodeQL,
+OSV-Scanner, gitleaks) was skipped with it and can be added later by running `/iru-setup-swift-github-workflows`
+on its own. If workflow files already exist on disk with `ci: no`, leave them untouched and list them in Step 11
+(they keep running on GitHub until removed by hand).
+
+Otherwise, format Steps 1–4's answers as `key: value` lines and invoke via `iru-isolated-skill-executor`:
 
 ```
 Agent({
@@ -394,9 +490,12 @@ Agent({
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
     security-dependency-review: <..., only if supplied>\\nsecurity-codeql: <..., only if supplied>\\n
     security-osv: <..., only if supplied>\\nsecurity-gitleaks: <..., only if supplied>\\n
-    mode: <mode>\"}). Report back: whether build.yml, release.yml, sync.yml + .github/scripts/sync_versions.py
-    (gitflow only), security.yml, .github/dependabot.yml and lcov_to_sonar_generic.py (library + sonar only) were
-    created fresh, updated, or already existed (and, if so, whether the user chose to stop), the runner label and
+    visibility: <visibility>\\nci-tests: <ci-tests>\\npages: <pages>\\non-existing: <..., only if supplied>\\n
+    mode: <mode>\"}). Report back: whether it ran from scratch or as an update, and for each of build.yml,
+    release.yml, sync.yml + .github/scripts/sync_versions.py (gitflow only), security.yml, .github/dependabot.yml
+    and lcov_to_sonar_generic.py (library + sonar only) whether it was created, updated, replaced or kept as is
+    (with every mismatch it listed for a kept file), or whether the user chose to stop; how ci-tests and pages
+    were applied (UI-test bundles skipped or not, Pages deploy vs. docs artifact); the runner label and
     xcode-version it resolved, any open gap it flagged (missing docs/antora.yml, a Packages/Core without the
     swift-docc-plugin dependency, README/version wording not matching sync_versions.py, a <team-id> still to
     supply), and the full required-secrets/environments table it produced for this flavor/branching/options.",
@@ -405,7 +504,10 @@ Agent({
 ```
 
 Omit `integration-branch` when `branching: main-only`, `publish`/`release-please` for `app`, and `generator`/
-`signing`/`distribution` for `library` (never send a key the flavor doesn't use). The four `security-*` keys are
+`signing`/`distribution` for `library` (never send a key the flavor doesn't use). `visibility`, `ci-tests` and
+`pages` are always sent here (so the workflows skill never re-asks them); `ci` itself is never sent — invoking
+the workflows skill already means CI is wanted. `on-existing` is sent only when it arrived via this skill's own
+`args`. The four `security-*` keys are
 forwarded only when `args` supplied them (a `security-codeql: no` given to this orchestrator must reach the
 workflows skill, or the CodeQL job is generated anyway) — each defaults to `yes` inside
 `iru-setup-swift-github-workflows` itself, and this orchestrator never asks about them; note this once in
@@ -413,28 +515,30 @@ Step 11's report rather than re-asking per run. The shared `license`/`developer-
 likewise never passed here: the workflows skill accepts them only to tolerate a full shared-args set and would
 report them as "supplied but unused".
 
-If it reports that the workflow files already existed and the user chose to stop, note that in Step 11's report
+If it reports that the workflow files already existed and the user chose Stop, note that in Step 11's report
 rather than treating it as a failure of this skill — the scaffold, the Antora docs, and the `.gitignore` from
 Steps 5–7 are still valid on their own.
 
 ## Step 9 — Run `iru-setup-changelog`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run iru-setup-changelog", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-changelog\"}) with no args — it takes
-none, working entirely from the repository's own git tag/GitHub Release history. Report back only whether
-CHANGELOG.md was created (and the version range reconstructed) or already existed.", run_in_background: false})`.
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-changelog\"}) with no args — or, only when
+`on-existing` arrived via this skill's own `args`, with args \"on-existing: <on-existing>\" (the only key it
+accepts) — working entirely from the repository's own git tag/GitHub Release history. Report back only whether
+CHANGELOG.md was created (and the version range reconstructed), updated (which missing releases were appended),
+replaced, or kept as is.", run_in_background: false})`.
 Position relative to Steps 5–8 doesn't matter functionally — it's independent of all of them. In `mode: new`
 (no tags yet) it either bootstraps a minimal `## [Unreleased]`-only file or stops per the user's choice; in
-`mode: existing`, real tag/release history may exist to backfill. If `CHANGELOG.md` already exists, it stops
-immediately and reports that regardless of `mode` — not a failure of this skill, just something to note in
-Step 11's report. Running it before `iru-setup-readme` means the README's Documentation section sees it already
+`mode: existing`, real tag/release history may exist to backfill. If `CHANGELOG.md` already exists, it warns
+and asks Keep as is (its old skip behaviour) / Update (append only missing releases) / Replace (rebuild from
+history) regardless of `mode` — whichever is chosen is just something to note in Step 11's report. Running it before `iru-setup-readme` means the README's Documentation section sees it already
 in place, and — for a gitflow library — that `sync.yml`'s `sync_versions.py` has a `CHANGELOG.md` to roll the
 `[Unreleased]` heading in after each release.
 
 ## Step 10 — Run `iru-setup-readme`
 
 Invoke via `iru-isolated-skill-executor`: `Agent({description: "Run iru-setup-readme", subagent_type:
-"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-readme\", args: \"sonar: <sonar>\"}) — `sonar` is the only key it accepts (with `none` it suppresses Sonar badges/links even if Sonar config exists on disk),
+"iru-isolated-skill-executor", prompt: "Invoke Skill({skill: \"iru-setup-readme\", args: \"sonar: <sonar>\\nci: <ci>\\npages: <pages, only when ci: yes>\\non-existing: <..., only if supplied>\"}) — the four keys it accepts (`sonar: none` suppresses Sonar badges/links even if Sonar config exists on disk, `ci: no` omits CI status badges, `pages: no` keeps it from linking a github.io docs site that won't be published),
 deriving everything it needs by exploring the repository directly (Package.swift or the XcodeGen/Tuist manifest,
 the Antora docs, .gitignore, the workflows and sonar-project.properties, and CHANGELOG.md). Report back only
 which sections were included vs. omitted and why, and — for a library — whether the installation snippet it
@@ -442,9 +546,10 @@ wrote uses the SwiftPM .package(url: \\\"<repository-url>\\\", from: \\\"<versio
 run_in_background: false})`. Run this last, after every other skill, so its badges/status-table/
 documentation-links sections see the finished state of Steps 5–9 instead of a sparser mid-run snapshot. In
 `mode: new`, most CI/Sonar/changelog-derived sections will still be sparse or absent (no commits/tags/CI runs
-yet) — expected; `iru-setup-readme` omits what it can't confirm rather than inventing it. `README.md` may or may
-not already exist depending on `mode`; `iru-setup-readme`'s own approval step handles that on its own — nothing
-further to confirm here.
+yet) — expected; `iru-setup-readme` omits what it can't confirm rather than inventing it. With `ci: no`, send
+`ci: no` and omit `pages` (it isn't meaningful without CI — no Pages deploy exists). `README.md` may or may not
+already exist depending on `mode`; `iru-setup-readme`'s own Update / Keep / Replace question (shown with a diff)
+handles that on its own — nothing further to confirm here.
 
 For a gitflow **library**, the README's dependency snippet is what `sync.yml`'s `sync_versions.py` rewrites after
 each release — if `iru-setup-readme` reports a snippet shape other than the `.package(url:from:)` line
@@ -453,19 +558,31 @@ Step 11 so the user reconciles one of the two before the first release.
 
 ## Step 11 — Report
 
-Summarize the outcome of all six delegated skills together: the resolved `flavor`, `branching` and `mode`, the
-project identity and license, the flavor-specific inputs (`platforms`, `min-deployment-targets`/
+Summarize the outcome of all six delegated skills together. Start by repeating the **setup mode** announced in
+Step 1 (from scratch, or updating an existing repository) and give a per-component table — scaffold manifest,
+source layout, lint/format config, Sonar config, `.spi.yml`/`fastlane/Fastfile`, Antora docs, `.gitignore`, each
+workflow file, `.github/dependabot.yml`, `CHANGELOG.md`, `README.md` — with the action actually taken: **created /
+updated / replaced / kept as is / skipped (ci: no)**, plus every mismatch a sub-skill listed for a component kept
+as is. Then the resolved `flavor`, `branching` and `mode`, the project identity and license, the flavor-specific inputs (`platforms`, `min-deployment-targets`/
 `min-deployment-target`, `generator`, `signing`), the pipeline parameters used (the Step 4 table with the values
 actually applied), and which of the scaffold's own files (`Package.swift` + `Sources/`/`Tests/`, or the generator
 manifest + `Packages/Core` + `Targets/` + `fastlane/Fastfile`, plus `.swiftlint.yml`, the formatter config,
 `.spi.yml`, `sonar-project.properties`), the Antora docs site, the `.gitignore`, the workflow files (`build.yml`/
 `release.yml`/`sync.yml` + `sync_versions.py`, or `build.yml`/`release.yml`, plus `security.yml` and
-`.github/dependabot.yml`), `CHANGELOG.md`, and `README.md` were created, updated, or left untouched (per any stop
-choice in Steps 5 or 8, or a `mode: existing` skip in Step 5).
+`.github/dependabot.yml`), `CHANGELOG.md`, and `README.md` ended up (the table above).
 
 State explicitly which of publishing/distribution and Sonar analysis were wired, or deliberately omitted and why:
 
 - **`open-source`**: yes/no, as resolved in Step 4.
+- **`visibility`**: `public`/`private`/`internal`, and whether it came from `args`, `gh repo view`, or the user.
+- **`ci`**: yes/no. For `no`: the workflows step was skipped, and with it the shared security block (Dependabot,
+  dependency-review, CodeQL, OSV-Scanner, gitleaks) — run `/iru-setup-swift-github-workflows` later to add it.
+  For `yes` on a private/internal repository: restate the included-minutes budget and that macOS minutes count
+  roughly 10× against it.
+- **`ci-tests`** (`ci: yes` only): `unit` (UI-test bundles skipped via `-skip-testing:` for an app; any library
+  integration-test target skipped) or `full`.
+- **`pages`** (`ci: yes` only): `yes` (deployed to GitHub Pages — defaulted without asking for a public
+  repository) or `no` (docs built and uploaded as a workflow artifact; the README links no github.io site).
 - **`publish`** (`library`): whether `.spi.yml` was written — and restate that SwiftPM has no registry publish
   job, so `release.yml` only validates the semver tag and `swift package dump-package` either way.
 - **`distribution`**/**`signing`** (`app`): which Fastfile lanes exist as a result (`test` only; `test`+`build`+
@@ -475,19 +592,20 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
 - **`sonar`**: `cloud`/`self-hosted`/`none`, and whether `sonar-project.properties`, the coverage-conversion
   step (`lcov_to_sonar_generic.py` for a library, `xccov-to-sonarqube-generic.sh` for an app) and the
   `SonarSource/sonarqube-scan-action` step were included — if `none`, note whether that's the expected
-  non-open-source default or a direct user choice.
+  non-open-source/private default or a direct user choice; if Sonar is configured with `ci: no`, state that no CI
+  step sends reports (analysis only runs when someone runs the scanner manually).
 - **`runner`**: `macos-26` or `xcode-27`, restating the GA-vs-preview tradeoff, and the `xcode-version` the
   workflows skill resolved from it.
 - **Toolchain versions**: which came from a live lookup versus the recorded September 2026 fallback, as reported
   by the scaffold (`swift-docc-plugin`, XcodeGen/Tuist) and the workflows skill (action tags, runner image).
 
-Reproduce the **consolidated required-secrets/settings table** `iru-setup-swift-github-workflows` reported in
-Step 8 verbatim (it's already scoped to exactly this flavor/branching/options — don't re-derive or expand it):
+Unless Step 8 was skipped (`ci: no`), reproduce the **consolidated required-secrets/settings table**
+`iru-setup-swift-github-workflows` reported in Step 8 verbatim (it's already scoped to exactly this flavor/branching/options — don't re-derive or expand it):
 `SONAR_TOKEN` for a non-`none` `sonar`; `MATCH_GIT_URL`/`MATCH_PASSWORD` for `signing: fastlane-match`;
 `APP_STORE_CONNECT_API_KEY_ID`/`APP_STORE_CONNECT_API_KEY_ISSUER_ID`/`APP_STORE_CONNECT_API_KEY_BASE64` for
 `signing: api-key` (and also, regardless of `signing`, for notarization when `macos` is selected); `GITHUB_TOKEN`
 is automatic. Then its repository-settings notes: GitHub Pages source set to **GitHub Actions** for the docs
-deploy, and — gitflow only — "Workflow permissions" allowing GitHub Actions to create pull requests for
+deploy (only when `pages: yes`), and — gitflow only — "Workflow permissions" allowing GitHub Actions to create pull requests for
 `sync.yml`. For an app, add the Apple Developer Team ID placeholder the workflows skill leaves for the user to
 supply, and the `fastlane match` certs repository / App Store Connect API key that must exist before the first
 signed build.
@@ -496,9 +614,11 @@ List every decision made on the user's behalf: the license question's flavor-dep
 leaving `formatter` for `iru-setup-swift-library` to ask (Step 2); `min-deployment-target` resolved by
 `iru-setup-apple-app` from the local simulator runtimes rather than asked (Step 3); `xcode-version` resolved by the
 workflows skill from the runner image and `release-please` left at its `no` default (Step 4); `signing: none`
-offered as the default when `distribution: none` (Step 4); `iru-setup-swift-gitignore`'s `mode` left to its own
-detection and `package-resolved` left for it to ask (Step 7); and the four `security-*` flags left at their `yes`
-default (Step 8).
+offered as the default when `distribution: none` (Step 4); `pages: yes` defaulted for a public repository
+(Step 4); every pre-existing-file decision left to the owning sub-skill's own Update / Keep / Replace question
+(Steps 5–10), with `on-existing` forwarded only when it came in via `args`; `iru-setup-swift-gitignore`'s `mode`
+left to its own detection and `package-resolved` left for it to ask (Step 7); and the four `security-*` flags
+left at their `yes` default (Step 8).
 
 Finish with an explicit **Warn explicitly** block, repeating each sub-skill's own closing warning:
 

@@ -1,6 +1,6 @@
 ---
 name: iru-setup-react-web
-description: Scaffold a new React web application with `npm create vite@latest <name> -- --template react-ts`, then add Vitest + `@vitest/coverage-v8` + `@testing-library/react` + `jsdom` for unit tests, ESLint (flat config, with `eslint-plugin-react-hooks`) or the template's own Oxlint (asked once), Prettier, Stylelint 17 for CSS, Playwright for end-to-end smoke tests under `e2e/`, an optional Storybook setup, and — when Sonar is enabled — `sonar-project.properties`. Invoke as `/iru-setup-react-web`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `keep-oxlint` (`yes`/`no`), `storybook` (`yes`/`no`), `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it asks whatever `args` didn't resolve. There is no `publish`/`distribution` question for this skill — a web app isn't published to a package registry or an app store. If `package.json` already exists at the repository root, asks whether to stop or continue in `mode: existing` gap-fill (only missing pieces — Vitest, ESLint/Stylelint, Playwright, Storybook, `sonar-project.properties` — are added; nothing already wired is touched). Use whenever a repository needs a React + Vite + TypeScript web app bootstrapped with its full test/lint/e2e toolchain from this house template, instead of running `npm create vite` and wiring the rest by hand.
+description: Scaffold a new React web application with `npm create vite@latest <name> -- --template react-ts`, then add Vitest + `@vitest/coverage-v8` + `@testing-library/react` + `jsdom` for unit tests, ESLint (flat config, with `eslint-plugin-react-hooks`) or the template's own Oxlint (asked once), Prettier, Stylelint 17 for CSS, Playwright for end-to-end smoke tests under `e2e/`, an optional Storybook setup, and — when Sonar is enabled — `sonar-project.properties`. Invoke as `/iru-setup-react-web`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `keep-oxlint` (`yes`/`no`), `storybook` (`yes`/`no`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar since no CI would send reports), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — one answer for every pre-existing file in scripted runs), `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it asks whatever `args` didn't resolve. There is no `publish`/`distribution` question for this skill — a web app isn't published to a package registry or an app store. Announces whether it is scaffolding from scratch or updating an existing app; for every artifact it owns that already exists (`package.json`, Vitest/Jest config, ESLint/Oxlint, Prettier, Stylelint, Playwright, Storybook, `tsconfig` references, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a React + Vite + TypeScript web app bootstrapped with its full test/lint/e2e toolchain from this house template, instead of running `npm create vite` and wiring the rest by hand.
 model: haiku
 ---
 
@@ -35,6 +35,9 @@ sonar-project-key: example_my-app
 sonar-host-url: https://sonarcloud.io
 keep-oxlint: no
 storybook: no
+visibility: public
+ci: yes
+on-existing: ask
 mode: new
 ```
 
@@ -46,37 +49,73 @@ Recognized keys: `app-name`, `description`, `license`, `developer-name`, `develo
 `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus
 `sonar-organization`/`sonar-project-key`/`sonar-host-url` only when `sonar` is `cloud` or `self-hosted`),
 `keep-oxlint` (`yes` keeps the Vite template's Oxlint script alongside ESLint, `no` replaces it), `storybook`
-(`yes`/`no`), and `mode` (`new`/`existing`). There is no `publish`/`distribution` key for this skill.
+(`yes`/`no`), `visibility` (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key
+Step 2's Sonar recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions
+workflows at all; only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`,
+default `ask` — how Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode`
+(`new`/`existing`). There is no `publish`/`distribution` key for this skill.
+
+`mode: existing` marks this run as an **update** of an established repository, but it never means "update
+silently": Step 1 still warns and asks per pre-existing artifact unless `on-existing` says otherwise.
 
 ## Step 1 — Survey the repository
 
-- If `mode` wasn't supplied via `args`, don't ask it as an isolated question — check whether `package.json`
-  already exists at the repository root:
-  - **No `package.json`**: default to `mode: new`, skip straight to Step 2.
-  - **`package.json` already exists**: default to `mode: existing` and confirm with `AskUserQuestion`
-    (`existing` pre-selected — gap-fill only what's missing; `new` as the other option, warning that it
-    re-scaffolds from `npm create vite@latest` and can conflict with what's already there). If the user
-    picks **stop**, report that `package.json` already exists and end here — make no changes.
-- Also check whether the repository root is otherwise empty (ignoring dotfiles like `.git`, `.gitignore`, a
-  `LICENSE`, or a `CLAUDE.md`/`README.md`):
-  - **Empty** (or `mode: existing`): scaffold `npm create vite@latest . -- --template react-ts` directly into
+- If `mode` wasn't supplied via `args`, don't ask it as an isolated question — derive it from whether
+  `package.json` already exists at the repository root (absent ⇒ `new`, present ⇒ `existing`).
+- Survey every artifact this skill owns: `package.json` (the Vite scaffold), `vitest.config.ts` (or a
+  `jest.config.*` — another unit-test setup), `src/test/setup.ts`/`src/App.test.tsx`, an ESLint or Oxlint config
+  (`eslint.config.js`, `.oxlintrc.json`), `.prettierrc`/`.prettierignore` (or a `prettier` key), a Stylelint config,
+  `playwright.config.ts`/`e2e/`, `.storybook/`, `tsconfig.e2e.json` (and its reference in `tsconfig.json`), and
+  `sonar-project.properties`.
+- Announce the mode before asking anything else:
+  - **Nothing owned exists**: "Scaffolding the React web app **from scratch**." Continue with the placement check
+    below.
+  - **Anything owned exists** (or `mode: existing`): "**Updating an existing setup** — found: <list with paths>."
+    Warn that each one will be handled individually, then resolve one action per existing artifact:
+    - **`on-existing` is `keep`/`update`/`replace`**: apply it to every artifact without asking (still print the
+      warning).
+    - **Otherwise**: ask with `AskUserQuestion`, batching up to 4 artifacts per call (one question each), naming
+      any concrete contradiction with this run's choices in the question (e.g. "your `eslint.config.js` has no
+      `react-hooks` rules", "a `sonar-project.properties` exists but you chose `sonar: none`"):
+      - **Update (Recommended)** — merge: add what's missing and correct outdated parts using this skill's
+        template as reference (missing scripts/devDependencies, ignores, the `e2e/**` Vitest exclude, the
+        Chromium-only Playwright project, the `tsconfig.e2e.json` reference), keeping everything this skill
+        doesn't own. The user reviews a diff; customizations survive, but a customized part this skill owns may be
+        rewritten.
+      - **Keep as is** — leave it untouched (and skip the install/fix commands that only serve it). Nothing
+        customized changes, but it may stay out of date or disagree with this run's choices — Step 10 lists each
+        mismatch.
+      - **Replace** — regenerate from this skill's template; every customization in it is lost (recoverable only
+        from git history). For `package.json` this means re-running `npm create vite@latest` over the existing
+        app, which overwrites the template's own files (`src/App.tsx`, `index.html`, …) — say so and never
+        recommend it. For a `jest.config.*`, Replace means switching the unit tests to Vitest (Step 4); Keep stays
+        on Jest and skips Step 4 entirely (recommend Keep here).
+      - **Stop** (first batch only) — end this skill now without changing anything; report this and end here.
+    - Defer the `sonar-project.properties` question until Step 2 resolves `sonar`: with `sonar: none`,
+      Update/Replace mean removing the file and Keep leaves it as a reported mismatch.
+- Steps 3–9 consult these decisions: an absent artifact is created; **Update** merges and shows the diff;
+  **Keep as is** skips that artifact (e.g. a kept linter config also skips the `keep-oxlint` question in Step 2,
+  using whichever linter exists); **Replace** overwrites it. Step 3's `create-vite` scaffold runs only when there
+  is no `package.json` yet or the user chose Replace for it.
+- Placement (only when Step 3 will scaffold): check whether the repository root is otherwise empty (ignoring
+  dotfiles like `.git`, `.gitignore`, a `LICENSE`, or a `CLAUDE.md`/`README.md`):
+  - **Empty**: scaffold `npm create vite@latest . -- --template react-ts` directly into
     the repository root (verified — `create-vite` accepts `.` as the target and infers the `package.json`
     `name` from the current directory's basename when no other name is given). Use the resolved `app-name`
     (Step 2) to override that inferred name afterward if it differs.
-  - **Not empty, no `package.json` yet** (e.g. docs or CI files already present but no app scaffolded): ask
+  - **Not empty** (e.g. docs or CI files already present but no app scaffolded): ask
     the user with `AskUserQuestion` whether to scaffold into the repository root anyway (accepting that
     `create-vite` scaffolds alongside existing files — it does not require an empty directory, only warns if
     files would be overwritten) or into a subdirectory named after `app-name`.
-- In `mode: existing`, additionally survey what's already wired so Steps 3–9 only fill gaps: does
-  `vitest.config.ts`/`jest.config.*` exist (skip Step 4 if so), an ESLint/Oxlint config (skip Step 5's linter
-  choice — use whichever exists), `.prettierrc`/`prettier` key (skip Prettier setup), a Stylelint config
-  (skip Step 5's Stylelint block), `playwright.config.ts`/`e2e/` (skip Step 6), `.storybook/` (skip Step 7),
-  `sonar-project.properties` (skip Step 8).
 
 ## Step 2 — Collect identity and options
 
 For any field Step 0 already resolved from `args`, use that value directly. For everything else, ask the
 user directly (plain conversation for free text; `AskUserQuestion` for the bounded choices below):
+
+When an existing `package.json` (or app config such as `app.json`/`angular.json`) already supplies an identity
+value Step 0 didn't — typical in `mode: existing`, where orchestrators omit identity keys — use it as resolved and
+confirm it in one line instead of asking.
 
 - **app-name** — only asked when scaffolding into a subdirectory (Step 1); when scaffolding into the
   repository root, default to the root directory's own basename and only ask if the user wants a different
@@ -98,9 +137,17 @@ exist yet — `iru-check-license` can verify/backfill source headers against it.
 Then resolve `open-source` and `sonar` — skip either one Step 0 already resolved:
 
 - **open-source** — is this repository open source? Yes / No.
-- **sonar** — recommend **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that
-  SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend
-  **None** (`none`), offering **self-hosted SonarQube** as the second option:
+- **sonar** — "Configure SonarCloud / SonarQube for this project?" The recommendation keys on both `open-source`
+  and `visibility`. If `visibility` wasn't supplied via `args`, resolve it only now (only when this question is
+  actually asked): `gh repo view --json visibility -q .visibility` when the repository has a GitHub remote
+  (lowercase the result and tell the user), otherwise ask **Public** / **Private** (Public recommended when open
+  source); `internal` counts as private. If `open-source: yes` but `visibility` is `private`/`internal`, warn about
+  the contradiction and ask which is right. Recommend **SonarCloud** (`cloud`) only when the repository is public
+  **and** open source; otherwise state that SonarCloud is free only for public open-source projects (per its
+  current pricing — a private project needs a paid plan) and recommend **None** (`none`), offering **self-hosted
+  SonarQube** as the second option. If `ci: no` was supplied via `args`, say plainly that no CI workflow would send
+  reports — analysis would only run when someone runs the scanner manually with a token — and recommend **None**;
+  if the user still picks `cloud`/`self-hosted`, write `sonar-project.properties` anyway and say so in Step 10:
   - `cloud` — ask for `sonar.organization` (suggest `<owner>-github`, the owner parsed from
     `git remote get-url origin`), `sonar.projectKey` (suggest `<owner>_<repo>`), and confirm
     `sonar.host.url` defaults to `https://sonarcloud.io`.
@@ -598,9 +645,11 @@ npm run typecheck && npm run lint && npm run format && npm run test && npm run c
 
 ## Step 10 — Report
 
-Summarize what was generated: the app name and location (repository root or subdirectory), the license
-chosen (or "none"), and whether this ran in `mode: new` or `mode: existing` (and, if `existing`, which pieces
-were already present and left untouched vs. which were added).
+Start by repeating the mode announced in Step 1 (**scaffolded from scratch** or **updated an existing setup**).
+Summarize what was generated: the app name and location (repository root or subdirectory), the license chosen (or
+"none"), and, per owned artifact, the action actually taken — **created / updated / replaced / kept as is /
+removed**. For every kept artifact, list each mismatch with this run's choices (e.g. a `sonar-project.properties`
+left after `sonar: none`, a Playwright config still listing Firefox/WebKit).
 
 State explicitly what was included versus omitted, and why:
 
@@ -609,8 +658,9 @@ State explicitly what was included versus omitted, and why:
   name which `package.json` scripts run which tool.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, `sonar-project.properties` was
   written with the resolved organization/project key/host URL; if `none`, note that this is expected when
-  the project isn't open source (SonarCloud is free only for open-source projects) unless the user explicitly
-  chose it.
+  the repository isn't public and open source (SonarCloud is free only for public open-source projects) unless
+  the user explicitly chose it. State the `visibility` used and where it came from (`args`, `gh`, or the user);
+  if `ci: no` was supplied and Sonar was still configured, say no CI step sends reports.
 - **`storybook`**: yes/no — if yes, call out the `vitest.config.ts` project-split from Step 7 and which
   script-scoping option (combined vs. `--project=unit`/`--project=storybook`) was applied.
 

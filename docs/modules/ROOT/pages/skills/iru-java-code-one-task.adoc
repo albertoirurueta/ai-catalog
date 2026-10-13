@@ -1,6 +1,6 @@
 = Java Code One Task
-:description: Implements a single Java task from an implementation plan, applying its bundled Java code agreements, writing the code and JUnit tests, then checking off its checkbox.
-:keywords: iru-java-code-one-task, claude code skill, java, junit, implementation plan, task implementation, unit testing, code style, var type inference, final, declaration order, javadoc
+:description: Implements one Java task from an implementation plan with JUnit tests, applying its bundled code agreements and mandatory rules, then checks off the task.
+:keywords: iru-java-code-one-task, claude code skill, java, junit, mockito, implementation plan, task implementation, mandatory coding rules, var type inference, javadoc
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -28,8 +28,13 @@ captures a quality baseline or runs any test/coverage/quality check itself.
 
 This skill ships a `reference/` directory alongside its `SKILL.md`, holding this catalog's **general Java code
 agreements** — the framework-independent conventions new code is expected to follow. It is read by
-**progressive disclosure**: `reference/README.md` is a short routing table, one file is always read, and the
+**progressive disclosure**: `reference/README.md` is a short routing table, two files are always read, and the
 others only when the task's shape calls for them, so a one-method change doesn't pay for the whole library.
+
+One of the always-read files, `mandatory-rules.md`, is different in kind from the rest: its rules are
+**non-negotiable** and take precedence over "match the surrounding code" for every line the skill writes or
+rewrites — production and test code alike. They still don't license restyling untouched code; a pre-existing
+violation found in a touched file is left alone and named in the report.
 
 The Spring Boot counterpart, xref:skills/iru-java-springboot-code-one-task.adoc[], ships its own `reference/`
 covering hexagonal module boundaries, DDD, SOLID, and the distributed patterns. Everything in this directory
@@ -38,6 +43,20 @@ still holds there; the two libraries are complementary rather than alternatives.
 [cols="2,1,3", options="header"]
 |===
 |File |Read when |Covers
+
+|`mandatory-rules.md`
+|Always
+|The non-negotiable rules. Tests: JUnit assertions, never AssertJ; Mockito mocks or spies, never hand-written fake
+implementations (an abstract class is tested through a `CALLS_REAL_METHODS` mock); test methods named
+`methodBeingTested_whenCondition_expectedResult`; one test class per public class, never one shared across several
+implementations; `*Test` for unit tests and `*IT` for integration tests; standard member ordering and full Javadoc
+in test classes too. Style: `var` wherever possible, including an explicit type witness for generic static
+factories (`List.<String>of()`); records validated in the compact constructor, with collections defensively copied
+(or SpotBugs `EI_EXPOSE_REP` fails the build); `final` on every parameter (Checkstyle `FinalParameters`); Javadoc on
+every type, method, constructor, and field; named constants instead of magic numbers; stream predicates over
+manual loops for simple scans; `getFirst()`/`getLast()`; method references over forwarding lambdas; `switch`
+expressions over `if`/`else if` chains; no redundant `this`; null-safe utility predicates from a library already on
+the classpath; LF line endings, never `System.lineSeparator()` or `%n`.
 
 |`code-style.md`
 |Always
@@ -61,19 +80,22 @@ existing file without producing an unreviewable diff.
 
 |`javadoc.md`
 |The task adds or changes a type or a public/protected member
-|Full Javadoc as a hard requirement: a standalone summary sentence, the caller's contract, `@param` for every
+|Full Javadoc as a hard requirement — on every type, method, constructor, and field, private ones and test sources
+included: a standalone summary sentence, the caller's contract, `@param` for every
 parameter, type parameter, and record component, `@return`, and `@throws` for every handleable exception — the
 `@throws` list being what the tests are written against. Plus interface Javadoc as the implementation contract,
 what an overridable method must document for its subclasses, `{@inheritDoc}`, when a private member deserves a
-comment, and the mechanics that otherwise fail a doclint build.
+Javadoc says for private members and in test sources, and the mechanics that otherwise fail a doclint build.
 
 |`testing.md`
 |The task writes or updates tests — nearly every task
-|Matching the package's existing test conventions before introducing any of your own; what to cover (the changed
+|The fixed rules from `mandatory-rules.md` first (JUnit not AssertJ, Mockito not fakes, naming, one test class per
+public class), then the package's existing conventions for everything those leave open; what to cover (the changed
 behaviour through the public API, one test per documented `@throws`, boundaries) and what not to; JUnit 5
 mechanics (`assertThrows`, `@ParameterizedTest`, `@Nested`, no shared mutable state, no `Thread.sleep`); why
 private methods are tested through public behaviour rather than by widening visibility; and disciplined mocking
-— mock what you don't own, never the type under test, verify only when the interaction *is* the behaviour.
+— mock what you don't own, never a hand-written fake, never the type under test, verify only when the interaction
+*is* the behaviour.
 |===
 
 The declaration-order rules are the ones with a downstream consequence: `iru-java-code-quality` runs Checkstyle's
@@ -119,40 +141,45 @@ report rather than guessing at what the reference would have said.
 
 == Outputs
 
-* Source and test files created/modified per the task, following the bundled `reference/` agreements — `var` and
-  `final` as the defaults for new code, public-to-private declaration order with overloads kept together, full
-  Javadoc on every type and public/protected member — plus this repository's own `CLAUDE.md` conventions (Java
+* Source and test files created/modified per the task, following `reference/mandatory-rules.md` in full and the
+  rest of the bundled `reference/` agreements — `var` and `final` as the defaults for new code, public-to-private
+  declaration order with overloads kept together, full Javadoc on every type, method, constructor, and field —
+  plus this repository's own `CLAUDE.md` conventions (Java
   version, license header expectations, banned dependencies) where they are more specific, and the surrounding
-  file's existing style wherever it consistently differs.
-* JUnit tests added/updated covering the new/changed behavior, including a case per documented `@throws` — not
-  run by this skill; the caller runs them once for the whole bucket.
+  file's existing style wherever it consistently differs (except for the mandatory rules).
+* JUnit tests added/updated covering the new/changed behavior, including a case per documented `@throws` — one
+  `<ClassName>Test` per public class, methods named `methodBeingTested_whenCondition_expectedResult`, JUnit
+  assertions and Mockito mocks/spies only — not run by this skill; the caller runs them once for the whole bucket.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
   pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
   the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
 * A short summary handed back to the caller: file(s) touched, tests added/updated, whether the run stopped on a
   blocker, and any deliberate deviation from `reference/` (a file that doesn't use `var`, a class left non-final
   because a framework proxies it or the project's Mockito can't mock it, a file whose existing member order is
-  already wrong) so it reads as a decision rather than an oversight.
+  already wrong) so it reads as a decision rather than an oversight — plus any pre-existing violation of the
+  mandatory rules noticed in a touched file (AssertJ, fakes, shared test classes, platform line endings) and left
+  alone because it was outside the task's scope.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-java-code-one-task\n(task description)"] --> B["Step 1: read reference/README.md,\nthen only the files this task needs"]
+    A["Start /iru-java-code-one-task\n(task description)"] --> B["Step 1: read reference/README.md,\nmandatory-rules.md + code-style.md,\nthen only the files this task needs"]
     B -- "reference/ missing" --> B2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
     B2 --> C
     B --> C["Step 2: re-check current code state;\nnote what the file already does"]
-    C --> D["Step 3: implement exactly what the task\nspecifies (var/final, member order, Javadoc)"]
-    D --> E["Step 4: write/update JUnit tests\n(not run here)"]
+    C --> D["Step 3: implement exactly what the task\nspecifies, applying the mandatory rules in full"]
+    D --> E["Step 4: write/update JUnit tests per the\nmandatory rules (not run here)"]
     E --> F{"Ambiguous, or approach\ninfeasible against real code?"}
     F -- yes --> G["Step 5: stop; leave checkbox\nunchecked; report blocker to caller"]
     F -- no --> H["Step 6: check off this task's\ncheckbox + 'validation pending' note"]
-    H --> I["Step 7: report outcome to caller:\nfiles, tests, deviations from reference/"]
+    H --> I["Step 7: report outcome to caller: files, tests,\ndeviations, pre-existing rule violations"]
 ....
 
 A conflict between `reference/` and the surrounding code is deliberately *not* a stop condition — the skill
-follows the surrounding code and reports the divergence in Step 7.
+follows the surrounding code and reports the divergence in Step 7, except for `mandatory-rules.md`, which new code
+follows regardless.
 
 == Dependencies
 

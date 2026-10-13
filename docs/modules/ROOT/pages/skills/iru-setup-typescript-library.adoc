@@ -1,5 +1,5 @@
 = Setup TypeScript Library
-:description: Generates package.json, tsconfig.json, vitest.config.ts, eslint.config.js, typedoc.json and a src/test skeleton for a new npm/TypeScript library.
+:description: Creates or updates an npm/TypeScript library toolchain (package.json, vitest, eslint, typedoc, src/test skeleton), asking Update, Keep or Replace per file.
 :keywords: iru-setup-typescript-library, claude code skill, npm, typescript, vitest, eslint, typedoc, changesets, sonarcloud, scaffold
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -7,7 +7,8 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 Generate the standard npm/TypeScript library toolchain at the repository root — `package.json`, `tsconfig.json`,
 `vitest.config.ts`, `eslint.config.js`, `.prettierrc`/`.prettierignore`, `typedoc.json`, and, when opted in,
 `sonar-project.properties` and `.changeset/config.json` — plus a minimal `src/index.ts` + `test/index.test.ts`
-skeleton, from explicit house templates embedded in the skill itself.
+skeleton, from explicit house templates embedded in the skill itself. It announces whether it is creating the
+toolchain from scratch or updating an existing one, and asks per pre-existing file.
 
 == Purpose
 
@@ -17,7 +18,9 @@ and an 80%-lines threshold, ESLint 10 flat config (`@eslint/js` + `typescript-es
 `eslint-config-prettier`, plus a license-header rule once a license is chosen), Prettier, and Typedoc with
 `treatWarningsAsErrors`. Every devDependency version is looked up from the npm registry at run time (Step 4), with
 a recorded fallback only for when that lookup fails, and `npm install` is run at the end so the scaffold is
-immediately buildable.
+immediately buildable. When any owned file already exists it announces "updating an existing setup", warns, and for
+each such file asks **Update** (merge, keeping customizations), **Keep as is**, or **Replace** (regenerate from the
+template, losing customizations), explaining each option's consequences; **Stop** is offered in the first batch.
 
 == Purpose group
 
@@ -85,7 +88,7 @@ otherwise plain `<package-name>`.
 |No
 |`cloud`/`self-hosted`/`none` — whether to write `sonar-project.properties`. Plus `sonar-organization`/
 `sonar-project-key`/`sonar-host-url` once `cloud` or `self-hosted` is chosen.
-|`cloud` when open-source; otherwise asked, `none` recommended
+|`cloud` only when open-source and public; otherwise asked, `none` recommended
 
 |`integration-branch`
 |No
@@ -95,24 +98,47 @@ workflows so the two agree; stand-alone with `publish: yes` and no value, the sk
 silently defaulting.
 |`main`
 
+|`visibility`
+|No
+|`public`/`private`/`internal` — the GitHub repository's visibility, used only to key the Sonar recommendation.
+When absent and the Sonar question is asked, detected via `gh repo view`, else asked. Open source combined with
+private/internal is flagged as contradictory. `internal` counts as private.
+|Detected or asked (only when Sonar is asked)
+
+|`ci`
+|No
+|`yes`/`no` — whether the calling run generates GitHub Actions workflows. With `ci: no` the Sonar question
+recommends `none`, since no CI would send reports; if `cloud`/`self-hosted` is still chosen, the properties file is
+written and the report notes that no CI step sends reports.
+|Unset
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` — one answer applied to every pre-existing owned file, for scripted runs (the
+warning is still printed).
+|`ask`
+
 |`mode`
 |No
-|`new`/`existing`. `existing` skips Step 1's stop-or-regenerate question and goes straight to gap-fill (create only
-missing files, touch nothing already present).
+|`new`/`existing`. `existing` marks the run as an update in the announcement, but the skill still warns and asks per
+pre-existing file unless `on-existing` says otherwise. When an existing `package.json` supplies identity values,
+they are used and confirmed in one line instead of asked.
 |`new`
 |===
 
 == Outputs
 
 * `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`, `.prettierrc`, `.prettierignore`,
-  `typedoc.json` at the repository root.
+  `typedoc.json` at the repository root — created, merged (Update), kept, or regenerated (Replace) per file.
 * `src/index.ts` and `test/index.test.ts` — a minimal placeholder module and its test, verified to build/test/
   lint/typecheck/document clean.
-* `sonar-project.properties` — only when `sonar` is `cloud` or `self-hosted`.
-* `.changeset/config.json` — only when `publish: yes`.
+* `sonar-project.properties` — only when `sonar` is `cloud` or `self-hosted`; with `sonar: none`, an existing file is
+  removed on Update/Replace and left in place on Keep (reported as a mismatch).
+* `.changeset/config.json` — only when `publish: yes`; with `publish: no`, same removal/keep rule.
 * `node_modules/` from `npm install` (or `pnpm`/`yarn` if that package manager is already in use in the
   repository), run at the end of Step 7.
-* A report (Step 8) of the resolved package identity, which files were created/left untouched/replaced, which
+* A report (Step 8) of the mode (from scratch vs update), resolved package identity, the per-file action (created / updated / replaced / kept as
+  is / removed) with mismatches listed for kept files, the `visibility` used and its source, which
   devDependency versions came from a live lookup versus the recorded fallback, and explicit warnings to review
   every generated file, add a `LICENSE` file if a license was chosen, and set up `SONAR_TOKEN`/npm publishing
   credentials before relying on `sonar`/`publish`.
@@ -127,19 +153,22 @@ flowchart TD
     B -- no --> D[Treat every field as unset]
     C --> E{"Step 1: any owned file\nalready exists?"}
     D --> E
-    E -- none exist --> F["Step 2: Collect inputs\n(package-name, scope, description,\ndeveloper info, license,\nopen-source, publish, sonar)"]
-    E -- mode: existing --> G["Gap-fill: create only\nmissing files"]
-    G --> F
-    E -- yes, mode not set --> H["Warn user; AskUserQuestion:\nstop / fill gaps only / regenerate"]
+    E -- none exist --> E1["Announce: creating\nfrom scratch"]
+    E1 --> F
+    E -- yes --> E2["Announce: updating existing setup;\nlist files found"]
+    E2 --> E3{"on-existing set?"}
+    E3 -- keep/update/replace --> E4["Apply that action\nto every existing file"]
+    E3 -- ask --> H["AskUserQuestion per file:\nUpdate / Keep as is / Replace\n(Stop in first batch)"]
     H -- stop --> I[Report nothing written; end]
-    H -- fill gaps only --> F
-    H -- regenerate --> J["Read existing package.json\nas defaults"]
-    J --> F
-    F --> K["Step 3: Infer repository info\n(owner/repo/host from git remote,\ndescription fallback via gh)"]
+    H -- choices made --> J["Read existing package.json\nas defaults"]
+    E4 --> J
+    J --> F["Step 2: Collect inputs\n(package-name, scope, description,\ndeveloper info, license, open-source,\npublish, visibility, sonar)"]
+    F --> F2["Ask Update / Keep / Replace for\nsonar-project.properties and\n.changeset/config.json"]
+    F2 --> K["Step 3: Infer repository info\n(owner/repo/host from git remote,\ndescription fallback via gh)"]
     K --> L["Step 4: Look up devDependency\nversions via npm view\n(TypeScript/@types/node caveats)"]
-    L --> M["Step 5-6: Fill templates\nand write files\n(respecting stop/fill-gaps/regenerate)"]
+    L --> M["Step 5-6: Fill templates and write files\nper file: create / update (show diff) /\nkeep / replace"]
     M --> N["Step 7: npm install\n(or pnpm/yarn if already in use)"]
-    N --> O["Step 8: Report + warn:\nreview before building/publishing"]
+    N --> O["Step 8: Report per-file actions + warn:\nreview before building/publishing"]
 ....
 
 == Dependencies
@@ -154,7 +183,7 @@ either.
 
 * xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-typescript-library` (one of five
   flavor choices) via the `iru-isolated-skill-executor` agent, passing the pre-resolved package identity,
-  developer info, license, and shared bootstrap inputs (`open-source`/`publish`/`sonar`/`mode`) via `args` as
+  developer info, license, and shared bootstrap inputs (`open-source`/`publish`/`sonar`/`integration-branch`/`visibility`/`ci`/`mode`, plus `on-existing` when supplied) via `args` as
   `key: value` lines so this skill's own Step 2 questions are skipped.
 
 === Related agents

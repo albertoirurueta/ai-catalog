@@ -1,6 +1,6 @@
 ---
 name: iru-java-code-one-task
-description: Implement a single task from a Java `implementation_plan.md`-style task list — just the implementation and its tests. Loads only the relevant guidance from this skill's own `reference/` directory (this catalog's general Java code agreements: `var` type inference used as much as possible, `final` wherever possible — including classes and methods not meant to be overridden, public-to-private declaration order within every type with overloads kept together, immutability and narrow visibility, exception and null conventions, full Javadoc on every type and public/protected member, and JUnit test conventions), re-checks the current code state, implements exactly what the task specifies, writes/updates JUnit tests, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update Javadoc, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-java-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-java-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-dotnet-code-one-task` for Java/Maven projects.
+description: Implement a single task from a Java `implementation_plan.md`-style task list — just the implementation and its tests. Loads only the relevant guidance from this skill's own `reference/` directory (this catalog's general Java code agreements: `var` type inference used as much as possible, `final` wherever possible — including classes and methods not meant to be overridden, public-to-private declaration order within every type with overloads kept together, immutability and narrow visibility, exception and null conventions, and JUnit test conventions — plus a `mandatory-rules.md` that always applies: JUnit assertions never AssertJ, Mockito mocks/spies never hand-written fakes, `methodBeingTested_whenCondition_expectedResult` test names, one `*Test` (unit) / `*IT` (integration) class per public class, `var` with explicit type witnesses for generic factories, records validated and defensively copied in the compact constructor, `final` parameters, full Javadoc on every type, method, constructor, and field including test sources, named constants instead of magic numbers, `getFirst()`/`getLast()`, method references, `switch` expressions, stream predicates, no redundant `this`, utility predicates, and LF line endings), re-checks the current code state, implements exactly what the task specifies, writes/updates JUnit tests, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update Javadoc, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-java-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-java-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-dotnet-code-one-task` for Java/Maven projects.
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
 ---
@@ -23,13 +23,14 @@ points at for this task. The routing, restated:
 
 | Read | When |
 |---|---|
+| `reference/mandatory-rules.md` | **Always** — the non-negotiable rules for production and test code (JUnit not AssertJ, Mockito not fakes, test naming and one test class per public class, type witnesses, record defensive copies, `final` parameters, Javadoc on every member, constants, modern idioms, LF line endings). |
 | `reference/code-style.md` | **Always** — `var` type inference, `final` wherever possible, immutability, visibility, naming, exceptions, null. |
 | `reference/class-member-ordering.md` | The task adds a new type, or adds/moves a constant, field, constructor, method, or nested type in an existing one. Skip it only for a change confined to an existing method body. |
 | `reference/javadoc.md` | The task adds or changes a type, or any public/protected member. |
 | `reference/testing.md` | The task writes or updates tests — nearly every task, since Step 4 is part of implementing it. |
 
-Don't read the optional files speculatively — for a change inside one existing method, `code-style.md` plus
-`testing.md` is the whole list.
+Don't read the optional files speculatively — for a change inside one existing method, `mandatory-rules.md`,
+`code-style.md`, and `testing.md` are the whole list.
 
 If `reference/` is missing (e.g. the skill directory was copied without it), proceed using this repository's own
 `CLAUDE.md` conventions and the surrounding code's existing style, and say so in Step 7's report — don't guess at
@@ -42,9 +43,11 @@ state" notes passed in with the task are still accurate; other tasks in the same
 concurrently, or the file may have changed for unrelated reasons.
 
 Also note what the surrounding file and package already do about the things `reference/` has opinions on:
-whether `var` is used, whether parameters are `final`, how members are ordered, how errors are reported. The
-reference's rules are the default for new code; a file that consistently does something else wins, and the
-divergence goes in Step 7's report rather than becoming an unrequested restyle.
+whether `var` is used, how members are ordered, how errors are reported. The reference's rules are the default
+for new code; a file that consistently does something else wins, and the divergence goes in Step 7's report
+rather than becoming an unrequested restyle. The one exception is `reference/mandatory-rules.md`: the code you
+write follows it even where the surrounding file doesn't (while still leaving the file's untouched code alone),
+and any pre-existing violation you notice goes in the report.
 
 ## Step 3 — Implement exactly what the task specifies
 
@@ -54,14 +57,16 @@ conventions where they are more specific (Java version, license header expectati
 
 Non-negotiable, because a later gate enforces them:
 
-- **Full Javadoc** on every type and every public/protected member, with `@param` (including every record
-  component and type parameter), `@return`, and `@throws` for every exception a caller can handle. The
-  `@throws` list is what Step 4's tests are written against.
+- **`reference/mandatory-rules.md`, in full**, for every line written or rewritten — production and test code.
+- **Full Javadoc** on every type, method, constructor, and field (private ones included), with `@param`
+  (including every record component and type parameter), `@return`, and `@throws` for every exception a caller
+  can handle. The `@throws` list is what Step 4's tests are written against.
 - **Declaration order** within any type you create or add to: constants, then fields, then constructors, then
   methods, then nested types — each band ordered public → protected → package-private → private, with
   overloads kept contiguous. Insert new members in their correct band; never reorder an existing file wholesale
   for an unrelated task.
-- **`final` and `var` as the defaults for new code** — `final` fields, locals, and parameters; `final` on a
+- **`final` and `var` as the defaults for new code** — `final` fields and locals, `final` on every parameter
+  (Checkstyle `FinalParameters`); `final` on a
   class or method not meant to be overridden (minding the proxy/mocking caveats in `reference/code-style.md`);
   `var` for locals wherever the type is inferable and nothing is hidden by it.
 - **No new runtime dependency** unless the task explicitly calls for it. If one seems unavoidable, that's a
@@ -72,9 +77,13 @@ code the task doesn't touch.
 
 ## Step 4 — Write or update the tests
 
-Follow `reference/testing.md` and the existing test style in the same package (JUnit 5, Mockito only where
-already used). Cover the new/changed behavior, including the edge cases implied by the Javadoc `@throws`
-contracts (e.g. null/invalid-argument cases). Do not run the test suite yourself — `iru-java-code-one-task-group`
+Follow `reference/mandatory-rules.md` and `reference/testing.md`, and the existing test style in the same
+package for anything those leave open. That means: JUnit 5 assertions (never AssertJ); Mockito mocks or spies for
+collaborators (never a hand-written fake); one `<ClassName>Test` per public class (`<ClassName>IT` for an
+integration test), never one test class shared across several implementations; test methods named
+`methodBeingTested_whenCondition_expectedResult`; and full Javadoc on the test class and every member. Cover the
+new/changed behavior, including the edge cases implied by the Javadoc `@throws` contracts (e.g.
+null/invalid-argument cases). Do not run the test suite yourself — `iru-java-code-one-task-group`
 runs it once for the whole bucket in its own consolidated validation pass.
 
 ## Step 5 — When to interrupt the user
@@ -121,6 +130,8 @@ Hand control back to the caller with a short summary:
   non-final because a framework proxies it or the project's Mockito can't mock it, or adding a member to a file
   whose existing order is already wrong — so the caller can see it was a decision rather than an oversight. Say
   so here too if `reference/` was missing entirely (Step 1).
+- **Pre-existing violations of `reference/mandatory-rules.md`** noticed in the files touched (AssertJ, fakes,
+  shared test classes, platform line endings, …) and left alone because they were outside the task's scope.
 
 This is what `iru-java-code-one-task-group` records for this task before running its own consolidated
 license/Javadoc/test/coverage/quality validation across the whole bucket; this skill has already checked off this

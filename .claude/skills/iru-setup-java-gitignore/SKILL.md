@@ -4,12 +4,14 @@ description: Create or update the root `.gitignore` file for a Java project — 
   artifacts (jar/war/ear/zip), JVM crash logs, the build tool's output directory (Maven `/target/` or Gradle
   `build/`/`.gradle/`), IntelliJ/.idea entries, and, when detected, project-specific generated files such as a
   build-info properties file written by a Groovy/Maven plugin or an Antora docs build output directory. Invoke as
-  `/iru-setup-java-gitignore`. Only creates `.gitignore` when one doesn't exist yet — if one already exists, this skill
-  never overwrites it silently: it proposes an updated version, shows the user a diff, and only writes it on
-  explicit approval. Ships with this repository's own `.gitignore` as the concrete reference template (genericized
-  so its Hermes-specific paths don't leak into other repositories), reused across repositories. Use whenever a Java
-  project needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this house template
-  without touching it unless the user approves.
+  `/iru-setup-java-gitignore`, optionally with `args` carrying `on-existing: ask|keep|update|replace` (default `ask`)
+  for scripted runs. Announces whether it is creating `.gitignore` from scratch or updating an existing one; if one
+  already exists, it never overwrites it silently: it warns, shows the proposed version as a diff, and asks whether to
+  Update (merge, keeping hand-added entries), Keep it as is, or Replace it with the template (hand-added entries lost)
+  — unless `on-existing` already decides. Ships with this repository's own `.gitignore` as the concrete reference
+  template (genericized so its Hermes-specific paths don't leak into other repositories), reused across repositories.
+  Use whenever a Java project needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this
+  house template without touching it unless the user approves.
 model: haiku
 ---
 
@@ -20,14 +22,28 @@ concrete reference template. Never overwrite an existing `.gitignore` without sh
 change and getting explicit approval first — a `.gitignore` can carry hand-added, project-specific entries that
 must not be silently dropped.
 
+## Step 0 — Check for pre-supplied parameters
+
+This skill can be invoked stand-alone or by an orchestrator (e.g. `iru-setup-java-library-repository`). Parse
+`args`, if any, as `key: value` lines, one per line. The only key this skill reads is:
+
+- `on-existing` — `ask` (default) / `keep` / `update` / `replace`: how to treat an already-existing `.gitignore`
+  (Step 5). `keep`/`update`/`replace` apply that choice without asking (the warning in Step 1 is still printed);
+  `ask`, or the key being absent, means ask the user.
+
+Ignore every other key (orchestrators may pass shared keys such as `mode` or `open-source` this skill doesn't need).
+If `args` is absent or doesn't look like this format, treat `on-existing` as `ask`.
+
 ## Step 1 — Check whether `.gitignore` already exists at the repository root
 
-- **Not found**: continue to Step 2. Because there's nothing to lose, the final write in Step 5 happens without
-  needing approval — go straight from composing the content to writing it, then report in Step 6.
-- **Found**: read its current content now — it matters later, both to avoid proposing duplicate entries and
-  because Step 4 must preserve any hand-written, project-specific lines this skill doesn't know how to regenerate.
-  Warn the user up front that a `.gitignore` already exists and this skill will propose changes for them to review
-  rather than overwrite it silently. Continue to Step 2.
+- **Not found**: tell the user this skill is **creating `.gitignore` from scratch**, then continue to Step 2.
+  Because there's nothing to lose, the final write in Step 6 happens without needing approval — go straight from
+  composing the content to writing it, then report in Step 6.
+- **Found**: tell the user this skill is **updating an existing `.gitignore`**, and read its current content now —
+  it matters later, both to avoid proposing duplicate entries and because Step 4 must preserve any hand-written,
+  project-specific lines this skill doesn't know how to regenerate. Warn the user up front that a `.gitignore`
+  already exists and this skill will propose changes for them to review (Update / Keep / Replace, Step 5) rather
+  than overwrite it silently. Continue to Step 2.
 
 ## Step 2 — The universal base template
 
@@ -133,21 +149,34 @@ header for readability (e.g. `# Maven`, `# IntelliJ IDEA`, `# Antora docs`). If 
 template (hand-added project-specific ignores must survive), and don't repeat a line that's already present
 verbatim.
 
-## Step 5 — If `.gitignore` already existed, get approval before writing
+## Step 5 — If `.gitignore` already existed, decide Update / Keep / Replace before writing
 
 Skip this step entirely if Step 1 found no existing file — proceed straight to Step 6's write.
 
-- Show the user the proposed new `.gitignore` content as a diff against the current file (writing the draft to a
-  temp path and running `git diff --no-index <current> <draft>` gives a clean unified diff).
-- Ask via `AskUserQuestion` whether to: (a) accept and write the proposed content, (b) skip and leave the existing
-  `.gitignore` untouched. There is no partial-apply option here — if the user wants only some of the proposed lines,
-  let them say so in free text and revise the draft before writing.
-- Only proceed to Step 6 on explicit acceptance.
+- Show the user the proposed new `.gitignore` content (Step 4's merged draft) as a diff against the current file
+  (writing the draft to a temp path and running `git diff --no-index <current> <draft>` gives a clean unified
+  diff). Also compose — but don't show unless asked — the pure-template version (Step 2 + Step 3 sections only,
+  without the existing file's extra lines) for the Replace option, and list the existing lines Replace would drop.
+- If `on-existing` (Step 0) is `keep`, `update`, or `replace`, apply that choice without asking (still show the
+  warning and, for `update`/`replace`, the diff). Otherwise ask via `AskUserQuestion` (header e.g. `.gitignore`),
+  explaining each option's consequence in its description:
+  - **Update (Recommended)** — "Merge: add the missing entries from this skill's template and keep every
+    hand-added, project-specific line already in the file. You've seen the diff; your custom entries survive."
+  - **Keep as is** — "Leave `.gitignore` untouched. Nothing you customized changes, but build output, IDE files, or
+    the Antora build directory listed as missing in the diff may stay unignored and get committed by accident."
+  - **Replace** — "Regenerate from this skill's template only. Result matches the house pattern exactly, but every
+    hand-added line not covered by the template (listed above) is lost — recoverable only from git history."
+  There is no partial-apply option here — if the user wants only some of the proposed lines, let them say so in
+  free text and revise the draft before writing.
+- **Keep** ends here: make no change and go to Step 6's report. **Update** writes Step 4's merged draft;
+  **Replace** writes the pure-template version.
 
 ## Step 6 — Write `.gitignore` and report
 
-Write the composed content (Step 4, incorporating any edits from Step 5's review) to `.gitignore` at the repository
-root. Then summarize: whether the file was newly created or updated, which conditional sections from Step 3 were
+Unless Step 5 resolved **Keep**, write the chosen content (Step 4's merged draft for a new file or **Update**,
+the pure-template version for **Replace**, incorporating any edits from Step 5's review) to `.gitignore` at the
+repository root. Then summarize: whether the file was **created**, **updated**, **replaced**, or **kept as is** (and
+whether that came from the user's answer or from `on-existing`), which conditional sections from Step 3 were
 included versus skipped and why (e.g. "no Eclipse section — no `.classpath`/`.project` found", "no build-info
-entry — no such generated-file step in `pom.xml`"), and — if `.gitignore` already existed — whether the user
-accepted or skipped the proposed changes.
+entry — no such generated-file step in `pom.xml`"), and — for **Replace** — which hand-added lines were dropped; for
+**Keep**, which template entries are still missing from the file.

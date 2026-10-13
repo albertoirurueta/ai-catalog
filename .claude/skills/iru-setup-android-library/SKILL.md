@@ -1,6 +1,6 @@
 ---
 name: iru-setup-android-library
-description: Generate the standard Gradle/Kotlin toolchain for a new Android library at the repository root — the Gradle wrapper (`gradle/wrapper/gradle-wrapper.properties` pinned to the current Gradle version plus its `distributionSha256Sum`, `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, a `lib/` library module (`build.gradle.kts`, `proguard-rules.pro`, manifests, `robolectric.properties`, `.gitignore`, one placeholder source + unit test + instrumented test), and an `app/` Jetpack Compose sample module (`build.gradle.kts`, manifest, `.gitignore`, `MainActivity.kt`, launcher/theme resources) that depends on `lib` — asks for `group-id`, `artifact-id`, `namespace`, `description`, `min-sdk` (default `26`), `compile-sdk` (default the current stable API level), license, developer name/email/organization URL, whether the project is open source, whether it publishes to Maven Central (`publish`, gating the `mavenPublishing`/vanniktech block), whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), `built-in-kotlin` (`no`/`yes`, gating `android.builtInKotlin`/`android.newDsl` in `gradle.properties`), `junit` (`4`/`5`, gating the `de.mannodermaus.android-junit` plugin), `coverage-tool` (`jacoco`/`kover`, gating AGP's own unit-test-coverage flags vs. the Kover plugin), and `static-analysis` (`lint`/`lint+detekt+ktlint`, gating Detekt + Spotless(ktlint + licenseHeader)). Invoke as `/iru-setup-android-library`. Ships with explicit example templates embedded in this skill file, genericized (no real repository/organization/person names, `<placeholder>` markers with a resolution table) from a real Android library's actual project files — https://github.com/albertoirurueta/irurueta-android-glutils — including its `lib/` module shape (JUnit 4 + MockK + Robolectric + AndroidX Espresso, AGP JaCoCo, inline `sonar { properties {…} } ` block run as `./gradlew :lib:sonar`, `mavenPublishing { AndroidSingleVariantLibrary(...) }`) and its Compose `app/` sample module, which is part of this scaffold, not a separate skill. Every toolchain version (Gradle, AGP, Kotlin, Dokka, the `sonarqube`/`com.vanniktech.maven.publish`/Detekt/Spotless/Kover/`de.mannodermaus.android-junit` Gradle plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK, Robolectric, `com.irurueta:irurueta-android-test-utils`) is looked up at run time (Google Maven, Maven Central, the Gradle Plugin Portal, `services.gradle.org`), with this skill's own September 2026 findings as the fallback. If any of this skill's files already exist, asks whether to stop, fill gaps only, or regenerate (`mode: existing` skips straight to gap-fill, this catalog's shared front-door convention); accepts every input pre-resolved via `args` (`key: value` lines) so an orchestrating skill can supply them without re-prompting. Verifies with `./gradlew --offline help` then `./gradlew :lib:assembleDebug` through the `iru-gate-runner` agent, warning up front that the first run downloads Gradle itself, Android SDK components, and every dependency. Use whenever a new Android/Kotlin library repository (with its Compose sample app) needs its Gradle build scaffolded from this house template, instead of hand-writing each Gradle/manifest/properties file.
+description: Generate the standard Gradle/Kotlin toolchain for a new Android library at the repository root — the Gradle wrapper (`gradle/wrapper/gradle-wrapper.properties` pinned to the current Gradle version plus its `distributionSha256Sum`, `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, a `lib/` library module (`build.gradle.kts`, `proguard-rules.pro`, manifests, `robolectric.properties`, `.gitignore`, one placeholder source + unit test + instrumented test), and an `app/` Jetpack Compose sample module (`build.gradle.kts`, manifest, `.gitignore`, `MainActivity.kt`, launcher/theme resources) that depends on `lib` — asks for `group-id`, `artifact-id`, `namespace`, `description`, `min-sdk` (default `26`), `compile-sdk` (default the current stable API level), license, developer name/email/organization URL, whether the project is open source, whether it publishes to Maven Central (`publish`, gating the `mavenPublishing`/vanniktech block), whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), `built-in-kotlin` (`no`/`yes`, gating `android.builtInKotlin`/`android.newDsl` in `gradle.properties`), `junit` (`4`/`5`, gating the `de.mannodermaus.android-junit` plugin), `coverage-tool` (`jacoco`/`kover`, gating AGP's own unit-test-coverage flags vs. the Kover plugin), and `static-analysis` (`lint`/`lint+detekt+ktlint`, gating Detekt + Spotless(ktlint + licenseHeader)). Invoke as `/iru-setup-android-library`. Ships with explicit example templates embedded in this skill file, genericized (no real repository/organization/person names, `<placeholder>` markers with a resolution table) from a real Android library's actual project files — https://github.com/albertoirurueta/irurueta-android-glutils — including its `lib/` module shape (JUnit 4 + MockK + Robolectric + AndroidX Espresso, AGP JaCoCo, inline `sonar { properties {…} } ` block run as `./gradlew :lib:sonar`, `mavenPublishing { AndroidSingleVariantLibrary(...) }`) and its Compose `app/` sample module, which is part of this scaffold, not a separate skill. Every toolchain version (Gradle, AGP, Kotlin, Dokka, the `sonarqube`/`com.vanniktech.maven.publish`/Detekt/Spotless/Kover/`de.mannodermaus.android-junit` Gradle plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK, Robolectric, `com.irurueta:irurueta-android-test-utils`) is looked up at run time (Google Maven, Maven Central, the Gradle Plugin Portal, `services.gradle.org`), with this skill's own September 2026 findings as the fallback. Announces whether it is scaffolding from scratch or updating an existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/tasks) / Keep as is / Replace (regenerate, losing customizations) / Stop, even under `mode: existing`, unless `on-existing` (`ask`/`keep`/`update`/`replace`) decides; accepts every input pre-resolved via `args` (`key: value` lines) — including `visibility` (`public`/`private`/`internal`, so SonarCloud is recommended only for a public open-source repository) and `ci` (`yes`/`no`, recommending `sonar: none` when no CI would send reports) — so an orchestrating skill can supply them without re-prompting. Verifies with `./gradlew --offline help` then `./gradlew :lib:assembleDebug` through the `iru-gate-runner` agent, warning up front that the first run downloads Gradle itself, Android SDK components, and every dependency. Use whenever a new Android/Kotlin library repository (with its Compose sample app) needs its Gradle build scaffolded from this house template, instead of hand-writing each Gradle/manifest/properties file.
 model: haiku
 ---
 
@@ -43,7 +43,10 @@ junit: 4
 coverage-tool: jacoco
 static-analysis: lint
 version: 1.0.0-SNAPSHOT
+visibility: public
+ci: yes
 mode: new
+on-existing: ask
 ```
 
 Parse any such lines from `args` now. Every field found here is resolved — skip asking about it in Step 2. Only
@@ -57,12 +60,17 @@ Recognized keys: `group-id`, `artifact-id`, `namespace` (the Android `namespace`
 (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `built-in-kotlin` (`no`/`yes`, default `no`), `junit`
 (`4`/`5`, default `4`), `coverage-tool` (`jacoco`/`kover`, default `jacoco`), `static-analysis`
-(`lint`/`lint+detekt+ktlint`, default `lint`), `version` (default `1.0.0-SNAPSHOT`), and `mode` (`new`/`existing`).
+(`lint`/`lint+detekt+ktlint`, default `lint`), `version` (default `1.0.0-SNAPSHOT`), `visibility`
+(`public`/`private`/`internal` — GitHub repository visibility, only used to pick the `sonar` recommendation in
+Step 2), `ci` (`yes`/`no` — whether CI workflows will exist to send Sonar reports; only used by Step 2's `sonar`
+question), `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`).
 
 `mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
-gap-fill: create only whatever files from Steps 5–7 are genuinely missing, and leave every file that already exists
-untouched. `mode: new` or an unset `mode` follows Step 1's normal survey instead.
+is an established repository). It no longer means "gap-fill silently": Step 1 still warns about, and asks about,
+every pre-existing file group. Only `on-existing` skips that question — `keep` (create only missing files, leave
+every existing one untouched — the old `mode: existing` behaviour), `update`, or `replace` is then applied to every
+pre-existing file group without asking (the warning is still printed). `on-existing` is meant for scripted runs; an
+orchestrator passes it only if its own `args` received it.
 
 ## Step 1 — Survey the repository
 
@@ -75,28 +83,53 @@ Check, at the repository root, which of this skill's files already exist: `build
 `app/src/main/AndroidManifest.xml`, `app/src/main/java/.../MainActivity.kt`, and the `app/src/main/res/` files from
 Step 7.
 
-- **None exist**: skip straight to Step 2. There is nothing to preserve.
-- **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: create only
-  the files that are missing; leave every file that already exists completely untouched (including
-  `lib/build.gradle.kts` and `app/build.gradle.kts` — merge nothing into them). Note in Step 11's report which
-  files were left alone because they already existed.
-- **Otherwise, and at least one file already exists**: warn the user which files were found, then use
-  `AskUserQuestion` with three options:
-  - **Stop** — leave every existing file untouched; make no changes at all. Report this and end here.
-  - **Fill gaps only** (recommended once real library code exists under `lib/src/main`) — create only the files
-    that are missing; don't overwrite anything already present. Same effective behavior as `mode: existing`.
-  - **Regenerate everything** — before asking Step 2's questions, read the existing `lib/build.gradle.kts` (if
-    present) for its current `namespace`, `libraryVersion`, `compileSdk`/`minSdk`, and whether a `sonar`/
-    `mavenPublishing` block is already present, and use those as the *defaults* offered for whichever Step 2
-    question Step 0 didn't already resolve via `args` — a value supplied via `args` always wins. Tell the user up
-    front that regenerating replaces every one of this skill's files wholesale; any customization added since the
-    last run (extra dependencies, extra Gradle tasks, hand-edited manifests/resources) will be lost unless
-    re-added afterward (call this out again in Step 11).
+Then tell the user which of the two this run is doing:
+
+- **Scaffolding from scratch** — none exist: skip straight to Step 2. There is nothing to preserve.
+- **Updating an existing Gradle project** — at least one exists: warn the user, listing every file found by path,
+  that each existing file group below will be decided individually (files that don't exist yet are still created
+  from scratch alongside). This applies under `mode: existing` too.
+
+Group the existing files into these artifacts (only those with at least one file present): **`settings.gradle.kts`**,
+**root `build.gradle.kts`**, **`gradle/libs.versions.toml`**, **`gradle.properties`**, **the Gradle wrapper**
+(`gradle-wrapper.properties` + `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), **`lib/build.gradle.kts`**, **the
+`lib/` skeleton** (manifests, `proguard-rules.pro`, `robolectric.properties`, `lib/.gitignore`, placeholder
+source/tests), **`app/build.gradle.kts`**, **the `app/` skeleton** (manifest, `.gitignore`, `MainActivity.kt`,
+`res/` files), and **`detekt.yml`** (only once Step 2 resolves `static-analysis: lint+detekt+ktlint` — ask about
+it after Step 2 in that case). `local.properties` is never part of this — it is per-machine and never
+overwritten (Step 9).
+
+Unless `on-existing` decides (Step 0), ask with `AskUserQuestion`, one question per artifact (batch up to 4 per
+call; further calls for the rest), naming any concrete conflict with this run's choices in the question (e.g.
+"`lib/build.gradle.kts` has a `sonar {}` block but you chose `sonar: none`", "it has no `mavenPublishing {}` block
+but `publish: yes`"). Options, with the consequence in each description:
+
+- **Update (Recommended for the build files and the wrapper)** — "Merge: add what's missing and correct outdated
+  parts using this skill's template as reference — missing plugins/version-catalog aliases, the `sonar {}` /
+  `mavenPublishing {}` blocks added or removed per this run's `sonar`/`publish`, toolchain versions bumped to
+  Step 4's lookup, the wrapper's `distributionUrl`/`distributionSha256Sum` refreshed; keep every dependency, task,
+  repository and option this skill doesn't own. You review a diff; your customizations survive, but a customized
+  part this skill owns may be rewritten." For a skeleton artifact, Update only creates the missing files of that
+  group and never rewrites existing source, manifests or resources.
+- **Keep as is (Recommended for the `lib/`/`app/` skeletons once real code exists under `src/main`)** — "Leave the
+  file(s) untouched. Nothing you customized changes, but they may stay out of date or disagree with this run's
+  choices (e.g. still apply the `org.sonarqube` plugin after `sonar: none`) — the report will list each mismatch."
+- **Replace** — "Regenerate from this skill's template. Result matches this house pattern exactly, but every
+  customization (extra dependencies, Gradle tasks, hand-edited manifests/resources) is lost — recoverable only
+  from git history." Never the default.
+- **Stop** (first question only) — "End this skill now without changing any file." Report this and end here.
+
+Whichever is chosen, before asking Step 2's questions read the existing `lib/build.gradle.kts` (if present) for
+its current `namespace`, `libraryVersion`, `compileSdk`/`minSdk`, and whether a `sonar`/`mavenPublishing` block is
+already present, and use those as the *defaults* offered for whichever Step 2 question Step 0 didn't already resolve
+via `args` — a value supplied via `args` always wins. Any Replace means the replaced files' customizations will be
+lost unless re-added afterward (call this out again in Step 12).
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
-everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if regenerating):
+everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if a
+`lib/build.gradle.kts` already existed):
 
 - **group-id** — the Maven Central `groupId` used to publish this library, e.g. `com.example`.
 - **artifact-id** — the Maven Central `artifactId` / Gradle project name, e.g. `my-android-library`. Used verbatim
@@ -136,7 +169,7 @@ Then, unless Step 0 already resolved a `license` value from `args`, ask about th
   rule (Step 6, only relevant when `static-analysis: lint+detekt+ktlint`)
 - Other — ask for the license's display name and URL directly afterward
 
-If a license is chosen (anything but "No license"), remind the user in Step 11 to also add a matching `LICENSE`
+If a license is chosen (anything but "No license"), remind the user in Step 12 to also add a matching `LICENSE`
 file at the repository root if one doesn't exist yet — the `iru-check-license` skill can verify/backfill file
 headers against it once it's there.
 
@@ -152,9 +185,14 @@ derive the recommended defaults for the other two from that answer, per this cat
 - **sonar** — whether to wire up a SonarQube/SonarCloud scan (this house pattern applies the `org.sonarqube`
   plugin per-module and runs it as `./gradlew :lib:sonar`, typically from a CI workflow such as
   `iru-setup-android-github-workflows`, so it's worth setting up here even if that workflow comes later). Recommend
-  **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that SonarCloud is free only for
-  open-source projects (a paid plan is required otherwise) and recommend **None** (`none`), offering **self-hosted
-  SonarQube** as the second option:
+  **SonarCloud** (`cloud`) only when open-source is Yes **and** `visibility` is `public` (or unset — this skill
+  doesn't resolve `visibility` itself when invoked standalone; an unset value is treated as matching
+  `open-source`); otherwise state that SonarCloud is free only for public/open-source projects (a private project
+  needs a paid plan) and recommend **None** (`none`), offering **self-hosted SonarQube** (free Community Build, but
+  you run the server) as the second option. If `ci: no` was supplied, say plainly that no CI workflow would send
+  reports — analysis would only run when someone runs `./gradlew :lib:sonar` manually with a token — and recommend
+  `none`; if the user still picks `cloud`/`self-hosted`, write the `sonar {}` blocks only and note in Step 12 that
+  no CI step sends reports:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
     suggested default. Default `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url` to
     `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
@@ -206,7 +244,7 @@ Don't ask for these — derive them from the current repository, the same way `i
 ## Step 4 — Look up toolchain versions
 
 Look up every version below at run time; only fall back to the table's recorded value if the lookup fails (offline,
-registry unreachable, rate-limited). Note in Step 11's report whenever a fallback was used instead of a live
+registry unreachable, rate-limited). Note in Step 12's report whenever a fallback was used instead of a live
 lookup, and whenever a resolved version differs meaningfully from what this table recorded.
 
 | Component | Lookup | September 2026 fallback |
@@ -1275,14 +1313,15 @@ with no placeholders of their own beyond the identity/license/repository ones al
 
 ## Step 9 — Write the files
 
-Apply Step 1's decision (regenerate / fill gaps only / gap-fill from `mode: existing`) file by file, across every
-file listed in Steps 5–7 — write each one unless "fill gaps only"/`mode: existing` found that specific file already
-present, in which case leave it untouched. Create every intermediate directory (`lib/src/main/java/<namespace-path>`,
+Apply Step 1's per-artifact decision file by file, across every file listed in Steps 5–7: a file that didn't exist
+is always written; an existing file is left untouched (Keep as is), merged with the filled-in template after
+showing the user the diff (Update — for a skeleton artifact, only its missing files are created), or overwritten
+with the filled-in template (Replace). Create every intermediate directory (`lib/src/main/java/<namespace-path>`,
 `lib/src/test/resources/<namespace-path>`, `app/src/main/res/values-night`, etc.) as needed — don't touch any other
 file already inside a directory this skill writes into.
 
 Then create `local.properties` at the repository root, **only if it doesn't already exist** (it's per-machine and
-this skill never overwrites it even on "regenerate"):
+this skill never overwrites it even on Replace):
 
 ```properties
 sdk.dir=<resolved-android-sdk-path>
@@ -1450,15 +1489,18 @@ State explicitly what was included versus omitted, and why:
   `no`, both were omitted.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, the `sonar {...}` blocks (in both modules)
   and the `sonarqube` toml alias were included with the resolved `sonar.organization`/`sonar.projectKey`/
-  `sonar.host.url`; if `none`, note that this is expected when the project isn't open source unless the user
-  explicitly chose it.
+  `sonar.host.url`; if `none`, note whether that's the expected default (not open source, a private/internal
+  `visibility`, or `ci: no`) or a direct user choice. If Sonar was configured with `ci: no`, say that no CI step
+  sends reports — the scan only runs when invoked manually.
 - **`built-in-kotlin`**/**`junit`**/**`coverage-tool`**/**`static-analysis`**: the resolved value for each, and
   which of them fall into Step 11's "unverified locally" list.
 - Which toolchain versions (Step 4) came from a live lookup versus this skill's recorded fallback, and any version
   drift worth flagging (e.g. the `com.vanniktech.maven.publish` metadata quirk).
 
-Then report which of Steps 5–7's files were created fresh, left untouched (fill-gaps/`mode: existing`), or replaced
-(regenerate), whether `local.properties` was created or left alone, and whether Step 10's wrapper-binary fetch and
+Then state whether this run scaffolded from scratch or updated an existing project, and report, per Step 1
+artifact, the action actually taken — **created / updated / replaced / kept as is** — and whether it came from
+the user's answer or `on-existing`; for each artifact kept as is, list any mismatch with this run's choices;
+whether `local.properties` was created or left alone, and whether Step 10's wrapper-binary fetch and
 Step 11's two verification commands succeeded. If Step 1's existing files were replaced, explicitly list what could
 have been lost — any dependency, Gradle task, or config option beyond what Steps 5–7's templates show — and tell
 the user to check `git diff` for anything they need to re-add.

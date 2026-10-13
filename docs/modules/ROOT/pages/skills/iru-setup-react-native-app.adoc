@@ -66,13 +66,13 @@ as newline-separated `key: value` lines. Every field found here is resolved in S
 
 |open-source
 |No
-|Whether the repository is open source (`yes`/`no`) — drives the `sonar` default.
+|Whether the repository is open source (`yes`/`no`) — drives the `sonar` recommendation together with `visibility`.
 |Asked first when invoked stand-alone
 
 |sonar (+ sonar-organization/sonar-project-key/sonar-host-url)
 |No
-|Whether to wire up SonarQube/SonarCloud (`cloud`/`self-hosted`/`none`), plus its organization/project key/host URL.
-|`cloud` if open source, else `none` recommended
+|Whether to wire up SonarQube/SonarCloud (`cloud`/`self-hosted`/`none`), plus its organization/project key/host URL. `cloud` is recommended only for a repository that is both public and open source (SonarCloud is free only for public open-source projects, per its current pricing); otherwise `none` is recommended, with self-hosted SonarQube as the alternative.
+|`cloud` if public and open source, else `none` recommended
 
 |native-builds
 |No
@@ -84,9 +84,24 @@ as newline-separated `key: value` lines. Every field found here is resolved in S
 |`none`, `internal`, or `store` — gates `eas.json`'s `submit` block and the store-credential secrets named in the report.
 |`none`/`internal`/`store` per this catalog's shared convention
 
-|mode
+|`visibility`
 |No
-|`new` or `existing` — `existing` skips Step 1's stop/update question and goes straight to gap-fill.
+|`public`, `private`, or `internal` — the GitHub repository's visibility, used only to key the `sonar` recommendation. `internal` counts as private. If `open-source: yes` but visibility is private/internal, the skill warns and asks which is right.
+|Resolved only when the `sonar` question is asked: `gh repo view --json visibility -q .visibility`, else asked (Public recommended when open source)
+
+|`ci`
+|No
+|`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
+|`yes` implied
+
+|`on-existing`
+|No
+|`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing tooling file. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
+|`ask`
+
+|`mode`
+|No
+|`new` or `existing`. `existing` marks the run as an *update* of an established repository, but never means "update silently" — Step 1 still warns and asks per pre-existing tooling file unless `on-existing` says otherwise.
 |`new`
 |===
 
@@ -101,7 +116,7 @@ as newline-separated `key: value` lines. Every field found here is resolved in S
   `distribution: store`).
 * `.maestro/smoke.yaml` smoke-test skeleton.
 * `sonar-project.properties` (only when `sonar` is not `none`).
-* A report of what was created/left untouched/replaced, unresolved `<placeholder>` values still needing manual
+* A report that opens by repeating the announced mode (from scratch or updating an existing setup), lists per tooling file the action taken (created / updated / replaced / kept as is / removed) and each mismatch a kept artifact leaves with this run's choices, the `visibility` used for Sonar and where it came from, unresolved `<placeholder>` values still needing manual
   fill-in (e.g. `app.json`'s bundle identifiers, the Maestro `<app-id>`), and required warnings before building,
   committing, or submitting to a store.
 
@@ -116,24 +131,26 @@ flowchart TD
     C --> E["Step 1: Resolve app-directory\n(root if empty, else confirmed subdirectory)"]
     D --> E
     E --> F{"package.json exists\nat app-directory?"}
-    F -- no --> G["Step 2: Collect app-name, app-slug,\nlicense, developer info, open-source,\nsonar, native-builds, distribution"]
-    F -- "yes, has expo dependency" --> H{"mode: existing?"}
-    H -- yes --> I["Gap-fill: skip straight to Step 7\nwith only missing tooling files"]
-    H -- no --> J["AskUserQuestion:\nStop or Update?"]
-    J -- Stop --> K[Report app-directory untouched; end]
-    J -- Update --> L["Re-run tooling files only\n(never touch App.tsx/app.json/assets)"]
-    F -- "yes, no expo dependency" --> M["Warn: not an Expo project;\nask different directory or stop"]
-    M -- stop --> K
-    M -- different directory --> E
-    G --> N["Step 3: Infer owner/repo/host\nfrom git remote"]
+    F -- no --> G["Announce: scaffolding from scratch"]
+    F -- "yes, no expo dependency" --> H["Warn: not an Expo project;\nask different directory or stop\n(regardless of on-existing)"]
+    H -- stop --> K[Report app-directory untouched; end]
+    H -- different directory --> E
+    F -- "yes, has expo dependency" --> I["Announce: updating an existing Expo app;\nlist tooling files found; create-expo-app never re-run"]
+    I --> J{"on-existing keep/update/replace?"}
+    J -- yes --> L[Apply it to every existing file]
+    J -- no --> M["AskUserQuestion per file:\nUpdate / Keep as is / Replace / Stop"]
+    M -- Stop --> K
+    M -- other --> N
     L --> N
-    N --> O["Step 4: Resolve devDependency versions\n(npm view, or the fallback table)"]
-    O --> P{"Step 1 resolved gap-fill?"}
-    P -- no --> Q["Step 6: Scaffold via create-expo-app;\nset LICENSE/app.json name+slug;\nmerge package.json/tsconfig.json fragments;\nwrite jest/eslint/prettier/eas/maestro/sonar files"]
-    P -- yes --> R
-    Q --> R["Step 7: npm install; add devDependencies;\nnpx expo lint; expo install web deps"]
-    I --> R
-    R --> S["Step 8: Report resolved inputs,\nfile status, version fallbacks,\nand required warnings"]
+    G --> N["Step 2: Collect app-name, app-slug, license,\ndeveloper info, open-source, visibility, sonar,\nnative-builds, distribution"]
+    N --> O["Step 3: Infer owner/repo/host\nfrom git remote"]
+    O --> P["Step 4: Resolve devDependency versions\n(npm view, or the fallback table)"]
+    P --> Q{"Scaffolding from scratch?"}
+    Q -- yes --> R["Step 6: Scaffold via create-expo-app;\nset LICENSE/app.json name+slug"]
+    Q -- no --> S
+    R --> S["Step 6: Merge package.json/tsconfig.json fragments;\nwrite jest/eslint/prettier/eas/maestro/sonar files\nper the per-file decision (Step 5 templates)"]
+    S --> T["Step 7: npm install; add devDependencies;\nnpx expo lint; expo install web deps"]
+    T --> U["Step 8: Report per-file actions, mismatches,\nversion fallbacks, warnings"]
 ....
 
 == Dependencies

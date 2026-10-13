@@ -28,9 +28,14 @@ the lockfile shows it, SwiftPM, Python, or — for distributed apps — store li
 and a "how it works" section with a runnable example grounded in the current public API — reusing an existing
 Antora overview/example rather than writing a divergent one if the docs site already covers it. A section whose
 source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled
-with placeholders. If `README.md` already exists, the skill warns the user, preserves any hand-written section
-it doesn't know how to regenerate (e.g. "Contributing"), and shows the proposed new content as a diff before
-writing anything, requiring explicit approval.
+with placeholders. It announces whether it is creating the README **from scratch** or **updating an existing
+one**. If `README.md` already exists, the skill warns the user, preserves any hand-written section it doesn't know
+how to regenerate (e.g. "Contributing"), flags where the existing file contradicts this run's choices (stale Sonar
+badges under `sonar: none`, a github.io link under `pages: no`), and shows the proposed content as a diff before
+writing anything. The user then picks **Update** (recommended: merged draft, hand-written sections kept),
+**Keep as is** (file untouched; the report lists each mismatch), or **Replace** (only the generated sections are
+written, hand-written ones dropped). Under `ci: no` / `pages: no` it omits CI badges and never links a github.io
+site that nothing publishes, pointing at the `docs/` sources and the local Antora build command instead.
 
 == Purpose group
 
@@ -42,6 +47,11 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 ----
 /iru-setup-readme
 /iru-setup-readme sonar: none
+/iru-setup-readme
+sonar: none
+ci: no
+pages: no
+on-existing: update
 ----
 
 == Inputs
@@ -52,13 +62,36 @@ xref:index.adoc#group-bootstrap[Repository Bootstrap]
 
 |`sonar`
 |No
-|An `args` line — the only key this skill accepts. `none` suppresses every SonarCloud/SonarQube badge and the
-dashboard link, even when a `sonar {}` block or `sonar-project.properties` is present on disk (a `mode: existing`
-repository may carry Sonar config the user has just chosen not to wire up). Any other value, or omitting `args`
-entirely, means "detect from the repository" as normal. Passed by this catalog's `iru-setup-*-repository`
-orchestrators (and `iru-release`) with the `sonar` value they already resolved, so the choice isn't re-asked or
-re-detected here.
-|No `args` — Sonar badges/links are detected from the repository's own config.
+|`cloud`, `self-hosted`, or `none`. Only `none` changes behaviour: it suppresses every SonarCloud/SonarQube badge
+and the dashboard link, even when a `sonar {}` block or `sonar-project.properties` is present on disk (a
+`mode: existing` repository may carry Sonar config the user has just chosen not to wire up). Passed by this
+catalog's setup orchestrators with the value they already resolved, so the choice isn't re-asked or re-detected here.
+|Detected from the repository's own Sonar config.
+
+|`ci`
+|No
+|`yes` or `no`. Only `no` changes behaviour: every CI status badge and the CI row of the status table are skipped,
+even if stale `.github/workflows/*.yml` files exist. `ci: no` also implies `pages: no`.
+|Detected from the workflows present.
+
+|`pages`
+|No
+|`yes` or `no`. Only `no` changes behaviour: no `https://<owner>.github.io/<repo>` link is emitted (Antora site,
+Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC), because CI only uploads the built docs as a workflow
+artifact. Readers are pointed at `docs/` and the local `cd docs && npx antora antora-playbook.yml` build instead.
+|Detected from whether a workflow publishes to `gh-pages`.
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update`, or `replace` — how Step 9 treats an existing `README.md`. `keep` stops after the warning
+and leaves the file untouched; `update`/`replace` are applied without asking (the diff is still shown).
+`mode: existing` alone does not mean "update silently".
+|`ask`
+
+|other `key: value` lines
+|No
+|Ignored (e.g. `mode`, `visibility`).
+|N/A
 
 |(all other inputs)
 |No
@@ -72,12 +105,16 @@ by invoking `iru-explore`).
 
 == Outputs
 
-* `README.md` at the repository root — newly created, or updated after explicit user approval.
+* `README.md` at the repository root — newly created, or updated or replaced after the user's choice.
 * If `README.md` didn't previously exist: it is written directly, no approval step needed.
-* If `README.md` already existed: the full proposed content (or diff) is shown first, and the file is only
-  overwritten if the user explicitly accepts; any partial-apply request is handled by revising the draft in
-  free text before writing.
-* A closing report naming which sections were included versus omitted and why (e.g. no Installation section
+* If `README.md` already existed: the full proposed content (or diff) is shown first, together with the
+  hand-written sections that were preserved and any contradiction with this run's `sonar`/`ci`/`pages` choices.
+  The file is only written on **Update** or **Replace** (from the user or `on-existing`); under **Replace** the
+  preserved hand-written sections are dropped; under **Keep as is** it is left untouched. Any partial-apply request
+  is handled by revising the draft in free text before writing.
+* A closing report that starts by restating the mode (created from scratch, or updated / kept as is / replaced and
+  whether that came from the user or `on-existing`; under Keep as is, each mismatch with this run's choices),
+  naming which sections were included versus omitted and why (e.g. no Installation section
   because no build/package config was found), any fact that had to be inferred rather than confirmed, and a
   reminder to double-check the "How It Works"/example section specifically since it depends on this skill's
   reading of the current API.
@@ -87,23 +124,29 @@ by invoking `iru-explore`).
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-readme] --> A0["Step 0: Resolve args\n(sonar: none suppresses\nSonar badges/dashboard link)"]
-    A0 --> B{"README.md already\nexists at root?"}
-    B -- yes --> C["Read existing content;\nwarn user changes will be proposed"]
-    B -- no --> D
+    A[Start /iru-setup-readme] --> A0["Step 0: Resolve args\n(sonar, ci, pages, on-existing)"]
+    A0 --> B{"Step 1: README.md already\nexists at root?"}
+    B -- no --> B1["Announce: creating from scratch"]
+    B1 --> D
+    B -- yes --> B2["Announce: updating existing README;\nwarn that changes will be proposed"]
+    B2 -- on-existing is keep --> N
+    B2 --> C["Read existing content"]
+    C --> D
     C --> D["Step 2: Gather project identity\n(repo/host, description, license,\nmulti-stack detection, versions)"]
-    D --> E["Step 3: Gather badge sources\n(CI, SonarCloud, npm/Maven Central/\nSwift Package Index)"]
+    D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, npm/Maven Central/\nSwift Package Index)"]
     E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/Swift/\nNode/TS/framework rows)"]
-    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, DocC)"]
+    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, DocC;\nno github.io links under pages: no)"]
     G --> H["Step 6: Compose installation\ninstructions (Gradle + version catalog,\npnpm/yarn, SwiftPM, store/run-locally)"]
     H --> I["Step 7: Write how-it-works\nsection with a real example\n(via Explore agent)"]
     I --> J["Step 8: Compose remaining structural\nsections; preserve hand-written extras"]
     J --> K{"Did README.md\nalready exist?"}
     K -- no --> L["Write README.md directly"]
-    K -- yes --> M["Show diff, ask user:\naccept or skip"]
-    M -- accept --> L
-    M -- skip --> N["Leave existing README.md untouched"]
-    L --> O["Step 11: Report"]
+    K -- yes --> M["Step 9: Show diff and mismatches;\nask Update / Keep as is / Replace\n(or apply on-existing)"]
+    M -- Update --> L
+    M -- Replace --> M2["Drop preserved hand-written sections"]
+    M2 --> L
+    M -- Keep as is --> N["Leave existing README.md untouched"]
+    L --> O["Step 11: Restate mode and option;\nreport"]
     N --> O
 ....
 
@@ -119,13 +162,13 @@ flowchart TD
 === Invoked by
 
 * xref:skills/iru-setup-java-library-repository.adoc[] — Step 8, the last of its six delegated skills, runs
-  `iru-setup-readme` with `args: "sonar: <sonar>"`, the value it already resolved.
+  `iru-setup-readme` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 * xref:skills/iru-setup-typescript-repository.adoc[] — Step 10, last in its chain, runs `iru-setup-readme` via
-  `iru-isolated-skill-executor` with `args: "sonar: <sonar>"`.
+  `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 * xref:skills/iru-setup-android-repository.adoc[] — Step 9, last in its chain, runs `iru-setup-readme` via
-  `iru-isolated-skill-executor` with `args: "sonar: <sonar>"`.
+  `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 * xref:skills/iru-setup-swift-repository.adoc[] — Step 10, last in its chain, runs `iru-setup-readme` via
-  `iru-isolated-skill-executor` with `args: "sonar: <sonar>"`.
+  `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 
 === Related agents
 

@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-platform
-description: Generate the OpenTofu (Terraform-compatible) infrastructure-as-code that deploys a Spring Boot service to AWS or Google Cloud, derived from the technologies the service actually uses — a remote encrypted state backend, a keyless GitHub OIDC deployment role, a container registry, the compute runtime (ECS Fargate/EKS on AWS, Cloud Run/GKE Autopilot on Google Cloud) with region and replica/CPU/memory sizing as variables, and a managed instance of each database, cache, Kafka cluster, and secret store the stack needs, always preferring the cloud provider's managed offering over a self-packaged container. Also wires load balancing, DNS, TLS, secret injection from AWS Secrets Manager or Google Secret Manager, and the IAM/RBAC the service's dynamic configuration requires. Reads `springboot-stack.yml` for the technology list and the target cloud, asks only the questions IaC genuinely cannot infer (region, environments, sizing, existing versus new infrastructure, domain names), scaffolds `infra/` with reusable modules and one directory per environment, and writes explicit manual instructions for any step OpenTofu cannot perform. Never writes a credential, token, or secret value into any file. Invoke as `/iru-setup-java-springboot-platform`, or with `args` (`stack-file:` line) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs deployable, reviewable infrastructure-as-code instead of hand-clicked cloud resources.
+description: Generate the OpenTofu (Terraform-compatible) infrastructure-as-code that deploys a Spring Boot service to AWS or Google Cloud, derived from the technologies the service actually uses — a remote encrypted state backend, a keyless GitHub OIDC deployment role, a container registry, the compute runtime (ECS Fargate/EKS on AWS, Cloud Run/GKE Autopilot on Google Cloud) with region and replica/CPU/memory sizing as variables, and a managed instance of each database, cache, Kafka cluster, and secret store the stack needs, always preferring the cloud provider's managed offering over a self-packaged container. Also wires load balancing, DNS, TLS, secret injection from AWS Secrets Manager or Google Secret Manager, and the IAM/RBAC the service's dynamic configuration requires. Reads `springboot-stack.yml` for the technology list and the target cloud, asks only the questions IaC genuinely cannot infer (region, environments, sizing, existing versus new infrastructure, domain names), scaffolds `infra/` with reusable modules and one directory per environment, and writes explicit manual instructions for any step OpenTofu cannot perform. Never writes a credential, token, or secret value into any file. Announces whether it is generating `infra/` from scratch or updating an existing one, and for every OpenTofu file it owns that already exists warns and asks Update (fill gaps) / Keep as is / Replace — never replacing a file that manages live resources without an explicit confirmation, and never touching `.tfstate` — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-platform`, or with `args` (`stack-file:`, `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs deployable, reviewable infrastructure-as-code instead of hand-clicked cloud resources.
 model: sonnet
 ---
 
@@ -26,14 +26,31 @@ Generate the OpenTofu configuration that deploys this service. Five rules govern
 
 ## Step 0 — Resolve inputs
 
-Parse `args` for `stack-file: <path>`, defaulting to `springboot-stack.yml`. Read it for `stack.cloud`, the
+Parse `args` for `key: value` lines: `stack-file: <path>`, defaulting to `springboot-stack.yml`; `mode`
+(`new`/`existing`, informational — it never means "update silently"); and `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask`). Read the manifest for `stack.cloud`, the
 database engines, caches, messaging, metrics/tracing, `stack.dynamicConfig`, and whether the service exposes REST
 and/or gRPC. That tells you what infrastructure is needed. It does **not** tell you the operational parameters —
 Step 1 asks those.
 
 Check whether `tofu` (or `terraform`) is on the PATH; if not, note it, write the files anyway, and skip Step 6's
-validation with an explicit note. Check for an existing `infra/` directory: if one exists, survey it and treat
-this run as gap-filling — never overwrite a `.tf` file that manages live resources, and never touch a `.tfstate`.
+validation with an explicit note. Check for an existing `infra/` directory and say whether this run is
+**generating the infrastructure code from scratch** or **updating an existing `infra/`** (list the modules and
+`envs/*` found). Never touch a `.tfstate`, whatever is chosen below. For each existing file group this skill owns
+(per module under `infra/modules/`, per environment under `infra/envs/`, the backend configuration), warn and —
+unless `on-existing` says otherwise — ask with `AskUserQuestion` (up to 4 per call, one question each):
+
+- **Update — fill gaps (Recommended)** — today's behaviour: add missing modules/resources/variables/outputs for
+  technologies newly in the manifest and correct provider/version pins this skill owns; never rewrite an existing
+  resource block that may manage live infrastructure. Customizations survive.
+- **Keep as is** — leave the group untouched; it may lack infrastructure for newly added technologies — Step 7
+  lists each gap.
+- **Replace** — regenerate the group from this skill's templates; customizations are lost (recoverable only from
+  git history), and **a regenerated resource block can produce a destructive plan against live infrastructure**
+  (renamed addresses mean destroy-and-recreate). Only offer it with that warning, ask for an explicit second
+  confirmation for any environment that has remote state, and treat an `on-existing: replace` from `args` as
+  Update for those environments (say so) — a scripted run must not be able to replace live-resource
+  configuration unattended.
 
 ## Step 1 — Ask what cannot be inferred
 
@@ -236,6 +253,8 @@ destroy in the plan means the configuration is fighting something that already e
 
 Summarize:
 
+- Whether `infra/` was generated from scratch or updated, and per file group the action taken (**created /
+  updated / replaced / kept as is**), with each gap left in a kept group.
 - The cloud, environments, regions, and sizing generated.
 - The compute runtime chosen, and every managed service the configuration will create versus reference as
   existing.
@@ -258,6 +277,8 @@ Warn explicitly:
   sensitive.
 - **The undeploy workflow (`iru-setup-java-springboot-github-workflows`) can destroy these resources.** Confirm
   deletion protection is enabled on anything holding data before that workflow exists in a state where someone
-  can run it.
+  can run it. If the manifest's `ci.enabled` is `false`, no deploy/undeploy workflow is generated: every
+  `tofu apply`/`tofu destroy` is a manual run from a workstation, so the same deletion-protection advice applies
+  to whoever runs it, and the OIDC identity created for CI is not needed until workflows are added — say so.
 - Provider versions are pinned; upgrading one is a reviewed change, because a provider major version can produce a
   destructive plan for unchanged configuration.

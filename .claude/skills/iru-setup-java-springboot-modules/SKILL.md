@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-modules
-description: Scaffold the source tree of a DDD/hexagonal Spring Boot service whose Maven reactor already exists — the package layout for every module, the ports (interfaces) that `domain` defines, a worked adapter skeleton per `infrastructure`/`api` module (repository adapter with MapStruct mapping, refreshable `@ConfigurationProperties` beans, REST/gRPC/GraphQL/Kafka entry points, Kafka producer, metrics publisher), the `@SpringBootApplication` class and component-scan wiring in `boot`, `application.yml` plus per-profile overrides (including structured logging, actuator/Prometheus exposure, and the dynamic-configuration binding the stack selected), the database migration/changelog directory for each engine's tooling (Flamingock, Liquibase and its Couchbase/MongoDB/Neo4j extensions, or Flyway), and an ArchUnit test that fails the build when the hexagonal dependency direction is violated. Reads `springboot-stack.yml` for every decision and writes no version numbers. Invoke as `/iru-setup-java-springboot-modules`, or with `args` (`stack-file:` line) when called from `iru-setup-java-springboot`. Use after `iru-setup-java-springboot-pom` has created the poms, whenever a Spring Boot service needs its hexagonal source skeleton and runtime configuration generated instead of hand-writing the ports, adapters, and profile files module by module.
+description: Scaffold the source tree of a DDD/hexagonal Spring Boot service whose Maven reactor already exists — the package layout for every module, the ports (interfaces) that `domain` defines, a worked adapter skeleton per `infrastructure`/`api` module (repository adapter with MapStruct mapping, refreshable `@ConfigurationProperties` beans, REST/gRPC/GraphQL/Kafka entry points, Kafka producer, metrics publisher), the `@SpringBootApplication` class and component-scan wiring in `boot`, `application.yml` plus per-profile overrides (including structured logging, actuator/Prometheus exposure, and the dynamic-configuration binding the stack selected), the database migration/changelog directory for each engine's tooling (Flamingock, Liquibase and its Couchbase/MongoDB/Neo4j extensions, or Flyway), and an ArchUnit test that fails the build when the hexagonal dependency direction is violated. Reads `springboot-stack.yml` for every decision and writes no version numbers. Announces whether it is scaffolding the source tree from scratch or updating an existing one; never overwrites hand-written code, and for every generated file it owns that already exists (profile `application*.yml` files, the ArchUnit test, migration directories, the worked example) warns and asks Update / Keep as is / Replace — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-modules`, or with `args` (`stack-file:`, `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use after `iru-setup-java-springboot-pom` has created the poms, whenever a Spring Boot service needs its hexagonal source skeleton and runtime configuration generated instead of hand-writing the ports, adapters, and profile files module by module.
 model: sonnet
 ---
 
@@ -18,8 +18,10 @@ report.
 
 ## Step 0 — Resolve inputs and check the reactor exists
 
-Parse `args` for `stack-file: <path>`, defaulting to `springboot-stack.yml` at the repository root, and read it in
-full. If it's missing, stop and point the user at `/iru-setup-java-springboot`.
+Parse `args` for `key: value` lines: `stack-file: <path>`, defaulting to `springboot-stack.yml` at the repository
+root (read it in full; if it's missing, stop and point the user at `/iru-setup-java-springboot`); `mode`
+(`new`/`existing`, informational — it never means "update silently"); and `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask`).
 
 Verify `pom.xml` exists at the root and that every module directory the manifest names has a `pom.xml`. If not,
 stop and tell the user to run `/iru-setup-java-springboot-pom` first — this skill writes sources into modules, it
@@ -36,7 +38,23 @@ Derive from the manifest:
   says otherwise, and say in the report which way you resolved it.
 
 Never overwrite a `.java` file that already contains code you didn't generate. Check first, skip and report
-instead.
+instead — this rule holds whatever `on-existing` says, and **Replace** below never applies to hand-written code.
+
+Say whether this run is **scaffolding from scratch** (no sources in any module yet) or **updating an existing
+source tree** (list the modules that already have sources). Then, for each generated artifact this skill owns that
+already exists — `boot/src/main/resources/application*.yml`, the ArchUnit test, each engine's migration/changelog
+directory, the worked example (aggregate/port/adapter/use case/endpoint) — warn and, unless `on-existing` says
+otherwise, ask with `AskUserQuestion` (up to 4 per call, one question each):
+
+- **Update (Recommended)** — add what's missing (a property block for a newly added technology, a migration
+  directory for a new engine, a rule in the ArchUnit test for a new module) and correct stale values; keep
+  everything else, including your own keys and code. Your customizations survive, but a generated part this skill
+  owns may be rewritten.
+- **Keep as is** — leave it untouched; it may not reflect the current manifest (e.g. no configuration for a newly
+  added database) — Step 13 lists each gap.
+- **Replace** — regenerate from this skill's templates; customizations in that file are lost (recoverable only
+  from git history). Only offered for files that are wholly generated (profile YAML, the ArchUnit test), never for
+  a class containing hand-written logic.
 
 ## Step 1 — Package layout
 
@@ -339,6 +357,8 @@ expected rather than a defect.
 
 Summarize:
 
+- Whether the source tree was scaffolded from scratch or updated, and per pre-existing artifact the action taken
+  (**created / updated / replaced / kept as is**), with each gap left in a kept file.
 - Which modules got sources, and which were skipped because they already contained hand-written code.
 - Every **port** defined in `domain` and which adapter implements it.
 - The example aggregate/use case/endpoint written, and what it's called, so the user knows exactly what to rename

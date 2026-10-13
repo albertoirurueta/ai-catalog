@@ -13,19 +13,22 @@ it.
 
 | Read | When |
 |---|---|
+| `mandatory-rules.md` | **Always.** The non-negotiable rules for production *and* test code: JUnit not AssertJ, Mockito mocks/spies not fakes, `method_whenCondition_expectedResult` test names, one `*Test`/`*IT` class per public class, `var` with type witnesses, records with defensive copies, `final` parameters, Javadoc on every member, named constants, modern collection accessors, method references, `switch` expressions, no redundant `this`, utility predicates, LF line endings. |
 | `code-style.md` | **Always.** Type inference (`var`), `final` wherever possible, immutability, visibility, naming, exceptions. |
 | `class-member-ordering.md` | The task adds a new type, or adds/moves a constant, field, constructor, method, or nested type in an existing one. Skip it only for a change that stays inside an existing method body. |
 | `javadoc.md` | The task adds or changes a type, or any public/protected member. |
 | `testing.md` | The task writes or updates tests — which is nearly every task, since writing the tests is part of implementing it. |
 
-A task that only changes logic inside one existing method needs `code-style.md` plus `testing.md`, and nothing
-else. Don't read the rest speculatively.
+A task that only changes logic inside one existing method needs `mandatory-rules.md`, `code-style.md`, and
+`testing.md`, and nothing else. Don't read the rest speculatively.
 
-## The three rules that override everything else
+## The three principles that override everything else
 
-1. **Match the surrounding code.** Every rule here is the default for *new* code. If the file or package you're
-   editing consistently does something else, follow it and note the divergence in the report rather than
-   converting the file to this document's preference as a side effect of an unrelated task. Reordering or
+1. **Match the surrounding code — except for `mandatory-rules.md`.** Every other rule here is the default for
+   *new* code. If the file or package you're editing consistently does something else, follow it and note the
+   divergence in the report rather than converting the file to this document's preference as a side effect of an
+   unrelated task. The rules in `mandatory-rules.md` are the exception: the code you write follows them even
+   where the surrounding code doesn't — but they still don't license restyling untouched code. Reordering or
    restyling untouched code turns a two-line change into an unreviewable diff.
 2. **A task implements what the task says.** These references tell you *how* to write what was asked for. They
    never license adding an abstraction, an interface, a builder, or a "while I'm here" refactor the plan didn't

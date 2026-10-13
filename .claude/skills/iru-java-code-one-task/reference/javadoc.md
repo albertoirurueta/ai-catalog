@@ -1,6 +1,7 @@
 # Javadoc
 
-**All code is fully documented.** On every type and every public or protected member, without exception. The
+**All code is fully documented.** On every type, method, constructor, and field — public, protected,
+package-private, and private alike, in test sources as much as in production sources (`mandatory-rules.md`). The
 `iru-java-javadoc` skill audits this one gate later, in the task group, and a Maven build configured with
 `-Xdoclint:all` fails on a missing `@param` — so writing it now is cheaper than fixing it after validation.
 
@@ -40,11 +41,14 @@ An override that changes nothing about the contract may use `{@inheritDoc}` — 
 let the tool inherit it. Write fresh Javadoc whenever the override narrows the contract, strengthens a
 guarantee, throws something the supertype doesn't, or has a performance characteristic worth knowing.
 
-## Private members
+## Private members and test sources
 
-Document a private member whenever the *why* isn't obvious from the name. A comment explaining why an invariant
-exists, or why an obvious-looking simplification is wrong, is worth far more than one restating what the next
-line does. A private helper with a self-describing name and three lines of body needs nothing.
+Private members get Javadoc too, with the same `@param`/`@return`/`@throws` tags. Make it earn its place: say
+*why* the member exists, why an invariant holds, or why an obvious-looking simplification is wrong — not a
+restatement of what the next line does.
+
+In test sources, the class Javadoc names the type under test, a test method's Javadoc states the scenario and
+the expected outcome in one sentence, and fixtures, constants, and helpers are documented like any other member.
 
 ## Mechanics that trip up a build
 

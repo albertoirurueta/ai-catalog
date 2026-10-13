@@ -29,6 +29,13 @@ accidentally work against something real.
 Finally it writes an ArchUnit test in `boot`'s test sources. The enforcer rules catch violations at *module*
 granularity; ArchUnit catches them at *package* granularity, which is where they actually creep in.
 
+The skill announces whether the run is scaffolding from scratch or updating an existing source tree (listing the
+modules that already have sources). Hand-written `.java` code is never overwritten, whatever the options say. For
+each generated artifact it owns that already exists (the `application*.yml` profile files, the ArchUnit test, each
+engine's migration directory, the worked example) it warns and asks **Update (Recommended)** / **Keep as is** /
+**Replace** unless `on-existing` pre-answers. Replace is only offered for wholly generated files (profile YAML, the
+ArchUnit test), never for a class containing hand-written logic.
+
 == Purpose group
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -52,6 +59,18 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 decides every method signature — plain values, or `Mono`/`Flux`), and which modules exist.
 |`springboot-stack.yml` at the repository root
 
+|`mode`
+|No
+|`args` `key: value` line, `new` or `existing`. Informational only: it never means "update silently"; pre-existing
+artifacts are still asked about.
+|None
+
+|`on-existing`
+|No
+|`args` `key: value` line, `ask`, `keep`, `update` or `replace`, pre-answering the per-artifact Update / Keep as is /
+Replace question for scripted runs.
+|`ask`
+
 |An existing reactor
 |Yes
 |A root `pom.xml` plus a `pom.xml` in every module the manifest names. If they're missing the skill stops and points
@@ -60,7 +79,8 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
 
 |Existing hand-written sources
 |No
-|Any `.java` file already containing code the skill didn't generate is skipped, never overwritten, and reported.
+|Any `.java` file already containing code the skill didn't generate is skipped, never overwritten (even with
+`on-existing: replace`), and reported.
 |Skip and report
 |===
 
@@ -96,7 +116,8 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
   the exception-to-status advice (RFC 9457 `ProblemDetail` for REST), and the security filter chain if enabled.
 * `boot` — the `@SpringBootApplication` class, `application.yml` and the three profile files, composition-root
   `@Configuration`, a context smoke test, and the ArchUnit architecture test.
-* A report that includes the configuration-property list, the metrics list, and the exception-to-status mapping
+* A report stating whether the tree was scaffolded from scratch or updated, the action taken per pre-existing
+  artifact (created / updated / replaced / kept as is) with any gaps left in kept files, plus the configuration-property list, the metrics list, and the exception-to-status mapping
   formatted for pasting into the documentation tables.
 
 == Execution flow
@@ -104,9 +125,10 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-setup-java-springboot-modules"] --> B["Step 0: Read the manifest;\nverify the reactor exists"]
+    A["Start /iru-setup-java-springboot-modules"] --> B["Step 0: Read the manifest and args;\nverify the reactor exists"]
     B -- no reactor --> STOP["Stop — run /iru-setup-java-springboot-pom first"]
-    B --> C["Step 1: Create the package layout\nfor every module"]
+    B --> B2["Announce from scratch vs update;\nper existing generated artifact ask\nUpdate / Keep as is / Replace\n(or apply on-existing)"]
+    B2 --> C["Step 1: Create the package layout\nfor every module"]
     C --> D["Step 2: domain — model, ports, exceptions\n(written first; no Spring annotations)"]
     D --> E["Step 3: application — use cases\nplus a mocked unit test"]
     E --> F["Steps 4-9: one adapter per infrastructure/api module\n(database + migrations, configuration, clients,\nKafka producers/consumers, metrics, REST/gRPC/GraphQL)"]
@@ -115,7 +137,7 @@ flowchart TD
     H --> I["Step 12: mvn clean test via iru-gate-runner"]
     I -- ArchUnit fails --> J["Fix the code, not the rule\n(unless the rule is wrong for this project)"]
     J --> I
-    I --> K["Step 13: Report ports, config properties,\nmetrics, status mapping, and warnings"]
+    I --> K["Step 13: Report actions per artifact, ports,\nconfig properties, metrics, status mapping,\nand warnings"]
 ....
 
 `mvn verify` is deliberately not run here: the `*IT` tests need the Testcontainers harness that

@@ -15,10 +15,14 @@ description: Scaffold a new Angular web application with `npx -p @angular/cli@la
   `sonar.javascript.lcov.reportPaths=coverage/<project>/lcov.info`). Invoke as `/iru-setup-angular-web`. Accepts
   pre-resolved inputs via `args` (`key: value` lines) — `name`, `directory`, `license`, `developer-name`,
   `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `storybook`, `mode` (`new`/`existing`) — so an orchestrating skill can supply them without
-  re-prompting; invoked stand-alone, it asks `open-source` first and derives the `sonar` question's default from
-  that answer. If `angular.json` already exists, surveys every file this skill owns and asks whether to stop, fill
-  gaps only, or regenerate everything. Use whenever a new Angular web application needs its scaffold, test/coverage
+  `sonar-host-url`), `storybook`, `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
+  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar), `on-existing`
+  (`ask`/`keep`/`update`/`replace`, default `ask`), `mode` (`new`/`existing`) — so an orchestrating skill can supply
+  them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `sonar` question's
+  default from that answer. Announces whether it is scaffolding from scratch or updating an existing workspace; for
+  every artifact it owns that already exists (`angular.json` test options, ESLint, Prettier, Stylelint, Playwright,
+  Compodoc script, Storybook, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep
+  as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a new Angular web application needs its scaffold, test/coverage
   config, lint/format/style tooling, e2e tests, API docs, and Sonar wiring bootstrapped from this house template,
   instead of hand-running each `ng add`/`npm install` separately.
 model: haiku
@@ -52,6 +56,9 @@ sonar-organization: example-org-github
 sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
 storybook: no
+visibility: public
+ci: yes
+on-existing: ask
 mode: new
 ```
 
@@ -63,12 +70,18 @@ Recognized keys: `name` (the Angular workspace/project name — also the default
 (where to scaffold; default is `name` itself, but pass `.` to scaffold directly into the current, already-existing
 repository root — see Step 3), `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`
 (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
-`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `storybook` (`yes`/`no`), and `mode` (`new`/`existing`).
+`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `storybook` (`yes`/`no`), `visibility`
+(`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
+recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
+only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
+Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode` (`new`/`existing`).
 
-`mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
-gap-fill. There is no `publish` or `distribution` key here — an Angular web app isn't published to a package
-registry or an app store the way a library or a native app is; it's built and deployed as static assets, which is
+`mode: existing` is this catalog's shared signal (set by a front door or orchestrator that already knows this is an
+established repository) that this run is an **update** — Step 1 announces it as such, but still warns and asks per
+pre-existing artifact unless `on-existing` says otherwise; it never means "update silently".
+
+There is no `publish` or `distribution` key here — an Angular web app isn't published to a package registry or an
+app store the way a library or a native app is; it's built and deployed as static assets, which is
 `iru-setup-typescript-github-workflows`'s concern, not this skill's.
 
 ## Step 1 — Survey the repository
@@ -78,30 +91,53 @@ subdirectory once Step 2 resolves `name` — for this survey, check both the bar
 subdirectory matching a `name` already given via `args`), whether an Angular workspace already exists: `angular.json`
 plus `package.json` with `@angular/core` in its dependencies.
 
-- **Neither exists**: skip straight to Step 2. There is nothing to preserve.
-- **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: run only the
-  `ng add`/config steps below whose target file or `package.json` entry is genuinely missing, and leave everything
-  already present untouched (including `angular.json`'s existing `test` options — merge in only the missing keys
-  from Step 4, don't overwrite ones already set). Note in Step 13's report which steps were skipped because their
-  output already existed.
-- **Otherwise, and a workspace already exists**: warn the user, then use `AskUserQuestion` with three options:
-  - **Stop** — leave everything untouched; make no changes at all. Report this and end here.
-  - **Fill gaps only** (recommended) — run only the steps below whose output is missing (e.g. Playwright is set up
-    but Compodoc isn't); don't touch anything already configured.
-  - **Regenerate everything** — before asking Step 2's questions, read the existing `angular.json`/`package.json`
-    and use their current project name, style preprocessor, and any already-resolved license/author info as the
-    *defaults* offered for whichever Step 2 question Step 0 didn't already resolve via `args`. Tell the user this
-    replaces `angular.json`'s `test` options, `eslint.config.js`, `.stylelintrc.json`, `playwright.config.ts`, and
-    `sonar-project.properties` wholesale — any hand-added customization to those files will be lost unless
-    re-added afterward (call this out again in Step 13).
+Announce the mode before asking anything else:
+
+- **Neither exists** (and none of the artifacts below exist either): say "Scaffolding the Angular workspace **from
+  scratch**." and skip straight to Step 2. There is nothing to preserve.
+- **A workspace exists** (or `mode: existing`): say "**Updating an existing workspace** — found: <list with
+  paths>." `ng new` (Step 4) is never re-run over an existing workspace — re-scaffolding would overwrite the
+  application's own source; if the user genuinely wants a fresh workspace they must move the existing one away
+  first. Survey the artifacts Steps 5–13 own: `angular.json`'s `test` options (`runner`/`coverageReporters`/
+  `coverageThresholds`) and the `coverage`/`typecheck`/`format`/`stylelint`/`docs` scripts, `@vitest/coverage-v8`,
+  `eslint.config.js` (angular-eslint + `eslint-config-prettier`), `.prettierrc`/`.prettierignore`,
+  `.stylelintrc.json`, `playwright.config.ts`/`e2e/`, `.storybook/`, and `sonar-project.properties`. Warn that each
+  existing one will be handled individually, then resolve one action per artifact:
+  - **`on-existing` is `keep`/`update`/`replace`**: apply it to every artifact without asking (still print the
+    warning).
+  - **Otherwise**: ask with `AskUserQuestion`, batching up to 4 artifacts per call (one question each), naming any
+    concrete contradiction with this run's choices (e.g. "`angular.json`'s `test` target has no
+    `coverageThresholds`", "a `sonar-project.properties` exists but you chose `sonar: none`"):
+    - **Update (Recommended)** — merge: add what's missing and correct outdated parts using this skill's steps as
+      reference (e.g. merge only the missing `test` option keys, append `eslint-config-prettier` if absent, add the
+      Playwright title fix), keeping everything this skill doesn't own. The user reviews a diff; customizations
+      survive, but a customized part this skill owns may be rewritten.
+    - **Keep as is** — leave it untouched and skip the step that would write it. Nothing customized changes, but it
+      may stay out of date or disagree with this run's choices — Step 14 lists each mismatch.
+    - **Replace** — regenerate it from this skill's template (e.g. `angular.json`'s `test` options,
+      `eslint.config.js`, `.stylelintrc.json`, `playwright.config.ts` rewritten wholesale); every customization in
+      it is lost (recoverable only from git history).
+    - **Stop** (first batch only) — end this skill now without changing anything; report this and end here.
+  - Defer the `sonar-project.properties` question until Step 2 resolves `sonar`: with `sonar: none`,
+    Update/Replace mean removing the file and Keep leaves it as a reported mismatch.
+  - When anything is updated or replaced, read the existing `angular.json`/`package.json` first and use their
+    current project name, style preprocessor, and any already-resolved license/author info as the *defaults*
+    offered for whichever Step 2 question Step 0 didn't already resolve via `args`.
+
+Steps 5–13 consult these decisions: an absent artifact is created, **Update** merges and shows the diff, **Keep as
+is** skips it, **Replace** overwrites it.
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
-everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if regenerating):
+everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if updating):
+
+When an existing `package.json` (or app config such as `app.json`/`angular.json`) already supplies an identity
+value Step 0 didn't — typical in `mode: existing`, where orchestrators omit identity keys — use it as resolved and
+confirm it in one line instead of asking.
 
 - **name** — the Angular workspace/project name, e.g. `my-app`. Used for the `ng new` command, and as
-  `<project>` in the `coverage/<project>/lcov.info` path Step 11's `sonar-project.properties` references.
+  `<project>` in the `coverage/<project>/lcov.info` path Step 13's `sonar-project.properties` references.
 - **directory** — where to scaffold. If the repository is otherwise empty (no tracked files besides maybe
   `.git`/`README.md`), offer `.` (scaffold directly into the repository root, so the Angular project *is* the
   repository) as the default; otherwise ask explicitly, since scaffolding a full Angular workspace into a
@@ -118,15 +154,23 @@ Then, unless Step 0 already resolved a `license` value from `args`, ask about th
 - No license (proprietary / all rights reserved)
 - Other — ask for the license's display name and URL directly afterward
 
-If a license is chosen, remind the user in Step 13 to add a matching `LICENSE` file at the repository root if one
+If a license is chosen, remind the user in Step 14 to add a matching `LICENSE` file at the repository root if one
 doesn't exist yet — `iru-check-license` can verify/backfill source headers against it once it's there.
 
 Then resolve `open-source` and `sonar` — skip either one Step 0 already resolved from `args`:
 
 - **open-source** — is this repository open source? Yes / No.
-- **sonar** — recommend **SonarCloud** (`cloud`) when open-source is Yes; when not open source, state that
-  SonarCloud is free only for open-source projects (a paid plan is required otherwise) and recommend **None**
-  (`none`), offering **self-hosted SonarQube** as the second option. When `cloud` or `self-hosted` is chosen, also
+- **sonar** — the recommendation keys on both `open-source` and `visibility`. If `visibility` wasn't supplied via
+  `args`, resolve it only now (only when this question is actually asked): `gh repo view --json visibility -q
+  .visibility` when the repository has a GitHub remote (lowercase the result and tell the user), otherwise ask
+  **Public** / **Private** (Public recommended when open source); `internal` counts as private. If `open-source:
+  yes` but `visibility` is `private`/`internal`, warn about the contradiction and ask which is right. Recommend
+  **SonarCloud** (`cloud`) only when the repository is public **and** open source; otherwise state that SonarCloud
+  is free only for public open-source projects (per its current pricing — a private project needs a paid plan) and
+  recommend **None** (`none`), offering **self-hosted SonarQube** as the second option. If `ci: no` was supplied via
+  `args`, say plainly that no CI workflow would send reports — analysis would only run when someone runs the
+  scanner manually with a token — and recommend **None**; if the user still picks `cloud`/`self-hosted`, write
+  `sonar-project.properties` anyway and say so in Step 14. When `cloud` or `self-hosted` is chosen, also
   collect `sonar-organization`/`sonar-project-key`/`sonar-host-url` the same way this catalog's Java/TypeScript
   setup skills do (SonarCloud: suggest `<owner>-github` / `<owner>_<repo>` / `https://sonarcloud.io`, inferring
   `<owner>`/`<repo>` from `git remote get-url origin`; self-hosted: ask for `sonar.host.url` directly, plus
@@ -179,7 +223,7 @@ Flag notes (each one discovered/confirmed by actually running this command non-i
   (22.x) — passing `--standalone` is redundant but harmless and future-proofs the command if a later major changes
   that default back. Likewise, the scaffolded app is **zoneless by default** (no `zone.js` dependency, no
   `provideZoneChangeDetection` call) — there is no need to pass `--zoneless` explicitly today, but note this
-  explicitly in Step 13's report since it's easy to assume otherwise from older Angular tutorials.
+  explicitly in Step 14's report since it's easy to assume otherwise from older Angular tutorials.
 - **`--directory <directory>`** — pass `.` to scaffold directly into an already-empty repository root (verified:
   this writes `angular.json`/`package.json`/`src/` etc. straight into the current directory instead of creating a
   `<name>/` subdirectory, while the project is still internally named `<name>` in `angular.json`); omit it (or
@@ -269,7 +313,7 @@ npm install -D @vitest/coverage-v8@${installed_vitest_major}
 (equivalently, read `vitest`'s resolved version from `package-lock.json`/`node_modules/vitest/package.json` and
 pick the matching major of `@vitest/coverage-v8` from `npm view @vitest/coverage-v8 versions --json`). Verified
 after this fix: `ng test --coverage` runs cleanly and writes lcov to **`coverage/<project>/lcov.info`** (confirmed
-by inspecting the actual output directory after a real run — this is the path Step 11's `sonar-project.properties`
+by inspecting the actual output directory after a real run — this is the path Step 13's `sonar-project.properties`
 and this catalog's `iru-typescript-coverage`/CI steps must reference for an Angular project, not the bare
 `coverage/lcov.info` a library or React-Vite project uses).
 
@@ -455,16 +499,20 @@ don't reach them.
 
 ## Step 14 — Report
 
-Summarize: the resolved project `name`/`directory`, the license chosen (or "none"), and which of Steps 4–13 ran
-fresh, were skipped because their output already existed (Step 1's gap-fill/regenerate outcome), or were skipped
-by design (Storybook when `storybook: no`, `sonar-project.properties` when `sonar: none`).
+Start by repeating the mode announced in Step 1 (**scaffolded from scratch** or **updated an existing
+workspace**). Summarize: the resolved project `name`/`directory`, the license chosen (or "none"), and, per owned
+artifact, the action actually taken — **created / updated / replaced / kept as is / removed** — or skipped by
+design (Storybook when `storybook: no`, `sonar-project.properties` when `sonar: none`). For every kept artifact,
+list each mismatch with this run's choices.
 
 State explicitly what was included versus omitted, and why:
 
 - **`open-source`**: yes/no, as resolved in Step 2.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if `cloud`/`self-hosted`, `sonar-project.properties` was written
-  with the resolved organization/project key/host URL; if `none`, note this is expected when the project isn't
-  open source (SonarCloud is free only for open-source projects) unless the user explicitly chose it.
+  with the resolved organization/project key/host URL; if `none`, note this is expected when the repository isn't
+  public and open source (SonarCloud is free only for public open-source projects) unless the user explicitly chose
+  it. State the `visibility` used and where it came from (`args`, `gh`, or the user); if `ci: no` was supplied and
+  Sonar was still configured, say no CI step sends reports.
 - **`storybook`**: yes/no — if yes, note that Step 12 was not verified end-to-end in this skill's own
   verification pass (see that step) and should be spot-checked the first time it actually runs.
 

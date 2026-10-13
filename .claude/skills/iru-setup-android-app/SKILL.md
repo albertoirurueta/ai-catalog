@@ -16,15 +16,19 @@ description: Scaffold a new single-module Android application (Gradle Kotlin DSL
   `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `ui` (`compose`/`views`), `distribution` (`none`/`internal`/`store`), `built-in-kotlin`
   (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool` (`jacoco`/`kover`), `static-analysis`
-  (`lint`/`lint+detekt+ktlint`), and `mode` (`new`/`existing`) — so an orchestrating skill can supply them without
-  re-prompting; invoked stand-alone, it asks `open-source` first and derives the `sonar` question's default from
-  that answer. `distribution: internal` wires the Firebase App Distribution Gradle plugin
+  (`lint`/`lint+detekt+ktlint`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
+  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `sonar: none` is recommended since no CI
+  would send reports), `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`, default
+  `ask`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks
+  `open-source` first and derives the `sonar` question's default from that answer. `distribution: internal` wires the Firebase App Distribution Gradle plugin
   (`com.google.firebase.appdistribution`, `google-services.json` gitignored); `distribution: store` asks via
   `AskUserQuestion` whether to add the Gradle Play Publisher plugin (`com.github.triplet.play`) to the build or
   leave the upload to the workflow-level `r0adkll/upload-google-play@v1` action that `iru-setup-android-github-workflows`
-  generates (default: leave it to the workflow). If `settings.gradle.kts`/`app/build.gradle.kts` already exist, asks
-  the user whether to stop or regenerate (`mode: existing` skips straight to gap-fill: create only what's missing,
-  never overwrite hand-edited application source). Every Gradle/Kotlin/plugin version is looked up at run time
+  generates (default: leave it to the workflow). Announces whether it is scaffolding from scratch or updating an
+  existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the
+  `app/` skeleton, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/
+  flavors/build types) / Keep as is / Replace (regenerate, losing customizations) / Stop — even under
+  `mode: existing`, unless `on-existing` decides — and never overwrites hand-edited application source. Every Gradle/Kotlin/plugin version is looked up at run time
   (Google Maven, Maven Central, the Gradle plugin portal, the Gradle releases API), falling back to the versions
   recorded in this file when a lookup fails. Templates are genericized from a real Android repository's actual
   toolchain and CI-verified `app/` module (see Step 5's header for the link) — no real repository/org/person names
@@ -85,7 +89,10 @@ built-in-kotlin: no
 junit: 4
 coverage-tool: jacoco
 static-analysis: lint
+visibility: public
+ci: yes
 mode: new
+on-existing: ask
 ```
 
 Parse any such lines from `args` now. Every field found here is resolved — skip asking about it in Step 2. Only
@@ -98,33 +105,59 @@ Recognized keys: `application-id`, `namespace` (defaults to `application-id` if 
 `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is
 `cloud` or `self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `ui` (`compose`/`views`),
 `distribution` (`none`/`internal`/`store`), `built-in-kotlin` (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool`
-(`jacoco`/`kover`), `static-analysis` (`lint`/`lint+detekt+ktlint`), and `mode` (`new`/`existing`).
+(`jacoco`/`kover`), `static-analysis` (`lint`/`lint+detekt+ktlint`), `visibility` (`public`/`private`/`internal` —
+GitHub repository visibility, only used to pick the `sonar` recommendation in Step 2), `ci` (`yes`/`no` — whether
+CI workflows will exist to send Sonar reports; only used by Step 2's `sonar` question), `mode` (`new`/`existing`),
+and `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`).
 
 `mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that Step 1 should skip its stop-or-regenerate question entirely and go straight to
-gap-fill: create only whatever files from Step 5 are genuinely missing, and leave every file that already exists
-untouched. `mode: new` or an unset `mode` follows Step 1's normal survey instead.
+is an established repository). It no longer means "gap-fill silently": Step 1 still warns about, and asks about,
+every pre-existing file group. Only `on-existing` skips that question — `keep` (create only missing files, leave
+every existing one untouched — the old `mode: existing` behaviour), `update`, or `replace` is then applied to every
+pre-existing file group without asking (the warning is still printed). `on-existing` is meant for scripted runs; an
+orchestrator passes it only if its own `args` received it.
 
 ## Step 1 — Survey the repository
 
-Check for `settings.gradle.kts` and `app/build.gradle.kts` at the repository root.
+Check which of Step 5's files already exist at the repository root — above all `settings.gradle.kts` and
+`app/build.gradle.kts`, but also root `build.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, the
+Gradle wrapper files, `detekt.yml`, and the `app/` skeleton files (manifest, `proguard-rules.pro`, `res/` files,
+`MainActivity.kt`/theme, test sources, `app/.gitignore`). Then tell the user which of the two this run is doing:
 
-- **Neither exists**: skip straight to Step 2. There is nothing to preserve.
-- **`app/build.gradle.kts` exists and applies `com.android.application`**: this skill (or a hand-written
-  equivalent) already owns this module. Warn the user it will be regenerated, then:
-  - **`mode: existing` was resolved in Step 0**: skip the question below — go straight to **gap-fill**: create
-    only the files from Step 5 that are genuinely missing (never touch `MainActivity.kt`/existing composables/
-    `AndroidManifest.xml`'s `<application>` children beyond the one `<activity>` this skill adds/existing
-    resources); note in Step 8's report which files were left alone because they already existed.
-  - **Otherwise**: use `AskUserQuestion` with two options:
-    - **Stop** — leave everything untouched. Report this and end here.
-    - **Update** — regenerate the toolchain files (`build.gradle.kts` root, `settings.gradle.kts`,
-      `gradle.properties`, `gradle/libs.versions.toml`, `app/build.gradle.kts`) from this skill's templates, but
-      never touch `app/src/main/java/**` application source beyond the placeholder files this skill created
-      originally (detect by exact content match against Step 5's templates before overwriting any Kotlin file).
-      Tell the user up front that regenerating `app/build.gradle.kts` replaces the whole file — any dependency,
-      flavor, or build-type customization beyond what Step 5 shows will be lost unless re-added afterward (call
-      this out again in Step 8).
+- **Scaffolding from scratch** — none exist: skip straight to Step 2. There is nothing to preserve.
+- **Updating an existing Gradle project** — `app/build.gradle.kts` exists and applies `com.android.application`
+  (this skill, or a hand-written equivalent, already owns this module), or any other of Step 5's files exists:
+  warn the user, listing every file found by path, that each existing file group below will be decided
+  individually (files that don't exist yet are still created from scratch alongside). This applies under
+  `mode: existing` too.
+
+  Group the existing files into these artifacts (only those with at least one file present):
+  **`settings.gradle.kts`**, **root `build.gradle.kts`**, **`gradle/libs.versions.toml`**, **`gradle.properties`**,
+  **the Gradle wrapper**, **`app/build.gradle.kts`**, **the `app/` skeleton** (manifest, `proguard-rules.pro`,
+  `res/` files, `MainActivity.kt`/theme or layout, test sources, `app/.gitignore`), and **`detekt.yml`** (only once
+  Step 2 resolves `static-analysis: lint+detekt+ktlint` — ask about it after Step 2 in that case). Unless
+  `on-existing` decides (Step 0), ask with `AskUserQuestion`, one question per artifact (batch up to 4 per call;
+  further calls for the rest), naming any concrete conflict with this run's choices (e.g. "`app/build.gradle.kts`
+  has a `sonar {}` block but you chose `sonar: none`", "it applies `com.google.firebase.appdistribution` but
+  `distribution` is `store`"). Options, with the consequence in each description:
+  - **Update (Recommended for the build files and the wrapper)** — "Merge: add what's missing and correct outdated
+    parts using this skill's template as reference — missing plugins/version-catalog aliases, the `sonar {}` /
+    `signingConfigs` / distribution-plugin blocks added or removed per this run's choices, toolchain versions
+    bumped to Step 4's lookup; keep every dependency, product flavor, build type and option this skill doesn't
+    own. You review a diff; your customizations survive, but a customized part this skill owns may be
+    rewritten." For the `app/` skeleton, Update only creates its missing files.
+  - **Keep as is (Recommended for the `app/` skeleton)** — "Leave the file(s) untouched. Nothing you customized
+    changes, but they may stay out of date or disagree with this run's choices — the report will list each
+    mismatch."
+  - **Replace** — "Regenerate from this skill's template. Result matches this house pattern exactly, but every
+    customization (dependencies, flavors, build types beyond Step 5's template) is lost — recoverable only from git
+    history." Never the default. Even on Replace, never overwrite `app/src/main/java/**` application source beyond
+    the placeholder files this skill created originally (detect by exact content match against Step 5's templates
+    before overwriting any Kotlin file), and never touch `AndroidManifest.xml`'s `<application>` children beyond
+    the one `<activity>` this skill adds.
+  - **Stop** (first question only) — "End this skill now without changing any file." Report this and end here.
+
+  Note in Step 8's report the action taken per artifact.
 - **`settings.gradle.kts` exists but has no `app` module applying `com.android.application`, or `app/build.gradle.kts`
   exists and applies `com.android.library`**: this is not this skill's scaffold (a library-only or differently
   laid out project). Warn the user explicitly and ask whether to add an `app` module alongside the existing one, or
@@ -194,9 +227,13 @@ yes/no) and derive the recommended default for `sonar` from that answer, per thi
 - **sonar** — whether to wire up a SonarQube/SonarCloud scan (this house pattern runs it via the `org.sonarqube`
   Gradle plugin, invoked as `./gradlew :app:sonar` — typically from the CI workflow `iru-setup-android-github-workflows`
   generates, so it's worth setting up here even if that workflow comes later). Recommend **SonarCloud** (`cloud`)
-  when open-source is Yes; when not open source, state that SonarCloud is free only for open-source projects (a
-  paid plan is required otherwise) and recommend **None** (`none`), offering **self-hosted SonarQube** as the
-  second option:
+  only when open-source is Yes **and** `visibility` is `public` (or unset — this skill doesn't resolve `visibility`
+  itself when invoked standalone; an unset value is treated as matching `open-source`); otherwise state that
+  SonarCloud is free only for public/open-source projects (a private project needs a paid plan) and recommend
+  **None** (`none`), offering **self-hosted SonarQube** (free Community Build, but you run the server) as the
+  second option. If `ci: no` was supplied, say plainly that no CI workflow would send reports — analysis would only
+  run when someone runs `./gradlew :app:sonar` manually with a token — and recommend `none`; if the user still
+  picks `cloud`/`self-hosted`, write the `sonar {}` block only and note in Step 8 that no CI step sends reports:
   - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
     suggested default. Default `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url` to
     `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
@@ -1179,8 +1216,10 @@ tests keep using JUnit 4 exactly as before; JUnit 5 is for new tests that don't 
 
 ## Step 6 — Scaffold the project
 
-Skip any individual file this step would write if Step 1 resolved gap-fill (`mode: existing` or the "Update"
-choice) and that exact file already exists — never overwrite it.
+Apply Step 1's per-artifact choice to every file this step would write that already exists: **Keep as is** —
+skip it; **Update** — merge the filled-in template into it after showing the user the diff (for the `app/`
+skeleton, only its missing files are created); **Replace** — overwrite it, within Step 1's application-source
+limits. Files that didn't exist are always written.
 
 1. Obtain the Gradle wrapper (Step 5's two-path recipe): try `gradle wrapper --gradle-version <gradle-version>`
    first, falling back to fetching `gradlew`/`gradlew.bat`/`gradle/wrapper/gradle-wrapper.jar` from the Gradle
@@ -1219,14 +1258,16 @@ Report pass/fail and any error output verbatim for a failure; don't dump a succe
 ## Step 8 — Report
 
 Summarize what was generated: the resolved `application-id`/`namespace`/`app-name`, `min-sdk`/`compile-sdk`/
-`target-sdk`, `version-name`/`version-code`, the license chosen (or "none"), and whether Step 6's scaffold ran
-fresh, was skipped in favor of gap-fill/update (per Step 1), or the user chose to stop.
+`target-sdk`, `version-name`/`version-code`, the license chosen (or "none"), and whether this run scaffolded from
+scratch, updated an existing project (per Step 1), or the user chose to stop.
 
 State explicitly what was included versus omitted, and why:
 
 - **`ui`**: `compose`/`views` — which `MainActivity`/theme template was written.
 - **`open-source`**/**`sonar`**: as Step 2 resolved them; if `sonar` ≠ `none`, restate the `sonar.organization`/
-  `sonar.projectKey`/`sonar.host.url` written into `app/build.gradle.kts`'s `sonar { properties {…} } }` block.
+  `sonar.projectKey`/`sonar.host.url` written into `app/build.gradle.kts`'s `sonar { properties {…} } }` block (and,
+  with `ci: no`, that no CI step sends reports); if `none`, whether that's the expected default (not open source, a
+  private/internal `visibility`, or `ci: no`) or a direct user choice.
 - **`distribution`**: `none`/`internal`/`store` —
   - `internal`: restate that `app/google-services.json` must be downloaded from the Firebase console and placed at
     that exact path before any Firebase-related task runs, and that `FIREBASE_APP_ID` plus a service-account
@@ -1241,8 +1282,9 @@ State explicitly what was included versus omitted, and why:
 - Which Step 4 versions came from a live lookup versus this skill's recorded fallback — call out explicitly any
   row marked "unverified locally" above that was used as-is without confirming it resolves.
 
-Then report which of Step 5's files were created fresh, left untouched (gap-fill/`mode: existing`), or replaced
-(update). If existing toolchain files were replaced, explicitly list what could have been lost — any dependency,
+Then report, per Step 1 artifact, the action actually taken — **created / updated / replaced / kept as is** — and
+whether it came from the user's answer or `on-existing`; for each artifact kept as is, list any mismatch with this
+run's choices. If existing toolchain files were replaced, explicitly list what could have been lost — any dependency,
 flavor, or build-type customization beyond what Step 5's templates show — and tell the user to check `git diff` for
 anything they need to re-add.
 

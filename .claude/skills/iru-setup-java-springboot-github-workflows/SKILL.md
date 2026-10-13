@@ -1,6 +1,6 @@
 ---
 name: iru-setup-java-springboot-github-workflows
-description: Create the GitHub Actions workflows for a Spring Boot service repository — a build workflow (`build.yml`) that runs on pushes to the integration and main branches and on pull requests, executing unit tests via Surefire and Testcontainers-backed integration tests via Failsafe, Checkstyle/PMD/SpotBugs static analysis, aggregated JaCoCo coverage, optionally a SonarCloud/SonarQube scan via `mvn sonar:sonar` (gated by the manifest's `sonar.mode`), the Antora documentation build, and the generated API documentation — OpenAPI, protobuf, the AsyncAPI HTML produced by `@asyncapi/html-template`, and the GraphQL reference produced by `spectaql` and `graphql-voyager` — publishing all of it to GitHub Pages; when the manifest's `frontend` is `hilla`, `build.yml` also sets up Node via `actions/setup-node`, runs `vaadin:prepare-frontend` before it, then `npm ci` and `npx vitest run --coverage` in the web module, and packages with `-Pproduction -Dvaadin.ci.build=true`; a `deploy.yml` that builds and pushes the container image, authenticates to AWS or Google Cloud via keyless OIDC, and applies the OpenTofu configuration for a chosen environment behind a GitHub Environment approval gate; an `undeploy.yml` that scales the service to zero or destroys an environment's infrastructure, guarded by a typed-confirmation input and a protected environment; a `security.yml` that runs a `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job (`github/codeql-action@v4`, matrix including `javascript-typescript` when `frontend` is `hilla`), an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job (`gitleaks/gitleaks-action@v3`) — each individually omittable; and a `.github/dependabot.yml` with grouped weekly updates for the `maven`, `docker`, and `github-actions` ecosystems, plus `npm` (pointed at the real web module's directory) when the manifest's `frontend` isn't `none`. Reads `sonar.mode` from `springboot-stack.yml` as the source of truth for whether the Sonar step and `SONAR_TOKEN` secret are generated at all, rather than asking reactively. Derives the pipeline from `springboot-stack.yml` and the actual reactor/`infra/` layout on disk, lists every required repository secret and environment, and never writes a credential into a workflow file. Invoke as `/iru-setup-java-springboot-github-workflows`, or with `args` (`stack-file:`, `integration-branch:`, `main-branch:` lines, plus `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`, each `yes`/`no`, default `yes`) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of hand-writing the YAML for testing, analysis, documentation publishing, deployment, teardown, and dependency/secret/code security scanning.
+description: Create the GitHub Actions workflows for a Spring Boot service repository — a build workflow (`build.yml`) that runs on pushes to the integration and main branches and on pull requests, executing unit tests via Surefire and Testcontainers-backed integration tests via Failsafe, Checkstyle/PMD/SpotBugs static analysis, aggregated JaCoCo coverage, optionally a SonarCloud/SonarQube scan via `mvn sonar:sonar` (gated by the manifest's `sonar.mode`), the Antora documentation build, and the generated API documentation — OpenAPI, protobuf, the AsyncAPI HTML produced by `@asyncapi/html-template`, and the GraphQL reference produced by `spectaql` and `graphql-voyager` — publishing all of it to GitHub Pages; when the manifest's `frontend` is `hilla`, `build.yml` also sets up Node via `actions/setup-node`, runs `vaadin:prepare-frontend` before it, then `npm ci` and `npx vitest run --coverage` in the web module, and packages with `-Pproduction -Dvaadin.ci.build=true`; a `deploy.yml` that builds and pushes the container image, authenticates to AWS or Google Cloud via keyless OIDC, and applies the OpenTofu configuration for a chosen environment behind a GitHub Environment approval gate; an `undeploy.yml` that scales the service to zero or destroys an environment's infrastructure, guarded by a typed-confirmation input and a protected environment; a `security.yml` that runs a `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job (`github/codeql-action@v4`, matrix including `javascript-typescript` when `frontend` is `hilla`), an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job (`gitleaks/gitleaks-action@v3`) — each individually omittable; and a `.github/dependabot.yml` with grouped weekly updates for the `maven`, `docker`, and `github-actions` ecosystems, plus `npm` (pointed at the real web module's directory) when the manifest's `frontend` isn't `none`. Reads `sonar.mode` from `springboot-stack.yml` as the source of truth for whether the Sonar step and `SONAR_TOKEN` secret are generated at all, rather than asking reactively, and reads the manifest's `visibility` and `ci:` block (`ci.tests` = `unit` ⇒ Surefire only with `-DskipITs` and no Testcontainers/Docker stack in CI, `full` ⇒ Surefire + Failsafe + Testcontainers; `ci.pages` = `no` ⇒ the docs are still built but uploaded as a workflow artifact instead of deployed to GitHub Pages) — `args` may override them, and when invoked standalone with no `ci:` block it resolves `visibility` (args, then `gh repo view`, then asks) and asks `ci-tests`/`pages` (and `sonar` when the manifest has none) itself, stating the Actions-minutes/SonarCloud/Pages cost facts for a private repository. Announces whether it is creating the workflows from scratch or updating existing ones, and for every workflow/config file that already exists warns and asks Update / Keep as is / Replace (or applies `on-existing` from `args`). Derives the pipeline from `springboot-stack.yml` and the actual reactor/`infra/` layout on disk, lists every required repository secret and environment, and never writes a credential into a workflow file. Invoke as `/iru-setup-java-springboot-github-workflows`, or with `args` (`stack-file:`, `integration-branch:`, `main-branch:` lines, plus `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`, each `yes`/`no`, default `yes`, and the shared `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `sonar`, `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`) keys) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of hand-writing the YAML for testing, analysis, documentation publishing, deployment, teardown, and dependency/secret/code security scanning.
 model: sonnet
 ---
 
@@ -14,7 +14,7 @@ sync stages are replaced by image build, OpenTofu apply, and teardown.
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `build.yml` | push to integration/main branch, and every pull request | build, unit tests, integration tests, static analysis, coverage, Sonar (when `sonar.mode` isn't `none`), docs; publishes Pages from the main branch only |
+| `build.yml` | push to integration/main branch, and every pull request | build, unit tests, integration tests (only when `ci.tests: full`), static analysis, coverage, Sonar (when `sonar.mode` isn't `none`), docs; publishes Pages from the main branch only when `ci.pages: yes`, otherwise uploads the built docs as a workflow artifact |
 | `deploy.yml` | `workflow_dispatch` (environment input) and optionally on release published | build + push image, OIDC auth, `tofu apply`, smoke check |
 | `undeploy.yml` | `workflow_dispatch` only, with typed confirmation | scale to zero, or `tofu destroy` an environment |
 | `security.yml` | push to main branch, every pull request, weekly schedule | dependency review, CodeQL, OSV-Scanner, gitleaks — each individually omittable |
@@ -35,9 +35,23 @@ security-dependency-review: yes
 security-codeql: yes
 security-osv: yes
 security-gitleaks: yes
+visibility: private
+ci-tests: unit
+pages: no
+sonar: none
+mode: existing
+on-existing: ask
 ```
 
 - **`stack-file`**/**`integration-branch`**/**`main-branch`** — as before.
+- **`visibility`** (`public`/`private`/`internal`), **`ci-tests`** (`unit`/`full`), **`pages`** (`yes`/`no`),
+  **`sonar`** (`cloud`/`self-hosted`/`none`) — overrides for the manifest's `visibility`, `ci.tests`, `ci.pages`,
+  and `sonar.mode` (see "Resolving the CI choices" below). Normally absent: `iru-setup-java-springboot` records
+  them in the manifest, which is enough.
+- **`mode`** (`new`/`existing`) — informational; this skill still decides scratch-vs-update per file from what's on
+  disk, and `mode: existing` does **not** mean "update silently" — existing files are still asked about below.
+- **`on-existing`** (`ask`/`keep`/`update`/`replace`, default `ask`) — how to treat each workflow/config file that
+  already exists (see "Existing workflow files" below).
 - **`security-dependency-review`**/**`security-codeql`**/**`security-osv`**/**`security-gitleaks`** — each
   `yes`/`no`, default `yes` when not supplied. Individually gate the matching job in `security.yml` (Step 3b);
   `.github/dependabot.yml` itself is always generated regardless of these four flags, since dependency updates and
@@ -45,7 +59,8 @@ security-gitleaks: yes
   (default yes) rather than silently assumed, unless this skill is running unattended as part of
   `iru-setup-java-springboot`'s Step 8, in which case the default stands without asking.
 
-Read `springboot-stack.yml` for the cloud, the Java version, `sonar.mode`
+Read `springboot-stack.yml` for the cloud, the Java version, `visibility`, the `ci:` block (`ci.tests`,
+`ci.pages`), `sonar.mode`
 (`cloud`/`self-hosted`/`none` — absent means `cloud`, for backward compatibility with a manifest written before
 this field existed) and its `sonar.organization`/`sonar.projectKey`/`sonar.hostUrl`, `frontend`
 (`none`/`hilla`), and which technologies are in play. **`sonar.mode` is the source of truth for whether `build.yml`
@@ -90,14 +105,73 @@ Step 3b. Then survey what's actually on disk — the workflows must match realit
 - Whether `compose.yaml` exists and how heavy the container stack is: integration tests on a standard GitHub
   runner (4 vCPU / 16 GB) can't host Elasticsearch + Couchbase + Kafka + several databases simultaneously. If the
   stack looks too large, say so now and offer either a larger runner or splitting integration tests into a matrix
-  by module.
+  by module. Skip this check when `ci.tests: unit` — no container stack runs in CI then.
 
-If any workflow file already exists, use `AskUserQuestion` to ask whether to stop or to update it, preserving any
-step this skill doesn't own (a Slack notification, an extra matrix leg) and only correcting the stages it does.
+### Resolving the CI choices
+
+The manifest is the source of truth, `args` overrides it, and only what is still unresolved is asked. Being
+invoked at all means CI is wanted, so `ci` itself is never asked here (a manifest with `ci.enabled: false` is
+contradictory with running this skill — say so, and ask whether to proceed and flip it to `true`, or stop).
+
+1. **`visibility`** — `args`, else the manifest's `visibility`, else `gh repo view --json visibility -q
+   .visibility` (lowercased; tell the user the detected value), else ask with `AskUserQuestion` — **Public** /
+   **Private** — recommending Public when the manifest's `openSource: true`, otherwise Private. `internal`
+   behaves like `private` for every decision below. If `openSource: true` but visibility is `private`/`internal`,
+   warn that this is contradictory (a private repo forfeits the free-for-public-repos pricing) and ask which is
+   right.
+2. **`sonar`** — `args`, else the manifest's `sonar.mode`. Only when neither has it (a manifest written before the
+   `sonar:` block existed), ask "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to
+   it?", recommending `cloud` only when the repository is public **and** open source, otherwise `none` (with
+   `self-hosted` as the alternative) — SonarCloud is free for public/open-source projects; a private project needs
+   a paid plan. If `sonar.mode: cloud` and visibility is `private`/`internal`, point that out in the report.
+3. **`ci-tests`** — `args`, else the manifest's `ci.tests`, else ask "Which tests should CI run?":
+   - **Unit tests only** (`unit`) — Surefire `*Test` only; Failsafe `*IT` integration tests and the
+     Testcontainers/docker compose stack stay local. Cheaper: fewer minutes, faster feedback. Recommended for
+     private/internal repositories.
+   - **Unit + integration** (`full`) — Surefire plus Failsafe integration tests against the Testcontainers stack
+     (databases, Kafka + Schema Registry, the API mock, …). Complete verification, but uses considerably more
+     minutes. Recommended for public repositories.
+   For a private/internal repository, state the cost facts per GitHub's current pricing (tell the user to
+   double-check their plan): standard GitHub-hosted runners are free for public repositories; private/internal
+   ones consume the account's included minutes — 2,000/month on GitHub Free, 3,000 on Pro and Team, 50,000 on
+   Enterprise Cloud — then are billed per minute (Linux 2-core $0.006/min). Every workflow here runs on
+   `ubuntu-latest`, so the macOS/Windows multipliers don't apply.
+4. **`pages`** — `args`, else the manifest's `ci.pages`, else: public ⇒ `yes` without asking (say so in the
+   report); private/internal ⇒ ask with **No (Recommended)** — "CI still builds the Antora site, Maven site, and
+   API docs and uploads them as a workflow artifact; nothing is published" — versus **Yes** — "GitHub Pages for a
+   private/internal repository requires GitHub Pro, Team, or Enterprise Cloud (not GitHub Free), and the site
+   will be **publicly accessible on the internet** unless the organization is on Enterprise Cloud and publishes it
+   with private access control".
+
+When any of these was resolved by asking (or by `gh`) rather than read from the manifest, offer to record it in
+`springboot-stack.yml` (`visibility:`, `ci: { enabled: true, tests: …, pages: … }`, `sonar.mode`) so the next
+run and `iru-update-java-springboot-documentation` see the same choice; an `args` override is applied for this run
+only and not written back unless the user agrees.
+
+### Existing workflow files
+
+Say up front whether this run is **creating the workflows from scratch** (none of `build.yml`, `deploy.yml`,
+`undeploy.yml`, `security.yml`, `.github/dependabot.yml` exist) or **updating existing ones** (list which exist).
+For each one that exists, warn and — unless `on-existing` is `keep`/`update`/`replace`, in which case apply it to
+every file without asking (still print the warning) — ask with `AskUserQuestion` (up to 4 files per call, one
+question each), stating concretely where the existing file contradicts this run's choices (e.g. "your current
+`build.yml` runs `mvn verify` with Failsafe/Testcontainers but you chose `ci-tests: unit`", "it deploys to
+`gh-pages` but `pages: no`", "it still runs `sonar:sonar` after `sonar: none`"):
+
+- **Update (Recommended)** — merge: add what's missing and correct the stages this skill owns (action versions,
+  gated steps, test scope, Pages vs artifact, Sonar) using the templates below; keep every step/job this skill
+  doesn't own (a Slack notification, an extra matrix leg). You review a diff; your customizations survive, but a
+  customized part of a stage this skill owns may be rewritten.
+- **Keep as is** — leave the file untouched. Nothing you customized changes, but it may stay out of date or
+  disagree with this run's choices — Step 6's report lists each mismatch.
+- **Replace** — regenerate from the template. Matches this house pattern exactly, but every customization in the
+  file is lost (recoverable only from git history).
+- **Stop** — end this skill now without changing any file.
 
 ## Step 1 — `build.yml`
 
 Structure it as two jobs so a pull request gets fast feedback and Pages publishing only happens on the main branch.
+The template below is the `ci.tests: full` / `ci.pages: yes` shape; the `unit` and `pages: no` variants follow it.
 
 ```yaml
 name: Build
@@ -183,7 +257,7 @@ jobs:
       - name: Upload test reports
         # `always()` so a failing build still yields the reports that explain why.
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: |
@@ -310,6 +384,48 @@ explicit `npm i` list `iru-setup-antora` uses, **including `asciidoctor-kroki`**
 Kroki-diagram page will fail the build. The `mvn site` invocation at the reactor root aggregates every module's
 reports; verify the aggregate actually lands in `./target/site` for this reactor (a multi-module `site` sometimes
 needs `site:stage`) and use whichever path is real.
+
+**`ci.tests: unit`** — CI runs Surefire only, with no Testcontainers/Docker stack:
+
+- Rename the Maven step to `Build and unit tests` and run `mvn -B -ntp clean verify -DskipITs` (keeping
+  `-Pproduction -Dvaadin.ci.build=true` when `frontend: hilla`). `-DskipITs` is Failsafe's own skip property, so
+  `*IT` classes — the only ones that start the Testcontainers/compose stack written by
+  `iru-setup-java-springboot-testcontainers` — never run, while Surefire `*Test` classes and the `coverage/`
+  module's `report-aggregate` still do; the JaCoCo aggregate (and therefore Sonar's coverage) then reflects unit
+  tests only. Replace the step's comment accordingly (no Failsafe, no Docker needed).
+- Drop `**/target/failsafe-reports/**` from the artifact-upload paths.
+- Add a one-line comment at the top of the job stating that integration tests run locally only
+  (`mvn verify`), so nobody assumes CI exercised them.
+- Verify against the survey that the reactor really separates the two (Failsafe bound with `*IT` includes, as
+  `iru-setup-java-springboot-pom` configures it). If some test that needs Docker is a Surefire `*Test`, it would
+  still run — and fail — in CI; flag that class by name in the report rather than silently passing.
+
+**`ci.tests: full`** — the template as written: `verify` runs Surefire, then Failsafe against the Testcontainers
+stack, then the aggregate report.
+
+**`ci.pages: no`** — keep the `docs` job (it still validates that the Antora site, the Maven site, and every API
+doc generator build) but:
+
+- Replace the `Deploy to GitHub Pages` step with an artifact upload of the merged tree:
+
+  ```yaml
+      - name: Upload documentation
+        # ci.pages: no — nothing is published; download the artifact from the run to browse the docs.
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation
+          path: ./doc
+          retention-days: 14
+  ```
+
+- Drop the job's `permissions: contents: write` (only the `gh-pages` push needed it) — the workflow-level
+  `contents: read` is enough — and the `.nojekyll` touch, which only matters to Pages.
+- Rename the job to `Build documentation`. Keep its `if:` (main-branch pushes only) so pull requests don't pay
+  for a docs build twice; widening it to every run is the user's call.
+- Say in the report that no github.io site will exist, so `iru-update-java-springboot-documentation`'s
+  `api-docs-url` attribute (which points the Antora API pages at `https://<owner>.github.io/<repo>/api`) would be
+  a dead link — flag it for the user.
 
 If the manifest's `sonar.mode` is `none`, drop the entire `Run SonarCloud analysis` step from `build.yml` rather
 than leaving it in with a permanently-false condition — dead YAML that can never run is worse than no YAML.
@@ -710,7 +826,7 @@ Report these as a table; this skill cannot create them.
 
 | Name | Kind | Purpose |
 |---|---|---|
-| `SONAR_TOKEN` | repository secret | SonarCloud/SonarQube scan — **only listed when `sonar.mode` isn't `none`**; omit this row entirely for `sonar.mode: none` |
+| `SONAR_TOKEN` | repository secret | SonarCloud/SonarQube scan — **only listed when `sonar.mode` isn't `none`**; omit this row entirely for `sonar.mode: none` (for `cloud` on a private/internal repository, note that the SonarCloud project needs a paid plan) |
 | `AWS_DEPLOY_ROLE_ARN` | environment secret | OIDC role assumed per environment (AWS) |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT` | environment secrets | OIDC identity (Google Cloud) |
 | `AWS_REGION` / `GCP_PROJECT_ID`, `GCP_REGION` | environment variables | not secret, but environment-specific |
@@ -727,7 +843,11 @@ Also required, and easy to miss:
 
 - **A GitHub Environment per deployment environment**, with required reviewers on `prod`.
 - **GitHub Pages** configured to serve from the `gh-pages` branch (Settings → Pages), or the docs job publishes
-  into a branch nobody reads.
+  into a branch nobody reads — only when `ci.pages: yes`. For a private/internal repository that needs GitHub
+  Pro, Team, or Enterprise Cloud, and the site is public unless Enterprise Cloud private Pages access control is
+  used. Omit this bullet entirely when `ci.pages: no`.
+- For a **private/internal repository**, every run of these workflows consumes the account's included Actions
+  minutes (see Step 0) — mention it so the user can watch their usage.
 - The **OIDC trust policy** on the cloud side must name this repository *and* the environment. If it's scoped only
   to the repository, any branch can deploy to production — flag this as a real finding if the platform skill's
   output shows a wildcard subject.
@@ -742,7 +862,8 @@ Also required, and easy to miss:
 - Confirm every action reference is a current major version, and every secret/variable name used appears in Step
   4's table — a typo'd secret name silently evaluates to empty, which usually surfaces as a confusing
   authentication failure much later.
-- Confirm the Maven commands actually work locally first (`mvn -B -ntp clean verify`, `mvn -B -ntp site
+- Confirm the Maven commands actually work locally first (`mvn -B -ntp clean verify` — or `mvn -B -ntp clean
+  verify -DskipITs` for `ci.tests: unit`, confirming no Docker-dependent test runs in it —, `mvn -B -ntp site
   -DskipTests -Djacoco.skip`, `mvn -B -ntp generate-resources`) — delegate to `iru-gate-runner` for a compact
   result. A workflow whose commands were never run locally is a guess.
 - If the GraphQL step was added, run its commands locally too (`npm ci` in `apis/graphql-server/docs`, then
@@ -771,7 +892,12 @@ Also required, and easy to miss:
 
 ## Step 6 — Report
 
-Summarize: which workflow files were created or updated; the branch names and Java version resolved; whether the
+Summarize: whether this run created the workflows from scratch or updated existing ones, and per file the action
+actually taken (**created / updated / replaced / kept as is**) — for every file kept as is, each mismatch with
+this run's choices (e.g. still runs integration tests after `ci-tests: unit`, still deploys to Pages after
+`pages: no`, still runs a Sonar step after `sonar: none`); the resolved `visibility` and how (args, manifest,
+`gh`, or asked), `ci.tests` and `ci.pages` (and whether they were written back to the manifest), plus the
+Actions-minutes note for a private/internal repository; the branch names and Java version resolved; whether the
 Sonar step was included (and, if so, `sonar.mode` and the resolved organization/project key/host URL) or omitted
 because `sonar.mode: none`, and whether the pom's own Sonar wiring matched what Step 0 expected; whether the docs
 job's Antora install matches `docs/package.json` (including Kroki); whether the AsyncAPI and GraphQL documentation
@@ -798,8 +924,9 @@ Warn explicitly:
 - **Configure required reviewers on `prod` before the workflows land on the main branch**, not after — until then,
   anyone with write access can dispatch a production deploy or teardown.
 - **Verify the OIDC trust policy is scoped to the repository *and* the environment.**
-- Integration tests need Docker on the runner; if the compose stack is too heavy for `ubuntu-latest`, the first
-  `build.yml` run will fail on resource exhaustion rather than on a code defect — deal with it now if Step 0
-  flagged it.
+- With `ci.tests: full`, integration tests need Docker on the runner; if the compose stack is too heavy for
+  `ubuntu-latest`, the first `build.yml` run will fail on resource exhaustion rather than on a code defect — deal
+  with it now if Step 0 flagged it. With `ci.tests: unit`, integration tests run only when someone runs
+  `mvn verify` locally — say so plainly.
 - Nothing in these files contains a credential, and it must stay that way: every new value goes in as a secret or
   variable reference.
