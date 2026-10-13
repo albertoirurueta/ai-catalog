@@ -320,7 +320,7 @@ back to the versions confirmed current as of **September 2026**, listed here:
 | `actions/dependency-review-action` | `v5` | |
 | `github/codeql-action` (`init`/`analyze`) | `v4` | resolve via `.../tags`, not `.../releases/latest` — that endpoint returns the unrelated `codeql-bundle-*` tag |
 | `SonarSource/sonarqube-scan-action` | `v8` | resolve via `.../tags` too, for the same reason |
-| `google/osv-scanner-action` (reusable workflow) | `v2` | pin the workflow ref, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2` |
+| `google/osv-scanner-action` (reusable workflow) | `v2` | pin the workflow ref, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0` |
 | `gitleaks/gitleaks-action` | `v3` | |
 | `changesets/action` | `v2` | library flavor only |
 | `expo/expo-github-action` | `v9` | react-native/`native-builds: eas` only — the repository publishes `v5`…`v9` tags (`git ls-remote --tags`), so the ref needs the `v` prefix like every other action here; a bare `@9` doesn't resolve |
@@ -1452,7 +1452,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
     with:
       scan-args: |-
         --recursive

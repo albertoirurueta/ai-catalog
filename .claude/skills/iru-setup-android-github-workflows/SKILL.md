@@ -286,7 +286,7 @@ verification pass — see Step 12 for the two that don't have a floating major t
 | `actions/setup-node` | `v7` | yes | used only for the Antora build step |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
 | `actions/dependency-review-action` | **`v5.0.0`** | **no** | this action has never published a floating `v5` tag — only exact-version tags (`v5.0.0`, `v4.9.0`, …); pin the exact version and re-check at generation time whether a floating major now exists |
-| `google/osv-scanner-action` (reusable workflow) | **`v2.6.0`** | **no** | same situation — pin the workflow ref to the exact tag, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.6.0` |
+| `google/osv-scanner-action` (reusable workflow) | **`v2.6.0`** | **no** | same situation — pin the workflow ref to the exact tag, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0` |
 | `gitleaks/gitleaks-action` | `v3` | yes | |
 | `r0adkll/upload-google-play` | `v1` | yes | `flavor: app`, `distribution: store`, workflow-level upload only |
 | `wzieba/Firebase-Distribution-Github-Action` | `v1` | yes | `flavor: app`, `distribution: internal` |
@@ -1127,7 +1127,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.6.0
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
     with:
       scan-args: |-
         --recursive

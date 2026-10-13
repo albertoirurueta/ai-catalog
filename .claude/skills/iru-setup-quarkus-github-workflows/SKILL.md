@@ -55,7 +55,7 @@ API): `actions/checkout@v7`, `actions/setup-java@v6`, `gradle/actions/*@v6`, `ac
 `actions/setup-python@v7`, `actions/upload-artifact@v7`, `crazy-max/ghaction-github-pages@v5`,
 `docker/setup-buildx-action@v4`, `docker/login-action@v4`, `docker/metadata-action@v6`,
 `docker/build-push-action@v7`, `github/codeql-action/*@v4`, `actions/dependency-review-action@v5`,
-`google/osv-scanner-action/...@v2`, `gitleaks/gitleaks-action@v3`. Re-check them when updating an old pipeline —
+`google/osv-scanner-action/...@v2.7.0`, `gitleaks/gitleaks-action@v3`. Re-check them when updating an old pipeline —
 Dependabot's `github-actions` entry keeps them current afterwards.
 
 ## Step 1 — Resolve inputs and survey the repository
@@ -735,7 +735,7 @@ jobs:
       contents: read
       security-events: write
       actions: read
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
     with:
       scan-args: |-
         --recursive

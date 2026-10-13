@@ -286,9 +286,13 @@ fully gated on a machine with no Docker; only the integration result is lost.
 8. **Integration tests** — only now, with everything above clean and the lock held. First make sure the
    environment is up **without starting anything the user hasn't agreed to**:
 
-   - **wp-env**: `npx wp-env run tests-cli wp core version` (or `cli` on wp-env versions without a separate tests
-     environment) succeeds → running. If not, ask once (`AskUserQuestion`: start it with `npx wp-env start` /
-     leave the stage unverified). Starting wp-env pulls images and takes minutes; never `wp-env destroy`/`clean`.
+   - **wp-env**: check the **test** environment — `npx wp-env run cli --config=.wp-env.test.json wp core version`
+     when `.wp-env.test.json` exists (`tests-cli` without `--config` only for older projects still using the
+     deprecated `testsEnvironment`) — succeeds → running. If not, ask once (`AskUserQuestion`: start it with the
+     project's `npm run test:env:start`, else `npx wp-env start --config=.wp-env.test.json` / leave the stage
+     unverified). **Never start or test against the development environment** (`npx wp-env start` with the plain
+     `.wp-env.json`): its test config shares the dev site's database, which the installer wipes. Starting wp-env
+     pulls images and takes minutes; never `wp-env destroy`/`clean`.
    - **`bin/install-wp-tests.sh` setups**: the test library at `$WP_TESTS_DIR` (default
      `/tmp/wordpress-tests-lib`) and its MySQL must already exist — never run the script yourself (it drops the
      named database).
@@ -305,7 +309,8 @@ fully gated on a machine with no Docker; only the integration result is lost.
      description: "Run integration tests for task group",
      subagent_type: "iru-gate-runner",
      prompt: "Invoke Skill({skill: \"iru-php-test\", args: \"<integration selector from Step 1, e.g. -c
-       phpunit-integration.xml, or --testsuite Integration>\"}) through <wp-env tests-cli / Sail / ddev / host>.
+       phpunit-integration.xml, or --testsuite Integration>\"}) through <the project's test:integration script / wp-env cli --config=.wp-env.test.json (tests-cli only on
+       legacy testsEnvironment projects) / Sail / ddev / host>.
        Run exactly this one invocation — no --parallel, nothing else concurrently: the suite shares one database.
        It is slow; wait for it. Report back only: whether all integration tests passed; for any failure, the test
        name and first failure line; and separately whether any failure was an environment problem (database

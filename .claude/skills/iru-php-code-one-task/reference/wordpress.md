@@ -168,8 +168,10 @@ Two kinds, usually two configs or suites — find which ones the project has (`i
   **WP_Mock** (`10up/wp_mock`) to stub WordPress functions and assert hooks. Default for logic in classes and
   hook callbacks. These run in the fast stage — no database, no Docker.
 - **Integration**: `WP_UnitTestCase` subclasses run against a real WordPress test install and a dedicated MySQL
-  database — via `@wordpress/env` (`npx wp-env run tests-cli --env-cwd=wp-content/plugins/<slug>
-  vendor/bin/phpunit …`) or `bin/install-wp-tests.sh`. Use `self::factory()->post->create()`,
+  database — via `@wordpress/env`'s dedicated test environment (the project's `npm run test:integration`, i.e.
+  `npx wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/plugins/<slug> vendor/bin/phpunit -c
+  phpunit-integration.xml.dist`; `tests-cli` only on older projects still using the deprecated
+  `testsEnvironment`) or `bin/install-wp-tests.sh`. Use `self::factory()->post->create()`,
   `wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) )`, `rest_do_request( new
   WP_REST_Request( 'POST', '/acme-loans/v1/loans' ) )`, `$this->go_to()`. **Write them, don't run them here** —
   the group skill runs them under its integration lock.

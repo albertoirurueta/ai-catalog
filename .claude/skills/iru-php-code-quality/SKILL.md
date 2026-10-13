@@ -41,7 +41,9 @@ Any flavor may wire any extra tool — always run whatever is actually configure
 **Environment** — static analysis needs no database, so prefer host PHP: `command -v php` succeeds and its version
 satisfies `composer.json`'s `require.php` (`php -r 'echo PHP_VERSION;'`). Otherwise use the project's container,
 detected exactly as `iru-php-test` Step 1 does (`.ddev/config.yaml` → `ddev exec <cmd>`; Laravel Sail →
-`./vendor/bin/sail php <cmd>` / `./vendor/bin/sail bin <tool>`; wp-env → `npx wp-env run cli --env-cwd=wp-content/plugins/<dir> <cmd>`),
+`./vendor/bin/sail php <cmd>` / `./vendor/bin/sail bin <tool>`; wp-env → `npx wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/<plugins|themes>/<dir> <cmd>` when the
+project has that test config, else plain `cli` — static analysis doesn't touch the database, but never start an
+environment just for it; ask first),
 after confirming `docker info` succeeds — if Docker isn't running, stop and say so. No usable PHP at all → stop and
 report it; never report "0 issues".
 

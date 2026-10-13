@@ -21,7 +21,7 @@ Never assume host `php` is the right interpreter — many PHP projects only run 
 |---|---|---|
 | `.ddev/config.yaml` exists | **ddev** | `ddev exec <cmd>` (e.g. `ddev exec vendor/bin/phpunit`) |
 | `vendor/bin/sail` exists **and** `compose.yaml`/`docker-compose.yml` references `laravel/sail` (or `sail-8.x` runtimes) | **Laravel Sail** | `./vendor/bin/sail <cmd>` (`sail test`, `sail php`, `sail bin pest`) |
-| `.wp-env.json` exists, or `@wordpress/env` is in `package.json` devDependencies, **and** the selected suite is a WordPress integration suite (Step 3) | **wp-env** | `npx wp-env run <container> --env-cwd=<path> <cmd>` (Step 3) |
+| `.wp-env.json`/`.wp-env.test.json` exists, or `@wordpress/env` is in `package.json` devDependencies, **and** the selected suite is a WordPress integration suite (Step 3) | **wp-env** | the project's own script (`npm run test:integration` / `composer test:integration`), else `npx wp-env run cli --config=.wp-env.test.json --env-cwd=<path> <cmd>` (Step 3) |
 | `command -v php` succeeds | **host PHP** | none |
 
 Rules:
@@ -92,15 +92,23 @@ words** (and the command that would provision it), never a raw fatal error:
   deletes the named database's data; ask first. If `vendor/yoast/phpunit-polyfills` is missing (and no
   `WP_TESTS_PHPUNIT_POLYFILLS_PATH` is set), report that too — the WordPress bootstrap aborts without it.
 - **WordPress via wp-env**: Docker must be running (Step 1). wp-env ships PHPUnit, Composer and the matching test
-  library inside its containers, with `WP_TESTS_DIR` already set. Run the suite inside the container with the
-  plugin/theme as working directory:
-  `npx wp-env run tests-cli --env-cwd=wp-content/plugins/<plugin-dir> vendor/bin/phpunit [args]`
-  (themes: `wp-content/themes/<theme-dir>`). Use the container name the project's own `package.json`/composer
-  scripts use; older wp-env releases have a separate `tests-cli` container, while recent ones dropped the
-  built-in tests environment in favour of a separate `--config` and run tests in `cli` — if `tests-cli` is
-  rejected as an unknown container, use `cli`. If the environment isn't started (`npx wp-env run` reports it
-  can't find the containers), report "wp-env is not running — start it with `npx wp-env start`" and ask before
-  starting it.
+  library inside its containers, with `WP_TESTS_DIR` already set. Pick the invocation in this order:
+  1. **The project's own scripts** — `npm run test:integration` / `composer test:integration` (read them in
+     `package.json`/`composer.json` first and mirror their `--config`, container and `--env-cwd`; append extra
+     PHPUnit args after `--`).
+  2. **A dedicated test config** (`.wp-env.test.json`, wp-env 11's documented replacement for the deprecated
+     built-in tests environment): `npx wp-env run cli --config=.wp-env.test.json
+     --env-cwd=wp-content/<plugins|themes>/<dir> vendor/bin/phpunit [-c phpunit-integration.xml.dist] [args]`.
+  3. **Only for older projects** whose `.wp-env.json` still relies on the deprecated `testsEnvironment` (no
+     `"testsEnvironment": false`, no test config): `npx wp-env run tests-cli --env-cwd=wp-content/plugins/<dir>
+     vendor/bin/phpunit [args]`.
+
+  **Never run the integration suite in the development environment's `cli`** (`.wp-env.json` without
+  `--config` when `testsEnvironment` is `false`): its `wp-tests-config.php` uses the dev site's database and table
+  prefix, and the test installer drops those tables. If the environment isn't started (`npx wp-env run` reports it
+  can't find the containers), report "wp-env test environment is not running — start it with `npm run
+  test:env:start` (or `npx wp-env start --config=.wp-env.test.json`)" and **ask before starting it** — never start
+  the development environment for integration tests.
 - **Database reachability** (WordPress, Laravel against MySQL/PostgreSQL, PrestaShop): the typical failures are
   WordPress's `Error establishing a database connection`, PDO's `SQLSTATE[HY000] [2002] Connection refused` /
   `php_network_getaddresses: getaddrinfo ... failed` (host name like `mysql` that only resolves inside Docker), and
@@ -190,8 +198,8 @@ doesn't get committed as build noise.
 
 ## Step 6 — Report results
 
-- State the environment and runner used (e.g. "Pest via Sail", "PHPUnit via wp-env `tests-cli`, config
-  `phpunit-integration.xml`") and the counts — don't paste the JUnit XML or the full console log.
+- State the environment and runner used (e.g. "Pest via Sail", "PHPUnit via wp-env `cli --config=.wp-env.test.json`,
+  config `phpunit-integration.xml.dist`") and the counts — don't paste the JUnit XML or the full console log.
 - If the selector matched nothing (0 tests in the log, or `No tests executed!`), say so plainly — not as 0 passed.
 - If the environment was missing (Docker down, wp-env/Sail not started, WordPress test library absent, database
   unreachable, `vendor/` missing, no shop for PrestaShop integration tests), report exactly what is missing and the
@@ -210,5 +218,9 @@ one failing test: the JUnit parser above reports the correct totals and the asse
 Pest's `<testcase>` carries `class`, `classname`, and `file` attributes. With `--filter` matching nothing, Pest exited
 1 and PHPUnit 12 exited 255 — exit codes for an unmatched selector are therefore not a reliable signal, so treat a
 JUnit file with `tests="0"` (or "No tests executed" on the console) as "nothing matched", never as a pass or a crash.
-Still unverified: `php artisan test` and Sail, ddev, the `tests-cli`/`cli` container split across wp-env versions,
-and a real WordPress (`WP_UnitTestCase`) or PrestaShop integration suite.
+The wp-env path was verified with `iru-setup-php-wordpress`'s scaffold (wp-env 11.17.0, WordPress 7.1.3, PHPUnit
+9.6): `npx wp-env start --config=.wp-env.test.json` then `npx wp-env run cli --config=.wp-env.test.json
+--env-cwd=wp-content/plugins/<slug> vendor/bin/phpunit -c phpunit-integration.xml.dist` ran a real `WP_UnitTestCase`
+suite (plugin and block theme); wp-env 11's `run` accepts `mysql`/`wordpress`/`cli`/`composer`/`phpmyadmin`, and
+`tests-cli` exists only while the deprecated `testsEnvironment` is on (it still defaults to `true`). Still
+unverified: `php artisan test` and Sail, ddev, and a PrestaShop integration suite.

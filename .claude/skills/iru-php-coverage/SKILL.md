@@ -48,7 +48,8 @@ both `tests/Unit` and `tests/Feature`, or a WordPress plugin class hit by both t
 ## Step 3 — Detect the coverage driver (never trust a 0% without this)
 
 Run the check **in the same environment the tests run in** (`php -m`, `./vendor/bin/sail php -m`, `ddev exec php
--m`, or `npx wp-env run <container> php -m`):
+-m`, or for wp-env the test environment's `cli` — `npx wp-env run cli --config=.wp-env.test.json php -m`, or
+`tests-cli` only on older projects still using the deprecated `testsEnvironment`; never the development site):
 
 ```bash
 php -m | grep -i -E '^(pcov|xdebug)$'
@@ -72,7 +73,8 @@ Choose, in order:
    Docker image, `install-php-extensions pcov` (mlocati/docker-php-extension-installer) or the distro package
    (`apt-get install php8.x-pcov`); in Sail, check `./vendor/bin/sail php -m` (the Sail runtimes ship Xdebug, enabled
    for coverage with `SAIL_XDEBUG_MODE=develop,debug,coverage` in `.env` and `sail up`); in ddev, `ddev xdebug on`
-   loads Xdebug; in wp-env, `npx wp-env start --xdebug=coverage` (restarts the environment — ask first).
+   loads Xdebug; in wp-env, restart the **test** environment with Xdebug, `npx wp-env start --config=.wp-env.test.json
+   --xdebug=coverage` (restarts it — ask first; never start the development environment for this).
 
 **The `php -d` pitfall with `php artisan test`**: `artisan test` (and `--parallel` in any runner) re-launches Pest/
 PHPUnit in a **child process that does not inherit `-d` options** — `php -d extension=pcov.so -d pcov.enabled=1
@@ -101,7 +103,9 @@ XDEBUG_MODE=coverage php artisan test [scope] --coverage-clover build/iru-php-co
 # Sail / ddev / wp-env — same command behind the Step 1 prefix, e.g.
 ./vendor/bin/sail php -d pcov.enabled=1 vendor/bin/pest [scope] --coverage-clover build/iru-php-coverage-clover.xml
 ddev exec XDEBUG_MODE=coverage vendor/bin/phpunit [scope] --coverage-clover build/iru-php-coverage-clover.xml
-npx wp-env run tests-cli --env-cwd=wp-content/plugins/<plugin-dir> env XDEBUG_MODE=coverage vendor/bin/phpunit [scope] --coverage-clover build/iru-php-coverage-clover.xml
+npx wp-env run cli --config=.wp-env.test.json --env-cwd=wp-content/<plugins|themes>/<dir> env XDEBUG_MODE=coverage vendor/bin/phpunit -c phpunit-integration.xml.dist [scope] --coverage-clover build/iru-php-coverage-clover.xml
+# (mirror the project's own test:integration script when it exists; `tests-cli` without --config only for older
+#  projects still on the deprecated testsEnvironment)
 ```
 
 Add `-c <config>` when the selection lives in a non-default config. Don't add `--min=N`/`--coverage` table flags:
