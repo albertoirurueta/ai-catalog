@@ -1,6 +1,6 @@
 ---
 name: iru-issue
-description: End-to-end kickoff for a tracked ticket — a GitHub issue or a Jira ticket, auto-detected like `iru-explore` — requires a ticket ID, unlike `iru-explore`/`iru-plan` this skill stops if none is given. Fetches the ticket, classifies it as a feature or a hotfix from its labels/issue-type/content, detects whether it is running locally or in a Claude Code cloud/web session, resolves the base branch accordingly (the current branch when local; the repository's default branch — never the `claude/*` session branch — when in the cloud) and always confirms that base with the user before branching, creates a `feature/<ticket-id>` or `hotfix/<ticket-id>` branch off it, records it in the plan's Task summary as a `Base branch:` line so a later session can recover the choice, then runs the `iru-explore` and `iru-plan` skills for that ticket. Once a reviewable `implementation_plan.md` exists, asks whether to hand off implementation to the `iru-code` skill (run in an isolated sub-agent) or stop for manual review; once implementation is done, attaches the archived implementation plan back onto the original ticket (as a GitHub issue comment, or a Jira attachment/comment) for future context if one was actually archived, skipping that step otherwise, then pushes the branch, opens a pull request (using whichever tooling matches the repository's host — GitHub, Bitbucket, Azure DevOps, or TFS — as detected by `iru-explore`) back to that same confirmed base branch, uses the `iru-pr-description` skill (passing the base branch to it) to fill in its description, then runs the `iru-pr-review` skill (passing both the new PR's id and the ticket id) to leave review comments on it. If `iru-code`'s security gate (`iru-check-security`) ever flags a new or newly-unaudited secret during implementation, this skill stops instead — it warns the user with the specifics and never pushes the branch or opens a PR for that run, even if `iru-code` itself went on to resolve the gate and finish. Invoke as `/iru-issue <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`). Use when starting work on a tracked ticket and you want branch creation, exploration, planning, implementation, PR creation, and an initial code review done in one pass.
+description: End-to-end kickoff for a tracked ticket — a GitHub issue or a Jira ticket, auto-detected like `iru-explore` — requires a ticket ID, unlike `iru-explore`/`iru-plan` this skill stops if none is given. Fetches the ticket, classifies it as a feature or a hotfix from its labels/issue-type/content, detects whether it is running locally or in a Claude Code cloud/web session, resolves the base branch accordingly (the current branch when local; the repository's default branch — never the `claude/*` session branch — when in the cloud) and always confirms that base with the user before branching, creates a `feature/<ticket-id>-<slug>` or `hotfix/<ticket-id>-<slug>` branch off it (`<slug>` being a short kebab-case summary of the ticket title, e.g. `feature/42-add-csv-export` or `hotfix/PROJ-123-login-fails-after-timeout`), records it in the plan's Task summary as a `Base branch:` line so a later session can recover the choice, then runs the `iru-explore` and `iru-plan` skills for that ticket. Once a reviewable `implementation_plan.md` exists, asks whether to hand off implementation to the `iru-code` skill (run in an isolated sub-agent) or stop for manual review; once implementation is done, attaches the archived implementation plan back onto the original ticket (as a GitHub issue comment, or a Jira attachment/comment) for future context if one was actually archived, skipping that step otherwise, then pushes the branch, opens a pull request (using whichever tooling matches the repository's host — GitHub, Bitbucket, Azure DevOps, or TFS — as detected by `iru-explore`) back to that same confirmed base branch, uses the `iru-pr-description` skill (passing the base branch to it) to fill in its description, then runs the `iru-pr-review` skill (passing both the new PR's id and the ticket id) to leave review comments on it. If `iru-code`'s security gate (`iru-check-security`) ever flags a new or newly-unaudited secret during implementation, this skill stops instead — it warns the user with the specifics and never pushes the branch or opens a PR for that run, even if `iru-code` itself went on to resolve the gate and finish. Invoke as `/iru-issue <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`). Use when starting work on a tracked ticket and you want branch creation, exploration, planning, implementation, PR creation, and an initial code review done in one pass.
 model: sonnet
 ---
 
@@ -152,11 +152,27 @@ reports it.
 
 ### 4.3 — Create the branch
 
-- Compute the branch name: `feature/<ticket-id>` if Step 3 classified it as a feature, `hotfix/<ticket-id>` if a
-  hotfix.
+- Compute the branch name as `<prefix>/<ticket-id>-<slug>`:
+  - `<prefix>` is `feature` if Step 3 classified the ticket as a feature, `hotfix` if a hotfix.
+  - `<ticket-id>` is the ticket's id exactly as the tracker shows it: the bare GitHub issue number (`42`, no `#`)
+    or the Jira key with its original casing (`PROJ-123`).
+  - `<slug>` is a brief description of the task so the branch is recognizable at a glance — usually the ticket
+    title, summarized when it's long: lowercase ASCII, words joined by single hyphens, every other character
+    (punctuation, quotes, slashes, `#`, emoji, accents) dropped or transliterated, filler words (`a`, `the`,
+    `should`, …) and any text duplicating the ticket id or a `[bug]`/`feat:`-style title prefix removed, and kept
+    to roughly 3–6 words / at most ~40 characters, cut at a word boundary. E.g. issue #42 "Add CSV export to the
+    reports page" → `feature/42-add-csv-export-reports-page`; Jira `PROJ-123` "Login fails after session
+    timeout" → `hotfix/PROJ-123-login-fails-after-session-timeout`.
+  - If the title yields no usable slug (empty, or only symbols/non-Latin text), derive one from the ticket body's
+    first sentence instead; if that also fails, fall back to `<prefix>/<ticket-id>` and say so.
+  - The result must be a valid ref name — check with `git check-ref-format --branch <branch-name>`.
 - Check it doesn't already exist locally or on `origin` (`git branch --list <branch-name>`, `git ls-remote --heads
-  origin <branch-name>`). If it does, tell the user and ask (`AskUserQuestion`) whether to check it out instead of
-  creating it, pick a different name, or stop — don't silently overwrite or reuse it.
+  origin <branch-name>`). Also look for any other branch already created for this same ticket — same prefix and
+  ticket id with a different or no slug (`git branch --list '<prefix>/<ticket-id>' '<prefix>/<ticket-id>-*'`, and
+  `git ls-remote --heads origin` filtered the same way), e.g. from an earlier run before the title changed. If
+  either finds a match, tell the user and ask (`AskUserQuestion`) whether to check out the existing branch instead
+  of creating one, pick a different name, or stop — don't silently overwrite or reuse it, and don't create a
+  second branch for the same ticket without asking.
 - If `<base-branch>` is **not** the current branch, check the working tree first (`git status`): uncommitted
   changes would be dragged onto a fork point the user didn't expect, so stop and ask the user to commit or stash
   them before continuing.
