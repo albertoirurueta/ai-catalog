@@ -146,8 +146,14 @@ If they decline: stop — the draft from Step 4 is the deliverable.
 If they accept, collect the specifics via `AskUserQuestion`, offering an inferred default for each so the user
 can accept or override in one step:
 
-- **Branch name** — default: a kebab-case slug derived from the draft's summary (e.g.
-  `fix-list-item-move-detection`). If the current branch is already a non-default branch with commits ahead of
+- **Branch name** — default: when the work resolves a known GitHub issue or Jira ticket (a `Source:` line in the
+  plan's "Task summary" — the same `implementation_plan.md` or archived copy Step 2 reads — or a ticket handled
+  earlier in this conversation), follow the same convention `iru-issue` uses:
+  `feature/<ticket-id>-<slug>` or `hotfix/<ticket-id>-<slug>`, where `<ticket-id>` is the bare issue number or the
+  Jira key (`42`, `PROJ-123`), the prefix is `hotfix` for a bug fix and `feature` otherwise (judged from the
+  ticket/draft), and `<slug>` is a short kebab-case summary of the ticket title (e.g.
+  `hotfix/PROJ-123-login-fails-after-session-timeout`). With no ticket, a kebab-case slug derived from the draft's
+  summary (e.g. `fix-list-item-move-detection`). If the current branch is already a non-default branch with commits ahead of
   base and no uncommitted changes, ask instead whether to reuse it rather than creating a new one — except when
   the current branch matches `claude/*`, the throwaway per-session branch of a Claude Code cloud/web run: say so
   and default to a new, properly named branch instead of offering to reuse it.

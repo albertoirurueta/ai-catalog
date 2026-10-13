@@ -61,7 +61,8 @@ rather than falling back to a codebase-only mode.
 
 == Outputs
 
-* A new local branch, `feature/<ticket-id>` or `hotfix/<ticket-id>` depending on classification, created off
+* A new local branch, `feature/<ticket-id>-<slug>` or `hotfix/<ticket-id>-<slug>` depending on classification
+  (`<slug>` is a short kebab-case summary of the ticket title, e.g. `feature/42-add-csv-export`), created off
   the branch `/iru-issue` was invoked from.
 * `implementation_plan.md` at the repository root (produced by `iru-plan`), ready for manual review, or already
   executed by `iru-code` if the user chose automatic implementation.
@@ -99,7 +100,7 @@ flowchart TD
     F2 --> F5{"Confirm base branch with user\n(always, on both environments)"}
     F3 --> F5
     F5 -- stop --> Z2["Stop: user declined the base branch"]
-    F5 -- confirmed --> G["Create feature/&amp;lt;id&amp;gt; or hotfix/&amp;lt;id&amp;gt;\nbranch off the confirmed base"]
+    F5 -- confirmed --> G["Create feature/&amp;lt;id&amp;gt;-&amp;lt;slug&amp;gt;\nor hotfix/&amp;lt;id&amp;gt;-&amp;lt;slug&amp;gt;\nbranch off the confirmed base"]
     G --> H["Invoke explore skill\n(scoped to ticket id)"]
     H --> I["Invoke plan skill\n(scoped to ticket id)"]
     I --> I2["Record 'Base branch:' line in\nimplementation_plan.md Task summary"]

@@ -62,7 +62,8 @@ in `implementation_plan.md` (or its archived copy under `.archive/`), then the r
 |Nothing else is passed on the command line. The skill derives the current branch's diff itself, detects the
 repository host (reusing `iru-explore`'s detection if it already ran this conversation), and prompts
 interactively (via `AskUserQuestion`) for branch name, destination branch, and PR title only if the user chooses
-to open a new pull request.
+to open a new pull request. When the work resolves a known ticket, the suggested branch name follows the same
+`feature/<ticket-id>-<slug>` / `hotfix/<ticket-id>-<slug>` convention as `iru-issue`.
 |Not applicable.
 |===
 
