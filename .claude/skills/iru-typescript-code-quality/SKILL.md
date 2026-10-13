@@ -1,13 +1,14 @@
 ---
 name: iru-typescript-code-quality
-description: Run this project's TypeScript static-analysis and formatting tools — ESLint (flat config, plus Oxlint when it's set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, and Stylelint for CSS/SCSS when configured — then report every issue found (file, line, rule id, message), grouped by tool and classified by rule id. Invoke as `/iru-typescript-code-quality` to check the whole project, or `/iru-typescript-code-quality <path-or-glob>` to scope both the run and the report to specific files — unlike Java's Checkstyle/PMD/SpotBugs trio, ESLint/tsc/Prettier/Stylelint all accept a glob directly, so a scoped invocation narrows what actually runs. Detects the project's framework (npm/TypeScript library, React, Angular, React Native, Ionic, Hilla frontend) from `package.json` to pick the right invocation (`ng lint` vs `npx eslint`) and the right rule-id prefixes to classify against, and verifies each tool's own config file actually exists before trusting a "zero issues" result from it. When the prompt supplies a baseline (a prior per-rule-id issue count from an earlier run of this skill, e.g. captured by `iru-typescript-code-one-task-group` before a task group's changes), reports only the new-vs-baseline diff per rule id instead of the full current list. Use whenever the user wants a lint/type-check/format pass called out separately from `iru-typescript-test`/`iru-typescript-coverage`, instead of eyeballing `npm run lint` output.
+description: Run this project's TypeScript static-analysis and formatting tools — ESLint (flat config, plus Oxlint when it's set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, and Stylelint for CSS/SCSS when configured — then report every issue found (file, line, rule id, message), grouped by tool and classified by rule id. Invoke as `/iru-typescript-code-quality` to check the whole project, or `/iru-typescript-code-quality <path-or-glob>` to scope both the run and the report to specific files — unlike Java's Checkstyle/PMD/SpotBugs trio, ESLint/tsc/Prettier/Stylelint all accept a glob directly, so a scoped invocation narrows what actually runs. Detects the project's framework (npm/TypeScript library, React, Angular, React Native, Ionic, Hilla frontend, NestJS, Next.js) from `package.json` to pick the right invocation (`ng lint` vs `npx eslint`; Oxlint `oxlint --type-aware src/ test/` plus Prettier as the primary linter of a NestJS 12 scaffold, ESLint on older Nest projects; for Next.js 16 plain `eslint` with the `eslint-config-next` flat config since `next lint` was removed, `next lint` only on Next 15 or older, or Biome `biome check` when the project chose it; and `next typegen` before `tsc --noEmit` so the generated `PageProps`/`LayoutProps`/`RouteContext` route types exist) and the right rule-id prefixes to classify against (`@next/next/*`, `jsx-a11y/*`, Oxlint's `typescript(...)`/`eslint(...)` codes, Biome's `lint/<group>/<rule>` categories), and verifies each tool's own config file actually exists before trusting a "zero issues" result from it. When the prompt supplies a baseline (a prior per-rule-id issue count from an earlier run of this skill, e.g. captured by `iru-typescript-code-one-task-group` before a task group's changes), reports only the new-vs-baseline diff per rule id instead of the full current list. Use whenever the user wants a lint/type-check/format pass called out separately from `iru-typescript-test`/`iru-typescript-coverage`, instead of eyeballing `npm run lint` output.
 model: haiku
 ---
 
 # TypeScript Code Quality
 
-Run ESLint, `tsc --noEmit`, Prettier, and (when configured) Stylelint and Oxlint directly, and report every issue
-they find, grouped by tool and by rule id. This skill only runs static analysis/formatting checks and reports
+Run ESLint, `tsc --noEmit`, Prettier, and (when configured) Stylelint, Oxlint, and Biome directly — whichever of
+them the project actually lints with, which for NestJS 12 means Oxlint + Prettier and for Next.js means ESLint or
+Biome plus `next typegen` before `tsc` — and report every issue they find, grouped by tool and by rule id. This skill only runs static analysis/formatting checks and reports
 results — it does not fix issues unless asked to as a follow-up.
 
 ## Step 1 — Detect the toolchain, verify it is actually wired, then run each tool
@@ -15,9 +16,39 @@ results — it does not fix issues unless asked to as a follow-up.
 **Framework detection** (also used by `iru-typescript-test`/`-coverage`/`-tsdoc`/`-code-one-task*`, kept
 consistent across all of them): inspect `package.json` — `@vaadin/hilla`/`hilla-spring-boot-starter` in a
 Maven `pom.xml` or a `src/main/frontend/` directory → `hilla-frontend`; `expo` or `react-native` in dependencies
-→ `react-native`; `@ionic/angular` or `@ionic/react` + `@capacitor/core` → `ionic`; `@angular/core` → `angular`;
-`react` + `vite` → `react`; otherwise → `library`. This decides which rule-id prefixes matter (Step 3) and, for
-Angular, how lint is invoked (below).
+→ `react-native`; `@ionic/angular` or `@ionic/react` + `@capacitor/core` → `ionic`; `@nestjs/core` → `nestjs`;
+`next` → `nextjs`; `@angular/core` → `angular`; `react` + `vite` → `react`; otherwise → `library`. This decides
+which rule-id prefixes matter (Step 3) and, for Angular, NestJS, and Next.js, how lint and type-checking are
+invoked (below).
+
+**What "the project's linter" is, per framework** — read the `lint` script in `package.json` and run what it runs
+(with this skill's JSON/report flags added), rather than assuming ESLint:
+
+- **NestJS 12** scaffolds `"lint": "oxlint --type-aware src/ test/"` with a `.oxlintrc.json`, `oxlint` +
+  `oxlint-tsgolint` devDependencies (the latter is what `--type-aware` needs), and Prettier (`.prettierrc`,
+  `"format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""`) — no ESLint at all (verified on a fresh
+  `@nestjs/cli` 12 scaffold). There, **Oxlint is the primary linter**, not the bonus check described for Vite
+  scaffolds below. Older Nest projects (pre-v12, and CommonJS ones migrated forward) use ESLint
+  (`eslint.config.mjs` with `typescript-eslint`, or a legacy `.eslintrc.js`) + Prettier — handle them like any
+  other ESLint project.
+- **Next.js 16** removed `next lint` (and `next build` no longer lints): `"lint": "eslint"` with an
+  `eslint.config.mjs` flat config spreading `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`
+  plus `globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"])`. Run `npx eslint` directly. Verified
+  locally on Next 16.4: `npx next lint` fails with `Invalid project directory provided, no such directory:
+  <project>/lint` (the CLI treats `lint` as a `next dev` directory) — never run it on 16+. **Next.js 15 or older**
+  may still have `"lint": "next lint"` with a legacy `.eslintrc.json` extending `next/core-web-vitals`; there
+  prefer `npx eslint` when a flat config exists, and otherwise `npx next lint --format json --output-file
+  eslint-report.json` (same ESLint JSON shape; **unverified locally** — only Next 16 was scaffolded). A project
+  created with `create-next-app --biome` has `@biomejs/biome`, a `biome.json`, and `"lint": "biome check"`
+  instead of ESLint — see Biome below.
+- **Type-checking a Next.js project** needs the generated route types first: App Router files use the global
+  `PageProps<'/route'>`, `LayoutProps<'/route'>`, and `RouteContext<'/route'>` helpers, which only exist once
+  `next dev`, `next build`, or `next typegen` has written them under `.next/types` (included via `tsconfig.json`'s
+  `include`). Run `npx next typegen` before `tsc` (Step 1.2) — verified locally: on a fresh Next 16.4 scaffold
+  with `.next/types` removed, `tsc --noEmit` failed with `src/app/layout.tsx(20,50): error TS2304: Cannot find
+  name 'LayoutProps'.`, and after `next typegen` the same command exited `0`. A `TS2304` for those names is a
+  missing-typegen artifact, never a real finding. `next typegen` exists from Next 15.5; on older versions there
+  are no such helper types and plain `tsc --noEmit` is correct.
 
 **Package manager**: from `packageManager` in `package.json`, else the lockfile present —
 `package-lock.json` → npm, `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn. Run every command below through it:
@@ -50,9 +81,15 @@ that "no issues found" must mean the tool ran against real rules, not that it ha
 - **Stylelint**: only relevant, and only run, when the project has `.css`/`.scss` files *and* a
   `stylelint.config.*`/`.stylelintrc*` file or a `"stylelint"` key in `package.json` exists. No config → skip it
   and say so explicitly; don't report a clean Stylelint pass for a project that never wired it.
-- **Oxlint**: only run when `oxlint` is a `package.json` dependency, or an `oxlintrc.json` exists (some Vite/React
-  scaffolds ship it as a fast pre-check alongside, not instead of, ESLint — see `iru-setup-react-web`). Skip
-  silently otherwise; Oxlint is a bonus signal, not a substitute for a missing ESLint config.
+- **Oxlint**: only run when `oxlint` is a `package.json` dependency, or an `.oxlintrc.json`/`oxlintrc.json`
+  exists (some Vite/React scaffolds ship it as a fast pre-check alongside, not instead of, ESLint — see
+  `iru-setup-react-web`). Skip silently otherwise; in those projects Oxlint is a bonus signal, not a substitute for
+  a missing ESLint config. The exception is a project whose `lint` script *is* Oxlint (NestJS 12, above) — there a
+  missing ESLint config is expected and must not be reported as "ESLint: not configured"; say "ESLint: not used
+  (project lints with Oxlint)" instead.
+- **Biome**: only run when `@biomejs/biome` is a dependency and a `biome.json`/`biome.jsonc` exists (e.g. a
+  `create-next-app --biome` project). Biome is both linter and formatter — when it's the project's tool, it
+  replaces ESLint *and* Prettier, so don't report those two as "not configured" findings.
 
 If a tool's config is missing, **skip running it and say so in the report** ("ESLint: not configured, skipped")
 instead of silently omitting it or reporting a misleading "0 issues".
@@ -80,12 +117,18 @@ instead of silently omitting it or reporting a misleading "0 issues".
      JSON array shape above (`ng lint` wraps `@angular-eslint/builder`, which wraps ESLint) — **unverified
      locally** (`ng`/Angular CLI isn't installed on this machine; only confirm this against a real Angular
      scaffold, e.g. right after `iru-setup-angular-web` runs).
-   - **Oxlint**, when configured: `npx oxlint --format json [scope]`. Verified locally: output is a single JSON
+   - **Oxlint**, when configured: `npx oxlint --format json [scope]` — add `--type-aware` when the project's own
+     `lint` script uses it (NestJS 12: `npx oxlint --type-aware --format json src/ test/`, or the `[scope]` in place
+     of `src/ test/`), since type-aware rules such as `typescript(no-floating-promises)` only fire with it. Verified locally: output is a single JSON
      **object** (not an array like ESLint) — `{"diagnostics":[{"message":"...","code":"eslint(no-unused-vars)",
      "severity":"warning","filename":"src/index.ts","labels":[{"span":{"line":2,"column":7,...}}]}],
-     "number_of_files":1,...}` — `code` is `eslint(<rule-name>)` or `typescript-eslint(<rule-name>)`, no
-     `@typescript-eslint/` prefix. Exit code is `0` even with warning-severity diagnostics by default; pass
-     `--deny-warnings` to make warnings fail the run too (verified: exit `1` then). Report Oxlint's findings as a
+     "number_of_files":1,...}` — `code` is `<plugin>(<rule-name>)`, no `@typescript-eslint/` prefix: `eslint(...)`
+     for core rules, and for TypeScript rules `typescript-eslint(...)` on older Oxlint or `typescript(...)` on
+     current releases (verified on Oxlint 1.88 in the NestJS 12 scaffold: `typescript(no-floating-promises)` at
+     `"severity":"error"` alongside `eslint(no-unused-vars)` at `"warning"`; other plugins appear as `unicorn(...)`,
+     `import(...)`, `oxc(...)`, `jest(...)`/`vitest(...)`). Exit code is `0` with only warning-severity
+     diagnostics by default and `1` once any error-severity one exists (verified); pass `--deny-warnings` to make
+     warnings fail the run too (verified: exit `1` then). Report Oxlint's findings as a
      separate line item from ESLint's — they're two different linters even when scoped to the same files, and a
      project running both typically uses Oxlint as a fast subset check, not a replacement.
 2. **tsc** — `npx tsc --noEmit -p tsconfig.json --pretty false` (or the solution-file handling above). Verified
@@ -107,7 +150,19 @@ instead of silently omitting it or reporting a misleading "0 issues".
    files at all (no equivalent of ESLint's `--no-error-on-unmatched-pattern` — verified, so treat exit `2` here
    as "nothing to check" rather than a real failure only after confirming the message says "No files matching").
    Prettier has no rule ids — every finding is filed under a single `formatting` bucket in Step 3.
-4. **Stylelint**, only when configured (Step 1) and CSS/SCSS files are in scope —
+4. **Next.js type-check** replaces item 2's plain `tsc` call: `npx next typegen && npx tsc --noEmit --pretty false`
+   (same output format and parsing as item 2). If `next typegen` itself fails (e.g. an invalid route segment),
+   report that as a `next typegen` failure and don't run `tsc` — its results would be meaningless without the
+   generated types.
+5. **Biome**, only when configured (Step 1) — `npx biome check --reporter=json [scope or "."] > biome-report.json`.
+   Verified locally against Biome 2.5: JSON goes to stdout (a note that the `json` reporter "is experimental and may
+   change in patch releases" goes to stderr — capture stdout only), as one object:
+   `{"summary":{"errors":2,"warnings":3,...},"diagnostics":[{"severity":"warning","message":"Unexpected any. ...",
+   "category":"lint/suspicious/noExplicitAny","location":{"path":"src/a.ts","start":{"line":1,"column":22},...}}]}`.
+   Formatting problems appear as diagnostics with `"category":"format"` (one per unformatted file, no line), so
+   `biome check` covers what Prettier covers in other projects. Exit code `1` when any error-severity diagnostic
+   exists. Because the reporter is marked experimental, re-check the field names against the first real report.
+6. **Stylelint**, only when configured (Step 1) and CSS/SCSS files are in scope —
    `npx stylelint "**/*.{css,scss}" --formatter json -o stylelint-report.json` (scope the glob to `[scope]`
    when given, e.g. `"<scope>/**/*.{css,scss}"`). Verified locally: the JSON formatter writes to **stderr** by
    default even though `--format json` writes it as a genuine JSON array — always pass `-o <file>` rather than
@@ -123,7 +178,7 @@ tool — its report wasn't meaningfully generated, so don't read a stale or empt
 ## Step 2 — Read each generated report, scoped to the request if given
 
 Every tool above (unlike Java's Checkstyle/PMD/SpotBugs) accepts a glob directly, so `[scope]` should already
-have narrowed what ran wherever the tool supports it (ESLint, Prettier, Stylelint, Oxlint file arguments). Only
+have narrowed what ran wherever the tool supports it (ESLint, Prettier, Stylelint, Oxlint, Biome file arguments). Only
 `tsc` always runs the whole project graph regardless of scope (Step 1.2) — for it, filter the parsed diagnostic
 lines to ones whose leading `<file>` path matches `[scope]` before reporting, the same way `iru-java-code-quality`
 extracts a matching `<file>`/`classname` block from a whole-project Checkstyle/PMD/SpotBugs report instead of
@@ -131,7 +186,8 @@ re-running the tool per class.
 
 **With no argument** (project-wide): report every parsed entry from every tool that ran.
 
-**With a `[scope]` argument**: for ESLint/Oxlint, only report entries whose `filePath`/`filename` falls under
+**With a `[scope]` argument**: for ESLint/Oxlint/Biome, only report entries whose `filePath`/`filename`/
+`location.path` falls under
 `[scope]`; for Prettier/Stylelint, only report files under `[scope]`; for `tsc`, filter as above. An empty result
 for a tool after filtering means that tool found nothing in `[scope]`, not that it didn't run — say so rather
 than omitting the tool from the report.
@@ -142,13 +198,19 @@ Bucket every issue by rule id, grouped first by which linter/checker reported it
 without stating its source is ambiguous — `no-unused-vars` exists in both ESLint's core rules and Oxlint's):
 
 - **ESLint** — bucket by the exact `ruleId` (`@typescript-eslint/no-unused-vars`, `@typescript-eslint/no-explicit-any`,
-  `react-hooks/rules-of-hooks`, `@angular-eslint/no-empty-lifecycle-method`, bare ESLint-core ids like
+  `react-hooks/rules-of-hooks`, `@angular-eslint/no-empty-lifecycle-method`, Next.js's `@next/next/*` rules from
+  `eslint-config-next` such as `@next/next/no-img-element`/`@next/next/no-html-link-for-pages` plus the
+  `jsx-a11y/*`, `react/*`, and `import/*` rules that config enables (verified on Next 16.4: an `<img>` without
+  `alt` produced `@next/next/no-img-element` and `jsx-a11y/alt-text`, both severity `1`), bare ESLint-core ids like
   `prefer-const`/`eqeqeq` with no prefix). A `null` `ruleId` (parsing errors ESLint itself can't attribute to a
   rule) gets its own `<parse-error>` bucket.
-- **Oxlint** — bucket by `code` verbatim (`eslint(no-unused-vars)`, `typescript-eslint(no-explicit-any)`) —
-  report these separately from ESLint's buckets even when the rule name overlaps; they're different tools' runs.
+- **Oxlint** — bucket by `code` verbatim (`eslint(no-unused-vars)`, `typescript-eslint(no-explicit-any)`,
+  `typescript(no-floating-promises)`) — report these separately from ESLint's buckets even when the rule name
+  overlaps; they're different tools' runs.
+- **Biome** — bucket by `category` verbatim (`lint/suspicious/noExplicitAny`, `lint/style/useConst`,
+  `lint/correctness/noUnusedVariables`); `format` diagnostics go in the same `formatting` bucket Prettier uses.
 - **tsc** — bucket by the `TS<code>` diagnostic code (`TS2322`, `TS2345`, `TS6133`, …), parsed out of each
-  `error TS<code>:` line.
+  `error TS<code>:` line. For Next.js, say whether `next typegen` ran first.
 - **Prettier** — every finding is one `formatting` bucket (Prettier doesn't have rule ids); count of files listed
   by `--list-different`.
 - **Stylelint** — bucket by the `rule` field (`color-hex-length`, `selector-class-pattern`, …).
@@ -168,5 +230,5 @@ stayed the same is not a regression and is omitted from this diff entirely, even
 the plain (non-baseline) count above it. State explicitly when a tool couldn't be diffed because it wasn't run in
 the baseline (skipped/not configured then) — treat every one of its current issues as new in that case.
 
-Do not attempt to fix any of the issues found, or modify ESLint/tsc/Prettier/Stylelint configuration — that's a
+Do not attempt to fix any of the issues found, or modify ESLint/Oxlint/Biome/tsc/Prettier/Stylelint configuration — that's a
 follow-up the user drives explicitly.

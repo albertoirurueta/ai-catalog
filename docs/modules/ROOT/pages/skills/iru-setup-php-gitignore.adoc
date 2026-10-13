@@ -1,0 +1,110 @@
+= Setup PHP Gitignore
+:description: Creates or updates the root .gitignore for a PHP/Composer project, with Laravel, WordPress, PrestaShop and Antora sections, never ignoring composer.lock.
+:keywords: iru-setup-php-gitignore, claude code skill, php, composer, gitignore, laravel, wordpress, prestashop, repository setup
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or refresh the root `.gitignore` for a PHP/Composer project — a universal base plus flavor-specific sections
+for whatever is actually detected (Laravel application, WordPress plugin or theme, PrestaShop module, Node tooling,
+PHPCS/PHPStan caches, an Antora docs build). It mirrors `iru-setup-typescript-gitignore` and
+`iru-setup-java-gitignore` for the PHP ecosystem and never overwrites an existing `.gitignore` without showing a
+diff and getting approval.
+
+== Purpose
+
+`iru-setup-php-gitignore` bootstraps a `.gitignore` that matches what a PHP project really produces: `vendor/`,
+`auth.json`, PHPUnit/Pest caches, `build/` report output (Clover/JUnit/coverage HTML), code-style caches, env files
+(keeping `.env.example`), OS/editor noise and the repository-wide `.integration-test.lock/` directory. It adds a
+section only when the thing it targets is present — Laravel's skeleton entries (`public/build`, `public/hot`,
+`public/storage`, `storage/*.key`, IDE-helper files), WordPress release zips and `.wp-env.override.json`, PrestaShop
+`config_*.xml` caches (with `config.xml` kept tracked), Node, PHPCS/PHPStan cache paths read from their configs, and
+Antora build output. It never ignores `composer.lock` and proposes removing such a line from an existing file.
+When `.gitignore` already exists it announces an update, shows the merged draft as a diff, and asks Update (merge,
+keep hand-added entries) / Keep as is / Replace (template only).
+
+== Purpose group
+
+xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-php-gitignore
+----
+
+Optionally with an `args` block of `key: value` lines (see below) for scripted runs.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace` — how to treat an existing `.gitignore` in scripted runs. An orchestrator
+forwards it only if its own `args` received it. Other shared keys (such as `mode` or `flavor`) are ignored; the
+flavor is detected from the files themselves.
+|`ask`
+|===
+
+== Outputs
+
+* A root `.gitignore` — created from scratch, updated (merged, keeping hand-added lines), or replaced with the
+  template — or left untouched when kept as is.
+* A report stating whether the run was from scratch or an update, the action taken (created / updated / replaced /
+  kept as is, and whether it came from the user's answer or `on-existing`), the detected flavor, which conditional
+  sections were included or skipped and why, any Laravel nested `.gitignore` files found missing, whether a
+  `composer.lock` ignore line was removed, and which hand-added lines were preserved or dropped.
+* Explicit warnings: review the file before committing (detection is heuristic); run `git rm -r --cached` manually
+  for anything already tracked under a newly ignored path (rotate credentials if `auth.json` or `.env` was
+  committed); commit `composer.lock`; and which sections were verified (Laravel skeleton, PrestaShop native modules)
+  versus inferred.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-php-gitignore"] --> B["Step 0: parse args\n(on-existing)"]
+    B --> C{.gitignore exists?}
+    C -- no --> D["Announce: creating from scratch"]
+    C -- yes --> E["Announce: updating existing,\nread current content"]
+    E --> F{on-existing is keep?}
+    F -- yes --> R["Step 6: report, file untouched"]
+    F -- no --> G
+    D --> G["Step 2: universal PHP/Composer base template\n(tracked-files check for build/)"]
+    G --> H["Step 3: detect flavor and add sections\nLaravel, WordPress, PrestaShop, Node,\nPHPCS/PHPStan cache, Antora"]
+    H --> I["Step 4: compose merged draft\n(drop composer.lock ignore) and\ntemplate-only draft"]
+    I --> J{Existing file?}
+    J -- no --> W["Step 6: write .gitignore"]
+    J -- yes --> K["Step 5: show diff"]
+    K --> L{on-existing update or replace?}
+    L -- yes --> W
+    L -- no --> M{"AskUserQuestion:\nUpdate, Keep as is, Replace"}
+    M -- Update or Replace --> W
+    M -- Keep as is --> R
+    W --> R
+    R --> S["Report mode, action, flavor,\nsections, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-php-gitignore` is a leaf skill; it only reads manifests and config files and writes `.gitignore`.
+It relies on the flavor markers also used by xref:skills/iru-explore.adoc[] and
+xref:skills/iru-setup-php-repository.adoc[], but does not call them.
+
+=== Invoked by
+
+* xref:skills/iru-setup-php-repository.adoc[] — Step 7, root .gitignore, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-php-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

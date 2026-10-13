@@ -1,0 +1,104 @@
+= PHP Test
+:description: Runs a PHP project's tests via Pest, PHPUnit or artisan test on host, Sail, ddev or wp-env, scoped by selector, and reports a compact pass/fail summary.
+:keywords: iru-php-test, claude code skill, php, pest, phpunit, laravel, wordpress, wp-env, junit, run tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a PHP project's test suite through whichever runner and execution environment it actually has configured, scope the run to what the caller asked for, and report a compact pass/fail summary parsed from the runner's own JUnit XML log. It is a read-only reporting skill: it never fixes a failing test, edits code, installs dependencies, or provisions databases unless asked to as a follow-up.
+
+== Purpose
+
+PHP projects rarely run the same way twice: a library runs on host PHP, a Laravel app inside Sail, a WordPress plugin through `@wordpress/env`, a PrestaShop module only inside a shop. `iru-php-test` detects where PHP runs, which runner is wired (Pest, PHPUnit, `php artisan test`), and which suites are fast unit tests versus integration tests that need a real environment (a WordPress test library, a database, a shop). It then runs exactly the requested selection and reports counts and failures, or reports plainly what environment piece is missing instead of failing obscurely. A selector that matched nothing is reported as such, never as a clean run.
+
+== Purpose group
+
+xref:index.adoc#group-php[PHP Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-php-test
+/iru-php-test <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|A file path, a directory, `--filter <pattern>`, `--testsuite <name>`, or `--group <name>`, combinable, optionally with `-c <config>` for a non-default PHPUnit config. All three runners share these options.
+|None — omitting it runs the whole suite.
+|===
+
+Environment and runner resolution:
+
+[cols="2,3", options="header"]
+|===
+|Signal |Environment
+
+|`.ddev/config.yaml`
+|ddev (`ddev exec <cmd>`)
+
+|`vendor/bin/sail` plus a Sail compose file
+|Laravel Sail (`./vendor/bin/sail <cmd>`)
+
+|`.wp-env.json`/`.wp-env.test.json` or `@wordpress/env`, and a WordPress integration suite selected
+|wp-env (the project's own script, else `npx wp-env run cli --config=.wp-env.test.json ...`)
+
+|host `php` available
+|host PHP
+|===
+
+Container environments need Docker; if `docker info` fails the skill stops with "Docker is not running" rather than letting the runner fail. The runner is Laravel's `php artisan test` (which wraps Pest or PHPUnit), then Pest, then PHPUnit; the composer `test` script is read to mirror the project's real flags and configs. Missing `vendor/` or no runner stops with a plain report, never "0 tests".
+
+Unit versus integration is decided per project kind (plain library, Laravel with SQLite in-memory versus MySQL, WordPress Brain Monkey/WP_Mock versus `WP_UnitTestCase`, PrestaShop `tests/Unit` versus shop-backed bootstraps). For an integration selection the skill preflights the WordPress test library (it never runs `bin/install-wp-tests.sh` itself), the wp-env test environment (never the development one), database reachability, and the PrestaShop installation, and reports the command that would provision whatever is missing.
+
+== Outputs
+
+* A plain-text summary in the conversation: the environment and runner used, total/failed/error/skipped counts parsed from a JUnit XML log (written under `build/iru-php-test-junit.xml` and deleted afterwards), and for each failure the `Class::method` (or Pest description) with the first line of its assertion message. PHP errors are counted separately from assertion failures.
+* A selector that matched nothing (0 tests in the log, or `No tests executed!`) is reported as "selector matched nothing", since exit codes for an unmatched selector are unreliable across PHPUnit and Pest versions. Exit code 255 is reported as a PHP fatal error with its first line.
+* A missing environment is reported with the exact missing piece and the provisioning command, plus which tests could still run (for example the Brain Monkey `Unit` suite).
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-php-test\n(optional selector)"] --> B["Step 1: detect where PHP runs\nddev, Sail, wp-env, host php"]
+    B --> C{"Environment usable?\nDocker up if needed"}
+    C -- no --> D["Stop: report missing\nenvironment"]
+    C -- yes --> E["Step 2: detect runner\nartisan, Pest, PHPUnit,\ncomposer test script"]
+    E --> F{"vendor present and\nrunner wired?"}
+    F -- no --> G["Stop: report dependencies\nnot installed or no runner"]
+    F -- yes --> H["Step 3: classify unit vs\nintegration and preflight\nthe environment it needs"]
+    H --> I{"Integration prerequisites\nmissing?"}
+    I -- yes --> J["Stop: report missing piece\nand provisioning command"]
+    I -- no --> K["Step 4: map selector to\nfile, dir, filter, testsuite, group"]
+    K --> L["Step 5: run with --log-junit\nin build/"]
+    L --> M["Parse JUnit XML:\ntotals and failures"]
+    M --> N["Delete the log"]
+    N --> O["Step 6: report counts,\nnothing-matched, failures,\nor missing environment"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-php-test` is a leaf skill; it only runs PHP test commands and reports on their output.
+
+=== Invoked by
+
+* xref:skills/iru-php-code-one-task-group.adoc[] — Step 3.4, 3.6 and 3.8, fast tests, full fast suite and integration run, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+None — it spawns no agents itself. Calling skills normally run it inside an xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] sub-agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-php-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

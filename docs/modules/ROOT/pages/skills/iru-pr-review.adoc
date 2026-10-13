@@ -1,6 +1,6 @@
 = PR Review
-:description: Reviews an open pull request against codebase conventions and linked ticket intent, posting findings as comments without editing code.
-:keywords: iru-pr-review, claude code skill, github, bitbucket, azure devops, jira, code review, review comments, pull request review, ticket intent, eslint, detekt, swiftlint, static analysis
+:description: Reviews an open pull request against codebase conventions, stack-specific pitfalls and linked ticket intent, then posts confirmed findings as comments.
+:keywords: iru-pr-review, claude code skill, github, bitbucket, azure devops, jira, pull request review, review comments, ticket intent, stack pitfalls
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -19,7 +19,13 @@ so the review is grounded in how the codebase is actually structured — includi
 framework(s), the architectural style appropriate to that stack (hexagonal/DDD for a backend, MVC/MVVM for a
 UI layer, unidirectional data flow for SwiftUI/Compose), and the right lint/static-analysis config to check
 (Checkstyle/PMD/SpotBugs for Java; ESLint/Prettier/Biome plus `tsconfig.json` strictness for JS/TS; Detekt/ktlint/
-Android Lint for Kotlin/Android; SwiftLint/swift-format for Swift) — rather than the diff in isolation. Where the external
+Android Lint for Kotlin/Android; PHPStan/Psalm/PHPCS/Pint/PHP-CS-Fixer for PHP; SwiftLint/swift-format for Swift) —
+rather than the diff in isolation. Step 7 also applies a stack-specific pitfalls checklist for whichever stacks were
+detected: Kotlin + Spring Boot (all-open/no-arg plugins, `data class` JPA entities, `@Transactional` with coroutines),
+Quarkus (build-time CDI rules, transaction placement, blocking calls on the event loop, native reflection), PHP
+(strict types, mass assignment, N+1 queries, plus WordPress nonce/capability/escaping and PrestaShop hook/SQL/token
+checks), NestJS (`import type` DTOs, global providers, request scope) and Next.js (server/client boundary, Server
+Action auth, caching semantics, `NEXT_PUBLIC_*` secrets). Where the external
 `code-review` skill happens to be available in the current session, `iru-pr-review` prefers delegating
 correctness/reuse/simplification/efficiency analysis to it — checking out the PR locally and invoking it with
 `--comment` — rather than reimplementing that logic, and focuses its own review on what `code-review` has no way
@@ -76,7 +82,7 @@ Jira key, in the PR title or body; if none is found, the review proceeds without
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-pr-review pr-id ticket-id?] --> B["Step 1: Resolve PR id (required)\nand ticket id (optional)"]
+    A["Start /iru-pr-review pr-id ticket-id?"] --> B["Step 1: Resolve PR id (required)\nand ticket id (optional)"]
     B --> C["Step 2: Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
     C --> D["Step 3: Fetch PR metadata, diff,\nand existing comments via host's tool"]
     D --> E{PR merged or closed?}
@@ -86,8 +92,8 @@ flowchart TD
     G --> H["Step 5: Invoke explore skill\n(scoped to ticket if found)"]
     H --> I{code-review skill\navailable this session?}
     I -- yes --> J["Step 6: Confirm, checkout PR locally,\ninvoke code-review --comment,\nrestore original branch"]
-    I -- no --> K["Step 7: Cover correctness, security,\ntest coverage, simplification\nyourself, plus ticket-intent\nand convention checks"]
-    J --> L["Step 7: Review for ticket-intent\nmismatch and convention drift"]
+    I -- no --> K["Step 7: Cover correctness, security,\ntest coverage, simplification\nyourself, plus ticket-intent,\nconvention and stack-pitfall checks"]
+    J --> L["Step 7: Review for ticket-intent\nmismatch, convention drift and\nstack-specific pitfalls"]
     K --> M["Step 8: Present findings,\nask to post via AskUserQuestion"]
     L --> M
     M -- decline --> N[Stop - draft is the deliverable]
@@ -109,8 +115,7 @@ flowchart TD
 
 === Invoked by
 
-* xref:skills/iru-issue.adoc[] — Step 7 runs `iru-pr-review`, passing both the new PR's id and the ticket id
-  explicitly, since `iru-issue` already knows the relationship between them with certainty.
+* xref:skills/iru-issue.adoc[] — Step 8.6, initial review of the new PR, passing PR id and ticket id.
 
 === Related agents
 

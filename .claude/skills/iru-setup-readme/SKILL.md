@@ -1,6 +1,32 @@
 ---
 name: iru-setup-readme
-description: Create or update the root `README.md` for a repository — a brief description, badges (CI status, SonarCloud/SonarQube, npm, Maven Central, Swift Package Index, etc.), a project status table (language, versions, platforms, license, CI, quality tools), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC, CHANGELOG), installation instructions (Maven/Gradle/npm/SwiftPM/etc. dependency snippets, or a "run it locally"/store-listing section for apps, matched to the project's actual stack and build tool), and a short "how it works" section with a runnable example. Invoke as `/iru-setup-readme`, optionally with `args` (one key/value pair per line, all optional) — `sonar` set to `none` suppresses Sonar badges and dashboard links even when a `sonar {}` block or `sonar-project.properties` exists, `ci` set to `no` omits CI status badges, `pages` set to `no` avoids linking a github.io documentation site that won't be published, and `on-existing` (`ask`/`keep`/`update`/`replace`, scripted runs, default `ask`) pre-answers the existing-README question — so an orchestrator's resolved choices produce a README matching them. Explores the repository's actual state (`pom.xml`/`build.gradle`/`package.json`/`Package.swift`/Android Gradle modules/Xcode or Tuist project files/etc., git remote, GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled with placeholders or invented content. Announces whether it is creating the README from scratch or updating an existing one; if `README.md` already exists, warns the user and shows the proposed content as a diff before writing anything, asking whether to Update it (merged draft, hand-written sections kept), Keep it as is, or Replace it (regenerated, hand-written sections dropped). Use whenever a repository needs a README bootstrapped or refreshed from what's actually there, instead of hand-writing it.
+description: >-
+  Create or update the root `README.md` for a repository — a brief description, badges (CI status,
+  SonarCloud/SonarQube, npm, Maven Central, Packagist, WordPress.org, PHP version, GHCR container image, Swift
+  Package Index, etc.), a project status table (language, versions, framework, platforms, license, CI, quality
+  tools, distribution), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API
+  docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor, CHANGELOG), installation instructions
+  (Maven/Gradle/npm/Composer/SwiftPM/etc. dependency snippets, or a "run it locally"/container-image/store-listing
+  section for services, web apps, WordPress plugins/themes and PrestaShop modules, matched to the project's actual
+  stack and build tool — Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress,
+  PrestaShop, NestJS, Next.js, and the earlier library/app stacks), and a short "how it works" section with a
+  runnable example. Invoke as `/iru-setup-readme`, optionally with `args` (one key/value pair per line, all
+  optional) — `sonar` set to `none` suppresses Sonar badges and dashboard links even when a `sonar {}` block or
+  `sonar-project.properties` exists, `ci` set to `no` omits CI status badges, `pages` set to `no` avoids linking a
+  github.io documentation site (or Next.js static export) that won't be published, and `on-existing`
+  (`ask`/`keep`/`update`/`replace`, scripted runs, default `ask`) pre-answers the existing-README question — so an
+  orchestrator's resolved choices produce a README matching them. Explores the repository's actual state
+  (`pom.xml`/`build.gradle*`/`gradle.properties`/`composer.json`/`package.json`/`Package.swift`/WordPress plugin
+  or theme headers/PrestaShop module class/Android Gradle modules/Xcode or Tuist project files/etc., git remote,
+  GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every
+  section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is
+  omitted rather than filled with placeholders or invented content; a WordPress `readme.txt` is a separate file
+  this skill never replaces. Announces whether it is creating the README from scratch or updating an existing one;
+  if `README.md` already exists (including a generator's stock README from `laravel new`, `create-next-app`, `nest
+  new` or `quarkus create`), warns the user and shows the proposed content as a diff before writing anything,
+  asking whether to Update it (merged draft, hand-written sections kept), Keep it as is, or Replace it
+  (regenerated, hand-written sections dropped). Use whenever a repository needs a README bootstrapped or refreshed
+  from what's actually there, instead of hand-writing it.
 model: sonnet
 ---
 
@@ -24,9 +50,11 @@ with the values they resolved. Every key is optional; any other key (e.g. `mode`
   if stale `.github/workflows/*.yml` files exist on disk (the run chose no workflows, so a badge would point at a
   pipeline that isn't maintained — or, on a fresh repository, doesn't exist). `ci: no` also implies `pages: no`.
 - **`pages: <yes|no>`** — only `no` changes behaviour: Step 5 never links a `https://<owner>.github.io/<repo>` URL
-  (Antora site, Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC), because nothing publishes there — CI
-  only uploads the built docs as a workflow artifact. Point readers at the docs sources instead (`docs/` in the
-  repository, built locally with `cd docs && npx antora antora-playbook.yml`) when an Antora site exists.
+  (Antora site, Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor, or a Next.js/React/Angular
+  static export deployed as the site itself), because nothing publishes there — CI only uploads the built docs (or
+  `out/`) as a workflow artifact. Point readers at the docs sources instead (`docs/` in the repository, built
+  locally with `cd docs && npx antora antora-playbook.yml`) when an Antora site exists, and at the local
+  build/serve commands for a static export.
 - **`on-existing: <ask|keep|update|replace>`** — default `ask`. How Step 9 treats an existing `README.md`: `keep`/
   `update`/`replace` apply that option without asking (Step 1 still prints its warning). `mode: existing` alone
   does **not** mean "update silently" — Step 9 still asks unless `on-existing` says otherwise.
@@ -48,20 +76,38 @@ Look at the repository root for `README.md`.
   diff against it, and any hand-written section that doesn't map onto Steps 3–8 (e.g. a "Contributing" or
   "Acknowledgements" section unrelated to this skill's scope) should be preserved in the proposed version rather
   than dropped. Continue to Step 2.
+  - **Generator boilerplate**: if the existing file is the stock README a project generator wrote — Laravel's own
+    (the `laravel.com` logo lockup, `laravel/framework` badges, "About Laravel"), `create-next-app`'s ("This is a
+    Next.js project bootstrapped with…"), `nest new`'s (the NestJS logo, "A progressive Node.js framework…"),
+    `quarkus create`'s ("This project uses Quarkus, the Supersonic Subatomic Java Framework"), or the like — say
+    so: it describes the generator or framework, not this project, and its badges point at someone else's
+    repository. Nothing in it counts as a hand-written section to preserve, and Step 9 recommends **Replace**
+    instead of **Update**.
+  - **Not `readme.txt`**: a WordPress plugin/theme's `readme.txt` (the WordPress.org directory listing, with
+    `=== Name ===`, `Stable tag:`, `== Changelog ==`) is a different file with its own format and release
+    rules — this skill reads it for facts (Step 2) but never writes, replaces, or "converts" it.
 
 ## Step 2 — Gather project identity
 
 - **Repository name and host**: `git remote get-url origin`; if it's GitHub, extract `<owner>/<repo>` — used for
   badge URLs, GitHub Pages links, and compare links throughout. If there's no remote, or it isn't GitHub, skip
   every GitHub-specific link/badge later and note this in Step 11's report rather than guessing a URL scheme.
-- **Description/tagline**: prefer, in order, a `<description>` in `pom.xml`, a `"description"` in `package.json`,
-  or an existing Antora `docs/modules/ROOT/pages/index.adoc` overview paragraph. If none exist, ask the user for a
-  one-sentence description rather than inventing one — this is the first thing a reader sees.
+- **Description/tagline**: prefer, in order, `project.description` in a `springboot-stack.yml`/`quarkus-stack.yml`
+  manifest, a `<description>` in `pom.xml`, a `description` in the root `build.gradle.kts`, a `"description"` in
+  `package.json` or `composer.json`, the `Description:` header of a WordPress main plugin file or theme
+  `style.css`, a PrestaShop module class's `$this->description`, or an existing Antora
+  `docs/modules/ROOT/pages/index.adoc` overview paragraph. Skip a generator's untouched default — `composer.json`
+  still reading "The skeleton application for the Laravel framework." (with `"name": "laravel/laravel"`), Spring
+  Initializr's "Demo project for Spring Boot", and the like describe the template, not this project. If
+  none remain, ask the user for a one-sentence description rather than inventing one — this is the first thing a
+  reader sees.
 - **License**: look for `LICENSE`/`LICENSE.txt`/`LICENSE.md` at the root. Identify common licenses by their actual
   text (Apache-2.0, MIT, BSD, GPL family) rather than assuming; if the file exists but doesn't match a license you
   can confidently name, still link to it but describe it generically ("see `LICENSE`") rather than guessing a name.
   If no license file exists, omit the License section entirely — don't claim a license the repository doesn't
-  declare.
+  declare. A license the project declares in its own metadata — a WordPress `License:` header, `composer.json`/
+  `package.json` `"license"` SPDX id — may still fill Step 4's License row (say "declared in <file>; no `LICENSE`
+  file") and be flagged in Step 11, but there is no License section linking a file that doesn't exist.
 - **Primary language, framework, and build tool**: reuse `iru-explore`'s `- Project type:` line rather than
   re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
   Expo/React Native, Ionic/Capacitor, Android library/app, SwiftPM/XcodeGen/Tuist, plain TypeScript/npm library,
@@ -73,8 +119,14 @@ Look at the repository root for `README.md`.
     names.
   - Only if `iru-explore` isn't installed in this repository, fall back to a minimal one-manifest check — `pom.xml`
     → Java/Maven, `build.gradle*` → Gradle (Android when a module applies `com.android.library`/
-    `com.android.application`), `package.json` → npm/TypeScript, `Package.swift`/`*.xcodeproj`/`project.yml`/
-    `Project.swift` → Swift/Apple — and say in Step 11 that the framework flavor wasn't detected.
+    `com.android.application`), `package.json` → npm/TypeScript, `composer.json` → PHP, `Package.swift`/
+    `*.xcodeproj`/`project.yml`/`Project.swift` → Swift/Apple — and say in Step 11 that the framework flavor wasn't
+    detected.
+  - The project types this skill tailors sections for beyond plain libraries/apps (Steps 3–7): `java-springboot`/
+    `kotlin-springboot` (+ `-hilla`), `java-quarkus`/`kotlin-quarkus`, `php-laravel`, `php-wordpress-plugin`,
+    `php-wordpress-theme`, `php-prestashop-module`, `php-library`, `nestjs`, `nextjs`. For the JVM services, also
+    note the language (Kotlin when `src/main/kotlin` holds the sources / the Kotlin plugin is applied) and the build
+    tool (Maven, or Gradle with the Kotlin DSL) — every command later in this skill depends on both.
   - A repository can have more than one manifest (e.g. a Maven library with an Antora docs site under `docs` that
     has its own `package.json` for the doc toolchain only, or a Hilla app that is both Java and TypeScript — treat
     the latter as both a Java backend and a frontend for badges/snippets/status-table purposes) — identify the
@@ -86,15 +138,32 @@ Look at the repository root for `README.md`.
     dependency/plugin), plus `groupId`/`artifactId`.
   - Gradle/Android library: `group` and `libraryVersion` (or equivalent) in `lib/build.gradle.kts`, falling back
     to a version property in `gradle.properties` when the build script references one.
-  - npm/Vite/Angular/Expo/Ionic/TypeScript: the `"name"`/`"version"` in `package.json`.
+  - Gradle JVM service (Kotlin Spring Boot / Quarkus on Gradle KTS): `group`/`version` in `gradle.properties`
+    (where the Spring Boot scaffold keeps them), else `group =`/`version =` in the root `build.gradle.kts` (where
+    the Quarkus generator writes them); the
+    artifact name is `rootProject.name` in `settings.gradle.kts`. Quarkus on Maven: `pom.xml` as above.
+  - npm/Vite/Angular/Expo/Ionic/TypeScript/NestJS/Next.js: the `"name"`/`"version"` in `package.json`.
+  - Laravel: `'version' => env('APP_VERSION', '<x.y.z[-dev]>')` in `config/app.php` (never a `composer.json`
+    `"version"` field — the app has none); the PHP floor from `composer.json` `require.php` (or
+    `config.platform.php`) and the Laravel version from `composer.lock`'s `laravel/framework` entry.
+  - WordPress plugin: the main plugin file (the PHP file at the plugin root carrying a `Plugin Name:` header) —
+    `Version:`, `Requires at least:`, `Requires PHP:`, `Text Domain:`; the slug is the plugin directory / main
+    file basename (or `Text Domain` when they differ — say which in Step 11). `readme.txt` adds `Tested up to:` and
+    `Stable tag:` (the latest *release*; it never carries a `-dev` version). WordPress theme: the same headers
+    in `style.css` (`Theme Name:`, `Version:`, `Requires at least:`, `Requires PHP:`), slug = theme directory.
+  - PrestaShop module: the main module class (`<module>.php` extending `Module`) — `$this->name` (the technical
+    name/zip name), `$this->version`, `$this->displayName`, and `$this->ps_versions_compliancy` (`min`/`max`); a
+    tracked `config.xml` `<version>` must agree with it.
+  - Plain Composer package (`php-library`): `"name"` from `composer.json`; the version comes from git tags (Composer
+    packages carry no in-tree version, like SwiftPM).
   - Swift: the package name from `Package.swift`, with the version taken from git tags (SwiftPM has no in-file
     version field) — `git tag --sort=-v:refname | head -1`.
   - Xcode app: `MARKETING_VERSION` from the project's build settings (`project.pbxproj`, `project.yml`, or
     `Project.swift`, depending on which of Xcode/XcodeGen/Tuist generates the project).
   - Also find the latest released version for any stack: `git tag --sort=-v:refname | head -1` (or `gh release
     list --limit 1` if on GitHub with `gh` available). If the current version has no `-SNAPSHOT`/prerelease
-    suffix and matches the latest tag, there's only one version to show, not a "current dev / latest release"
-    pair.
+    suffix (`-SNAPSHOT`, `-dev`, `-dev.N`, `-rc.N`, …) and matches the latest tag, there's only one version to show,
+    not a "current dev / latest release" pair. Strip a leading `v` from tags when comparing.
 
 ## Step 3 — Gather badge sources
 
@@ -132,6 +201,56 @@ SonarCloud project that isn't configured yet.
     and `…%2Fbadge%3Ftype%3Dswift-versions`, linking to `https://swiftpackageindex.com/<owner>/<repo>`, when the
     package is confirmed listed there (or a `Package.swift` plus an SPI-focused release workflow strongly implies
     it — note the inference in Step 11 if not confirmed live).
+  - **Packagist** (`php-library`, or a WordPress plugin/theme whose `composer.json` has `"type":
+    "wordpress-plugin"`/`"wordpress-theme"` and is listed there) — only when `curl -sf
+    https://repo.packagist.org/p2/<vendor>/<name>.json` succeeds (the package is live): version
+    `https://img.shields.io/packagist/v/<vendor>/<name>`, total downloads `https://img.shields.io/packagist/dt/<vendor>/<name>`,
+    and PHP requirement `https://img.shields.io/packagist/dependency-v/<vendor>/<name>/php` (the older
+    `packagist/php-v/…` path is a redirect to this one), each linking to `https://packagist.org/packages/<vendor>/<name>`.
+    Never for a Laravel application (`"type": "project"`), a PrestaShop module, or the untouched `laravel/laravel`
+    skeleton name — those aren't Packagist packages.
+  - **WordPress.org** (`php-wordpress-plugin`/`php-wordpress-theme`) — live badges only when the slug is actually
+    published: `curl -sf "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&request%5Bslug%5D=<slug>"`
+    (themes: `…/themes/info/1.2/?action=theme_information&request%5Bslug%5D=<slug>`) succeeds — an unknown slug is
+    HTTP 404 with `{"error":"Plugin not found."}`. Keep the brackets URL-encoded (or pass `curl -g`): unescaped
+    `[slug]` is a curl glob and silently returns nothing. Then, linking to `https://wordpress.org/plugins/<slug>/` (themes:
+    `https://wordpress.org/themes/<slug>/`):
+    - plugin: `https://img.shields.io/wordpress/plugin/v/<slug>` (version),
+      `…/wordpress/plugin/required-php/<slug>`, `…/wordpress/plugin/wp-version/<slug>` (minimum WordPress),
+      `…/wordpress/plugin/tested/<slug>` (tested up to), `…/wordpress/plugin/rating/<slug>`,
+      `…/wordpress/plugin/installs/<slug>` (active installs);
+    - theme: `https://img.shields.io/wordpress/theme/v/<slug>`, `…/wordpress/theme/required-php/<slug>`,
+      `…/wordpress/theme/wp-version/<slug>`, `…/wordpress/theme/rating/<slug>`, `…/wordpress/theme/installs/<slug>`
+      (shields.io has no `tested` badge for themes).
+    A release workflow that deploys to WordPress.org SVN (`10up/action-wordpress-plugin-deploy`, a
+    `themes.svn.wordpress.org` commit) without the slug being live yet — the first review is still pending —
+    gets **no** live badges (they'd render "not found"); use the static requirement badges below instead and say
+    in Step 11 that the WordPress.org badges can be added after approval.
+- **Requirement badges** (static, from the files read in Step 2 — use them when no registry badge above already
+  shows the same fact):
+  - **PHP version** (any PHP project not covered by the Packagist/WordPress.org `required-php` badge):
+    `https://img.shields.io/badge/php-<range>-777BB4?logo=php&logoColor=white`, where `<range>` is the floor from
+    `composer.json` `require.php` (or the WordPress `Requires PHP:` header) written as `>=8.3` and URL-encoded
+    (`%3E%3D8.3`; in shields static badges `-` must be doubled as `--`, `_` as `__`, and a space is `%20`). No link,
+    or link to `https://www.php.net/supported-versions.php`.
+  - **WordPress requirement** for an unpublished plugin/theme: `https://img.shields.io/badge/WordPress-%3E%3D<min>-21759B?logo=wordpress&logoColor=white`
+    from `Requires at least:`.
+  - **PrestaShop compatibility** (`php-prestashop-module`): `https://img.shields.io/badge/PrestaShop-<majors>-DF0067`
+    where `<majors>` is derived from `ps_versions_compliancy` — e.g. `min` `8.0.0` / `max` `9.99.99` →
+    `8.x%20%7C%209.x` ("8.x | 9.x"); never wider than the declared range. PrestaShop Addons has no badge
+    service — link the Addons product page only when its URL actually appears in the repository (module class,
+    `composer.json` `homepage`/`support`, existing README), never a guessed one.
+- **Container image** (services/web apps that publish one): when a workflow pushes to GHCR — `docker/login-action`
+  with `registry: ghcr.io` plus `docker/build-push-action`/`docker/metadata-action` `images: ghcr.io/<owner>/<image>`,
+  or Quarkus' `-Dquarkus.container-image.registry=ghcr.io` (Jib or Docker builder) — add
+  `https://img.shields.io/badge/ghcr.io-<image>-2496ED?logo=docker&logoColor=white` linking to
+  `https://github.com/<owner>/<repo>/pkgs/container/<image>`. Take `<image>` from the workflow's `images:` value (its
+  last path segment), not from the repository name, and lowercase `<owner>` (registry paths are lowercase; the
+  workflows compute `${GITHUB_REPOSITORY_OWNER,,}`). Shields.io has no GHCR version service (`/ghcr/…` is a 404),
+  so this badge is static — the version lives in the Installation snippet. A Laravel app may push two images
+  (`<image>` and `<image>-web`) — one badge each. Images pushed only to a registry configured by variables (e.g. a
+  deploy workflow's `${{ vars.IMAGE_REGISTRY }}`) get no badge; mention the deploy workflow in Step 4's
+  Distribution row instead.
 - If none of the above exist yet, skip the badges section of the README entirely rather than leaving an empty
   heading.
 
@@ -148,16 +267,19 @@ Compose a small table from whatever Steps 2–3 actually resolved; omit rows wit
 | Platform(s) | For Android/Apple/web projects only: Android / iOS / iPadOS / macOS / watchOS / web, as applicable                             |
 | Min / target SDK | Android only: `minSdk` and compile/target SDK from the Gradle module, when they differ from the platform row above             |
 | Kotlin / AGP | Android/Kotlin-Gradle only: Kotlin version and Android Gradle Plugin version, when pinned explicitly                           |
+| Kotlin | Kotlin JVM services (Spring Boot / Quarkus): the Kotlin version from `gradle/libs.versions.toml` or the POM's `kotlin.version`, plus the JDK toolchain |
+| PHP | PHP projects only: the floor from `composer.json` `require.php` (or `Requires PHP:`), e.g. `>= 8.3`                            |
 | Swift tools / deployment targets | Swift only: the Swift tools version from `Package.swift` and the platform deployment targets it declares          |
 | Node engine | npm-based projects only: the `engines.node` range from `package.json`, if one is declared                                     |
 | TypeScript | TypeScript projects only: the `typescript` version pinned in `package.json`/`package-lock.json`                               |
-| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, etc.)                                            |
+| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, Next.js, NestJS, Spring Boot from the catalog/parent POM, Quarkus `quarkus.platform.version`, Laravel from `composer.lock`), or the host compatibility (WordPress `Requires at least` – `Tested up to`; PrestaShop `ps_versions_compliancy` range) |
 | License | The license identified in Step 2, if any                                                                                       |
 | CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds"); omitted when Step 0 resolved `ci: no` |
-| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Checkstyle, SpotBugs, PMD, ESLint, Detekt, SwiftLint, etc.) |
+| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Kover, Checkstyle, SpotBugs, PMD, detekt, ktlint, ESLint, oxlint, Prettier, PHPStan/Larastan, Pint, PHPCS/WPCS, PHP-CS-Fixer, Pest/PHPUnit, SwiftLint, etc.) |
+| Distribution | Services/apps/plugins only, from the release workflow actually present: container image on GHCR, static export on GitHub Pages, WordPress.org directory (SVN deploy), installable zip attached to GitHub Releases (WordPress, PrestaShop), deploy workflow to an environment; omitted when nothing is published |
 
-Omit every row in this extended set (platforms through framework) that doesn't apply to the detected stack — a
-plain Java/Maven library still shows only the original rows.
+Omit every row in this extended set (platforms through framework, and Distribution) that doesn't apply to the
+detected stack — a plain Java/Maven library still shows only the original rows.
 
 ## Step 5 — Gather documentation links
 
@@ -185,11 +307,26 @@ and skip the published API-docs links below.
     the static build, normally landing at `https://<owner>.github.io/<repo>/storybook` or
     `https://<owner>.github.io/<repo>/api/storybook`, depending on where the workflow places it.
   - **Dokka** (Android/Kotlin): a `dokkaHtml`/`dokkaGenerate` Gradle task feeding a Pages publish step, normally
-    landing at `https://<owner>.github.io/<repo>/api`.
+    landing at `https://<owner>.github.io/<repo>/api`. Kotlin Spring Boot / Quarkus services run
+    `dokkaGeneratePublicationHtml` (Gradle) or `dokka-maven-plugin` (`mvn dokka:dokka`) and merge the result into
+    the Antora output — the Spring Boot workflows put it under `/api/kdoc/` (root-aggregated, or one
+    `/api/kdoc/<module-path>/` per module when the root doesn't aggregate); read the workflow's copy step.
+  - **phpDocumentor** (PHP): a `phpdoc run --config phpdoc.dist.xml` step merged into the Pages site, normally at
+    `https://<owner>.github.io/<repo>/api` — only when `phpdoc.dist.xml` exists.
+  - **Generated REST/gRPC/AsyncAPI docs** (Spring Boot services): the `generated-docs` directories the build
+    workflow merges under `/api/` — link the index the workflow actually produces, if any.
   - **DocC** (Swift): a `docc`/`xcodebuild docbuild` step (often via `docc-render`/`Swift-DocC-Plugin`) feeding a
     Pages publish step, normally landing at `https://<owner>.github.io/<repo>/api`.
   - Use the subpath the workflow actually publishes to rather than assuming `/api` when the workflow config makes
     a different path clear (e.g. `/storybook` vs. `/api/storybook`).
+- **Static export site** (Next.js `output: 'export'`, React/Angular SPAs): when `release.yml` deploys the built
+  app (`out/`, `dist/`) with `actions/deploy-pages`, the app itself lives at `https://<owner>.github.io/<repo>/`
+  (its `basePath` comes from `PAGES_BASE_PATH` in the workflow) — list it as "Live site", not as documentation.
+  When the build workflow *also* deploys the Antora docs to Pages, both share one Pages site and whichever deployed
+  last wins (the workflows skill's "Decision made" note); link the URL the repository's workflows actually leave
+  in place and flag the overlap in Step 11 rather than promising both.
+- **Registry/store pages**: the WordPress.org directory page, Packagist page, or GHCR package page from Step 3,
+  when those badges were included (a reader without badges rendered still needs the link).
 - **SonarCloud/SonarQube dashboard**: reuse the link built in Step 3.
 - **Changelog**: if `CHANGELOG.md` exists at the root, link to it directly (`CHANGELOG.md`).
 - Omit any of the above whose source doesn't exist — don't add a "Documentation" section at all if none of these
@@ -217,6 +354,94 @@ versa:
   name from `Package.swift`'s `products`), and the equivalent steps for Xcode users ("File > Add Package
   Dependencies…", paste the repository URL, select the product).
 - **Python**: `pip install <package-name>`, using the real project name from `pyproject.toml`/`setup.py`.
+- **Composer** (`php-library`, only when Step 3 confirmed it on Packagist): `composer require <vendor>/<name>`
+  (add `--dev` only if the package is a dev tool by its own `composer.json` `type`/description), plus the PHP floor.
+
+Services, web apps, WordPress plugins/themes and PrestaShop modules aren't consumed as dependencies, so for them
+the section is **Getting Started** — prerequisites, then the commands to run it locally, then (only when a release
+workflow publishes one) how to get the released artifact. Every command must be one the repository actually
+defines (a script in `package.json`/`composer.json`, a Gradle task, a Maven plugin, a wrapper that exists); read
+ports, health paths and env keys from the code/config rather than writing framework defaults from memory, and
+never copy a value from `.env`/`.env.example` that looks like a secret — list the key names only.
+
+- **Spring Boot service** (`java-springboot`/`kotlin-springboot`, `-hilla`): prerequisites = the JDK from the
+  toolchain/`java.version`, plus Docker when `compose.yaml` or Testcontainers tests exist. Run: Gradle KTS
+  `./gradlew :boot:bootRun`; Maven `./mvnw install -DskipTests` (or `mvn` when there's no wrapper) then
+  `./mvnw -pl boot spring-boot:run`. When the boot module has an `application-local.*` profile (the catalog's
+  scaffold starts `compose.yaml` from it via `spring.docker.compose`), activate it —
+  `./gradlew :boot:bootRun --args='--spring.profiles.active=local'` / `-Dspring-boot.run.profiles=local` — and
+  say Docker must be running. Tests: `./gradlew test` + `./gradlew integrationTest` (Gradle) or `./mvnw verify`
+  (Maven, Failsafe `*IT`); coverage `./gradlew :coverage:testCodeCoverageReport` when that project exists. Kotlin
+  quality: `./gradlew detekt ktlintCheck` (Gradle) or `./mvnw detekt:check ktlint:check` (Maven) — only the
+  plugins actually configured; API docs: `./gradlew dokkaGeneratePublicationHtml` / `./mvnw dokka:dokka`. Health:
+  the Actuator endpoints the config exposes (`management.endpoints.web.exposure.include`, e.g.
+  `/actuator/health`). Container image: `./gradlew :boot:bootBuildImage` / `./mvnw -pl boot
+  spring-boot:build-image` (or the Jib task the build defines), and the GHCR pull snippet below when published.
+- **Quarkus service** (`java-quarkus`/`kotlin-quarkus`): prerequisites = JDK, Docker for Dev Services
+  (databases/brokers started automatically in dev and test mode), optionally the Quarkus CLI. Dev mode:
+  `./mvnw quarkus:dev` / `./gradlew quarkusDev` (or `quarkus dev` with the CLI) — the Dev UI is at
+  `http://localhost:8080/q/dev-ui` and, with `quarkus-smallrye-health`, health at `/q/health` (use the real
+  `quarkus.http.port`/root path if overridden). Package and run: `./mvnw package` → `java -jar
+  target/quarkus-app/quarkus-run.jar` (Gradle: `./gradlew build` → `build/quarkus-app/quarkus-run.jar`); in a
+  hexagonal multi-module layout, the paths are under the app module that carries the Quarkus plugin. Native
+  (only when a `native` profile/`quarkus.native` config exists): `./mvnw package -Dnative`. Container image:
+  `./mvnw package -Dquarkus.container-image.build=true` when a `quarkus-container-image-*` extension is present,
+  otherwise `docker build -f src/main/docker/Dockerfile.jvm .` after packaging.
+- **Laravel** (`php-laravel`): prerequisites = PHP floor + the `ext-*` from `composer.json`, Composer 2, Node
+  (only when `package.json`/Vite assets exist), and the database from `.env.example`'s `DB_CONNECTION` (SQLite
+  needs nothing). Setup: `composer run setup` when that script exists (the stock one runs `composer install`,
+  copies `.env.example`, `php artisan key:generate`, `php artisan migrate`, and builds assets), otherwise the
+  explicit `composer install`, `cp .env.example .env`, `php artisan key:generate`, `php artisan migrate`,
+  `npm install && npm run build`. Run: `composer run dev` when defined, else `php artisan serve`. Tests:
+  `composer test` (and `composer test:integration` / `composer test:coverage` when defined). **Sail** only when
+  `laravel/sail` is in `require-dev` (and a Sail `compose.yaml` exists): `./vendor/bin/sail up -d` then
+  `./vendor/bin/sail artisan migrate`, presented as an optional alternative, never the only path. Container image
+  (the `Dockerfile` + a GHCR release workflow): `docker run` with the `EXPOSE`d port and the env vars the image
+  expects at run time (`APP_KEY`, `DB_*` — names only), never a baked-in `.env`.
+- **WordPress plugin/theme** (`php-wordpress-plugin`/`php-wordpress-theme`): requirements = `Requires at least`/
+  `Requires PHP` (and `Tested up to`) from Step 2. Installation, only the routes that actually exist:
+  - published on WordPress.org (Step 3): WP admin → **Plugins → Add New Plugin**, search for the plugin name
+    (themes: **Appearance → Themes → Add New Theme**), Install, Activate; or `wp plugin install <slug> --activate`
+    / `wp theme install <slug> --activate` with WP-CLI;
+  - a zip attached to GitHub Releases by `release.yml`: download `<slug>.zip` from the latest release, then
+    **Plugins → Add New Plugin → Upload Plugin** (themes: **Appearance → Themes → Add New Theme → Upload Theme**),
+    or unzip into `wp-content/plugins/` (`wp-content/themes/`);
+  - Composer: `composer require <vendor>/<name>` only when listed on Packagist (Step 3; the site's root
+    `composer.json` needs `composer/installers` to land it in `wp-content/`), or
+    `composer require wpackagist-plugin/<slug>` (`wpackagist-theme/<slug>`) with the `https://wpackagist.org`
+    repository only when published on WordPress.org — never both invented.
+  Development: `composer install`, `npm install && npm run build` when `package.json` uses `@wordpress/scripts`,
+  and `npx wp-env start` when `.wp-env.json` exists (local site at the port it configures, default
+  `http://localhost:8888`; needs Docker); tests via the composer scripts actually defined. Mention that
+  `readme.txt` is the WordPress.org listing and is maintained separately.
+- **PrestaShop module** (`php-prestashop-module`): compatibility from `ps_versions_compliancy` (e.g. "PrestaShop
+  8.x and 9.x") and the PHP floor. Install: download `<module-name>-<version>.zip` from the GitHub Release (when
+  `release.yml` attaches it) → back office **Modules → Module Manager → Upload a module**, or unzip into
+  `modules/<module-name>/` and run `php bin/console prestashop:module install <module-name>` from the shop root.
+  Link the PrestaShop Addons page only when Step 3 found its real URL — Addons uploads are manual, so never imply
+  automatic publishing. Development: `composer install` inside the module, then its composer scripts (`test`,
+  `lint`, `format:check`) as defined.
+- **NestJS** (`nestjs`): prerequisites = Node from `engines.node`/`.nvmrc`, the package manager from the lockfile,
+  Docker when a database or Testcontainers e2e tests are configured. Setup: `npm ci`, `cp .env.example .env`, then
+  list the keys `.env.example` declares with one-line meanings (from the env schema/validation file, e.g.
+  `src/config/env.schema.ts`); start the database with `docker compose up -d` only when a compose file exists, and
+  run migrations via the ORM script the project defines (e.g. a `prisma`/`typeorm`/`drizzle` script) — never an
+  invented one. Run: `npm run start:dev` (watch mode), production `npm run build && npm run start:prod`. Health:
+  the routes the health controller actually declares (the catalog's scaffold: `GET /health/live` and
+  `GET /health/ready` on the `PORT` from `.env.example`, default `3000`), plus the Swagger UI path when
+  `SwaggerModule.setup('<path>', …)` exists. Tests: `npm test`, `npm run test:e2e` (needs Docker when it uses
+  Testcontainers). Docker: `docker build -t <name> .` and `docker run --env-file .env -p 3000:3000 <name>` (port
+  from `EXPOSE`).
+- **Next.js** (`nextjs`): `npm ci`, `npm run dev` (`http://localhost:3000`), `npm run build`, then — server output
+  (`output: 'standalone'` or default) — `npm run start`; static export (`output: 'export'`) — the site is written to
+  `out/`, previewed with any static server (e.g. `npx serve out`), and, when Step 5 found the Pages deploy, live at
+  `https://<owner>.github.io/<repo>/` (omitted under `pages: no`). Tests: `npm test`, `npm run test:e2e`
+  (Playwright, when present — `npx playwright install` first). Docker (standalone + `Dockerfile`): `docker build -t
+  <name> .` and `docker run -p 3000:3000 <name>`.
+- **Released container image** (any of the above, only when Step 3 added the GHCR badge):
+  `docker pull ghcr.io/<owner>/<image>:<latest-release-version>` (tags as `docker/metadata-action` writes them —
+  check its `tags:` config for `{{version}}`/`latest`), followed by the same `docker run` line. For a private
+  repository add that pulling requires `docker login ghcr.io` with a token that has `read:packages`.
 - **Distributed apps** (Android/iOS apps, not libraries): when the manifest declares a store distribution (e.g. a
   Gradle `distribution`/Play publishing config, an App Store Connect/Fastlane/`eas submit` workflow step, or
   existing store metadata in the repository), replace the dependency snippet with store links the user fills in
@@ -246,8 +471,16 @@ This is the most judgment-heavy part — ground it in what the code actually doe
 - Write a short paragraph (a few sentences) on the core concept, plus one minimal, realistic code example that
   would actually compile/run against the current API — check public method/constructor signatures rather than
   guessing them.
+- For a service or web app the example is a request against a real endpoint, not a library call: a `curl`
+  against a route a controller actually declares (Spring `@RestController`/`@*Mapping`, Quarkus/JAX-RS `@Path`,
+  NestJS `@Controller`/`@Get`, a Laravel `routes/api.php`/`routes/web.php` entry, a Next.js route handler or
+  page), with the request/response shape read from its DTOs and the port from Step 6. For a WordPress plugin/theme,
+  show what a site builder actually uses — the block name, shortcode, `add_filter`/`add_action` hook it exposes, or
+  the theme's templates/patterns; for a PrestaShop module, the hooks it registers in `install()` and its
+  configuration page.
 - If the repository has no meaningful source yet (a brand-new, scaffolded-but-empty project), omit this section
-  entirely rather than writing a placeholder example.
+  entirely rather than writing a placeholder example. A catalog scaffold's sample feature (e.g. a `books` sample)
+  is real, runnable code — it may be shown, labeled as the sample it is.
 
 ## Step 8 — Compose the remaining structural sections
 
@@ -257,7 +490,8 @@ Include each only when Steps 2–7 gave it real content:
 - **Badges**: from Step 3, directly under the title.
 - **Project Status**: table from Step 4.
 - **Documentation**: links from Step 5.
-- **Installation**: snippet(s) from Step 6.
+- **Installation** (libraries) or **Getting Started** (services, web apps, plugins/themes/modules): snippet(s)
+  and commands from Step 6, with a short **Requirements** list first when Step 6 gathered prerequisites.
 - **How It Works** / **Quick Example**: prose + code from Step 7.
 - **License**: one line naming the license from Step 2, linking to the `LICENSE` file.
 
@@ -273,6 +507,8 @@ Skip this step entirely if Step 1 found no existing file — proceed straight to
 - Show the user the full proposed new `README.md` content (or a diff against the current file — writing the
   draft to a temp path and running `git diff --no-index <current> <draft>` gives a clean unified diff) so they
   can see exactly what would change section by section. Also list the hand-written sections Step 8 preserved.
+  When Step 1 identified the file as a generator's stock README, say so and make **Replace** the recommended
+  option instead of Update (there is nothing hand-written to keep).
   When the existing file contradicts this run's choices, say so concretely (e.g. "your current README shows
   SonarCloud badges but this run chose `sonar: none`", or "it links a github.io docs site but `pages: no`").
 - Unless Step 0's `on-existing` already decided (`update`/`replace`, applied without asking — the diff is still
@@ -304,6 +540,8 @@ Start by restating the mode — "created from scratch", or for an existing `READ
 summarize: which sections were included versus omitted and why (e.g. "no Installation section — no build/package
 config found", "no CI badges — no GitHub Actions workflows present"), any fact that had to be inferred rather than
 confirmed (e.g. an Antora Pages URL assumed from convention), and every badge/link suppressed by Step 0's
-`sonar: none`/`ci: no`/`pages: no`. Remind the user to double-check the "How It Works"/example section
+`sonar: none`/`ci: no`/`pages: no`, and every registry/store badge withheld because the package/slug/image
+isn't live yet (Packagist, WordPress.org, GHCR) together with the check used. For WordPress projects, state that
+`readme.txt` was left untouched. Remind the user to double-check the "How It Works"/example section
 specifically, since it's the part most dependent on this skill's reading of the current API rather than on
 mechanically-derived facts like versions or badge URLs.

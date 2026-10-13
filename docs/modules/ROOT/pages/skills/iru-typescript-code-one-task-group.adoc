@@ -107,8 +107,7 @@ directly, so verbose report output stays out of this skill's own context:
 
 === Invoked by
 
-* xref:skills/iru-code-one-task-group.adoc[] — Step 2, once for the whole bucket of tasks tagged (or defaulted to)
-  `typescript`, via a direct `Skill` call.
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key typescript.
 
 === Related agents
 

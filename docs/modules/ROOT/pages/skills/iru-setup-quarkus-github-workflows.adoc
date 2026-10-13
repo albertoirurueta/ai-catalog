@@ -1,0 +1,153 @@
+= Setup Quarkus GitHub Workflows
+:description: Creates or updates CI/CD and security GitHub Actions workflows for a Quarkus service: build, tests, coverage, Sonar, docs, image release, sync and Dependabot.
+:keywords: iru-setup-quarkus-github-workflows, claude code skill, quarkus, github actions, maven, gradle, kotlin, jacoco, ghcr, dependabot, codeql
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or update the GitHub Actions pipeline for a Quarkus service — Java or Kotlin, Maven or Gradle (Kotlin DSL),
+single-module or hexagonal multi-module — as scaffolded by `iru-setup-quarkus-service`.
+
+== Purpose
+
+`iru-setup-quarkus-github-workflows` generates the CI/CD and security files for a Quarkus service, fitting the
+catalog's release flow (`iru-release` cuts a release branch and bumps the version with `iru-java-bump-version`;
+merging it runs the build on the stable branch; publishing the GitHub Release runs the image and sync workflows).
+It reads `quarkus-stack.yml` when present (otherwise detects the build) and writes:
+
+* `build.yml` — build and tests per `ci-tests` (`unit` = plain and `@QuarkusComponentTest` only with Dev Services off
+and every `@QuarkusTest` excluded; `full` = also `@QuarkusTest` with Dev Services containers and
+`@QuarkusIntegrationTest` against the packaged artifact), the JaCoCo 80% gate, Checkstyle/PMD/SpotBugs or
+detekt/ktlint reports, an optional SonarCloud/SonarQube scan (skipped on fork pull requests), a docs job (Antora plus
+Maven site/Javadoc or Dokka, deployed to Pages from the stable branch with `pages: yes`, otherwise uploaded as an
+artifact), and an optional native build-and-test job.
+* `release.yml` — only with `distribution: registry`: builds and pushes the container image (version tag and
+`latest`) via Jib or a Dockerfile, to GHCR by default.
+* `sync.yml` plus `.github/scripts/sync_versions.py` — after a release from the stable branch, opens a PR merging it
+back into the integration branch and bumping the next `-SNAPSHOT` (plus `README.md` and `docs/antora.yml`).
+* `security.yml` (dependency review, Gradle dependency submission, CodeQL with a real compile, OSV-Scanner, gitleaks)
+and `.github/dependabot.yml` (Maven or Gradle, GitHub Actions, Docker, npm for the docs toolchain).
+
+It announces whether it is creating the pipeline from scratch or updating one, asks Update / Keep as is / Replace
+(or Stop) per existing unit, validates with `actionlint`, and ends with a required-secrets table.
+
+== Purpose group
+
+xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-quarkus-github-workflows
+/iru-setup-quarkus-github-workflows <args as key: value lines>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`integration-branch`, `stable-branch`
+|No
+|Branches the workflows trigger on and `sync.yml` merges between.
+|`develop` and `main`, confirmed against `git branch -a`.
+
+|`java-version`
+|No
+|JDK used in CI.
+|Detected from the build, else asked (`21`).
+
+|`open-source`, `visibility`
+|No
+|Open-source flag; `public`, `private` or `internal`.
+|`visibility` from `gh repo view`, else asked.
+
+|`ci-tests`
+|No
+|`unit` or `full`, with visibility-aware cost notes.
+|Asked (`unit` recommended for private, `full` for public).
+
+|`pages`
+|No
+|`yes` or `no` — deploy the docs to GitHub Pages or upload an artifact.
+|`yes` when public, otherwise asked (`no` recommended).
+
+|`sonar`, `sonar-organization`, `sonar-project-key`, `sonar-host-url`
+|No
+|`cloud`, `self-hosted` or `none` plus detail keys.
+|Manifest or build, else asked (`cloud` only for public open source).
+
+|`distribution`, `registry`, `image-builder`
+|No
+|`none` or `registry`; the registry host; `jib` or `docker`.
+|Asked; registry `ghcr.io`; builder detected from the build.
+
+|`native`
+|No
+|`yes` or `no` — add the native build-and-test job.
+|`yes` only when the manifest or `args` says so.
+
+|`mode`, `on-existing`
+|No
+|`new` or `existing` (informational); `ask`, `keep`, `update` or `replace` per existing file.
+|`ask`.
+
+|`security-dependency-review`, `security-codeql`, `security-osv`, `security-gitleaks`
+|No
+|`yes` or `no` for each shared security job.
+|`yes`.
+|===
+
+== Outputs
+
+* `.github/workflows/build.yml`, `security.yml`, and (per choices) `release.yml` and `sync.yml` with
+`.github/scripts/sync_versions.py`.
+* `.github/dependabot.yml`, always written.
+* A report: scratch vs update and the action per unit, build tool/language/layout, visibility and its cost note,
+`ci-tests`, `pages`, `sonar`, `distribution`, `native`, security jobs included, open gaps (no Antora setup, missing
+JaCoCo or Sonar plugin, README wording the sync script won't match), the required-secrets table, repository settings
+to check, and a warning to review every workflow before pushing.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-quarkus-github-workflows"] --> B["Step 1: parse args, read quarkus-stack.yml,\ndetect build tool, language, layout, docs"]
+    B --> B1{"Quarkus build?"}
+    B1 -- no --> B2["Ask: Stop or Continue anyway"]
+    B1 -- yes --> C["Ask unresolved cost-aware choices:\nvisibility, sonar, ci-tests, pages, distribution"]
+    B2 --> C
+    C --> D["Step 2: announce scratch vs update"]
+    D --> D1{"Existing workflow files?"}
+    D1 -- yes --> D2["Ask per unit: Update, Keep as is,\nReplace or Stop"]
+    D1 -- no --> E
+    D2 --> E["Step 3: select templates for\nbuild, release, sync, security, dependabot"]
+    E --> F["Step 4: fill placeholders,\napply gates, strip guidance comments"]
+    F --> G["Step 5: actionlint, parse dependabot.yml,\nrun workflow commands locally via iru-gate-runner"]
+    G --> H["Step 6: write files\n(no release.yml when distribution: none)"]
+    H --> I["Step 7: report secrets table,\nsettings, choices, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — this skill invokes no other skill. It names `iru-release`, `iru-java-bump-version`,
+`iru-setup-java-github-workflows`, `iru-setup-quarkus-service` and `iru-setup-antora` only to describe how its
+output fits their flow (its Step 5 runs the workflows' build commands through the `iru-gate-runner` agent, which
+runs gate commands rather than catalog skills here).
+
+=== Invoked by
+
+* xref:skills/iru-setup-quarkus-repository.adoc[] — Step 6, build/release/sync/security workflows and Dependabot, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 5, runs the workflows' test, static-analysis and docs
+commands locally and returns compact results.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-quarkus-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

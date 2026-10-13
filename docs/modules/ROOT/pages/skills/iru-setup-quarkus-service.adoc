@@ -1,0 +1,143 @@
+= Setup Quarkus Service
+:description: Scaffolds or updates a Quarkus service in Java or Kotlin, Maven or Gradle, single-module or hexagonal, using live code.quarkus.io data.
+:keywords: iru-setup-quarkus-service, claude code skill, quarkus, java, kotlin, maven, gradle, hexagonal, scaffold, jacoco, quarkus-stack.yml
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a Quarkus service, or bring an existing one up to date, so the coding, gate and workflow skills of this
+catalog find the layout, test levels, coverage engine and quality tools they expect.
+
+== Purpose
+
+`iru-setup-quarkus-service` is the interviewer and scaffolder for the service itself (not the Antora site,
+`.gitignore`, workflows, changelog, README or license, which `iru-setup-quarkus-repository` chains). It announces
+whether it is setting up from scratch or updating an existing Quarkus build, with an inventory of every artifact it
+owns, and hard-stops for a non-Quarkus build (Spring Boot, Android, other JVM). It interviews once: identity, language
+(Java or Kotlin), build tool (Maven or Gradle Kotlin DSL), layout (single module or DDD/hexagonal multi-module), Java
+version (21 minimum), open source, visibility, CI, Sonar, CI test depth, Pages, distribution and every technology choice.
+
+The platform version comes from the live code.quarkus.io streams API (falling back to registry.quarkus.io) and every
+extension id is validated against the live catalogue, never a remembered list. After a confirmation step it writes a
+`quarkus-stack.yml` manifest, scaffolds with `quarkus-maven-plugin:create` in a scratch directory, and post-processes to
+catalog conventions: Kotlin all-open and no-arg plugins, the `quarkus-jacoco` plus JaCoCo setup with an 80% line check,
+Checkstyle/PMD/SpotBugs/Javadoc or detekt/ktlint/Dokka, integration-test wiring, configuration profiles, Sonar, Jandex and
+an ArchUnit test for hexagonal builds, and a sample feature tested at four levels. It then verifies the result builds,
+passes unit and container stages, and clears quality gates. Each existing artifact gets an Update, Keep as is or Replace
+choice.
+
+== Purpose group
+
+xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-quarkus-service
+/iru-setup-quarkus-service
+args:
+  language: kotlin
+  build-tool: gradle
+  layout: single
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`mode`
+|No
+|`new` or `existing`.
+|Detected from the repository.
+
+|`open-source`, `visibility`
+|No
+|Open-source flag, and `public`, `private` or `internal`.
+|Asked; visibility detected via `gh` when possible.
+
+|`ci`, `ci-tests`, `pages`
+|No
+|Whether to record CI, `unit` or `full` test depth, and GitHub Pages use.
+|Asked.
+
+|`distribution`
+|No
+|`none` or `registry` (container image).
+|Asked.
+
+|`sonar`, `sonar-organization`, `sonar-project-key`, `sonar-host-url`
+|No
+|`cloud`, `self-hosted` or `none`, plus its coordinates.
+|Asked.
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, for scripted runs.
+|`ask`
+
+|`group-id`, `artifact-id`, `version`, `package`, `description`, `developer-name`, `developer-email`, `organization-url`, `license`, `java-version`
+|No
+|Identity values.
+|Asked, or read from `quarkus-stack.yml`.
+
+|`language`, `build-tool`, `layout`
+|No
+|`java`/`kotlin`, `maven`/`gradle`, `single`/`hexagonal`.
+|Asked.
+|===
+
+== Outputs
+
+* A `quarkus-stack.yml` manifest at the repository root.
+* Build files, wrapper, `application.properties`, container files, quality and coverage configuration, and a sample
+  feature with tests (only where no sources exist); a hexagonal module tree when chosen.
+* A report: setup mode, per-component action (created, updated, replaced, kept as is), recorded pipeline choices, each
+  verification gate's result, unverified items and open gaps.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: parse args, detect mode,\nannounce inventory"] --> H{"Non-Quarkus build?"}
+    H -- yes --> Stop["Ask: stop or continue anyway"]
+    H -- no --> S1
+    Stop --> S1["Step 1: resolve platform and\nextension catalogue from code.quarkus.io"]
+    S1 --> S2["Step 2: identity and license"]
+    S2 --> S3["Steps 3-3b: language, build tool, layout,\nJava version, CI, Sonar, distribution"]
+    S3 --> S4["Step 4: technology choices"]
+    S4 --> S5["Step 5: confirm whole plan"]
+    S5 --> S6["Step 6: write quarkus-stack.yml"]
+    S6 --> E{"Existing Quarkus build?"}
+    E -- no --> S7["Step 7: create in scratch directory;\ncopy into repository"]
+    E -- yes --> S8
+    S7 --> S8["Step 8: post-process per artifact\nUpdate, Keep or Replace"]
+    S8 --> S9["Step 9: verify via gate runner\nunit, container, quality, docs"]
+    S9 --> S10["Step 10: report and warn"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-java-code-quality.adoc[] — Step 9, quality gate for Java builds, run via the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-kotlin-code-quality.adoc[] — Step 9, detekt and ktlint gate for Kotlin builds, run via the
+  `iru-gate-runner` agent.
+
+It also reads `iru-quarkus-code-one-task` reference files for conventions, and waits on the container-stage lock used by
+xref:skills/iru-quarkus-code-one-task-group.adoc[] before starting containers, without invoking either.
+
+=== Invoked by
+
+* xref:skills/iru-setup-quarkus-repository.adoc[] — Step 3, interviews the technology choices, writes quarkus-stack.yml and scaffolds the build, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs each Step 9 verification gate and returns a compact result.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-quarkus-service/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

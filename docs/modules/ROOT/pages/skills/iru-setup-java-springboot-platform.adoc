@@ -176,10 +176,7 @@ the placeholders already referenced there), and writes OpenTofu configuration.
 
 === Invoked by
 
-* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, fifth of seven sub-skills, via the
-  `iru-isolated-skill-executor` agent. Its output is what
-  xref:skills/iru-setup-java-springboot-github-workflows.adoc[] surveys to build the deploy and undeploy workflows;
-  that skill still generates them if `infra/` is absent, but marks the OpenTofu steps as requiring this skill first.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, OpenTofu deployment config, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runs standalone (`/iru-setup-java-springboot-platform`).
 

@@ -1,6 +1,6 @@
 = Code One Task Group
 :description: Implements every task in one plan group by dispatching each task's language to a matching skill and checks off its implementation_plan.md boxes.
-:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, dotnet, typescript, android, swift, database, code generation, checklist update
+:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, kotlin, quarkus, php, nextjs, typescript
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -12,14 +12,16 @@ dispatching each task by its declared language/framework key to the matching `<k
 
 `iru-code-one-task-group` is the generic, language-agnostic dispatcher `iru-code` calls once per plan group. It resolves
 each task's language/framework key, partitions the group's tasks into per-key buckets, hands each bucket with a
-matching `<key>-code-one-task-group` skill installed (`iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`,
-`iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`,
-`iru-database-code-one-task-group`) off to that skill in one call — which itself captures a single quality
+matching `<key>-code-one-task-group` skill installed off to that skill in one call — which itself captures a single quality
 baseline, implements the bucket's tasks (in parallel when the group allows it), and validates the whole bucket
 once (`iru-database-code-one-task-group` is a deliberately simpler exception — see
 xref:skills/iru-database-code-one-task-group.adoc[]) — and implements any remaining
 tasks (no resolved key, or a key with no matching group skill) directly itself, best effort, following the same
-implement/test/license/document/verify obligations a one-task skill would. It checks off each task/sub-task's
+implement/test/license/document/verify obligations a one-task skill would. The installed group skills are discovered at run time
+(`find .claude/skills -maxdepth 1 -type d -name "*-code-one-task-group"`, key = directory name minus the `iru-` prefix
+and `-code-one-task-group` suffix) rather than hard-coded; the catalog currently ships `java`, `java-springboot`,
+`kotlin-springboot`, `quarkus`, `php`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `android`, `swift` and `database`.
+It checks off each task/sub-task's
 box in `implementation_plan.md` and notifies the user as it happens, so `iru-code` doesn't need to track per-task
 progress itself.
 
@@ -62,7 +64,7 @@ plan sets one, the group's `Parallelizable` verdict, and any relevant "Current c
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-code-one-task-group] --> B["Step 1: resolve each task's\nlanguage/framework key; find installed\n*-code-one-task-group skills"]
+    A["Start /iru-code-one-task-group"] --> B["Step 1: resolve each task's\nlanguage/framework key; find installed\n*-code-one-task-group skills"]
     B --> C["Partition tasks into per-key buckets\n+ a remaining/unresolved bucket"]
     C --> D{Bucket has a matching\n&amp;lt;key&amp;gt;-code-one-task-group skill?}
     D -- yes --> E["Step 2: invoke it once for\nthe whole bucket via Skill()"]
@@ -83,9 +85,15 @@ flowchart TD
 * xref:skills/iru-java-code-one-task-group.adoc[] — Step 2, once for the whole bucket of tasks tagged (or
   defaulted to) `java`, via a direct `Skill` call — that skill captures one quality baseline, implements every
   task in the bucket (in parallel when the group allows it), and validates the bucket once.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — the same role, for tasks tagged `java-springboot`.
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — the same role, for tasks tagged `kotlin-springboot`.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — the same role, for tasks tagged `quarkus`.
+* xref:skills/iru-php-code-one-task-group.adoc[] — the same role, for tasks tagged `php`.
 * xref:skills/iru-dotnet-code-one-task-group.adoc[] — the same role as `iru-java-code-one-task-group`, for tasks tagged
   `dotnet`.
 * xref:skills/iru-typescript-code-one-task-group.adoc[] — the same role, for tasks tagged `typescript`.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — the same role, for tasks tagged `nestjs`.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — the same role, for tasks tagged `nextjs`.
 * xref:skills/iru-android-code-one-task-group.adoc[] — the same role, for tasks tagged `android`.
 * xref:skills/iru-swift-code-one-task-group.adoc[] — the same role, for tasks tagged `swift`.
 * xref:skills/iru-database-code-one-task-group.adoc[] — the same role for tasks tagged `database`, but deliberately
@@ -102,9 +110,7 @@ agent, so verbose report output stays out of this skill's own context:
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Step 4, once per plan group, in order, via the
-  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent so each group's own file
-  reads/edits/reasoning stay out of `iru-code`'s own context.
+* xref:skills/iru-code.adoc[] — Step 4, implements each plan group in order, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

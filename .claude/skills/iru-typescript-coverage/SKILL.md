@@ -5,10 +5,14 @@ description: Run the project's TypeScript/JavaScript test runner (Vitest, Jest, 
   (falling back to `coverage/lcov.info`'s `LF`/`LH`/`BRF`/`BRH` records via `awk` when the summary is missing or a
   specific file's row isn't in it) — reporting line/branch percentage totals, per-file percentages scoped to the
   given selector, and the uncovered line ranges (collapsed from consecutive `DA:<line>,0` records) for files under
-  the bar. Invoke as `/iru-typescript-coverage [scope]`, where `[scope]` is a file path, a directory, or a name
+  the bar. Also recognizes NestJS (`@nestjs/core` — the `test:cov` setup, i.e. Vitest + `@vitest/coverage-v8` on ESM,
+  Jest `--coverage` on CommonJS — measured from the `*.spec.ts` unit suite only, with `*.module.ts`/`main.ts`
+  wiring files excluded so they don't drag the number down) and Next.js (`next` — Vitest v8 coverage or Jest via
+  `next/jest`; Playwright end-to-end tests are never run for coverage and never counted). Invoke as
+  `/iru-typescript-coverage [scope]`, where `[scope]` is a file path, a directory, or a name
   pattern — the same selector syntax as the `iru-typescript-test` skill's — or with no argument to run the whole
-  suite and report whole-project coverage. Detects the test runner (Vitest, Jest, or Angular's `@angular/build:
-  unit-test` builder) and package manager the same way `iru-typescript-test` does, and reports "coverage not
+  suite and report whole-project coverage. Detects the test runner (Vitest, Jest, or Angular's
+  `@angular/build:unit-test` builder) and package manager the same way `iru-typescript-test` does, and reports "coverage not
   wired" (naming the missing package/config) instead of a false 0%/100% when the coverage provider isn't
   installed. Use whenever the user wants to check, or verify a bar (e.g. "at least 80% line coverage") for, a
   TypeScript/JavaScript file, directory, or the whole project, instead of eyeballing a runner's console output.
@@ -38,6 +42,9 @@ TypeScript conventions):
     a bare `vitest` invocation. (An older Angular project pinned to the legacy `@angular-devkit/build-angular:
     karma` builder uses Karma + Istanbul instead — its coverage output layout was not exercised locally; see
     "Unverified" below.)
+- **Framework** — `@nestjs/core` in `dependencies` → **nestjs**; `next` in `dependencies` → **nextjs** (same
+  detection rule as `iru-typescript-test`). Neither changes the runner detection above — they change which suite is
+  measured and which files are excluded (Step 3).
 - **Package manager** — `packageManager` field in `package.json`, else lockfile: `package-lock.json` → npm,
   `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn. Prefix commands with the matching runner (`npm run`/`npx`, `pnpm`,
   `yarn`) — the commands below are written with `npx`/direct binary names; substitute accordingly.
@@ -81,6 +88,46 @@ checking this first:
   `npm ls vitest` (it prints the version `@angular/build` bundles, deduped) or read
   `node_modules/@angular/build/package.json`'s own `vitest` dependency, then install the exact matching
   `@vitest/coverage-v8@<that version>`. If installing at all fails, report "coverage not wired" the same way.
+
+**NestJS** — the project's `test:cov` script is `vitest run --coverage` (ESM, Nest 12's default scaffold, which
+already ships `@vitest/coverage-v8` — verified on a fresh `@nestjs/cli` 12 scaffold) or `jest --coverage` (CommonJS,
+coverage built in). Run the matching Vitest/Jest command below rather than the script, so the reporter/include
+flags are exactly the ones this skill reads:
+
+- Measure the **unit suite only** — the default `vitest.config.ts`/`jest.config.ts`, never `--config
+  ./vitest.config.e2e.ts`/`./test/jest-e2e.json`. E2E specs boot the whole application and often need a database
+  or Docker (Testcontainers); a coverage number that depends on them can't be reproduced where Docker is missing.
+  If the user explicitly asks for combined unit + e2e coverage, report it separately and label it as such — never
+  as the gate value.
+- **Exclude pure wiring files** — `**/*.module.ts` and `src/main.ts` — unless the project's own coverage config
+  deliberately includes them: they only declare providers/bootstrap the app and no unit test imports them. Verified
+  locally on the Nest 12 scaffold: with `--coverage.include='src/**/*.ts'` alone, `app.module.ts` and `main.ts`
+  appear at 0% and pull the total from 100% to 58.33%; adding `--coverage.exclude='**/*.module.ts'
+  --coverage.exclude='src/main.ts'` removes them. For Jest, append the negated globs to `--collectCoverageFrom`
+  (`--collectCoverageFrom='src/**/*.ts' --collectCoverageFrom='!**/*.module.ts' --collectCoverageFrom='!src/main.ts'`,
+  verified on a CommonJS Nest 12 scaffold generated with `nest g application --type=cjs` and Jest 30 + ts-jest). Say in the report that these were excluded.
+- **Exclude generated code inside `src/`** too — a Prisma client generated into the source tree (the generator's
+  `output`, e.g. `src/generated/**`; read it from `prisma/schema.prisma`) and any other `**/generated/**` output:
+  `--coverage.exclude='src/generated/**'` for Vitest, `--collectCoverageFrom='!src/generated/**'` for Jest. On a
+  Prisma 7 scaffold it otherwise drops the measured total from 100% to ~83%. Prefer the project's own `coverage`
+  script/config when it already excludes these.
+- For a CommonJS project whose scripts invoke Jest as `node --experimental-vm-modules ./node_modules/jest/bin/jest.js`,
+  use that same prefix instead of `npx jest`.
+
+**Next.js** — Vitest (`vitest.config.mts`) needs `@vitest/coverage-v8` exactly like any other Vitest project;
+Jest through `next/jest` has coverage built in (the Next.js guide sets `coverageProvider: "v8"` in
+`jest.config.ts`). Coverage comes from the Vitest/Jest suite only — **Playwright e2e tests are never run by this
+skill and never counted**, even when `@playwright/test` is installed, since they run in a browser against a
+production build and produce no V8/Istanbul data for the source files. Scope the include glob to the app's own
+source (`src/**/*.{ts,tsx}`, or `app/**`, `components/**`, `lib/**` when there is no `src/`) and exclude
+`**/*.d.ts`, `next.config.*`, and `.next/**`. An `async` Server Component page/layout that React Testing Library
+can't render shows up at 0% when force-included — report it as "only reachable through e2e/Playwright" rather than
+as an untested file that a unit test could fix. Verified locally on a fresh `create-next-app` 16.4 scaffold with
+Vitest 4.1 + `@vitest/coverage-v8` 4.1 (`$TMPDIR/iru-verify/typescript/nest-next/next-app`): with
+`--coverage.include='src/**/*.{ts,tsx}' --coverage.exclude='**/*.d.ts'`, a tested `src/lib/add.ts` reported 100%
+while the untested `src/app/layout.tsx`/`page.tsx` appeared at 0%. (Installing the latest Vitest 5 into that
+scaffold failed with an npm `ERESOLVE` peer conflict on its pinned `@types/node@20` — a setup problem to report,
+not a coverage result.)
 
 Run the coverage command for the detected runner, scoped to the selector from Step 1 when one is scriptable, and
 passing the include flag from Step 2 for the scope's directory/pattern so untested files aren't dropped:
@@ -209,6 +256,9 @@ user (or another skill, e.g. `iru-code`, `iru-typescript-generate-all-tests`) dr
 - **pnpm and yarn** — only npm was exercised locally for every command above; the coverage commands themselves are
   package-manager-agnostic (they invoke the runner's own binary via `npx`/`pnpm exec`/`yarn`), but this wasn't
   re-run under pnpm/yarn to confirm no wrapper-specific quirk changes the report path.
+- **Jest via `next/jest`** — NestJS coverage was exercised on both the ESM/Vitest and the CommonJS/Jest Nest 12
+  scaffolds (including the `*.module.ts`/`main.ts` exclusions), and Next.js only with Vitest; Jest via
+  `next/jest` was not.
 - **React, React Native, Ionic, and Hilla-frontend scaffolds' own coverage config** — this skill's mechanics
   (Vitest/Jest + `coverage-summary.json`/`lcov.info`) were verified against a bare Vitest project, a bare Jest
   project, and a freshly-scaffolded Angular CLI app only; a framework-specific `vitest.config.ts`/`jest.config.js`

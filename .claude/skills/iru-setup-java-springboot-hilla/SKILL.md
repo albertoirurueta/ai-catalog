@@ -1,6 +1,35 @@
 ---
 name: iru-setup-java-springboot-hilla
-description: Scaffold a Hilla (Vaadin) React frontend into one module of an existing Spring Boot hexagonal reactor — the Vaadin BOM and `hilla-spring-boot-starter`/`vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution wired into that module's pom, `src/main/frontend/` (file-based-routing `views/@index.tsx` + `views/@layout.tsx`, a customized `index.html`), the module-root `vitest.config.ts` extending Vaadin's generated Vite config with `@vitest/coverage-v8` lcov output, a sample `@testing-library/react` test, `eslint.config.js` (flat config, `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-config-prettier`) plus `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format` scripts, the `.gitignore` additions this frontend needs, and — only when the manifest's `sonar.mode` isn't `none` — the `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to the root pom. Announces whether it is scaffolding the frontend from scratch or updating an existing one, and for every frontend file/pom wiring it owns that already exists warns and asks Update (fill gaps) / Keep as is / Replace / Stop — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`) and `on-existing:` (`ask`/`keep`/`update`/`replace`) lines). Runs standalone against any reactor built by `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is `hilla`. Reads `springboot-stack.yml` for the module layout and `sonar.mode`, and looks up the Vaadin BOM version and every npm devDependency version live (Maven Central and the npm registry) rather than from memory. The root pom's `vaadin.version` property, `dependencyManagement` import, `pluginManagement` entry, and `production` profile are primarily written by `iru-setup-java-springboot-pom` (see that skill) — this skill only fills that gap itself when running standalone against a reactor where it's missing. Use whenever a Spring Boot service needs its Hilla frontend module actually scaffolded, instead of hand-wiring the Vaadin/Hilla Maven and npm toolchains file by file.
+description: >-
+  Scaffold a Hilla (Vaadin) React frontend into one module of an existing Spring Boot hexagonal build — Java (Maven)
+  or Kotlin (Maven, or Gradle Kotlin DSL), read from `springboot-stack.yml`'s `project.language`/`project.buildTool`
+  (absent ⇒ `java`/`maven`, the unchanged Java path) — the Vaadin BOM and `hilla-spring-boot-starter`/
+  `vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution wired into that module's pom (on
+  Gradle the `com.vaadin` plugin — `vaadinPrepareFrontend`/`hillaGenerate`/`vaadinBuildFrontend` — applied to the
+  `:boot` project with the BOM, starters and plugin in `gradle/libs.versions.toml`), Kotlin `@BrowserCallable`
+  conventions (Hilla 25 maps Kotlin's own nullability to the TypeScript client natively — `String` required,
+  `String?` optional — so no `@Nonnull` annotations), `src/main/frontend/` (file-based-routing `views/@index.tsx` +
+  `views/@layout.tsx`, a customized `index.html`), the module-root `vitest.config.ts` extending Vaadin's generated
+  Vite config with `@vitest/coverage-v8` lcov output, a sample `@testing-library/react` test, `eslint.config.js`
+  (flat config, `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-config-prettier`) plus
+  `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format` scripts, the `.gitignore`
+  additions this frontend needs, and — only when the manifest's `sonar.mode` isn't `none` — the `sonar.sources`/
+  `sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to the root pom (Gradle: the root `sonar {}` block).
+  The frontend files are identical for every language and build tool. Announces whether it is scaffolding the
+  frontend from scratch or updating an existing one, and for every frontend file/build wiring it owns that already
+  exists warns and asks Update (fill gaps) / Keep as is / Replace / Stop — or applies `on-existing` from `args`.
+  Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest
+  path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`) and
+  `on-existing:` (`ask`/`keep`/`update`/`replace`) lines). Runs standalone against any build created by
+  `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via
+  `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is
+  `hilla`. Reads `springboot-stack.yml` for the module layout, language, build tool and `sonar.mode`, and looks up
+  the Vaadin BOM version and every npm devDependency version live (Maven Central and the npm registry) rather than
+  from memory. The root pom's `vaadin.version` property, `dependencyManagement` import, `pluginManagement` entry,
+  and `production` profile (Gradle: the catalog's `vaadin` version, `vaadin-bom` library and `com.vaadin` plugin
+  alias) are primarily written by `iru-setup-java-springboot-pom` — this skill only fills that gap itself when
+  running standalone against a build where it's missing. Use whenever a Spring Boot service needs its Hilla frontend
+  module actually scaffolded, instead of hand-wiring the Vaadin/Hilla build and npm toolchains file by file.
 model: haiku
 ---
 
@@ -25,6 +54,13 @@ Step 8 repeats on every future run):
    `views/@index.tsx` and `views/@layout.tsx` only — never `routes.tsx` itself, and never anything under
    `src/main/frontend/generated/`.
 
+**Kotlin and Gradle.** The manifest's `project.language` (`java` | `kotlin`, absent ⇒ `java`) and
+`project.buildTool` (`maven` | `gradle`, absent ⇒ `maven`; `gradle` only with `kotlin`) change the build wiring
+(Step 2) and the server-side service code (Step 2a) — never the frontend files of Steps 3–5, which are identical in
+all three combinations. Both Kotlin paths were verified on Spring Boot 4.1.1 + Vaadin 25.3.2 + Kotlin 2.3.21: a
+Kotlin `@BrowserCallable` service compiled, the TypeScript client was generated from it, and a production bundle
+was built — on Maven with `vaadin-maven-plugin` and on Gradle 8.14 with the `com.vaadin` plugin.
+
 ## Step 0 — Resolve inputs
 
 Parse `args` for `key: value` lines:
@@ -38,7 +74,8 @@ on-existing: ask
 `mode` (`new`/`existing`) is informational — it never means "update silently"; `on-existing`
 (`ask`/`keep`/`update`/`replace`, default `ask`) pre-answers Step 1's existing-frontend question for every file.
 
-`stack-file` defaults to `springboot-stack.yml` at the repository root. Read it in full. Stop and tell the user to
+`stack-file` defaults to `springboot-stack.yml` at the repository root. Read it in full, including
+`project.language` and `project.buildTool` (defaults above; stop and report a manifest pairing `gradle` with `java`). Stop and tell the user to
 run `/iru-setup-java-springboot` (or `/iru-setup-java-springboot-modules`) first if it doesn't exist — this skill
 doesn't scaffold a reactor from nothing, only a frontend into one that already exists. Confirm `frontend: hilla` is
 actually set; if it's `none`, ask via `AskUserQuestion` whether to proceed anyway (the user may be adding a
@@ -56,16 +93,28 @@ writing anything else, so a later re-run of `iru-setup-java-springboot` sees the
   writes into. This was checked against `iru-setup-java-springboot-pom`'s own module table (`boot` is "every other
   module, `spring-boot-starter`... the only module with `spring-boot-maven-plugin`") and confirmed against the
   official `vaadin/skeleton-starter-hilla-react` reference project, whose single module plays exactly this role.
-- **The root pom.** Check whether `<vaadin.version>`, the `vaadin-bom` `dependencyManagement` import, the
+- **Gradle:** the web module is the `:boot` project (`settings.gradle.kts`), its build file
+  `boot/build.gradle.kts`; Vite's working files land in `boot/build/` instead of `boot/target/`.
+- **The root pom** (Maven). Check whether `<vaadin.version>`, the `vaadin-bom` `dependencyManagement` import, the
   `vaadin-maven-plugin` `pluginManagement` entry, and a `production` profile already exist (written by
   `iru-setup-java-springboot-pom` — see that skill's Step 1). If they do, use the existing `<vaadin.version>`
   as-is rather than re-resolving it, so the module and root stay on one version. **If they don't** (this skill is
   running standalone, or the root pom predates that skill's Hilla support), write them yourself now, following
   exactly the fragment `iru-setup-java-springboot-pom` documents, and say so in the final report so the user knows
   the root pom was touched by this skill rather than its usual owner.
+- **The version catalog** (Gradle). The equivalent of the root-pom wiring is a `vaadin` entry in
+  `gradle/libs.versions.toml` `[versions]`, a `vaadin-bom` library (`com.vaadin:vaadin-bom`, `version.ref = "vaadin"`),
+  the versionless `vaadin-spring-boot-starter`/`hilla-spring-boot-starter`/`vaadin-dev` libraries, and a `vaadin`
+  plugin alias (`id = "com.vaadin"`, `version.ref = "vaadin"` — the Vaadin Gradle plugin is published at the same
+  version as the BOM). Same rule as Maven: use what `iru-setup-java-springboot-pom` wrote, fill the gap yourself
+  only when it's missing, and say so in the report. Use `com.vaadin`, not the older standalone `com.vaadin.hilla`
+  plugin: `com.vaadin` already registers `hillaConfigure`/`hillaGenerate` when Hilla is on the classpath (verified:
+  `./gradlew :boot:tasks --group vaadin` lists them), and the `com.vaadin.hilla` plugin portal entry currently
+  points at pre-releases only.
 - **Existing frontend.** Check for `<web-module>/src/main/frontend/`, `<web-module>/vitest.config.ts`,
   `<web-module>/eslint.config.js`, and an existing `com.vaadin:hilla-spring-boot-starter`/
-  `vaadin-spring-boot-starter` dependency in `<web-module>/pom.xml`. Say whether this run is **scaffolding the
+  `vaadin-spring-boot-starter` dependency in `<web-module>/pom.xml` (Gradle: `boot/build.gradle.kts`, plus a `com.vaadin`
+plugin alias there). Say whether this run is **scaffolding the
   frontend from scratch** (none of these exist) or **updating an existing frontend** (list which exist). If any
   exist, warn and — unless `on-existing` says otherwise — ask with `AskUserQuestion` rather than overwriting
   hand-written frontend code by default:
@@ -105,7 +154,7 @@ writing anything else, so a later re-run of `iru-setup-java-springboot` sees the
   whether Step 3 also scaffolds an example `@Route` Java class — `vaadin-spring-boot-starter` is added either way,
   per the "always add both starters" finding above.
 
-## Step 2 — Module pom: dependencies and plugin execution
+## Step 2 — Module build: dependencies and plugin
 
 Add to `<web-module>/pom.xml` (`boot/pom.xml` unless Step 1 found otherwise). No `<version>` on any of these — they
 resolve through the root pom's `dependencyManagement`/`pluginManagement`, exactly like every other module in this
@@ -157,8 +206,87 @@ reactor.
 
 If Step 1's "Flow views" question was answered Yes, also add whichever Flow UI component starters the user wants
 (e.g. `com.vaadin:vaadin` for the full component set) and scaffold one example `@Route` class under
-`<web-module>/src/main/java/<base-package>/...`; this is a small, self-contained addition and not templated here
-since it's opt-in and Java-only.
+`<web-module>/src/main/java/<base-package>/...` (Kotlin: `src/main/kotlin/<base-package>/...`, a plain `class`
+extending the Flow component — `kotlin-spring` doesn't need to open it, Flow instantiates rather than proxies it);
+this is a small, self-contained addition and not templated here since it's opt-in.
+
+**Kotlin + Maven** — the pom fragment above is unchanged. `vaadin-maven-plugin`'s goals bind to `process-classes`,
+after `kotlin-maven-plugin`'s `compile`, so the Hilla generator parses the compiled Kotlin classes in
+`target/classes` like Java ones. Keep Spring Boot parent's `<javaParameters>true</javaParameters>` for
+`kotlin-maven-plugin` (the parent sets it; don't override it) — parameter names are what the generated TypeScript
+client's argument names come from.
+
+**Kotlin + Gradle** — in `boot/build.gradle.kts` (which `iru-setup-java-springboot-pom`'s `iru.spring-boot-app`
+convention plugin already makes a Spring Boot application):
+
+```kotlin
+plugins {
+    // ... existing iru.* convention plugins ...
+    alias(libs.plugins.vaadin)          // com.vaadin — vaadinPrepareFrontend, hillaGenerate, vaadinBuildFrontend
+}
+
+kotlin {
+    compilerOptions {
+        // Hilla reads method parameter names from bytecode for the generated TypeScript client.
+        // Hilla 25's Kotlin parser also reads Kotlin metadata, so names survived without it in verification —
+        // keep it anyway: Spring's own parameter binding wants it too.
+        javaParameters.set(true)
+    }
+}
+
+dependencies {
+    implementation(platform(libs.vaadin.bom))
+    implementation(libs.vaadin.spring.boot.starter)   // required even with no Flow views — see the top of this skill
+    implementation(libs.hilla.spring.boot.starter)
+    // developmentOnly is a separate configuration: the BOM platform must be added to it as well, or the build fails
+    // with "Could not find com.vaadin:vaadin-dev:." (hit while verifying this skill).
+    developmentOnly(platform(libs.vaadin.bom))
+    developmentOnly(libs.vaadin.dev)
+}
+```
+
+The `com.vaadin` plugin needs no task wiring: it hooks `hillaConfigure` and `vaadinBuildFrontend` into
+`processResources`/`bootJar` itself (verified with `--dry-run`), and `vaadinBuildFrontend` decides on its own whether
+a bundle is needed. `vaadinPrepareFrontend` is **not** part of that graph — run it explicitly where Step 8 says so.
+The Maven `production` profile's equivalent is the `-Pvaadin.productionMode=true` project property (verified:
+`./gradlew :boot:build -Pvaadin.productionMode=true -x test` wrote the bundle under `META-INF/VAADIN/webapp/` in
+`boot/build/libs/boot.jar`). The plugin's CI flag is the same key as Maven's, `vaadin.ci.build` (present in
+`flow-gradle-plugin` 25.3; pass `-Pvaadin.ci.build=true` — not exercised during verification, so confirm it shows
+`npm ci` rather than `npm install` in the first CI log).
+
+## Step 2a — Kotlin `@BrowserCallable` services (`language: kotlin` only)
+
+Skip for Java. Kotlin services are written exactly like Java ones — a class annotated `@BrowserCallable` (plus an
+access annotation such as `@AnonymousAllowed` or `@RolesAllowed`), public methods become the TypeScript client —
+with one difference that matters: **nullability comes from Kotlin's type system, not from annotations.** Since
+Vaadin 24.8 Hilla's parser reads Kotlin metadata, and in Vaadin 25 this is built into the TypeScript generator (the
+separate `hilla-parser-jvm-plugin-nonnull-kotlin` artifact stopped at `25.0.0-beta3` — never add it). Verified
+output for
+
+```kotlin
+data class Greeting(val text: String, val audience: String?)
+
+@BrowserCallable
+@AnonymousAllowed
+class GreetingService {
+    fun greet(name: String, title: String?): Greeting = Greeting("Hello ${title.orEmpty()} $name".trim(), title)
+}
+```
+
+is `greet(name: string, title: string | undefined): Promise<Greeting>` and `interface Greeting { text: string;
+audience?: string; }` — so:
+
+- Do **not** add JSpecify `@NonNull`/`@Nullable` (the Java way of getting required TypeScript fields) to Kotlin
+  services or DTOs; `String` vs `String?` already says it, and two sources of truth drift.
+- Return and accept Kotlin `data class`es for DTOs; keep entity types off the endpoint signature exactly as for Java.
+- `@BrowserCallable` classes are Spring beans, so `kotlin-spring` opens them for proxying (security interceptors);
+  nothing extra to configure. Hilla's own Kotlin test project additionally opens `com.vaadin.hilla.EndpointExposed`
+  with `allOpen` — add that annotation to the module's all-open list only if a service extends an
+  `@EndpointExposed` base class (e.g. `CrudRepositoryService`).
+- Service classes go under `src/main/kotlin/<base-package>/...` of the web module, or the `api` module the
+  modules skill designated for them — wherever Java services would go.
+
+Scaffold no sample service unless the frontend's sample view (Step 3) calls one; this skill's sample view doesn't.
 
 ## Step 3 — `src/main/frontend/`
 
@@ -379,6 +507,10 @@ generated once by the plugin, meant to be committed, and safe to hand-edit after
 say exactly this in their own generated header comments). `<web-module>/index.html` is likewise committed, not
 ignored — Step 3 writes it deliberately so it isn't left at the generic default.
 
+On Gradle the same three entries apply (verified: the `com.vaadin` plugin writes the same `vite.generated.ts`,
+`node_modules/` and `src/main/frontend/generated/` into `boot/`); its other outputs land under `boot/build/`, which
+the JVM `.gitignore` already ignores.
+
 `.gitignore` is hand-maintained in this catalog's conventions (see `CLAUDE.md`), so show the diff and confirm
 before writing.
 
@@ -399,8 +531,32 @@ must not clobber it:
 <sonar.exclusions>**/generated-sources/**,**/generated/**,**/frontend/generated/**</sonar.exclusions>
 ```
 
+For **Kotlin + Maven**, the server-side roots are `src/main/kotlin` and `src/test/kotlin` (keep `src/main/java`/
+`src/test/java` as well if the pom skill listed them for mixed sources): `<sonar.sources>src/main/kotlin,src/main/java,<web-module>/src/main/frontend</sonar.sources>`
+and the matching `sonar.tests`.
+
+For **Kotlin + Gradle**, the Sonar Gradle plugin already derives each project's `sonar.sources`/`sonar.tests` from
+its source sets, so only the frontend is added — in `boot/build.gradle.kts`, appending to rather than replacing the
+derived lists (and merging `sonar.exclusions` with whatever the root `sonar {}` block set):
+
+```kotlin
+sonar {
+    properties {
+        property("sonar.sources", listOf("src/main/kotlin", "src/main/frontend").filter { file(it).exists() })
+        property("sonar.tests", listOf("src/test/kotlin", "src/main/frontend").filter { file(it).exists() })
+        property("sonar.test.inclusions", "**/*.test.ts,**/*.test.tsx")
+        property("sonar.javascript.lcov.reportPaths", layout.projectDirectory.file("coverage/lcov.info").asFile.path)
+        property("sonar.exclusions", "**/build/generated/**,**/generated/**,**/frontend/generated/**")
+    }
+}
+```
+
+(Not exercised against a Sonar server during verification — confirm the first analysis lists both the Kotlin and the
+TypeScript files under the `boot` project.)
+
 `<web-module>/coverage/lcov.info` is the exact path Step 4's `vitest.config.ts` produces — confirmed by an actual
-`vitest run --coverage` run, not assumed.
+`vitest run --coverage` run, not assumed. The path is the same on Gradle: it is relative to Vite's root, not to the
+build tool's output directory.
 
 ## Step 8 — Verify
 
@@ -429,8 +585,12 @@ Agent({
 })
 ```
 
+On **Gradle**, the first gate's command is `./gradlew :boot:vaadinPrepareFrontend` (it is not part of
+`./gradlew build`'s task graph, so it must be run by name); the second gate is unchanged.
+
 **Ordering matters and is easy to get backwards**: `vitest.config.ts` (and `vite.config.ts`) import
-`./vite.generated.ts`, which itself imports compiled helper scripts from `<web-module>/target/plugins/...` —
+`./vite.generated.ts`, which itself imports compiled helper scripts from `<web-module>/target/plugins/...` (Gradle:
+`boot/build/plugins/...` — verified in the Gradle-generated `vite.generated.ts`) —
 files that only exist after at least one Maven build has reached `vaadin:prepare-frontend`. Running `npx vitest`
 before any Maven build (e.g. against a freshly cloned repository with only `target/` gitignored away) fails with a
 module-not-found error that has nothing to do with the tests themselves. Always run the `mvn ... prepare-frontend`
@@ -438,7 +598,8 @@ gate before the `vitest` gate, in that order, both here and in the generated CI 
 `iru-setup-java-springboot-github-workflows`).
 
 If a production bundle build is wanted as part of verification, also run (via the same `iru-gate-runner` pattern)
-`mvn -q -pl <web-module> -am package -Pproduction -DskipTests` — expect `npm install` to run for real the first
+`mvn -q -pl <web-module> -am package -Pproduction -DskipTests` (Gradle: `./gradlew :boot:build
+-Pvaadin.productionMode=true -x test -x integrationTest`) — expect `npm install` to run for real the first
 time views exist under `src/main/frontend/views/` (confirmed: with an empty `views/` directory the plugin decides
 "a production mode bundle build is not needed" and skips npm entirely, which is correct but would give a false
 sense that the toolchain works before any real frontend code exists to prove it).
@@ -447,8 +608,11 @@ sense that the toolchain works before any real frontend code exists to prove it)
 
 Summarize:
 
-- The web module written into (`boot`, unless Step 1 found a reason to use another), and why.
-- The resolved `vaadin.version`, and whether the root pom's Vaadin wiring already existed (owned by
+- The language and build tool read from the manifest, and for Kotlin whether any `@BrowserCallable` service was
+  written and that its TypeScript signatures came out with the expected required/optional fields.
+- The web module written into (`boot`, unless Step 1 found a reason to use another; Gradle: `:boot`), and why.
+- The resolved `vaadin.version` (Gradle: the catalog's `vaadin` version), and whether the root pom's / catalog's
+  Vaadin wiring already existed (owned by
   `iru-setup-java-springboot-pom`) or had to be filled in by this skill.
 - Every npm package version resolved, separating live lookups from the recorded fallbacks actually used.
 - Whether Flow views were requested, and what that added.
@@ -479,4 +643,4 @@ Warn explicitly:
 | `<project-name>` | `springboot-stack.yml`'s `project.artifactId` (or `project.description`, whichever reads better as UI copy) |
 | `<base-package>` | `springboot-stack.yml`'s `project.basePackage` (only used if Flow views were requested) |
 | `<resolved>` (npm versions) | Live npm registry lookups in Step 1, falling back to the pinned versions listed there |
-| `${vaadin.version}` | The root pom's `<vaadin.version>` property (Step 1: read if present, written if not — see `iru-setup-java-springboot-pom`) |
+| `${vaadin.version}` | The root pom's `<vaadin.version>` property (Step 1: read if present, written if not — see `iru-setup-java-springboot-pom`); on Gradle the catalog's `vaadin` version |

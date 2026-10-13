@@ -1,6 +1,7 @@
 ---
 name: iru-explore
-description: Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Expo/React Native, Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
+description: >-
+  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Expo/React Native, Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -227,6 +228,25 @@ fallback when manifests are absent or ambiguous:
     `com.vaadin:vaadin-spring-boot-starter` → Hilla (Spring Boot + Vaadin + Hilla), corroborated by a
     `@vaadin/hilla` dependency in a co-located `package.json` and a `src/main/frontend/` directory — `micronaut-*`,
     `quarkus-*`, or an Android Gradle plugin (`com.android.application`/`com.android.library`).
+    - **Build tool**: record which one is in use — Maven (`pom.xml`, `mvnw`), Gradle Kotlin DSL
+      (`build.gradle.kts`/`settings.gradle.kts`), or Gradle Groovy (`build.gradle`/`settings.gradle`), plus
+      whether a wrapper (`mvnw`/`gradlew`) is present — since the coding and gate skills run different commands
+      for each.
+    - **Kotlin**: `org.jetbrains.kotlin:kotlin-maven-plugin` in `pom.xml`, a `kotlin("jvm")`/
+      `org.jetbrains.kotlin.jvm` plugin (or `kotlin("plugin.spring")`/`kotlin("plugin.jpa")`) in
+      `build.gradle.kts`, and/or a `src/main/kotlin/` tree → Kotlin. Combined with `spring-boot-starter*` →
+      Kotlin Spring Boot (and Kotlin Spring Boot + Hilla when the Hilla markers above are also present). A
+      `src/main/java/` tree alongside `src/main/kotlin/` is a mixed Java/Kotlin module — record it as such and
+      decide Java vs. Kotlin by where the bulk of production sources live.
+    - **Quarkus**: the `io.quarkus:quarkus-maven-plugin` (or Gradle `id("io.quarkus")`), an imported
+      `io.quarkus.platform:quarkus-bom`/`io.quarkus:quarkus-bom`, and/or `io.quarkus:quarkus-*` dependencies →
+      Quarkus; Java vs. Kotlin by the Kotlin signals above (a `quarkus-kotlin` extension corroborates Kotlin).
+    - **Architecture layout** (Spring Boot / Quarkus backends): record whether the build is a **hexagonal
+      multi-module reactor** — sibling modules named (or suffixed) `domain`, `application`, `infrastructure`
+      (or `adapters`), and `api`/`rest`/`web`, wired via `<modules>` in a parent `pom.xml` or `include(...)` in
+      `settings.gradle*`, with dependencies pointing inward toward `domain` — vs. a **layered/feature-based**
+      single-module (or loosely multi-module) layout. The coding skills apply hexagonal boundary rules only for
+      the former, so state which one it is explicitly.
     - **Android plugin id**: `com.android.library` → Android library module, `com.android.application` → Android
       application module — read it directly from `build.gradle`/`build.gradle.kts`, or, when the project
       centralizes versions/plugins in `gradle/libs.versions.toml` (itself a signal worth recording), from a
@@ -253,9 +273,30 @@ fallback when manifests are absent or ambiguous:
       underlying framework (Angular vs. React) Ionic is layered on; `@capacitor/core` plus a
       `capacitor.config.*` and/or `ionic.config.json` corroborate it as an Ionic/Capacitor hybrid app rather
       than a plain Angular/React web app.
-    - `vue`, `next`, `express`, `nestjs`, etc. — other framework deps, as already covered.
+    - `@nestjs/core` (usually with `@nestjs/cli`, a `nest-cli.json`, and `src/main.ts` calling
+      `NestFactory.create`) → NestJS backend. Also record: module format — ESM (`"type": "module"`, relative
+      imports ending in `.js`) vs. CommonJS (no `type` field); test runner — Vitest (`vitest.config*.ts`) vs. Jest
+      (`jest.config.*`, `test/jest-e2e.json`); and the persistence layer — TypeORM (`@nestjs/typeorm`), Prisma
+      (`prisma`/`@prisma/client`, `prisma/schema.prisma`), or Mongoose (`@nestjs/mongoose`), if any.
+    - `next` (with a `next.config.*`) → Next.js web app. Also record: App Router (`app/` or `src/app/` with a root
+      `layout.tsx`) vs. Pages Router (`pages/` or `src/pages/`) — or both, if they coexist; the installed Next major
+      version (from `package.json`/the lockfile — caching and request-API semantics differ between 13/14, 15, and
+      16); and whether `cacheComponents: true` is set in `next.config.*` (Cache Components model vs. the previous
+      caching model).
+    - `vue`, `express`, etc. — other framework deps, as already covered.
     - No app-framework dependency present, but `main`/`exports`/`types` fields plus a co-located
       `tsconfig.json` → a plain TypeScript/npm library (no framework), not an application.
+  - `composer.json` and/or `*.php` sources → PHP; record the PHP version constraint (`require.php`) and the test
+    runner (Pest vs. PHPUnit), then tell the kind of project apart:
+    - `laravel/framework` in `composer.json` plus an `artisan` file at the root → Laravel application.
+    - A PHP file at the plugin root whose header comment carries `Plugin Name:` (typically `<slug>/<slug>.php`,
+      often with a `readme.txt`) → WordPress plugin.
+    - A `style.css` whose header comment carries `Theme Name:` and/or a `theme.json` (block theme: `templates/`,
+      `parts/`) → WordPress theme.
+    - A main class that `extends Module` (or `PaymentModule`/`CarrierModule`) in `<module>/<module>.php`, a
+      `config.xml`, and/or `prestashop/*` dependencies in `composer.json` → PrestaShop module.
+    - Any other `composer.json` package (a `type` of `library`, or none, with PSR-4 `autoload`) → plain PHP
+      library/package.
   - `requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py` → Python; check for `django`, `flask`, `fastapi`.
   - `Podfile`, `Package.swift`, `project.yml`, `Project.swift`, `*.xcodeproj`/`*.xcworkspace` → Swift and/or
     Objective-C:
@@ -336,9 +377,14 @@ Summarize for the user in plain text (no file output unless asked):
   - Languages (codebase): <e.g. Java, Kotlin>
   - Frameworks (codebase): <e.g. Spring Boot (backend/), Jetpack Compose (android/)>
   - Languages/frameworks (requested change): <e.g. Kotlin, Jetpack Compose — matches android/ module>
-  - Project type: <one of: java-library, java-springboot, java-springboot-hilla, typescript-library, react-web,
-    angular-web, android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos),
-    react-native-app, ionic-app (angular|react), dotnet, other, unknown>
+  - Project type: <one of: java-library, java-springboot, java-springboot-hilla, kotlin-springboot,
+    kotlin-springboot-hilla, java-quarkus, kotlin-quarkus, typescript-library, react-web, angular-web, nestjs,
+    nextjs, php-laravel, php-wordpress-plugin, php-wordpress-theme, php-prestashop-module, php-library,
+    android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos), react-native-app,
+    ionic-app (angular|react), dotnet, other, unknown>
+  - Build & layout: <JVM backends: e.g. "Gradle (Kotlin DSL, wrapper), hexagonal reactor (domain/, application/,
+    infrastructure/, api/)" or "Maven (wrapper), layered single-module"; NestJS: e.g. "ESM, Vitest, TypeORM";
+    Next.js: e.g. "Next 16, App Router, cacheComponents: true"; PHP: e.g. "PHP ^8.3, Pest" — omit for other stacks>
   - Antora docs: <e.g. docs/ (antora.yml component "my-lib") — or "none found">
   - Repository host: <e.g. GitHub (github.com/org/repo) — or Bitbucket / Azure DevOps / TFS, with base URL — or
     "no remote configured" — or "none — not a git repository">
@@ -359,12 +405,23 @@ Summarize for the user in plain text (no file output unless asked):
 
   | Project type            | Derived from (Step 5 signals)                                                            |
   |--------------------------|-------------------------------------------------------------------------------------------|
-  | `java-library`           | `pom.xml`/`build.gradle*` present, no `spring-boot-starter*`, no Android plugin           |
-  | `java-springboot`        | `spring-boot-starter*` dependency present, no Hilla markers                               |
+  | `java-library`           | `pom.xml`/`build.gradle*` present, no `spring-boot-starter*`, no Quarkus, no Android plugin |
+  | `java-springboot`        | `spring-boot-starter*` dependency present, Java sources, no Hilla markers                 |
   | `java-springboot-hilla`  | `hilla-spring-boot-starter`/`vaadin-spring-boot-starter` (+ `@vaadin/hilla`, `src/main/frontend/`) |
+  | `kotlin-springboot`      | `spring-boot-starter*` + Kotlin (`kotlin-maven-plugin`/`kotlin("jvm")`/`kotlin("plugin.spring")`/`src/main/kotlin/`), no Hilla markers |
+  | `kotlin-springboot-hilla`| Kotlin Spring Boot (as above) + the Hilla markers                                         |
+  | `java-quarkus`           | `io.quarkus` plugin / `quarkus-bom` / `io.quarkus:quarkus-*` deps, Java sources           |
+  | `kotlin-quarkus`         | Quarkus (as above) + Kotlin (`quarkus-kotlin`, Kotlin plugin, `src/main/kotlin/`)          |
   | `typescript-library`     | `package.json` with `main`/`exports`/`types` + `tsconfig.json`, no app-framework dep       |
   | `react-web`               | `package.json` with `vite` + `react` (or another React web setup, not Native/Ionic)        |
   | `angular-web`             | `@angular/cli`/`@angular/core` + `angular.json`, not layered under Ionic                   |
+  | `nestjs`                  | `@nestjs/core` dependency (+ `nest-cli.json`, `NestFactory` in `src/main.ts`)               |
+  | `nextjs`                  | `next` dependency (+ `next.config.*`, `app/` and/or `pages/`)                               |
+  | `php-laravel`             | `composer.json` with `laravel/framework` + an `artisan` file                               |
+  | `php-wordpress-plugin`    | Main PHP file with a `Plugin Name:` header comment                                         |
+  | `php-wordpress-theme`     | `style.css` with a `Theme Name:` header and/or `theme.json`                                 |
+  | `php-prestashop-module`   | Class `extends Module` (+ `config.xml`, `prestashop/*` deps)                                |
+  | `php-library`             | Any other `composer.json` package (no Laravel/WordPress/PrestaShop markers)                |
   | `android-library`         | Gradle `com.android.library` plugin (direct or via `libs.versions.toml` alias)             |
   | `android-app`             | Gradle `com.android.application` plugin (direct or via `libs.versions.toml` alias)         |
   | `swift-library`           | `Package.swift` with a `.library(...)` product                                             |
@@ -372,7 +429,7 @@ Summarize for the user in plain text (no file output unless asked):
   | `react-native-app`        | `expo`/`react-native` deps (+ `app.json`/`metro.config.js`/`eas.json`, `ios/`+`android/`)   |
   | `ionic-app`               | `@ionic/angular` or `@ionic/react` (+ `@capacitor/core`, `capacitor.config.*`)              |
   | `dotnet`                  | `*.csproj`/`*.fsproj`/`*.sln` present (library, ASP.NET Core, MAUI/Xamarin, WPF/WinForms)   |
-  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, plain Python, Go, Rust, Ruby, C/C++) |
+  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, plain Python, Go, Rust, Ruby, C/C++) |
   | `unknown`                 | Nothing in Step 5 matched any manifest or source-level signal                              |
 
   - `apple-app` lists its detected target platforms in parentheses, using the platform keys `ios`, `ipados`,
@@ -381,6 +438,19 @@ Summarize for the user in plain text (no file output unless asked):
     detected in Step 5.
   - `ionic-app` lists its underlying framework in parentheses — `ionic-app (angular)` or `ionic-app (react)` —
     from whichever of `@ionic/angular`/`@ionic/react` was found.
+  - **Java vs. Kotlin** (Spring Boot / Quarkus): pick the `kotlin-*` value when Kotlin is the build's primary
+    language (Kotlin plugin applied and production sources mainly under `src/main/kotlin/`); a Java build with a
+    few Kotlin files stays `java-*`. A **hexagonal multi-module reactor** (`domain`/`application`/`infrastructure`/
+    `api` modules) is still a single project type — e.g. `kotlin-springboot` with the layout on the
+    `Build & layout:` line — **not** `multiple`.
+  - **PHP**: Laravel, WordPress, and PrestaShop markers take precedence over `php-library` (a Laravel app or a
+    PrestaShop module also has a `composer.json`). A WordPress plugin that ships blocks is still
+    `php-wordpress-plugin`; a repository holding both a plugin and a theme is `multiple`.
+  - **Hilla frontend vs. Next.js/NestJS**: a `package.json` under a Spring Boot module's `src/main/frontend/` is
+    part of the `*-springboot-hilla` value, never a separate `nextjs`/`react-web` module.
+  - Examples: `- Project type: kotlin-quarkus` with `- Build & layout: Gradle (Kotlin DSL, wrapper), layered
+    single-module`; `- Project type: nextjs` with `- Build & layout: Next 16, App Router, cacheComponents: true`;
+    `- Project type: php-wordpress-plugin` with `- Build & layout: PHP >=8.1, PHPUnit`.
   - **Android library with a sample app**: when every `com.android.application` module depends on a sibling
     `com.android.library` module (`implementation(project(":lib"))`) — this catalog's reference library layout,
     `lib/` + Compose `app/` — the value is `android-library`, with the sample module recorded on an indented

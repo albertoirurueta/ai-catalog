@@ -1,21 +1,36 @@
 = Java Code Quality
-:description: Runs Checkstyle, PMD, and SpotBugs via Maven and summarizes every static-analysis issue found, grouped by tool and file, without fixing anything.
-:keywords: iru-java-code-quality, claude code skill, java, maven, checkstyle, pmd, spotbugs, static analysis, code quality report
+:description: Runs Checkstyle, PMD and SpotBugs via Maven or Gradle and summarizes every static-analysis issue by tool and file, without fixing anything.
+:keywords: iru-java-code-quality, claude code skill, java, maven, gradle, checkstyle, pmd, spotbugs, static analysis, code quality report
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Run this project's static-analysis Maven plugins — Checkstyle, PMD, and SpotBugs — directly via
-`mvn clean compile checkstyle:checkstyle pmd:pmd spotbugs:spotbugs`, then read the three generated XML reports to
-summarize every issue found, grouped by tool. This is a read-only reporting skill: it runs static analysis and
-reports results, it does not fix issues unless asked to as an explicit follow-up.
+Run this project's Java static-analysis tools — Checkstyle, PMD, and SpotBugs — directly (via Maven goals or the
+Gradle `checkstyleMain`/`pmdMain`/`spotbugsMain` tasks), then read the generated XML reports to summarize every issue
+found, grouped by tool. This is a read-only reporting skill: it runs static analysis and reports results, it does
+not fix issues unless asked to as an explicit follow-up.
 
 == Purpose
 
-`iru-java-code-quality` gives a fast, focused lint pass without paying for a full `mvn site` build (which also
-regenerates javadoc, JXR, and Surefire-report output this skill doesn't need). It runs the three analysis goals
-directly, parses their XML reports itself rather than relying on console output — which only shows progress, not
-the full issue list — and can scope its summary to a single file/class even though the underlying Maven run
-always analyzes the whole project.
+`iru-java-code-quality` gives a fast, focused lint pass without paying for a full `mvn site` or `./gradlew check`
+build (which also regenerates javadoc/site output or runs tests). It runs the three analysis tools directly, parses
+their XML reports itself rather than relying on console output — which only shows progress, not the full issue list —
+and can scope its summary to a single file/class even though the underlying run always analyzes the whole project.
+
+It first detects the build tool exactly as `iru-java-test` does (`pom.xml` means Maven; `build.gradle(.kts)` /
+`settings.gradle(.kts)` means Gradle with the wrapper preferred; an Android Gradle plugin means
+`iru-android-code-quality` is the right skill instead). It also decides what these tools can see: Checkstyle and PMD
+parse Java source only, and SpotBugs sees Kotlin only as noisy bytecode, so Kotlin sources are not covered here. A
+pure Kotlin project is pointed at `iru-kotlin-code-quality` (detekt + ktlint) and the run stops; a mixed Java/Kotlin
+project analyzes the Java sources and states in its report that the Kotlin sources still need
+`iru-kotlin-code-quality`.
+
+On Maven it runs `mvn clean compile checkstyle:checkstyle pmd:pmd spotbugs:spotbugs` (`clean compile` is required
+because SpotBugs analyzes compiled bytecode). On Gradle it first lists which of the three tasks the build actually
+defines (a task that exists nowhere fails the whole invocation) and runs exactly those with
+`clean ... --continue` — `--continue` is required because each tool fails its own task when it finds issues and
+Gradle would otherwise never run the remaining tools; a task that failed because it found violations still wrote its
+report. If none of the tasks exists, the skill reports that none of these tools is configured and stops without
+editing the build.
 
 == Purpose group
 
@@ -39,10 +54,17 @@ xref:index.adoc#group-java[Java Development Tooling]
 |No
 |Scopes the *reported summary* to matches in a specific file/class: Checkstyle/PMD entries whose `<file name>`
 ends in `/<Name>.java`, and SpotBugs entries whose `<Class classname>` equals `<Name>`, ends in `.<Name>`, or is
-nested under it (e.g. `Foo$Inner` for `Foo`). The underlying Maven run still analyzes the whole project regardless
-— none of the three plugins expose a per-file CLI selector like Surefire's `-Dtest`.
+nested under it (e.g. `Foo$Inner` for `Foo`). The underlying run still analyzes the whole project regardless — none
+of the three tools expose a per-file selector like Surefire's `-Dtest`.
 |None — omitting it summarizes every issue across the whole project.
 |===
+
+Report locations: Maven writes `target/checkstyle-result.xml`, `target/pmd.xml` and `target/spotbugsXml.xml`; Gradle
+writes `build/reports/checkstyle/main.xml`, `build/reports/pmd/main.xml` and, only when the build enables an XML
+report, `build/reports/spotbugs/main.xml`. If SpotBugs has no XML report configured the skill reads its HTML/SARIF
+output or, when no file is written at all, parses its console lines (run with `--console=plain`); it never edits the
+build to switch a report format on. Gradle's `pmd` plugin defaults to the `errorprone` ruleset only, so an empty PMD
+report there does not mean stricter Maven-style rulesets were applied.
 
 == Outputs
 
@@ -50,7 +72,10 @@ nested under it (e.g. `Foo$Inner` for `Foo`). The underlying Maven run still ana
 * Findings grouped by tool (Checkstyle, PMD, SpotBugs), then by file.
 * Per issue: file:line, the rule/check name, and the message.
 * A total issue count per tool at the top and an overall total; a tool with zero issues in the requested scope is
-  called out as clean rather than omitted silently.
+  called out as clean, and on Gradle a tool whose task is not defined is reported as "not configured" rather than
+  "zero issues".
+* For projects with Kotlin sources, a closing one-line note that they were not covered and need
+  `iru-kotlin-code-quality`.
 * No source, Checkstyle, PMD, or SpotBugs configuration is ever modified.
 
 == Execution flow
@@ -58,39 +83,48 @@ nested under it (e.g. `Foo$Inner` for `Foo`). The underlying Maven run still ana
 [mermaid]
 ....
 flowchart TD
-    A["Start /java-code-quality\n(optional path-or-class-name)"] --> B["Run mvn clean compile checkstyle:checkstyle\npmd:pmd spotbugs:spotbugs"]
-    B --> C{Build succeeded?}
-    C -- no --> D["Report failure, stop\n(reports not freshly regenerated)"]
-    C -- yes --> E["Read target/checkstyle-result.xml"]
-    E --> F["Read target/pmd.xml"]
-    F --> G["Read target/spotbugsXml.xml"]
-    G --> H{Scope argument given?}
-    H -- yes --> I["Filter each report's entries\nto the matching file/class"]
+    A["Start /iru-java-code-quality\n(optional path-or-class-name)"] --> B{"Step 0: Build tool and languages?"}
+    B -- "Android Gradle plugin" --> B1["Stop: use iru-android-code-quality"]
+    B -- "pure Kotlin project" --> B2["Stop: use iru-kotlin-code-quality"]
+    B -- "Maven" --> C["Step 1: mvn clean compile checkstyle:checkstyle\npmd:pmd spotbugs:spotbugs"]
+    B -- "Gradle, or mixed Java/Kotlin" --> D["Step 1: list which of checkstyleMain,\npmdMain, spotbugsMain exist"]
+    D --> D1{"Any defined?"}
+    D1 -- no --> D2["Report: none configured, stop"]
+    D1 -- yes --> D3["Run clean plus the defined tasks\nwith --continue"]
+    C --> E{"Build or compile failed?"}
+    D3 --> E
+    E -- yes --> F["Report failure, stop\n(reports not freshly regenerated)"]
+    E -- no --> G["Step 2: read Checkstyle, PMD and SpotBugs reports"]
+    G --> H{"Scope argument given?"}
+    H -- yes --> I["Extract only the matching\nfile/class entries"]
     H -- no --> J["Keep full project-wide results"]
-    I --> K
-    J --> K["Group findings by tool, then by file"]
-    K --> L["Report file:line, rule/check, message,\nplus totals per tool and overall"]
+    I --> K["Step 3: group by tool, then file"]
+    J --> K
+    K --> L["Report file:line, rule, message, totals;\nnote uncovered Kotlin sources"]
 ....
 
 == Dependencies
 
 === Invokes
 
-None — `iru-java-code-quality` is a leaf skill; it only runs Maven commands and reads the generated Checkstyle/PMD/
-SpotBugs reports, it does not call any other skill in this catalog.
+None — `iru-java-code-quality` is a leaf skill; it only runs Maven/Gradle commands and reads the generated
+Checkstyle/PMD/SpotBugs reports. It names `iru-kotlin-code-quality` and `iru-android-code-quality` as the right
+skills for Kotlin and Android code but does not invoke them.
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
-  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
-  baseline for the `java` language/framework key.
+* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and final comparison for Java, Spring Boot and Java Quarkus, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-java-code-one-task-group.adoc[] — Steps 1 and 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every class the
   bucket touches and later diff the post-change result against it.
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 1 and 3.7, Checkstyle/PMD/SpotBugs when touched modules hold Java, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 1 and 3.7, Java quality baseline and regression check, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-setup-quarkus-service.adoc[] — Step 9, quality gate for Java builds, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Steps 1 and 3.7, for the Checkstyle/PMD/SpotBugs baseline and the regression diff against it, via `iru-gate-runner`. Skipped if not installed — and that skip is itself reported, since a bucket validated with no static analysis at all is worth knowing about. SpotBugs findings are treated more seriously than the rest: unlike most Checkstyle rules they describe real defects rather than style.
 
 === Related agents
 
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — both callers above always invoke this skill from inside a
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills invoke this skill from inside an
   `iru-gate-runner` sub-agent they spawn, not inline.
 
 == Source

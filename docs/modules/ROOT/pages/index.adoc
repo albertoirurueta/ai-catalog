@@ -1,6 +1,6 @@
 = AI Catalog
-:description: 102 Claude Code Skills and 3 agents for Java, Spring Boot, .NET, database, TypeScript/Node, Android, and Swift/Apple bootstrap, coding, and release.
-:keywords: claude code skills, claude code agents, ai catalog, java development, spring boot bootstrap, dotnet development, typescript development, android development, swift development, skill catalog
+:description: 130 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, .NET, TypeScript, NestJS, Next.js, Android and Swift work.
+:keywords: claude code skills, claude code agents, ai catalog, java and kotlin development, spring boot and quarkus bootstrap, php development, typescript nestjs nextjs, android development, swift development, skill catalog
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -135,7 +135,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-android-bump-version`
 |xref:index.adoc#group-android[Android Development Tooling]
-|Sets an Android/Gradle project's version across lib/app `build.gradle.kts` and optionally README/Antora mentions.
+|Sets an Android project's version in lib/app Gradle scripts, optionally syncing README and Antora mentions.
 |xref:skills/iru-android-bump-version.adoc[]
 
 |`iru-android-code-one-task`
@@ -190,12 +190,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-code`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Execute `implementation_plan.md` end to end, one task group at a time, dispatching each to `iru-code-one-task-group`.
+|Executes implementation_plan.md group by group, validates, updates docs, and archives the plan.
 |xref:skills/iru-code.adoc[]
 
 |`iru-code-one-task-group`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Implement one plan task group, dispatching each task to its language's `<key>-code-one-task-group` skill.
+|Dispatches one plan group's tasks to matching key-specific code-one-task-group skills; checks off plan boxes live.
 |xref:skills/iru-code-one-task-group.adoc[]
 
 |`iru-create-github-issue`
@@ -255,7 +255,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-explore`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Read-only research pass over the codebase, optionally grounded in a GitHub issue or Jira ticket, reporting a normalized `Project type:` line for downstream bootstrap tooling.
+|Read-only repository and ticket exploration that reports tech stack and a normalized Project type line.
 |xref:skills/iru-explore.adoc[]
 
 |`iru-generate-skill-docs`
@@ -265,12 +265,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-issue`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|End-to-end kickoff for a tracked ticket: branch, explore, plan, implement, open PR, review.
+|Takes a GitHub issue or Jira ticket from branch creation through plan, implementation and a reviewed draft PR.
 |xref:skills/iru-issue.adoc[]
 
 |`iru-java-bump-version`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Sets a Maven project's version to an exact value in `pom.xml`, single-module or reactor-wide, with optional README/Antora sync.
+|Sets a Maven or Gradle JVM (Java/Kotlin) project's version to an exact value, with optional README/Antora sync.
 |xref:skills/iru-java-bump-version.adoc[]
 
 |`iru-java-code-one-task`
@@ -285,12 +285,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-java-code-quality`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Run Checkstyle/PMD/SpotBugs and summarize every issue found, grouped by tool.
+|Runs Checkstyle, PMD and SpotBugs via Maven or Gradle and summarizes issues by tool and file; read-only.
 |xref:skills/iru-java-code-quality.adoc[]
 
 |`iru-java-coverage`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Run JaCoCo and report the exact measured coverage percentage for target class(es).
+|Measures exact JaCoCo/Kover line coverage for JVM classes (Maven/Gradle, Quarkus) against an optional bar; read-only.
 |xref:skills/iru-java-coverage.adoc[]
 
 |`iru-java-generate-all-tests`
@@ -320,7 +320,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-java-test`
 |xref:index.adoc#group-java[Java Development Tooling]
-|Run the JUnit suite via Surefire, scoped to a class/method/package/tag selector.
+|Runs a JVM project's JUnit tests via Maven Surefire or Gradle test, scoped by class/method/pattern/tag, and reports.
 |xref:skills/iru-java-test.adoc[]
 
 |`iru-jira-custom-context`
@@ -363,24 +363,109 @@ features, and where the underlying models genuinely differ.
 |Convert a pending/not-completed agreement into a Jira ticket via `iru-explore` + `iru-create-jira-ticket`.
 |xref:skills/iru-knowledge-to-jira.adoc[]
 
+|`iru-kotlin-code-quality`
+|xref:index.adoc#group-kotlin[Kotlin Development Tooling]
+|Runs detekt and ktlint on JVM Kotlin projects (Gradle/Maven/Spotless) and reports issues by tool and rule id.
+|xref:skills/iru-kotlin-code-quality.adoc[]
+
+|`iru-kotlin-kdoc`
+|xref:index.adoc#group-kotlin[Kotlin Development Tooling]
+|Audits Kotlin classes/packages for complete KDoc, fills gaps, wires Dokka module docs, verifies the Dokka build.
+|xref:skills/iru-kotlin-kdoc.adoc[]
+
+|`iru-kotlin-springboot-code-one-task`
+|xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+|Implements one Kotlin Spring Boot plan task with unit tests only, checking Kotlin/Spring build plumbing first.
+|xref:skills/iru-kotlin-springboot-code-one-task.adoc[]
+
+|`iru-kotlin-springboot-code-one-task-group`
+|xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+|Implements one Kotlin Spring Boot task bucket, then validates once: unit coverage gate and lock-serialized integration tests.
+|xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[]
+
+|`iru-nestjs-code-one-task`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one NestJS plan task with unit and e2e specs and checks off its box.
+|xref:skills/iru-nestjs-code-one-task.adoc[]
+
+|`iru-nestjs-code-one-task-group`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one bucket of NestJS tasks, then validates it once with unit coverage, type-check, build and a locked e2e stage.
+|xref:skills/iru-nestjs-code-one-task-group.adoc[]
+
+|`iru-nextjs-code-one-task`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one Next.js plan task and tests for the detected version/router/caching profile, then ticks its checkbox.
+|xref:skills/iru-nextjs-code-one-task.adoc[]
+
+|`iru-nextjs-code-one-task-group`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one Next.js task bucket, then validates once: unit coverage, quality, next build route table, serialized Playwright.
+|xref:skills/iru-nextjs-code-one-task-group.adoc[]
+
+|`iru-php-bump-version`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Sets a PHP project's version to an exact value in every Laravel/WordPress/PrestaShop location (x.y.z-dev convention).
+|xref:skills/iru-php-bump-version.adoc[]
+
+|`iru-php-code-one-task`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Implements one PHP plan task (Laravel/WordPress/PrestaShop/library) with fast tests and checks off its box.
+|xref:skills/iru-php-code-one-task.adoc[]
+
+|`iru-php-code-one-task-group`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Implements one bucket of PHP tasks, then validates the bucket once, with an integration stage behind a repo-wide lock.
+|xref:skills/iru-php-code-one-task-group.adoc[]
+
+|`iru-php-code-quality`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Runs PHPStan, Psalm, Pint, PHP-CS-Fixer, PHPCS and Rector and reports issues by rule id.
+|xref:skills/iru-php-code-quality.adoc[]
+
+|`iru-php-coverage`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Runs PHP tests with PCOV or Xdebug and reports exact per-class line and method coverage from Clover XML.
+|xref:skills/iru-php-coverage.adoc[]
+
+|`iru-php-phpdoc`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Audits PHP files for complete PHPDoc, fills gaps per Laravel/WordPress/PrestaShop conventions, verifies with PHPStan/phpcs.
+|xref:skills/iru-php-phpdoc.adoc[]
+
+|`iru-php-test`
+|xref:index.adoc#group-php[PHP Development Tooling]
+|Runs PHP tests via Pest, PHPUnit or artisan on host, Sail, ddev or wp-env and reports a summary.
+|xref:skills/iru-php-test.adoc[]
+
 |`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Write a concrete, reviewable `implementation_plan.md`, tagging each task's language/framework.
+|Writes a dependency-grouped, checkbox-driven implementation_plan.md for a ticket or described task.
 |xref:skills/iru-plan.adoc[]
 
 |`iru-pr-description`
 |xref:index.adoc#group-pr[Pull Request Lifecycle]
-|Draft a PR description from the real diff, and optionally open/update the pull request.
+|Drafts a PR description from the real diff against an inherited base branch; opens or updates the PR on its host.
 |xref:skills/iru-pr-description.adoc[]
 
 |`iru-pr-review`
 |xref:index.adoc#group-pr[Pull Request Lifecycle]
-|Review an open pull request against the linked ticket's intent and this codebase's conventions.
+|Reviews an open PR by id for ticket intent, convention drift and stack pitfalls; posts findings only after confirmation.
 |xref:skills/iru-pr-review.adoc[]
+
+|`iru-quarkus-code-one-task`
+|xref:index.adoc#group-quarkus[Quarkus Development Tooling]
+|Implements one plan task in a Quarkus service (Java/Kotlin) with tests, running only container-free test levels.
+|xref:skills/iru-quarkus-code-one-task.adoc[]
+
+|`iru-quarkus-code-one-task-group`
+|xref:index.adoc#group-quarkus[Quarkus Development Tooling]
+|Implements one Quarkus task bucket, then validates it once with unit-stage coverage and a lock-serialized container stage.
+|xref:skills/iru-quarkus-code-one-task-group.adoc[]
 
 |`iru-release`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
-|Ecosystem-agnostic release: detects Java/TypeScript/Android/Swift and delegates the version bump to the matching `iru-<key>-bump-version` skill, then drafts release notes/changelog and opens the release PR.
+|Cuts a release_x.y.z branch from develop, delegates the version bump, drafts release notes and opens the release PR.
 |xref:skills/iru-release.adoc[]
 
 |`iru-setup-android-app`
@@ -390,7 +475,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-android-github-workflows`
 |xref:index.adoc#group-android-bootstrap[Android Bootstrap]
-|Scaffolds gitflow/main-only CI/CD and security GitHub Actions workflows for an Android/Gradle library or app repo.
+|Creates or updates gitflow/main-only GitHub Actions CI/CD, security workflows and Dependabot config for an Android/Gradle repo.
 |xref:skills/iru-setup-android-github-workflows.adoc[]
 
 |`iru-setup-android-gitignore`
@@ -420,12 +505,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-apple-app`
 |xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
-|Scaffolds a native Apple app's XcodeGen/Tuist manifest, SwiftPM Core package, test targets, and Fastlane/Sonar config.
+|Scaffold a native Apple app: XcodeGen/Tuist manifest, shared SwiftPM Core, Swift Testing/XCUITest, Fastlane, Sonar.
 |xref:skills/iru-setup-apple-app.adoc[]
 
 |`iru-setup-changelog`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Bootstraps `CHANGELOG.md` from git tags/GitHub Releases, or appends missing releases to an existing one (Update / Keep / Replace).
+|Creates or updates a root CHANGELOG.md from tags, GitHub Releases, readme.txt and diffs in Keep a Changelog format.
 |xref:skills/iru-setup-changelog.adoc[]
 
 |`iru-setup-ionic-app`
@@ -435,12 +520,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-github-workflows`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Scaffolds/updates the `develop.yml`/`main.yml`/`sync.yml`/`security.yml` GitHub Actions CI/CD pipeline, including the shared Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks security block, gated by open-source/publish/sonar/visibility/ci-tests/pages args.
+|Creates or updates develop, main, sync and security GitHub Actions workflows plus dependabot.yml for Java/Maven.
 |xref:skills/iru-setup-java-github-workflows.adoc[]
 
 |`iru-setup-java-gitignore`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Create or refresh the root `.gitignore` for a Java project.
+|Creates or updates a JVM project's root .gitignore (Java/Kotlin, Maven/Gradle, Quarkus); asks Update/Keep/Replace.
 |xref:skills/iru-setup-java-gitignore.adoc[]
 
 |`iru-setup-java-library`
@@ -455,27 +540,27 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-springboot`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Orchestrator: bootstraps or updates a hexagonal Spring Boot service repository end to end in one pass, with an optional Hilla frontend and Sonar/open-source/visibility/CI args.
+|Interviews once, then bootstraps or updates a Spring Boot hexagonal multi-module service (Java or Kotlin) via sub-skills.
 |xref:skills/iru-setup-java-springboot.adoc[]
 
 |`iru-setup-java-springboot-apis`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Set up the `apis/` contract tree and the OpenAPI/protobuf/GraphQL/AVRO/AsyncAPI generators that read it.
+|Sets up a Spring Boot service's contract-first apis/ tree and OpenAPI/gRPC/GraphQL/AVRO/AsyncAPI generators (Java/Kotlin, Maven/Gradle).
 |xref:skills/iru-setup-java-springboot-apis.adoc[]
 
 |`iru-setup-java-springboot-github-workflows`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Scaffold the `build.yml`/`deploy.yml`/`undeploy.yml` workflows, with keyless OIDC cloud authentication.
+|Generates build, deploy, undeploy and security GitHub Actions workflows plus Dependabot for a Java/Kotlin Spring Boot service.
 |xref:skills/iru-setup-java-springboot-github-workflows.adoc[]
 
 |`iru-setup-java-springboot-hilla`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Scaffolds a Hilla React frontend into a Spring Boot reactor's web module with Vitest, ESLint, and Sonar wiring.
+|Scaffold a Hilla React frontend into a Spring Boot web module (Java or Kotlin, Maven or Gradle).
 |xref:skills/iru-setup-java-springboot-hilla.adoc[]
 
 |`iru-setup-java-springboot-modules`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Scaffold the hexagonal source tree: domain ports, adapters, use cases, profiles, and an ArchUnit test.
+|Scaffolds the hexagonal source tree, profiles, migrations and ArchUnit test of a Java or Kotlin Spring Boot service.
 |xref:skills/iru-setup-java-springboot-modules.adoc[]
 
 |`iru-setup-java-springboot-platform`
@@ -485,13 +570,68 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-java-springboot-pom`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Generate the multi-module Maven reactor — a root pom holding every version, plus one pom per module.
+|Generates the Maven or Gradle KTS multi-module build for a hexagonal Spring Boot service (Java/Kotlin) from springboot-stack.yml
 |xref:skills/iru-setup-java-springboot-pom.adoc[]
 
 |`iru-setup-java-springboot-testcontainers`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Write one `compose.yaml` and the Testcontainers harness that launches it, shared by local runs and CI.
+|Writes compose.yaml, an API mock and a Testcontainers IT harness for a Spring Boot service (Java/Kotlin, Maven/Gradle).
 |xref:skills/iru-setup-java-springboot-testcontainers.adoc[]
+
+|`iru-setup-nestjs-app`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffolds or updates a NestJS service with shared npm scripts, validated config, health checks, ORM option, Dockerfile and Sonar.
+|xref:skills/iru-setup-nestjs-app.adoc[]
+
+|`iru-setup-nextjs-web`
+|xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+|Scaffold a Next.js app via create-next-app flags plus Vitest, ESLint, Playwright, TypeDoc, Sonar, and static or Docker output.
+|xref:skills/iru-setup-nextjs-web.adoc[]
+
+|`iru-setup-php-github-workflows`
+|xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+|Writes build, release, sync, security and Dependabot GitHub workflows for Laravel, WordPress and PrestaShop repos.
+|xref:skills/iru-setup-php-github-workflows.adoc[]
+
+|`iru-setup-php-gitignore`
+|xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+|Creates or updates the root .gitignore for PHP/Composer projects with Laravel/WordPress/PrestaShop sections.
+|xref:skills/iru-setup-php-gitignore.adoc[]
+
+|`iru-setup-php-laravel`
+|xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+|Scaffolds or updates a Laravel app with Pest/PHPUnit, Pint, Larastan, composer scripts and a tested sample slice.
+|xref:skills/iru-setup-php-laravel.adoc[]
+
+|`iru-setup-php-prestashop`
+|xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+|Scaffolds a PrestaShop 8/9 module with Composer, PHPUnit, PHPStan, PHP-CS-Fixer and a packaging script.
+|xref:skills/iru-setup-php-prestashop.adoc[]
+
+|`iru-setup-php-repository`
+|xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+|Bootstraps a Laravel, WordPress plugin/theme or PrestaShop module repository: scaffold, docs, gitignore, CI, changelog, README.
+|xref:skills/iru-setup-php-repository.adoc[]
+
+|`iru-setup-php-wordpress`
+|xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+|Scaffolds a WordPress plugin or block theme with Composer, WPCS, PHPStan, Brain Monkey and wp-env tests.
+|xref:skills/iru-setup-php-wordpress.adoc[]
+
+|`iru-setup-quarkus-github-workflows`
+|xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
+|Creates/updates Quarkus service CI/CD and security GitHub Actions workflows, Dependabot and a secrets table.
+|xref:skills/iru-setup-quarkus-github-workflows.adoc[]
+
+|`iru-setup-quarkus-repository`
+|xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
+|Bootstraps a Quarkus service repository: build, docs, gitignore, CI workflows, changelog and README.
+|xref:skills/iru-setup-quarkus-repository.adoc[]
+
+|`iru-setup-quarkus-service`
+|xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
+|Scaffolds or updates a Quarkus service (Java/Kotlin, Maven/Gradle, single or hexagonal) from live code.quarkus.io data.
+|xref:skills/iru-setup-quarkus-service.adoc[]
 
 |`iru-setup-react-native-app`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
@@ -505,17 +645,17 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-readme`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Create or refresh the root `README.md` from what actually exists in the repository.
+|Creates or refreshes the root README.md (badges, status table, docs links, install or run steps) from the repo's real state.
 |xref:skills/iru-setup-readme.adoc[]
 
 |`iru-setup-repository`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Catalog-wide bootstrap front door: detects/asks a repository's project type and delegates to one of five stack orchestrators.
+|Catalog-wide bootstrap front door: detects project type, asks shared cost-aware inputs, delegates to one stack orchestrator.
 |xref:skills/iru-setup-repository.adoc[]
 
 |`iru-setup-swift-github-workflows`
 |xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
-|Scaffolds `build.yml`, `release.yml`, `sync.yml`, `security.yml`, and `dependabot.yml` for the Swift/Apple CI/CD pipeline.
+|Create/update build, release, sync, security and Dependabot GitHub workflows for a Swift package or Apple app repo.
 |xref:skills/iru-setup-swift-github-workflows.adoc[]
 
 |`iru-setup-swift-gitignore`
@@ -535,12 +675,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-typescript-github-workflows`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
-|Scaffolds build/release/sync/security GitHub Actions workflows for an npm/TypeScript repo across five flavors.
+|Creates or updates build/release/sync/security workflows and Dependabot for seven npm/TypeScript flavors, per-file choices.
 |xref:skills/iru-setup-typescript-github-workflows.adoc[]
 
 |`iru-setup-typescript-gitignore`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
-|Creates or refreshes a TypeScript/npm project's `.gitignore` with framework- and tooling-specific entries, diffing before overwrite.
+|Creates or updates a TypeScript/npm project's .gitignore, asking Update, Keep as is or Replace when one exists.
 |xref:skills/iru-setup-typescript-gitignore.adoc[]
 
 |`iru-setup-typescript-library`
@@ -550,7 +690,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-typescript-repository`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
-|Bootstraps an npm/TypeScript repository (library, React, Angular, React Native, or Ionic) end to end in one pass.
+|Orchestrates scaffold, Antora, gitignore, CI workflows, changelog and README for a seven-flavor npm/TypeScript repository.
 |xref:skills/iru-setup-typescript-repository.adoc[]
 
 |`iru-swift-bump-version`
@@ -610,12 +750,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-typescript-code-quality`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Runs ESLint, `tsc`, Prettier, and Stylelint/Oxlint when configured, reporting every issue by tool and rule id.
+|Runs ESLint/Oxlint/Biome, tsc, Prettier, Stylelint (NestJS/Next.js aware) and reports issues by tool and rule id.
 |xref:skills/iru-typescript-code-quality.adoc[]
 
 |`iru-typescript-coverage`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Runs Vitest/Jest/Angular test coverage and reports exact line/branch percentages and uncovered line ranges.
+|Runs Vitest/Jest/ng test with coverage (NestJS/Next.js aware) and reports exact line/branch % and uncovered ranges.
 |xref:skills/iru-typescript-coverage.adoc[]
 
 |`iru-typescript-generate-all-tests`
@@ -625,12 +765,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-typescript-test`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Runs a TypeScript project's unit tests via Vitest, Jest, or `ng test`, scoped by file, directory, or name pattern.
+|Runs TypeScript unit tests via Vitest, Jest or ng test; NestJS/Next.js e2e on request.
 |xref:skills/iru-typescript-test.adoc[]
 
 |`iru-typescript-tsdoc`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Audits TypeScript files for TSDoc completeness, fills gaps, and verifies the build with TypeDoc or Compodoc.
+|Audits and fills TSDoc on exported TypeScript symbols, then verifies with TypeDoc or Compodoc, incl. NestJS/Next.js.
 |xref:skills/iru-typescript-tsdoc.adoc[]
 
 |`iru-update-docs`
@@ -640,7 +780,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-update-java-springboot-documentation`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Create or refresh a Spring Boot service's own documentation pages, derived from its actual code.
+|Creates and refreshes a Java/Kotlin Spring Boot service's Antora docs from code, marking underivable facts TODO.
 |xref:skills/iru-update-java-springboot-documentation.adoc[]
 |===
 
@@ -659,7 +799,7 @@ file of their own and are instead described together in xref:agents/overview.ado
 |xref:agents/iru-change-summarizer.adoc[]
 
 |`iru-gate-runner`
-|Run a single verification/quality-gate skill spanning Java, .NET, TypeScript, Android, and Swift, and report back only a compact summary, optionally vs. a baseline.
+|Run a single verification/quality-gate skill (tests, coverage, lint, license, docs, security, build) for any supported stack — Java/Kotlin on Maven or Gradle, PHP, .NET, TypeScript incl. NestJS/Next.js, Android, Swift — and report back only a compact summary, optionally vs. a baseline.
 |xref:agents/iru-gate-runner.adoc[]
 
 |`iru-isolated-skill-executor`
@@ -680,15 +820,17 @@ partial setup — so a new Java library starts out matching the same conventions
 Reach for this group when standing up a **brand-new repository**, or when bringing one with an older or partial
 setup in line with the house pattern. `iru-setup-repository` is the catalog-wide front door: it detects a
 non-empty repository (via `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the
-project type over up to four `AskUserQuestion` rounds of three concrete types each (Java/JVM, Android & Swift,
-mobile apps, Web/Node — each with a "Something in the next group" escape hatch; .NET is detected but has no
-orchestrator to offer), asks the shared inputs once — `open-source`, the repository's `visibility` (detected via
+project type over up to four `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node,
+PHP, Mobile & Apple — each with a "Something in the next group" escape hatch, the last ending in "None of these";
+.NET is detected but has no orchestrator to offer), asks the shared inputs once — `open-source`, the repository's `visibility` (detected via
 `gh` when possible), whether GitHub workflows are wanted at all (`ci`), Sonar, whether CI runs unit tests only or
 the full suite (`ci-tests`), GitHub Pages (`pages`), and `publish`-or-`distribution` — quoting the cost
 differences for private repositories (Actions minutes, macOS runners, SonarCloud pricing, Pages availability),
 and delegates to exactly one matching stack
-orchestrator — `iru-setup-java-library-repository`, `iru-setup-java-springboot`,
+orchestrator — `iru-setup-java-library-repository`, xref:index.adoc#group-service-bootstrap[`iru-setup-java-springboot`]
+(Java or Kotlin), xref:index.adoc#group-quarkus-bootstrap[`iru-setup-quarkus-repository`],
 xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
+xref:index.adoc#group-php-bootstrap[`iru-setup-php-repository`],
 xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`], or
 xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. Every
 run announces whether it is setting the repository up **from scratch** or **updating an existing one** (with an
@@ -701,13 +843,14 @@ already has a `pom.xml`).
 ====
 
 * xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] — catalog-wide front door: detects/asks a
-  repository's project type and delegates to one of five stack orchestrators.
+  repository's project type and delegates to one of seven stack orchestrators.
 * xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
   or updates a Java library repository end to end in one pass.
 * xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
   source layout.
 * xref:skills/iru-setup-antora.adoc[`iru-setup-antora`] — scaffolds the Antora documentation site.
-* xref:skills/iru-setup-java-gitignore.adoc[`iru-setup-java-gitignore`] — creates or refreshes the root `.gitignore`.
+* xref:skills/iru-setup-java-gitignore.adoc[`iru-setup-java-gitignore`] — creates or refreshes the root `.gitignore`
+  for any JVM project (Java/Kotlin, Maven/Gradle, Quarkus); also reused by the Spring Boot and Quarkus orchestrators.
 * xref:skills/iru-setup-java-github-workflows.adoc[`iru-setup-java-github-workflows`] — scaffolds/updates the CI/CD
   GitHub Actions pipeline.
 * xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] — bootstraps `CHANGELOG.md` from release history,
@@ -720,7 +863,8 @@ already has a `pom.xml`).
 Standing up (or updating) a Spring Boot **service** — as opposed to a library — with Domain-Driven Design and
 hexagonal (ports and adapters) architecture imposed from the first commit: a Maven multi-module reactor, a
 contract-first API layer, reproducible integration tests, infrastructure-as-code, CI/CD, and a documentation
-page set derived from the code.
+page set derived from the code. The service can be written in Java (Maven) or Kotlin (Maven or Gradle Kotlin DSL),
+read from the manifest's `project.language`/`project.buildTool`.
 
 [TIP]
 ====
@@ -768,11 +912,35 @@ the root `pom.xml` and nowhere else, and Java 21 is the enforced minimum.
   re-run continuously, in the same spirit as
   xref:skills/iru-update-docs.adoc[`iru-update-docs`] in xref:index.adoc#group-maintenance[Repository Maintenance].
 
+[[group-quarkus-bootstrap]]
+=== Quarkus Service Bootstrap
+
+Standing up (or updating) a Quarkus service — Java or Kotlin, Maven or Gradle, single-module or hexagonal
+multi-module — resolved against the live code.quarkus.io data and recorded in a `quarkus-stack.yml` manifest.
+
+[TIP]
+====
+`iru-setup-quarkus-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape as the other
+`*-repository` orchestrators — `iru-setup-quarkus-service` (scaffold) → `iru-setup-antora` →
+`iru-setup-java-gitignore` → `iru-setup-quarkus-github-workflows` → `iru-setup-changelog` → `iru-setup-readme` —
+each run via `iru-isolated-skill-executor`. Work inside the resulting service is then implemented through the
+xref:index.adoc#group-quarkus[Quarkus Development Tooling] pair.
+====
+
+* xref:skills/iru-setup-quarkus-repository.adoc[`iru-setup-quarkus-repository`] — orchestrator: one-pass Quarkus
+  bootstrap chaining service scaffold, Antora, gitignore, workflows, changelog, and README.
+* xref:skills/iru-setup-quarkus-service.adoc[`iru-setup-quarkus-service`] — interviews once, writes
+  `quarkus-stack.yml`, scaffolds the service and applies the catalog's conventions (JaCoCo, quality tooling, a
+  tested sample), then verifies the gates.
+* xref:skills/iru-setup-quarkus-github-workflows.adoc[`iru-setup-quarkus-github-workflows`] — writes `build.yml`,
+  `release.yml` (container image), `sync.yml`, `security.yml`, and Dependabot for the service.
+
 [[group-typescript-bootstrap]]
 === TypeScript/Node Bootstrap
 
-Scaffolding (or updating) an npm/TypeScript repository end to end — library or one of four app flavors (React,
-Angular, React Native, Ionic) — so it starts out matching this catalog's conventions the same way a new Java
+Scaffolding (or updating) an npm/TypeScript repository end to end — library or one of six app flavors (React,
+Next.js, Angular, NestJS, React Native, Ionic) — so it starts out matching this catalog's conventions the same way a new Java
 library does.
 
 [TIP]
@@ -780,8 +948,8 @@ library does.
 `iru-setup-typescript-repository` is the single entry point, reached either directly or via
 xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-step shape the four
 `*-repository` orchestrators in this catalog follow: scaffold (whichever of `iru-setup-typescript-library`,
-`iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, or `iru-setup-ionic-app` matches
-the chosen flavor) → `iru-setup-antora` → `iru-setup-typescript-gitignore` →
+`iru-setup-react-web`, `iru-setup-nextjs-web`, `iru-setup-angular-web`, `iru-setup-nestjs-app`,
+`iru-setup-react-native-app`, or `iru-setup-ionic-app` matches the chosen flavor) → `iru-setup-antora` → `iru-setup-typescript-gitignore` →
 `iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`. It accepts the
 shared `args` vocabulary the front door and the orchestrators use — `open-source: yes|no`, `publish: yes|no`,
 `sonar: cloud|self-hosted|none`, and `mode: new|existing` — so a value collected once upstream never needs
@@ -790,11 +958,16 @@ repository to fill a single gap.
 ====
 
 * xref:skills/iru-setup-typescript-repository.adoc[`iru-setup-typescript-repository`] — orchestrator: bootstraps
-  an npm/TypeScript repository (library, React, Angular, React Native, or Ionic) end to end in one pass.
+  an npm/TypeScript repository (library, React, Next.js, Angular, NestJS, React Native, or Ionic) end to end in one
+  pass.
 * xref:skills/iru-setup-typescript-library.adoc[`iru-setup-typescript-library`] — scaffolds `package.json`,
   tsconfig, Vitest, ESLint, TypeDoc, and a src/test skeleton for a new npm/TypeScript library.
 * xref:skills/iru-setup-react-web.adoc[`iru-setup-react-web`] — scaffolds a React + Vite + TypeScript web app
   with Vitest, ESLint/Oxlint, Prettier, Stylelint, Playwright, and Storybook.
+* xref:skills/iru-setup-nextjs-web.adoc[`iru-setup-nextjs-web`] — scaffolds a Next.js app via `create-next-app`
+  with Vitest, ESLint/Prettier, Playwright, TypeDoc, a tested sample feature, and static-export or Docker output.
+* xref:skills/iru-setup-nestjs-app.adoc[`iru-setup-nestjs-app`] — scaffolds or updates a NestJS service via the
+  Nest CLI, adding validated config, health checks, an optional ORM with Testcontainers, a Dockerfile, and Sonar.
 * xref:skills/iru-setup-angular-web.adoc[`iru-setup-angular-web`] — scaffolds an Angular app via `ng new`, then
   adds Vitest coverage, ESLint, Prettier, Stylelint, Playwright, Compodoc, and Sonar.
 * xref:skills/iru-setup-react-native-app.adoc[`iru-setup-react-native-app`] — scaffolds a new Expo-managed React
@@ -802,9 +975,38 @@ repository to fill a single gap.
 * xref:skills/iru-setup-ionic-app.adoc[`iru-setup-ionic-app`] — scaffolds a new Ionic Angular/React app via the
   Ionic CLI, then adds Vitest, ESLint/Prettier, Playwright, Maestro, and Sonar.
 * xref:skills/iru-setup-typescript-github-workflows.adoc[`iru-setup-typescript-github-workflows`] —
-  scaffolds build/release/sync/security GitHub Actions workflows across all five flavors.
+  scaffolds build/release/sync/security GitHub Actions workflows across all seven flavors.
 * xref:skills/iru-setup-typescript-gitignore.adoc[`iru-setup-typescript-gitignore`] — creates or refreshes the
   root `.gitignore`, diffing before overwrite.
+
+[[group-php-bootstrap]]
+=== PHP Bootstrap
+
+Scaffolding (or updating) a PHP/Composer repository end to end — a Laravel application, a WordPress plugin or
+block theme, or a PrestaShop module.
+
+[TIP]
+====
+`iru-setup-php-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It resolves the flavor, project identity, PHP floor, and
+pipeline parameters once, then chains the same six-step shape as the other `*-repository` orchestrators:
+scaffold (`iru-setup-php-laravel`, `iru-setup-php-wordpress`, or `iru-setup-php-prestashop`) →
+`iru-setup-antora` → `iru-setup-php-gitignore` → `iru-setup-php-github-workflows` → `iru-setup-changelog` →
+`iru-setup-readme`, each via `iru-isolated-skill-executor`. Each member also runs standalone.
+====
+
+* xref:skills/iru-setup-php-repository.adoc[`iru-setup-php-repository`] — orchestrator: bootstraps a Laravel,
+  WordPress plugin/theme, or PrestaShop module repository end to end in one pass.
+* xref:skills/iru-setup-php-laravel.adoc[`iru-setup-php-laravel`] — creates (or updates) a Laravel app and adds
+  Pest, Pint, Larastan, composer scripts, and optional Sail/Boost/Dockerfile.
+* xref:skills/iru-setup-php-wordpress.adoc[`iru-setup-php-wordpress`] — scaffolds a WordPress plugin (optionally
+  with blocks) or block theme with unit/integration tests, WPCS, PHPStan, and packaging config.
+* xref:skills/iru-setup-php-prestashop.adoc[`iru-setup-php-prestashop`] — scaffolds or updates a PrestaShop 8/9
+  module with a Symfony config page, tests, PHPStan, and a packaging script.
+* xref:skills/iru-setup-php-gitignore.adoc[`iru-setup-php-gitignore`] — creates or merges the root `.gitignore`
+  with Laravel/WordPress/PrestaShop sections, never ignoring `composer.lock`.
+* xref:skills/iru-setup-php-github-workflows.adoc[`iru-setup-php-github-workflows`] — build, release, sync,
+  security, and Dependabot workflows (PHP version matrix, Psalm taint analysis, Pages).
 
 [[group-android-bootstrap]]
 === Android Bootstrap
@@ -907,9 +1109,11 @@ time. `iru-issue` is the single entry point for the full pipeline; `iru-explore`
 individually (`/iru-explore`, `/iru-plan`) ahead of, or instead of, the full `/iru-issue` flow. `iru-code` itself doesn't
 implement anything directly — it dispatches each of `iru-plan`'s dependency-aware task groups, in order, to
 `iru-code-one-task-group`, which resolves each task's language and delegates to whichever
-xref:index.adoc#group-java[Java], xref:index.adoc#group-dotnet[.NET], xref:index.adoc#group-typescript[
-TypeScript], xref:index.adoc#group-android[Android], xref:index.adoc#group-swift[Swift], or
-xref:index.adoc#group-database[Database] Development Tooling group skill matches, and brackets the whole run
+xref:index.adoc#group-java[Java], xref:index.adoc#group-springboot[Spring Boot] (Java or Kotlin),
+xref:index.adoc#group-quarkus[Quarkus], xref:index.adoc#group-php[PHP], xref:index.adoc#group-dotnet[.NET],
+xref:index.adoc#group-typescript[TypeScript] (incl. NestJS and Next.js), xref:index.adoc#group-android[Android],
+xref:index.adoc#group-swift[Swift], or xref:index.adoc#group-database[Database] Development Tooling group skill
+matches, and brackets the whole run
 with quality and security baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
 ====
 
@@ -926,8 +1130,14 @@ with quality and security baselines (xref:index.adoc#group-maintenance[Repositor
 * xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`] — implements one task group, resolving each
   task's language and dispatching to its matching `<key>-code-one-task-group` skill (e.g.
   xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
+  xref:skills/iru-java-springboot-code-one-task-group.adoc[`iru-java-springboot-code-one-task-group`],
+  xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[`iru-kotlin-springboot-code-one-task-group`],
+  xref:skills/iru-quarkus-code-one-task-group.adoc[`iru-quarkus-code-one-task-group`],
+  xref:skills/iru-php-code-one-task-group.adoc[`iru-php-code-one-task-group`],
   xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
   xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
+  xref:skills/iru-nestjs-code-one-task-group.adoc[`iru-nestjs-code-one-task-group`],
+  xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`],
   xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
   xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`],
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`]) — or a best-effort direct
@@ -960,20 +1170,42 @@ of them yourself during the xref:index.adoc#group-cycle[Issue-to-PR Development 
   narrow visibility, exception and null conventions, full Javadoc, and JUnit test conventions — read by
   progressive disclosure so a one-method change doesn't pay for all of it. The rules are the default for new code:
   a file that consistently does otherwise wins, and the divergence is reported instead of silently converted.
-* xref:skills/iru-java-test.adoc[`iru-java-test`] — runs the JUnit suite via Surefire, scoped to a
-  class/method/package/tag selector.
-* xref:skills/iru-java-coverage.adoc[`iru-java-coverage`] — runs JaCoCo and reports the exact measured coverage
-  percentage for target class(es).
-* xref:skills/iru-java-code-quality.adoc[`iru-java-code-quality`] — runs Checkstyle/PMD/SpotBugs and summarizes every
-  issue found, grouped by tool.
+* xref:skills/iru-java-test.adoc[`iru-java-test`] — runs the JUnit suite via Maven Surefire or Gradle `test`
+  (Java or Kotlin sources, incl. Spring Boot and Quarkus), scoped to a class/method/package/tag selector.
+* xref:skills/iru-java-coverage.adoc[`iru-java-coverage`] — runs JaCoCo (Maven, Gradle, or `quarkus-jacoco`) or
+  Kover and reports the exact measured coverage percentage for target class(es).
+* xref:skills/iru-java-code-quality.adoc[`iru-java-code-quality`] — runs Checkstyle/PMD/SpotBugs via Maven or Gradle
+  and summarizes every issue found, grouped by tool.
 * xref:skills/iru-java-generate-all-tests.adoc[`iru-java-generate-all-tests`] — finds every class with no test class or
   under 80% line coverage (via `iru-java-coverage`) and generates/extends tests until it clears the bar, across the
   whole codebase in one pass.
 * xref:skills/iru-java-javadoc.adoc[`iru-java-javadoc`] — audits and completes Javadoc coverage for given classes,
   then verifies it builds cleanly.
-* xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`] — sets a Maven project's version to an exact
-  value in `pom.xml`, single-module or reactor-wide, with optional README/Antora sync; called by
-  xref:skills/iru-release.adoc[`iru-release`] when the detected ecosystem is Java/Maven.
+* xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`] — sets a JVM project's version to an exact
+  value in `pom.xml` (single-module or reactor-wide) or the Gradle version location, with optional README/Antora
+  sync; called by xref:skills/iru-release.adoc[`iru-release`] when the detected ecosystem is Java/Kotlin on Maven or
+  Gradle.
+
+[[group-kotlin]]
+=== Kotlin Development Tooling
+
+The Kotlin-specific point-in-time checks for JVM (non-Android) Kotlin code — static analysis and KDoc — that
+complement the build-tool-agnostic xref:index.adoc#group-java[Java Development Tooling] test/coverage skills
+for Kotlin Spring Boot services, Quarkus services, and plain Kotlin libraries.
+
+[TIP]
+====
+Reached mostly as gates: the xref:index.adoc#group-springboot[`iru-kotlin-springboot-code-one-task-group`] and
+xref:index.adoc#group-quarkus[`iru-quarkus-code-one-task-group`] skills run both of them through the
+`iru-gate-runner` agent when a bucket touches Kotlin sources, and `iru-code` uses `iru-kotlin-code-quality` for its
+project-wide quality baseline on Kotlin plans. Run either directly any time while iterating. Android Kotlin code
+uses xref:index.adoc#group-android[Android Development Tooling] instead.
+====
+
+* xref:skills/iru-kotlin-code-quality.adoc[`iru-kotlin-code-quality`] — runs detekt and ktlint (Gradle, Maven, or
+  Spotless) and reports issues by tool and rule id, optionally diffed against a baseline.
+* xref:skills/iru-kotlin-kdoc.adoc[`iru-kotlin-kdoc`] — audits Kotlin classes/packages for KDoc completeness,
+  fills gaps, wires Dokka module docs, and verifies the Dokka build.
 
 [[group-typescript]]
 === TypeScript Development Tooling
@@ -988,8 +1220,10 @@ version-bump skill for the release pipeline.
 Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every task-group bucket
 tagged `typescript` to `iru-typescript-code-one-task-group`, which captures one quality baseline for the
 bucket, runs `iru-typescript-code-one-task` once per task (in parallel when the group allows it), then
-validates the whole bucket once via the test/coverage/quality/doc skills below. Reach for those directly any
-time while iterating day to day; `iru-code` rarely needs them invoked directly during the
+validates the whole bucket once via the test/coverage/quality/doc skills below. Buckets tagged `nestjs` or
+`nextjs` go to their own framework-specific pairs instead, which reuse the same TypeScript gate skills but add a
+`nest build`/`next build` stage and a lock-serialized e2e stage (`.integration-test.lock`). Reach for the gate
+skills directly any time while iterating day to day; `iru-code` rarely needs them invoked directly during the
 xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
 
@@ -999,6 +1233,14 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 * xref:skills/iru-typescript-code-one-task.adoc[`iru-typescript-code-one-task`] — implements a single task's code
   and tests only, routing to the detected framework's reference file; called once per task by
   `iru-typescript-code-one-task-group`.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[`iru-nestjs-code-one-task-group`] — implements a NestJS bucket
+  and validates it once: unit-only coverage, `tsc` and `nest build`, and an e2e stage behind a repo-wide lock.
+* xref:skills/iru-nestjs-code-one-task.adoc[`iru-nestjs-code-one-task`] — implements a single NestJS task with its
+  unit specs (e2e specs written but not run); called once per task by `iru-nestjs-code-one-task-group`.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`] — implements a Next.js bucket
+  and validates it once, including a `next build` route-table comparison and lock-serialized Playwright e2e.
+* xref:skills/iru-nextjs-code-one-task.adoc[`iru-nextjs-code-one-task`] — implements a single Next.js task for the
+  detected version/router/caching profile; called once per task by `iru-nextjs-code-one-task-group`.
 * xref:skills/iru-typescript-test.adoc[`iru-typescript-test`] — runs the unit test suite via Vitest, Jest, or
   `ng test`, scoped by file, directory, or name pattern.
 * xref:skills/iru-typescript-coverage.adoc[`iru-typescript-coverage`] — runs Vitest/Jest/Angular coverage and
@@ -1094,8 +1336,8 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 [[group-springboot]]
 === Spring Boot Development Tooling
 
-The `java-springboot` language/framework backend for the `iru-code` pipeline — the pair of skills that implement
-plan tasks in a DDD/hexagonal Spring Boot service, as opposed to the plain Java/Maven backend above — plus the
+The `java-springboot` and `kotlin-springboot` language/framework backends for the `iru-code` pipeline — the pairs of
+skills that implement plan tasks in a DDD/hexagonal Spring Boot service (in Java or Kotlin), as opposed to the plain Java/Maven backend above — plus the
 standalone Spring Boot checks a person runs on demand against such a service. Registered by
 convention — xref:skills/iru-plan.adoc[] derives the `java-springboot` key from the `*-code-one-task` directory
 name, and xref:skills/iru-code-one-task-group.adoc[] dispatches that key's tasks to the group skill — so no
@@ -1128,11 +1370,68 @@ through `iru-code`.
   and module boundaries, DDD tactical patterns, SOLID, the distributed patterns (CQRS, transactional outbox, saga,
   eventual consistency, listen-to-yourself), and this catalog's Java code style — read by progressive disclosure so
   a small task doesn't pay for all of it.
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[`iru-kotlin-springboot-code-one-task-group`] — the
+  `kotlin-springboot` counterpart of the group skill above, on Maven or Gradle: gates with
+  `iru-kotlin-code-quality`/`iru-kotlin-kdoc` (plus the Java gates for any Java sources), keeps the unit-only 80%
+  coverage gate, and runs the Testcontainers integration stage behind the repo-wide `.integration-test.lock`.
+* xref:skills/iru-kotlin-springboot-code-one-task.adoc[`iru-kotlin-springboot-code-one-task`] — implements a single
+  Kotlin Spring Boot task with unit tests only, first verifying the Kotlin/Spring build plumbing (all-open/no-arg).
 * xref:skills/iru-java-springboot-performance-tests.adoc[`iru-java-springboot-performance-tests`] — generates an
   Apache JMeter suite under `performance/` covering only the happy paths of the service's main use cases, in three
   scenarios (low flat concurrency, high flat concurrency, and a symmetric scale-up/scale-down ramp). Unlike the two
   skills above it is never reached through `iru-code`: it is run by a person, after real endpoints exist, and it
   deliberately sits outside the Maven reactor so `mvn verify` never triggers a load test.
+
+[[group-quarkus]]
+=== Quarkus Development Tooling
+
+The `quarkus` language/framework backend for the `iru-code` pipeline — implementing plan tasks in a Quarkus
+service (Java or Kotlin, Maven or Gradle), created by xref:index.adoc#group-quarkus-bootstrap[Quarkus Service
+Bootstrap].
+
+[TIP]
+====
+`iru-code-one-task-group` dispatches every bucket tagged `quarkus` to `iru-quarkus-code-one-task-group`, which
+runs `iru-quarkus-code-one-task` once per task and validates the bucket once with the shared JVM gates
+(`iru-java-test`, `iru-java-coverage`, `iru-java-code-quality`/`iru-java-javadoc` for Java sources,
+`iru-kotlin-code-quality`/`iru-kotlin-kdoc` for Kotlin). The 80% coverage gate counts only the container-free
+unit stage; the Dev Services container stage runs last, serialized behind `.integration-test.lock`.
+====
+
+* xref:skills/iru-quarkus-code-one-task-group.adoc[`iru-quarkus-code-one-task-group`] — implements a Quarkus bucket
+  and validates it once, with unit-stage coverage and a lock-serialized Dev Services stage.
+* xref:skills/iru-quarkus-code-one-task.adoc[`iru-quarkus-code-one-task`] — implements a single Quarkus task
+  (CDI/Panache/REST rules from its own `reference/` library), running only container-free test levels.
+
+[[group-php]]
+=== PHP Development Tooling
+
+The PHP/Composer counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing plan tasks in
+a Laravel app, WordPress plugin/theme, PrestaShop module, or plain Composer library, plus the point-in-time checks
+(tests, coverage, static analysis/style, PHPDoc) and a version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every bucket tagged `php`
+to `iru-php-code-one-task-group`, which captures one quality baseline, runs `iru-php-code-one-task` once per task
+(in parallel when allowed), and validates the bucket once via the skills below — with the fast-test 80% coverage
+gate and the integration stage (e.g. `wp-env`) serialized behind `.integration-test.lock`.
+====
+
+* xref:skills/iru-php-code-one-task-group.adoc[`iru-php-code-one-task-group`] — implements a PHP bucket and
+  validates it once: license headers, PHPDoc, fast tests, coverage, a quality diff, and a locked integration run.
+* xref:skills/iru-php-code-one-task.adoc[`iru-php-code-one-task`] — detects the PHP flavor and implements a single
+  task with its fast tests; called once per task by `iru-php-code-one-task-group`.
+* xref:skills/iru-php-test.adoc[`iru-php-test`] — runs Pest, PHPUnit, or artisan tests on the host, Sail, ddev, or
+  wp-env and reports a JUnit-based summary.
+* xref:skills/iru-php-coverage.adoc[`iru-php-coverage`] — measures coverage with PCOV or Xdebug and reports exact
+  per-class percentages from Clover XML.
+* xref:skills/iru-php-code-quality.adoc[`iru-php-code-quality`] — runs PHPStan/Psalm, Pint/PHP-CS-Fixer/PHPCS, and
+  Rector as wired, reporting issues by tool and rule id.
+* xref:skills/iru-php-phpdoc.adoc[`iru-php-phpdoc`] — audits and fills PHPDoc per flavor conventions, verifying
+  with PHPStan/phpcs and phpDocumentor.
+* xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`] — sets a PHP project's version in every
+  Laravel/WordPress/PrestaShop location; called by `iru-release` when the detected ecosystem is PHP.
 
 [[group-dotnet]]
 === .NET Development Tooling
@@ -1223,8 +1522,9 @@ releases, keeping docs from drifting after unrelated code changes, periodically 
 and scanning for accidentally committed secrets.
 ====
 
-* xref:skills/iru-release.adoc[`iru-release`] — cuts a release branch, bumps versions, drafts release
-  notes/changelog, and opens the release PR.
+* xref:skills/iru-release.adoc[`iru-release`] — cuts a release branch, bumps versions via the ecosystem's
+  `iru-<key>-bump-version` skill (Java/Kotlin, TypeScript, Android, Swift, PHP), drafts release notes/changelog, and
+  opens the release PR.
 * xref:skills/iru-update-docs.adoc[`iru-update-docs`] — brings the Antora documentation module up to date with
   changes already made to the code.
 * xref:skills/iru-build-docs.adoc[`iru-build-docs`] — builds the existing Antora documentation site as-is (no content
@@ -1313,24 +1613,20 @@ how agents differ from skills in how they're triggered.
 
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs a single verification/quality-gate skill and reports back
   only a compact summary, optionally diffed against a baseline. Used throughout `iru-code`, `iru-code-one-task-group`,
-  `iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`,
-  `iru-android-code-one-task-group`, and `iru-swift-code-one-task-group`, plus the `generate-all-tests` skills for
-  every language and several of the TypeScript/Android/Swift bootstrap skills (verifying a scaffold actually
-  builds).
+  and every `<key>-code-one-task-group` skill (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, .NET, TypeScript,
+  NestJS, Next.js, Android, Swift), plus the `generate-all-tests` skills for every language and several bootstrap
+  skills (verifying a scaffold or generated workflow actually builds).
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs one named skill end to end in a
   fresh context so the caller can keep running afterward. Used by xref:skills/iru-issue.adoc[`iru-issue`] to delegate the
   entire `iru-code` run for a ticket, by xref:skills/iru-code.adoc[`iru-code`] itself to delegate each task group to
-  `iru-code-one-task-group`, by the `java`/`dotnet`/`typescript`/`android`/`swift` `*-code-one-task-group` skills
-  (xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
-  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
-  xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
-  xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
-  xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`]) to delegate each task in a bucket
-  to its matching `<key>-code-one-task` skill, and by
+  `iru-code-one-task-group`, by every parallelizable `<key>-code-one-task-group` skill to delegate each task in a
+  bucket to its matching `<key>-code-one-task` skill, and by
   xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] and every stack orchestrator
   (xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`],
   xref:skills/iru-setup-java-springboot.adoc[`iru-setup-java-springboot`],
+  xref:skills/iru-setup-quarkus-repository.adoc[`iru-setup-quarkus-repository`],
   xref:skills/iru-setup-typescript-repository.adoc[`iru-setup-typescript-repository`],
+  xref:skills/iru-setup-php-repository.adoc[`iru-setup-php-repository`],
   xref:skills/iru-setup-android-repository.adoc[`iru-setup-android-repository`],
   xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`]) to delegate each of the bootstrap
   skills it orchestrates.
@@ -1341,270 +1637,493 @@ how agents differ from skills in how they're triggered.
 
 == Dependency graph
 
-An edge means "invokes" (a solid line, via the `Skill` tool) or "spawns" (a dotted line, via the `Agent`
-tool). `code-review` is an external skill this catalog does not define — `iru-pr-review` uses it only when it
+An unlabeled edge means "invokes": a solid line when the caller runs the target directly via the `Skill` tool, a
+dotted line when it runs the target inside a sub-agent (`iru-gate-runner`, `iru-isolated-skill-executor`, or
+`general-purpose`). A dotted line labeled "spawns"/"uses" points at the agent type itself, via the `Agent` tool. `code-review` is an external skill this catalog does not define — `iru-pr-review` uses it only when it
 happens to be available in the current session.
 
 [mermaid]
 ....
 flowchart LR
-    subgraph Bootstrap["Repository Bootstrap"]
-        SETREPO["iru-setup-repository"]
-        SJLR["iru-setup-java-library-repository"]
-        SJL["iru-setup-java-library"]
-        AS["iru-setup-antora"]
-        SJG["iru-setup-java-gitignore"]
-        SJW["iru-setup-java-github-workflows"]
-        SC["iru-setup-changelog"]
-        SR["iru-setup-readme"]
+    subgraph GROUP_BOOTSTRAP["Repository Bootstrap"]
+        SETUP_ANTORA["iru-setup-antora"]
+        SETUP_CHANGELOG["iru-setup-changelog"]
+        SETUP_JAVA_GITHUB_WORKFLOWS["iru-setup-java-github-workflows"]
+        SETUP_JAVA_GITIGNORE["iru-setup-java-gitignore"]
+        SETUP_JAVA_LIBRARY["iru-setup-java-library"]
+        SETUP_JAVA_LIBRARY_REPOSITORY["iru-setup-java-library-repository"]
+        SETUP_README["iru-setup-readme"]
+        SETUP_REPOSITORY["iru-setup-repository"]
     end
 
-    subgraph SBoot["Spring Boot Service Bootstrap"]
-        SB["iru-setup-java-springboot"]
-        SBP["iru-setup-java-springboot-pom"]
-        SBM["iru-setup-java-springboot-modules"]
-        SBA["iru-setup-java-springboot-apis"]
-        SBH["iru-setup-java-springboot-hilla"]
-        SBT["iru-setup-java-springboot-testcontainers"]
-        SBPL["iru-setup-java-springboot-platform"]
-        SBW["iru-setup-java-springboot-github-workflows"]
-        SBD["iru-update-java-springboot-documentation"]
+    subgraph GROUP_SERVICE_BOOTSTRAP["Spring Boot Service Bootstrap"]
+        SETUP_JAVA_SPRINGBOOT["iru-setup-java-springboot"]
+        SETUP_JAVA_SPRINGBOOT_APIS["iru-setup-java-springboot-apis"]
+        SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS["iru-setup-java-springboot-github-workflows"]
+        SETUP_JAVA_SPRINGBOOT_HILLA["iru-setup-java-springboot-hilla"]
+        SETUP_JAVA_SPRINGBOOT_MODULES["iru-setup-java-springboot-modules"]
+        SETUP_JAVA_SPRINGBOOT_PLATFORM["iru-setup-java-springboot-platform"]
+        SETUP_JAVA_SPRINGBOOT_POM["iru-setup-java-springboot-pom"]
+        SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS["iru-setup-java-springboot-testcontainers"]
+        UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION["iru-update-java-springboot-documentation"]
     end
 
-    subgraph TSBoot["TypeScript/Node Bootstrap"]
-        TSR["iru-setup-typescript-repository"]
-        TSL["iru-setup-typescript-library"]
-        RW["iru-setup-react-web"]
-        AW["iru-setup-angular-web"]
-        RNA["iru-setup-react-native-app"]
-        ION["iru-setup-ionic-app"]
-        TSW["iru-setup-typescript-github-workflows"]
-        TSG["iru-setup-typescript-gitignore"]
+    subgraph GROUP_QUARKUS_BOOTSTRAP["Quarkus Service Bootstrap"]
+        SETUP_QUARKUS_GITHUB_WORKFLOWS["iru-setup-quarkus-github-workflows"]
+        SETUP_QUARKUS_REPOSITORY["iru-setup-quarkus-repository"]
+        SETUP_QUARKUS_SERVICE["iru-setup-quarkus-service"]
     end
 
-    subgraph AndBoot["Android Bootstrap"]
-        ANR["iru-setup-android-repository"]
-        ANL["iru-setup-android-library"]
-        ANA["iru-setup-android-app"]
-        ANW["iru-setup-android-github-workflows"]
-        ANG["iru-setup-android-gitignore"]
+    subgraph GROUP_TYPESCRIPT_BOOTSTRAP["TypeScript/Node Bootstrap"]
+        SETUP_ANGULAR_WEB["iru-setup-angular-web"]
+        SETUP_IONIC_APP["iru-setup-ionic-app"]
+        SETUP_NESTJS_APP["iru-setup-nestjs-app"]
+        SETUP_NEXTJS_WEB["iru-setup-nextjs-web"]
+        SETUP_REACT_NATIVE_APP["iru-setup-react-native-app"]
+        SETUP_REACT_WEB["iru-setup-react-web"]
+        SETUP_TYPESCRIPT_GITHUB_WORKFLOWS["iru-setup-typescript-github-workflows"]
+        SETUP_TYPESCRIPT_GITIGNORE["iru-setup-typescript-gitignore"]
+        SETUP_TYPESCRIPT_LIBRARY["iru-setup-typescript-library"]
+        SETUP_TYPESCRIPT_REPOSITORY["iru-setup-typescript-repository"]
     end
 
-    subgraph SwBoot["Swift/Apple Bootstrap"]
-        SWR["iru-setup-swift-repository"]
-        SWL["iru-setup-swift-library"]
-        APP["iru-setup-apple-app"]
-        SWW["iru-setup-swift-github-workflows"]
-        SWG["iru-setup-swift-gitignore"]
+    subgraph GROUP_PHP_BOOTSTRAP["PHP Bootstrap"]
+        SETUP_PHP_GITHUB_WORKFLOWS["iru-setup-php-github-workflows"]
+        SETUP_PHP_GITIGNORE["iru-setup-php-gitignore"]
+        SETUP_PHP_LARAVEL["iru-setup-php-laravel"]
+        SETUP_PHP_PRESTASHOP["iru-setup-php-prestashop"]
+        SETUP_PHP_REPOSITORY["iru-setup-php-repository"]
+        SETUP_PHP_WORDPRESS["iru-setup-php-wordpress"]
     end
 
-    subgraph Intake["Ticket Intake"]
-        CGI["iru-create-github-issue"]
-        CJT["iru-create-jira-ticket"]
-        CJCC["iru-jira-custom-context"]
+    subgraph GROUP_ANDROID_BOOTSTRAP["Android Bootstrap"]
+        SETUP_ANDROID_APP["iru-setup-android-app"]
+        SETUP_ANDROID_GITHUB_WORKFLOWS["iru-setup-android-github-workflows"]
+        SETUP_ANDROID_GITIGNORE["iru-setup-android-gitignore"]
+        SETUP_ANDROID_LIBRARY["iru-setup-android-library"]
+        SETUP_ANDROID_REPOSITORY["iru-setup-android-repository"]
     end
 
-    subgraph Cycle["Issue-to-PR Development Cycle"]
-        ISSUE["iru-issue"]
-        EXPLORE["iru-explore"]
-        PLAN["iru-plan"]
+    subgraph GROUP_SWIFT_BOOTSTRAP["Swift/Apple Bootstrap"]
+        SETUP_APPLE_APP["iru-setup-apple-app"]
+        SETUP_SWIFT_GITHUB_WORKFLOWS["iru-setup-swift-github-workflows"]
+        SETUP_SWIFT_GITIGNORE["iru-setup-swift-gitignore"]
+        SETUP_SWIFT_LIBRARY["iru-setup-swift-library"]
+        SETUP_SWIFT_REPOSITORY["iru-setup-swift-repository"]
+    end
+
+    subgraph GROUP_INTAKE["Ticket Intake"]
+        CREATE_GITHUB_ISSUE["iru-create-github-issue"]
+        CREATE_JIRA_TICKET["iru-create-jira-ticket"]
+        JIRA_CUSTOM_CONTEXT["iru-jira-custom-context"]
+    end
+
+    subgraph GROUP_CYCLE["Issue-to-PR Development Cycle"]
         CODE["iru-code"]
-        COTG["iru-code-one-task-group"]
+        CODE_ONE_TASK_GROUP["iru-code-one-task-group"]
+        EXPLORE["iru-explore"]
+        ISSUE["iru-issue"]
+        PLAN["iru-plan"]
     end
 
-    subgraph Java["Java Development Tooling"]
-        JCOTG["iru-java-code-one-task-group"]
-        JCOT["iru-java-code-one-task"]
-        JT["iru-java-test"]
-        JC["iru-java-coverage"]
-        JCQ["iru-java-code-quality"]
-        JJ["iru-java-javadoc"]
-        JGAT["iru-java-generate-all-tests"]
+    subgraph GROUP_JAVA["Java Development Tooling"]
+        JAVA_BUMP_VERSION["iru-java-bump-version"]
+        JAVA_CODE_ONE_TASK["iru-java-code-one-task"]
+        JAVA_CODE_ONE_TASK_GROUP["iru-java-code-one-task-group"]
+        JAVA_CODE_QUALITY["iru-java-code-quality"]
+        JAVA_COVERAGE["iru-java-coverage"]
+        JAVA_GENERATE_ALL_TESTS["iru-java-generate-all-tests"]
+        JAVA_JAVADOC["iru-java-javadoc"]
+        JAVA_TEST["iru-java-test"]
     end
 
-    subgraph SBootDev["Spring Boot Development Tooling"]
-        SBCOTG["iru-java-springboot-code-one-task-group"]
-        SBCOT["iru-java-springboot-code-one-task"]
-        SBPERF["iru-java-springboot-performance-tests"]
+    subgraph GROUP_KOTLIN["Kotlin Development Tooling"]
+        KOTLIN_CODE_QUALITY["iru-kotlin-code-quality"]
+        KOTLIN_KDOC["iru-kotlin-kdoc"]
     end
 
-    subgraph Dotnet[".NET Development Tooling"]
-        DCOTG["iru-dotnet-code-one-task-group"]
-        DCOT["iru-dotnet-code-one-task"]
-        DT["iru-dotnet-test"]
-        DC["iru-dotnet-coverage"]
-        DCQ["iru-dotnet-code-quality"]
-        DDF["iru-dotnet-docfx"]
-        DGAT["iru-dotnet-generate-all-tests"]
+    subgraph GROUP_TYPESCRIPT["TypeScript Development Tooling"]
+        NESTJS_CODE_ONE_TASK["iru-nestjs-code-one-task"]
+        NESTJS_CODE_ONE_TASK_GROUP["iru-nestjs-code-one-task-group"]
+        NEXTJS_CODE_ONE_TASK["iru-nextjs-code-one-task"]
+        NEXTJS_CODE_ONE_TASK_GROUP["iru-nextjs-code-one-task-group"]
+        TYPESCRIPT_BUMP_VERSION["iru-typescript-bump-version"]
+        TYPESCRIPT_CODE_ONE_TASK["iru-typescript-code-one-task"]
+        TYPESCRIPT_CODE_ONE_TASK_GROUP["iru-typescript-code-one-task-group"]
+        TYPESCRIPT_CODE_QUALITY["iru-typescript-code-quality"]
+        TYPESCRIPT_COVERAGE["iru-typescript-coverage"]
+        TYPESCRIPT_GENERATE_ALL_TESTS["iru-typescript-generate-all-tests"]
+        TYPESCRIPT_TEST["iru-typescript-test"]
+        TYPESCRIPT_TSDOC["iru-typescript-tsdoc"]
     end
 
-    subgraph Database["Database Development Tooling"]
-        DBCOTG["iru-database-code-one-task-group"]
-        DBCOT["iru-database-code-one-task"]
+    subgraph GROUP_ANDROID["Android Development Tooling"]
+        ANDROID_BUMP_VERSION["iru-android-bump-version"]
+        ANDROID_CODE_ONE_TASK["iru-android-code-one-task"]
+        ANDROID_CODE_ONE_TASK_GROUP["iru-android-code-one-task-group"]
+        ANDROID_CODE_QUALITY["iru-android-code-quality"]
+        ANDROID_COVERAGE["iru-android-coverage"]
+        ANDROID_DOKKA["iru-android-dokka"]
+        ANDROID_GENERATE_ALL_TESTS["iru-android-generate-all-tests"]
+        ANDROID_TEST["iru-android-test"]
     end
 
-    subgraph PRLife["Pull Request Lifecycle"]
-        PRD["iru-pr-description"]
-        PRR["iru-pr-review"]
+    subgraph GROUP_SWIFT["Swift Development Tooling"]
+        SWIFT_BUMP_VERSION["iru-swift-bump-version"]
+        SWIFT_CODE_ONE_TASK["iru-swift-code-one-task"]
+        SWIFT_CODE_ONE_TASK_GROUP["iru-swift-code-one-task-group"]
+        SWIFT_CODE_QUALITY["iru-swift-code-quality"]
+        SWIFT_COVERAGE["iru-swift-coverage"]
+        SWIFT_DOCC["iru-swift-docc"]
+        SWIFT_GENERATE_ALL_TESTS["iru-swift-generate-all-tests"]
+        SWIFT_TEST["iru-swift-test"]
     end
 
-    subgraph Maintenance["Repository Maintenance"]
-        REL["iru-release"]
-        UD["iru-update-docs"]
-        BD["iru-build-docs"]
-        CL["iru-check-license"]
-        CSEC["iru-check-security"]
-        JBV["iru-java-bump-version"]
-        TBV["iru-typescript-bump-version"]
-        ABV["iru-android-bump-version"]
-        SWBV["iru-swift-bump-version"]
+    subgraph GROUP_SPRINGBOOT["Spring Boot Development Tooling"]
+        JAVA_SPRINGBOOT_CODE_ONE_TASK["iru-java-springboot-code-one-task"]
+        JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-java-springboot-code-one-task-group"]
+        JAVA_SPRINGBOOT_PERFORMANCE_TESTS["iru-java-springboot-performance-tests"]
+        KOTLIN_SPRINGBOOT_CODE_ONE_TASK["iru-kotlin-springboot-code-one-task"]
+        KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-kotlin-springboot-code-one-task-group"]
     end
 
-    subgraph Tooling["Catalog Tooling"]
-        GSD["iru-generate-skill-docs"]
+    subgraph GROUP_QUARKUS["Quarkus Development Tooling"]
+        QUARKUS_CODE_ONE_TASK["iru-quarkus-code-one-task"]
+        QUARKUS_CODE_ONE_TASK_GROUP["iru-quarkus-code-one-task-group"]
     end
 
-    subgraph Knowledge["Knowledge Base Management"]
-        KS["iru-knowledge-setup"]
-        KPI["iru-knowledge-process-inbox"]
-        KB["iru-knowledge-briefing"]
-        KC["iru-knowledge-complete"]
-        KCP["iru-knowledge-compact"]
-        KTI["iru-knowledge-to-issue"]
-        KTJ["iru-knowledge-to-jira"]
+    subgraph GROUP_PHP["PHP Development Tooling"]
+        PHP_BUMP_VERSION["iru-php-bump-version"]
+        PHP_CODE_ONE_TASK["iru-php-code-one-task"]
+        PHP_CODE_ONE_TASK_GROUP["iru-php-code-one-task-group"]
+        PHP_CODE_QUALITY["iru-php-code-quality"]
+        PHP_COVERAGE["iru-php-coverage"]
+        PHP_PHPDOC["iru-php-phpdoc"]
+        PHP_TEST["iru-php-test"]
     end
 
-    SJLR -.-> SJL
-    SJLR -.-> AS
-    SJLR -.-> SJG
-    SJLR -.-> SJW
-    SJLR -.-> SC
-    SJLR -.-> SR
+    subgraph GROUP_DOTNET[".NET Development Tooling"]
+        DOTNET_CODE_ONE_TASK["iru-dotnet-code-one-task"]
+        DOTNET_CODE_ONE_TASK_GROUP["iru-dotnet-code-one-task-group"]
+        DOTNET_CODE_QUALITY["iru-dotnet-code-quality"]
+        DOTNET_COVERAGE["iru-dotnet-coverage"]
+        DOTNET_DOCFX["iru-dotnet-docfx"]
+        DOTNET_GENERATE_ALL_TESTS["iru-dotnet-generate-all-tests"]
+        DOTNET_TEST["iru-dotnet-test"]
+    end
 
-    SB -.-> SBP
-    SB -.-> SBM
-    SB -.-> SBA
-    SB -.-> SBT
-    SB -.-> SBPL
-    SB -.-> SBW
-    SB -.-> SBD
-    SB --> SJG
-    SB --> SC
-    SB --> SR
-    SBD -.->|only if no Antora module yet| AS
+    subgraph GROUP_DATABASE["Database Development Tooling"]
+        DATABASE_CODE_ONE_TASK["iru-database-code-one-task"]
+        DATABASE_CODE_ONE_TASK_GROUP["iru-database-code-one-task-group"]
+    end
 
-    CGI --> EXPLORE
-    CJT --> EXPLORE
-    CJT --> CJCC
+    subgraph GROUP_PR["Pull Request Lifecycle"]
+        PR_DESCRIPTION["iru-pr-description"]
+        PR_REVIEW["iru-pr-review"]
+    end
 
+    subgraph GROUP_MAINTENANCE["Repository Maintenance"]
+        BUILD_DOCS["iru-build-docs"]
+        CHECK_LICENSE["iru-check-license"]
+        CHECK_SECURITY["iru-check-security"]
+        RELEASE["iru-release"]
+        UPDATE_DOCS["iru-update-docs"]
+    end
+
+    subgraph GROUP_KNOWLEDGE["Knowledge Base Management"]
+        KNOWLEDGE_BRIEFING["iru-knowledge-briefing"]
+        KNOWLEDGE_COMPACT["iru-knowledge-compact"]
+        KNOWLEDGE_COMPLETE["iru-knowledge-complete"]
+        KNOWLEDGE_PROCESS_INBOX["iru-knowledge-process-inbox"]
+        KNOWLEDGE_SETUP["iru-knowledge-setup"]
+        KNOWLEDGE_TO_ISSUE["iru-knowledge-to-issue"]
+        KNOWLEDGE_TO_JIRA["iru-knowledge-to-jira"]
+    end
+
+    subgraph GROUP_TOOLING["Catalog Tooling"]
+        GENERATE_SKILL_DOCS["iru-generate-skill-docs"]
+    end
+
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_ONE_TASK
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_QUALITY
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_COVERAGE
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_DOKKA
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_TEST
+    ANDROID_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    ANDROID_GENERATE_ALL_TESTS -.-> ANDROID_COVERAGE
+    ANDROID_GENERATE_ALL_TESTS -.-> ANDROID_TEST
+    BUILD_DOCS --> SETUP_ANTORA
+    CODE -.-> ANDROID_CODE_QUALITY
+    CODE -.-> CHECK_SECURITY
+    CODE -.-> CODE_ONE_TASK_GROUP
+    CODE --> CREATE_JIRA_TICKET
+    CODE -.-> DOTNET_CODE_QUALITY
+    CODE -.-> JAVA_CODE_QUALITY
+    CODE -.-> KOTLIN_CODE_QUALITY
+    CODE -.-> PHP_CODE_QUALITY
+    CODE -.-> SWIFT_CODE_QUALITY
+    CODE -.-> TYPESCRIPT_CODE_QUALITY
+    CODE --> UPDATE_DOCS
+    CODE_ONE_TASK_GROUP --> ANDROID_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    CODE_ONE_TASK_GROUP --> DATABASE_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> DOTNET_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> JAVA_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> NESTJS_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> NEXTJS_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> PHP_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> QUARKUS_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> SWIFT_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> TYPESCRIPT_CODE_ONE_TASK_GROUP
+    CREATE_GITHUB_ISSUE --> EXPLORE
+    CREATE_JIRA_TICKET --> EXPLORE
+    CREATE_JIRA_TICKET --> JIRA_CUSTOM_CONTEXT
+    DATABASE_CODE_ONE_TASK --> EXPLORE
+    DATABASE_CODE_ONE_TASK_GROUP --> DATABASE_CODE_ONE_TASK
+    DOTNET_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_ONE_TASK
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_QUALITY
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_COVERAGE
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_DOCFX
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_TEST
+    DOTNET_GENERATE_ALL_TESTS -.-> DOTNET_COVERAGE
+    DOTNET_GENERATE_ALL_TESTS -.-> DOTNET_TEST
+    ISSUE -.-> CODE
     ISSUE --> EXPLORE
     ISSUE --> PLAN
-    ISSUE -.-> CODE
-    ISSUE --> PRD
-    ISSUE --> PRR
+    ISSUE --> PR_DESCRIPTION
+    ISSUE --> PR_REVIEW
+    JAVA_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_ONE_TASK
+    JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    JAVA_GENERATE_ALL_TESTS -.-> JAVA_COVERAGE
+    JAVA_GENERATE_ALL_TESTS -.-> JAVA_TEST
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_SPRINGBOOT_CODE_ONE_TASK
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS --> EXPLORE
+    KNOWLEDGE_COMPACT --> KNOWLEDGE_COMPLETE
+    KNOWLEDGE_PROCESS_INBOX --> KNOWLEDGE_COMPACT
+    KNOWLEDGE_TO_ISSUE --> CREATE_GITHUB_ISSUE
+    KNOWLEDGE_TO_ISSUE --> EXPLORE
+    KNOWLEDGE_TO_JIRA --> CREATE_JIRA_TICKET
+    KNOWLEDGE_TO_JIRA --> EXPLORE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_CODE_QUALITY
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_KDOC
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_SPRINGBOOT_CODE_ONE_TASK
+    NESTJS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    NESTJS_CODE_ONE_TASK_GROUP -.-> NESTJS_CODE_ONE_TASK
+    NESTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
+    NESTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
+    NESTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
+    NESTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    NEXTJS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    NEXTJS_CODE_ONE_TASK_GROUP -.-> NEXTJS_CODE_ONE_TASK
+    NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
+    NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
+    NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
+    NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    PHP_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    PHP_CODE_ONE_TASK_GROUP -.-> PHP_CODE_ONE_TASK
+    PHP_CODE_ONE_TASK_GROUP -.-> PHP_CODE_QUALITY
+    PHP_CODE_ONE_TASK_GROUP -.-> PHP_COVERAGE
+    PHP_CODE_ONE_TASK_GROUP -.-> PHP_PHPDOC
+    PHP_CODE_ONE_TASK_GROUP -.-> PHP_TEST
     PLAN --> EXPLORE
-    PRR --> EXPLORE
+    PR_REVIEW --> EXPLORE
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> KOTLIN_CODE_QUALITY
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> KOTLIN_KDOC
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> QUARKUS_CODE_ONE_TASK
+    RELEASE --> ANDROID_BUMP_VERSION
+    RELEASE --> JAVA_BUMP_VERSION
+    RELEASE --> PHP_BUMP_VERSION
+    RELEASE --> PR_DESCRIPTION
+    RELEASE --> SWIFT_BUMP_VERSION
+    RELEASE --> TYPESCRIPT_BUMP_VERSION
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_APP
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_GITHUB_WORKFLOWS
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_GITIGNORE
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_LIBRARY
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_README
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_GITHUB_WORKFLOWS
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_LIBRARY
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_README
+    SETUP_JAVA_SPRINGBOOT --> SETUP_CHANGELOG
+    SETUP_JAVA_SPRINGBOOT --> SETUP_JAVA_GITIGNORE
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_APIS
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_HILLA
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_MODULES
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_PLATFORM
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_POM
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS
+    SETUP_JAVA_SPRINGBOOT --> SETUP_README
+    SETUP_JAVA_SPRINGBOOT -.-> UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION
+    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS --> SETUP_JAVA_SPRINGBOOT_POM
+    SETUP_PHP_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_PHP_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_GITHUB_WORKFLOWS
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_GITIGNORE
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_LARAVEL
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_PRESTASHOP
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_WORDPRESS
+    SETUP_PHP_REPOSITORY -.-> SETUP_README
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_QUARKUS_GITHUB_WORKFLOWS
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_QUARKUS_SERVICE
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_README
+    SETUP_QUARKUS_SERVICE -.-> JAVA_CODE_QUALITY
+    SETUP_QUARKUS_SERVICE -.-> KOTLIN_CODE_QUALITY
+    SETUP_README --> EXPLORE
+    SETUP_REPOSITORY --> EXPLORE
+    SETUP_REPOSITORY -.-> SETUP_ANDROID_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_JAVA_LIBRARY_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_JAVA_SPRINGBOOT
+    SETUP_REPOSITORY -.-> SETUP_PHP_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_QUARKUS_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_SWIFT_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_TYPESCRIPT_REPOSITORY
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_APPLE_APP
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_README
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_GITHUB_WORKFLOWS
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_LIBRARY
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_ANGULAR_WEB
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_IONIC_APP
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_NESTJS_APP
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_NEXTJS_WEB
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_REACT_NATIVE_APP
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_REACT_WEB
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_README
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_GITHUB_WORKFLOWS
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_GITIGNORE
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_LIBRARY
+    SWIFT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_CODE_ONE_TASK
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_CODE_QUALITY
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_COVERAGE
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_DOCC
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_TEST
+    SWIFT_GENERATE_ALL_TESTS -.-> SWIFT_COVERAGE
+    SWIFT_GENERATE_ALL_TESTS -.-> SWIFT_TEST
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_ONE_TASK
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    TYPESCRIPT_GENERATE_ALL_TESTS -.-> TYPESCRIPT_COVERAGE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.-> TYPESCRIPT_TEST
+    UPDATE_DOCS --> SETUP_ANTORA
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.-> SETUP_ANTORA
 
-    KTI --> EXPLORE
-    KTI --> CGI
-    KTJ --> EXPLORE
-    KTJ --> CJT
+    PR_REVIEW -.->|external, not in this catalog| CR[["code-review"]]
 
-    KPI -->|"once per run, if any\nagreement was created"| KCP
-    KCP -->|per completed item| KC
-
-    CODE -.-> COTG
-    CODE -.-> JCQ
-    CODE -.-> DCQ
-    CODE -.-> CSEC
-    CODE --> UD
-    CODE -->|"quality regressed,\nJira-origin plan,\nuser opts to file"| CJT
-
-    COTG --> JCOTG
-    COTG --> SBCOTG
-    COTG --> DCOTG
-    COTG --> DBCOTG
-
-    SBPERF -->|"to find the service's\nmain use cases"| EXPLORE
-
-    SBCOTG -.-> SBCOT
-    SBCOTG -.-> JCQ
-    SBCOTG -.-> CL
-    SBCOTG -.-> JJ
-    SBCOTG -.-> JT
-    SBCOTG -.-> JC
-
-    DBCOTG --> DBCOT
-    DBCOT --> EXPLORE
-
-    JCOTG -.-> JCOT
-    JCOTG -.-> JCQ
-    JCOTG -.-> CL
-    JCOTG -.-> JJ
-    JCOTG -.-> JT
-    JCOTG -.-> JC
-
-    JGAT --> JC
-    JGAT --> JT
-
-    DCOTG -.-> DCOT
-    DCOTG -.-> DCQ
-    DCOTG -.-> CL
-    DCOTG -.-> DDF
-    DCOTG -.-> DT
-    DCOTG -.-> DC
-
-    DGAT --> DC
-    DGAT --> DT
-
-    REL --> JBV
-    REL --> TBV
-    REL --> ABV
-    REL --> SWBV
-    REL --> PRD
-    UD -.->|only if no Antora module yet| AS
-    BD -.->|only if no Antora module yet| AS
-
-    GSD -.->|only if no Antora module yet| AS
-
-    PRR -.->|external, not in this catalog| CR[["code-review"]]
-
-    EXPLORE -.uses.-> AGT_EXPLORE(("Explore\nagent"))
-    AS -.uses.-> AGT_EXPLORE
-    SR -.uses.-> AGT_EXPLORE
-    JGAT -.uses.-> AGT_EXPLORE
-    DGAT -.uses.-> AGT_EXPLORE
-    SBD -.uses.-> AGT_EXPLORE
-    CODE -.spawns.-> AGT_GATE(("iru-gate-runner\nagent"))
-    COTG -.spawns.-> AGT_GATE
-    JCOTG -.spawns.-> AGT_GATE
-    DCOTG -.spawns.-> AGT_GATE
-    JGAT -.spawns.-> AGT_GATE
-    DGAT -.spawns.-> AGT_GATE
-    SB -.spawns.-> AGT_GATE
-    SBP -.spawns.-> AGT_GATE
-    SBM -.spawns.-> AGT_GATE
-    SBA -.spawns.-> AGT_GATE
-    SBT -.spawns.-> AGT_GATE
-    SBW -.spawns.-> AGT_GATE
-    SBCOTG -.spawns.-> AGT_GATE
-    SBPERF -.spawns.-> AGT_GATE
-    SBPERF -.uses.-> AGT_EXPLORE
-    ISSUE -.spawns.-> AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    ANDROID_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE(("iru-gate-runner\nagent"))
+    ANDROID_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
+    CODE -.spawns.-> AGT_GATE
+    CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    DOTNET_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    DOTNET_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
+    JAVA_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    JAVA_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS -.spawns.-> AGT_GATE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    NESTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    NEXTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    PHP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    QUARKUS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    SETUP_ANDROID_APP -.spawns.-> AGT_GATE
+    SETUP_ANDROID_LIBRARY -.spawns.-> AGT_GATE
+    SETUP_APPLE_APP -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_APIS -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_HILLA -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_MODULES -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_POM -.spawns.-> AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS -.spawns.-> AGT_GATE
+    SETUP_PHP_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_QUARKUS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_QUARKUS_SERVICE -.spawns.-> AGT_GATE
+    SETUP_SWIFT_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_SWIFT_LIBRARY -.spawns.-> AGT_GATE
+    SWIFT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    SWIFT_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
+    ANDROID_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE(("iru-isolated-skill-executor\nagent"))
     CODE -.spawns.-> AGT_ISE
-    JCOTG -.spawns.-> AGT_ISE
-    DCOTG -.spawns.-> AGT_ISE
-    SJLR -.spawns.-> AGT_ISE
-    SB -.spawns.-> AGT_ISE
-    SBCOTG -.spawns.-> AGT_ISE
-    SC -.spawns.-> AGT_CS(("iru-change-summarizer\nagent"))
-    REL -.spawns.-> AGT_CS
-    GSD -.spawns.-> AGT_GP(("general-purpose\nagent"))
-    UD -.spawns.-> AGT_GP
-    PRD -.spawns.-> AGT_GP
-    JGAT -.spawns.-> AGT_GP
-    DGAT -.spawns.-> AGT_GP
-    SBD -.spawns.-> AGT_GP
+    DOTNET_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    ISSUE -.spawns.-> AGT_ISE
+    JAVA_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    NESTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    NEXTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    PHP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    QUARKUS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    SETUP_ANDROID_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_JAVA_LIBRARY_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_JAVA_SPRINGBOOT -.spawns.-> AGT_ISE
+    SETUP_PHP_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_QUARKUS_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_SWIFT_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_TYPESCRIPT_REPOSITORY -.spawns.-> AGT_ISE
+    SWIFT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    RELEASE -.spawns.-> AGT_CS(("iru-change-summarizer\nagent"))
+    SETUP_CHANGELOG -.spawns.-> AGT_CS
+    ANDROID_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE(("Explore\nagent"))
+    DOTNET_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
+    EXPLORE -.uses.-> AGT_EXPLORE
+    JAVA_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS -.uses.-> AGT_EXPLORE
+    SETUP_ANTORA -.uses.-> AGT_EXPLORE
+    SETUP_README -.uses.-> AGT_EXPLORE
+    SWIFT_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.uses.-> AGT_EXPLORE
+    ANDROID_GENERATE_ALL_TESTS -.spawns.-> AGT_GP(("general-purpose\nagent"))
+    DOTNET_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
+    GENERATE_SKILL_DOCS -.spawns.-> AGT_GP
+    JAVA_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
+    PR_DESCRIPTION -.spawns.-> AGT_GP
+    SWIFT_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
+    TYPESCRIPT_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
+    UPDATE_DOCS -.spawns.-> AGT_GP
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.spawns.-> AGT_GP
 ....
 
 == Common workflows
@@ -1640,10 +2159,33 @@ whether docs deploy to GitHub Pages — recommending the cheaper options for pri
 Any of these six can also be run standalone against an existing repository to fill a single gap (e.g. just
 `/iru-setup-antora` to add docs to a repository that already has a `pom.xml`).
 
+The same six-step shape is shared by the other `*-repository` orchestrators — only the scaffold, gitignore, and
+workflows skills change per stack:
+
+[mermaid]
+....
+flowchart TD
+    FD["/iru-setup-repository\n(front door: detect or ask project type,\nshared inputs asked once)"] --> J["iru-setup-java-library-repository"]
+    FD --> SB["iru-setup-java-springboot\n(Java or Kotlin)"]
+    FD --> Q["iru-setup-quarkus-repository"]
+    FD --> T["iru-setup-typescript-repository"]
+    FD --> PH["iru-setup-php-repository"]
+    FD --> A["iru-setup-android-repository"]
+    FD --> SW["iru-setup-swift-repository"]
+    Q --> Q1["iru-setup-quarkus-service → iru-setup-antora →\niru-setup-java-gitignore → iru-setup-quarkus-github-workflows →\niru-setup-changelog → iru-setup-readme"]
+    T --> T1["library / react / nextjs / angular / nestjs /\nreact-native / ionic scaffold → iru-setup-antora →\niru-setup-typescript-gitignore → iru-setup-typescript-github-workflows →\niru-setup-changelog → iru-setup-readme"]
+    PH --> P1["iru-setup-php-laravel / -wordpress / -prestashop →\niru-setup-antora → iru-setup-php-gitignore →\niru-setup-php-github-workflows → iru-setup-changelog → iru-setup-readme"]
+....
+
+`iru-setup-repository` is the usual way in: it detects a non-empty repository's type via `iru-explore` (or asks
+over up to four rounds — JVM services & libraries, Web & Node, PHP, Mobile & Apple), collects the shared,
+cost-aware inputs once, and delegates to exactly one orchestrator via `iru-isolated-skill-executor`, forwarding
+`mode: existing` when the repository already has content.
+
 === Setting up a new Spring Boot service
 
 `iru-setup-java-springboot` is the service-shaped counterpart to the flow above. It interviews the user once —
-project identity, target cloud, reactive or blocking, and every technology choice — resolving versions and
+project identity, language (Java on Maven, or Kotlin on Maven or Gradle Kotlin DSL), target cloud, reactive or blocking, and every technology choice — resolving versions and
 dependency ids against the live Spring Initializr API, records everything in `springboot-stack.yml`, and then runs
 seven sub-skills in a fixed order that each read that manifest back:
 
@@ -1721,14 +2263,15 @@ flowchart LR
 
 `iru-code` itself doesn't implement anything directly: for every task group it dispatches to
 xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`], which resolves each task's language and delegates
-to whichever xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`] or
-xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`] skill matches — each of which captures
+to whichever `iru-<key>-code-one-task-group` skill matches (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, .NET,
+TypeScript, NestJS, Next.js, Android, or Swift — e.g.
+xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`]) — each of which captures
 one quality baseline for the whole bucket, implements its tasks (in parallel when the group allows it), and
 validates the bucket once via its own group's tests/coverage/quality/doc skills, instead of once per task. A
 bucket tagged `database` instead goes to xref:skills/iru-database-code-one-task-group.adoc[
 `iru-database-code-one-task-group`], which is deliberately simpler — always sequential, with no baseline or
 bucket-wide validation of its own. The whole run is bracketed with project-wide quality
-(`iru-java-code-quality`/`iru-dotnet-code-quality`) and security (`iru-check-security`) baselines — if quality regresses,
+(the plan key's own `iru-<key>-code-quality` skill — Java, Kotlin, PHP, .NET, TypeScript, Android, or Swift) and security (`iru-check-security`) baselines — if quality regresses,
 follow-up issues can be filed on whichever tracker the plan itself originated from (GitHub via `gh issue create`,
 or Jira via xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`]) — updating documentation via
 `iru-update-docs` once both pass, and archiving the plan under a filename that embeds the originating ticket id
@@ -1740,10 +2283,11 @@ tickets, and any attached prior implementation plans for extra context.
 
 === Generating a release
 
-`iru-release` must be run from `develop`, is ecosystem-agnostic (Java/Maven, TypeScript/npm, Android/Gradle, or
-Swift/Apple), and delegates the actual version-file edit to that ecosystem's own installed
+`iru-release` must be run from `develop`, is ecosystem-agnostic (Java/Kotlin on Maven or Gradle, TypeScript/npm,
+Android/Gradle, Swift/Apple, or PHP/Composer), and delegates the actual version-file edit to that ecosystem's own installed
 xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`]/xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`]/
-xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]
+xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]/
+xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`]
 skill (called with `sync-files: yes`, which folds in refreshing `README.md`/`docs/antora.yml`/Antora dependency
 snippets), keeping only the release notes and PR description as its own work. See
 xref:guides/common-workflows.adoc#generating-a-release[] for a more detailed walkthrough.

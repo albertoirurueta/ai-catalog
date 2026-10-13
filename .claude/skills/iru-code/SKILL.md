@@ -1,8 +1,8 @@
 ---
 name: iru-code
-description: Execute the tasks in implementation_plan.md at the repository root, one task group at a time — implement every task in a group (in parallel where the plan marks the group parallelizable), validate the whole group once (tests, coverage, code quality), and check off each task's checkbox directly in implementation_plan.md before moving to the next group. Dispatches each group to the `iru-code-one-task-group` skill, which in turn resolves the language/framework-specific `<key>-code-one-task-group` skill declared by the plan (e.g. `iru-java-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `iru-update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or new tickets (on whichever tracker the plan originated from — a GitHub issue via `gh issue create`, or a Jira ticket via the `iru-create-jira-ticket` skill) if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/iru-code` once implementation_plan.md exists (e.g. produced by the `iru-plan` skill).
+description: Execute the tasks in implementation_plan.md at the repository root, one task group at a time — implement every task in a group (in parallel where the plan marks the group parallelizable), validate the whole group once (tests, coverage, code quality), and check off each task's checkbox directly in implementation_plan.md before moving to the next group. Dispatches each group to the `iru-code-one-task-group` skill, which in turn resolves the language/framework-specific `<key>-code-one-task-group` skill declared by the plan (e.g. `iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`, `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `iru-update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or new tickets (on whichever tracker the plan originated from — a GitHub issue via `gh issue create`, or a Jira ticket via the `iru-create-jira-ticket` skill) if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/iru-code` once implementation_plan.md exists (e.g. produced by the `iru-plan` skill).
 model: sonnet
-allowed-tools: Read Edit Write Bash(mvn *) Bash(detect-secrets *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(date *) Bash(gh issue create *) TaskCreate TaskUpdate TaskList TaskGet Skill Agent
+allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(npm *) Bash(composer *) Bash(vendor/bin/*) Bash(detect-secrets *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(date *) Bash(gh issue create *) TaskCreate TaskUpdate TaskList TaskGet Skill Agent
 ---
 
 # Implementation
@@ -66,23 +66,33 @@ Before implementing anything, determine which language/framework(s) this plan is
 summary" section's **Language/framework** line if the plan declared one key for the whole plan, or the per-task
 tags in "Implementation steps" if it declared them per task instead (this is exactly what the `iru-plan` skill's Step
 5 produces). Collect the distinct set of keys found across the whole plan — usually just one (e.g. `java`,
-`dotnet`, `typescript`, `android`, or `swift`), occasionally more for a plan spanning several languages.
+`java-springboot`, `kotlin-springboot`, `quarkus`, `php`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `android`, or
+`swift`), occasionally more for a plan spanning several languages.
+
+Framework keys share their language's gate skills rather than having their own, so resolve each key's quality
+skill as follows before looking it up (and use the same mapping in Step 7): `java-springboot` →
+`iru-java-code-quality`; `kotlin-springboot` → `iru-kotlin-code-quality`; `quarkus` → `iru-java-code-quality` for a
+Java build or `iru-kotlin-code-quality` for a Kotlin one (per `iru-explore`'s report or `src/main/kotlin/`); `php` →
+`iru-php-code-quality`; `nestjs`/`nextjs` → `iru-typescript-code-quality`; any other key → `iru-<key>-code-quality`.
 
 For each distinct key, capture a project-wide quality baseline by delegating to the `iru-gate-runner` agent rather
-than running that language's quality skill directly — use the matching `<key>-code-quality` skill for the
+than running that language's quality skill directly — use the quality skill resolved above for the
 detected language/framework, e.g. `iru-java-code-quality` when the plan is Java (Checkstyle/PMD/SpotBugs), or
 `iru-dotnet-code-quality` when it's .NET (StyleCop.Analyzers/CA rules), `iru-typescript-code-quality` when it's
-TypeScript, `iru-android-code-quality` when it's Android, `iru-swift-code-quality` when it's Swift, or whichever other `<key>-code-quality` skill
-matches a key found in this repository's `.claude/skills`: `Agent({description: "Capture code-quality baseline
-(<key>)", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-<key>-code-quality\"}) unscoped. Report
+TypeScript (including NestJS/Next.js), `iru-kotlin-code-quality` when it's Kotlin Spring Boot or Kotlin Quarkus
+(detekt/ktlint), `iru-php-code-quality` when it's PHP (PHPStan/Psalm/PHPCS), `iru-android-code-quality` when it's
+Android, `iru-swift-code-quality` when it's Swift, or whichever other quality skill the mapping above resolves to
+and is found in this repository's `.claude/skills`: `Agent({description: "Capture code-quality baseline
+(<key>)", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"<resolved quality skill>\"}) unscoped. Report
 back only the total issue count per tool and the per-file list of issues."})`. `iru-gate-runner` runs in its own
 separate context and is built to report back just the issue list rather than the full generated reports, keeping
 that content out of the main context window since only the resulting list of issues is needed here. Record each
 returned list, keyed by its language/framework, as that key's baseline — the final check in Step 7 compares each
 one back against its own key's baseline to judge whether the plan's work left overall code quality at least as
-good as it found it. Skip capturing a baseline for any key that has no matching `<key>-code-quality` skill
+good as it found it. Skip capturing a baseline for any key whose resolved quality skill isn't
 installed in this repository, and skip this baseline capture entirely if no language/framework key could be
-determined for the plan at all.
+determined for the plan at all. When two keys resolve to the same quality skill (e.g. `java` and
+`java-springboot`), capture its baseline once and share it between them.
 
 Also capture a project-wide security baseline the same way, by delegating to `iru-gate-runner` rather than running
 `iru-check-security` directly: `Agent({description: "Capture security baseline", subagent_type: "iru-gate-runner",
@@ -183,10 +193,19 @@ keys Step 3 collected). Resolve the command for each key as follows:
    or "full check" command), use it verbatim.
 2. Otherwise fall back to this key → command table:
    - `java`: `mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar source:jar -P '!build-extras'`
+     for Maven, `./gradlew build` for Gradle
    - `java-springboot`: `mvn -B -ntp clean verify`
+   - `kotlin-springboot`, `quarkus`: `./mvnw -B -ntp clean verify` (or `mvn` without a wrapper) for Maven,
+     `./gradlew build` for Gradle — container-backed tests in it need Docker; if Docker is unavailable, say so
+     in Step 9 instead of treating the failure as a code defect
+   - `php`: `composer validate --strict`, then the project's own `composer` test/lint scripts if defined,
+     otherwise `vendor/bin/pest` or `vendor/bin/phpunit`, plus `vendor/bin/phpstan analyse` when configured
    - `dotnet`: `dotnet build && dotnet test`
    - `typescript`: the package manager's `lint`, `typecheck` (when present), and `test` scripts, in that order
      (`npm run lint && npm run typecheck && npm test`, or the `pnpm`/`yarn` equivalents matching the lockfile)
+   - `nestjs`: the same scripts as `typescript`, then `npm run build`
+   - `nextjs`: the same scripts as `typescript`, then `npm run build` (`next build` — the build itself type-checks
+     and verifies routes/caching rules)
    - `android`: `./gradlew build`
    - `swift`: `swift build && swift test` for a SwiftPM package, or `xcodebuild build-for-testing` (with the
      project's scheme and a simulator destination) for an Xcode app
@@ -208,11 +227,12 @@ key found in the plan:
 1. For each key a baseline was captured for in Step 3, run its project-wide quality check by delegating to the
    `iru-gate-runner` agent, for the same reason as the other quality checks in this skill: `Agent({description:
    "Compare final quality against baseline (<key>)", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
-   \"iru-<key>-code-quality\"}) unscoped, project-wide. Compare the reported issues against this baseline: <that key's
+   \"<resolved quality skill>\"}) unscoped, project-wide. Compare the reported issues against this baseline: <that key's
    baseline from Step 3>. Report back only the total issue count per tool and the per-file list of issues."})` —
    e.g. `iru-java-code-quality` for the `java` baseline, `iru-dotnet-code-quality` for the `dotnet` baseline,
-   `iru-typescript-code-quality` for `typescript`, `iru-android-code-quality` for `android`, `iru-swift-code-quality`
-   for `swift`. Running each
+   `iru-typescript-code-quality` for `typescript`/`nestjs`/`nextjs`, `iru-kotlin-code-quality` for
+   `kotlin-springboot` (and a Kotlin `quarkus`), `iru-php-code-quality` for `php`, `iru-android-code-quality` for
+   `android`, `iru-swift-code-quality` for `swift` — per the Step 3 mapping. Running each
    via `iru-gate-runner` keeps the full reports out of the main context window. Compare each returned counts/per-file
    list against that same key's Step 3 baseline.
 2. If, across every key checked, the total issue count did not increase and is zero (or was already zero at
@@ -245,8 +265,8 @@ key found in the plan:
    - leave it as-is and proceed to archive without further action.
    Respect whichever the user picks; only proceed to Step 8 once this choice has been acted on (issues filed, or
    explicit acknowledgment to proceed as-is).
-4. If no language/framework key could be determined for the plan, or none of the keys involved have a matching
-   `<key>-code-quality` skill installed in this repository, skip this quality assessment entirely and proceed
+4. If no language/framework key could be determined for the plan, or none of the keys involved have their resolved
+   quality skill installed in this repository, skip this quality assessment entirely and proceed
    directly to the security assessment below. If only some keys have a matching skill, assess just those and note
    in the Step 9 summary which key(s) were skipped for lacking one.
 

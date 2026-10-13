@@ -74,18 +74,31 @@ a|
 |Code implementation
 |xref:skills/iru-code.adoc[`iru-code`]
 a|
-* Captures a project-wide code-quality baseline (`iru-java-code-quality`/`iru-dotnet-code-quality`) and a security
-  baseline (`iru-check-security`) before making any change
+* Captures a project-wide code-quality baseline per plan key (`iru-java-code-quality`, `iru-kotlin-code-quality`,
+  `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-php-code-quality`, `iru-android-code-quality`,
+  `iru-swift-code-quality`, …) and a security baseline (`iru-check-security`) before making any change
 * Works through `implementation_plan.md` one task group at a time, dispatching each to
   xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`], which resolves each task's language and delegates
-  to xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
-  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`], or (for database-tagged tasks)
+  to the matching `iru-<key>-code-one-task-group` skill — e.g.
+  xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`],
+  xref:skills/iru-java-springboot-code-one-task-group.adoc[`iru-java-springboot-code-one-task-group`],
+  xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[`iru-kotlin-springboot-code-one-task-group`],
+  xref:skills/iru-quarkus-code-one-task-group.adoc[`iru-quarkus-code-one-task-group`],
+  xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
+  xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
+  xref:skills/iru-nestjs-code-one-task-group.adoc[`iru-nestjs-code-one-task-group`],
+  xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`],
+  xref:skills/iru-php-code-one-task-group.adoc[`iru-php-code-one-task-group`],
+  xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
+  xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`], or (for database-tagged tasks)
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`] (or implements it directly if
   no matching skill applies), checking off boxes as it goes
 * Each task group's tasks are implemented in parallel when the plan allows it (database task groups are always
   sequential instead), then paired with tests reaching at least 80% line coverage — verified against a real
   coverage report, not estimated — plus license headers and language-appropriate doc comments, all validated
-  once per group rather than once per task
+  once per group rather than once per task; container-backed stages (Testcontainers, Quarkus Dev Services, NestJS
+  e2e, Next.js Playwright, WordPress `wp-env`) run serialized behind one repository-wide `.integration-test.lock`
+  and never count toward the coverage gate
 * Re-checks the quality and security baselines at the end (a security regression is a hard stop, unlike a
   quality regression, which the user can accept or turn into follow-up tasks), runs a full local build, and
   updates the Antora documentation via `iru-update-docs` (which also proposes matching updates to a connected
@@ -158,12 +171,16 @@ supports — it works the same way whether the repository is brand new or alread
 === On a brand-new, empty repository
 
 `/iru-setup-repository` finds nothing to detect, so it asks the project type itself, over up to four short
-`AskUserQuestion` rounds rather than one long list. Each round offers three concrete types plus a "Something in
-the next group" escape hatch that moves on to the next round: Java/JVM (Java library, Spring Boot service, Spring
-Boot + Vaadin + Hilla), Android & Swift (Android library, Android app, Swift/SwiftPM library), mobile apps (Apple
-app, React Native app, Ionic app), and Web/Node (TypeScript/npm library, React web app, Angular web app) — twelve
-types in total; the last round's escape hatch is "None of these", which ends the run with a plain "no orchestrator
-for this stack" report. .NET is recognised by `iru-explore` but never offered here, because the catalog has no
+`AskUserQuestion` rounds rather than one long list. Each round offers three options plus a "Something in
+the next group" escape hatch that moves on to the next round: JVM services & libraries (Java library, Spring Boot
+service, Quarkus service), Web & Node (TypeScript/npm library, web app, NestJS backend service), PHP (Laravel
+application, WordPress plugin or block theme, PrestaShop module), and Mobile & Apple (Android, Apple,
+cross-platform mobile app); the last round's escape hatch is "None of these", which ends the run with a plain "no
+orchestrator for this stack" report. An option that bundles several types gets one short follow-up right away —
+web app → React / Next.js / Angular, WordPress → plugin / block theme, Android → library / app, Apple → Swift
+library / Apple app, cross-platform → React Native / Ionic — while Spring Boot and Quarkus get none here: their
+language (Java or Kotlin), build tool (Maven or Gradle), Quarkus layout, and Hilla frontend are asked by their own
+orchestrators. .NET is recognised by `iru-explore` but never offered here, because the catalog has no
 .NET bootstrap orchestrator. Once the type is known, it announces that it is setting the repository up **from
 scratch**, then asks only the inputs the stacks genuinely share, exactly once: `open-source`; `visibility`
 (`public`/`private`/`internal`, detected with `gh repo view` when the repository already has a GitHub remote,
@@ -226,10 +243,23 @@ action actually taken — created, updated, replaced, kept as is, or skipped (`c
 Each stack's orchestrator also runs standalone, useful when the front door's project-type rounds are unnecessary
 because the stack is already known:
 
-* **TypeScript/web** — `/iru-setup-typescript-repository` covers five flavors from one orchestrator; pass
-  `flavor` to skip the question (`library`, `react`, `angular`, `react-native`, `ionic`), e.g.
+* **TypeScript/web** — `/iru-setup-typescript-repository` covers seven flavors from one orchestrator; pass
+  `flavor` to skip the question (`library`, `react`, `angular`, `react-native`, `ionic`, `nestjs`, `nextjs`), e.g.
   `/iru-setup-typescript-repository` with `args: flavor: react` for a Vite+React web app, or `flavor: ionic` (plus
-  `framework: angular` or `framework: react` for Ionic's own underlying choice).
+  `framework: angular` or `framework: react` for Ionic's own underlying choice). `flavor: nestjs` scaffolds a NestJS
+  API via `iru-setup-nestjs-app` (`orm`/`database` pick an optional persistence layer, `distribution: internal`
+  adds a container image to GHCR); `flavor: nextjs` scaffolds a Next.js web app via `iru-setup-nextjs-web`
+  (`router: app|pages`, `output: server|static`, `e2e: playwright|none`).
+* **Quarkus** — `/iru-setup-quarkus-repository` with `args: language: java|kotlin`, `build-tool: maven|gradle`
+  (Gradle uses the Kotlin DSL), and `layout: single|hexagonal` (a single-module service, or a multi-module
+  hexagonal reactor mirroring the Spring Boot module table); `iru-setup-quarkus-service` writes a
+  `quarkus-stack.yml` manifest, scaffolds with the Quarkus Maven plugin using extensions validated against
+  code.quarkus.io, and post-processes quality tooling, JaCoCo, and sample tests at each Quarkus test level.
+* **PHP** — `/iru-setup-php-repository` with `args: flavor: laravel` (Pest, Pint, Larastan),
+  `flavor: wordpress-plugin` or `flavor: wordpress-theme` (block theme; WPCS, PHPStan WordPress, Brain Monkey unit
+  tests plus `wp-env` integration tests), or `flavor: prestashop-module` (PrestaShop 8.x/9.x,
+  `prestashop/php-dev-tools`); `php-version` sets the supported floor and `distribution` decides whether a
+  WordPress.org/PrestaShop Addons package or a Laravel container image is produced.
 * **Android** — `/iru-setup-android-repository` with `args: flavor: library` (a `lib/` module plus a Compose
   `app/` sample, following the Android reference-repository conventions) or `flavor: app` (a single `app/`
   module).
@@ -239,6 +269,10 @@ because the stack is already known:
 * **Spring Boot + Hilla** — `/iru-setup-java-springboot` itself already asks whether the service has a frontend;
   pass `args: frontend: hilla` to skip that question and have `iru-setup-java-springboot-hilla` scaffold the
   Vaadin/Hilla React frontend into the `boot` module right after the API layer is generated.
+* **Kotlin Spring Boot** — the same `/iru-setup-java-springboot` chain with `args: language: kotlin` (and optionally
+  `build-tool: gradle` for a Kotlin DSL build with a version catalog and `build-logic/` convention plugins; Maven
+  remains the default): the module tree is unchanged, while detekt/ktlint and Dokka replace
+  Checkstyle/PMD/SpotBugs and Javadoc. Java services stay Maven-only.
 
 [[generating-a-release]]
 == Generating a release
@@ -248,9 +282,11 @@ xref:skills/iru-release.adoc[`iru-release`] converts the repository's current de
 into a final, tagged release: it must be run from `develop` (this catalog follows gitflow) and stops immediately
 if it isn't. It is not Maven-only — the version-bump step itself is delegated to whichever
 `iru-<key>-bump-version` skill (xref:guides/extending-the-catalog.adoc#_release_generation_for_other_ecosystems[]
-covers the registry) matches the project's detected ecosystem (`java`, `typescript`, `android`, `swift` today),
-so the same `/iru-release` flow applies whether the version lives in `pom.xml`, `package.json`, a Gradle version
-catalog, or a Swift package manifest.
+covers the registry) matches the project's detected ecosystem (`java` — Java or Kotlin, Maven or Gradle —,
+`typescript`, `android`, `swift`, `php` today), so the same `/iru-release` flow applies whether the version lives in
+`pom.xml`, a Gradle build or `gradle.properties`, `package.json`, a Gradle version catalog, a Swift package
+manifest, or a PHP project's own version location (Laravel `config/app.php`, a WordPress plugin/theme header, a
+PrestaShop module class).
 
 [mermaid]
 ....

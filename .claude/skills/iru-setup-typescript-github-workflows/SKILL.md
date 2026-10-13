@@ -1,6 +1,54 @@
 ---
 name: iru-setup-typescript-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (library/web flavors only), and `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs on every push to the integration/stable branches, every pull request, and `workflow_dispatch` — checkout, Node setup with dependency caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), Playwright e2e for web flavors, a docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages deploy from the stable branch only. `release.yml` is flavor-specific — for `library` it publishes to npm when a GitHub Release is published, via OIDC trusted publishing plus an optional Changesets version-PR job; for `react`/`angular` it builds and deploys the web bundle (`dist/` for Vite, `dist/<project>/browser/` for Angular) to Pages; for `react-native` it runs EAS or local Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular only) merge the stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0` prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot(`npm`)/dependency-review/CodeQL(`javascript-typescript`, `build-mode` `none`)/OSV-Scanner/gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`. Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Announces whether it is creating the workflows from scratch or updating existing ones; creates all workflows (and the sync/security scripts) from scratch if none exist, and for each one that already exists warns and asks per file whether to update it (merge against the template, keeping customizations), keep it as is, or replace it (or stop), unless `on-existing` pre-answers that. Accepts pre-resolved inputs via `args` (`key`/`value` lines) — `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`, required), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`), `package-manager` (`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only, gates the npm publish job), `distribution` (`none`/`internal`/`store` — react-native/ionic only, gates native store/signing steps), `sonar` (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `visibility` (`public`/`private`/`internal` — detected via `gh` when absent, drives the cost notes and defaults), `ci-tests` (`unit`/`full` — `unit` drops the Playwright e2e step; asked when absent), `pages` (`yes`/`no` — `no` replaces every GitHub Pages deploy, including the react/angular app deploy, with a workflow-artifact upload; defaults to `yes` for public repositories and is asked for private/internal ones, since private-repo Pages need a paid plan and are publicly reachable), `mode` (`new`/`existing` — informational; existing files are still asked about per file), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default `yes`), so an orchestrating skill can supply them without re-prompting. Use whenever an npm/TypeScript repository of any of these five flavors needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: >-
+  Create or update the `build.yml`, `release.yml`, `sync.yml` (every flavor but react-native/ionic), and
+  `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of
+  seven flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web
+  app), `react-native` (an Expo app), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service), or
+  `nextjs` (a Next.js web app, `output` `server` or `static`). `build.yml` runs on every push to the
+  integration/stable branches, every pull request, and `workflow_dispatch` — checkout, Node setup with dependency
+  caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan
+  (skipped on fork pull requests), e2e per `ci-tests` (Playwright for the web flavors and Next.js; for NestJS the
+  `test:e2e` suite with Testcontainers on the runner's Docker, after `prisma generate` when Prisma is used), the
+  production build (plus an unpushed container-image build when a NestJS/Next.js server image is distributed), a
+  docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages
+  deploy from the stable branch only. `release.yml` is flavor-specific — for `library` it publishes to npm when a
+  GitHub Release is published, via OIDC trusted publishing plus an optional Changesets version-PR job; for
+  `react`/`angular` it builds and deploys the web bundle (`dist/` for Vite, `dist/<project>/browser/` for Angular)
+  to Pages; for `nextjs` with `output` `static` it builds the static export (`out/`, `basePath` taken from
+  `actions/configure-pages` so project pages work) and deploys it to Pages; for `nestjs` and `nextjs` `server` with
+  `distribution` `internal` it builds the multi-stage `Dockerfile` and pushes the image to GHCR (Buildx, metadata,
+  build-push), while `distribution` `none` writes no `release.yml`; for `react-native` it runs EAS or local
+  Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per
+  `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular/nestjs/nextjs) merge the
+  stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0`
+  prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot (`npm`, plus `docker`
+  when a `Dockerfile` exists) / dependency-review / CodeQL (`javascript-typescript`, `build-mode` `none`, plus
+  `actions` for nestjs/nextjs) / OSV-Scanner / gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`.
+  Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Announces
+  whether it is creating the workflows from scratch or updating existing ones; creates all workflows (and the
+  sync/security scripts) from scratch if none exist, and for each one that already exists warns and asks per file
+  whether to update it (merge against the template, keeping customizations), keep it as is, or replace it (or stop),
+  unless `on-existing` pre-answers that. Accepts pre-resolved inputs via `args` (`key`/`value` lines) — `flavor`
+  (`library`/`react`/`angular`/`react-native`/`ionic`/`nestjs`/`nextjs`, required), `integration-branch` (default
+  `develop`), `stable-branch` (default `main`), `node-version` (default `24`), `package-manager`
+  (`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only, gates the npm publish
+  job), `distribution` (`none`/`internal`/`store` — react-native/ionic gate native store/signing steps;
+  `none`/`internal` for nestjs and nextjs `server`, where `internal` is a GHCR image), `output` (`server`/`static` —
+  nextjs only), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/`drizzle` — nestjs only; `prisma` adds the `prisma
+  generate` step), `e2e` (`playwright`/`none` — nextjs only), `sonar` (`cloud`/`self-hosted`/`none`, +
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only),
+  `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `visibility`
+  (`public`/`private`/`internal` — detected via `gh` when absent, drives the cost notes and defaults), `ci-tests`
+  (`unit`/`full` — `unit` drops the e2e steps; asked when absent), `pages` (`yes`/`no` — `no` replaces every GitHub
+  Pages deploy, including the react/angular/nextjs-static app deploy, with a workflow-artifact upload; defaults to
+  `yes` for public repositories and is asked for private/internal ones, since private-repo Pages need a paid plan
+  and are publicly reachable), `mode` (`new`/`existing` — informational; existing files are still asked about per
+  file), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`), and
+  `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default
+  `yes`), so an orchestrating skill can supply them without re-prompting. Use whenever an npm/TypeScript repository
+  of any of these seven flavors needs this CI/CD release and security pipeline bootstrapped or brought in line with
+  this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -15,25 +63,33 @@ repository, for whichever `flavor` the repository actually is:
   for the web flavors (`react`, `angular`, `ionic`, only when `ci-tests: full`), a docs build gated by
   `docs-tool` merged with an Antora build, and a GitHub Pages deploy of the merged docs site (only when
   `pages: yes`; with `pages: no` the merged site is uploaded as a workflow artifact instead) — the deploy/upload
-  only runs on a push to the stable branch.
+  only runs on a push to the stable branch. The `nestjs`/`nextjs` flavors use their own `build.yml` template
+  (Step 3) with the same shape plus `prisma generate` (NestJS + Prisma), the production `build`, the e2e suite
+  per `ci-tests` (NestJS `test:e2e` with Testcontainers on the runner's Docker; Next.js Playwright), and an
+  unpushed image build when a container image is distributed.
 - **`release.yml`** — flavor-specific; see Step 3. Always triggered by `release: [published]` (plus
   `workflow_dispatch` for a manual re-run) so a continuous-deployment push to the stable branch never
   accidentally re-publishes or re-signs a release artifact. For `react`/`angular` it deploys the web app to
-  Pages only when `pages: yes`; with `pages: no` it builds the bundle and uploads it as an artifact only.
-- **`sync.yml`** — **library/react/angular flavors only** (the three that keep a version in `package.json`
-  meaningfully bumped between releases; `react-native`/`ionic` app versions are usually driven by store
-  submission tooling instead — see Step 1). Triggered when a GitHub Release is published from the stable
+  Pages only when `pages: yes`; with `pages: no` it builds the bundle and uploads it as an artifact only. For
+  `nextjs` with `output: static` it does the same with the static export (`out/`); for `nestjs` and `nextjs`
+  with `output: server` it pushes a container image to GHCR when `distribution: internal`, and isn't written
+  at all when `distribution: none`.
+- **`sync.yml`** — **library/react/angular/nestjs/nextjs flavors only** (the ones that keep a version in
+  `package.json` meaningfully bumped between releases; `react-native`/`ionic` app versions are usually driven
+  by store submission tooling instead — see Step 1). Triggered when a GitHub Release is published from the stable
   branch. Opens a pull request into the integration branch that merges the released branch back in and bumps
   the development prerelease version in `package.json` (and its lockfile), `README.md`, and the Antora docs,
   via the companion script `.github/scripts/sync_versions.py`.
 - **`security.yml`** — runs on every pull request and push to the integration/stable branches: a
   `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job
   (`github/codeql-action@v4`, language `javascript-typescript`, `build-mode: none` — no compile step is
-  needed for JS/TS analysis), an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a
+  needed for JS/TS analysis; `nestjs`/`nextjs` also scan the `actions` language — the workflows themselves),
+  an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a
   `gitleaks` job (`gitleaks/gitleaks-action@v3`) — each individually omittable via `args` (defaulting to on;
   see Step 1).
 - **`.github/dependabot.yml`** — grouped weekly dependency updates for the `npm` ecosystem and for
-  `github-actions` itself. Always generated (or updated) regardless of the four `security-*` `args` keys
+  `github-actions` itself, plus `docker` (base-image bumps) when the repository has a `Dockerfile` (the
+  `nestjs`/`nextjs`-server image). Always generated (or updated) regardless of the four `security-*` `args` keys
   above — it's baseline repository hygiene, not an optional CI job.
 
 This skill is designed for npm/TypeScript projects produced by the matching scaffold skill
@@ -41,7 +97,11 @@ This skill is designed for npm/TypeScript projects produced by the matching scaf
 `iru-setup-react-native-app`, `iru-setup-ionic-app`) — the templates in Step 3 assume the fixed npm script
 names those skills wire up (`build`, `test`, `coverage`, `lint`, `format`, `typecheck`, plus `docs` for
 `docs-tool: typedoc`/`compodoc` and `build-storybook` — the script Storybook's own installer writes — for
-`docs-tool: storybook`). If
+`docs-tool: storybook`). The `nestjs`/`nextjs` flavors come from `iru-setup-nestjs-app` /
+`iru-setup-nextjs-web` and use that contract's names instead: `lint`, `format:check` (the non-writing check —
+`format` writes), `typecheck`, `test` (unit), `coverage` (unit tests with lcov at `coverage/lcov.info` — the
+same name `react` uses, even though Nest's own CLI calls it `test:cov`), `test:e2e`, `build`, `start`, plus
+`docs` per `docs-tool`. If
 `package.json` is missing at the repository root, don't stop automatically: warn the user that this skill's
 templates assume an npm/TypeScript project and most of Step 1's survey won't resolve, then use
 `AskUserQuestion` to ask whether to stop here or continue anyway. If they choose to continue, proceed through
@@ -79,6 +139,17 @@ security-osv: yes
 security-gitleaks: yes
 ```
 
+A `nestjs`/`nextjs` run adds its flavor-specific keys (other keys as above; `publish` doesn't apply):
+
+```
+flavor: nestjs          # or nextjs
+distribution: internal  # none | internal (nestjs, nextjs output: server)
+orm: prisma             # nestjs only: none | typeorm | prisma | mongoose | drizzle
+output: static          # nextjs only: server | static
+e2e: playwright         # nextjs only: playwright | none
+docs-tool: compodoc     # nestjs: compodoc | typedoc | none ; nextjs: typedoc | none
+```
+
 Parse any such lines from `args` first. For each key found there, use that value directly — skip the
 corresponding fact-finding bullet below entirely for it. If `args` is absent or doesn't look like this
 format, treat everything as unset and gather every fact below as usual.
@@ -105,9 +176,13 @@ format, treat everything as unset and gather every fact below as usual.
     flavors) — complete verification, considerably more minutes." Recommend for public repos.
   For `library`/`react-native` (no e2e step in this pipeline) the choice has no effect on `build.yml` — say so
   and default to `unit` without asking unless a Playwright config or another e2e runner (Detox, Maestro) is
-  actually configured in the repository.
+  actually configured in the repository. For `nestjs`, word **Unit + e2e** as "Also runs the `test:e2e`
+  suite — with Testcontainers starting the real database in the runner's Docker when an ORM is configured;
+  GitHub's `ubuntu-latest` runners ship Docker, so nothing extra is installed, but each run pulls the database
+  image". For `nextjs` with `e2e: none` the choice has no effect (default `unit` without asking).
 - **`pages`** (skip if supplied via `args`; only relevant when this run would deploy anything to Pages, i.e.
-  `docs-tool` isn't `none` or the Antora docs exist, or `flavor` is `react`/`angular`): `visibility: public` ⇒
+  `docs-tool` isn't `none` or the Antora docs exist, or `flavor` is `react`/`angular`, or `flavor: nextjs`
+  with `output: static`): `visibility: public` ⇒
   `pages: yes` without asking (state it in Step 8). `private`/`internal` ⇒ ask with `AskUserQuestion` (header
   `Pages`):
   - **No (Recommended)** — "CI still builds the docs (and, for react/angular, the production web bundle) and
@@ -115,14 +190,17 @@ format, treat everything as unset and gather every fact below as usual.
   - **Yes** — "Per GitHub's current pricing, Pages on a private/internal repository requires GitHub Pro, Team,
     or Enterprise Cloud (not GitHub Free), and the site is PUBLIC on the internet unless the organization is on
     Enterprise Cloud and publishes it with private access control."
-  For `react`/`angular`, say explicitly that `release.yml` deploys the *web app itself* to Pages, so `pages: no`
+  For `react`/`angular` (and `nextjs` with `output: static`, whose static export is the app), say explicitly
+  that `release.yml` deploys the *web app itself* to Pages, so `pages: no`
   means the release workflow only builds and uploads the bundle — hosting the app elsewhere (Netlify, Vercel,
   Cloudflare Pages, S3/CloudFront, an internal server, …) is left to the user and out of this skill's scope.
 
 - **`flavor`** (skip if supplied via `args`): if not given, detect it with the same rule Tasks 12–17 of this
   catalog's TypeScript group share — inspect `package.json`: `@vaadin/hilla`/`hilla-spring-boot-starter` in a
-  parent `pom.xml`, or a `src/main/frontend/` directory → `hilla-frontend` (not one of this skill's five
-  flavors — warn the user this skill doesn't cover Hilla frontends and stop); `expo` or `react-native` in
+  parent `pom.xml`, or a `src/main/frontend/` directory → `hilla-frontend` (not one of this skill's seven
+  flavors — warn the user this skill doesn't cover Hilla frontends and stop); `@nestjs/core` in dependencies →
+  `nestjs`; `next` in dependencies → `nextjs` (checked before the `react` rule — every Next.js app also depends
+  on `react`); `expo` or `react-native` in
   dependencies → `react-native`; `@ionic/angular` or `@ionic/react` + `@capacitor/core` → `ionic`;
   `@angular/core` → `angular`; `react` + `vite` (or `@vitejs/plugin-react`) → `react`; otherwise → `library`.
   Ask the user to confirm if the detection is ambiguous (e.g. both `react` and `@capacitor/core` present).
@@ -148,6 +226,28 @@ format, treat everything as unset and gather every fact below as usual.
   a Firebase App Distribution / TestFlight-internal push if they opt in — ask a follow-up yes/no, default
   "just the artifact, no extra secrets"), or `store` (Google Play / App Store Connect production track,
   needs the signing/API-key secrets in Step 7's table).
+- **`distribution`** (`nestjs`, and `nextjs` with `output: server`; skip if supplied via `args`): `internal`
+  when a root `Dockerfile` exists (the scaffolds write one only for `internal`), else `none`; confirm with the
+  user. `internal` ⇒ `release.yml` pushes the image to GHCR (`ghcr.io/<owner>/<image-name>`); `none` ⇒ no
+  `release.yml` at all (the GitHub Release/tag itself is the release; deployment is the user's own pipeline).
+  `store` doesn't apply to these flavors. Not asked for `nextjs` with `output: static`: there it is always
+  `none` (the orchestrator forwards `distribution: none`), and its release is the Pages deploy, gated by `pages`.
+- **`output`** (`nextjs` only; skip if supplied via `args`): `next.config.(ts|mjs|js)` sets `output: 'export'`
+  → `static`, `output: 'standalone'` (or no `output`) → `server`. For `static`, also check that the config reads
+  the GitHub Pages base path from the environment — e.g. `basePath: process.env.PAGES_BASE_PATH ?? ''` (plus
+  `images: { unoptimized: true }`, which `next/image` requires under `output: 'export'`); `release.yml` passes
+  `actions/configure-pages`'s `base_path` output (`/<repository>` for a project site, empty for a
+  `<owner>.github.io` repository or a custom domain) in that variable. If the config hardcodes or omits
+  `basePath`, note it as an open gap: a project site would load every asset from the wrong root.
+- **`orm`** (`nestjs` only; skip if supplied via `args`): `prisma` when `prisma/schema.prisma` exists or
+  `prisma`/`@prisma/client` is a dependency (adds the `prisma generate` step — the generated client is not
+  committed, and lint/typecheck/tests import it); `typeorm`/`mongoose`/`drizzle` from `@nestjs/typeorm`/
+  `@nestjs/mongoose`/`drizzle-orm`; else `none`. Only `prisma` changes the generated workflow.
+- **`e2e`** (`nextjs` only; skip if supplied via `args`): `playwright` when `playwright.config.ts` and a
+  `test:e2e` script exist, else `none`.
+- **`Dockerfile`** (`nestjs`/`nextjs`): note whether a root `Dockerfile` exists — it gates the image build
+  check in `build.yml`, `release.yml`'s GHCR job, and Dependabot's `docker` entry. `distribution: internal`
+  without a `Dockerfile` is an open gap (re-run the scaffold skill), never a reason to invent one here.
 - **`native-builds`** (react-native flavor only; skip if supplied via `args`): ask the user `eas` (Expo
   Application Services — simplest, but the free tier is capped at 15 builds/platform/month) or `local`
   (self-hosted Gradle on `ubuntu-latest` + `xcodebuild` on `macos-latest`, no EAS account needed but slower
@@ -156,8 +256,9 @@ format, treat everything as unset and gather every fact below as usual.
   (`@ionic/angular` vs `@ionic/react`), confirm with the user if ambiguous.
 - **`docs-tool`** (skip if supplied via `args`): `typedoc.json` present → `typedoc`; `.compodocrc`/`compodoc`
   script → `compodoc`; `.storybook/` directory → `storybook`; none of these found → ask the user, defaulting
-  to `typedoc` for `library`, `compodoc` for `angular`, `none` for `react-native`/`ionic` (mobile apps rarely
-  publish a public API doc site) unless the survey found a doc tool already configured.
+  to `typedoc` for `library`, `compodoc` for `angular` and `nestjs`, `typedoc` for `nextjs`, `none` for
+  `react-native`/`ionic` (mobile apps rarely publish a public API doc site) unless the survey found a doc tool
+  already configured. `storybook` isn't offered for `nestjs` (no UI).
 - **`sonar`** (skip entirely if supplied via `args`): check for `sonar-project.properties` at the repository
   root and its `sonar.organization`/`sonar.projectKey`/`sonar.host.url` keys — this house pattern's
   `SonarSource/sonarqube-scan-action@v8` step reads that file automatically with no extra `with:` args, so
@@ -182,7 +283,7 @@ format, treat everything as unset and gather every fact below as usual.
   `main`) actually match this repository's branching model — run `git branch -a` or ask, don't assume
   gitflow defaults.
 - **README/Antora version-snippet wording** (only needed for `sync.yml`'s companion script,
-  `sync_versions.py`, and only for the `library`/`react`/`angular` flavors that get a `sync.yml` at all):
+  `sync_versions.py`, and only for the `library`/`react`/`angular`/`nestjs`/`nextjs` flavors that get a `sync.yml` at all):
   grep for the marker text and its surrounding lines — `grep -B2 -A2 -i "current development version\|latest
   release\|latest snapshot" README.md`, and for Antora pages, `grep -rl "\"version\"\|<version>"
   docs/modules/ROOT/pages/*.adoc`. From that context, find the exact row label used for the development row
@@ -198,6 +299,10 @@ format, treat everything as unset and gather every fact below as usual.
   `iru-setup-react-web`, `iru-setup-angular-web` Step 5, `iru-setup-react-native-app`, `iru-setup-ionic-app`
   Step 6), but a hand-started repository may not: note any that are missing or named differently so Step 4
   can adjust the template rather than generate a step that fails immediately with "Missing script".
+  For `nestjs`/`nextjs`, check the contract names from the intro instead — `lint`, `format:check`,
+  `typecheck`, `coverage`, `build`, `test:e2e` (when e2e runs in CI), and `docs` per `docs-tool`. A Nest CLI
+  project that still has only `test:cov` / a Next.js project with only `format` is the same open gap (adjust the
+  `run:` line to the real name, and say so in Step 8), not something to rename in `package.json` here.
 - **Web build output directory** (`react`/`angular` only): `react` (Vite) writes to `dist/`; `angular`'s
   application builder writes to `dist/<project>/browser/` — read the actual value from `angular.json`
   (`projects.<project>.architect.build.options.outputPath`, plus its `browser` sub-key when `outputPath` is an
@@ -213,7 +318,11 @@ format, treat everything as unset and gather every fact below as usual.
 - **Playwright** (`react`/`angular`/`ionic` only, and only when `ci-tests: full`): check for a
   `playwright.config.ts` and an `e2e`/`e2e:ci` script. If absent, the e2e step in `build.yml` has nothing to
   run — note this as an open gap; the scaffold skills for these flavors are expected to have wired it already.
-  With `ci-tests: unit` the e2e step isn't generated, so skip this check.
+  With `ci-tests: unit` the e2e step isn't generated, so skip this check. For `nextjs` (`e2e: playwright`)
+  check `playwright.config.ts` + `test:e2e` the same way, and that its `webServer` serves what the CI step
+  just built when `CI` is set (`next start` for `output: server`; a static file server over `out/` for
+  `output: static`, since `next start` refuses an export build). For `nestjs`, check for the `test:e2e`
+  script and its config (`vitest.config.e2e.ts` or `test/jest-e2e.json`).
 
 **Ordering and cost context.** Resolve `visibility` before asking `sonar`, `ci-tests`, or `pages`, and ask
 those three in the order `sonar` → `ci-tests` → `pages`. This skill never asks whether CI is wanted at all —
@@ -275,20 +384,22 @@ Per-file handling once decided:
 - **Update**: proceed to Step 4 treating the existing file as the base to edit, not something to overwrite
   wholesale, and show the user the resulting diff (`git diff --no-index <current> <draft>`) before writing:
   - For `build.yml`: preserve any step that isn't one of the pipeline stages this skill owns
-    (install/lint/format/typecheck/test/coverage, optional Sonar, optional e2e, docs build, Pages deploy or
+    (install/lint/format/typecheck/test/coverage, optional Sonar, optional e2e, `prisma generate`/build/image build
+    check for nestjs/nextjs, docs build, Pages deploy or
     docs-artifact upload) — e.g. a Slack notification step or an extra matrix entry stays untouched. Only add
     missing stages or correct outdated ones (wrong action version, wrong script name, a stage that should now
     be gated on/off per `sonar`/`docs-tool`/`ci-tests`/`pages`, etc.), and don't reorder steps this skill
     doesn't own.
   - For `release.yml`: preserve any job/step outside this flavor's owned jobs; only correct the
-    publish/build/signing/deploy jobs per the resolved `publish`/`distribution`/`native-builds`/`pages` values.
+    publish/build/signing/deploy jobs per the resolved `publish`/`distribution`/`native-builds`/`output`/`pages` values (the GHCR image job for
+    nestjs/nextjs-server, the static-export Pages job for nextjs-static).
   - For `sync.yml`/`sync_versions.py`: preserve any file the script updates beyond
     `package.json`/`README.md`/the Antora docs that a prior customization added, and preserve any extra
     workflow step the same way. Only correct the pipeline stages this skill owns.
   - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
     `dependency-review`/CodeQL/OSV-Scanner/gitleaks jobs per the resolved `security-*` `args` (Step 1).
   - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage
-    (e.g. `maven` for a sibling backend); only add/update the `npm` and `github-actions` entries.
+    (e.g. `maven` for a sibling backend); only add/update the `npm`, `github-actions`, and (when a `Dockerfile` exists) `docker` entries.
 
 Missing files are always created from the template, whatever was decided for the existing ones.
 
@@ -320,8 +431,13 @@ back to the versions confirmed current as of **September 2026**, listed here:
 | `actions/dependency-review-action` | `v5` | |
 | `github/codeql-action` (`init`/`analyze`) | `v4` | resolve via `.../tags`, not `.../releases/latest` — that endpoint returns the unrelated `codeql-bundle-*` tag |
 | `SonarSource/sonarqube-scan-action` | `v8` | resolve via `.../tags` too, for the same reason |
-| `google/osv-scanner-action` (reusable workflow) | `v2` | pin the workflow ref, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2` |
+| `google/osv-scanner-action` (reusable workflow) | `v2` | pin the workflow ref, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0` |
 | `gitleaks/gitleaks-action` | `v3` | |
+| `actions/cache` | `v6` | `nextjs` only — persists `.next/cache` between builds, as Next.js's CI guide recommends |
+| `docker/setup-buildx-action` | `v4` | `nestjs`/`nextjs` (`output: server`) with a `Dockerfile` — image build check and GHCR release |
+| `docker/login-action` | `v4` | GHCR release only |
+| `docker/metadata-action` | `v6` | GHCR release only |
+| `docker/build-push-action` | `v7` | image build check (`push: false`) and GHCR release |
 | `changesets/action` | `v2` | library flavor only |
 | `expo/expo-github-action` | `v9` | react-native/`native-builds: eas` only — the repository publishes `v5`…`v9` tags (`git ls-remote --tags`), so the ref needs the `v` prefix like every other action here; a bare `@9` doesn't resolve |
 | `r0adkll/upload-google-play` | `v1` | ionic/`distribution: store` Android upload only |
@@ -365,15 +481,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Only when package-manager: pnpm (Step 1) — must run before setup-node's cache step can find pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Node <node-version>
         uses: actions/setup-node@v7
         with:
           node-version: <node-version>
           cache: <package-manager> # 'npm' | 'pnpm' | 'yarn' — requires the matching lockfile to already exist
-
-      # Only when package-manager: pnpm (Step 1) — must run before setup-node's cache step can find pnpm
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: <install-command> # npm ci | pnpm install --frozen-lockfile | yarn install --frozen-lockfile (or --immutable for Yarn Berry)
@@ -520,6 +636,151 @@ Notes specific to this template:
 - `setup-node`'s `cache: <package-manager>` fails outright if the matching lockfile doesn't exist yet
   ("Dependencies lock file is not found") — never generate this workflow before the scaffold skill has run
   `npm install`/`pnpm install`/`yarn install` at least once and committed the lockfile.
+
+### `build.yml` template — `nestjs`/`nextjs` flavors
+
+Same triggers, concurrency, docs and Pages tail as the template above; the difference is the middle of the
+`build` job (contract script names, `prisma generate`, the production build, the flavor's e2e suite, and the
+image build check). Every step marked for one flavor is dropped for the other.
+
+```yaml
+name: Build
+
+on:
+  push:
+    branches: [ <integration-branch>, <stable-branch> ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Only when package-manager: pnpm — before setup-node, whose `cache: pnpm` needs pnpm on PATH
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      - name: Install dependencies
+        run: <install-command>
+
+      # nestjs with orm: prisma only — the generated client isn't committed, and lint/typecheck/tests import it
+      - name: Generate the Prisma client
+        run: <package-manager-exec> prisma generate
+
+      - name: Lint
+        run: <package-manager-run> lint
+
+      - name: Check formatting
+        run: <package-manager-run> format:check
+
+      # nextjs: the scaffold's typecheck script runs `next typegen` before `tsc --noEmit`, so route types exist
+      - name: Typecheck
+        run: <package-manager-run> typecheck
+
+      - name: Run unit tests with coverage
+        run: <package-manager-run> coverage
+
+      # Omit if sonar: none. Skipped on fork pull requests (no secrets there)
+      - name: Run SonarQube/SonarCloud analysis
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Only when sonar: self-hosted
+          SONAR_HOST_URL: <sonar-host-url>
+
+      # nextjs only — Next.js's incremental build cache, keyed on the lockfile then the sources
+      - name: Cache the Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('<lockfile-name>') }}-${{ hashFiles('src/**', 'app/**', 'pages/**', 'public/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('<lockfile-name>') }}-
+
+      - name: Build
+        run: <package-manager-run> build
+
+      # nestjs, ci-tests: full only. With an ORM, the e2e suite starts the database through Testcontainers on the
+      # runner's own Docker engine (ubuntu-latest ships it; nothing to install). Without an ORM it's plain
+      # in-process supertest.
+      - name: Run e2e tests (Testcontainers)
+        run: <package-manager-run> test:e2e
+
+      # nextjs, ci-tests: full and e2e: playwright only. CI=1 makes the scaffold's playwright.config.ts serve the
+      # build above (next start, or a static server over out/) instead of `next dev`, and enables retries
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run e2e tests
+        env:
+          CI: '1'
+        run: <package-manager-run> test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      # nestjs, or nextjs with output: server — only with distribution: internal (a Dockerfile exists). Builds the
+      # release image without pushing, so a broken Dockerfile fails the pull request rather than the release
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build the container image (not pushed)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          tags: <image-name>:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Docs: identical to the template above from here on — `Build API docs` (`docs` script; docs-tool
+      # compodoc/typedoc for nestjs, typedoc for nextjs; omitted for none), the Antora setup-node/install/build
+      # steps, `Merge documentation` (docs/api -> site/api), and `Upload Pages artifact` (pages: yes) or
+      # `Upload docs artifact` (pages: no), followed by the `deploy-docs` job when pages: yes.
+```
+
+Notes specific to this template:
+
+- **Step order** is cheapest-first, matching the coding skills' group validation: static checks → unit tests
+  with coverage (the only coverage Sonar sees — the e2e suites never feed the 80% gate) → build → e2e → image.
+  The Next.js e2e needs the build first (Playwright drives the production server); the NestJS e2e boots its
+  own `Test.createTestingModule` app and doesn't, but running after `build` costs nothing.
+- **`ci-tests: unit`** drops `Run e2e tests (Testcontainers)` (nestjs) or the three Playwright steps (nextjs);
+  everything else stays. For nestjs that also skips pulling the database image, the main minutes saving.
+- **Testcontainers on GitHub runners**: no `services:` block and no `DOCKER_HOST` tweak — Testcontainers finds
+  the runner's Docker socket itself, and Ryuk cleans up. A self-hosted runner without Docker fails this step:
+  say so in Step 8 if the user mentioned self-hosted runners.
+- **`<package-manager-exec> prisma generate`** uses the project's pinned `prisma` devDependency (never a bare
+  `npx prisma@latest`); it needs no database. Migrations are not applied here — the e2e suite's own setup
+  applies them to its throwaway container.
+- **Image build check** uses the GitHub Actions cache backend (`type=gha`) so `release.yml`'s push build
+  reuses the layers. `<image-name>:ci` is a local tag only — nothing is pushed or logged in to. Drop the two
+  Docker steps for `distribution: none` and for `nextjs` with `output: static` (no image).
+- **`nextjs` with `output: static` and `pages: yes`** shares one Pages site between `deploy-docs` (this file)
+  and the app deploy (`release.yml`), exactly like `react`/`angular` — the same "Decision made" note under the
+  react/angular `release.yml` template applies, including the option of shipping the docs under `out/docs/`.
 
 ### `release.yml` template — `library` flavor
 
@@ -706,6 +967,187 @@ Notes specific to this template:
   `Upload build artifact`. That step and its credentials are out of this skill's scope; list it as a follow-up
   in Step 8 rather than improvising one. The decision about sharing one Pages site with `build.yml`'s docs
   (next bullet) no longer applies in that case.
+
+### `release.yml` template — `nextjs` flavor, `output: static`
+
+The static export *is* the app, so this mirrors the react/angular template: `pages: yes` deploys `out/` to
+Pages; `pages: no` keeps the job as `Build static export`, drops its `pages: write`/`id-token: write`
+permissions, `environment:`, `Configure Pages`, `Upload Pages artifact`, and `Deploy to GitHub Pages`, and the
+build step's `PAGES_BASE_PATH` env (no Pages site, so no base path to inject) — leaving a downloadable bundle.
+
+```yaml
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build static export and deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # Only when package-manager: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      - name: Install dependencies
+        run: <install-command>
+
+      # pages: yes only. Runs before the build: its base_path output is "/<repository>" for a project site and ""
+      # for a <owner>.github.io repository or a custom domain
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Build static export
+        env:
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }} # pages: yes only — read by next.config's basePath
+        run: <package-manager-run> build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: out
+          path: out/
+          retention-days: 30
+
+      # pages: yes only
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: out/
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+```
+
+Notes specific to this template:
+
+- **`basePath`**: a project site lives at `https://<owner>.github.io/<repository>/`, so every `/_next/...`
+  asset and every `<Link>` must carry `/<repository>`. The workflow doesn't hardcode it: `configure-pages`
+  computes it (and keeps working after a repository rename or a custom domain), and `next.config` reads
+  `process.env.PAGES_BASE_PATH` (Step 1's `output` survey). Don't use `configure-pages`' own
+  `static_site_generator: next` option instead — it rewrites a `next.config.js` in place and can't edit the
+  `next.config.ts` the scaffold writes.
+- `.nojekyll` isn't needed: `actions/deploy-pages` publishes the artifact as-is without running Jekyll, so the
+  `_next/` directory is served.
+- Dynamic features (`next start`, route handlers with request data, server actions, middleware, ISR) don't
+  exist in an export; a build that uses them fails here — that's the scaffold's `output` decision, not
+  something this workflow can paper over.
+- The `react`/`angular` notes on sharing one Pages site with `build.yml`'s `deploy-docs`, and on `pages: no`
+  meaning "nothing is hosted", apply unchanged.
+
+### `release.yml` template — `nestjs`, and `nextjs` with `output: server` (`distribution: internal`)
+
+Builds the repository's multi-stage `Dockerfile` (NestJS: compiled `dist/` on `node:<lts>-slim` or distroless,
+non-root; Next.js: the `output: 'standalone'` server) and pushes it to GitHub Container Registry. With
+`distribution: none` don't write `release.yml` at all — an `on: release` workflow with no jobs is invalid, the
+GitHub Release/tag is itself the release, and Step 8 reports the file as "not generated (distribution: none)".
+
+```yaml
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: Build and push the container image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # GHCR push with GITHUB_TOKEN — no registry secret needed
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # A manual re-run must start from the release tag (Run workflow → "Use workflow from" → Tags), or the
+      # image would be tagged with a branch name
+      - name: Compute image coordinates
+        id: image
+        env:
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$GITHUB_REF_TYPE" != tag ]; then
+            echo "::error::Run this workflow from a release tag, not a branch."
+            exit 1
+          fi
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT" # registry paths must be lowercase
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ steps.image.outputs.owner }}/<image-name>
+          tags: |
+            type=raw,value=${{ steps.image.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+```
+
+Notes specific to this template:
+
+- Same image job shape as this catalog's other GHCR releases (`iru-setup-php-github-workflows`' Laravel image,
+  `iru-setup-quarkus-github-workflows`' Docker variant): lowercase owner, `<version>` + `latest` tags, OCI
+  labels from `metadata-action` (source repository, revision, version), GHA layer cache shared with
+  `build.yml`'s unpushed build check. `build-push-action` attaches its default minimal provenance attestation
+  to a pushed image; no explicit `provenance:`/`sbom:` inputs are set, consistent with those skills — add
+  `provenance: mode=max` + `sbom: true` only if the consumer verifies attestations.
+- The released commit was already tested by `build.yml` on `<stable-branch>`, so no tests run here.
+- No image is pushed per `<integration-branch>` push — a registry full of `-dev` tags costs storage on private
+  repositories; add one to `build.yml` only if a deployment pipeline consumes it.
+- A new GHCR package is **private** by default even on a public repository, and is linked to the repository
+  through the `org.opencontainers.image.source` label `metadata-action` writes. Deploying the image (Kubernetes,
+  a VM, a PaaS) is the user's own pipeline — out of this skill's scope; list it as a follow-up in Step 8.
+- Configuration stays out of the image: database URLs, secrets, `PORT`, and (Next.js) runtime environment
+  variables are injected at run time. `NEXT_PUBLIC_*` values are inlined at **build** time, so a Next.js image is
+  built per environment if those differ — flag that in Step 8 when the project uses any.
 
 ### `release.yml` template — `react-native` flavor, `native-builds: eas`
 
@@ -1115,7 +1557,7 @@ Notes specific to this template:
   included-minutes impact in Step 8 (Step 1's cost context), and mention that a team that rarely ships iOS
   can drop the `ios` job here and archive locally in Xcode instead.
 
-### `sync.yml` template (library/react/angular flavors only)
+### `sync.yml` template (library/react/angular/nestjs/nextjs flavors only)
 
 Runs once a GitHub Release is published, provided it was published from the stable branch. Opens a pull
 request that merges the released branch back into the integration branch and bumps the development
@@ -1167,9 +1609,11 @@ jobs:
           NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}-dev.0"
           SYNC_BRANCH="sync_${MAJOR}.${MINOR}.${NEXT_PATCH}"
 
-          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "sync_branch=$SYNC_BRANCH" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_version=$RELEASE_VERSION"
+            echo "next_version=$NEXT_VERSION"
+            echo "sync_branch=$SYNC_BRANCH"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Skip if this release was already synced
         id: guard
@@ -1278,7 +1722,7 @@ Notes specific to this template:
   Actions → General → "Workflow permissions" must also allow GitHub Actions to create pull requests, or
   `gh pr create` will fail with a permissions error even though the token has the right scopes declared here.
 
-### `sync_versions.py` template (library/react/angular flavors only)
+### `sync_versions.py` template (library/react/angular/nestjs/nextjs flavors only)
 
 Companion script for `sync.yml`, at `.github/scripts/sync_versions.py`. Reads `RELEASE_VERSION`/
 `NEXT_VERSION` from the environment and rewrites `README.md` and any Antora page carrying the same version
@@ -1452,7 +1896,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
     with:
       scan-args: |-
         --recursive
@@ -1480,6 +1924,36 @@ Notes specific to this template:
 - `build-mode: none` is correct for `javascript-typescript` regardless of flavor — CodeQL's JS/TS extractor
   works directly from source, no compile step needed, unlike the Java template's `codeql` job which must run
   `mvn compile` first.
+- **`nestjs`/`nextjs`**: the `codeql` job also scans the `actions` language (workflow injection, over-broad
+  token permissions — these two flavors' workflows push images and deploy), as a matrix with one SARIF
+  category per language, like `iru-setup-php-github-workflows`. Replace the `codeql` job above with:
+
+  ```yaml
+  codeql:
+    name: CodeQL analysis (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ actions, javascript-typescript ]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
+  ```
+
+  The other five flavors keep the single-language job unchanged.
 - None of these four jobs need a repository secret beyond the automatically provided `GITHUB_TOKEN` — don't
   add any of them to Step 7's secrets table.
 - If `github.com` public-repository default CodeQL setup is simpler for this repository than a workflow-based
@@ -1514,6 +1988,16 @@ updates:
           - "*"
 ```
 
+For `nestjs`/`nextjs` with a root `Dockerfile` (Step 1), add a third entry so the `node:<lts>-slim`/distroless
+base images get digest and patch bumps too:
+
+```yaml
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+```
+
 For the `ionic` flavor, add a second `npm` entry with `directory: /android` only if that directory has its own
 `package.json` (Capacitor's default layout doesn't create one — Gradle manages Android dependencies
 separately and isn't an ecosystem Dependabot's `npm` updater covers; a `gradle` ecosystem entry is a
@@ -1541,16 +2025,24 @@ user or note it as an open gap in Step 8's report instead of silently guessing.
 | `<web-dist-dir>` | `react`/`angular` only (release.yml's Pages deploy): `dist` for `react` (Vite's default `build.outDir`); `dist/<project>/browser` for `angular`, read from `angular.json`'s build `outputPath` per Step 1 (never the bare `dist`, which holds no `index.html` on Angular) |
 | `<ios-workspace>` / `<ios-scheme>` | `react-native` with `native-builds: local` only: the basename of `ios/*.xcworkspace` after `npx expo prebuild --platform ios` (both share the name — `expo prebuild` derives it from `app.json`'s `expo.name` with non-alphanumeric characters stripped), per Step 1's survey. Not used by `ionic`, whose Capacitor project is always `ios/App/App.xcworkspace` + scheme `App` |
 | `<android-package-name>` | `android/app/build.gradle`'s `applicationId`, only when `flavor: ionic` and `distribution: store` |
+| `<image-name>` | `nestjs`/`nextjs` (`output: server`) with `distribution: internal`: `package.json`'s `name` without its `@scope/` prefix, lowercase (GHCR path segment; the scaffolds set it to the repository slug) — the final reference is `ghcr.io/<owner-lowercased>/<image-name>` |
 
 Also apply the `sonar`/`docs-tool`/`publish`/`distribution`/`native-builds`/`flavor`/`ci-tests`/`pages` gating
 resolved in Step 1:
 drop every block the templates above mark with an "Omit this … if …" comment when the matching value is
 `no`/`none`/doesn't apply to this flavor, and drop that same comment itself — it's guidance for filling the
 template, not part of the generated workflow file. GitHub Pages publishing (in `build.yml`, and in
-`release.yml` for `react`/`angular`) is gated only by `pages` — never by `sonar`/`publish`: `pages: yes` keeps
+`release.yml` for `react`/`angular` and `nextjs` with `output: static`) is gated only by `pages` — never by
+`sonar`/`publish`: `pages: yes` keeps
 the deploy steps/jobs; `pages: no` swaps them for `actions/upload-artifact` steps and drops the
 `pages: write`/`id-token: write` permissions and `github-pages` environment only the deploy needed.
-`ci-tests: unit` drops the Playwright e2e block from `build.yml`.
+`ci-tests: unit` drops the Playwright e2e block from `build.yml` (and, for `nestjs`, the `test:e2e` step).
+For `nestjs`/`nextjs`, use the dedicated `build.yml` template and apply its per-flavor markers: `prisma
+generate` only for `nestjs` + `orm: prisma`; `.next/cache` and Playwright only for `nextjs` (Playwright only
+with `e2e: playwright` and `ci-tests: full`); the two Docker steps only with `distribution: internal` and a
+`Dockerfile`; the `security.yml` CodeQL matrix variant and Dependabot's `docker` entry per Step 3. `release.yml`
+for these flavors: `nextjs` + `output: static` → the static-export template; `nestjs` or `nextjs` +
+`output: server` → the GHCR template when `distribution: internal`, **no file** when `distribution: none`.
 
 ## Step 5 — Handle missing supporting files
 
@@ -1562,7 +2054,7 @@ Before writing the workflows, make sure the files they depend on exist:
   using SonarCloud), `sonar.projectKey`, and `sonar.host.url` (default `https://sonarcloud.io` unless they run
   self-hosted SonarQube), then create it at the repository root **using the resolved flavor's own scaffold
   template** — the source/test layout and the lcov path differ per flavor, and the scanner rejects a
-  `sonar.tests` root that doesn't exist (`library`'s `test/` is the only separate test root; every other
+  `sonar.tests` root that doesn't exist (`library`'s `test/` and `nestjs`'s e2e `test/` are the only separate test roots; every other
   flavor colocates tests) as well as a wrong `lcov` path (Angular and Ionic-Angular write per-project
   `coverage/<project>/lcov.info`). The common head is always:
 
@@ -1582,6 +2074,8 @@ Before writing the workflows, make sure the files they depend on exist:
   | `angular` | `iru-setup-angular-web` Step 13 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts`, `sonar.javascript.lcov.reportPaths=coverage/<project>/lcov.info` (`<project>` = the `angular.json` project name), `sonar.exclusions=**/dist/**,**/docs/api/**` |
   | `react-native` | `iru-setup-react-native-app` Step 5 | `sonar.sources=.`, `sonar.tests=.`, `sonar.test.inclusions=**/__tests__/**,**/*.test.ts,**/*.test.tsx`, `sonar.exclusions`/`sonar.test.exclusions=android/**,ios/**,node_modules/**,coverage/**,.expo/**,dist/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
   | `ionic` | `iru-setup-ionic-app` Step 10 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts` (`framework: angular`) or `**/*.test.ts,**/*.test.tsx` (`react`), `sonar.javascript.lcov.reportPaths=coverage/app/lcov.info` (`angular` — the Ionic starter's fixed `app` project key) or `coverage/lcov.info` (`react`), `sonar.exclusions=android/**,ios/**,e2e/**,coverage/**,www/**` (`angular`) / `...,dist/**` (`react`) |
+  | `nestjs` | `iru-setup-nestjs-app` | `sonar.sources=src`, `sonar.tests=src,test`, `sonar.test.inclusions=**/*.spec.ts,**/*.e2e-spec.ts`, `sonar.exclusions=**/dist/**,**/docs/api/**` (plus the generated Prisma client directory when it lives under `src/`), `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
+  | `nextjs` | `iru-setup-nextjs-web` | `sonar.sources=src` (or `app` when the project has no `src/` directory), `sonar.tests=src,e2e`, `sonar.test.inclusions=**/*.test.ts,**/*.test.tsx,e2e/**`, `sonar.exclusions=**/.next/**,**/out/**,**/docs/api/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
 
   Skip this entirely when `sonar: none` — there's nothing to add, and the `Run SonarQube/SonarCloud analysis`
   step is omitted from `build.yml` anyway.
@@ -1591,6 +2085,13 @@ Before writing the workflows, make sure the files they depend on exist:
 - **`ExportOptions.plist` missing under `ios/`, `flavor` is `react-native` or `ionic`, and `distribution`
   isn't `none`**: flag this prominently — the iOS export step in `release.yml` will fail without it. This
   file is project-specific (team id, export method) and this skill doesn't generate it.
+- **`next.config` not reading `PAGES_BASE_PATH`, `flavor: nextjs`, `output: static`, `pages: yes`**: flag it —
+  the project site's assets would 404 — and show the two lines to add (`basePath: process.env.PAGES_BASE_PATH ??
+  ''`, `images: { unoptimized: true }`); the config belongs to `iru-setup-nextjs-web`, so don't rewrite it here
+  without the user's go-ahead.
+- **`Dockerfile` missing with `distribution: internal` (`nestjs`, `nextjs` + `output: server`)**: recommend
+  re-running the scaffold skill (`iru-setup-nestjs-app` / `iru-setup-nextjs-web`) for its multi-stage, non-root
+  `Dockerfile` + `.dockerignore`; omit the image steps/job until it exists and report the gap.
 - **`.gitignore` missing entries for `dist/`, `coverage/`, `docs/api/`, `docs/build/`, `storybook-static/`**:
   add whichever are absent, so the build output the workflow generates never gets committed by accident (the
   `iru-setup-typescript-gitignore` skill is the canonical source for this list — defer to it if present rather
@@ -1600,7 +2101,7 @@ Before writing the workflows, make sure the files they depend on exist:
 
 Write (or, per Step 2's per-file decision, carefully update or replace — and never touch a file kept as is) `.github/workflows/build.yml`, `.github/workflows/release.yml`, and
 `.github/workflows/security.yml` with the filled-in templates from Step 4, plus `.github/dependabot.yml` and
-any supporting files created in Step 5. For `library`/`react`/`angular` flavors only, also write
+any supporting files created in Step 5. For `library`/`react`/`angular`/`nestjs`/`nextjs` flavors only, also write
 `.github/workflows/sync.yml` together with `.github/scripts/sync_versions.py` — never write one without the
 other, and never write either for `react-native`/`ionic` (Step 3). `security.yml` and
 `.github/dependabot.yml` are always written (or updated), independent of `sonar`/`publish`/`distribution` —
@@ -1622,16 +2123,23 @@ the user needs to go create:
 | `APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64` | Drives `xcodebuild`'s automatic cloud-managed signing (`-allowProvisioningUpdates` + the `-authenticationKey*` trio) on both the archive and the `.ipa` export — the key needs the App Manager or Admin role; no certificate/profile secrets are needed unless the team switched to the manually-managed alternative described under the react-native template | `flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Uploads the signed `.aab` straight to a Play Console track | `flavor: ionic`, `distribution: store` |
 | `FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase App Distribution push | `flavor: ionic` (or `react-native`), `distribution: internal`, and the user opted into Firebase App Distribution over a plain artifact upload (Step 1) |
+| *(none)* | The `nestjs`/`nextjs` GHCR push authenticates with `GITHUB_TOKEN` (`packages: write`), the static-export Pages deploy with the Pages OIDC token, and Testcontainers needs no credentials — no secret row for these flavors beyond `SONAR_TOKEN` | `flavor: nestjs`/`nextjs` |
 
 `GITHUB_TOKEN` needs no setup — GitHub Actions provides it automatically, used by `sync.yml`'s `gh` calls and
 `security.yml`'s `gitleaks`/CodeQL jobs. `sync.yml` also needs the repository setting under Settings → Actions
 → General → "Workflow permissions" set to allow GitHub Actions to create pull requests — the
 `permissions: contents: write / pull-requests: write` block in the workflow itself is not sufficient on its
-own. When `pages: yes`, `build.yml`'s Pages deploy (and the `react`/`angular` `release.yml` deploy) needs
+own. When `pages: yes`, `build.yml`'s Pages deploy (and the `react`/`angular`/`nextjs`-static `release.yml`
+deploy) needs
 Settings → Pages → "Build and deployment" → Source set to **GitHub Actions** — and on a private/internal
 repository, a GitHub Pro, Team, or Enterprise Cloud plan (Pages isn't available for private repositories on
 GitHub Free), with the published site publicly reachable unless the organization uses Enterprise Cloud's
 private Pages access control. With `pages: no`, none of this applies — omit the Pages notes.
+The `nestjs`/`nextjs` GHCR image job needs no secret, but: the first push creates a **private** package (even
+from a public repository) — make it public, or grant the deploying cluster/host a pull token, under the
+package's settings; and if the organization restricts package creation, Settings → Packages (organization) must
+allow members/Actions to publish. The Testcontainers e2e step needs Docker on the runner — GitHub-hosted
+`ubuntu-latest` has it; a self-hosted runner must provide it.
 `release.yml`'s `library` flavor `publish` job needs the trusted-publisher relationship
 configured on npmjs.com for this package (Package settings → Trusted Publisher → GitHub Actions), naming this
 repository, the `release.yml` workflow file, and the `publish` job/environment exactly — publish will
@@ -1659,14 +2167,21 @@ State explicitly what was wired versus omitted, and why:
   repeat the cost context from Step 1 (included minutes per plan, macOS ~10×) and which generated jobs run on
   `macos-latest` (the `ios` release job for `react-native`/`local` and `ionic`), telling the user to
   double-check their plan's current pricing.
-- **`ci-tests`**: `unit` or `full`, and whether that removed the Playwright e2e block (web flavors) or had no
-  effect (`library`/`react-native`, which have no e2e step here).
+- **`ci-tests`**: `unit` or `full`, and whether that removed the Playwright e2e block (web flavors, `nextjs`
+  with `e2e: playwright`) or the Testcontainers `test:e2e` step (`nestjs`), or had no effect
+  (`library`/`react-native`/`nextjs` with `e2e: none`, which have no e2e step here).
 - **`pages`**: `yes` (deploy to GitHub Pages — defaulted without asking for a public repository, or chosen by
-  the user for a private one) or `no` (docs, and for `react`/`angular` the release bundle, uploaded as workflow
-  artifacts only). For `react`/`angular` with `pages: no`, state plainly that the app is not hosted anywhere by
+  the user for a private one) or `no` (docs, and for `react`/`angular`/`nextjs`-static the release bundle, uploaded as workflow
+  artifacts only). For `react`/`angular`/`nextjs`-static with `pages: no`, state plainly that the app is not hosted anywhere by
   this pipeline and list adding a deploy step for the user's chosen host as a follow-up.
 
-- **`flavor`**: which of the five flavor-specific `release.yml` variants was generated.
+- **`flavor`**: which of the flavor-specific `release.yml` variants was generated.
+- **`distribution`/`output`** (`nestjs`/`nextjs` only): GHCR image (`ghcr.io/<owner>/<image-name>`, tags
+  `<version>` + `latest`) or "release.yml not generated (distribution: none)"; for `nextjs` `output: static`,
+  the static-export deploy (or artifact with `pages: no`) and whether `next.config` reads `PAGES_BASE_PATH`;
+  whether `prisma generate` was wired (`orm: prisma`), whether the unpushed image build check and Dependabot's
+  `docker` entry were added (both need a `Dockerfile`), and any contract script (`format:check`, `coverage`,
+  `test:e2e`) that had to be mapped to a differently named script. List deploying the image as a follow-up.
 - **`sonar`**: `cloud`/`self-hosted`/`none` — if not `none`, the Sonar step and `SONAR_TOKEN` row were
   included; if `none`, both were omitted, and note whether that's because the project isn't open source / the
   repository isn't public (SonarCloud needs a paid plan for private projects) or a direct user choice.
@@ -1686,7 +2201,7 @@ State explicitly what was wired versus omitted, and why:
 - **Security block**: which of `security-dependency-review`/`security-codeql`/`security-osv`/
   `security-gitleaks` were included in `security.yml` versus omitted per Step 1's `args`/answers, and confirm
   `.github/dependabot.yml` was written regardless (it has no opt-out).
-- **`sync.yml`**: generated for `library`/`react`/`angular`; intentionally omitted for `react-native`/`ionic`
+- **`sync.yml`**: generated for `library`/`react`/`angular`/`nestjs`/`nextjs`; intentionally omitted for `react-native`/`ionic`
   — state this plainly so it doesn't read as an oversight.
 
 Finish with an explicit warning: **the user must review the generated (or updated) workflow files before

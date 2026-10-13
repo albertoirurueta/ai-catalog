@@ -1,6 +1,49 @@
 ---
 name: iru-setup-java-springboot-github-workflows
-description: Create the GitHub Actions workflows for a Spring Boot service repository — a build workflow (`build.yml`) that runs on pushes to the integration and main branches and on pull requests, executing unit tests via Surefire and Testcontainers-backed integration tests via Failsafe, Checkstyle/PMD/SpotBugs static analysis, aggregated JaCoCo coverage, optionally a SonarCloud/SonarQube scan via `mvn sonar:sonar` (gated by the manifest's `sonar.mode`), the Antora documentation build, and the generated API documentation — OpenAPI, protobuf, the AsyncAPI HTML produced by `@asyncapi/html-template`, and the GraphQL reference produced by `spectaql` and `graphql-voyager` — publishing all of it to GitHub Pages; when the manifest's `frontend` is `hilla`, `build.yml` also sets up Node via `actions/setup-node`, runs `vaadin:prepare-frontend` before it, then `npm ci` and `npx vitest run --coverage` in the web module, and packages with `-Pproduction -Dvaadin.ci.build=true`; a `deploy.yml` that builds and pushes the container image, authenticates to AWS or Google Cloud via keyless OIDC, and applies the OpenTofu configuration for a chosen environment behind a GitHub Environment approval gate; an `undeploy.yml` that scales the service to zero or destroys an environment's infrastructure, guarded by a typed-confirmation input and a protected environment; a `security.yml` that runs a `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job (`github/codeql-action@v4`, matrix including `javascript-typescript` when `frontend` is `hilla`), an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job (`gitleaks/gitleaks-action@v3`) — each individually omittable; and a `.github/dependabot.yml` with grouped weekly updates for the `maven`, `docker`, and `github-actions` ecosystems, plus `npm` (pointed at the real web module's directory) when the manifest's `frontend` isn't `none`. Reads `sonar.mode` from `springboot-stack.yml` as the source of truth for whether the Sonar step and `SONAR_TOKEN` secret are generated at all, rather than asking reactively, and reads the manifest's `visibility` and `ci:` block (`ci.tests` = `unit` ⇒ Surefire only with `-DskipITs` and no Testcontainers/Docker stack in CI, `full` ⇒ Surefire + Failsafe + Testcontainers; `ci.pages` = `no` ⇒ the docs are still built but uploaded as a workflow artifact instead of deployed to GitHub Pages) — `args` may override them, and when invoked standalone with no `ci:` block it resolves `visibility` (args, then `gh repo view`, then asks) and asks `ci-tests`/`pages` (and `sonar` when the manifest has none) itself, stating the Actions-minutes/SonarCloud/Pages cost facts for a private repository. Announces whether it is creating the workflows from scratch or updating existing ones, and for every workflow/config file that already exists warns and asks Update / Keep as is / Replace (or applies `on-existing` from `args`). Derives the pipeline from `springboot-stack.yml` and the actual reactor/`infra/` layout on disk, lists every required repository secret and environment, and never writes a credential into a workflow file. Invoke as `/iru-setup-java-springboot-github-workflows`, or with `args` (`stack-file:`, `integration-branch:`, `main-branch:` lines, plus `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`, each `yes`/`no`, default `yes`, and the shared `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `sonar`, `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`) keys) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of hand-writing the YAML for testing, analysis, documentation publishing, deployment, teardown, and dependency/secret/code security scanning.
+description: >-
+  Create the GitHub Actions workflows for a Spring Boot service repository — in Java (Maven) or Kotlin (Maven, or
+  Gradle Kotlin DSL), read from the manifest's `project.language`/`project.buildTool` (absent ⇒ `java`/`maven`, the
+  unchanged Java path) — a build workflow (`build.yml`) that runs on pushes to the integration and main branches and
+  on pull requests, executing unit tests via Surefire and Testcontainers-backed integration tests via Failsafe,
+  Checkstyle/PMD/SpotBugs static analysis (detekt + ktlint for Kotlin), aggregated JaCoCo coverage, optionally a
+  SonarCloud/SonarQube scan via `mvn sonar:sonar` or `./gradlew sonar` (gated by the manifest's `sonar.mode`), the
+  Antora documentation build, Javadoc (Dokka for Kotlin), and the generated API documentation — OpenAPI, protobuf, the
+  AsyncAPI HTML produced by `@asyncapi/html-template`, and the GraphQL reference produced by `spectaql` and
+  `graphql-voyager` — publishing all of it to GitHub Pages; when the manifest's `frontend` is `hilla`, `build.yml`
+  also sets up Node via `actions/setup-node`, runs `vaadin:prepare-frontend` before it, then `npm ci` and `npx vitest
+  run --coverage` in the web module, and packages with `-Pproduction -Dvaadin.ci.build=true`; on Gradle every job uses
+  `gradle/actions/setup-gradle` (open-source `basic` cache provider) with `./gradlew
+  test`/`integrationTest`/`:coverage:testCodeCoverageReport`/`detekt ktlintCheck`/`dokkaGeneratePublicationHtml`; a
+  `deploy.yml` that builds and pushes the container image (`spring-boot:build-image`, or `bootBuildImage` tagged with
+  the `gradle.properties` version on Gradle), authenticates to AWS or Google Cloud via keyless OIDC, and applies the
+  OpenTofu configuration for a chosen environment behind a GitHub Environment approval gate; an `undeploy.yml` that
+  scales the service to zero or destroys an environment's infrastructure, guarded by a typed-confirmation input and a
+  protected environment; a `security.yml` that runs a `dependency-review` job (`actions/dependency-review-action@v5`),
+  a CodeQL job (`github/codeql-action@v4`, `java-kotlin` with autobuild on Maven or a manual `./gradlew` compile on
+  Gradle, matrix including `javascript-typescript` when `frontend` is `hilla`), on Gradle a `dependency-submission`
+  job (`gradle/actions/dependency-submission`) feeding the dependency graph that dependency review compares, an
+  OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a `gitleaks` job
+  (`gitleaks/gitleaks-action@v3`) — each individually omittable; and a `.github/dependabot.yml` with grouped weekly
+  updates for the `maven` (or `gradle`), `docker`, and `github-actions` ecosystems, plus `npm` (pointed at the real
+  web module's directory) when the manifest's `frontend` isn't `none`. Reads `sonar.mode` from `springboot-stack.yml`
+  as the source of truth for whether the Sonar step and `SONAR_TOKEN` secret are generated at all, rather than asking
+  reactively, and reads the manifest's `visibility` and `ci:` block (`ci.tests` = `unit` ⇒ Surefire only with
+  `-DskipITs` and no Testcontainers/Docker stack in CI, `full` ⇒ Surefire + Failsafe + Testcontainers; `ci.pages` =
+  `no` ⇒ the docs are still built but uploaded as a workflow artifact instead of deployed to GitHub Pages) — `args`
+  may override them, and when invoked standalone with no `ci:` block it resolves `visibility` (args, then `gh repo
+  view`, then asks) and asks `ci-tests`/`pages` (and `sonar` when the manifest has none) itself, stating the
+  Actions-minutes/SonarCloud/Pages cost facts for a private repository. Announces whether it is creating the workflows
+  from scratch or updating existing ones, and for every workflow/config file that already exists warns and asks Update
+  / Keep as is / Replace (or applies `on-existing` from `args`). Derives the pipeline from `springboot-stack.yml` and
+  the actual reactor/`infra/` layout on disk, lists every required repository secret and environment, and never writes
+  a credential into a workflow file. Invoke as `/iru-setup-java-springboot-github-workflows`, or with `args`
+  (`stack-file:`, `integration-branch:`, `main-branch:` lines, plus
+  `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`, each `yes`/`no`, default `yes`,
+  and the shared `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`),
+  `sonar`, `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`) keys) when called from
+  `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of
+  hand-writing the YAML for testing, analysis, documentation publishing, deployment, teardown, and
+  dependency/secret/code security scanning.
 model: sonnet
 ---
 
@@ -59,7 +102,8 @@ on-existing: ask
   (default yes) rather than silently assumed, unless this skill is running unattended as part of
   `iru-setup-java-springboot`'s Step 8, in which case the default stands without asking.
 
-Read `springboot-stack.yml` for the cloud, the Java version, `visibility`, the `ci:` block (`ci.tests`,
+Read `springboot-stack.yml` for the cloud, the Java version, `project.language` and `project.buildTool` (see
+"Language and build tool" below), `visibility`, the `ci:` block (`ci.tests`,
 `ci.pages`), `sonar.mode`
 (`cloud`/`self-hosted`/`none` — absent means `cloud`, for backward compatibility with a manifest written before
 this field existed) and its `sonar.organization`/`sonar.projectKey`/`sonar.hostUrl`, `frontend`
@@ -106,6 +150,32 @@ Step 3b. Then survey what's actually on disk — the workflows must match realit
   runner (4 vCPU / 16 GB) can't host Elasticsearch + Couchbase + Kafka + several databases simultaneously. If the
   stack looks too large, say so now and offer either a larger runner or splitting integration tests into a matrix
   by module. Skip this check when `ci.tests: unit` — no container stack runs in CI then.
+
+### Language and build tool
+
+`project.language` (`java`/`kotlin`, absent ⇒ `java`) and `project.buildTool` (`maven`/`gradle`, absent ⇒ `maven`;
+`gradle` only ever appears with `kotlin`) pick one of three variants. Confirm them against the disk the same way as
+everything else: `pom.xml` at the root ⇒ Maven, `settings.gradle.kts` + `gradlew` ⇒ Gradle, `src/main/kotlin` in the
+modules ⇒ Kotlin. If the manifest and the disk disagree, the disk wins for this run — say so in the report.
+
+| Variant | Templates | What changes |
+|---|---|---|
+| `java` + `maven` | Steps 1–3b exactly as written | nothing — the Java path is the base template |
+| `kotlin` + `maven` | Steps 1–3b as written, plus "Kotlin + Maven" in Step 1 | static analysis is detekt + ktlint instead of Checkstyle/PMD/SpotBugs, code docs are Dokka instead of Javadoc; every `mvn` build/test/Sonar/image command is unchanged |
+| `kotlin` + `gradle` | the Gradle templates in Steps 1, 2 and 3b | every job uses `gradle/actions/setup-gradle` and `./gradlew`; `security.yml` gains `dependency-submission`; Dependabot uses the `gradle` ecosystem |
+
+For Gradle, also survey: that `gradlew`, `gradle/wrapper/gradle-wrapper.properties` and
+`gradle/wrapper/gradle-wrapper.jar` are committed (CI uses the wrapper only — never a runner-installed `gradle`);
+that the `integrationTest` task and the `:coverage` project's `testCodeCoverageReport` task exist
+(`./gradlew tasks --all`, both written by `iru-setup-java-springboot-pom`'s `build-logic/` convention plugins); where
+the aggregated JaCoCo XML lands (`coverage/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml`
+by default); whether the root project aggregates Dokka (`dokka(project(":…"))` dependencies ⇒ one site at
+`build/dokka/html`) or only each module runs it (⇒ one `build/dokka/html` per module); that `gradle.properties`
+carries a `version=` line (the deploy workflow's image tag reads it); and which tasks generate the API documentation
+(`./gradlew -q :<project>:tasks --group documentation` for each project applying a codegen plugin — the root-level
+`./gradlew tasks --group documentation` doesn't list subproject tasks like `generateRestServerV1Docs` — the OpenAPI
+html2 and protoc-gen-doc equivalents
+`iru-setup-java-springboot-apis` registers), and that they write under `<module>/build/generated-docs/`.
 
 ### Resolving the CI choices
 
@@ -196,13 +266,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           # Sonar needs full history to attribute issues to blame data.
           fetch-depth: 0
 
       - name: Set up JDK <java-version>
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: <java-version>
@@ -276,10 +346,10 @@ jobs:
       contents: write
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK <java-version>
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: <java-version>
@@ -453,6 +523,292 @@ second `cache-dependency-path` entry entirely rather than leaving dead YAML behi
   copied alongside `index.html`. The merge step's directory copy preserves that automatically; a merge step
   rewritten to copy only `index.html` files would silently produce a blank graph.
 
+### Kotlin + Maven (`language: kotlin`, `buildTool: maven`)
+
+Same two jobs, same `mvn` build/test/Sonar commands and the same `ci.tests`/`ci.pages`/`sonar.mode`/`frontend`
+variants — `iru-setup-java-springboot-pom` keeps Surefire `*Test`, Failsafe `*IT`, JaCoCo and the `coverage/`
+`report-aggregate` identical for Kotlin. Only the quality and code-documentation tools differ, because the pom wires
+detekt/ktlint/Dokka instead of Checkstyle/PMD/SpotBugs/Javadoc:
+
+- In the `build` job, replace the `Static analysis and site report` step with:
+
+  ```yaml
+      - name: Static analysis (detekt + ktlint)
+        # detekt-maven-plugin and ktlint-maven-plugin replace Checkstyle/PMD/SpotBugs for Kotlin. Both read
+        # sources only, so no compile is needed; their XML reports are what the Sonar Kotlin sensor imports
+        # (sonar.kotlin.detekt.reportPaths / sonar.kotlin.ktlint.reportPaths in the root pom), so this step must
+        # stay before the Sonar step.
+        run: mvn -B -ntp detekt:check ktlint:check
+  ```
+
+  Use the goals the pom actually binds: if it already binds `detekt:check`/`ktlint:check` to `verify`, the
+  `mvn clean verify` step runs them and this step is redundant — drop it and say so. The `detekt`/`ktlint` prefixes
+  resolve because the plugins are declared in the root pom; if the survey finds them only in a profile, call them by
+  coordinates (`com.github.ozsie:detekt-maven-plugin:check`, `com.github.gantsign.maven:ktlint-maven-plugin:check`).
+- Add `**/target/detekt*.xml` and `**/target/ktlint*.xml` (whatever report paths the pom configures) to the
+  `Upload test reports` artifact paths, so a failing lint run leaves its findings attached.
+- In the `docs` job, keep `mvn -B -ntp site -DskipTests -Djacoco.skip` (Surefire/JaCoCo/JXR reports — the pom no
+  longer configures Javadoc/Checkstyle/PMD/SpotBugs reports, so the site simply doesn't have those sections) and add
+  the Dokka build as its own step before `Install Antora`:
+
+  ```yaml
+      - name: Generate KDoc (Dokka)
+        # dokka-maven-plugin runs per module and writes <module>/target/dokka/ — Dokka's Maven plugin has no
+        # multi-module aggregation, so each module gets its own site.
+        run: mvn -B -ntp dokka:dokka
+  ```
+
+  and, in `Merge documentation`, copy each module's Dokka site under `./doc/api/kdoc/<module-path>/` (that's the
+  location `iru-update-java-springboot-documentation` links its code reference to):
+
+  ```bash
+          while IFS= read -r dir; do
+            module="$(dirname "$(dirname "$dir")")"; module="${module#./}"
+            mkdir -p "./doc/api/kdoc/$module" && cp -r "$dir"/. "./doc/api/kdoc/$module/"
+          done < <(find . -type d -path '*/target/dokka' -not -path './node_modules/*')
+  ```
+
+  Skip a module whose `target/dokka` has no `index.html` (an aggregator `pom` module with no sources).
+- CodeQL keeps `autobuild` (Step 3b): it builds a Maven reactor with Kotlin sources correctly.
+
+### Gradle (`language: kotlin`, `buildTool: gradle`)
+
+A Gradle build has no `mvn site`, Surefire/Failsafe or `report-aggregate`; the equivalents come from the
+`build-logic/` convention plugins `iru-setup-java-springboot-pom` writes (`iru.integration-test` registers
+`integrationTest` over `**/*IT*` while `test` excludes it; `iru.coverage` + the `coverage` project's
+`jacoco-report-aggregation` produce `testCodeCoverageReport`; `iru.quality` applies detekt, ktlint and Dokka). The
+template below is the `ci.tests: full` / `ci.pages: yes` / `sonar.mode` ≠ `none` shape with every optional step
+present; apply the same variant rules as the Maven template (drop what the manifest/survey rules out):
+
+```yaml
+name: Build
+
+on:
+  push:
+    branches: [ <integration-branch>, <main-branch> ]
+  pull_request:
+    branches: [ <integration-branch>, <main-branch> ]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, test and analyse
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          # Sonar needs full history to attribute issues to blame data.
+          fetch-depth: 0
+
+      - name: Set up JDK <java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: <java-version>
+
+      - name: Set up Gradle
+        # Caches the Gradle User Home (dependencies, wrapper distribution) and validates the committed wrapper
+        # jar's checksum. cache-provider: basic is the MIT-licensed actions/cache-backed provider; the v6 default
+        # ("enhanced") is a proprietary component governed by the Gradle Technologies Terms of Use (free for public
+        # repositories, a free preview for private ones). Switching to it is the repository owner's call, not
+        # something to accept silently on their behalf.
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      # Only when the manifest's frontend: hilla — same reasoning and ordering as the Maven template: the Vaadin
+      # Gradle plugin's vaadinPrepareFrontend/vaadinBuildFrontend tasks need Node on PATH.
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: <web-module>/package-lock.json
+
+      - name: Build and unit tests
+        # `test` excludes **/*IT* (iru.integration-test convention), so nothing here needs Docker.
+        # -Pvaadin.productionMode=true -Pvaadin.ci.build=true only when frontend: hilla — the Gradle plugin reads
+        # both as Gradle properties (vaadin.ci.build makes it run `npm ci`, never rewriting the lock file).
+        # Pass the same two flags to every later ./gradlew call in this job too, or Gradle sees different
+        # inputs and re-runs the frontend tasks in development mode. vaadinPrepareFrontend is named explicitly
+        # because a plain `build` doesn't depend on it — the frontend unit-test step below needs its output.
+        # Without frontend: hilla the command is just `./gradlew build -x integrationTest`.
+        run: ./gradlew :boot:vaadinPrepareFrontend build -x integrationTest -Pvaadin.productionMode=true -Pvaadin.ci.build=true
+
+      - name: Integration tests
+        # ci.tests: full only. *IT classes start the Testcontainers/compose stack; Docker is available on
+        # ubuntu-latest runners.
+        run: ./gradlew integrationTest
+
+      - name: Aggregated coverage report
+        # jacoco-report-aggregation in the coverage project: one XML over every module's test (and, with
+        # ci.tests: full, integrationTest) execution data — the file Sonar reads.
+        run: ./gradlew :coverage:testCodeCoverageReport
+
+      # Only when the manifest's frontend: hilla, and after the Gradle build for the same vite.generated.ts reason
+      # as the Maven template (its helpers live under <web-module>/build/ once vaadinPrepareFrontend has run).
+      - name: Frontend unit tests and coverage
+        working-directory: <web-module>
+        run: |
+          npm ci
+          npx vitest run --coverage
+
+      - name: Static analysis (detekt + ktlint)
+        # Already part of `check` (hence of `build` above); run explicitly with --continue so one tool's failure
+        # still yields the other's report, and so the reports exist before the Sonar step reads them.
+        run: ./gradlew detekt ktlintCheck --continue
+
+      - name: Run SonarCloud analysis
+        # Only present when sonar.mode isn't `none`. The org.sonarqube plugin's `sonar` task reads SONAR_TOKEN
+        # from the environment. Skipped on pull requests from forks, where SONAR_TOKEN is not available.
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: |
+            **/build/test-results/**
+            **/build/reports/tests/**
+            **/build/reports/detekt/**
+            **/build/reports/ktlint/**
+            coverage/build/reports/jacoco/testCodeCoverageReport/**
+            <web-module>/coverage/**
+          retention-days: 7
+
+  docs:
+    name: Build and publish documentation
+    needs: build
+    if: github.ref == 'refs/heads/<main-branch>' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK <java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: <java-version>
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            docs/package-lock.json
+            apis/messaging/docs/package-lock.json
+            apis/graphql-server/docs/package-lock.json
+
+      - name: Generate KDoc and API documentation
+        # dokkaGeneratePublicationHtml is Dokka 2's HTML task; <api-doc-tasks> are the non-npm API documentation
+        # tasks the survey found (OpenAPI html2, protoc-gen-doc) — they write <module>/build/generated-docs/.
+        run: ./gradlew dokkaGeneratePublicationHtml <api-doc-tasks>
+
+      - name: Generate AsyncAPI documentation
+        if: hashFiles('apis/messaging/docs/package.json') != ''
+        working-directory: apis/messaging/docs
+        env:
+          ASYNCAPI_METRICS_CONFIG_PATH: .asyncapi-analytics
+        run: |
+          npm ci --no-audit --no-fund
+          out="$GITHUB_WORKSPACE/build/generated-docs/messaging"
+          for spec in ../*-async-api-v*.yaml; do
+            v="$(basename "$spec" .yaml | sed -e 's/.*-async-api-//')"
+            npx asyncapi validate "$spec"
+            npx asyncapi generate fromTemplate "$spec" @asyncapi/html-template \
+              -o "$out/$v" --force-write -p singleFile=true
+          done
+
+      - name: Generate GraphQL documentation
+        if: hashFiles('apis/graphql-server/docs/package.json') != ''
+        working-directory: apis/graphql-server/docs
+        run: |
+          npm ci --no-audit --no-fund
+          out="$GITHUB_WORKSPACE/build/generated-docs/graphql-server"
+          for sdl in ../*-v*.graphqls; do
+            v="$(basename "$sdl" .graphqls | sed -e 's/.*-\(v[0-9]*\)$/\1/')"
+            npx spectaql "spectaql-$v.yml" --target-dir "$out/$v"
+            node build-voyager.mjs "$sdl" "$out/$v/voyager" "GraphQL schema $v"
+          done
+
+      - name: Install Antora
+        working-directory: docs
+        run: npm ci
+
+      - name: Build Antora docs
+        working-directory: docs
+        run: npx antora antora-playbook.yml
+
+      - name: Merge documentation
+        run: |
+          touch ./docs/build/site/.nojekyll
+          cp -r ./docs/build/site ./doc
+          mkdir -p ./doc/api/kdoc
+          # Dokka: the root-aggregated site when the root project aggregates, otherwise one site per module
+          # under doc/api/kdoc/<module-path>/.
+          if [ -f ./build/dokka/html/index.html ]; then
+            cp -r ./build/dokka/html/. ./doc/api/kdoc/
+          else
+            while IFS= read -r dir; do
+              module="$(dirname "$(dirname "$(dirname "$dir")")")"; module="${module#./}"
+              mkdir -p "./doc/api/kdoc/$module" && cp -r "$dir"/. "./doc/api/kdoc/$module/"
+            done < <(find . -type d -path '*/build/dokka/html' -not -path './node_modules/*' -not -path './build-logic/*')
+          fi
+          # Generated API documentation — same merge as the Maven template, from build/ instead of target/.
+          while IFS= read -r root; do
+            cp -r "$root"/. ./doc/api/
+          done < <(find . -type d -path '*/build/generated-docs' -not -path './node_modules/*')
+
+      - name: Deploy to GitHub Pages
+        if: success()
+        uses: crazy-max/ghaction-github-pages@v5
+        with:
+          target_branch: gh-pages
+          build_dir: ./doc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Gradle-specific variant rules, on top of the Maven template's:
+
+- **`ci.tests: unit`** — drop the `Integration tests` step (the `Build and unit tests` step already excludes
+  `integrationTest`), so the aggregate covers unit tests only; add the same one-line "integration tests run locally
+  only (`./gradlew integrationTest`)" comment at the top of the job. Verify against the survey that no Docker-needing
+  test class escapes the `**/*IT*` pattern into `test`, and flag it by name if one does.
+- **`ci.pages: no`**, **`sonar.mode: none`**, **`frontend` ≠ `hilla`**, no `apis/messaging/` or
+  `apis/graphql-server/docs/` — exactly as for Maven (drop the `-Pvaadin.*` flags along with the Node steps, and
+  the `SONAR_TOKEN` env along with the Sonar step).
+- **Sonar wiring** — the `sonar` task only exists when `iru-setup-java-springboot-pom` applied `org.sonarqube` in the
+  root `build.gradle.kts` (it does so when `sonar.mode` isn't `none`); check for it the way Step 0 checks the pom,
+  including that `sonar.coverage.jacoco.xmlReportPaths` points at the aggregated XML and
+  `sonar.kotlin.detekt.reportPaths`/`sonar.kotlin.ktlint.reportPaths` at the reports the quality step writes.
+- **No `mvn site`** — Gradle has no site equivalent; the test and coverage HTML reports travel in the `build` job's
+  `test-reports` artifact instead of being published. Say so in the report, so nobody looks for `mvn-site/` on the
+  published site.
+- **Never `gradle`, always `./gradlew`** — the wrapper pins the Gradle version the build was verified with, and
+  `setup-gradle` validates its checksum.
+
 ## Step 2 — `deploy.yml`
 
 ```yaml
@@ -489,10 +845,10 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK <java-version>
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: <java-version>
@@ -505,12 +861,12 @@ jobs:
       # --- Cloud authentication: keyless, via OIDC. No stored access key. ---
       # AWS variant:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
       # Google Cloud variant (use instead of the above):
-      # - uses: google-github-actions/auth@v2
+      # - uses: google-github-actions/auth@v3
       #   with:
       #     workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
       #     service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
@@ -526,7 +882,7 @@ jobs:
             -Ddocker.publishRegistry.password=${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Set up OpenTofu
-        uses: opentofu/setup-opentofu@v1
+        uses: opentofu/setup-opentofu@v2
 
       - name: Tofu init
         working-directory: infra/envs/${{ inputs.environment }}
@@ -545,7 +901,7 @@ jobs:
         # because `apply` returned 0.
         run: |
           url="$(cd infra/envs/${{ inputs.environment }} && tofu output -raw service_health_url)"
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl -fsS "$url" >/dev/null; then echo "Healthy"; exit 0; fi
             sleep 10
           done
@@ -570,6 +926,67 @@ Points to resolve from the survey rather than copy blindly:
   reviewers.
 - Buildpacks need a container daemon; `ubuntu-latest` has one. If the org requires a daemonless build, note Jib as
   the alternative and that it needs different plugin configuration in `boot/pom.xml`.
+
+### Gradle variant (`buildTool: gradle`)
+
+Same workflow, triggers, concurrency, permissions, OIDC and OpenTofu steps; replace the JDK, tag and image steps
+with:
+
+```yaml
+      - name: Set up JDK <java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: <java-version>
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Resolve image tag
+        id: meta
+        # The project version lives in gradle.properties (`version=`), the Gradle counterpart of the pom's
+        # <version>. The default tag is <version>-<short sha>: traceable to the release and still unique per
+        # commit, so an immutable-tag registry policy never rejects a redeploy of a SNAPSHOT.
+        env:
+          # Passed through env, not interpolated into the script, so a crafted input can't inject shell.
+          IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
+        run: |
+          version="$(sed -n 's/^version[[:space:]]*=[[:space:]]*//p' gradle.properties | tr -d '[:space:]')"
+          if [ -z "$version" ]; then
+            echo "::error::No version= line in gradle.properties"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=${IMAGE_TAG_INPUT:-${version}-${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to the container registry
+        # bootBuildImage has no command-line options for registry credentials; when none are configured in
+        # boot/build.gradle.kts it falls back to ~/.docker/config.json, which this step writes. For ECR or
+        # Artifact Registry use the OIDC-derived login instead (aws-actions/amazon-ecr-login, or
+        # `gcloud auth configure-docker`) and drop the two REGISTRY_* secrets.
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ vars.IMAGE_REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push the container image
+        # bootBuildImage is the Gradle counterpart of spring-boot:build-image — Cloud Native Buildpacks, layered
+        # image, no Dockerfile. --imageName/--publishImage are the plugin's own command-line options.
+        run: |
+          ./gradlew :boot:bootBuildImage -x test -x integrationTest \
+            --imageName=${{ vars.IMAGE_REPOSITORY }}:${{ steps.meta.outputs.tag }} \
+            --publishImage
+```
+
+- `:boot:` is the Gradle path of the `boot` project from `settings.gradle.kts` — use the real one from the survey.
+- `bootBuildImage` depends on `bootJar` (written to `boot/build/libs/`, not `boot/target/`); nothing else in the
+  workflow reads the jar, so no path changes elsewhere.
+- With `frontend: hilla`, add `-Pvaadin.productionMode=true -Pvaadin.ci.build=true` and the `Set up Node` step from
+  Step 1's Gradle template, or the image ships a development-mode frontend.
+- `IMAGE_REGISTRY` (the registry host, e.g. `ghcr.io` or `<account>.dkr.ecr.<region>.amazonaws.com`) is one more
+  environment variable than the Maven variant needs — list it in Step 4's table only for the Gradle variant.
 
 ## Step 3 — `undeploy.yml`
 
@@ -620,14 +1037,14 @@ jobs:
           fi
 
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Configure cloud credentials
         # Same OIDC step as deploy.yml
         run: echo "replace with the AWS or Google Cloud OIDC auth action"
 
       - name: Set up OpenTofu
-        uses: opentofu/setup-opentofu@v1
+        uses: opentofu/setup-opentofu@v2
 
       - name: Tofu init
         working-directory: infra/envs/${{ inputs.environment }}
@@ -695,7 +1112,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Dependency review
         uses: actions/dependency-review-action@v5
 
@@ -714,9 +1131,9 @@ jobs:
         language: [ java-kotlin, javascript-typescript ]  # drop javascript-typescript when frontend: none
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Set up JDK <java-version>
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: <java-version>
@@ -735,7 +1152,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
     with:
       scan-args: |-
         --recursive
@@ -748,7 +1165,7 @@ jobs:
       contents: read
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           # gitleaks needs full history to scan commits already merged, not just the current tree.
           fetch-depth: 0
@@ -762,6 +1179,115 @@ Drop whichever `jobs:` entries the matching `security-*` flag turned off — a j
 condition is always false is dead YAML, same reasoning as the Sonar step above. If all four are off, still write
 `security.yml` with a comment explaining it currently declares no jobs would be more confusing than simply not
 writing the file — in that case, skip `security.yml` entirely and say so in Step 6's report.
+
+**Kotlin + Maven** — the template as written. The `java-kotlin` CodeQL language covers Kotlin, and `autobuild`
+compiles a Maven reactor (Kotlin included, since `kotlin-maven-plugin` compiles in-process). Dependency review
+works from the committed poms exactly as for Java.
+
+**Gradle** — three changes, because GitHub's dependency graph can't read Gradle build scripts statically and
+CodeQL can't extract Kotlin without a real compilation:
+
+1. **`dependency-submission` job** (generated whenever `security-dependency-review` is on — dependency review has
+   nothing to compare without it). It resolves the build's dependency graph with Gradle and submits it to GitHub,
+   on pushes (the base snapshot) and on pull requests (the head snapshot the review compares against):
+
+   ```yaml
+     dependency-submission:
+       name: Submit Gradle dependency graph
+       # Needs contents: write, which a pull request from a fork never gets — skipped there.
+       if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+       runs-on: ubuntu-latest
+       permissions:
+         contents: write
+       steps:
+         - name: Check out code
+           uses: actions/checkout@v7
+         - name: Set up JDK <java-version>
+           uses: actions/setup-java@v6
+           with:
+             distribution: temurin
+             java-version: <java-version>
+         - name: Generate and submit dependency graph
+           uses: gradle/actions/dependency-submission@v6
+           with:
+             cache-provider: basic
+   ```
+
+   and make `dependency-review` wait for it and tolerate a snapshot still being processed:
+
+   ```yaml
+     dependency-review:
+       name: Dependency review
+       needs: dependency-submission
+       # !cancelled(): still runs when the submission job was skipped (fork PR), reviewing whatever graph exists.
+       if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+       runs-on: ubuntu-latest
+       permissions:
+         contents: read
+         pull-requests: write
+       steps:
+         - name: Check out code
+           uses: actions/checkout@v7
+         - name: Dependency review
+           uses: actions/dependency-review-action@v5
+           with:
+             retry-on-snapshot-warnings: true
+             retry-on-snapshot-warnings-timeout: 600
+   ```
+
+   Also add `push: branches: [ <integration-branch>, <main-branch> ]` (both, not just main) so each base branch a
+   pull request targets has a submitted snapshot to compare against.
+2. **CodeQL builds manually.** Replace the matrix and the `Autobuild` step with a per-language build mode
+   (`build-mode: none` is not an option for Kotlin — CodeQL then skips every Kotlin file with a warning):
+
+   ```yaml
+       strategy:
+         fail-fast: false
+         matrix:
+           include:
+             - language: java-kotlin
+               build-mode: manual
+             # frontend: hilla only
+             - language: javascript-typescript
+               build-mode: none
+       steps:
+         - name: Check out code
+           uses: actions/checkout@v7
+         - name: Set up JDK <java-version>
+           if: matrix.build-mode == 'manual'
+           uses: actions/setup-java@v6
+           with:
+             distribution: temurin
+             java-version: <java-version>
+         - name: Set up Gradle
+           if: matrix.build-mode == 'manual'
+           uses: gradle/actions/setup-gradle@v6
+           with:
+             cache-provider: basic
+         - name: Initialize CodeQL
+           uses: github/codeql-action/init@v4
+           with:
+             languages: ${{ matrix.language }}
+             build-mode: ${{ matrix.build-mode }}
+         - name: Compile for CodeQL
+           if: matrix.build-mode == 'manual'
+           # CodeQL only sees what is actually compiled while it traces the build: `clean` + --no-build-cache stop
+           # Gradle restoring classes from a cache, --no-daemon keeps the compiler inside the traced process tree,
+           # and the in-process Kotlin strategy keeps kotlinc out of the separate Kotlin daemon. No tests, no
+           # detekt/ktlint — compilation (main + test sources, including codegen) is all CodeQL needs.
+           run: >-
+             ./gradlew --no-daemon --no-build-cache clean assemble testClasses
+             -Pkotlin.compiler.execution.strategy=in-process
+         - name: Perform CodeQL analysis
+           uses: github/codeql-action/analyze@v4
+           with:
+             category: /language:${{ matrix.language }}
+   ```
+
+   CodeQL supports a bounded Kotlin range (1.8.0 up to 2.4.x at the time of writing — see
+   https://codeql.github.com/docs/codeql-overview/supported-languages-and-frameworks/); if `project.kotlinVersion` is
+   newer than the range the live page lists, say so in the report — extraction fails until CodeQL catches up.
+3. **Dependabot uses the `gradle` ecosystem** — see below.
 
 `.github/dependabot.yml` is **always** generated, independent of the four flags above — dependency-update PRs and
 vulnerability scanning are separate concerns, and this catalog's convention keeps Dependabot on unconditionally:
@@ -820,6 +1346,22 @@ separate `npm` entry pointed at its own `directory` regardless of `frontend`, si
 disk — the `frontend` gate is specifically about a Hilla application frontend, not the documentation toolchains
 `iru-setup-java-springboot-apis`/`iru-setup-antora` already manage.
 
+For **`buildTool: gradle`**, replace the `maven` entry with a `gradle` one. Dependabot's Gradle support reads
+`gradle/libs.versions.toml` and the build scripts, and also bumps the wrapper (`gradle-wrapper.properties`); the
+`build-logic/` included build declares plugin dependencies of its own, so list it as a second directory:
+
+```yaml
+  - package-ecosystem: gradle
+    directories: [ "/", "/build-logic" ]
+    schedule:
+      interval: weekly
+    groups:
+      gradle-dependencies:
+        patterns: [ "*" ]
+```
+
+Drop `"/build-logic"` if the survey finds no `build-logic/build.gradle.kts`. Kotlin + Maven keeps the `maven` entry.
+
 ## Step 4 — Required secrets, variables, and environments
 
 Report these as a table; this skill cannot create them.
@@ -831,6 +1373,8 @@ Report these as a table; this skill cannot create them.
 | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT` | environment secrets | OIDC identity (Google Cloud) |
 | `AWS_REGION` / `GCP_PROJECT_ID`, `GCP_REGION` | environment variables | not secret, but environment-specific |
 | `IMAGE_REPOSITORY` | environment variable | the registry path the image is pushed to |
+| `IMAGE_REGISTRY` | environment variable | the registry host `docker/login-action` logs in to — **Gradle variant only**, and only while the `REGISTRY_*` secrets below are used |
+| `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` | environment secrets | registry push credentials — **only for a third-party registry**; omit both when the image goes to ECR or Artifact Registry through the OIDC-derived login (Step 2) |
 | `<PROVIDER>_API_KEY` | environment secret | LLM provider key, if `stack.ai.enabled` — never in the repository |
 | third-party provider tokens (`MONGODB_ATLAS_*`, `CONFLUENT_CLOUD_*`, …) | environment secrets | needed by the OpenTofu providers for managed services outside the cloud account |
 
@@ -839,6 +1383,9 @@ run unauthenticated against the public npm registry and Maven Central, so this t
 
 `GITHUB_TOKEN` needs no setup and is all four `security.yml` jobs (Step 3b) require — none of `dependency-review`,
 CodeQL, OSV-Scanner, or gitleaks need a secret of their own in the free/public-repository tier of each action.
+The Gradle variant adds no secret either: `gradle/actions/setup-gradle` and `dependency-submission` use
+`GITHUB_TOKEN` (the latter with the job-level `contents: write` shown in Step 3b), and with `cache-provider: basic`
+there is no Develocity/Gradle account or access key involved. Kotlin itself (detekt, ktlint, Dokka) needs nothing.
 Also required, and easy to miss:
 
 - **A GitHub Environment per deployment environment**, with required reviewers on `prod`.
@@ -862,10 +1409,18 @@ Also required, and easy to miss:
 - Confirm every action reference is a current major version, and every secret/variable name used appears in Step
   4's table — a typo'd secret name silently evaluates to empty, which usually surfaces as a confusing
   authentication failure much later.
+- Lint every workflow with `actionlint` when it's available (`actionlint`, or `docker run --rm -v "$PWD":/repo -w
+  /repo rhysd/actionlint:latest`) — it catches expression, `needs`/`if`, permission and shellcheck errors that a
+  plain YAML parse doesn't. Report it as not run, rather than as passing, when neither is available.
 - Confirm the Maven commands actually work locally first (`mvn -B -ntp clean verify` — or `mvn -B -ntp clean
   verify -DskipITs` for `ci.tests: unit`, confirming no Docker-dependent test runs in it —, `mvn -B -ntp site
   -DskipTests -Djacoco.skip`, `mvn -B -ntp generate-resources`) — delegate to `iru-gate-runner` for a compact
-  result. A workflow whose commands were never run locally is a guess.
+  result. A workflow whose commands were never run locally is a guess. Kotlin + Maven adds `mvn -B -ntp
+  detekt:check ktlint:check` and `mvn -B -ntp dokka:dokka`. Gradle: `./gradlew build -x integrationTest`
+  (plus `./gradlew integrationTest` for `ci.tests: full`), `./gradlew :coverage:testCodeCoverageReport` (confirm the
+  XML lands where Sonar is configured to read it), `./gradlew detekt ktlintCheck --continue`,
+  `./gradlew dokkaGeneratePublicationHtml <api-doc-tasks>`, and `./gradlew --no-daemon --no-build-cache clean
+  assemble testClasses` (the CodeQL compile).
 - If the GraphQL step was added, run its commands locally too (`npm ci` in `apis/graphql-server/docs`, then
   `spectaql` and `build-voyager.mjs`) and **open both pages in a browser**. SpectaQL's output is server-rendered so
   a wrong SDL path fails loudly, but Voyager renders client-side: a bad introspection payload or a missing
@@ -878,7 +1433,8 @@ Also required, and easy to miss:
   `npm ci` here has failed before on an unpublished transitive dependency of the CLI, so a green run on your
   machine with a warm cache isn't proof CI will install cleanly.
 - If the Node/Vitest step was added (`frontend: hilla`), run its commands locally too, **in the same order as the
-  workflow**: `mvn -B -ntp clean verify -Pproduction -Dvaadin.ci.build=true` first, then `npm ci` and
+  workflow**: `mvn -B -ntp clean verify -Pproduction -Dvaadin.ci.build=true` (Gradle: `./gradlew build -x
+  integrationTest -Pvaadin.productionMode=true -Pvaadin.ci.build=true`) first, then `npm ci` and
   `npx vitest run --coverage` in the web module. Running the npm/vitest commands before the Maven build fails on
   a module-not-found error from `vite.generated.ts` (it imports compiled helpers under `<web-module>/target/`)
   that has nothing to do with the frontend tests — confirmed while writing `iru-setup-java-springboot-hilla`, and
@@ -897,7 +1453,13 @@ actually taken (**created / updated / replaced / kept as is**) — for every fil
 this run's choices (e.g. still runs integration tests after `ci-tests: unit`, still deploys to Pages after
 `pages: no`, still runs a Sonar step after `sonar: none`); the resolved `visibility` and how (args, manifest,
 `gh`, or asked), `ci.tests` and `ci.pages` (and whether they were written back to the manifest), plus the
-Actions-minutes note for a private/internal repository; the branch names and Java version resolved; whether the
+Actions-minutes note for a private/internal repository; the branch names and Java version resolved; the
+language/build-tool variant used (`java`+`maven`, `kotlin`+`maven`, or `kotlin`+`gradle`), how it was resolved
+(manifest, or the disk overriding it), and — for Gradle — the `setup-gradle` cache provider (`basic`, and that
+switching to the default enhanced provider means accepting the Gradle Technologies Terms of Use), the image tag
+scheme (`<version>-<short sha>` from `gradle.properties`), whether `dependency-submission` was added, whether Dokka
+publishes one aggregated site or one per module under `doc/api/kdoc/`, that no Maven site is published, and whether
+`project.kotlinVersion` falls inside CodeQL's supported Kotlin range; whether the
 Sonar step was included (and, if so, `sonar.mode` and the resolved organization/project key/host URL) or omitted
 because `sonar.mode: none`, and whether the pom's own Sonar wiring matched what Step 0 expected; whether the docs
 job's Antora install matches `docs/package.json` (including Kroki); whether the AsyncAPI and GraphQL documentation

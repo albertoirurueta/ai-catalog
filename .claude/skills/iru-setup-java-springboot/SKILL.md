@@ -1,6 +1,53 @@
 ---
 name: iru-setup-java-springboot
-description: End-to-end bootstrap for a new (or older/partially set-up) Spring Boot service repository built on DDD + hexagonal architecture as a Maven multi-module reactor (`boot`, `application`, `domain`, `infrastructure/*`, `api/*`). Collects the project's identity (groupId, artifactId, base Java package), the target cloud (AWS or Google Cloud), the concurrency model (reactive/blocking/both), and every technology choice (databases + index/migration tooling, caches, security, Kafka via Spring Cloud Stream + AVRO, REST/gRPC/GraphQL servers and clients, the API mocking tool backing those clients in tests — Microcks or WireMock — logging, metrics, tracing, Spring AI, dynamic configuration), resolving the latest Spring Boot version and validating every dependency id against the live Spring Initializr metadata API (`https://start.spring.io/metadata/client`) rather than a hardcoded list. Records all of it in a `springboot-stack.yml` manifest, then orchestrates `iru-setup-java-springboot-pom` (root reactor pom with Javadoc/Checkstyle/PMD/SpotBugs/Surefire/Failsafe/JaCoCo/JXR/site/groovy build-info/Sonar plugins), `iru-setup-java-springboot-modules` (module tree, ports/adapters skeleton, configuration), `iru-setup-java-springboot-apis` (the `apis/` spec tree plus OpenAPI/protobuf/GraphQL-SDL/AVRO code generation and AsyncAPI documentation generation), `iru-setup-java-springboot-testcontainers` (docker compose + Testcontainers integration-test harness), `iru-setup-java-springboot-platform` (OpenTofu deployment), `iru-setup-java-springboot-github-workflows` (test/publish, deploy and undeploy workflows), and `iru-update-java-springboot-documentation` (Antora site with Mermaid + Kroki and the full template page set). Also asks whether the project is open source, the GitHub repository's visibility (detected via `gh` when possible), whether GitHub Actions workflows are wanted at all (`ci` set to `no` skips the github-workflows sub-skill — build, deploy and undeploy workflows and the security block alike), which tests CI runs (`unit` = Surefire only, `full` = plus Failsafe/Testcontainers integration tests), whether docs are deployed to GitHub Pages, which SonarCloud/self-hosted SonarQube/no Sonar analysis it runs — stating the Actions-minutes, SonarCloud and Pages cost differences for private repositories — and whether a Hilla frontend is part of the service — when it is, `iru-setup-java-springboot-hilla` scaffolds the Vaadin/Hilla React frontend (BOM, starters, `vaadin-maven-plugin`, `src/main/frontend/`, Vitest, ESLint/Prettier) into the `boot` module right after `iru-setup-java-springboot-apis` — recording all of it (including a `visibility` field and a `ci:` block with `enabled`/`tests`/`pages`) in the manifest for the sub-skills to read. Announces up front whether it is setting the repository up from scratch or updating an existing one (with an inventory of every component it owns), and each sub-skill then warns and asks Update / Keep as is / Replace per pre-existing artifact instead of a blanket stop; only a genuinely incompatible repository (e.g. a Gradle build or a non-reactor pom) gets a hard stop question. Enforces Java 21 as a minimum. Invoke as `/iru-setup-java-springboot`, optionally with `args` (`key`/`value` lines) to pre-resolve `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when set), `frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), and `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded to every file-writing sub-skill only when supplied), skipping the matching interview question. Use when starting a new Spring Boot microservice from nothing and you want the whole hexagonal reactor, CI/CD, infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and re-answering the same questions each time.
+description: >-
+  End-to-end bootstrap for a new (or older/partially set-up) Spring Boot service repository built on DDD +
+  hexagonal architecture as a multi-module build (`boot`, `application`, `domain`, `infrastructure/*`, `api/*`) —
+  in Java (always a Maven reactor) or Kotlin (a Maven reactor, or a Gradle Kotlin DSL multi-project build with a
+  `gradle/libs.versions.toml` catalog and `build-logic/` convention plugins). Asks the implementation language
+  (Java recommended unless the repository already has Kotlin) and, for Kotlin only, the build tool (Gradle KTS
+  recommended for a new repository, Maven for an existing Maven one), resolving the Kotlin version from the one the
+  chosen Spring Boot version manages rather than from memory. Collects the project's identity (groupId,
+  artifactId, base package), the target cloud (AWS or Google Cloud), the concurrency model (reactive/blocking/both),
+  and every technology choice (databases + index/migration tooling, caches, security, Kafka via Spring Cloud
+  Stream + AVRO, REST/gRPC/GraphQL servers and clients, the API mocking tool backing those clients in tests —
+  Microcks or WireMock — logging, metrics, tracing, Spring AI, dynamic configuration), resolving the latest Spring
+  Boot version and validating every dependency id against the live Spring Initializr metadata API
+  (`https://start.spring.io/metadata/client`) rather than a hardcoded list. Records all of it in a
+  `springboot-stack.yml` manifest (including `project.language`, `project.buildTool`, and `project.kotlinVersion`),
+  then orchestrates `iru-setup-java-springboot-pom` (the root build — reactor pom with
+  Javadoc/Checkstyle/PMD/SpotBugs for Java or Dokka/detekt/ktlint for Kotlin, plus
+  Surefire/Failsafe/JaCoCo/JXR/site/build-info/Sonar, or the Gradle KTS settings/catalog/convention plugins/wrapper
+  equivalent), `iru-setup-java-springboot-modules` (module tree, ports/adapters skeleton, configuration),
+  `iru-setup-java-springboot-apis` (the `apis/` spec tree plus OpenAPI/protobuf/GraphQL-SDL/AVRO code generation
+  and AsyncAPI documentation generation), `iru-setup-java-springboot-testcontainers` (docker compose +
+  Testcontainers integration-test harness), `iru-setup-java-springboot-platform` (OpenTofu deployment),
+  `iru-setup-java-springboot-github-workflows` (test/publish, deploy and undeploy workflows), and
+  `iru-update-java-springboot-documentation` (Antora site with Mermaid + Kroki and the full template page set) —
+  each reading the language and build tool from the manifest. Also asks whether the project is open source, the
+  GitHub repository's visibility (detected via `gh` when possible), whether GitHub Actions workflows are wanted at
+  all (`ci` set to `no` skips the github-workflows sub-skill — build, deploy and undeploy workflows and the
+  security block alike), which tests CI runs (`unit` = unit tests only, `full` = plus Testcontainers integration
+  tests), whether docs are deployed to GitHub Pages, which SonarCloud/self-hosted SonarQube/no Sonar analysis it
+  runs — stating the Actions-minutes, SonarCloud and Pages cost differences for private repositories — and
+  whether a Hilla frontend is part of the service — when it is, `iru-setup-java-springboot-hilla` scaffolds the
+  Vaadin/Hilla React frontend (BOM, starters, Vaadin build plugin, `src/main/frontend/`, Vitest, ESLint/Prettier)
+  into the `boot` module right after `iru-setup-java-springboot-apis` — recording all of it (including a
+  `visibility` field and a `ci:` block with `enabled`/`tests`/`pages`) in the manifest for the sub-skills to read.
+  Announces up front whether it is setting the repository up from scratch or updating an existing one (with an
+  inventory of every component it owns), and each sub-skill then warns and asks Update / Keep as is / Replace per
+  pre-existing artifact instead of a blanket stop; only a genuinely incompatible repository (e.g. a Gradle build
+  for a Java service, a Groovy-DSL Gradle build, or a single-module build with root sources) gets a hard stop
+  question. Enforces Java 21 as a minimum. Invoke as `/iru-setup-java-springboot`, optionally with `args`
+  (`key`/`value` lines) to pre-resolve `mode` (`new`/`existing`), `language` (`java`/`kotlin`), `build-tool`
+  (`maven`/`gradle`; `gradle` only with Kotlin), `open-source` (`yes`/`no`), `sonar`
+  (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when set),
+  `frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
+  (`unit`/`full`), `pages` (`yes`/`no`), and `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded to every
+  file-writing sub-skill only when supplied), skipping the matching interview question. Use when starting a new
+  Spring Boot microservice (Java or Kotlin) from nothing and you want the whole hexagonal build, CI/CD,
+  infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and
+  re-answering the same questions each time.
 model: sonnet
 ---
 
@@ -15,44 +62,59 @@ read that manifest back.
 
 The architecture is not negotiable — it is what this skill exists to impose:
 
-- **Domain-Driven Design + hexagonal (ports & adapters)**, realised as a **Maven multi-module reactor**.
-- The **root `pom.xml` is the single place any dependency or plugin version is declared**. Module poms list
-  artifacts without `<version>`, inheriting from the root's `<dependencyManagement>`/`<pluginManagement>`.
-- **Java 21 is the enforced minimum** (`maven.compiler.release`, `java.version`, and a
-  `maven-enforcer-plugin` `requireJavaVersion` rule). Never generate a project below 21, even if Spring
-  Initializr's own default is lower — as of this writing its default `javaVersion` is `17`, which this skill
-  overrides.
+- **Domain-Driven Design + hexagonal (ports & adapters)**, realised as a **multi-module build**: a **Maven
+  multi-module reactor** for Java (Java services are Maven-only in this catalog) and for Kotlin + Maven, or a
+  **Gradle Kotlin DSL multi-project build** for Kotlin + Gradle. The language (`project.language`: `java` |
+  `kotlin`) and build tool (`project.buildTool`: `maven` | `gradle`) are asked once in Step 3 and recorded in the
+  manifest; every sub-skill branches on them.
+- **One place declares every dependency and plugin version.** On Maven that is the **root `pom.xml`** — module
+  poms list artifacts without `<version>`, inheriting from the root's `<dependencyManagement>`/`<pluginManagement>`.
+  On Gradle it is **`gradle/libs.versions.toml`** (the Spring Boot BOM imported via `platform()`), consumed by the
+  `build-logic/` convention plugins and the module build files — no version literal anywhere else.
+- **Java 21 is the enforced minimum** (Maven: `maven.compiler.release`, `java.version`, and a
+  `maven-enforcer-plugin` `requireJavaVersion` rule; Gradle: the JDK toolchain `languageVersion` set by the
+  `iru.kotlin-library` convention plugin). Never generate a project below 21, even if Spring Initializr's own
+  default is lower — as of this writing its default `javaVersion` is `17`, which this skill overrides.
 
 ## Module layout this skill imposes
 
-`<a>` below is the project `artifactId`; directory names are the short forms.
+`<a>` below is the project `artifactId`; directory names are the short forms. The **artifactId** and
+**Packaging** columns apply to Maven builds (Java, or Kotlin + Maven); the **Gradle project path** column applies
+to Kotlin + Gradle builds, where `settings.gradle.kts` sets `rootProject.name = "<a>"` and `include(...)`s one
+project per module directory, its `:`-path mirroring the directory tree. Aggregator directories are plain parent
+projects on Gradle (no build file of their own needed).
 
-| Directory | artifactId | Packaging | May depend on |
-|---|---|---|---|
-| `.` | `<a>-parent` | `pom` | — (declares all versions) |
-| `domain/` | `<a>-domain` | `jar` | nothing in this project |
-| `application/` | `<a>-application` | `jar` | `domain` |
-| `infrastructure/` | `<a>-infrastructure` | `pom` | — (aggregator) |
-| `infrastructure/database/` | `<a>-infrastructure-database` | `pom` | — (aggregator) |
-| `infrastructure/database/<engine>/` | `<a>-infrastructure-database-<engine>` | `jar` | `domain` |
-| `infrastructure/configuration/` | `<a>-infrastructure-configuration` | `jar` | `domain` |
-| `infrastructure/clients/` | `<a>-infrastructure-clients` | `pom` | — (aggregator) |
-| `infrastructure/clients/<name>/` | `<a>-infrastructure-clients-<name>` | `jar` | `domain` |
-| `infrastructure/producers/` | `<a>-infrastructure-producers` | `jar` | `domain` |
-| `infrastructure/metrics/` | `<a>-infrastructure-metrics` | `jar` | `domain` |
-| `api/` | `<a>-api` | `pom` | — (aggregator) |
-| `api/rest-server/` | `<a>-api-rest-server` | `jar` | `application`, `domain` |
-| `api/grpc-server/` | `<a>-api-grpc-server` | `jar` | `application`, `domain` |
-| `api/graphql-server/` | `<a>-api-graphql-server` | `jar` | `application`, `domain` |
-| `api/consumers/` | `<a>-api-consumers` | `jar` | `application`, `domain` |
-| `boot/` | `<a>-boot` | `jar` | every other module |
-| `coverage/` | `<a>-coverage` | `pom` | every other module (test-scope, aggregation only) |
+| Directory | artifactId | Packaging | Gradle project path | May depend on |
+|---|---|---|---|---|
+| `.` | `<a>-parent` | `pom` | root (`<a>`) | — (declares all versions) |
+| `domain/` | `<a>-domain` | `jar` | `:domain` | nothing in this project |
+| `application/` | `<a>-application` | `jar` | `:application` | `domain` |
+| `infrastructure/` | `<a>-infrastructure` | `pom` | `:infrastructure` | — (aggregator) |
+| `infrastructure/database/` | `<a>-infrastructure-database` | `pom` | `:infrastructure:database` | — (aggregator) |
+| `infrastructure/database/<engine>/` | `<a>-infrastructure-database-<engine>` | `jar` | `:infrastructure:database:<engine>` | `domain` |
+| `infrastructure/configuration/` | `<a>-infrastructure-configuration` | `jar` | `:infrastructure:configuration` | `domain` |
+| `infrastructure/clients/` | `<a>-infrastructure-clients` | `pom` | `:infrastructure:clients` | — (aggregator) |
+| `infrastructure/clients/<name>/` | `<a>-infrastructure-clients-<name>` | `jar` | `:infrastructure:clients:<name>` | `domain` |
+| `infrastructure/producers/` | `<a>-infrastructure-producers` | `jar` | `:infrastructure:producers` | `domain` |
+| `infrastructure/metrics/` | `<a>-infrastructure-metrics` | `jar` | `:infrastructure:metrics` | `domain` |
+| `api/` | `<a>-api` | `pom` | `:api` | — (aggregator) |
+| `api/rest-server/` | `<a>-api-rest-server` | `jar` | `:api:rest-server` | `application`, `domain` |
+| `api/grpc-server/` | `<a>-api-grpc-server` | `jar` | `:api:grpc-server` | `application`, `domain` |
+| `api/graphql-server/` | `<a>-api-graphql-server` | `jar` | `:api:graphql-server` | `application`, `domain` |
+| `api/consumers/` | `<a>-api-consumers` | `jar` | `:api:consumers` | `application`, `domain` |
+| `boot/` | `<a>-boot` | `jar` | `:boot` | every other module |
+| `coverage/` | `<a>-coverage` | `pom` | `:coverage` (`jacoco-report-aggregation`) | every other module (test-scope, aggregation only) |
+
+The dependency direction is enforced by `maven-enforcer-plugin` `banned-dependencies` plus an ArchUnit test on
+Maven, and by an ArchUnit test alone on Gradle (module dependencies declared with `project(":...")` exactly per the
+table) — ArchUnit reads bytecode, so it works the same for Kotlin. Sources live in `src/main/java`/`src/test/java`
+for Java and `src/main/kotlin`/`src/test/kotlin` for Kotlin.
 
 Only the modules the user's technology choices actually call for are created — a project with no gRPC gets no
 `api/grpc-server/`, no GraphQL gets no `api/graphql-server/`, and no Kafka gets no `infrastructure/producers/` or
 `api/consumers/`. `domain`, `application`, `boot`, and `coverage` are always created.
 
-`apis/` at the repository root is **not** a Maven module — it holds the API contracts
+`apis/` at the repository root is **not** a Maven module or Gradle project — it holds the API contracts
 (`apis/rest-server/`, `apis/grpc-server/`, `apis/graphql-server/`, `apis/rest-client/<name>/`,
 `apis/grpc-client/<name>/`, `apis/graphql-client/<name>/`, `apis/messaging/` — AVRO schemas *and* the AsyncAPI
 specification describing the topics that carry them) that the code-generation and documentation generators read.
@@ -65,6 +127,8 @@ This skill can be invoked stand-alone (`/iru-setup-java-springboot`) or driven b
 
 ```
 mode: new
+language: kotlin
+build-tool: gradle
 open-source: yes
 sonar: cloud
 sonar-organization: example-github
@@ -78,17 +142,32 @@ pages: yes
 on-existing: ask
 ```
 
-Recognized keys: `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`), and
+Recognized keys: `mode` (`new`/`existing`), `language` (`java`/`kotlin`), `build-tool` (`maven`/`gradle`),
+`open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`), and
 — only when `sonar` is `cloud` or `self-hosted` — `sonar-organization`, `sonar-project-key`, `sonar-host-url`, plus
 `frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
 (`unit`/`full`, only meaningful when `ci: yes`), `pages` (`yes`/`no`, only meaningful when `ci: yes`), and
 `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key found here is resolved — skip the matching
-question in Step 3b. If `args` is absent or doesn't look like this format, treat everything as unset and ask
-normally. `on-existing` is never asked: it exists for scripted runs, and this skill forwards it to its sub-skills
+question in Step 3 or 3b. If `args` is absent or doesn't look like this format, treat everything as unset and ask
+normally.
+
+Validate the language/build-tool pair before anything else: `build-tool: gradle` together with `language: java` is
+**rejected** — say that a Java Spring Boot service is Maven-only in this catalog and ask (`AskUserQuestion`)
+whether to switch to **Kotlin + Gradle** or to **Java + Maven**; never proceed with Java on Gradle. `build-tool:
+gradle` with no `language` implies `language: kotlin` (say so). `language: java` with no `build-tool` resolves
+`build-tool: maven` without asking. `on-existing` is never asked: it exists for scripted runs, and this skill forwards it to its sub-skills
 **only** when it arrived here via `args` — otherwise every sub-skill asks per artifact itself.
 
-**Detect the mode.** `mode` from `args` wins; otherwise a root `pom.xml` means `existing`, and so does **any**
-other artifact this run owns being present (it is an update for that component even when there's no pom yet).
+**Detect the mode.** `mode` from `args` wins; otherwise a root `pom.xml`, `settings.gradle.kts` or
+`build.gradle.kts` means `existing`, and so does **any** other artifact this run owns being present (it is an
+update for that component even when there's no root build yet).
+
+**Detect the existing build's language and tool** (used to pre-select Step 3's answers, and by the hard-stop check
+below): Kotlin is present when there are `src/**/kotlin/` directories or `*.kt` files outside `build/`/`target/`,
+a `kotlin-maven-plugin` in any `pom.xml`, or `kotlin("jvm")`/`org.jetbrains.kotlin.jvm` in any `*.gradle.kts`
+or `gradle/libs.versions.toml`. The build tool is Maven when a root `pom.xml` exists, Gradle Kotlin DSL when
+`settings.gradle.kts`/`build.gradle.kts` exist, and **Gradle Groovy DSL** when only `settings.gradle`/
+`build.gradle` exist. Record what you found (e.g. "existing Maven reactor, Kotlin sources present").
 Then, before asking anything else, print a short **Setup mode** statement:
 
 - `mode: new` → "Setting up this repository **from scratch** — no prior setup found."
@@ -98,7 +177,7 @@ Then, before asking anything else, print a short **Setup mode** statement:
   | Component | Owner | Evidence to look for |
   |---|---|---|
   | Manifest | this skill | `springboot-stack.yml` |
-  | Root reactor pom + module poms | `iru-setup-java-springboot-pom` | `pom.xml`, `*/pom.xml` (partial: modules listed but missing on disk, or vice versa) |
+  | Root build + module builds | `iru-setup-java-springboot-pom` | Maven: `pom.xml`, `*/pom.xml`; Gradle: `settings.gradle.kts`, `build.gradle.kts`, `*/build.gradle.kts`, `gradle/libs.versions.toml`, `build-logic/`, `gradlew`/`gradlew.bat`/`gradle/wrapper/` (partial: modules listed but missing on disk, or vice versa) |
   | Module tree / source skeleton | `iru-setup-java-springboot-modules` | `domain/`, `application/`, `boot/`, `infrastructure/*`, `api/*`, `coverage/`, `application*.yml` |
   | API contracts + generators | `iru-setup-java-springboot-apis` | `apis/**` |
   | Hilla frontend (only when `frontend: hilla`) | `iru-setup-java-springboot-hilla` | `boot/src/main/frontend/`, `boot/package.json`, `vitest.config.ts` |
@@ -106,32 +185,49 @@ Then, before asking anything else, print a short **Setup mode** statement:
   | OpenTofu platform | `iru-setup-java-springboot-platform` | `infra/**` |
   | Workflows + security block | `iru-setup-java-springboot-github-workflows` | each of `.github/workflows/build.yml`, `deploy.yml`, `undeploy.yml`, `security.yml`, and `.github/dependabot.yml` |
   | Antora docs | `iru-update-java-springboot-documentation` | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
-  | Sonar config | `iru-setup-java-springboot-pom` | `sonar.*` properties / `sonar-maven-plugin` in `pom.xml` |
+  | Sonar config | `iru-setup-java-springboot-pom` | `sonar.*` properties / `sonar-maven-plugin` in `pom.xml`, or the `org.sonarqube` plugin / `sonar {}` block in the root `build.gradle.kts` |
+  | `detekt.yml` (Kotlin only) | `iru-setup-java-springboot-pom` | the file |
   | `.gitignore` | `iru-setup-java-gitignore` | `.gitignore` |
   | `README.md` / `CHANGELOG.md` | `iru-setup-readme` / `iru-setup-changelog` | the files |
-  | `checkstyle.xml` / `LICENSE` | this skill (Step 9) | the files |
+  | `checkstyle.xml` (Java only) / `LICENSE` | this skill (Step 9) | the files |
 
   Then: "For each component that already exists you'll be asked whether to keep it, update it, or replace it."
   Each sub-skill asks that itself, per artifact it owns, when it runs (unless `on-existing` was forwarded) — this
   skill does not ask the same question again on its behalf.
 
-**Hard stop only for a genuinely incompatible repository.** If the root build is not something this reactor can
-be laid over — a Gradle build (`build.gradle`/`build.gradle.kts`/`settings.gradle*`), or a `pom.xml` that is a
-single-module `jar`/`war` project with its own `src/main/java` at the root (re-parenting it under a `pom`-packaged
-reactor would move or overwrite real code) — use `AskUserQuestion` to ask **Stop (Recommended)** — "end now,
-nothing written; this repository's build can't host a DDD/hexagonal reactor without a manual migration" — or
-**Continue anyway** — "the sub-skills will still ask per file, but expect them to propose replacing the root build
-and to leave the existing root sources orphaned outside every module". This applies even when `mode: existing`
-came via `args`. An existing `pom`-packaged reactor (from this skill or similar) is **not** incompatible — it's a
-normal update run.
+**Hard stop only for a genuinely incompatible repository.** The root build is incompatible when it is not
+something this multi-module build can be laid over:
+
+- a **Gradle build when the language is Java** — `language: java` from `args`, or Step 3's answer once known (a
+  Java Spring Boot service is Maven-only in this catalog);
+- a **Gradle Groovy DSL build** (`settings.gradle`/`build.gradle` without `.kts`) for any language — the Kotlin
+  path generates Kotlin DSL only;
+- a **Maven build when `build-tool: gradle`** was requested (or a Gradle KTS build when `build-tool: maven` was) —
+  switching build tools is a migration, not an update;
+- a **single-module build with its own sources at the root** — a `pom.xml` that is a `jar`/`war` project with
+  `src/main/java`/`src/main/kotlin` at the root, or a `build.gradle.kts` applying the Spring Boot plugin with
+  `src/main/kotlin` at the root (re-parenting it under a multi-module build would move or overwrite real code).
+
+When the language isn't resolved yet (no `args`), an existing Gradle KTS build simply pre-selects Kotlin + Gradle
+in Step 3; re-apply this check right after Step 3 if the user then picks Java (or a different build tool). For an
+incompatible build, use `AskUserQuestion` to ask **Stop (Recommended)** — "end now, nothing written; this
+repository's build can't host a DDD/hexagonal multi-module build without a manual migration" — or **Continue
+anyway** — "the sub-skills will still ask per file, but expect them to propose replacing the root build and to
+leave the existing root sources orphaned outside every module". This applies even when `mode: existing` came via
+`args`. An existing `pom`-packaged reactor (from this skill or similar, Java or Kotlin) is **not** incompatible,
+and neither is an existing Gradle Kotlin DSL multi-project build when the language is Kotlin — both are normal
+update runs.
 
 - If `springboot-stack.yml` already exists, read it and offer its values as the defaults for every question below,
   so a re-run is a cheap "add one more database/client" pass rather than a full re-interview. Whether the manifest
   itself is then rewritten is asked in Step 6, not here.
 - Verify prerequisites and report any that are missing before asking anything (a missing one is not a hard stop —
   the generated files are still correct, they just can't be verified in Step 10):
-  `java -version` (must be 21+), `mvn -v`, `docker info` (needed by Testcontainers), `curl --version`,
-  `git rev-parse --show-toplevel`.
+  `java -version` (must be 21+), `mvn -v` (Maven builds), `docker info` (needed by Testcontainers), `curl --version`,
+  `git rev-parse --show-toplevel`. For a Gradle build also check `gradle --version` — optional: the build
+  sub-skill generates the Gradle wrapper with a local `gradle` if present, else through Docker
+  (`gradle:<tag>` image), else asks the user; afterwards every command runs through `./gradlew`. Since the build
+  tool may only be known after Step 3, check the Maven/Gradle prerequisites again then if they weren't yet.
 
 ## Step 1 — Resolve Spring Boot versions and the dependency catalogue from the live API
 
@@ -176,7 +272,7 @@ Ask in plain conversation (these are free-text fields, not bounded choices):
 - **groupId** — e.g. `com.example`.
 - **artifactId** — e.g. `orders-service`. Used as the `<a>` prefix for every module artifactId.
 - **version** — default `0.0.1-SNAPSHOT`.
-- **Base Java package** — e.g. `com.example.orders`. Need not equal `groupId`. Every module's package is derived
+- **Base package** — e.g. `com.example.orders` (the same for Java and Kotlin). Need not equal `groupId`. Every module's package is derived
   from it (`<base>.domain`, `<base>.application`, `<base>.infrastructure.database.mongodb`, `<base>.api.rest`, …),
   and `boot`'s `@SpringBootApplication` class lives directly in `<base>`.
 - **Service description** — one line; feeds the poms, the README, and the documentation overview page.
@@ -190,9 +286,50 @@ Derive, don't ask:
 - **Inception year** from `git log --reverse --format=%ad --date=format:%Y | head -1`, falling back to the current
   year.
 
-## Step 3 — Ask the two decisions that shape everything else
+## Step 3 — Ask the decisions that shape everything else
 
-Use `AskUserQuestion` for both.
+Use `AskUserQuestion` for each, skipping any already resolved in Step 0's `args`.
+
+**Language** (`project.language`) — header `Language`:
+
+- **Java** — recommended unless the repository already has Kotlin (Step 0's detection). Always a Maven reactor;
+  Checkstyle/PMD/SpotBugs + Javadoc; Lombok + MapStruct.
+- **Kotlin** — recommended when Step 0 found Kotlin sources or a Kotlin build plugin. Null-safety, data classes,
+  coroutines (`suspend` handlers work on MVC and WebFlux). Built with the `spring` (all-open) and `jpa` (no-arg)
+  compiler plugins and `-Xjsr305=strict`; detekt + ktlint instead of Checkstyle/PMD/SpotBugs; Dokka instead of
+  Javadoc; JaCoCo, Surefire/Failsafe-style unit vs `*IT` integration split, ArchUnit and Testcontainers unchanged.
+
+**Build tool** (`project.buildTool`) — asked **only when the language is Kotlin**; Java always resolves to `maven`
+without asking. Header `Build tool`:
+
+- **Gradle (Kotlin DSL)** — recommended for a new Kotlin repository (and for an existing Gradle KTS build):
+  `settings.gradle.kts`, a `gradle/libs.versions.toml` version catalog, `build-logic/` precompiled convention
+  plugins (`iru.kotlin-library`, `iru.spring-boot-app`, `iru.quality`, `iru.integration-test`, `iru.coverage`),
+  and the Gradle wrapper.
+- **Maven** — recommended when the repository already has a Maven build (Kotlin reactor or Java reactor being
+  converted): the same reactor and pom-per-module layout as the Java path, with `kotlin-maven-plugin`.
+
+If Step 0 found an existing build, re-apply its hard-stop check now that both answers are known.
+
+**Kotlin version** (`project.kotlinVersion`, only when the language is Kotlin) — resolve, don't ask and don't
+remember. The safest source is the `kotlin.version` the chosen Spring Boot version itself manages (its
+`spring-boot-dependencies` BOM), which is exactly what Initializr writes into a Kotlin build — so probe Initializr
+with a minimal Kotlin build for the Boot version confirmed in Step 1:
+
+```bash
+curl -sG https://start.spring.io/pom.xml \
+  --data-urlencode 'bootVersion=<boot-version>' \
+  -d type=maven-build -d language=kotlin -d javaVersion=<java-version> -d dependencies=web \
+  | sed -n 's:.*<kotlin.version>\(.*\)</kotlin.version>.*:\1:p'
+```
+
+(Equivalently: `<kotlin.version>` in
+`https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-dependencies/<boot-version>/spring-boot-dependencies-<boot-version>.pom`.)
+Use that value. Do **not** take the newest Kotlin from Maven Central's `maven-metadata.xml` (`<release>`/`<latest>`
+there can be a Beta/RC) or the newest GitHub release: a newer Kotlin line than the one Boot manages may work, but
+Boot hasn't been tested against it. If the user explicitly wants a newer stable Kotlin, tell them the Boot-managed
+version, warn that the override is untested by Spring Boot, and record their choice. Step 7 cross-checks this value
+against the reference build.
 
 **Deployment platform** — this drives `iru-setup-java-springboot-platform`'s whole OpenTofu layout, the dynamic
 configuration mechanism in Step 4, and the deploy workflows:
@@ -208,7 +345,9 @@ settled first:
   21+) already remove most of the thread-per-request scaling argument. Uses the blocking `spring-data-*` starters.
 - **Reactive (Spring WebFlux on Netty, Project Reactor)** — choose when the service is predominantly I/O-bound
   fan-out with very high concurrency and every downstream dependency has a reactive driver. Uses the
-  `spring-data-*-reactive` starters.
+  `spring-data-*-reactive` starters. With Kotlin, reactive code is usually written as `suspend` functions and
+  `Flow` over Reactor — Initializr adds `kotlinx-coroutines-reactor`, `reactor-kotlin-extensions` and
+  `kotlinx-coroutines-test` automatically for `webflux` when `language=kotlin`.
 - **Both** — a blocking web tier plus reactive clients (or vice versa). Pulls in Tomcat *and* Netty and both
   driver families. Warn the user this is the hardest to reason about: two runtime models coexist, blocking calls
   on a Netty event-loop thread will stall the whole server, and both dependency sets must be kept in sync. Only
@@ -250,8 +389,9 @@ facts below are per GitHub's current pricing — say so and tell the user to dou
   SonarCloud is free only for public/open-source projects (a private project needs a paid plan) and recommend
   **None** (`none`), offering **self-hosted SonarQube** (`self-hosted`, free Community Build, but you run the
   server) as the second option. When `ci: no`, say plainly that nothing would send reports automatically —
-  analysis would only run when someone runs `mvn sonar:sonar` manually with a token — and recommend `none`; if the
-  user still picks `cloud`/`self-hosted`, the root pom still gets its Sonar properties/plugin, and Step 11 reports
+  analysis would only run when someone runs `mvn sonar:sonar` (Gradle: `./gradlew sonar`) manually with a token —
+  and recommend `none`; if the user still picks `cloud`/`self-hosted`, the root build still gets its Sonar
+  properties/plugin, and Step 11 reports
   that no CI step sends reports. When `cloud` or `self-hosted` is chosen, also collect:
   - `sonar.organization` — for `cloud`, suggest `<owner>-github` (the owner parsed in Step 2) as the default,
     since that's the key SonarCloud assigns by default when an organization is created by importing from GitHub;
@@ -263,14 +403,15 @@ facts below are per GitHub's current pricing — say so and tell the user to dou
     and `iru-setup-java-springboot-github-workflows` both read `sonar.mode` and omit every Sonar plugin, property,
     and CI step accordingly.
 - **CI tests** (`ci.tests`, only when `ci: yes`) — "Which tests should CI run?"
-  - **Unit tests only** (`unit`) — "Surefire `*Test` only (cheaper: fewer minutes, faster feedback). Failsafe
-    `*IT` integration tests against the Testcontainers/docker compose stack stay local." Recommend for
-    private/internal repositories.
-  - **Unit + integration** (`full`) — "Surefire plus Failsafe integration tests against the Testcontainers stack
+  - **Unit tests only** (`unit`) — "Unit tests only — Surefire `*Test` on Maven, the `test` task on Gradle
+    (cheaper: fewer minutes, faster feedback). `*IT` integration tests (Failsafe / the Gradle `integrationTest`
+    task) against the Testcontainers/docker compose stack stay local." Recommend for private/internal
+    repositories.
+  - **Unit + integration** (`full`) — "Unit tests plus `*IT` integration tests against the Testcontainers stack
     (databases, Kafka + Schema Registry, the API mock, …) — complete verification, considerably more minutes."
     Recommend for public repositories.
-- **Pages** (`ci.pages`, only when `ci: yes`) — the build workflow publishes the Antora site, Maven site and
-  generated API docs to GitHub Pages.
+- **Pages** (`ci.pages`, only when `ci: yes`) — the build workflow publishes the Antora site, the Maven site (Maven
+  builds only) and generated API docs (Javadoc or Dokka) to GitHub Pages.
   - Public: `yes` without asking (state it in Step 11's report).
   - Private/internal: ask — **No (Recommended)** — "CI still builds the docs and uploads them as a workflow
     artifact; nothing is published" — versus **Yes** — "requires GitHub Pro, Team, or Enterprise Cloud (not GitHub
@@ -280,7 +421,8 @@ facts below are per GitHub's current pricing — say so and tell the user to dou
   (recommended default) or **Hilla**. Recording `frontend: hilla` here drives three downstream sub-skills: Step 8
   runs `iru-setup-java-springboot-hilla` (right after `iru-setup-java-springboot-apis`) to actually scaffold the
   Vaadin/Hilla React frontend into the `boot` module — the Vaadin BOM and `hilla-spring-boot-starter`/
-  `vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution, `src/main/frontend/`, Vitest,
+  `vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution (the `com.vaadin` Gradle plugin on
+  Gradle), `src/main/frontend/`, Vitest,
   and ESLint/Prettier — `iru-setup-java-springboot-pom` adds the root pom's `vaadin.version`
   property/`dependencyManagement` import/`pluginManagement` entry/`production` profile, and
   `iru-setup-java-springboot-github-workflows` adds the `npm`/Node ecosystem to `.github/dependabot.yml` plus the
@@ -297,6 +439,10 @@ since it caps out at four options.
 
 For every accepted choice, add the corresponding Initializr dependency id(s) to a running list, and validate each
 id against Step 1's catalogue before it goes in.
+
+The technology choices are the same for every language and build tool. Where this step says a version goes "in
+the root pom", read "in the version-declaring file": the root `pom.xml` on Maven, `gradle/libs.versions.toml` on
+Gradle.
 
 ### 4a — Databases (multi-select, may be none)
 
@@ -556,10 +702,19 @@ anything outside the groups above is typically **less relevant to this architect
 (template engines, `data-rest`, `cloud-gateway`) actively conflict with the contract-first, hexagonal shape this
 scaffold imposes — flag such a conflict rather than silently accepting it.
 
-Always include, regardless of the user's answers: `lombok` (boilerplate generation),
+Always include, regardless of the user's answers: `lombok` (boilerplate generation — **Java only**),
 `configuration-processor` (configuration metadata), `validation`, `testcontainers`, and `docker-compose`.
-MapStruct has no Initializr id — it's added explicitly in the root pom together with the
-`lombok-mapstruct-binding` needed to make the two annotation processors coexist.
+For Java, MapStruct has no Initializr id — it's added explicitly in the root pom together with the
+`lombok-mapstruct-binding` needed to make the two annotation processors coexist. For **Kotlin**, send neither
+`lombok` nor MapStruct: data classes and properties replace Lombok, mappers are plain extension functions (MapStruct
+would need kapt, which is in maintenance mode), and Initializr itself adds `kotlin-reflect`, the Kotlin Jackson
+module, and `kotlin-test-junit5` when `language=kotlin`. Note that `configuration-processor` only processes Java
+sources; Kotlin `@ConfigurationProperties` classes still bind correctly, they just get no generated IDE metadata.
+
+**Generator plugin names in this step and in Step 8 are the Maven ones.** On a Gradle build the same generators run as
+Gradle plugins — `org.openapi.generator`, `com.google.protobuf` (+ `grpc-kotlin`), an AVRO plugin
+(`com.github.davidmc24.gradle.plugin.avro` or an equivalent maintained one), `com.vaadin` for Hilla — chosen and
+wired by `iru-setup-java-springboot-apis`/`-hilla` from the manifest; the choices in Step 4 don't change.
 
 ## Step 5 — Confirm the whole plan before writing anything
 
@@ -568,13 +723,15 @@ the project is open source, the repository visibility, the CI choices (`ci`, and
 and whether docs go to GitHub Pages), the Sonar mode (and organization/project key/host URL when not `none`), the
 frontend choice, every selected technology with the dependency ids it resolved to, the migration tool per database, the
 client names and the mocking tool chosen for them,
-the exact list of Maven modules that will be created, and the docker compose services the integration-test stack
+the language, build tool and (Kotlin) Kotlin version, the exact list of modules (Maven modules or Gradle project
+paths) that will be created, and the docker compose services the integration-test stack
 will run. Ask for explicit confirmation, or for corrections, and loop back to the relevant part of Step 4 if the
 user changes something. **No file is written before this confirmation.**
 
 ## Step 6 — Write `springboot-stack.yml`
 
-Write the confirmed answers to `springboot-stack.yml` at the repository root. Every sub-skill reads this file
+Write the confirmed answers to `springboot-stack.yml` at the repository root. When reading an existing manifest
+that predates the `language`/`buildTool` fields, treat them as `java`/`maven` (its build was generated that way). Every sub-skill reads this file
 instead of re-asking, and `iru-update-java-springboot-documentation` reads it later to know what the service is
 built from. It is meant to be committed.
 
@@ -600,6 +757,9 @@ project:
   description: Handles the order lifecycle.
   javaVersion: "21"
   springBootVersion: "4.1.0"
+  language: java                 # java | kotlin — from Step 3; absent ⇒ java (manifests written before this field existed)
+  buildTool: maven               # maven | gradle — gradle ONLY when language: kotlin (Gradle Kotlin DSL); absent ⇒ maven
+  # kotlinVersion: "2.3.21"      # only when language: kotlin — the kotlin.version the chosen Boot version manages (Step 3)
   repository:
     host: github.com
     owner: example
@@ -619,7 +779,7 @@ frontend: none                   # none | hilla — hilla scaffolds a Hilla Reac
 visibility: public               # public | private | internal — from Step 3b (detected via gh when possible)
 ci:                              # from Step 3b — read by iru-setup-java-springboot-github-workflows (args may override)
   enabled: true                  # false ⇒ no workflows at all: no build/deploy/undeploy/security.yml, no dependabot.yml
-  tests: full                    # unit (Surefire only, -DskipITs, no Testcontainers in CI) | full (Surefire + Failsafe + Testcontainers); omitted when enabled: false
+  tests: full                    # unit (Surefire only, -DskipITs / Gradle `test` only, no Testcontainers in CI) | full (plus Failsafe / Gradle `integrationTest` + Testcontainers); omitted when enabled: false
   pages: true                    # false ⇒ docs built in CI and uploaded as a workflow artifact, not deployed to GitHub Pages; omitted when enabled: false
 stack:
   concurrency: blocking          # blocking | reactive | both
@@ -658,7 +818,7 @@ stack:
   extras: []
 initializr:
   dependencies: [webmvc-or-web-id, data-mongodb, cloud-stream, kafka, actuator, prometheus, ...]
-modules:
+modules:                         # directories; on Gradle each is the project path with / → : (e.g. :infrastructure:database:mongodb)
   - domain
   - application
   - infrastructure/database/mongodb
@@ -676,52 +836,94 @@ Pin every container image to a concrete tag — never `latest` — so integratio
 current stable tag for each image rather than inventing one, and record it in this manifest so the compose file,
 the Testcontainers harness, and the OpenTofu engine versions all agree.
 
-## Step 7 — Fetch the reference pom from Spring Initializr
+## Step 7 — Fetch the reference build from Spring Initializr
 
-With the confirmed answers, fetch the single-module pom Initializr would have produced. This is the **source of
-truth for artifact names, BOM imports, and version properties** — not a template to keep:
+With the confirmed answers, fetch the single-module build Initializr would have produced — a `pom.xml` for a Maven
+build (Java or Kotlin), a `build.gradle.kts` for Kotlin + Gradle. This is the **source of truth for artifact
+names, BOM imports, plugin ids and version properties** — not a template to keep. Save it to the scratchpad (not
+the repository).
+
+**Maven** (`buildTool: maven`, either language):
 
 ```bash
 curl -sG https://start.spring.io/pom.xml \
   --data-urlencode 'bootVersion=<boot-version>' \
   -d type=maven-build \
+  -d language=<java|kotlin> \
   -d javaVersion=<java-version> \
   -d groupId=<group-id> \
   -d artifactId=<artifact-id> \
   -d name=<artifact-id> \
   -d packageName=<base-package> \
   -d 'dependencies=<comma-separated ids from Step 4>' \
-  -o /tmp/initializr-pom.xml
+  -o <scratchpad>/initializr-pom.xml
 ```
 
-Save it to the scratchpad (not the repository) and read from it:
+**Gradle Kotlin DSL** (`buildTool: gradle`, Kotlin only). Initializr has no standalone `build.gradle.kts` endpoint
+(`/build.gradle.kts` is a 404, and `/build.gradle` with `type=gradle-build` returns the *Groovy* DSL), so fetch the
+whole starter project and extract its `build.gradle.kts` — into a new, empty scratchpad directory, since it is a
+downloaded archive:
 
-- the exact `<groupId>/<artifactId>` of every starter and driver, including test-scope ones;
-- every `<dependencyManagement>` BOM import and its version property (e.g. `spring-cloud.version`,
-  `spring-ai.version`) — these belong in the root pom verbatim;
-- any build plugin Initializr added (e.g. `io.github.ascopes:protobuf-maven-plugin` for the gRPC starters), and
-  whether the Boot parent already manages its version;
-- the `annotationProcessorPaths` configuration for Lombok and the configuration processor.
+```bash
+mkdir -p <scratchpad>/initializr-starter && cd <scratchpad>/initializr-starter
+curl -sG https://start.spring.io/starter.zip \
+  --data-urlencode 'bootVersion=<boot-version>' \
+  -d type=gradle-project-kotlin \
+  -d language=kotlin \
+  -d javaVersion=<java-version> \
+  -d groupId=<group-id> \
+  -d artifactId=<artifact-id> \
+  -d name=<artifact-id> \
+  -d packageName=<base-package> \
+  -d 'dependencies=<comma-separated ids from Step 4>' \
+  -o starter.zip && unzip -q starter.zip
+# reference build: <scratchpad>/initializr-starter/build.gradle.kts
+```
 
-Verify the response is actually XML — Initializr returns a plain-text error body for an invalid dependency id or
-an incompatible version combination. If it errors, read the message, fix the offending id (usually one that
-didn't validate against Step 1's catalogue, or one incompatible with the chosen Boot version), and retry. If a
-dependency turns out to be incompatible with the chosen Boot version, tell the user and let them choose between
-dropping it and changing the Boot version — don't decide silently.
+Read from the reference build:
+
+- the exact `<groupId>/<artifactId>` (Gradle: `group:name` coordinates) of every starter and driver, including
+  test-scope ones — Boot 4 adds a `spring-boot-starter-<x>-test` per starter and `testcontainers-<engine>` modules;
+- every BOM import and its version property (Maven: `<dependencyManagement>` + e.g. `spring-cloud.version`,
+  `spring-ai.version`; Gradle: the `dependencyManagement { imports { mavenBom(...) } }` block and the `extra[...]`
+  properties) — these belong in the root pom / `gradle/libs.versions.toml` verbatim;
+- any build plugin Initializr added (e.g. `io.github.ascopes:protobuf-maven-plugin` for the gRPC starters, or its
+  Gradle plugin id), and whether the Boot parent / plugin already manages its version;
+- Java: the `annotationProcessorPaths` configuration for Lombok and the configuration processor;
+- Kotlin: the Kotlin version (Maven `<kotlin.version>`; Gradle `kotlin("jvm") version "..."`) — it must equal
+  `project.kotlinVersion` from Step 3 unless the user deliberately overrode it; if it differs without an override,
+  update the manifest to the reference value and say so — plus the compiler setup Initializr generated
+  (`-Xjsr305=strict` and any further `freeCompilerArgs`, the `spring`/`jpa` compiler plugins, and the
+  `allOpen` annotations for `jakarta.persistence.Entity`/`MappedSuperclass`/`Embeddable`), which the build
+  sub-skill carries over.
+
+The Gradle starter also contains a Gradle wrapper (`gradlew`, `gradle/wrapper/`) pinned to the Gradle version
+Initializr currently ships; leave it in the scratchpad — the build sub-skill owns wrapper generation and may use that
+version as its reference.
+
+Verify the response is actually the requested build file (XML for the pom, a zip for the starter) — Initializr
+answers an invalid dependency id or an incompatible version combination with an HTTP 400 and a short error body
+(JSON, e.g. a `message` of `Unknown dependency 'x' check project metadata`). If it errors, read the message, fix
+the offending id (usually one that didn't validate against Step 1's catalogue, or one incompatible with the chosen
+Boot version), and retry. If a dependency turns out to be incompatible with the chosen Boot version, tell the user
+and let them choose between dropping it and changing the Boot version — don't decide silently.
 
 ## Step 8 — Delegate the file generation
 
 Run the sub-skills **in this order** (seven always, plus `iru-setup-java-springboot-hilla` as an eighth whenever
 the manifest's `frontend: hilla`), each via the `iru-isolated-skill-executor` agent so its own file reads,
 template expansion, and build output stay out of this orchestrator's context. Every sub-skill reads
-`springboot-stack.yml` itself, so each prompt only needs to point it at that file and at the saved Initializr pom,
-and to name what should come back. Add `mode: <new|existing>` to every sub-skill's `args`, and
+`springboot-stack.yml` itself — including `project.language`, `project.buildTool` and `project.kotlinVersion`, so
+nothing about the language or build tool is forwarded in `args` — and each prompt only needs to point it at that
+file and at the saved Initializr reference build (passed under the existing `initializr-pom` key whichever file it
+is: `initializr-pom.xml` for Maven, `initializr-starter/build.gradle.kts` for Gradle), and to name what should come
+back. Add `mode: <new|existing>` to every sub-skill's `args`, and
 `on-existing: <value>` **only when it arrived in this skill's own `args`** — otherwise leave it out so each
 sub-skill announces scratch-vs-update and asks Update / Keep as is / Replace per artifact it owns. Since a
 sub-skill run through `iru-isolated-skill-executor` still asks its `AskUserQuestion`s, tell the executor to let
 those questions through to the user rather than answering them itself.
 
-Order matters: poms before modules (a module needs its parent to exist), modules before APIs (generated sources
+Order matters: root build before modules (a module needs its parent pom / `settings.gradle.kts` entry to exist), modules before APIs (generated sources
 need a module to land in), APIs before Hilla (the `boot` module the frontend lands in must already exist, and the
 API-generated code Hilla endpoints may call must already be there), Hilla before Testcontainers (the compose stack
 and CI docs job both need to know a frontend toolchain now exists on disk), everything before the workflows and
@@ -732,56 +934,67 @@ Agent({
   description: "Run springboot pom setup",
   subagent_type: "iru-isolated-skill-executor",
   prompt: "Invoke Skill({skill: \"iru-setup-java-springboot-pom\", args: \"stack-file: springboot-stack.yml\\n
-    initializr-pom: <scratchpad-path-to-initializr-pom.xml>\\nmode: <mode>[\\non-existing: <value>]\"}).
+    initializr-pom: <scratchpad-path-to-reference-build>\\nmode: <mode>[\\non-existing: <value>]\"}).
     Report back: whether it created or updated each file and what the user chose per pre-existing file, the
-    modules declared in the reactor, the dependency and plugin versions pinned in the root pom, and any dependency
-    it could not place.",
+    modules (Maven) or project paths (Gradle) declared, the dependency and plugin versions pinned in the root pom
+    or version catalog, the Gradle wrapper version (Gradle), and any dependency it could not place.",
   run_in_background: false
 })
 ```
 
 Repeat that shape for, in order:
 
-1. **`iru-setup-java-springboot-pom`** — root reactor pom (all versions, all plugins) and every module pom.
-   Report back: reactor module list, pinned versions, anything unplaced.
+1. **`iru-setup-java-springboot-pom`** — the root build and every module build. Maven (Java or Kotlin): root
+   reactor pom (all versions, all plugins) and every module pom — Checkstyle/PMD/SpotBugs + Javadoc for Java,
+   `kotlin-maven-plugin` + detekt/ktlint + Dokka (and the root `detekt.yml`) for Kotlin. Gradle (Kotlin only):
+   `settings.gradle.kts`, `gradle/libs.versions.toml`, the `build-logic/` convention plugins, a minimal root
+   `build.gradle.kts`, one `build.gradle.kts` per module, the root `detekt.yml`, and the Gradle wrapper. Report
+   back: module list / project paths, pinned versions, anything unplaced.
 2. **`iru-setup-java-springboot-modules`** — directory tree, package layout, ports in `domain`, adapter skeletons
    in each `infrastructure`/`api` module, the `@SpringBootApplication` class, `application.yml` per profile, the
-   `@RefreshScope` configuration beans, and the ArchUnit test that enforces the dependency direction. Report
-   back: modules created, ports and adapters scaffolded, profiles written.
+   `@RefreshScope` configuration beans, and the ArchUnit test that enforces the dependency direction — as Java
+   sources under `src/*/java`, or Kotlin sources under `src/*/kotlin` (MockK-based sample tests) when the manifest
+   says Kotlin. Report back: modules created, ports and adapters scaffolded, profiles written.
 3. **`iru-setup-java-springboot-apis`** — the `apis/` tree with a starter spec per API, and the
    `openapi-generator-maven-plugin` / `protobuf-maven-plugin` / `avro-maven-plugin` executions wired into the
-   right module poms, HTML documentation generation included. Report back: spec files created, generator
+   right module poms — or, on Gradle, the equivalent Gradle generator plugins wired into the module build files —
+   HTML documentation generation included. Report back: spec files created, generator
    executions added and to which module.
 3b. **`iru-setup-java-springboot-hilla`** — only when the manifest's `frontend: hilla`. Scaffolds the Hilla React
-   frontend into the `boot` module: the Vaadin BOM/starters, the `vaadin-maven-plugin` execution,
+   frontend into the `boot` module: the Vaadin BOM/starters, the `vaadin-maven-plugin` execution (the `com.vaadin`
+   Gradle plugin on Gradle),
    `src/main/frontend/` (file-based-routing views, a customized `index.html`), `vitest.config.ts` with
    `@vitest/coverage-v8` lcov output and a sample test, ESLint flat config + Prettier, and — when `sonar.mode`
    isn't `none` — the frontend's `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to
-   the root pom. Report back: the resolved Vaadin version, files written versus already present, whether the
-   `vaadin:prepare-frontend` and `vitest run --coverage` gates passed, and the resolved
+   the root build. Report back: the resolved Vaadin version, files written versus already present, whether the
+   `vaadin:prepare-frontend` (Gradle: `vaadinPrepareFrontend`) and `vitest run --coverage` gates passed, and the resolved
    `boot/coverage/lcov.info` path.
 4. **`iru-setup-java-springboot-testcontainers`** — `docker-compose.yml` (or `compose.yaml`) with one service per
    chosen technology plus Prometheus/Grafana, the Microcks or WireMock mock backing every REST/gRPC client from
    the contracts in `apis/rest-client/`/`apis/grpc-client/`, the `ComposeContainer`-based integration-test base
-   class, and the Failsafe wiring. Report back: compose services and their pinned images, base test class
-   location, the base URL each client resolves to against the mock, whether `mvn verify` ran and its result.
+   class, and the Failsafe wiring (the `integrationTest` task on Gradle). Report back: compose services and their
+   pinned images, base test class location, the base URL each client resolves to against the mock, whether
+   `mvn verify` / `./gradlew integrationTest` ran and its result.
 5. **`iru-setup-java-springboot-platform`** — the OpenTofu configuration for the chosen cloud. Report back:
    resources it will manage, what it deliberately left to the user, and every secret/variable that must be
    provided out-of-band.
 6. **`iru-setup-java-springboot-github-workflows`** — the test/analyse/publish workflow, the deploy workflow, and
    the undeploy workflow, plus `security.yml` and `.github/dependabot.yml`. It reads `visibility`, `ci.tests`, and
-   `ci.pages` from the manifest, so they needn't be forwarded (only `mode`, and `on-existing` when applicable).
+   `ci.pages` (and the language/build tool, which switch it between Maven and `./gradlew` commands and between
+   Checkstyle/PMD/SpotBugs + Javadoc and detekt/ktlint + Dokka) from the manifest, so they needn't be forwarded
+   (only `mode`, and `on-existing` when applicable).
    Report back: workflow files created/updated/replaced/kept, required repository secrets and environments, and
    any gap. **Skipped entirely when the manifest's `ci.enabled: false`** — record it as "skipped (ci: no)" and
    note in Step 11 that the deploy/undeploy workflows were skipped with it (deployment and teardown are manual
    `tofu apply`/`tofu destroy` runs) along with the shared security block.
 7. **`iru-update-java-springboot-documentation`** — the Antora site (Mermaid **and** Kroki) with the full
-   template page set. Report back: pages created versus already present, and whether the site built.
+   template page set, its build/run/test commands and code samples matching the manifest's build tool and language. Report back: pages created versus already present, and whether the site built.
 
 If any sub-skill reports that it stopped, or that the user chose **Keep as is** for a file it owns, don't treat
 that as a failure of this skill — carry on with the remaining sub-skills and record it in Step 11's report. The
-one exception is `iru-setup-java-springboot-pom`: if no usable root reactor pom exists after it ran (it stopped on
-a brand-new repository, or the existing pom was kept but isn't a `pom`-packaged reactor) there is no reactor for
+one exception is `iru-setup-java-springboot-pom`: if no usable root build exists after it ran — no `pom`-packaged
+root reactor (Maven), or no `settings.gradle.kts` including the module projects (Gradle); e.g. it stopped on a
+brand-new repository, or the existing root build was kept but isn't a multi-module build — there is nothing for
 anything else to attach to, so stop the run there and report why.
 
 ## Step 9 — Supporting repository files
@@ -791,24 +1004,33 @@ After the sub-skills, fill in the repository-level files they don't own:
 Forward `on-existing` to each of these skills only when it arrived in this skill's own `args`; otherwise each one
 announces scratch-vs-update and asks Update / Keep as is / Replace for its own file itself.
 
-- **`.gitignore`** — invoke `iru-setup-java-gitignore` if available. Regardless, make sure `target/`,
-  `docs/build/`, `.env`, `*.tfstate`, `*.tfstate.*`, `.terraform/`, `*.tfvars` (except `*.tfvars.example`), and
-  IDE directories are ignored. The tfstate and tfvars entries matter: both routinely contain credentials.
+- **`.gitignore`** — invoke `iru-setup-java-gitignore` if available. Regardless, make sure `target/` (Maven) or
+  `build/` + `.gradle/` (Gradle, with `!gradle/wrapper/gradle-wrapper.jar` kept tracked), `.kotlin/` (Kotlin),
+  `.integration-test.lock/`, `docs/build/`, `.env`, `*.tfstate`, `*.tfstate.*`, `.terraform/`, `*.tfvars` (except
+  `*.tfvars.example`), and IDE directories are ignored. The tfstate and tfvars entries matter: both routinely contain credentials.
 - **`README.md`** — invoke `iru-setup-readme` if available, passing `args` lines `sonar: <manifest sonar.mode>`,
   `ci: <yes|no from ci.enabled>`, and — when `ci: yes` — `pages: <yes|no from ci.pages>` (plus `on-existing` when
   applicable), so the README's Sonar badges/dashboard links, CI badges, and documentation-site link match the
   choices recorded in `springboot-stack.yml` (no CI badge when `ci: no`, no github.io link when Pages is off).
 - **`CHANGELOG.md`** — invoke `iru-setup-changelog` if available (forwarding `on-existing` when applicable).
-- **`checkstyle.xml`** — the root pom's `maven-checkstyle-plugin` points at it; if one already exists, keep it
+- **`checkstyle.xml`** (Java only) — the root pom's `maven-checkstyle-plugin` points at it; if one already exists, keep it
   (it's a project's own ruleset — mention it in the report, and only offer to replace it if it's clearly broken);
   if no ruleset exists, write a starting one (Sun or Google checks with the line-length and Javadoc rules relaxed to what a Spring Boot service
   can realistically satisfy) rather than leaving the build referencing a missing file.
+- **`detekt.yml`** (Kotlin only) — written by `iru-setup-java-springboot-pom`, not here; detekt is configured
+  against it on both Maven and Gradle. Just check it exists at the repository root. If it's missing (the pom
+  sub-skill stopped, or the user kept an older root build that never had one), don't write one here — report it as
+  a gap in Step 11 and point at re-running `/iru-setup-java-springboot-pom`, since the detekt gate fails or falls
+  back to defaults without it. Don't write a `checkstyle.xml` for a Kotlin build.
 - **`LICENSE`** — ask whether the service needs one. Services often don't, unlike libraries. If one is added,
   `/iru-check-license` can backfill the file headers.
 
-## Step 10 — Verify the reactor builds
+## Step 10 — Verify the build
 
-Run, from the repository root, and fix what breaks before reporting success:
+Run, from the repository root, the three commands for the manifest's build tool, and fix what breaks before
+reporting success.
+
+Maven (Java, or Kotlin + Maven — identical commands):
 
 ```bash
 mvn -q clean verify -DskipTests   # compiles every module and runs all code generation
@@ -816,19 +1038,29 @@ mvn -q test                       # unit tests (Surefire)
 mvn -q verify                     # integration tests (Failsafe + Testcontainers) — needs Docker running
 ```
 
+Gradle Kotlin DSL (Kotlin + Gradle), always through the wrapper the build sub-skill generated:
+
+```bash
+./gradlew clean build -x test -x integrationTest   # compiles every project and runs all code generation
+./gradlew test                                     # unit tests (*Test, excluding **/*IT*)
+./gradlew integrationTest                          # integration tests (*IT + Testcontainers) — needs Docker running
+```
+
 Run all three regardless of `ci.tests`: `unit` only changes what CI runs, and the integration tests are exactly
 what still has to be verified locally then.
 
-Delegate each of these to the `iru-gate-runner` agent rather than running them inline, so a multi-module Maven log
-doesn't flood this orchestrator's context — ask it back for a compact pass/fail plus the first real error.
+Delegate each of these to the `iru-gate-runner` agent rather than running them inline (naming the build tool and
+the exact command in its prompt), so a multi-module Maven or Gradle log doesn't flood this orchestrator's context — ask it back for a compact pass/fail plus the first real error.
 
-Expect the generated skeleton to build and its example tests to pass. If `mvn verify` fails only because Docker
+Expect the generated skeleton to build and its example tests to pass. If `mvn verify` / `./gradlew
+integrationTest` fails only because Docker
 isn't available, say so plainly and don't call it a code problem. If code generation fails (a malformed starter
 spec, an OpenAPI/protobuf generator misconfiguration), fix it — a scaffold that doesn't compile isn't done.
 
 If `frontend: hilla`, note that the plain `mvn clean verify -DskipTests` above already exercises
-`vaadin:prepare-frontend` (bound in the `boot` module's pom by `iru-setup-java-springboot-hilla`) — a
-`-Pproduction` build is **not** needed for this local sanity check, only for a real release artifact, since
+`vaadin:prepare-frontend` (bound in the `boot` module's pom by `iru-setup-java-springboot-hilla`; on Gradle the
+`com.vaadin` plugin's `vaadinPrepareFrontend` runs as part of `build`) — a `-Pproduction` (Gradle:
+`-Pvaadin.productionMode=true`) build is **not** needed for this local sanity check, only for a real release artifact, since
 `vaadin:build-frontend` decides for itself whether a production bundle is actually needed. Don't add
 `-Pproduction` here just because the reactor has a Hilla frontend.
 
@@ -840,6 +1072,11 @@ Summarize:
   action actually taken: **created / updated / replaced / kept as is / skipped (ci: no)** — plus, for every
   component kept as is, each mismatch with this run's choices the sub-skill reported.
 - The resolved identity, Boot version, Java version, platform, and concurrency model.
+- The language and build tool (and how they were decided: `args`, detected from the existing repository, or
+  asked); for Kotlin, the `kotlinVersion` recorded and its source (the Boot-managed version confirmed against the
+  reference build, or a user override flagged as untested by Spring Boot); for Gradle, the wrapper version the build
+  sub-skill generated and how (local `gradle`, Docker, or the user); whether `detekt.yml` (Kotlin) or
+  `checkstyle.xml` (Java) is present.
 - The repository visibility (and whether it was detected via `gh` or asked), and the CI choices: `ci` (when `no`,
   that the build/deploy/undeploy workflows and the shared security block — Dependabot, dependency-review, CodeQL,
   OSV-Scanner, gitleaks — were skipped, that deployment is a manual `tofu apply`, and that
@@ -853,16 +1090,16 @@ Summarize:
   `iru-setup-java-springboot-hilla` reported back: the resolved Vaadin version, whether the frontend gates passed,
   and the resolved lcov path).
 - Every technology selected, with the starter it resolved to and the migration tool per database.
-- The full module tree created, and the `apis/` spec directories.
+- The full module tree created (with Gradle project paths on Gradle), and the `apis/` spec directories.
 - Which sub-skills completed, which stopped and why.
-- The build result from Step 10 for each of the three commands.
+- The build result from Step 10 for each of the three commands (Maven or Gradle, as run).
 - **Every secret and variable that must be provided out-of-band**, consolidated into one table from what the
   workflow (when `ci: yes`) and platform sub-skills reported — GitHub Actions secrets, the cloud OIDC role/workload-identity
   binding, the Sonar token (only when `sonar.mode` is not `none`), the security-block secrets
   (`GITLEAKS_LICENSE` if a Pro key is used), and any LLM API key. State again that none of them belong in the
   repository, and that the OpenTofu state backend must be remote and encrypted since state files contain resource
   attributes that are effectively secrets.
-- Any open gap: a dependency Step 1's catalogue couldn't resolve, a Spring Cloud component with no build for the
+- Any open gap: a missing `detekt.yml` on a Kotlin build, a dependency Step 1's catalogue couldn't resolve, a Spring Cloud component with no build for the
   chosen Boot version, an image tag that couldn't be pinned, a manual platform step the OpenTofu config can't do.
 
 Finish with an explicit warning: **review every generated file before committing, building against real

@@ -87,9 +87,7 @@ and parses their reports, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
-  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
-  baseline for the `swift` language/framework key.
+* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for Swift plans, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-swift-code-one-task-group.adoc[] — Steps 1 and 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering the bucket's
   touched file(s) and later diff the post-change result against it.

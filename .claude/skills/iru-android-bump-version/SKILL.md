@@ -1,6 +1,7 @@
 ---
 name: iru-android-bump-version
-description: Set an Android library/app project's version to an exact value, rewriting `val libraryVersion = "…"`
+description: >-
+  Set an Android library/app project's version to an exact value, rewriting `val libraryVersion = "…"`
   in `lib/build.gradle.kts` (when a `lib` module exists) and `versionName`/`versionCode` in `app/build.gradle.kts`
   (when an `app` module exists), then optionally syncing `README.md` dependency snippets and Antora
   `docs/antora.yml`/page version mentions. Invoke as `/iru-android-bump-version <new-version>` where

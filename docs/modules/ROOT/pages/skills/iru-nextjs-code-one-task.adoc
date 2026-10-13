@@ -1,0 +1,124 @@
+= Next.js Code One Task
+:description: Implements one Next.js plan task and its tests for the detected Next version, router and caching model, then checks off its plan checkbox.
+:keywords: iru-nextjs-code-one-task, claude code skill, nextjs, app router, server components, server actions, cache components, implementation plan, typescript
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement a single task from a Next.js `implementation_plan.md` — the implementation, its tests, and its checkbox
+update — for the exact Next.js profile the project actually has. It is the narrowest execution unit for a
+`nextjs`-tagged task in the `iru-code` pipeline and the Next.js counterpart to `iru-typescript-code-one-task`.
+
+== Purpose
+
+The same Next.js code means different things across versions and caching models: `fetch` is cached by default in 14
+and not in 15+, `params` is a plain object in 14 and a Promise from 15, and `export const revalidate = 60` is ISR in
+the previous model but a build error under Cache Components. `iru-nextjs-code-one-task` therefore starts by detecting
+the project's profile — Next major (14, 15, 16), router (App, Pages or hybrid), `cacheComponents` (giving the profile
+`14`, `15`, `16-prev` or `16-cc`), `src/` layout, `proxy.ts` vs `middleware.ts`, `output` mode, test runners (Vitest
+or Jest via `next/jest`, Playwright), styling, linter, package manager, and any project `AGENTS.md`/`CLAUDE.md`
+guidance including the version-matched docs under `node_modules/next/dist/docs/` — and only then loads the matching
+slice of its bundled `reference/` directory.
+
+It treats the route's rendering mode as part of the contract: it never changes a route's mode the task did not ask to
+change, and it states the expected `next build` classification (static, SSG, dynamic, partial) of every route it
+touched so the group skill can check it against the real build. It never runs tests, coverage, quality checks,
+license headers or `next build` — those happen once per group in `iru-nextjs-code-one-task-group`. It runs on a
+medium model on purpose: the plan carries the hard reasoning and the Next.js rules live in `reference/`.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-nextjs-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text from `implementation_plan.md`, including its exact checkbox line(s) and sub-tasks, plus any
+relevant "Current code state" context. Normally supplied by `iru-nextjs-code-one-task-group`, one task of a bucket at
+a time.
+|None — the skill has nothing to do without it.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory: `README.md` (routing), `code-style.md`,
+`server-and-client-components.md`, `data-fetching-and-caching.md` (organized by profile), `server-actions.md`,
+`route-handlers.md`, `routing-and-rendering.md`, `metadata-and-seo.md`, `pages-router.md`, `testing.md` and
+`security.md`. If missing, the skill falls back to the repository's `CLAUDE.md`/`AGENTS.md` and the surrounding code's
+style and says so in its report.
+|Bundled with the skill
+|===
+
+`code-style.md` is always read, `server-and-client-components.md` always for the App Router, `testing.md` nearly
+always, and the others only when the task touches that area (data reads/caching, Server Actions, route handlers and
+the proxy, new routes or segment config, metadata, Pages Router files, security-sensitive code). Within
+`data-fetching-and-caching.md` only the detected profile's section is applied.
+
+== Outputs
+
+* Source and test files created/modified per the task, following the detected profile: profile-correct APIs
+  (`await` on request APIs and `params` on 15+, `'use cache'` only under `16-cc`, segment config never under `16-cc`,
+  `proxy.ts` or `middleware.ts` as detected), `'use client'` on the smallest interactive leaf, no `any`, `readonly`
+  defaults, named exports except where Next requires a default, full TSDoc on exported symbols, and no new runtime
+  dependency or `next.config` change unless the task calls for it.
+* Server Actions and Route Handlers that authenticate, validate and authorize inside themselves, data modules that
+  import `server-only`, and no secrets or whole rows crossing to the client.
+* Tests added/updated — React Testing Library for components, direct calls for leaf async Server Components, Server
+  Actions and Route Handlers (always including anonymous, wrong-owner and invalid-input cases), and a Playwright spec
+  only for a new user-visible flow in a project that already has Playwright. Not run by this skill.
+* `implementation_plan.md` with this task's own checkbox (and completed sub-tasks) checked and a "group validation
+  pending" note, written before reporting. Untouched if the task stopped on a blocker.
+* A report to the caller: the detected profile and which reference files were read, files touched, tests written,
+  the expected `next build` classification of every touched route (and whether any changed mode), blocker status, and
+  any deliberate deviation from `reference/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-nextjs-code-one-task\n(task description)"] --> B["Step 1: detect profile - version, router,\ncacheComponents, proxy/middleware, output mode,\ntest runners, styling, AGENTS.md"]
+    B --> C["Read reference/README.md, then only the\nrouted reference files for this task"]
+    C -- "reference/ missing" --> C2["Fall back to CLAUDE.md and\nsurrounding style; report it"]
+    C --> D
+    C2 --> D["Step 2: re-check current code state;\nread layouts and data modules above each route"]
+    D --> E["Step 3: implement exactly what the task specifies\nfor the detected profile only"]
+    E --> F["Step 4: write/update tests\n(not run here)"]
+    F --> G{"Ambiguous, infeasible for the profile,\nneeds new dependency or config, or profile unclear?"}
+    G -- yes --> H["Step 5: stop and ask or report;\nleave checkbox unchecked"]
+    G -- no --> I["Step 6: check off this task's checkbox\nwith validation pending note"]
+    I --> J["Step 7: report profile, files, tests,\nexpected route classification, deviations"]
+    H --> J
+....
+
+A conflict between `reference/` and the surrounding code is deliberately not a stop condition: the skill follows the
+surrounding code and reports the divergence.
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-nextjs-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads its own
+`reference/` directory and edits the code and test files the task names.
+
+=== Invoked by
+
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 2, implements each task and its tests, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — it only reads its `reference/` files and edits the code and test files the task names.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-nextjs-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled Next.js agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-nextjs-code-one-task/reference[`reference/`].

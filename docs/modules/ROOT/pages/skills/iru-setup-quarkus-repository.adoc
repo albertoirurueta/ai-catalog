@@ -1,0 +1,155 @@
+= Setup Quarkus Repository
+:description: Bootstraps a full Quarkus service repository in one pass: build and sources, Antora docs, gitignore, CI workflows, changelog and README.
+:keywords: iru-setup-quarkus-repository, claude code skill, quarkus, java, kotlin, maven, gradle, repository bootstrap, orchestrator, github actions
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Bootstrap a new Quarkus service repository, or catch up an existing one, by orchestrating six skills in order while
+collecting every shared input exactly once.
+
+== Purpose
+
+`iru-setup-quarkus-repository` is the Quarkus orchestrator in this catalog's repository-bootstrap family. It supports
+Java or Kotlin, Maven or Gradle (Kotlin DSL), and a single-module or hexagonal multi-module layout. It collects the
+project identity (groupId, artifactId, base package, description, developer details, license), the shape (language,
+build tool, layout, Java version), the pipeline parameters (integration and stable branches), and the visibility-aware
+choices: open source, visibility, CI, which tests CI runs, GitHub Pages, whether a container image is published, and
+SonarCloud/SonarQube/none. It then chains `iru-setup-quarkus-service`, `iru-setup-antora`, `iru-setup-java-gitignore`,
+`iru-setup-quarkus-github-workflows`, `iru-setup-changelog` and `iru-setup-readme`, each through
+`iru-isolated-skill-executor`, passing each sub-skill only the `args` keys it accepts so nothing is asked twice.
+
+It announces the setup mode up front (from scratch, or updating an existing repository with an inventory of every owned
+component marked absent, present or partial); each sub-skill then asks keep, update or replace for what it finds, and
+the final report lists the action taken per component.
+
+== Purpose group
+
+xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-quarkus-repository
+/iru-setup-quarkus-repository
+mode: new
+language: java
+build-tool: maven
+layout: single
+----
+
+== Inputs
+
+Optional `args`, one `key: value` per line; every key found skips its question. Unknown keys are ignored.
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`mode`
+|No
+|`new` or `existing`.
+|`existing` when a Quarkus build or `quarkus-stack.yml` is found (confirmed), else `new`.
+
+|`open-source`, `visibility`
+|No
+|`yes`/`no`; `public`/`private`/`internal` (`internal` counts as private).
+|Asked; visibility from `gh repo view` when a GitHub remote exists.
+
+|`ci`, `ci-tests`, `pages`
+|No
+|Whether to generate workflows; `unit` or `full` CI tests; whether docs are published to GitHub Pages.
+|Asked with cost guidance; `ci: no` skips the workflows step; `pages` defaults to `yes` for public repositories.
+
+|`distribution`
+|No
+|`none` or `registry` (publish a container image on release).
+|Asked.
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`.
+|`cloud` recommended only for public open-source repositories, otherwise `none`.
+
+|`language`, `build-tool`, `layout`, `java-version`
+|No
+|`java`/`kotlin`; `maven`/`gradle`; `single`/`hexagonal`; Java version.
+|Asked (detected in existing mode); Java 21 default.
+
+|`integration-branch`, `stable-branch`
+|No
+|Gitflow branch names.
+|`develop`, `main`
+
+|`group-id`, `artifact-id`, `version`, `package`, `description`, `developer-name`, `developer-email`, `organization-url`, `license`
+|No
+|Project identity.
+|Asked (skipped in existing mode with a Quarkus build); version defaults to `1.0.0-SNAPSHOT`.
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; forwarded to file-writing sub-skills only when supplied.
+|`ask`
+|===
+
+== Outputs
+
+* A Quarkus service repository: `quarkus-stack.yml`, build files and wrapper, sources, quality and Sonar configuration,
+  Antora docs, `.gitignore`, GitHub workflows with Dependabot and the shared security block (unless `ci: no`),
+  `CHANGELOG.md` and `README.md`.
+* A final report repeating the setup mode and giving, per component, the action taken (created, updated, replaced,
+  kept as is, skipped, or not written), the verification results from the service skill, how each resolved choice was
+  wired or omitted, the required-secrets table and repository-settings notes, and explicit review warnings.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-quarkus-repository"] --> B["Step 0: parse args, resolve mode,\nannounce setup mode and inventory"]
+    B --> C{"Existing Quarkus build\nwith mode existing?"}
+    C -- no --> D["Step 1: collect identity and license"]
+    C -- yes --> E["Skip identity; read from build"]
+    D --> F["Step 2: collect shape and pipeline parameters"]
+    E --> F
+    F --> G["Step 3: run setup-quarkus-service"]
+    G --> H{"User stopped with no\nusable Quarkus build?"}
+    H -- yes --> Z["Stop"]
+    H -- no --> I["Step 4: run setup-antora"]
+    I --> J["Step 5: run setup-java-gitignore"]
+    J --> K{"ci: no?"}
+    K -- yes --> L["Step 6: skip workflows and Dependabot"]
+    K -- no --> M["Step 6: run setup-quarkus-github-workflows"]
+    L --> N["Step 7: run setup-changelog"]
+    M --> N
+    N --> O["Step 8: run setup-readme"]
+    O --> P["Step 9: report per-component actions,\nsecrets table, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Every step runs through the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+* xref:skills/iru-setup-quarkus-service.adoc[] — Step 3, interviews the technology choices, writes `quarkus-stack.yml`
+  and scaffolds the build.
+* xref:skills/iru-setup-antora.adoc[] — Step 4, creates the Antora documentation site.
+* xref:skills/iru-setup-java-gitignore.adoc[] — Step 5, writes the root `.gitignore`.
+* xref:skills/iru-setup-quarkus-github-workflows.adoc[] — Step 6, build/release/sync/security workflows and Dependabot;
+  skipped when `ci` is `no`.
+* xref:skills/iru-setup-changelog.adoc[] — Step 7, root `CHANGELOG.md` from tag history.
+* xref:skills/iru-setup-readme.adoc[] — Step 8, root `README.md`.
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] — Step 4, Quarkus (Java/Kotlin) bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per sub-skill
+  (Steps 3 to 8) so each sub-skill's transcript stays out of this orchestrator's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-quarkus-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

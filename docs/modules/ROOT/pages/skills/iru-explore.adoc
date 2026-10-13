@@ -22,9 +22,12 @@ travelling with the ticket itself. It also detects which platform hosts the repo
 DevOps, or TFS) and the language(s)/framework(s) in play — both in the existing codebase and in whatever change is
 being requested — so its "Tech stack" report can be reused directly by later skills (`iru-plan`, `iru-code`,
 `iru-update-docs`, PR/branch creation) instead of each re-detecting the same facts. Language/framework detection
-covers Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Expo/React Native, Ionic/Capacitor, Android
-(library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks in addition to the classic Java/.NET/
-Python/Go/Rust ones, and the report boils that detection down to a single normalized `Project type:` line — the
+covers Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin),
+NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Expo/React Native,
+Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks in addition to
+the classic Java/.NET/Python/Go/Rust ones — for JVM backends it also records the build tool (Maven vs. Gradle
+Kotlin/Groovy DSL, wrapper) and whether the layout is a hexagonal multi-module reactor or layered, and for NestJS,
+Next.js, and PHP the module format/test runner/router/version details — and the report boils that detection down to a single normalized `Project type:` line — the
 shared vocabulary the `iru-setup-repository` bootstrap front door reads to pre-select the right stack orchestrator
 on an existing repository. This works even when the current
 working directory isn't a git repository at all: it warns the user once, records that explicitly, and keeps going
@@ -81,13 +84,25 @@ general codebase tour.
 |Value |Meaning
 
 |`java-library`
-|Java/Kotlin library (`pom.xml`/`build.gradle*`, no Spring Boot, no Android plugin)
+|Java/Kotlin library (`pom.xml`/`build.gradle*`, no Spring Boot, no Quarkus, no Android plugin)
 
 |`java-springboot`
 |Spring Boot service (no Hilla markers)
 
 |`java-springboot-hilla`
 |Spring Boot + Vaadin + Hilla (`hilla-spring-boot-starter`/`vaadin-spring-boot-starter`, `@vaadin/hilla`, `src/main/frontend/`)
+
+|`kotlin-springboot`
+|Kotlin Spring Boot service (Kotlin plugin or `src/main/kotlin/` plus `spring-boot-starter*`, no Hilla markers)
+
+|`kotlin-springboot-hilla`
+|Kotlin Spring Boot plus the Hilla markers
+
+|`java-quarkus`
+|Quarkus service in Java (`io.quarkus` plugin, `quarkus-bom`, or `io.quarkus:quarkus-*` dependencies)
+
+|`kotlin-quarkus`
+|Quarkus service in Kotlin (`quarkus-kotlin`, Kotlin plugin, or `src/main/kotlin/`)
 
 |`typescript-library`
 |Plain TypeScript/npm library, no app framework
@@ -97,6 +112,27 @@ general codebase tour.
 
 |`angular-web`
 |Angular CLI web app, not layered under Ionic
+
+|`nestjs`
+|NestJS backend (`@nestjs/core`, `nest-cli.json`, `NestFactory` in `src/main.ts`)
+
+|`nextjs`
+|Next.js web app (`next` dependency, `next.config.*`, `app/` and/or `pages/`)
+
+|`php-laravel`
+|Laravel application (`laravel/framework` plus `artisan`)
+
+|`php-wordpress-plugin`
+|WordPress plugin (main PHP file with a `Plugin Name:` header)
+
+|`php-wordpress-theme`
+|WordPress theme (`style.css` with `Theme Name:` and/or `theme.json`)
+
+|`php-prestashop-module`
+|PrestaShop module (class extending `Module`, `config.xml`)
+
+|`php-library`
+|Any other Composer package with no Laravel/WordPress/PrestaShop markers
 
 |`android-library`
 |Gradle `com.android.library` module
@@ -128,6 +164,8 @@ general codebase tour.
 |`multiple`
 |More than one module with a distinct project type — followed by one `<module-path>: <type>` sub-line per module
 |===
+* An optional **`Build & layout:`** line for JVM backends (build tool, wrapper, hexagonal vs. layered), NestJS
+  (module format, test runner, persistence), Next.js (version, router, `cacheComponents`), and PHP (version, test runner).
 * If a documentation MCP (e.g. Confluence, Notion) is connected: a **Related documentation** section listing
   relevant pages found (title, link, one-line summary), or a note that none was relevant/connected.
 * A **Related past implementation plans** section covering both the local `.archive/` check and, for a Jira
@@ -170,7 +208,7 @@ flowchart TD
     E --> J["General orientation pass:\narchitecture, modules, recent git\nhistory (skipped if not a git repo)"]
     I --> O["Check .archive/ for a plan whose\ntopic overlaps the current task"]
     J --> O
-    O --> K["Detect tech stack (incl. Vite+React, Angular,\nHilla, Expo/RN, Ionic, Android, SwiftPM/Xcode)\n+ Antora docs; derive normalized\nProject type: line"]
+    O --> K["Detect tech stack (incl. Spring Boot/Quarkus,\nNestJS, Next.js, PHP, Vite+React, Angular,\nHilla, Expo/RN, Ionic, Android, SwiftPM/Xcode)\n+ Antora docs; derive normalized\nProject type: line"]
     K --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- yes --> N["Search it for pages relevant\nto the ticket/codebase"]
     M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ epic/linked tickets,\n+ Related documentation)"]
@@ -185,18 +223,11 @@ None — `iru-explore` is a leaf skill; it does not call any other skill in this
 
 === Invoked by
 
-* xref:skills/iru-setup-repository.adoc[] — Step 1 runs `iru-explore` with no argument on a non-empty repository,
-  reading its report's `Project type:` line to pre-select the matching stack orchestrator instead of asking the
-  user over `AskUserQuestion` rounds.
-* xref:skills/iru-setup-readme.adoc[] — Step 2 runs `iru-explore` with no argument when no report with a
-  `Project type:` line is already in the conversation, so the README's language/framework/build-tool detection
-  comes from the same table every other skill reads instead of a duplicated one.
-* xref:skills/iru-plan.adoc[] — Step 2 runs `iru-explore` first (unless equivalent exploration already happened
-  earlier in the conversation) so the plan it drafts is grounded in the real codebase.
-* xref:skills/iru-issue.adoc[] — Step 5 runs `iru-explore` (scoped to the ticket) as the first step of its
-  explore → plan → code → PR pipeline.
-* xref:skills/iru-pr-review.adoc[] — Step 5 runs `iru-explore` to learn the codebase's architecture and conventions
-  before judging a pull request's diff against them.
+* xref:skills/iru-setup-repository.adoc[] — Step 1, to detect the Project type: line when the working directory is non-empty.
+* xref:skills/iru-setup-readme.adoc[] — Step 2, to get the Project type: line when no report is in the conversation.
+* xref:skills/iru-plan.adoc[] — Step 3, grounds the plan in the codebase unless already explored in the conversation.
+* xref:skills/iru-issue.adoc[] — Step 5.1, to explore the ticket.
+* xref:skills/iru-pr-review.adoc[] — Step 5, learns architecture, conventions and tech stack before judging the diff.
 * xref:skills/iru-create-github-issue.adoc[] and xref:skills/iru-create-jira-ticket.adoc[] — each runs `iru-explore` with no
   argument (general orientation, since no ticket exists yet) to ground the ticket they draft in the real codebase.
 * xref:skills/iru-knowledge-to-issue.adoc[] — runs `iru-explore` with no argument to ground the purpose statement it
@@ -204,6 +235,8 @@ None — `iru-explore` is a leaf skill; it does not call any other skill in this
   `iru-create-github-issue`.
 * xref:skills/iru-knowledge-to-jira.adoc[] — the Jira counterpart: same use of `iru-explore` with no argument to
   ground the purpose statement it synthesizes, reused as-is when it then runs `iru-create-jira-ticket`.
+* xref:skills/iru-database-code-one-task.adoc[] — reused from earlier in the conversation if it already ran, or run fresh otherwise, to ground the query/queries in the real schema, database engine, and any ticket context.
+* xref:skills/iru-java-springboot-performance-tests.adoc[] — Step 1, to survey a large service for its candidate use cases, so the caller gets the candidate list rather than the file contents.
 
 NOTE: xref:skills/iru-release.adoc[] does not invoke `iru-explore` itself — it reads the `Project type:` and
 `Repository host:` lines from an `iru-explore` report already produced earlier in the same conversation (or falls

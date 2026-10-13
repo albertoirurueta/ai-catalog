@@ -1,6 +1,33 @@
 ---
 name: iru-setup-java-springboot-testcontainers
-description: Set up the local-execution and integration-test infrastructure for a Spring Boot service — a `compose.yaml` at the repository root with one pinned service per technology the stack uses (MongoDB, Couchbase, PostgreSQL/pgvector, MariaDB, Elasticsearch, Neo4j, Qdrant, Redis, Kafka, Confluent Schema Registry) plus Prometheus and Grafana for viewing metrics during local development, and a Testcontainers integration-test harness that launches that same compose file via `ComposeContainer` so integration tests and local runs share one definition of the environment. Whenever the service has REST, gRPC or GraphQL clients, also adds an API mocking service to that same compose stack, driven by the contracts already in `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and `apis/graphql-client/<name>/` — Microcks (the default when any gRPC client exists, since it mocks gRPC and REST from the same contracts in one container) or WireMock (the default when the service has REST clients only, with its gRPC extension noted as the upgrade path) — so integration tests never call a real downstream service. Writes the shared `*IT` base class, the `@DynamicPropertySource`/`ServiceConnection` wiring that points Spring at the started containers and each client's base URL at the mock, health-check-based readiness gating, and the Maven Failsafe/JaCoCo hookup, and verifies the whole thing by running `mvn verify`. Also wires Spring Boot's own `spring-boot-docker-compose` support so `local` runs start the stack automatically. Reads `springboot-stack.yml` for which services are needed and their pinned image tags. Announces whether it is creating the compose stack and IT harness from scratch or updating existing ones, and for every file it owns that already exists (`compose.yaml`/`docker-compose.yml`, the `*IT` base class, the Prometheus/Grafana provisioning, the mock's configuration) warns and asks Update / Keep as is / Replace — or applies `on-existing` from `args`. Notes that with the manifest's `ci.tests` set to `unit` (or `ci.enabled` set to `false`) the integration tests it generates run locally only. Invoke as `/iru-setup-java-springboot-testcontainers`, or with `args` (`stack-file:`, `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use whenever a Spring Boot service needs reproducible integration tests and a runnable local environment instead of hand-wiring containers per test class.
+description: >-
+  Set up the local-execution and integration-test infrastructure for a Spring Boot service — a `compose.yaml` at the
+  repository root with one pinned service per technology the stack uses (MongoDB, Couchbase, PostgreSQL/pgvector,
+  MariaDB, Elasticsearch, Neo4j, Qdrant, Redis, Kafka, Confluent Schema Registry) plus Prometheus and Grafana for
+  viewing metrics during local development, and a Testcontainers integration-test harness that launches that same
+  compose file via `ComposeContainer` so integration tests and local runs share one definition of the environment.
+  Whenever the service has REST, gRPC or GraphQL clients, also adds an API mocking service to that same compose stack,
+  driven by the contracts already in `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and
+  `apis/graphql-client/<name>/` — Microcks (the default when any gRPC client exists, since it mocks gRPC and REST from
+  the same contracts in one container) or WireMock (the default when the service has REST clients only, with its gRPC
+  extension noted as the upgrade path) — so integration tests never call a real downstream service. Writes the shared
+  `*IT` base class (Java, or Kotlin when `springboot-stack.yml`'s `project.language` is `kotlin` — a `companion
+  object` with `@JvmStatic` members, Testcontainers 2.x package names, `ComposeContainer` and `@ServiceConnection`
+  narrow per-adapter bases), the `@DynamicPropertySource`/`ServiceConnection` wiring that points Spring at the started
+  containers and each client's base URL at the mock, health-check-based readiness gating, and the Maven
+  Failsafe/JaCoCo hookup — or, when `project.buildTool` is `gradle`, checks the `integrationTest` task the build-logic
+  convention plugin already defines (never redefining it) and adds any mock Testcontainers test dependencies through
+  `gradle/libs.versions.toml` — and verifies the whole thing by running `mvn verify` or `./gradlew integrationTest`.
+  Also wires Spring Boot's own `spring-boot-docker-compose` support so `local` runs start the stack automatically.
+  Reads `springboot-stack.yml` for which services are needed and their pinned image tags. Announces whether it is
+  creating the compose stack and IT harness from scratch or updating existing ones, and for every file it owns that
+  already exists (`compose.yaml`/`docker-compose.yml`, the `*IT` base class, the Prometheus/Grafana provisioning, the
+  mock's configuration) warns and asks Update / Keep as is / Replace — or applies `on-existing` from `args`. Notes
+  that with the manifest's `ci.tests` set to `unit` (or `ci.enabled` set to `false`) the integration tests it
+  generates run locally only. Invoke as `/iru-setup-java-springboot-testcontainers`, or with `args` (`stack-file:`,
+  `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from
+  `iru-setup-java-springboot`. Use whenever a Spring Boot service needs reproducible integration tests and a runnable
+  local environment instead of hand-wiring containers per test class.
 model: sonnet
 ---
 
@@ -19,7 +46,11 @@ a time bomb that fails on an unrelated day for an unrelated reason.
 Parse `args` for `key: value` lines: `stack-file: <path>`, defaulting to `springboot-stack.yml`; `mode`
 (`new`/`existing`, informational — it never means "update silently"); and `on-existing`
 (`ask`/`keep`/`update`/`replace`, default `ask`). Read the manifest — including its `ci:` block, which only
-affects what Step 7 reports (see there) — and build the list of services needed:
+affects what Step 7 reports (see there) — and its `project.language` (`java` | `kotlin`; absent ⇒ `java`) and
+`project.buildTool` (`maven` | `gradle`; absent ⇒ `maven`). **Java (or absent) follows every step exactly as
+written.** Kotlin writes the test classes in `src/test/kotlin` from the Kotlin templates in Step 2; Gradle replaces
+the Maven Failsafe/`pom.xml` parts as Steps 2, 5 and 6 say. `compose.yaml`, the observability files and the mock
+configuration are identical for every language and build tool. Then build the list of services needed:
 
 | Manifest | Compose service | Image | Default port |
 |---|---|---|---|
@@ -207,9 +238,11 @@ wiremock:
 WireMock doesn't read OpenAPI natively, so wire the contract in from both ends:
 
 - **Generate the stub mappings from each spec's `examples`** into `wiremock/mappings/<name>/`, one file per
-  operation, rather than writing them from scratch. Every generated mapping gets a header comment naming the
-  contract and operation it came from and stating that it is generated — otherwise the next person edits the
-  mapping instead of the spec.
+  operation, rather than writing them from scratch. Every generated mapping names the contract and operation it
+  came from and states that it is generated — otherwise the next person edits the mapping instead of the spec.
+  JSON has no comments and WireMock refuses to start on an unknown top-level field (a `"comment"` key fails with
+  `Unrecognized field "comment"`), so put that note in the mapping's `"metadata"` object, e.g.
+  `"metadata": { "generated": "from apis/rest-client/<name>/<name>-api.yaml, operation getX, example 'found' — edit the spec" }`.
 - **Add the OpenAPI validation extension** so a request or response that violates the contract fails the test
   instead of quietly passing. This is what buys back most of the contract-fidelity that Microcks gets for free,
   and it is the difference between a mock that proves something and a mock that agrees with whatever the client
@@ -240,16 +273,22 @@ Put it in a module every `*IT` can reach. Two workable placements — pick one a
 Write the shared base class to launch the compose file:
 
 ```java
-@Testcontainers
+import org.testcontainers.containers.ComposeContainer;      // Testcontainers 2.x: core classes keep this package
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.utility.DockerImageName;
+
 public abstract class AbstractComposeIT {
+
+    // Compose runs inside this pinned image, so no local `docker compose` CLI is needed (Testcontainers 2.x removed
+    // withLocalCompose(false); this constructor is its replacement — new ComposeContainer(file) runs the local CLI).
+    private static final DockerImageName COMPOSE_IMAGE = DockerImageName.parse("docker:<pinned-tag>-cli");
 
     // The same compose.yaml a developer runs locally: one definition, no drift.
     @SuppressWarnings("resource")
     protected static final ComposeContainer ENVIRONMENT =
-            new ComposeContainer(new File("../compose.yaml"))
-                    .withExposedService("mongodb", 27017, Wait.forListeningPort())
+            new ComposeContainer(COMPOSE_IMAGE, new File("../compose.yaml"))
+                    .withExposedService("mongodb", 27017, Wait.forHealthcheck())
                     // ... one withExposedService per required service, each with a real wait strategy ...
-                    .withLocalCompose(false)
                     .withStartupTimeout(Duration.ofMinutes(3));
 
     static { ENVIRONMENT.start(); }
@@ -279,6 +318,12 @@ Points that matter:
 - **Start the environment once per JVM**, as a `static` singleton (as above), not per test class. Restarting a
   Kafka + schema-registry + database stack per class makes the suite unusably slow. Note in the report that this
   means tests must not assume an empty database: each `*IT` cleans up what it creates, or uses unique keys.
+- **Testcontainers 2.x (managed by Spring Boot 4)** renamed module artifacts to `testcontainers-<module>`
+  (`testcontainers-postgresql`, `testcontainers-junit-jupiter`, ...) and moved module classes to
+  `org.testcontainers.<module>` with no type parameter (`org.testcontainers.postgresql.PostgreSQLContainer`,
+  `org.testcontainers.mongodb.MongoDBContainer`); core classes (`ComposeContainer`, `GenericContainer`, `Wait`) stay
+  in `org.testcontainers.containers`. Pin the `docker:<tag>-cli` compose image like every other tag and record it in
+  the manifest. Only on Testcontainers 1.x use the old names and `withLocalCompose(false)`.
 - **Reuse across runs**: mention `testcontainers.reuse.enable=true` in `~/.testcontainers.properties` as a big
   local-iteration win, and that it must stay off in CI (where a fresh environment per run is the point).
 
@@ -313,12 +358,113 @@ concludes the two disagree.
 
 Add the matching test-scope dependency to each `infrastructure/clients/<name>/pom.xml`
 (`io.github.microcks:microcks-testcontainers` or `org.wiremock.integrations.testcontainers:wiremock-testcontainers-module`),
-with the version in the root pom's `<dependencyManagement>` like everything else — never inline in the module.
+with the version in the root pom's `<dependencyManagement>` like everything else — never inline in the module. On
+**Gradle**, the equivalent is a version + library alias in `gradle/libs.versions.toml` (e.g.
+`microcks-testcontainers = { module = "io.github.microcks:microcks-testcontainers", version.ref = "microcks-testcontainers" }`,
+version resolved from the latest stable release, not invented) and `testImplementation(libs.microcks.testcontainers)`
+in `infrastructure/clients/<name>/build.gradle.kts` — skip either edit if `iru-setup-java-springboot-pom` already
+placed it, and never put a literal version in a module build file.
+
+### Kotlin (`project.language: kotlin`)
+
+The same design — one compose-based base class in `boot`, narrow `@ServiceConnection` bases per adapter module —
+written in Kotlin under `src/test/kotlin`, following the project's Kotlin test rules (JUnit 5, `kotlin.test`
+assertions, backtick names, KDoc, named constants, no `!!`, constructor `@Autowired` injection in test classes).
+Testcontainers 2.x (managed by Spring Boot 4) renamed artifacts to `testcontainers-<module>` and moved module classes
+to `org.testcontainers.<module>` (e.g. `org.testcontainers.postgresql.PostgreSQLContainer`, no type parameter);
+core classes (`ComposeContainer`, `Wait`) stay in `org.testcontainers.containers`, and the JUnit extension is
+`org.testcontainers.junit.jupiter` from `testcontainers-junit-jupiter`. On Testcontainers 1.x use the old names.
+
+Testcontainers 2.x also dropped `withLocalCompose(...)`: `ComposeContainer(File)` runs the local `docker compose`
+CLI, while `ComposeContainer(DockerImageName, File)` runs compose inside that pinned image (the 1.x
+`withLocalCompose(false)` behaviour) — so no compose CLI is needed on the machine or CI runner. Pin the image tag
+like every other one and record it in the manifest.
+
+The compose-based base class (in `boot`):
+
+```kotlin
+@SpringBootTest
+// detekt flags a class whose members all live in its companion; this one exists to be extended by the *IT classes.
+@Suppress("UtilityClassWithPublicConstructor")
+abstract class AbstractComposeIT {
+    /** The shared compose environment and its property bindings. */
+    companion object {
+        private const val POSTGRES = "postgres"
+        private const val POSTGRES_PORT = 5432
+        private const val STARTUP_MINUTES = 3L
+        private const val COMPOSE_FILE = "compose.yaml"
+
+        /** Compose runs inside this pinned image, so no local `docker compose` CLI is needed. */
+        private val COMPOSE_IMAGE = DockerImageName.parse("docker:<pinned-tag>-cli")
+
+        /** Started once per JVM; ports are random, so every property comes from `getServicePort`. */
+        @JvmStatic
+        val environment: ComposeContainer =
+            ComposeContainer(COMPOSE_IMAGE, findComposeFile())
+                .withExposedService(POSTGRES, POSTGRES_PORT, Wait.forHealthcheck())
+                // ... one withExposedService per required service ...
+                .withStartupTimeout(Duration.ofMinutes(STARTUP_MINUTES))
+                .apply { start() }
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun springProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url") {
+                val host = environment.getServiceHost(POSTGRES, POSTGRES_PORT)
+                val port = environment.getServicePort(POSTGRES, POSTGRES_PORT)
+                "jdbc:postgresql://$host:$port/<db>"
+            }
+            // ... credentials from compose.yaml's development-only values, one binding per service/client ...
+        }
+
+        /** Walks up from the module's working directory, so this works at any module depth. */
+        private fun findComposeFile(): File =
+            generateSequence(File("").absoluteFile) { it.parentFile }
+                .map { File(it, COMPOSE_FILE) }
+                .firstOrNull { it.isFile }
+                ?: error("$COMPOSE_FILE not found above ${File("").absolutePath}")
+    }
+}
+```
+
+`@JvmStatic` on the companion members is what makes Spring see a static `@DynamicPropertySource` method and what
+starts the environment once per JVM (the companion initializer runs once). Walking up to `compose.yaml` removes the
+module-depth problem entirely — it works from `boot` (Maven or Gradle both run tests in the module directory).
+
+A narrow per-adapter base (in `infrastructure/database/<engine>`), plus a test-only
+`@SpringBootApplication class <Engine>TestApplication` in the module's base test package so `@SpringBootTest` finds a
+configuration (an adapter module has no application class of its own):
+
+```kotlin
+@SpringBootTest
+@ActiveProfiles("<engine>")          // load the module's own application-<engine>.yml (ddl-auto: validate etc.)
+@Testcontainers
+@Suppress("UtilityClassWithPublicConstructor") // extended by the *IT classes; detekt would otherwise flag it
+abstract class AbstractPostgresqlIT {
+    /** The shared container, static through the companion so every subclass reuses it. */
+    companion object {
+        /** Same image and tag as compose.yaml / springboot-stack.yml. */
+        @Container
+        @ServiceConnection
+        @JvmStatic
+        val postgres: PostgreSQLContainer =
+            PostgreSQLContainer(DockerImageName.parse("pgvector/pgvector:<tag>").asCompatibleSubstituteFor("postgres"))
+    }
+}
+```
+
+`asCompatibleSubstituteFor("postgres")` is required whenever the image isn't the module's default one (the
+`pgvector/pgvector` image here); `@ServiceConnection` picks the connection type from the container class. The
+`*IT` classes `iru-setup-java-springboot-modules` wrote extend these bases and take their beans through the
+constructor (`class JpaOrderRepositoryAdapterIT(@Autowired private val adapter: JpaOrderRepositoryAdapter) :
+AbstractPostgresqlIT()`); the full-context smoke test `<Name>ApplicationIT` extends `AbstractComposeIT` and drives
+one use case end to end through the real adapter.
 
 ## Step 3 — Local development via Spring Boot's compose support
 
-In `boot`, ensure `spring-boot-docker-compose` is a `runtime`/`optional` dependency (the pom skill places it) and
-configure the `local` profile:
+In `boot`, ensure `spring-boot-docker-compose` is a `runtime`/`optional` dependency (on Gradle,
+`developmentOnly(libs.spring.boot.docker.compose)`; the pom skill places it either way) and configure the `local`
+profile:
 
 ```yaml
 spring:
@@ -374,6 +520,16 @@ Integration tests must exercise the real schema, not an ad-hoc one:
 - `mvn test` succeeds with Docker stopped. If it doesn't, an integration test is misnamed as `*Test` — fix the
   name. A unit-test phase that needs Docker breaks every developer's inner loop.
 
+**Gradle** — the `integrationTest` task is defined once, by the `iru.integration-test` convention plugin in
+`build-logic/` that `iru-setup-java-springboot-pom` writes: a `Test` task over the `test` source set including only
+`**/*IT*`, while `test` excludes `**/*IT*`, with `check` depending on it. **This skill never redefines or
+reconfigures it** — no `tasks.register("integrationTest")`, no extra source set. Verify instead that every module
+holding an `*IT` applies `id("iru.integration-test")` (report any that don't — the pom skill owns the fix), that
+`./gradlew test` succeeds with Docker stopped (same misnaming rule as above), and that the `coverage` project's
+`testCodeCoverageReport` includes the `integrationTest` execution data. Test dependencies (`spring-boot-testcontainers`,
+`testcontainers-junit-jupiter`, `testcontainers-<module>`) come from the version catalog, never with a literal
+version in a module's `build.gradle.kts`.
+
 ## Step 6 — Verify
 
 Delegate each to `iru-gate-runner` and ask for a compact result:
@@ -384,6 +540,12 @@ mvn -q test                    # unit tests pass with no Docker involvement
 mvn -q verify                  # integration tests pass against the real containers
 docker compose --profile observability up -d && docker compose down -v   # the local stack comes up and tears down
 ```
+
+On Gradle, replace the two Maven lines with `./gradlew test` (with Docker stopped, if practical) and
+`./gradlew integrationTest`. If Gradle itself runs inside a container (a CI container job, or
+`docker run ... gradle:<tag>` with `/var/run/docker.sock` mounted), mount the project at the **same absolute path**
+as on the host (compose bind-mounts are resolved by the host daemon) and set
+`TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal` (Docker Desktop) so the tests reach the mapped ports.
 
 If the stack has a mock service, also confirm it is actually serving the contracts rather than merely running —
 a mock container that started with zero imported artifacts passes a healthcheck and fails every test:
@@ -415,12 +577,14 @@ Summarize:
 - Where the integration tests run, per the manifest's `ci:` block: with `ci.tests: full`, CI runs them through
   Failsafe against this same compose stack; with **`ci.tests: unit`** (or `ci.enabled: false`), **the `*IT` tests
   this skill generates run locally only** — `iru-setup-java-springboot-github-workflows` runs Maven with
-  `-DskipITs`, so no Docker/Testcontainers stack starts in CI and they're verified only when someone runs
+  `-DskipITs` (on Gradle, `./gradlew test` without `integrationTest`), so no Docker/Testcontainers stack starts in CI and they're verified only when someone runs
   `mvn verify` locally. Say this plainly so nobody assumes CI exercised them; this is also why Step 5's
   `*IT`-vs-`*Test` naming discipline matters even more there (a Docker-dependent test misnamed `*Test` would run,
   and fail, in CI).
 - Every compose service written, with its pinned image tag, its healthcheck, and whether it sits behind the
   `observability` profile. Note that Caffeine intentionally has no container, if it's in the stack.
+- The language and build tool (`java`/`kotlin`, `maven`/`gradle`); on Gradle, which modules apply
+  `iru.integration-test` and any that hold an `*IT` without it.
 - Where the integration-test base class(es) live and which containers each starts.
 - Which services use `@ServiceConnection` versus `@DynamicPropertySource`, and how the compose file path is
   resolved.

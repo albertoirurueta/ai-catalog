@@ -1,6 +1,6 @@
 = TypeScript Test
-:description: Runs a TypeScript/npm project's unit tests via Vitest, Jest, or Angular CLI's ng test, scoped to a file, directory, or name pattern, and reports results.
-:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, ng test, npm, run unit tests, test selector
+:description: Runs a TypeScript project's unit tests via Vitest, Jest or ng test, plus opt-in NestJS and Next.js e2e suites, scoped by selector, and reports results.
+:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, nestjs, nextjs, playwright, e2e tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -28,6 +28,7 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 ----
 /iru-typescript-test
 /iru-typescript-test <selector>
+/iru-typescript-test e2e [<selector>]
 ----
 
 == Inputs
@@ -40,7 +41,13 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 |No
 |A file path, a directory, or a `-t "<name pattern>"` filter, combinable as a file/directory plus a name
 pattern. Mapped to the matching runner's scoping flags per the table below.
-|None — omitting it runs the whole suite.
+|None — omitting it runs the whole unit suite.
+
+|`e2e` / `unit` keyword
+|No
+|Leading keyword (NestJS and Next.js only) that picks the suite. `e2e` runs the end-to-end suite instead of the
+unit suite and scopes it with the rest of the selector; `unit` means the same as no keyword.
+|`unit`
 |===
 
 The runner and its invocation are resolved as follows:
@@ -103,6 +110,25 @@ An unmatched file/directory selector is a hard failure (non-zero exit) for all t
 `-t`/`--filter` name pattern against files that do match is not a failure — every runner reports the matched
 tests as skipped and exits `0`.
 
+=== NestJS and Next.js
+
+`@nestjs/core` in `dependencies` marks a NestJS project and `next` marks a Next.js project; both still run on Vitest
+or Jest, detected as above, and the framework only changes which suite counts as "unit" and how `e2e` resolves:
+
+* *NestJS* — unit tests are `*.spec.ts` next to the source and e2e tests are `test/*.e2e-spec.ts`, kept apart by
+  two configs so the default run never picks up e2e files: ESM/Vitest (`vitest.config.ts` plus
+  `vitest.config.e2e.ts`) or CommonJS/Jest (`jest.config.ts` plus `test/jest-e2e.json`). The e2e config path is read
+  from the project's own `test:e2e` script; with no such script or config, `e2e` is reported as "NestJS e2e suite
+  not wired". Relative `.js` imports in the ESM flavor are correct and never reported.
+* *Next.js* — unit/component tests run on Vitest (`vitest.config.mts`) or Jest via `next/jest`; e2e is Playwright
+  (`@playwright/test` plus `playwright.config.*`), which builds and starts the app, so it only runs on an explicit
+  `e2e` selector and never by default. Cypress-only projects are reported as "Cypress e2e present, not run".
+
+An `e2e` selector on any other project is reported as unsupported and the skill stops. A failure caused by a missing
+database, Docker/Testcontainers daemon, Playwright browsers, or a failed `next build` is reported as an environment
+failure ("e2e not run/aborted: cause"), never as failing tests; the skill checks `docker info` first when the project
+uses Testcontainers.
+
 == Outputs
 
 * A plain-text pass/fail summary in the conversation — never a written file.
@@ -114,6 +140,8 @@ tests as skipped and exits `0`.
 * A selector that matched no files is reported plainly as "matched no test files", distinct from a genuinely
   clean 0-failure run; a name pattern that matched no individual tests is reported plainly as "0 of N tests
   matched the filter", distinct from "all passed".
+* For NestJS and Next.js, the report states which suite ran (unit or e2e), so a green unit run is never read as e2e
+  coverage. Playwright runs are parsed from its own JSON reporter shape (`stats` and nested `suites[].specs[]`).
 * No source or test code is ever modified.
 
 == Execution flow
@@ -125,7 +153,10 @@ flowchart TD
     B --> C{Runner detected?}
     C -- no --> D["Stop: report\n&quot;no test runner wired&quot;"]
     C -- yes, ng test with\nrunner=karma --> E["Stop: report Karma\nnot supported by this skill"]
-    C -- yes --> F{Selector given?}
+    C -- yes --> C2{"NestJS or Next.js\nwith e2e keyword?"}
+    C2 -- "e2e, env missing\n(Docker / browsers / build)" --> C3["Report e2e not run:\nenvironment failure"]
+    C2 -- "e2e, ready" --> F
+    C2 -- "no" --> F{Selector given?}
     F -- no --> G["Full-suite command\n(vitest run / jest / ng test --watch=false)"]
     F -- yes --> H["Map selector to file/dir\nand/or -t / --filter syntax"]
     H --> I["Compose scoped command"]
@@ -155,6 +186,8 @@ output, it does not call any other skill in this catalog.
   group's changes, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 7, to run the full suite after generating tests,
   via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.4, 3.6 and 3.9, unit tests, full unit suite and e2e run, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.3, 3.5 and 3.8, unit suites and Playwright via the e2e selector, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

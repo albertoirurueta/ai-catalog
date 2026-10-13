@@ -1,0 +1,83 @@
+= PHP Code One Task
+:description: Implements a single PHP plan task for Laravel, WordPress, PrestaShop or Composer libraries, with its fast tests, and checks off its own plan checkbox.
+:keywords: iru-php-code-one-task, claude code skill, php, laravel, wordpress, prestashop, pest, phpunit, implementation plan, single task
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out one task from a PHP `implementation_plan.md` — the implementation, its tests, and the checkbox update — against the real codebase, and nothing else. It is the narrowest execution unit for PHP projects in the `iru-code` pipeline and runs on a medium model, since the plan already carries the hard reasoning and the code agreements live in the skill's `reference/` directory.
+
+== Purpose
+
+PHP projects vary more by flavor than by language: a WordPress hook callback, a Laravel controller and a PrestaShop hook method look nothing alike. `iru-php-code-one-task` first detects the flavor (Laravel, WordPress plugin, WordPress theme, PrestaShop module, or plain library), the PHP floor, the style tooling (Pint, PHP-CS-Fixer, PHPCS with WordPressCS) and the test runner with its fast-versus-integration suites. It then reads `reference/README.md` and only the reference files the task needs: `code-style.md` always, `testing.md` when writing tests, `security.md` for request input, output, SQL, files or auth, and exactly one flavor file (`laravel.md`, `wordpress.md`, `prestashop.md`; none for a library). It re-checks the current code, implements exactly what the task says, writes tests, runs only the fast test files it touched, and checks off its own checkbox with a "group validation pending" note.
+
+Non-negotiables enforced while implementing: every input validated, every output escaped for its context, every SQL value bound, CSRF and authorization on every state-changing handler, native types, platform-required names (WordPress prefix and text domain, PrestaShop module-prefixed keys), no new dependency or migration unless asked, and no debugging leftovers. A task that would require insecure code is reported with a secure alternative rather than implemented.
+
+== Purpose group
+
+xref:index.adoc#group-php[PHP Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-php-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's own text from the plan, including its exact `implementation_plan.md` checkbox line(s), so the right box can be checked off.
+|None.
+|===
+
+== Outputs
+
+* Source and test changes for the single task, following the detected flavor's conventions and the neighbouring code's style (security rules always win over an insecure neighbour).
+* New or updated tests placed in the right suite: fast tests (Pest or PHPUnit, framework fakes, Brain Monkey/WP_Mock) run and green; integration tests (`WP_UnitTestCase`, MySQL-backed, shop-backed) written but never run. No test scaffolding is created for projects with no test setup.
+* The task's own checkbox (and covered sub-tasks) flipped to `[x]` in `implementation_plan.md` with a note naming the files touched and "group validation pending".
+* A short report: detected flavor, PHP floor, runner and reference files read; files touched and tests added or run; any blocker; any deliberate deviation from `reference/` and any insecure neighbouring code left alone.
+* It never captures a baseline, adds license headers, audits PHPDoc, runs coverage, quality tools, the full suite, `--parallel`, wp-env, or anything needing Docker, a database or a shop.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-php-code-one-task\n(task text + checkbox line)"] --> B["Step 1: detect flavor, PHP floor,\nstyle tooling, runner, suites"]
+    B --> C["Read reference README, code-style,\ntesting, security, one flavor file"]
+    C --> D["Step 2: re-check current code\nand neighbouring conventions"]
+    D --> E["Step 3: implement exactly\nwhat the task specifies"]
+    E --> F{"Blocker or insecure\nrequirement?"}
+    F -- yes --> G["Step 4: ask the user or\nreport blocked, leave checkbox"]
+    F -- no --> H["Step 5: write or update tests\nfast and integration"]
+    H --> I["Step 6: run only the fast\ntest files touched"]
+    I --> J{"Fast tests green?"}
+    J -- no --> K["Fix code or test,\nre-run"]
+    K --> I
+    J -- yes --> L["Step 7: check off this task's\ncheckbox, group validation pending"]
+    L --> M["Step 8: report outcome\nto the caller"]
+    G --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-php-code-one-task` does not call other skills; it reads its own `reference/` files and runs fast test commands directly.
+
+=== Invoked by
+
+* xref:skills/iru-php-code-one-task-group.adoc[] — Step 2, implements each task and its fast tests, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — it spawns no agents itself. Its caller may run several instances in parallel agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-php-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

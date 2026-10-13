@@ -22,15 +22,11 @@ answering "where is X defined". It cannot edit files.
 
 === Used by
 
-* xref:skills/iru-explore.adoc[] — Step 3 uses it to build a picture of the codebase's structure (module layout,
-  core abstractions, control flow) before reporting findings, in place of manually reading every file.
+* xref:skills/iru-explore.adoc[] — Step 4, codebase search of modules, abstractions and control flow.
 * xref:skills/iru-setup-antora.adoc[] — Step 7 uses it to locate the top-level source layout and main public entry
   points before writing `index.adoc`'s repository overview, instead of reading the whole source tree directly.
-* xref:skills/iru-setup-readme.adoc[] — Step 7 uses it the same way, to locate the main source entry points before
-  writing the README's "how it works" example.
-* xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 0 uses it for the broad structural sweeps a
-  service's documentation is derived from (the module tree, the use-case classes, the persistence entities and
-  migration files, the Micrometer calls), so only the specific files it identifies get read directly.
+* xref:skills/iru-setup-readme.adoc[] — Step 7, locate main source entry points before reading them.
+* xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 0, broad structural sweeps over modules, use cases, entities, metrics.
 * xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 2 uses it to build a structural map of every
   candidate source file and the existing test-file convention across the project, instead of reading each file
   inline.
@@ -38,6 +34,9 @@ answering "where is X defined". It cannot edit files.
   and the existing test-file convention across the module.
 * xref:skills/iru-swift-generate-all-tests.adoc[] — Step 2 uses it the same way, to map every candidate type and
   the existing test-file convention across the target.
+* xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 2, to build the class/test-file inventory across the whole codebase without reading every source file directly.
+* xref:skills/iru-java-generate-all-tests.adoc[] — Step 2, to build the class/test-file inventory across the whole codebase without reading every source file directly.
+* xref:skills/iru-java-springboot-performance-tests.adoc[] — the alternative to the `iru-explore` skill for Step 1's survey.
 
 === Why this one specifically
 
@@ -60,12 +59,8 @@ naming a specific type. It has the same tool access as the main conversation.
   directly; separately, it also spawns one (as does xref:skills/iru-update-docs.adoc[]) only when no Antora
   documentation module exists yet, to run the `iru-setup-antora` skill (briefed with the context of what's about to
   follow) before continuing with the rest of their own work.
-* xref:skills/iru-pr-description.adoc[] — Step 2 spawns one, given the branch/base-branch names, to read the full
-  diff and recent commit messages and draft the PR description, so the raw diff stays out of this skill's own
-  context and only the drafted text comes back.
-* xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, the same one-off case as above: only when a
-  Spring Boot service has no Antora module yet, to run `iru-setup-antora` before this skill adds the Kroki
-  extension and the service page set on top.
+* xref:skills/iru-pr-description.adoc[] — Step 2, reads the full diff and drafts the description text.
+* xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, runs iru-setup-antora mid-run.
 * xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per file needing tests,
   dispatched concurrently in batches, each reading only its own source file (and any existing test file) to
   write or extend that file's tests.
@@ -73,6 +68,8 @@ naming a specific type. It has the same tool access as the main conversation.
   same way.
 * xref:skills/iru-swift-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per type needing tests, the
   same way.
+* xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 5, one per class needing new/extended tests, dispatched concurrently since each only touches its own test file.
+* xref:skills/iru-java-generate-all-tests.adoc[] — Step 5, one per class needing new/extended tests, dispatched concurrently since each only touches its own test file.
 
 === Why this one specifically
 

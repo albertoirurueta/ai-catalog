@@ -1,0 +1,159 @@
+= Setup PHP Laravel
+:description: Scaffolds a Laravel application with composer create-project or updates an existing one, adding Pest, Pint, Larastan, composer scripts and a tested sample slice.
+:keywords: iru-setup-php-laravel, claude code skill, laravel, composer, pest, phpunit, larastan, pint, sail, laravel boost, php bootstrap
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds a Laravel application with `composer create-project laravel/laravel` (or brings an existing app up to date), then layers this catalog's standard PHP toolchain on top so the CI workflows and the `iru-php-*` gate skills work against it without further wiring.
+
+== Purpose
+
+`iru-setup-php-laravel` resolves the latest stable skeleton live from Packagist, scaffolds into a scratch directory and moves the result into the repository without overwriting anything that already exists. It then post-processes the app:
+
+* `config/app.php` gets a `'version' => env('APP_VERSION', '0.1.0-dev')` key in the `x.y.z-dev` shape that `iru-php-bump-version` maintains, and `config.platform.php` is pinned to the PHP floor.
+* Pest (default, with arch tests using the php/security/laravel presets) or PHPUnit, with fast Unit and Feature suites on SQLite `:memory:`.
+* Pint (`pint.json`) and Larastan (`phpstan.neon`) — level 9 for a new app, a lower level plus a generated baseline for an existing one.
+* Composer scripts the workflows and gates call by name: `test`, `test:coverage` (Clover and JUnit under `build/logs/`, 80% floor), `lint`, `lint:report`, `format`, `format:check`.
+* A sample action, Form Request, policy and resource with feature tests (never added to an existing app without asking).
+* Only when chosen: a database-backed `Integration` suite (MySQL or PostgreSQL), Laravel Sail, a production `Dockerfile` (FrankenPHP or PHP-FPM + Nginx) for `distribution: internal`, `sonar-project.properties`, and Laravel Boost as a dev-only dependency.
+
+The skill announces whether it is scaffolding from scratch or updating an existing app. For every artifact it owns that already exists it warns and asks **Update** / **Keep as is** / **Replace** (or **Stop**), unless `on-existing` pre-answers. Replace is never offered for the application itself, since re-running `create-project` would overwrite live code. It ends by running the same commands the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates run, and reports what it could not verify rather than assuming it works.
+
+== Purpose group
+
+xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-php-laravel
+----
+
+When called from `iru-setup-php-repository`, the resolved answers arrive as `args` `key: value` lines.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`name`, `slug`, `vendor`, `description`
+|No
+|Identity: `APP_NAME`, and the `composer.json` name (`vendor/slug`) and description.
+|Asked (existing apps: read from `composer.json` and `.env.example`)
+
+|`license`, `developer-name`, `developer-email`, `organization-url`
+|No
+|`composer.json` license and authors. No license maps to `proprietary`.
+|Asked
+
+|`php-version`
+|No
+|PHP floor (`major.minor`). Never below the skeleton's own floor; decides Pest 5 (PHP 8.4+) versus Pest 4.
+|Latest branch in active support
+
+|`open-source`, `visibility`, `ci`, `ci-tests`
+|No
+|Shared pipeline vocabulary. `ci-tests` only defaults `integration-tests`.
+|Asked or derived (`gh repo view`)
+
+|`distribution`
+|No
+|`none` or `internal`. `store` is invalid for an application. `internal` writes the production `Dockerfile`.
+|`none`
+
+|`runtime`
+|No
+|`frankenphp` or `fpm`; consulted only with `distribution: internal`.
+|`frankenphp`
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; writes `sonar-project.properties` unless `none`.
+|Asked; `none` recommended for private repositories
+
+|`test-framework`
+|No
+|`pest` or `phpunit`.
+|`pest` for a new app; an existing app keeps what it uses
+
+|`integration-tests`
+|No
+|`none`, `mysql` or `pgsql`: a DB-backed `Integration` suite (`phpunit.integration.xml`).
+|`mysql`/`pgsql` with `ci-tests: full`, otherwise `none`
+
+|`sail`, `boost`
+|No
+|`yes` or `no` for Laravel Sail and Laravel Boost.
+|Sail `yes` only with an integration suite; Boost `yes`
+
+|`mode`
+|No
+|`new` or `existing`. Informational: never means "update silently".
+|Derived: Laravel app present means `existing`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, pre-answering the per-artifact question for scripted runs. `replace` is treated as `update` for the app itself.
+|`ask`
+|===
+
+Unknown keys are ignored. A `composer.json` that is not a Laravel app makes the skill stop and suggest `iru-setup-php-repository`.
+
+== Outputs
+
+* A Laravel application at the repository root (or a `<slug>` subdirectory), with `composer.lock` and the identity, version key and platform pin applied.
+* `phpunit.xml` (fast suites), `tests/Pest.php` and `tests/Unit/ArchTest.php` (Pest), `pint.json`, `phpstan.neon` (+ baseline for an existing app), and the composer scripts.
+* The sample slice and its tests, optionally `phpunit.integration.xml`, Sail files, `Dockerfile`/`.dockerignore`, `sonar-project.properties`, Boost files and guidelines.
+* A `/build/` entry appended to `.gitignore` when no line covers it.
+* A report: mode, toolchain used (host or Docker image), resolved versions and their source, the action per owned artifact (created / updated / replaced / kept as is / removed / skipped), each gate command and result, anything unverified, and a warnings block (never commit `.env`, coverage needs PCOV or Xdebug, Boost runs with developer credentials, a `SONAR_TOKEN` is needed).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-php-laravel"] --> B["Step 0: parse args"]
+    B --> C["Step 1: survey; detect Laravel app"]
+    C -- "composer.json is not a Laravel app" --> STOP["Stop: suggest iru-setup-php-repository"]
+    C --> C2["Announce from scratch vs update;\nask Update / Keep / Replace / Stop per artifact"]
+    C2 -- Stop --> STOP2["End without changes"]
+    C2 --> D["Step 2: collect identity and options"]
+    D --> E["Step 3: pick toolchain, host PHP or Docker"]
+    E -- "no PHP and no Docker" --> STOP3["Stop: tell user what to install"]
+    E --> F{"New app?"}
+    F -- yes --> G["Step 4: composer create-project into scratch dir and move in"]
+    F -- no --> H["Skip scaffold"]
+    G --> I["Step 5: identity, version key, PHP platform"]
+    H --> I
+    I --> J["Step 6: Pest or PHPUnit, suites, arch rules"]
+    J --> K["Step 7: Larastan and Pint"]
+    K --> L["Step 8: composer scripts"]
+    L --> M["Step 9: sample code and tests"]
+    M --> N["Step 10: optional integration suite and Sail"]
+    N --> O["Steps 11-13: sonar properties, container image, Boost"]
+    O --> P["Step 14: gitignore entry for reports"]
+    P --> Q["Step 15: run test, coverage, PHPStan, Pint commands"]
+    Q -- failure in generated files --> R["Fix what this skill wrote"]
+    R --> Q
+    Q --> S["Step 16: report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It runs `composer`, `php`, `vendor/bin/*` and optionally `docker` directly. Step 15 runs the same commands as the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates, but does not call those skills. The sample code follows `iru-php-code-one-task/reference/laravel.md`.
+
+=== Invoked by
+
+* xref:skills/iru-setup-php-repository.adoc[] — Step 5, scaffold for the laravel flavor, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-php-laravel/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

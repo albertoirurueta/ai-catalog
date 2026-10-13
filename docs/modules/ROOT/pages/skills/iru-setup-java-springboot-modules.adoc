@@ -1,6 +1,6 @@
 = Setup Java Spring Boot Modules
-:description: Scaffolds the hexagonal source tree of a Spring Boot service: domain ports, adapters, use cases, profiles, migrations, and an ArchUnit architecture test.
-:keywords: iru-setup-java-springboot-modules, claude code skill, ports and adapters, hexagonal architecture, mapstruct, archunit, refreshscope, spring profiles, database migrations
+:description: Scaffolds the hexagonal source tree of a Java or Kotlin Spring Boot service: ports, adapters, use cases, profiles, migrations and an ArchUnit test.
+:keywords: iru-setup-java-springboot-modules, claude code skill, ports and adapters, hexagonal architecture, kotlin, gradle, mapstruct, archunit, refreshscope, spring profiles, database migrations
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -8,6 +8,8 @@ Turns a reactor of empty modules into a Spring Boot service skeleton that compil
 hexagonal pattern well enough that the first real feature has an obvious shape to follow.
 
 == Purpose
+
+The language and build tool come from `springboot-stack.yml`: `project.language` (`java` or `kotlin`, absent means `java`) and `project.buildTool` (`maven` or `gradle`, absent means `maven`; `gradle` only appears with Kotlin). The Java path is unchanged. With Kotlin the same layering, ports, configuration files and migrations are written, but into `src/main/kotlin` and `src/test/kotlin`, with Kotlin idioms: data classes and `@JvmInline value class` for value objects, a regular class for the aggregate root, hand-written extension-function mappers instead of MapStruct (no Lombok, no kapt/KSP), constructor-bound `@ConfigurationProperties` data classes with `@RefreshScope @Validated`, use cases wired as `@Bean`s in `boot/config` so `application` keeps no Spring dependency, a `runApplication` entry point, `suspend fun`/`Flow` for reactive stacks, KDoc, and JUnit 5 with MockK. When `iru-kotlin-springboot-code-one-task` is installed, its `reference/` files are treated as the authoritative rules for the generated Kotlin.
 
 `iru-setup-java-springboot-modules` writes **one worked example per adapter kind**, not a set of empty files: a
 single aggregate, its repository port, one adapter implementing that port against the chosen database, one use
@@ -71,26 +73,26 @@ artifacts are still asked about.
 Replace question for scripted runs.
 |`ask`
 
-|An existing reactor
+|An existing build
 |Yes
-|A root `pom.xml` plus a `pom.xml` in every module the manifest names. If they're missing the skill stops and points
+|Maven: a root `pom.xml` plus a `pom.xml` in every module the manifest names. Gradle (Kotlin): `settings.gradle.kts` including every module, a `build.gradle.kts` per module, `build-logic/` and `gradle/libs.versions.toml`. If they're missing the skill stops and points
 the user at `/iru-setup-java-springboot-pom` — it writes sources into modules, it doesn't create modules.
 |None — a precondition, not a default
 
 |Existing hand-written sources
 |No
-|Any `.java` file already containing code the skill didn't generate is skipped, never overwritten (even with
+|Any `.java` or `.kt` file already containing code the skill didn't generate is skipped, never overwritten (even with
 `on-existing: replace`), and reported.
 |Skip and report
 |===
 
 == Outputs
 
-* The package layout under `src/main/java`, `src/main/resources`, and `src/test/java` for every module.
+* The package layout under `src/main/java` (or `src/main/kotlin` for Kotlin), `src/main/resources`, and the matching test source root for every module.
 * `domain` — the aggregate, value objects, every port interface with Javadoc describing its contract, and the
   domain-exception hierarchy.
 * `application` — one use case class per use case, with a Mockito unit test that mocks every port.
-* `infrastructure/database/<engine>` — persistence entity, Spring Data repository, MapStruct mapper, the port
+* `infrastructure/database/<engine>` — persistence entity, Spring Data repository, MapStruct mapper (Kotlin: extension-function mappers), the port
   adapter, the migration/changelog directory for that engine's tooling (Flamingock change class, Liquibase changelog
   including a `pgvector` extension changeset where relevant, or a Flyway script), and an integration test.
 * `infrastructure/configuration` — validated `@ConfigurationProperties` beans annotated `@RefreshScope`, the
@@ -105,7 +107,7 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
   chosen here is reported so it can be reconciled with the AsyncAPI specification
   xref:skills/iru-setup-java-springboot-apis.adoc[] writes in `apis/messaging/`: a binding whose topic appears as no
   AsyncAPI channel is a topic nobody outside the repository can discover.
-* `infrastructure/metrics` — the metrics port implemented over Micrometer, with a constants class for every metric
+* `infrastructure/metrics` — the metrics port implemented over Micrometer, with a constants class (Kotlin: an `object` of `const val`s) for every metric
   name and tag key, and bounded tag cardinality documented in the Javadoc.
 * `api/graphql-server` — `@Controller` classes implementing the generated resolver interfaces, mappers, a
   `DataFetcherExceptionResolver` (GraphQL answers `200 OK` with an `errors` array, so exception mapping is entirely
@@ -114,9 +116,9 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
   scaffolded shape is the one that gets copied.
 * `api/rest-server` / `api/grpc-server` — controllers or services implementing the generated interfaces, mappers,
   the exception-to-status advice (RFC 9457 `ProblemDetail` for REST), and the security filter chain if enabled.
-* `boot` — the `@SpringBootApplication` class, `application.yml` and the three profile files, composition-root
+* `boot` — the `@SpringBootApplication` class (Kotlin: plus `UseCaseConfiguration` declaring the use cases as `@Bean`s), `application.yml` and the three profile files, composition-root
   `@Configuration`, a context smoke test, and the ArchUnit architecture test.
-* A report stating whether the tree was scaffolded from scratch or updated, the action taken per pre-existing
+* A report stating the language and build tool used, whether the tree was scaffolded from scratch or updated, the action taken per pre-existing
   artifact (created / updated / replaced / kept as is) with any gaps left in kept files, plus the configuration-property list, the metrics list, and the exception-to-status mapping
   formatted for pasting into the documentation tables.
 
@@ -125,22 +127,25 @@ the user at `/iru-setup-java-springboot-pom` — it writes sources into modules,
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-setup-java-springboot-modules"] --> B["Step 0: Read the manifest and args;\nverify the reactor exists"]
-    B -- no reactor --> STOP["Stop — run /iru-setup-java-springboot-pom first"]
-    B --> B2["Announce from scratch vs update;\nper existing generated artifact ask\nUpdate / Keep as is / Replace\n(or apply on-existing)"]
+    A["Start /iru-setup-java-springboot-modules"] --> B["Step 0: Read the manifest and args;\nresolve language and build tool;\nverify the Maven or Gradle build exists"]
+    B -- no build --> STOP["Stop — run /iru-setup-java-springboot-pom first"]
+    B --> K0{"language kotlin?"}
+    K0 -- yes --> K1["Apply the Kotlin substitutions\nto Steps 1-11"]
+    K0 -- no --> B2
+    K1 --> B2["Announce from scratch vs update;\nper existing generated artifact ask\nUpdate / Keep as is / Replace\n(or apply on-existing)"]
     B2 --> C["Step 1: Create the package layout\nfor every module"]
     C --> D["Step 2: domain — model, ports, exceptions\n(written first; no Spring annotations)"]
     D --> E["Step 3: application — use cases\nplus a mocked unit test"]
     E --> F["Steps 4-9: one adapter per infrastructure/api module\n(database + migrations, configuration, clients,\nKafka producers/consumers, metrics, REST/gRPC/GraphQL)"]
     F --> G["Step 10: boot — application class,\napplication.yml and local/dev/prod profiles,\ncomposition-root config, smoke test"]
     G --> H["Step 11: ArchUnit test enforcing\nthe package-level dependency direction"]
-    H --> I["Step 12: mvn clean test via iru-gate-runner"]
+    H --> I["Step 12: mvn clean test or ./gradlew clean test\nvia iru-gate-runner"]
     I -- ArchUnit fails --> J["Fix the code, not the rule\n(unless the rule is wrong for this project)"]
     J --> I
     I --> K["Step 13: Report actions per artifact, ports,\nconfig properties, metrics, status mapping,\nand warnings"]
 ....
 
-`mvn verify` is deliberately not run here: the `*IT` tests need the Testcontainers harness that
+`mvn verify` (or `./gradlew integrationTest`) is deliberately not run here: the `*IT` tests need the Testcontainers harness that
 xref:skills/iru-setup-java-springboot-testcontainers.adoc[] sets up in the next step, so integration tests failing
 at this point is expected rather than a defect.
 
@@ -148,20 +153,17 @@ at this point is expected rather than a defect.
 
 === Invokes
 
-None. It reads `springboot-stack.yml` and the existing poms, and writes sources and configuration.
+None. It reads `springboot-stack.yml` and the existing poms or Gradle build files, and writes sources and configuration. For Kotlin it reads the `reference/` files of `iru-kotlin-springboot-code-one-task` as style rules when that skill is installed, but does not invoke it.
 
 === Invoked by
 
-* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, second of seven sub-skills, via the
-  `iru-isolated-skill-executor` agent. Runs after xref:skills/iru-setup-java-springboot-pom.adoc[] because it needs
-  modules to write into, and before xref:skills/iru-setup-java-springboot-apis.adoc[], whose generated code the
-  adapters written here consume.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, module tree and source skeleton, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runs standalone (`/iru-setup-java-springboot-modules`) against an existing reactor.
 
 === Related agents
 
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for Step 12's `mvn clean test`, so a multi-module
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for Step 12's `mvn clean test` or `./gradlew clean test`, so a multi-module
   compile-and-test log is summarized rather than dumped into the caller's context.
 
 == Source

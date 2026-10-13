@@ -243,8 +243,7 @@ previous one's files being on disk:
 
 === Invoked by
 
-* xref:skills/iru-setup-repository.adoc[] — Step 4, via `iru-isolated-skill-executor`, when the detected or
-  chosen project type is `swift-library`/`apple-app`.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, Swift library/Apple app bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

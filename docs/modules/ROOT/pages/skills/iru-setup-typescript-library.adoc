@@ -181,10 +181,7 @@ either.
 
 === Invoked by
 
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-typescript-library` (one of five
-  flavor choices) via the `iru-isolated-skill-executor` agent, passing the pre-resolved package identity,
-  developer info, license, and shared bootstrap inputs (`open-source`/`publish`/`sonar`/`integration-branch`/`visibility`/`ci`/`mode`, plus `on-existing` when supplied) via `args` as
-  `key: value` lines so this skill's own Step 2 questions are skipped.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5, flavor library scaffold, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

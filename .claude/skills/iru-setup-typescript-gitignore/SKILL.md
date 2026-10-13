@@ -1,16 +1,21 @@
 ---
 name: iru-setup-typescript-gitignore
-description: Create or update the root `.gitignore` file for a TypeScript/npm project — `node_modules/`, build/output
+description: >-
+  Create or update the root `.gitignore` file for a TypeScript/npm project — `node_modules/`, build/output
   directories (`dist/`, `build/`, `out/`), test/coverage output, TypeScript incremental-build info, lint caches, env
   files (keeping `.env.example`), OS and editor noise — and, when detected, framework-specific generated paths for
-  Angular, React (Vite/Storybook), React Native/Expo, Ionic/Capacitor native projects, Antora docs, TypeDoc/Compodoc
-  API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as
-  `/iru-setup-typescript-gitignore`, optionally with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace`
-  (default `ask`) for scripted runs. Announces whether it is creating `.gitignore` from scratch or updating an existing one;
-  if one already exists it never overwrites it silently — it warns, shows the proposed merge as a diff, and asks
-  Update (merge, keeping hand-added entries) / Keep as is / Replace (template only, hand-added entries lost). Mirrors the `iru-setup-java-gitignore` skill's contract for the npm/TypeScript ecosystem.
-  Use whenever a TypeScript, React, Angular, React Native, or Ionic project needs a `.gitignore` bootstrapped from
-  scratch, or an existing one checked against this house template without touching it unless the user approves.
+  Angular, React (Vite/Storybook), NestJS (logs, runtime/diagnostic files, test reports), Next.js (`.next/`,
+  `next-env.d.ts`, `.vercel`, matching `create-next-app`'s own template), a Prisma client generated inside the
+  source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js coding skills, React
+  Native/Expo, Ionic/Capacitor native projects, Playwright, Antora docs, TypeDoc/Compodoc API docs, and a Spring
+  Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as `/iru-setup-typescript-gitignore`, optionally
+  with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs.
+  Announces whether it is creating `.gitignore` from scratch or updating an existing one; if one already exists it
+  never overwrites it silently — it warns, shows the proposed merge as a diff, and asks Update (merge, keeping
+  hand-added entries) / Keep as is / Replace (template only, hand-added entries lost). Mirrors the
+  `iru-setup-java-gitignore` skill's contract for the npm/TypeScript ecosystem. Use whenever a TypeScript, React,
+  Angular, NestJS, Next.js, React Native, or Ionic project needs a `.gitignore` bootstrapped from scratch, or an
+  existing one checked against this house template without touching it unless the user approves.
 model: haiku
 ---
 
@@ -95,8 +100,8 @@ directory out from under files that are already tracked.
 
 Don't guess; only add a section below when the thing it targets is actually present in the target repository. Use
 the same manifest signals `iru-explore` and the sibling TypeScript setup skills rely on: `package.json`,
-`angular.json`, `app.json`, `capacitor.config.*`, `pom.xml`, `docs/antora.yml` (or `docs/antora-playbook.yml`), and
-`typedoc.json`.
+`angular.json`, `nest-cli.json`, `next.config.*`, `app.json`, `capacitor.config.*`, `prisma/schema.prisma`, `pom.xml`,
+`docs/antora.yml` (or `docs/antora-playbook.yml`), and `typedoc.json`.
 
 - **Package manager–specific debug logs**: inspect `package.json`'s `packageManager` field and the lockfile present
   at the root.
@@ -134,6 +139,71 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
   ```gitignore
   storybook-static/
   ```
+
+- **NestJS** (`nest-cli.json` at the root, or `@nestjs/core` in `package.json` dependencies): add
+  ```gitignore
+  logs/
+  *.log
+  .temp/
+  .tmp/
+  pids
+  *.pid
+  *.seed
+  *.pid.lock
+  report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+  test-results/
+  ```
+  Everything except `test-results/` is taken from the `.gitignore` that `nest new` (`@nestjs/cli` 12) itself
+  writes, minus what the base template already covers (`dist/`, `build/`, `coverage/`, `*.tsbuildinfo`, the `.env*`
+  family, debug logs, `.idea/`, `.vscode/*`); `report.*.json` is Node's diagnostic-report file name.
+  `test-results/` is where the scaffold's JUnit reporter (Vitest or Jest) writes CI test reports — skip the line if
+  the Playwright block below already adds it. Nest's own template also lists Eclipse/Sublime files (`.project`,
+  `.classpath`, `.settings/`, `*.launch`, `.c9/`, `*.sublime-workspace`) and `.nyc_output`; this skill leaves those
+  to the base template's IDE policy and the Istanbul/nyc block below rather than guessing at editors.
+
+- **Next.js** (`next.config.js`/`.mjs`/`.ts` at the root, or `next` in `package.json` dependencies): add
+  ```gitignore
+  .next/
+  next-env.d.ts
+  .vercel
+  *.pem
+  .pnp
+  .pnp.*
+  .yarn/*
+  !.yarn/patches
+  !.yarn/plugins
+  !.yarn/releases
+  !.yarn/versions
+  ```
+  This mirrors the `.gitignore` that `create-next-app` (Next.js 16) writes, minus what the base template already
+  covers (`out/` — the static-export output — `build/`, `coverage/`, `*.tsbuildinfo`, `.env*`, debug logs,
+  `.DS_Store`). **`next-env.d.ts` is ignored, not committed**: `create-next-app` ignores it and `next dev`/`next
+  build`/`next typegen` regenerate it, which is why the type-check script is `next typegen && tsc --noEmit` (run it
+  before `tsc` in a clean checkout). Its Yarn Plug'n'Play lines are harmless for npm/pnpm projects and are kept so
+  the file stays recognisably create-next-app's; `.env*` here has no exception in the upstream template, but this
+  skill's base `!.env.example` is kept.
+
+- **Prisma client generated inside the source tree** (`prisma/schema.prisma` or `prisma.config.ts` exists, or
+  `prisma` is in `package.json` devDependencies): read the `generator client { … output = "…" }` path from the
+  schema (relative to the schema file's directory) and, when it resolves inside the repository (Prisma 7's
+  `provider = "prisma-client"` requires an explicit `output`, conventionally `../src/generated/prisma`), add that
+  directory relative to the root, e.g.
+  ```gitignore
+  src/generated/prisma/
+  ```
+  The generated client is never committed — `npx prisma generate` recreates it (locally after every schema change,
+  and as a CI step), per the NestJS coding reference (`iru-nestjs-code-one-task` `reference/persistence.md`). Never
+  ignore `prisma/migrations/` — migrations are committed. With the legacy `prisma-client-js` provider and no
+  `output`, the client lands in `node_modules/` and needs no line.
+
+- **Repository-wide integration-test lock** (NestJS or Next.js detected above, or a `.integration-test.lock/`
+  directory already exists): add
+  ```gitignore
+  .integration-test.lock/
+  ```
+  This is the atomic `mkdir` lock `iru-nestjs-code-one-task-group` / `iru-nextjs-code-one-task-group` (and the JVM
+  coding skills) take to serialize container-backed/e2e stages; it must never be committed, and adding it here
+  saves those skills from having to patch `.gitignore` mid-run.
 
 - **React Native / Expo** (`app.json` with an `"expo"` key, `expo` or `react-native` in `package.json`
   dependencies, and no `capacitor.config.*` — see the Ionic/Capacitor case below, which takes precedence when
@@ -189,6 +259,7 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
   blob-report/
   .playwright/
   ```
+  (`test-results/` may already have been added by the NestJS block — don't list it twice.)
 
 - **Turborepo** (`turbo.json` at the root): add
   ```gitignore
@@ -241,12 +312,14 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
   — if a future Hilla version introduces one, fold it in here once confirmed rather than guessing.
 
 - Don't invent additional entries beyond what's actually detected — if the project has no Storybook, no native
-  mobile shell, no docs tooling, or no Hilla frontend, the composed `.gitignore` should simply not mention them.
+  mobile shell, no docs tooling, no NestJS/Next.js/Prisma, or no Hilla frontend, the composed `.gitignore` should
+  simply not mention them.
 
 ## Step 4 — Compose the proposed content
 
 Concatenate Step 2's base template with whichever Step 3 sections actually matched, each under its own comment
-header for readability (e.g. `# Angular`, `# Playwright`, `# Vaadin Hilla frontend`). If Step 1 found an existing
+header for readability (e.g. `# Angular`, `# NestJS`, `# Next.js`, `# Prisma generated client`, `# Playwright`,
+`# Vaadin Hilla frontend`). If Step 1 found an existing
 `.gitignore`, compose two drafts:
 
 - **Merged** (the Update draft): keep any of the existing file's lines that aren't already covered by the
@@ -293,6 +366,8 @@ already existed — which hand-added lines were preserved (Update) or dropped (R
   deliberately committed `dist/`), `git rm -r --cached` that directory manually after reviewing the diff —
   writing `.gitignore` alone does not untrack already-committed files.
 - Which values were inferred versus verified: the Vaadin Hilla block (Step 3) was checked against Vaadin's current
-  published source-control documentation as part of authoring this skill; every other Step 3 section is inferred
+  published source-control documentation, and the NestJS and Next.js blocks against the `.gitignore` files that
+  `nest new` (`@nestjs/cli` 12) and `create-next-app` (Next.js 16) generate, as part of authoring this skill; the
+  Prisma path is read from the project's own schema; every other Step 3 section is inferred
   purely from local manifest/config-file signals in the target repository and should be spot-checked against the
   project's actual generated output once its scaffold exists.

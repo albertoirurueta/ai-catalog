@@ -1,0 +1,111 @@
+= Kotlin Spring Boot Code One Task
+:description: Implements one Kotlin Spring Boot plan task with unit tests on Maven or Gradle, checks Kotlin/Spring build plumbing first, skips integration tests.
+:keywords: iru-kotlin-springboot-code-one-task, claude code skill, kotlin, spring boot, maven, gradle, mockk, jpa, hexagonal, implementation plan
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single `kotlin-springboot` task from an `implementation_plan.md`-style list — the implementation, its unit
+tests, and its checkbox update — on Maven or Gradle (Kotlin DSL or Groovy), in either a DDD/hexagonal multi-module
+reactor or a plain layered/feature-packaged service, detected at runtime. It is the narrowest execution unit for a
+Kotlin Spring Boot task in the `iru-code` pipeline and the Kotlin counterpart to `iru-java-springboot-code-one-task`.
+
+== Purpose
+
+`iru-kotlin-springboot-code-one-task` differs from a generic "write some Kotlin" pass in three ways. First, the build
+is checked before any code is written: Kotlin classes are `final` by default, so without the `kotlin-spring`,
+`kotlin-jpa` and all-open plugins a `@Transactional` method silently runs without a transaction and a `LAZY`
+association silently loads eagerly. It verifies what the task depends on (all-open for Spring beans, `-Xjsr305=strict`,
+`kotlin-reflect`, no-arg plus all-open for JPA entities, `jackson-module-kotlin`, Maven mixed Java/Kotlin compile
+order) and adds whatever is missing, reporting the change. Second, the architecture is detected, not assumed:
+hexagonal module rules apply only when the repository really is a hexagonal reactor. Third, it runs unit tests only,
+scoped to the touched module (`mvn -pl <module> -am test -Dtest=...` or `./gradlew :<module>:test --tests ...`) —
+never `verify`, Failsafe, `integrationTest`, `check`, `build`, any `*IT`, or anything that starts Docker.
+
+It loads only the relevant guidance from its own `reference/` directory (build plugins, hexagonal architecture,
+mandatory rules, code style, testing, JPA, coroutines/WebFlux, DDD, SOLID, distributed patterns), applying rules such
+as JUnit 5 with MockK (never Mockito or a newly added AssertJ), `runTest` for coroutines, no `!!`, KDoc on public API,
+and data classes for DTOs but never JPA entities. It does not capture a quality baseline, add license headers, run
+coverage or quality checks, or run the full suite — those belong to
+xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[].
+
+== Purpose group
+
+xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kotlin-springboot-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Task description
+|Yes
+|The task's own text, including its exact `implementation_plan.md` checkbox line(s), so the skill can locate and
+check off its own line.
+|None — always invoked with a specific task by `iru-kotlin-springboot-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source and test files created or modified for the task, placed per the detected architecture (hexagonal reactor
+  module rules, or the existing layered/feature packaging), with KDoc on public declarations and a migration when the
+  project uses Flyway/Liquibase and a mapping changed.
+* Minimal build changes when the task needed Kotlin/Spring plumbing that was missing (plugin, option or dependency,
+  with versions left to the Spring Boot BOM), recorded in the report.
+* Unit tests written and run green, scoped to the touched module; integration tests are never run.
+* `implementation_plan.md` with this task's checkbox (and covered sub-tasks) checked and a short note naming the
+  module(s) and files touched plus "group validation pending". On a blocker, the checkbox is left untouched.
+* A short summary: modules/packages touched and whether the repository was treated as hexagonal or layered, build
+  changes, ports and migrations added, unit-test results, anything left to the group's integration pass, blockers,
+  deliberate deviations from `reference/`, and pre-existing rule violations noticed but left alone.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kotlin-springboot-code-one-task"] --> B["Step 0: detect build tool, modules,\nlanguages, Boot and Kotlin versions,\nstack, test conventions"]
+    B --> C["Step 1: read reference/README.md and\nonly the guidance this task needs"]
+    C --> D["Step 2: check Kotlin/Spring build plumbing\nthe task relies on"]
+    D --> E{Required plumbing missing?}
+    E -- yes --> F["Add minimal build change,\ncompile once, record for report"]
+    E -- no --> G
+    F --> G["Step 3: hexagonal reactor or\nlayered/feature packaging? place code"]
+    G --> H{Task conflicts with module rules\nor needs non-baseline dependency?}
+    H -- yes --> I["Step 6: stop and ask user,\nreport blocked"]
+    H -- no --> J["Step 4: re-read current state of\nfiles and neighbours"]
+    J --> K["Step 5: implement exactly what the task\nspecifies per code style and mandatory rules"]
+    K --> L["Step 7: write unit tests and run\nscoped Maven or Gradle test only"]
+    L --> M{Tests green?}
+    M -- no --> N["Fix implementation or test, re-run"]
+    N --> L
+    M -- yes --> O["Step 8: check off own checkbox\nwith group validation pending note"]
+    O --> P["Step 9: report modules, build changes,\ntests, deviations, violations"]
+    I --> P
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-kotlin-springboot-code-one-task` is a leaf skill; it reads its own `reference/` files and runs Maven or
+Gradle unit-test commands, it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 2, implements each task and its unit tests, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kotlin-springboot-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

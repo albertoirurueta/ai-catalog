@@ -11,7 +11,7 @@ Releases, and the actual code changes between them — not by guessing or leavin
 
 `iru-setup-changelog` backfills one Keep a Changelog entry per past release, using whichever source is most
 reliable for that release: a non-empty GitHub Release body if one exists (lightly reformatted rather than
-copied verbatim), or a derived analysis of `git log`/diffs between tags otherwise. It skips changes that don't
+copied verbatim), a WordPress plugin/theme `readme.txt` `== Changelog ==` entry for that version, or a derived analysis of `git log`/diffs between tags otherwise. It skips changes that don't
 affect users of the project (tooling, CI, formatting-only diffs) unless they're genuinely the entire content of
 a release, in which case it says so plainly rather than inventing something more exciting. This skill is
 primarily a bootstrap, and it announces whether it is creating the changelog **from scratch** or **updating an
@@ -22,6 +22,13 @@ that have no version heading in the file, and asks (unless `on-existing` pre-ans
 version order plus their compare links, never rewriting, reordering, or reformatting an existing entry; not offered
 for `.rst`/`.txt` files), or **Replace** (rebuild the whole file from history, losing hand-written entries; for a
 differently-named file it writes a new root `CHANGELOG.md` and leaves the old one for the user to delete).
+
+The skill is stack-agnostic: version tags (with or without a leading `v`) are the release markers whatever the
+build system — Maven/Gradle, npm, Laravel, WordPress, PrestaShop — and a `-SNAPSHOT`/`-dev` version found in-tree is
+never used as a heading. A WordPress `readme.txt` changelog does not count as an existing changelog (it is owned by
+the WordPress.org release process and is never edited), but it is read as a source; a plugin released only through
+WordPress.org SVN with no git tags can have its `readme.txt` entries backfilled instead of an Unreleased-only file
+(undated if the text gives no dates).
 
 == Purpose group
 
@@ -68,7 +75,8 @@ body via `gh release view`.
   corrects only the `[Unreleased]` link's base tag, leaving every existing line byte-for-byte unchanged (the diff
   is shown in the report); **Replace** rebuilds the file as for a from-scratch run.
 * If no git tags exist at all, the skill asks the user whether to create a minimal file with just an
-  `## [Unreleased]` section, or stop entirely rather than inventing version numbers.
+  `## [Unreleased]` section, or stop entirely rather than inventing version numbers (a WordPress plugin/theme with a
+  `readme.txt` changelog is offered a backfill from it instead).
 * A closing report that starts by restating the mode (created from scratch, or kept as is / updated / replaced and
   whether that came from the user or `on-existing`), then: how many releases were reconstructed (or, under Update,
   appended) and their version range, which releases used a GitHub
@@ -80,7 +88,7 @@ body via `gh release view`.
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-changelog] --> A0["Step 0: Resolve on-existing from args\n(default ask)"]
+    A["Start /iru-setup-changelog"] --> A0["Step 0: Resolve on-existing from args\n(default ask)"]
     A0 --> B{"Step 1: CHANGELOG.md (or\nequivalent) already exists?"}
     B -- no --> B1["Announce: creating from scratch"]
     B1 --> C
@@ -90,8 +98,8 @@ flowchart TD
     U --> C
     B2 -- Replace --> C["Step 2: Discover release history\n(git tags, GitHub Releases via gh)"]
     C --> D{"Any tags found?"}
-    D -- no --> E["Ask user: minimal Unreleased-only\nfile, or stop entirely?"]
-    D -- yes --> F["Step 3: For each release,\ndetermine source of content\n(GitHub Release body vs. derived diffs);\nlong tag history fans out to\nchange-summarizer agents"]
+    D -- no --> E["Ask user: minimal Unreleased-only\nfile (or readme.txt backfill for WordPress),\nor stop entirely?"]
+    D -- yes --> F["Step 3: For each release,\ndetermine source of content\n(GitHub Release body, readme.txt entry,\nor derived diffs);\nlong tag history fans out to\nchange-summarizer agents"]
     F --> G["Step 4: Compose each release's\nKeep a Changelog subsections"]
     G --> H["Step 5: Determine each version's\ndate and ordering"]
     H --> I["Step 6: Write CHANGELOG.md\n(Update: insert missing sections only)"]
@@ -110,10 +118,12 @@ sub-agent it delegates to.
 
 * xref:skills/iru-setup-java-library-repository.adoc[] — Step 7 runs `iru-setup-changelog` with no `args`, working
   entirely from the repository's own git tag/GitHub Release history.
-* xref:skills/iru-setup-typescript-repository.adoc[] (Step 9), xref:skills/iru-setup-android-repository.adoc[]
-  (Step 8), and xref:skills/iru-setup-swift-repository.adoc[] (Step 9) — each runs it via the
-  `iru-isolated-skill-executor` agent, treating a **Keep as is** outcome on an existing changelog as a note rather
-  than a failure.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 9, root CHANGELOG.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 9, CHANGELOG.md.
+* xref:skills/iru-setup-php-repository.adoc[] — Step 9, root CHANGELOG.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-quarkus-repository.adoc[] — Step 7, root CHANGELOG.md from tag history, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-android-repository.adoc[] — Step 8: bootstraps or updates the root `CHANGELOG.md`, invoked with no `args` (only `on-existing`, when supplied) since it works from the repository's own git tag/GitHub Release history.
+* xref:skills/iru-setup-swift-repository.adoc[] — Step 9: bootstraps the root `CHANGELOG.md`, invoked with no `args` (only `on-existing` when supplied) since it works from the repository's own git tag/GitHub Release history; position relative to Steps 5–8 doesn't matter functionally.
 
 === Related agents
 

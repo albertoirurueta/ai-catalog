@@ -1,20 +1,24 @@
 = Java Coverage
-:description: Runs JaCoCo via Maven and reads the generated coverage report to give exact line coverage percentages for specific Java classes against a target bar.
-:keywords: iru-java-coverage, claude code skill, java, maven, jacoco, code coverage report, unit testing
+:description: Measures exact line coverage for JVM (Java or Kotlin) classes with JaCoCo or Kover on Maven or Gradle, including Quarkus, against an optional coverage bar.
+:keywords: iru-java-coverage, claude code skill, java, kotlin, maven, gradle, jacoco, kover, quarkus, code coverage
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Run JaCoCo against a scoped (or full) test run via `mvn clean jacoco:prepare-agent test jacoco:report`, then read
-the generated `target/site/jacoco/jacoco.csv` to report the exact, measured line-coverage percentage for the
-specific class(es) the caller cares about. This is a read-only reporting skill: it measures and reports coverage,
-it does not add tests or modify source/test code unless asked to as an explicit follow-up.
+Run JaCoCo (or Kover) against a scoped or full unit-test run of a JVM project — Java or Kotlin sources, Maven or
+Gradle — then read the generated CSV/XML report to give the exact, measured line-coverage percentage for the
+specific class(es) the caller cares about. This is a read-only reporting skill: it measures and reports coverage, it
+does not add tests or modify source/test/build code unless asked to as an explicit follow-up.
 
 == Purpose
 
-`iru-java-coverage` answers "does class X meet the coverage bar?" with an exact, CSV-derived percentage instead of an
-eyeballed guess from Surefire output. It reuses `iru-java-test`'s selector syntax to scope which tests run, infers or
-accepts an explicit list of target classes, and — for classes under the bar — points to the exact uncovered
-lines/branches in the per-class HTML report so a follow-up can target them precisely.
+`iru-java-coverage` answers "does class X meet the coverage bar?" with an exact, report-derived percentage instead of
+an eyeballed guess from test output. It detects the build tool and coverage engine (Maven with `jacoco-maven-plugin`;
+Gradle with JaCoCo, using a throwaway init script that forces CSV/XML reports on without touching the build; Gradle
+with Kover; Quarkus with `quarkus-jacoco`), reuses `iru-java-test`'s selector syntax to scope which tests run, infers
+or accepts an explicit list of target classes (including Kotlin's compiler-generated `FooKt`, `Foo.Companion` and
+lambda classes), and, for classes under the bar, points to the exact uncovered lines/branches in the per-class HTML
+or XML report. It measures unit tests only and never runs Failsafe, `verify`, `integrationTest` or `quarkusIntTest`.
+Android Gradle builds are redirected to `iru-android-coverage`.
 
 == Purpose group
 
@@ -40,7 +44,7 @@ xref:index.adoc#group-java[Java Development Tooling]
 comma list, wildcard, package pattern, tag expression). Must cover every test class that exercises the target
 class(es) — a selector scoped too narrowly undercounts real coverage, so a broader selector (a whole package, or
 the full suite) is preferred when in doubt.
-|None — omitting it runs the full suite.
+|None — omitting it runs the full unit suite.
 
 |`TargetClass1,TargetClass2,...`
 |No
@@ -53,47 +57,59 @@ user is asked which class(es) matter).
 == Outputs
 
 * A plain-text summary in the conversation — never a written file.
-* Per target class: exact line-coverage percentage (and branch coverage where relevant), computed directly from
-  `target/site/jacoco/jacoco.csv` — never estimated.
+* Per target class: exact line-coverage percentage (and branch/instruction coverage where relevant), computed from
+  the CSV or JaCoCo-format XML counters — never estimated — labelled with the engine it came from (JaCoCo Maven,
+  JaCoCo Gradle, Kover, `quarkus-jacoco`).
 * If the user gave a coverage bar (e.g. "at least 80%"): a clear statement of whether each class meets it.
-* For classes under the bar: a pointer to the per-class HTML/`.java.html` report and the exact uncovered line
-  numbers (via the `nc`/`pc`/`fc` span classes) rather than just the aggregate percentage.
-* A class absent from the CSV is reported as 0% coverage, not as an error.
-* No source or test code is ever modified, and coverage is never re-run to try to raise a number.
+* For classes under the bar: a pointer to the per-class HTML report and the exact uncovered line numbers (via the
+  `nc`/`pc`/`fc` span classes, or the XML `<line>` entries) rather than just the aggregate percentage.
+* A class absent from the report is reported as 0% coverage, not as an error. Kotlin generated-code noise
+  (`inline` bodies, companion rows, coroutine state machines) is called out as such.
+* Quarkus: `@QuarkusTest` coverage from `quarkus-jacoco` and plain-unit-test coverage are reported separately, never
+  summed; classes exercised only by `@QuarkusComponentTest` without `quarkus-jacoco` are reported as unmeasured, not 0%.
+* A build, compilation or test failure (including a Docker-less Testcontainers/Dev Services start-up failure) is
+  reported as such instead of reading a stale report.
+* No source, test or build code is ever modified, and coverage is never re-run to try to raise a number.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /java-coverage\n(optional selector, target classes)"] --> B{Selector given?}
-    B -- yes --> C["Scope tests using java-test's\nselector syntax"]
-    B -- no --> D["Run full suite"]
-    C --> E
-    D --> E{Target classes given?}
-    E -- yes --> F["Use given class list"]
-    E -- no --> G["Infer from test selector\n(FooTest -> Foo), or defer to\nevery class touched by the run"]
-    F --> H["Run mvn clean jacoco:prepare-agent\ntest jacoco:report -Dtest=&amp;lt;selector&amp;gt;"]
-    G --> H
-    H --> I{Build succeeded?}
-    I -- no --> J["Report failure, stop\n(don't read a stale report)"]
-    I -- yes --> K["Read target/site/jacoco/jacoco.csv"]
-    K --> L["Compute line / branch / instruction\ncoverage % per target class"]
-    L --> M{Class row found in CSV?}
-    M -- no --> N["Report 0% (not an error)"]
-    M -- yes --> O["Report exact %; state pass/fail\nvs. any given bar"]
-    N --> P
-    O --> P{Under the bar?}
-    P -- yes --> Q["Point to per-class HTML +\n.java.html for uncovered lines"]
-    P -- no --> R["State it meets the bar"]
+    A["Start /iru-java-coverage\n(optional selector, target classes)"] --> B["Step 0: detect build tool\nand coverage engine"]
+    B --> B1{Android Gradle plugin?}
+    B1 -- yes --> B2["Defer to iru-android-coverage"]
+    B1 -- no --> C["Step 1: scope tests with\niru-java-test selector syntax\n(unit tests only)"]
+    C --> D["Step 2: given targets, or infer\nFooTest -> Foo (+ Kotlin FooKt, Companion)"]
+    D --> E{Engine}
+    E -- Maven --> F["3a: mvn clean jacoco:prepare-agent\ntest jacoco:report"]
+    E -- Gradle JaCoCo --> G["3b: gradlew clean test --tests\njacocoTestReport + init script"]
+    E -- Gradle Kover --> H["3c: gradlew clean test --tests\nkoverXmlReport"]
+    F --> I{Build succeeded?}
+    G --> I
+    H --> I
+    I -- no --> J["Report failure, stop\n(environment failure if no Docker)"]
+    I -- yes --> K["Step 4: read CSV, else JaCoCo-format XML"]
+    K --> L["Compute line / branch / instruction %\nper target class"]
+    L --> M{Quarkus extension report?}
+    M -- yes --> N["Read quarkus-jacoco report too;\nreport both numbers separately"]
+    M -- no --> O{Class row found?}
+    N --> O
+    O -- no --> P["Report 0% (or unmeasured\nfor component-test-only classes)"]
+    O -- yes --> Q["Step 5: report exact %;\nstate pass/fail vs. any bar"]
+    P --> R
+    Q --> R{Under the bar?}
+    R -- yes --> S["Point to per-class HTML / XML\nfor uncovered lines"]
+    R -- no --> T["State it meets the bar"]
 ....
 
 == Dependencies
 
 === Invokes
 
-None — `iru-java-coverage` is a leaf skill; it only runs Maven commands and reads the generated JaCoCo reports, it
-does not call any other skill in this catalog.
+None — `iru-java-coverage` is a leaf skill; it only runs Maven/Gradle commands and reads the generated reports. It
+reuses the build-tool detection and selector syntax documented in xref:skills/iru-java-test.adoc[], and redirects
+Android Gradle builds to xref:skills/iru-android-coverage.adoc[], but it does not call either skill.
 
 === Invoked by
 
@@ -101,12 +117,15 @@ does not call any other skill in this catalog.
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to check every changed/new class in the bucket meets the
   80% coverage bar (falling back to `mvn jacoco:prepare-agent test jacoco:report` directly if this skill is
   unavailable).
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 3.5, unit-only 80% coverage gate, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 3.5 and 3.9, unit-stage 80% gate and aggregate report, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-java-generate-all-tests.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated through the `iru-gate-runner` agent so its full `jacoco.csv`/HTML-derived report never lands directly in this conversation, and so the whole suite runs once per batch rather than once per class.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Step 3.5, via `iru-gate-runner`, measuring the 80% gate over a Surefire-only run. Falls back to `mvn clean jacoco:prepare-agent test jacoco:report -DskipITs` plus each module's own `jacoco.csv` — never the aggregate, which mixes in integration execution data.
 
 === Related agents
 
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-java-code-one-task-group` (see
-  xref:skills/iru-java-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner` sub-agent
-  it spawns, not inline.
+None — this skill spawns no agents itself; callers run it inside an
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] sub-agent.
 
 == Source
 

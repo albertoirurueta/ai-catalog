@@ -1,0 +1,84 @@
+= NestJS Code One Task
+:description: Implements a single NestJS plan task with its unit and e2e specs, detecting ESM, Vitest, ORM and validation style, and checks off its plan checkbox.
+:keywords: iru-nestjs-code-one-task, claude code skill, nestjs, typescript, vitest, jest, dto, implementation plan, single task
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out one task from a NestJS `implementation_plan.md` — the implementation, its tests, and the checkbox update — against a Nest application, and nothing else. It is the narrowest execution unit for Nest projects in the `iru-code` pipeline and runs on a medium model, since the plan already carries the hard reasoning and the guidance lives in `reference/`.
+
+== Purpose
+
+`iru-nestjs-code-one-task` differs from its plain TypeScript counterpart in two ways. Nest punishes some mistakes silently — a DTO imported with `import type`, a wrong `.js` import suffix for the module format, a global pipe registered only in `main.ts`, per-request state on a singleton — so the reference files exist mostly to prevent those. And because Nest unit specs build a small testing module in well under a second, it runs the unit specs it touched, leaving e2e specs, coverage and the full suite to the group.
+
+It detects, from files, the Nest app root and major version, ESM versus CommonJS, Vitest versus Jest, Express versus Fastify, the ORM (TypeORM, Prisma, Mongoose, Drizzle, MikroORM), class-validator versus Standard Schema validation and where global enhancers are registered, standard versus monorepo mode, layered versus hexagonal architecture, and the package manager. It then reads `reference/README.md` and only the reference files the task needs (`code-style.md` and `testing.md` always; modules and DI, validation and DTOs, enhancers, configuration, persistence, security, CLI generators or hexagonal on demand).
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-nestjs-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's own text from the plan, including its exact `implementation_plan.md` checkbox line(s).
+|None.
+|===
+
+== Outputs
+
+* Source changes for the single task, optionally scaffolded with the project's own `nest g` (dry run first, then every placeholder replaced and every enhancer registered). Prisma schema changes get `prisma generate` and a migration; touched files are formatted with the project's formatter.
+* Unit specs next to the source (placeholder specs replaced) that are run and green, and e2e specs for changed HTTP contracts that are written through the project's shared bootstrap but never run, since they boot the whole `AppModule` and may need Docker or a database.
+* Enforced rules: module-format-consistent imports, DTO and injected classes as value imports, full TSDoc with `@throws`, no `any`, no per-request state on singletons, no `synchronize: true`, no double-registered global enhancer, no new runtime dependency unless asked.
+* The task's own checkbox (and covered sub-tasks) flipped to `[x]` in `implementation_plan.md` with a "group validation pending" note.
+* A short report: detected flavor and reference files read, files touched and any `nest g` command, unit results, e2e specs left for the group, Prisma/migration actions, blockers, deviations from `reference/`, and silent-defect patterns noticed in surrounding code.
+* It never runs e2e, coverage, lint/type-check, `nest build`, the full suite, license or TSDoc audits.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-nestjs-code-one-task\n(task text + checkbox line)"] --> B["Step 1: detect Nest flavor\nESM, runner, ORM, validation,\nmonorepo, architecture"]
+    B --> C["Read reference README, code-style,\ntesting and task-specific files"]
+    C --> D["Step 2: re-check current code\nand global setup files"]
+    D --> E["Step 3: implement the task,\noptionally via nest g"]
+    E --> F{"Blocker, ambiguity or\nnew dependency needed?"}
+    F -- yes --> G["Step 5: ask the user or\nreport blocked, leave checkbox"]
+    F -- no --> H["Step 4: write unit specs\nand e2e specs"]
+    H --> I["Run only the unit specs touched"]
+    I --> J{"Unit specs green?"}
+    J -- no --> K["Fix code or spec,\nre-run"]
+    K --> I
+    J -- yes --> L["Step 6: check off this task's\ncheckbox, group validation pending"]
+    L --> M["Step 7: report outcome\nto the caller"]
+    G --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-nestjs-code-one-task` does not call other skills; it reads its own `reference/` files and runs the project's unit-spec command and optional `nest g` generators directly.
+
+=== Invoked by
+
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 2, implements each task and its unit specs, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — it spawns no agents itself. Its caller may run several instances in parallel agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-nestjs-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -86,8 +86,7 @@ flowchart TD
 
 === Invoked by
 
-* xref:skills/iru-code-one-task-group.adoc[] — dispatches every task-group bucket tagged (or defaulted to)
-  `database` to this skill, once per bucket.
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key database, discovered at run time.
 
 === Related agents
 

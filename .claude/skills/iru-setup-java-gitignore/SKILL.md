@@ -1,30 +1,36 @@
 ---
 name: iru-setup-java-gitignore
-description: Create or update the root `.gitignore` file for a Java project — compiled classes, logs, packaged
-  artifacts (jar/war/ear/zip), JVM crash logs, the build tool's output directory (Maven `/target/` or Gradle
-  `build/`/`.gradle/`), IntelliJ/.idea entries, and, when detected, project-specific generated files such as a
-  build-info properties file written by a Groovy/Maven plugin or an Antora docs build output directory. Invoke as
+description: >-
+  Create or update the root `.gitignore` file for a JVM project (Java or Kotlin, Maven or Gradle, plain, Spring
+  Boot or Quarkus) — compiled classes, logs, packaged artifacts (jar/war/ear/zip), JVM crash logs, the build
+  tool's output directories (Maven `target/`; Gradle `build/`/`.gradle/` with the wrapper jar kept tracked),
+  IntelliJ/.idea entries, and, when detected, Kotlin compiler caches (`.kotlin/`), Quarkus leftovers
+  (`.quarkus/`, `quarkus.log`, stray `jacoco.exec`), the repository-wide `.integration-test.lock/` directory used to
+  serialize container-backed test runs, and project-specific generated files such as a build-info properties file
+  written by a Groovy/Maven plugin or an Antora docs build output directory. Invoke as
   `/iru-setup-java-gitignore`, optionally with `args` carrying `on-existing: ask|keep|update|replace` (default `ask`)
   for scripted runs. Announces whether it is creating `.gitignore` from scratch or updating an existing one; if one
   already exists, it never overwrites it silently: it warns, shows the proposed version as a diff, and asks whether to
   Update (merge, keeping hand-added entries), Keep it as is, or Replace it with the template (hand-added entries lost)
   — unless `on-existing` already decides. Ships with this repository's own `.gitignore` as the concrete reference
   template (genericized so its Hermes-specific paths don't leak into other repositories), reused across repositories.
-  Use whenever a Java project needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this
+  Use whenever a Java or Kotlin JVM project needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this
   house template without touching it unless the user approves.
 model: haiku
 ---
 
 # Setup Java Gitignore
 
-Create or refresh the root `.gitignore` for a Java project, using this repository's own `.gitignore` as the
+Create or refresh the root `.gitignore` for a JVM project — Java or Kotlin, built with Maven or Gradle, including
+Spring Boot and Quarkus services — using this repository's own `.gitignore` as the
 concrete reference template. Never overwrite an existing `.gitignore` without showing the user exactly what would
 change and getting explicit approval first — a `.gitignore` can carry hand-added, project-specific entries that
 must not be silently dropped.
 
 ## Step 0 — Check for pre-supplied parameters
 
-This skill can be invoked stand-alone or by an orchestrator (e.g. `iru-setup-java-library-repository`). Parse
+This skill can be invoked stand-alone or by an orchestrator (e.g. `iru-setup-java-library-repository`,
+`iru-setup-java-springboot`, `iru-setup-quarkus-repository`). Parse
 `args`, if any, as `key: value` lines, one per line. The only key this skill reads is:
 
 - `on-existing` — `ask` (default) / `keep` / `update` / `replace`: how to treat an already-existing `.gitignore`
@@ -77,24 +83,75 @@ hs_err_pid*
 replay_pid*
 ```
 
-This section is unconditional — include it verbatim regardless of build tool or IDE.
+This section is unconditional — include it verbatim regardless of language, build tool or IDE.
 
 ## Step 3 — Detect project-specific additions
 
 Don't guess; only add a section below when the thing it targets is actually present in the target repository.
 
-- **Build tool output directory**:
-  - `pom.xml` at the root → Maven project: add
+- **Build tool output directory** — detect from build files anywhere in the repository (root or modules, e.g.
+  `find . -name pom.xml -o -name 'build.gradle*' -o -name 'settings.gradle*'`, excluding `node_modules/`,
+  `target/` and `build/`), not only the root:
+  - Any `pom.xml` → Maven project: add (unanchored, so every module's output directory is covered in a
+    multi-module reactor)
     ```gitignore
-    /target/
+    target/
+    !**/src/main/**/target/
+    !**/src/test/**/target/
     ```
-  - `build.gradle` or `build.gradle.kts` at the root → Gradle project: add
+    If the repository has a Maven wrapper (`mvnw`, `.mvn/wrapper/`), keep `.mvn/wrapper/maven-wrapper.jar`
+    tracked: add `!.mvn/wrapper/maven-wrapper.jar` right after the base template's `*.jar`.
+  - Any `build.gradle`/`build.gradle.kts`/`settings.gradle`/`settings.gradle.kts` → Gradle project (single- or
+    multi-project, Groovy or Kotlin DSL, including an included `build-logic/` build): add
     ```gitignore
-    /build/
+    build/
+    !**/src/main/**/build/
+    !**/src/test/**/build/
     .gradle/
+    !gradle/wrapper/gradle-wrapper.jar
     ```
+    `build/` and `.gradle/` are unanchored so every subproject's (and `build-logic/`'s) output and cache
+    directories are covered; the two `src/**` negations (here and in the Maven block) keep a source package that
+    happens to be named `build`/`target` (e.g. `com.example.build`) tracked. The `!gradle/wrapper/gradle-wrapper.jar` negation is **required**: the base
+    template's `*.jar` would otherwise ignore the wrapper jar, and `./gradlew` fails on a fresh clone without it.
+    If the repository uses a CI-specific Gradle cache directory inside the repository (grep the workflows and
+    `gradle.properties` for a `GRADLE_USER_HOME` or `--project-cache-dir` pointing at e.g. `.gradle-cache/`), add
+    that directory too; otherwise don't invent one.
   - Both can exist in unusual multi-tool setups — include both blocks if so; if neither exists, skip this section
     and note it in Step 6 (there's no build tool to infer an output directory for yet).
+
+  Dokka, detekt, ktlint, JaCoCo/Kover and Quarkus build outputs all land under `target/` or `build/`, so they need
+  no lines of their own.
+
+- **Kotlin**: if any `*.kt`/`*.kts` source exists outside `target/`/`build/` (or a `kotlin-maven-plugin`,
+  `kotlin("jvm")`/`org.jetbrains.kotlin.jvm`, or `io.quarkus`+`kotlin` extension is declared), add the Kotlin
+  compiler's per-project cache directory (Kotlin 2.x writes `.kotlin/` — session/error files — next to the Gradle
+  build, sometimes per subproject):
+  ```gitignore
+  .kotlin/
+  ```
+  Don't add `*.kotlin_module` — those are compiler outputs inside `META-INF/` of `target/`/`build/`, already covered.
+
+- **Quarkus**: if any `pom.xml`/`build.gradle*` references `io.quarkus` (the `quarkus-maven-plugin`, the
+  `io.quarkus` Gradle plugin, or the `quarkus-bom`/platform BOM), add:
+  ```gitignore
+  .quarkus/
+  quarkus.log*
+  ```
+  `.quarkus/` holds dev-mode/CLI state; `quarkus.log` is written by `quarkus.log.file.enable=true` (the base
+  template's `*.log` covers it only without a rotation suffix). If `quarkus-jacoco` is a dependency and its
+  data file isn't redirected into `target/`/`build/` (check `quarkus.jacoco.data-file` and any
+  `jacoco-maven-plugin` `destFile` used for `@QuarkusComponentTest` runs), also add `jacoco.exec` — a stray copy
+  otherwise appears at the module root after component tests.
+
+- **Container-backed test lock**: if the repository runs integration tests against containers — Testcontainers
+  (`org.testcontainers` in a build file), Quarkus Dev Services (`io.quarkus` with a datasource/messaging
+  extension), a `compose.yaml`/`docker-compose.yml`, or a skill in `.claude/skills/` that references
+  `.integration-test.lock` — add the lock directory the catalog's coding skills create to serialize those runs:
+  ```gitignore
+  .integration-test.lock/
+  ```
+  It is created and removed by the test-running skills; a crash can leave it behind, and it must never be committed.
 
 - **IntelliJ IDEA (`.idea/`)**: if a `.idea/` directory exists, or there's no strong signal either way (IntelliJ is
   the default assumption for a Java project), use this repository's own convention: track most of `.idea/` (shared
@@ -139,15 +196,21 @@ Don't guess; only add a section below when the thing it targets is actually pres
   `/docs/node_modules/`. Skip both if there's no Antora docs setup.
 
 - Don't invent additional entries beyond what's actually detected — if the project doesn't have a docs folder,
-  Eclipse files, or a build-info step, the composed `.gitignore` should simply not mention them.
+  Eclipse files, Kotlin sources, Quarkus, container-backed tests, or a build-info step, the composed `.gitignore`
+  should simply not mention them.
 
 ## Step 4 — Compose the proposed content
 
 Concatenate Step 2's base template with whichever Step 3 sections actually matched, each under its own comment
-header for readability (e.g. `# Maven`, `# IntelliJ IDEA`, `# Antora docs`). If Step 1 found an existing
+header for readability (e.g. `# Maven`, `# Gradle`, `# Kotlin`, `# Quarkus`, `# Integration-test lock`,
+`# IntelliJ IDEA`, `# Antora docs`). Negation lines (`!gradle/wrapper/gradle-wrapper.jar`,
+`!.mvn/wrapper/maven-wrapper.jar`) must come **after** the `*.jar` line they override — gitignore applies the last
+matching pattern. If Step 1 found an existing
 `.gitignore`, merge rather than duplicate: keep any of its lines that aren't already covered by the composed
 template (hand-added project-specific ignores must survive), and don't repeat a line that's already present
-verbatim.
+verbatim. Treat an existing anchored `/target/` or `/build/` line as only partially covering a multi-module build
+(it misses the modules' own output directories): in the merged draft, add the unanchored form and call the
+difference out in the diff rather than silently dropping the user's line.
 
 ## Step 5 — If `.gitignore` already existed, decide Update / Keep / Replace before writing
 
@@ -178,5 +241,5 @@ the pure-template version for **Replace**, incorporating any edits from Step 5's
 repository root. Then summarize: whether the file was **created**, **updated**, **replaced**, or **kept as is** (and
 whether that came from the user's answer or from `on-existing`), which conditional sections from Step 3 were
 included versus skipped and why (e.g. "no Eclipse section — no `.classpath`/`.project` found", "no build-info
-entry — no such generated-file step in `pom.xml`"), and — for **Replace** — which hand-added lines were dropped; for
+entry — no such generated-file step in `pom.xml`", "no Quarkus section — no `io.quarkus` in any build file"), and — for **Replace** — which hand-added lines were dropped; for
 **Keep**, which template entries are still missing from the file.

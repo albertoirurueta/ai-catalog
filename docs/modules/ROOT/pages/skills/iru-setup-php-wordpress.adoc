@@ -1,0 +1,166 @@
+= Setup PHP WordPress
+:description: Scaffolds a WordPress plugin or block theme repository with Composer, WPCS, PHPStan, Brain Monkey unit tests and wp-env integration tests.
+:keywords: iru-setup-php-wordpress, claude code skill, wordpress, plugin, block theme, composer, phpcs, phpstan, wp-env, brain monkey
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate (or bring up to date) a WordPress plugin or block theme repository on this catalog's PHP toolchain: a small
+real code skeleton plus the build, test, lint and packaging configuration, verified with its own gates before it
+reports success.
+
+== Purpose
+
+`iru-setup-php-wordpress` treats the repository root as the plugin or theme directory. With `flavor: plugin` it writes
+the main plugin file (full header, `ABSPATH` guard, version constant), a namespaced PSR-4 `src/` (composition root,
+filter service with a documented custom hook, settings page whose `admin-post.php` handler checks nonce and
+capability, REST route with a `permission_callback`), `uninstall.php`, `languages/`, a WordPress.org `readme.txt`
+and `.distignore`; `blocks: yes` additionally wires `@wordpress/scripts` and a first dynamic block. With
+`flavor: theme` it writes a block theme (`style.css` header, `theme.json` v3, templates, parts, translatable patterns
+and a minimal `functions.php`). Both flavors get `composer.json` with the catalog's shared scripts, `phpcs.xml.dist`
+(WordPress-Extra, WordPress-Docs, PHPCompatibilityWP), `phpstan.neon.dist` (phpstan-wordpress, level 6), a Brain
+Monkey `unit` suite, a `WP_UnitTestCase` `integration` suite running in a dedicated `@wordpress/env` environment,
+sample tests, Clover/JUnit output under `build/logs/`, and `sonar-project.properties` when Sonar is on.
+
+Dependency versions, the PHP floor and the WordPress floor/tested-up-to versions are resolved live (Packagist, npm,
+php.net, api.wordpress.org) with a documented fallback table; PHPUnit stays on 9.6 because the WordPress test library
+still targets it. For every owned file that already exists the skill warns and asks Update / Keep as is / Replace.
+
+== Purpose group
+
+xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-php-wordpress
+/iru-setup-php-wordpress
+flavor: plugin
+name: Acme Loans
+slug: acme-loans
+----
+
+== Inputs
+
+Optional `args`, one `key: value` per line (supplied by `iru-setup-php-repository`); unknown keys are ignored.
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`flavor`
+|No
+|`plugin` or `theme` (`wordpress-plugin`/`wordpress-theme` accepted as synonyms).
+|Detected from a `Plugin Name:` header or `style.css`/`theme.json`; otherwise asked.
+
+|`name`, `slug`, `vendor`, `namespace`, `prefix`
+|No
+|Identity of the plugin/theme: human name, kebab-case slug (also text domain and directory name), Composer vendor,
+PSR-4 namespace, snake_case function/option/hook prefix.
+|Derived from the name, the git remote's owner and existing files; confirmed or asked.
+
+|`description`, `developer-name`, `developer-email`, `organization-url`
+|No
+|Header and `composer.json` metadata.
+|Asked when missing.
+
+|`license`
+|No
+|SPDX id or `proprietary`.
+|Asked; GPL-2.0-or-later recommended.
+
+|`php-version`, `wp-version`
+|No
+|PHP floor and WordPress floor (`major.minor`).
+|PHP floor from php.net active branches; WordPress floor two releases behind the live tested-up-to version (raised
+for `theme.json` v3 and blocks).
+
+|`blocks`
+|No
+|`yes` or `no` (plugin only): adds `@wordpress/scripts` and a first dynamic block.
+|Asked; `no` recommended for a start.
+
+|`open-source`, `visibility`, `ci`, `distribution`
+|No
+|Drive the license, Sonar recommendation and packaging notes. `distribution`: `none`, `internal` or `store`.
+|`store` when open source, otherwise `none`; `visibility` from `gh repo view` when not given.
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`.
+|`cloud` recommended only for public open-source repositories, otherwise `none`.
+
+|`mode`
+|No
+|`new` or `existing`. `existing` announces an update but never means "update silently".
+|`new`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, applied to every pre-existing owned file.
+|`ask`
+|===
+
+== Outputs
+
+* The plugin or block theme skeleton and shared tooling files described above (created, updated, replaced, or kept as
+  is per file).
+* A generated `composer.lock`/`package-lock.json` after installing dependencies, and (with `blocks: yes`) a built
+  `build/` directory.
+* Verification of the fast gates (unit tests, coverage, PHPStan, PHPCS) and, when Docker is available and the user
+  agrees, the wp-env integration suite, run under the repository-wide `.integration-test.lock/`.
+* A report starting with the setup mode (created from scratch or updated) covering identity, floors and their
+  sources, live versus fallback versions, the PHPUnit 9 decision, per-file action, gate results, and explicit
+  warnings (review the files, WordPress.org slug approval and `Contributors:` for store distribution, namespace
+  prefixing before the first runtime Composer dependency, what `iru-setup-php-gitignore` and
+  `iru-setup-php-github-workflows` still own).
+* It never writes `.gitignore`, `README.md`, `CHANGELOG.md`, `LICENSE`, workflows or `docs/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-php-wordpress"] --> B["Step 0: parse args"]
+    B --> C["Step 1: resolve flavor\n(plugin or theme)"]
+    C --> D{"Any owned files\nalready exist?"}
+    D -- no --> E["Announce: creating from scratch"]
+    D -- yes --> F["Announce: updating existing;\nask Update / Keep / Replace per file"]
+    F -- Stop chosen --> Z["Stop without changes"]
+    E --> G["Step 2: collect identity, license,\ndistribution, blocks, sonar"]
+    F --> G
+    G --> H["Step 3: repository URL, PHP floor,\nWordPress floor and tested-up-to, year"]
+    H --> I["Step 4: look up versions\n(Packagist, npm, fallback table)"]
+    I --> J["Step 5: fill placeholders;\nComposer dependency rule"]
+    J --> K["Step 6: write shared and flavor files"]
+    K --> L["Step 7: composer install and npm install\n(Docker fallback)"]
+    L --> M{"Composer or Docker\navailable?"}
+    M -- no --> N["Report dependencies not installed"]
+    M -- yes --> O["Step 8: run unit tests, coverage,\nPHPStan, PHPCS"]
+    O --> P{"Docker available and\nuser accepts?"}
+    P -- yes --> Q["Run wp-env integration suite\nunder the integration lock"]
+    P -- no --> R["Mark integration unverified"]
+    Q --> S["Step 9: report mode, files, gates, warnings"]
+    R --> S
+    N --> S
+....
+
+== Dependencies
+
+=== Invokes
+
+None — this skill is a leaf: it uses Composer, npm, PHP and Docker directly. It follows the conventions that
+`iru-php-code-one-task` enforces later and produces a result the `iru-php-test`, `iru-php-coverage`,
+`iru-php-code-quality` and `iru-php-phpdoc` gate skills run on unchanged, but it does not call them.
+
+=== Invoked by
+
+* xref:skills/iru-setup-php-repository.adoc[] — Step 5, scaffold for a WordPress plugin/theme, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — this skill runs inline and spawns no agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-php-wordpress/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

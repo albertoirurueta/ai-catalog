@@ -1,12 +1,12 @@
 = Setup Java Spring Boot APIs
-:description: Sets up a Spring Boot service's contract-first API layer: the apis/ spec tree plus OpenAPI, protobuf, GraphQL, AVRO and AsyncAPI generation per module.
-:keywords: iru-setup-java-springboot-apis, claude code skill, contract first, openapi generator, protobuf, graphql sdl, avro, asyncapi, grpc, code generation, api versioning
+:description: Sets up a Spring Boot service's contract-first API layer (Java/Kotlin, Maven/Gradle): apis/ tree plus OpenAPI, protobuf, GraphQL, AVRO, AsyncAPI.
+:keywords: iru-setup-java-springboot-apis, claude code skill, contract first, openapi generator, protobuf, graphql, avro, asyncapi, kotlin, gradle
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Sets up the contract-first API layer of a Spring Boot service: a single `apis/` directory at the repository root
-holding every contract the service exposes or consumes, and the code-generation plugin executions wired into
-whichever module consumes each contract.
+Sets up the contract-first API layer of a Spring Boot service, in Java (Maven) or Kotlin (Maven or Gradle Kotlin
+DSL): a single `apis/` directory at the repository root holding every contract the service exposes or consumes, and
+the code-generation plugin executions (Maven) or tasks (Gradle) wired into whichever module consumes each contract.
 
 == Purpose
 
@@ -16,11 +16,52 @@ whichever module consumes each contract.
   where a reviewer looks to see everything the service exposes and consumes, and it keeps a contract from being
   coupled to the module that happens to implement it today. `apis/` is not a Maven module.
 * **Generated code is never committed and never hand-edited.** It lands in each module's
-  `target/generated-sources/`, is git-ignored, and is excluded from Checkstyle, PMD, SpotBugs, JaCoCo, and Sonar.
-  If the generated code is wrong, the fix is in the spec or the generator configuration.
+  `target/generated-sources/` (Maven) or `build/generated/` (Gradle), is git-ignored, and is excluded from
+  Checkstyle, PMD, SpotBugs (Java) or detekt and ktlint (Kotlin), JaCoCo, and Sonar. If the generated code is
+  wrong, the fix is in the spec or the generator configuration.
+
+The language and build tool come from `springboot-stack.yml`'s `project.language` (`java` or `kotlin`, absent means
+`java`) and `project.buildTool` (`maven` or `gradle`, absent means `maven`; `gradle` is only valid with `kotlin`, and
+a manifest pairing it with `java` makes the skill stop and report). The contracts in `apis/` are identical in all
+three combinations — a contract never depends on the language implementing it; only the generator changes:
+
+[cols="2,3,3", options="header"]
+|===
+|Contract |Kotlin + Maven |Kotlin + Gradle
+
+|REST server
+|`kotlin-spring`, `interfaceOnly`, `useSpringBoot4`, `useJackson3`
+|Same options via the `org.openapi.generator` `GenerateTask`
+
+|REST client
+|`kotlin` + `jvm-spring-restclient` (blocking); `kotlin-spring` + `spring-declarative-http-interface` (reactive,
+since `jvm-spring-webclient` is still Jackson 2-only)
+|Same libraries, `GenerateTask`
+
+|gRPC
+|The Java output plus `kotlinEnabled` DSL builders and `protoc-gen-grpc-kotlin` coroutine stubs
+|`com.google.protobuf` with the `kotlin` builtin and the `grpc` and `grpckt` plugins
+
+|GraphQL
+|`graphql-codegen-maven-plugin` with `generatedLanguage=KOTLIN`
+|`io.github.kobylynskyi.graphql.codegen` task, `KOTLIN`
+
+|AVRO
+|Unchanged — Java classes called from Kotlin
+|`com.bakdata.gradle.avro` (the maintained fork of the archived `com.github.davidmc24` plugin), Java output
+
+|HTML documentation
+|Unchanged (`html2`, `protoc-gen-doc`, npm toolchains via `frontend-maven-plugin`)
+|`documentation`-group tasks (`generateApiDocs` and parts) writing under `build/generated-docs/`; npm toolchains via
+`Exec` tasks
+|===
+
+On Gradle every plugin, protoc artifact and library version goes in `gradle/libs.versions.toml` (resolved live,
+protobuf and gRPC aligned to the versions the Spring Boot BOM manages), and modules apply plugins with
+`alias(libs.plugins.…)` and no inline version, mirroring the Maven "no `<version>` in module poms" rule.
 
 The setting that makes the REST generator safe to re-run is `interfaceOnly=true`: the generator owns the interfaces
-and DTOs, and the hand-written `@RestController` implements them, so `mvn generate-sources` can never overwrite
+and DTOs, and the hand-written `@RestController` implements them, so `mvn generate-sources` (or the Gradle equivalent) can never overwrite
 real logic. Without it the generator emits controllers and every regeneration becomes a merge conflict.
 
 Contracts are versioned in the filename and in the path inside the contract — an OpenAPI spec's paths carry
@@ -78,6 +119,8 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 /iru-setup-java-springboot-apis
 ----
 
+Optionally with `args` (`stack-file:`, `mode:`, `on-existing:` lines), as passed by `iru-setup-java-springboot`.
+
 == Inputs
 
 [cols="1,1,3,2", options="header"]
@@ -108,11 +151,22 @@ Replace question for scripted runs.
 never creates a module.
 |None — a precondition
 
-|Root `pom.xml` `pluginManagement`
+|Root `pom.xml` `pluginManagement` (Maven)
 |Yes
 |The generator plugin versions must already be managed there. If one is missing it is added to the root pom, never
 inline in a module pom.
 |None — a precondition
+
+|`gradle/libs.versions.toml` (Gradle)
+|Yes
+|Every generator plugin and library version lives in the version catalog; missing entries are added there, never
+inline in a module `build.gradle.kts`.
+|None — a precondition
+
+|`project.language` / `project.buildTool` (manifest)
+|No
+|Read from `springboot-stack.yml` to choose the Java or Kotlin generators and Maven executions or Gradle tasks.
+|`java` / `maven`
 |===
 
 == Outputs
@@ -152,8 +206,10 @@ inline in a module pom.
   action documents every arrow in the system backwards without anything failing to say so.)
 * `apis/messaging/docs/package.json` (plus its committed `package-lock.json` and a `.asyncapi-analytics` file that
   keeps the CLI from reporting usage on every build) — the pinned AsyncAPI documentation toolchain.
-* Generator executions added to `api/rest-server`, `api/grpc-server`, `api/graphql-server`, `infrastructure/clients/<name>`,
-  `infrastructure/producers`, and `api/consumers` — including the HTML documentation executions. The AsyncAPI
+* Generator executions (Maven) or tasks (Gradle) added to `api/rest-server`, `api/grpc-server`, `api/graphql-server`,
+  `infrastructure/clients/<name>`, `infrastructure/producers`, and `api/consumers` — including the HTML
+  documentation executions. On Gradle, also the `gradle/libs.versions.toml` entries and the `documentation`-group
+  task names that `iru-setup-java-springboot-github-workflows` discovers. The AsyncAPI
   executions go in exactly one module (`infrastructure/producers` if it exists, otherwise `api/consumers`), since
   the specification describes the whole service and generating it twice would publish the same pages under two
   paths.
@@ -170,18 +226,22 @@ flowchart TD
     A["Start /iru-setup-java-springboot-apis"] --> B["Step 0: Read the manifest and args;\nmap each needed contract to its module"]
     B -- no contracts needed --> STOP["Report and stop"]
     B -- a target module is missing --> SKIP["Skip that contract; report it"]
-    B --> B2["Announce from scratch vs update;\nper existing artifact ask\nUpdate / Keep as is / Replace\n(or apply on-existing)"]
+    B --> B1["Read project.language and buildTool;\nstop if gradle is paired with java"]
+    B1 --> B2["Announce from scratch vs update;\nper existing artifact ask\nUpdate / Keep as is / Replace\n(or apply on-existing)"]
     B2 --> C["Step 1: Create the apis/ tree\nand apis/README.md"]
     C --> D["Steps 2-3: REST server spec + Spring generator\n(interfaceOnly) and html2 docs;\ngRPC proto + protobuf plugin and protoc-gen-doc"]
-    D --> D2["Step 3a: GraphQL SDL + codegen resolver interfaces,\nplus the resources copy onto the runtime classpath"]
+    D --> D2["Steps 3a-3b: GraphQL SDL + codegen resolver interfaces,\nresources copy onto the runtime classpath,\nSpectaQL/Voyager docs"]
     D2 --> E["Steps 4-5a: one client contract and generator\nper REST/gRPC/GraphQL client"]
     E --> F["Step 6: AVRO schemas + avro-maven-plugin\nin producers and/or consumers"]
     F --> F1["Step 6a: AsyncAPI spec at the current version —\nchannels, send/receive actions,\n$refs to the .avsc files"]
     F1 --> F2["Step 6b: pin the npm toolchain and wire\nasyncapi validate + html-template\ninto one module via frontend-maven-plugin"]
-    F2 --> G["Step 7: Verify via iru-gate-runner —\ngenerate-sources, then compile"]
+    F2 --> F3{"kotlin + gradle?"}
+    F3 -- yes --> F4["Step 6c: version catalog entries and\nGradle tasks for every generator"]
+    F3 -- no --> G
+    F4 --> G["Step 7: Verify via iru-gate-runner —\ngenerate-sources or gradle build,\nthen compile"]
     G -->|"generator produced nothing,\nwrong package, or empty\nAsyncAPI payload tables"| H["Fix inputSpec / sourceDirectory,\nthe .avsc $ref, or the\nconfiguration schema"]
     H --> G
-    G --> I["Step 8: Confirm generated output is\ngit-ignored and excluded from analysis"]
+    G --> I["Step 8: Confirm generated output is\ngit-ignored and excluded from analysis\n(detekt/ktlint for Kotlin)"]
     I --> J["Step 9: Add or recommend contract linting"]
     J --> K["Step 10: Report actions per artifact, contracts,\ngenerators, and placeholder-spec warnings"]
 ....
@@ -190,15 +250,14 @@ flowchart TD
 
 === Invokes
 
-None. It reads `springboot-stack.yml` and the module poms, and writes contracts and generator configuration.
+None. It reads `springboot-stack.yml` and the module poms or `build.gradle.kts` files, and writes contracts and
+generator configuration. It mentions `iru-setup-java-springboot-pom` (which must already have created the modules
+and managed plugin versions) and `iru-setup-java-springboot-github-workflows` (which discovers the Gradle
+documentation tasks) only as precondition and downstream consumer, not as calls.
 
 === Invoked by
 
-* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, third of seven sub-skills, via the
-  `iru-isolated-skill-executor` agent. Runs after xref:skills/iru-setup-java-springboot-modules.adoc[] (generated
-  sources need a module to land in, and the adapters written there consume the generated code) and before
-  xref:skills/iru-setup-java-springboot-testcontainers.adoc[] (the compose stack must know whether a schema
-  registry is needed).
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, apis/ contracts and generators, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runs standalone (`/iru-setup-java-springboot-apis`) to add a contract to an existing service.
 
