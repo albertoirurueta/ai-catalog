@@ -1,0 +1,214 @@
+---
+name: iru-php-test
+description: >-
+  Run a PHP project's test suite through whichever runner the project actually has wired — Pest (`vendor/bin/pest`), PHPUnit (`vendor/bin/phpunit`), Laravel's `php artisan test`, or the commands behind a composer `test` script — and through whichever environment the project actually runs PHP in (host `php`, Laravel Sail, ddev, or `@wordpress/env` for WordPress integration suites). Optionally scoped to a file, a directory, a `--filter <pattern>`, a testsuite, or a group, and aware of the unit-vs-integration split (e.g. Brain Monkey/WP_Mock unit tests vs. `WP_UnitTestCase` integration tests that need a WordPress test install and MySQL, or PrestaShop module tests that need a shop install). Invoke as `/iru-php-test` to run everything, or `/iru-php-test <selector>` where `<selector>` is a file path, a directory, `--filter <pattern>`, `--testsuite <name>`, or `--group <name>` (combinable). Reports a missing environment (Docker not running, WordPress test library not installed, database unreachable, `vendor/` missing) plainly instead of failing obscurely. Report-only: never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down PHP tests instead of invoking the runner by hand.
+model: haiku
+allowed-tools: Read Bash(php *) Bash(vendor/bin/*) Bash(./vendor/bin/*) Bash(composer *) Bash(./vendor/bin/sail *) Bash(npx wp-env *) Bash(ddev *) Bash(docker info *) Bash(docker ps *) Bash(command -v *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(mkdir -p build*) Bash(rm -f build/iru-php-test-*)
+---
+
+# PHP Test
+
+Run the project's PHP tests through whichever runner and execution environment it actually has configured, scoping
+the run to whatever the user asked for, and report a compact pass/fail summary parsed from the runner's own JUnit
+XML log. This skill only runs tests and reports results — it does not fix failures, modify source/test code,
+install dependencies, or provision databases unless asked to as a follow-up.
+
+## Step 1 — Detect where PHP runs
+
+Never assume host `php` is the right interpreter — many PHP projects only run inside a container. Check, in order:
+
+| Signal | Environment | Command prefix |
+|---|---|---|
+| `.ddev/config.yaml` exists | **ddev** | `ddev exec <cmd>` (e.g. `ddev exec vendor/bin/phpunit`) |
+| `vendor/bin/sail` exists **and** `compose.yaml`/`docker-compose.yml` references `laravel/sail` (or `sail-8.x` runtimes) | **Laravel Sail** | `./vendor/bin/sail <cmd>` (`sail test`, `sail php`, `sail bin pest`) |
+| `.wp-env.json` exists, or `@wordpress/env` is in `package.json` devDependencies, **and** the selected suite is a WordPress integration suite (Step 3) | **wp-env** | `npx wp-env run <container> --env-cwd=<path> <cmd>` (Step 3) |
+| `command -v php` succeeds | **host PHP** | none |
+
+Rules:
+
+- Prefer the container environment when it exists **and** either `command -v php` fails or the test database the
+  suite needs (Step 3) only resolves inside the container (e.g. `DB_HOST=mysql` in `.env`/`phpunit.xml`). Prefer
+  host PHP when the suite is self-contained (in-memory SQLite, pure unit tests) and host `php` satisfies the
+  `require.php` constraint in `composer.json` (`php -r 'echo PHP_VERSION;'`).
+- Every container environment needs Docker. Before running anything through Sail, ddev, or wp-env, run
+  `docker info >/dev/null 2>&1`; if it fails, **stop and report "Docker is not running — <environment> cannot
+  start"** instead of letting the runner fail with a socket/connection error. For Sail, also check the containers
+  are up (`./vendor/bin/sail ps`); if they aren't, report "Sail containers are not running — start them with
+  `./vendor/bin/sail up -d`" and ask before starting them yourself.
+- If no environment is usable (no host `php`, no container tooling), stop and report that — do not report "0 tests".
+
+## Step 2 — Detect the runner and confirm it is actually wired
+
+Read `composer.json` (`require-dev`, `scripts`) and look at `vendor/bin/` first:
+
+- `vendor/` missing entirely → **stop and report "dependencies not installed — run `composer install`"** (ask
+  before running it yourself). Do not report "no tests".
+- **Laravel** (`artisan` at the root and `laravel/framework` in `require`) → `php artisan test` (Sail: `./vendor/bin/sail
+  test`; ddev: `ddev exec php artisan test`). It wraps Pest or PHPUnit, whichever the app uses, and forwards
+  unknown options (`--filter`, `--testsuite`, `--group`, `--log-junit`, a path) to it.
+- **Pest** (`pestphp/pest` in `require-dev` and `vendor/bin/pest` exists) → `vendor/bin/pest`. Once a project uses
+  Pest, Pest is its only runner — don't call `vendor/bin/phpunit` on a Pest suite (Pest's `test()`/`it()` files
+  aren't PHPUnit classes).
+- **PHPUnit** (`phpunit/phpunit` in `require-dev` and `vendor/bin/phpunit` exists) → `vendor/bin/phpunit`.
+- **composer `test` script** — read it (`composer run-script --list`, or `scripts.test` in `composer.json`) even when
+  you call a binary directly: it reveals the project's real invocation (a non-default `-c phpunit-unit.xml`, extra
+  env vars, a `@php` prefix, `--testsuite` defaults, or wp-env wrappers). Mirror its flags in the direct binary
+  call rather than running `composer test -- <flags>`, which composer forwards only to the last command of a
+  multi-command script.
+- None of the above → **stop and report "no test runner wired"** (name what's missing). Never report "0 tests",
+  which looks identical to a scoped run that legitimately matched nothing.
+
+**PHPUnit configuration file(s)**: the default lookup is `phpunit.xml`, then `phpunit.xml.dist`, then
+`phpunit.dist.xml` in the working directory. Also `find . -maxdepth 3 -name 'phpunit*.xml*' -not -path './vendor/*'`
+— WordPress and PrestaShop projects frequently keep separate configs (`phpunit-unit.xml`, `phpunit-integration.xml`,
+`tests/phpunit.xml`, `tests/Unit/phpunit.xml`, `tests/php/phpunit.xml`) that need `-c <file>` (`--configuration`).
+List the suites each config defines with `grep -o '<testsuite name="[^"]*"' <config>`, or let the runner do it:
+`<runner> [-c <config>] --list-suites` and `--list-groups` (PHPUnit and Pest both support these).
+
+## Step 3 — Classify unit vs. integration and check the environment the selection needs
+
+Decide what the requested selection needs before running it:
+
+| Project kind | Unit tests (no external services) | Integration tests (need a real environment) |
+|---|---|---|
+| Plain library / Composer package | everything, usually | rare — a `Integration` suite or `@group integration` |
+| Laravel | `tests/Unit`, and `tests/Feature` with the skeleton's in-memory SQLite (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:` in `phpunit.xml`) | Feature tests when `phpunit.xml`/`.env.testing` points at MySQL/PostgreSQL/Redis — that service must be reachable (Sail containers up) |
+| WordPress plugin/theme | tests using **Brain Monkey** (`brain/monkey`) or **WP_Mock** (`10up/wp_mock`) that never load WordPress — usually their own suite/config with a bootstrap that only requires `vendor/autoload.php` | tests extending `WP_UnitTestCase` (bootstrap references `WP_TESTS_DIR`, `wordpress-tests-lib`, or `includes/functions.php`) — need the WordPress PHPUnit test library, a **dedicated** MySQL database, and `yoast/phpunit-polyfills` |
+| PrestaShop module | `tests/Unit` (pure PHPUnit `TestCase`, dependencies mocked) | tests whose bootstrap requires the shop (`config/config.inc.php`, `_PS_ROOT_DIR_`, `_PS_VERSION_`) — need a PrestaShop installation and its database |
+
+Identify a suite as unit vs. integration by its name (`Unit`, `Integration`, `Feature`, `wp`, …), its directory,
+its config's `bootstrap=` file, and the base class its tests extend (`grep -rl 'extends WP_UnitTestCase' tests`).
+When the user asked for "unit tests" only, select the unit suite/config/group explicitly (Step 4) rather than
+running everything and hitting an unprovisioned integration suite.
+
+Preflight checks for an integration selection — when one fails, **stop and report the missing piece in plain
+words** (and the command that would provision it), never a raw fatal error:
+
+- **WordPress via `bin/install-wp-tests.sh`** (generated by `wp scaffold plugin-tests`/`wp scaffold theme-tests`):
+  the test library lives in `$WP_TESTS_DIR`, defaulting to `<sys_get_temp_dir()>/wordpress-tests-lib` (normally
+  `/tmp/wordpress-tests-lib`). If `$WP_TESTS_DIR/includes/functions.php` doesn't exist, report "WordPress test
+  library not installed — run `bin/install-wp-tests.sh <db-name> <db-user> <db-pass> [db-host] [wp-version]`
+  (needs a running MySQL; it drops and recreates that database)". Do **not** run the script yourself — it
+  deletes the named database's data; ask first. If `vendor/yoast/phpunit-polyfills` is missing (and no
+  `WP_TESTS_PHPUNIT_POLYFILLS_PATH` is set), report that too — the WordPress bootstrap aborts without it.
+- **WordPress via wp-env**: Docker must be running (Step 1). wp-env ships PHPUnit, Composer and the matching test
+  library inside its containers, with `WP_TESTS_DIR` already set. Run the suite inside the container with the
+  plugin/theme as working directory:
+  `npx wp-env run tests-cli --env-cwd=wp-content/plugins/<plugin-dir> vendor/bin/phpunit [args]`
+  (themes: `wp-content/themes/<theme-dir>`). Use the container name the project's own `package.json`/composer
+  scripts use; older wp-env releases have a separate `tests-cli` container, while recent ones dropped the
+  built-in tests environment in favour of a separate `--config` and run tests in `cli` — if `tests-cli` is
+  rejected as an unknown container, use `cli`. If the environment isn't started (`npx wp-env run` reports it
+  can't find the containers), report "wp-env is not running — start it with `npx wp-env start`" and ask before
+  starting it.
+- **Database reachability** (WordPress, Laravel against MySQL/PostgreSQL, PrestaShop): the typical failures are
+  WordPress's `Error establishing a database connection`, PDO's `SQLSTATE[HY000] [2002] Connection refused` /
+  `php_network_getaddresses: getaddrinfo ... failed` (host name like `mysql` that only resolves inside Docker), and
+  `SQLSTATE[HY000] [1045] Access denied`. Map any of them to "test database unreachable at `<host>` — <reason>".
+- **PrestaShop**: if the integration bootstrap requires a shop path (`_PS_ROOT_DIR_`, an env var such as
+  `PS_ROOT_DIR`, or a relative `../../config/config.inc.php`) that doesn't exist, report "PrestaShop installation
+  not found at `<path>`" — module integration tests only run with the module placed inside a shop (commonly via
+  the project's own Docker setup, e.g. a `prestashop/prestashop` image).
+
+## Step 4 — Determine scope from the argument
+
+All three runners share PHPUnit's CLI for these selectors (`php artisan test` forwards them; Pest accepts them):
+
+| What the user wants | PHPUnit | Pest | `php artisan test` |
+|---|---|---|---|
+| Everything | `vendor/bin/phpunit` | `vendor/bin/pest` | `php artisan test` |
+| One file | `vendor/bin/phpunit tests/Unit/FooTest.php` | `vendor/bin/pest tests/Unit/FooTest.php` | `php artisan test tests/Unit/FooTest.php` |
+| A directory | `vendor/bin/phpunit tests/Unit/Billing` | `vendor/bin/pest tests/Unit/Billing` | `php artisan test tests/Unit/Billing` |
+| Name pattern | `--filter '<pattern>'` (regex over `Class::method` and data-set names, e.g. `FooTest`, `FooTest::testBar`, `'/::testBar( with data set .*)?$/'`) | `--filter '<pattern>'` (matches the `test()`/`it()` description, e.g. `--filter 'rejects negative'`) | `--filter '<pattern>'` |
+| A testsuite | `--testsuite Unit` (comma-separate several) | `--testsuite Unit` | `--testsuite Unit` |
+| A group | `--group slow` / `--exclude-group slow` (`#[Group('slow')]` or `@group slow`) | `--group=slow` / `--exclude-group=slow` (`->group('slow')`) | `--group slow` |
+| A non-default config | `-c phpunit-unit.xml` | `-c phpunit-unit.xml` | `-c phpunit-unit.xml` *(forwarded)* |
+
+Notes:
+
+- Selectors combine: `vendor/bin/phpunit -c phpunit-integration.xml --group ajax --filter Checkout`.
+- WordPress core-style suites exclude some groups by default in their config (e.g. `ajax`, `ms-files`,
+  `ms-required`); `--group ajax` runs them, and multisite tests usually need their own config
+  (`-c tests/phpunit/multisite.xml` or a `WP_MULTISITE=1` env var) — check the project's config before assuming.
+- **An unmatched `--filter`/`--group`/`--testsuite` is not reliably a failure.** PHPUnit and Pest print
+  `No tests executed!` and the exit code depends on version and on `failOnEmptyTestSuite`; a non-existent file path
+  is reported as an error (`Test file "<path>" not found` / `Cannot open file`). Always read the counts from the
+  JUnit log (Step 5): 0 tests run is "selector `<x>` matched nothing", never "all passed".
+- Exit code **255** means a PHP fatal error (usually during bootstrap: missing test library, missing extension,
+  autoload failure) — report the first `PHP Fatal error`/`Error:` line, not a test count.
+- Don't add `--parallel` (artisan/Pest/ParaTest) unless the user asks — parallel runs need per-process databases
+  and obscure failure output.
+
+## Step 5 — Run with a JUnit log and parse it
+
+Keep the runner's normal console output for a human glancing at the log, and add `--log-junit` (supported by
+PHPUnit, Pest, and forwarded by `php artisan test`) so this skill parses structured results instead of
+screen-scraping. Write it **inside the project directory** so the same relative path works on the host and inside
+Sail/ddev/wp-env containers (which mount the project, not your `$TMPDIR`):
+
+```bash
+mkdir -p build
+<prefix> <runner> [scope] --log-junit build/iru-php-test-junit.xml
+```
+
+PHPUnit's JUnit XML shape (also what Pest writes):
+
+```xml
+<testsuites>
+  <testsuite name="Unit" tests="7" assertions="9" errors="0" failures="1" skipped="0" time="0.02">
+    <testsuite name="Tests\Unit\FineCalculatorTest" file="tests/Unit/FineCalculatorTest.php" ...>
+      <testcase name="testRejectsNegativeDays" class="Tests\Unit\FineCalculatorTest" file="..." line="42" ...>
+        <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Unit\FineCalculatorTest::testRejectsNegativeDays
+Failed asserting that exception of type "InvalidArgumentException" is thrown.
+
+tests/Unit/FineCalculatorTest.php:42</failure>
+      </testcase>
+```
+
+Parse the outermost `<testsuite>` for the totals and every `<testcase>` with a `<failure>` or `<error>` child for the
+failures — with host PHP (or `./vendor/bin/sail php` / `ddev exec php` when PHP only exists in the container):
+
+```bash
+php -r '$x = simplexml_load_file($argv[1]); $s = $x->testsuite[0];
+  printf("tests=%s assertions=%s failures=%s errors=%s skipped=%s\n", $s["tests"], $s["assertions"], $s["failures"], $s["errors"], $s["skipped"]);
+  foreach ($x->xpath("//testcase[failure or error]") as $t) {
+    $f = $t->failure ?: $t->error;
+    $l = array_values(array_filter(array_map("trim", explode("\n", (string) $f))));
+    $n = (string) $t["name"]; $h = array_shift($l) ?? "";
+    $h = str_starts_with($h, $n) ? substr($h, strlen($n)) : (str_ends_with($h, "::" . $n) ? "" : $h);
+    printf("%s::%s — %s\n", $t["class"] ?: $t["file"], $n, $h !== "" ? $h : ($l[0] ?? ""));
+  }' build/iru-php-test-junit.xml
+```
+
+The failure body opens with the test's own name — on a line of its own for PHPUnit (`Class::method`), glued to the
+start of the message for Pest (`it failsFailed asserting…`) — so the parser strips that prefix and reports the
+assertion message that follows; report only that line — never the full stack/diff. If no JUnit file was written at all, the run died before
+executing tests (fatal error, missing environment) — report that cause from the console output instead.
+
+Delete the log afterwards (`rm -f build/iru-php-test-junit.xml`; remove `build/` only if this run created it) so it
+doesn't get committed as build noise.
+
+## Step 6 — Report results
+
+- State the environment and runner used (e.g. "Pest via Sail", "PHPUnit via wp-env `tests-cli`, config
+  `phpunit-integration.xml`") and the counts — don't paste the JUnit XML or the full console log.
+- If the selector matched nothing (0 tests in the log, or `No tests executed!`), say so plainly — not as 0 passed.
+- If the environment was missing (Docker down, wp-env/Sail not started, WordPress test library absent, database
+  unreachable, `vendor/` missing, no shop for PrestaShop integration tests), report exactly what is missing and the
+  command that provisions it, and say which tests *could* still run (e.g. "the Brain Monkey `Unit` suite doesn't
+  need it: `/iru-php-test --testsuite Unit`").
+- On failures, list each failing test (`Class::method`, or the Pest description) with the first line of its
+  assertion message — nothing more per failure, and no noise about passing tests. Count PHP errors (`<error>`)
+  separately from assertion failures.
+- Do not attempt to fix failing tests, modify source/test code, install dependencies, or provision databases unless
+  the user asks for that as a next step.
+
+## Verification notes
+
+Verified in Docker (`php:8.4-cli` + PCOV, `composer:2`) against PHPUnit 12 and Pest 4 suites with one passing and
+one failing test: the JUnit parser above reports the correct totals and the assertion message for both runners;
+Pest's `<testcase>` carries `class`, `classname`, and `file` attributes. With `--filter` matching nothing, Pest exited
+1 and PHPUnit 12 exited 255 — exit codes for an unmatched selector are therefore not a reliable signal, so treat a
+JUnit file with `tests="0"` (or "No tests executed" on the console) as "nothing matched", never as a pass or a crash.
+Still unverified: `php artisan test` and Sail, ddev, the `tests-cli`/`cli` container split across wp-env versions,
+and a real WordPress (`WP_UnitTestCase`) or PrestaShop integration suite.

@@ -1,6 +1,7 @@
 ---
 name: iru-setup-apple-app
-description: Scaffold a new native Apple app (iOS/iPadOS/macOS/watchOS, SwiftUI, Swift 6) at the repository root —
+description: >-
+  Scaffold a new native Apple app (iOS/iPadOS/macOS/watchOS, SwiftUI, Swift 6) at the repository root —
   a generator manifest (XcodeGen's `project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one
   application target per selected platform with a SwiftUI `App` entry point, `MARKETING_VERSION`/
   `CURRENT_PROJECT_VERSION`, `SWIFT_STRICT_CONCURRENCY = complete`, and Info.plist keys, a shared `Packages/Core`

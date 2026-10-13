@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-tsdoc
-description: Audit given TypeScript file(s)/scope for complete TSDoc coverage on every exported function, class, interface, type alias, and enum (React components' props interfaces and hooks, Angular components/services/inputs/outputs included) — `/** ... */` with `@param`/`@returns`/`@throws` where applicable and `@example` on public entry points — generate any missing or incomplete TSDoc grounded in the actual code and current changes, then run the project's own doc-build tooling (TypeDoc or Compodoc, whichever the project uses) to confirm the result builds without warnings/errors. Invoke as `/iru-typescript-tsdoc <path-or-glob>` (comma-separated paths/globs accepted), or `/iru-typescript-tsdoc` with no argument to scope to files touched by uncommitted changes plus commits on the current branch not yet on the base branch. Works against any TypeScript project (npm/TypeScript library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend) — it detects the project's flavor and doc toolchain at runtime rather than assuming one. Use whenever the user wants TSDoc completeness checked and filled in for specific files, instead of relying on a full docs-site build to surface gaps.
+description: Audit given TypeScript file(s)/scope for complete TSDoc coverage on every exported function, class, interface, type alias, and enum (React components' props interfaces and hooks, Angular components/services/inputs/outputs, NestJS controllers/route handlers/services/DTOs/modules/guards/pipes, and Next.js exported components/pages/layouts/server actions/route handlers/hooks included) — `/** ... */` with `@param`/`@returns`/`@throws` where applicable and `@example` on public entry points — generate any missing or incomplete TSDoc grounded in the actual code and current changes, then run the project's own doc-build tooling (TypeDoc or Compodoc, whichever the project uses — Compodoc is common on NestJS) to confirm the result builds without warnings/errors; for NestJS and Next.js, where neither tool is guaranteed to be installed, it verifies with whichever one the project actually configured and reports the run as audit-only when neither is. Invoke as `/iru-typescript-tsdoc <path-or-glob>` (comma-separated paths/globs accepted), or `/iru-typescript-tsdoc` with no argument to scope to files touched by uncommitted changes plus commits on the current branch not yet on the base branch. Works against any TypeScript project (npm/TypeScript library, React, Angular, React Native, Ionic, a Vaadin Hilla frontend, NestJS, or Next.js) — it detects the project's flavor and doc toolchain at runtime rather than assuming one. Use whenever the user wants TSDoc completeness checked and filled in for specific files, instead of relying on a full docs-site build to surface gaps.
 model: sonnet
 ---
 
@@ -23,12 +23,26 @@ checks here so the doc bar and verification command match what the rest of the p
 - `@vaadin/hilla`/`hilla-spring-boot-starter` in `pom.xml`, or a `src/main/frontend/` directory → **hilla-frontend**
 - `expo` or `react-native` in `package.json` dependencies → **react-native**
 - `@ionic/angular` or `@ionic/react` + `@capacitor/core` in `package.json` → **ionic**
+- `@nestjs/core` in `package.json` → **nestjs**
+- `next` in `package.json` → **nextjs**
 - `@angular/core` in `package.json` → **angular**
 - `react` + `vite` in `package.json` → **react**
 - none of the above → **library**
 
 This drives two things later: which build tool verifies the docs (Step 5 — Compodoc for `angular`, TypeDoc for
-every other flavor) and what "exported" means for the audit (Step 1).
+every other flavor except `nestjs`/`nextjs`, which use whichever of the two the project actually configured, or
+neither) and what "exported" means for the audit (Step 1).
+
+**Doc tool for `nestjs`/`nextjs`** — these app flavors often ship no doc tool at all, so never fetch one on the fly
+with a bare `npx typedoc`/`npx compodoc` (that downloads and runs a tool the project never chose):
+
+- **nestjs**: Compodoc is the de-facto Nest documentation tool (it understands modules, controllers, providers,
+  and routes) — use it when `@compodoc/compodoc` is a devDependency or a `.compodocrc*`/`compodoc` script exists.
+  Otherwise use TypeDoc when `typedoc` is a devDependency or a `typedoc.json` exists. Neither → **audit-only**.
+- **nextjs**: TypeDoc when `typedoc` is a devDependency or a `typedoc.json` exists; otherwise **audit-only**.
+- **Audit-only** means Steps 1-4 still run in full (the audit and the generated TSDoc don't depend on a build
+  tool), Step 5 is skipped, and the Step 6 report says "doc build not verified: no TypeDoc/Compodoc configured in
+  this project" — never a pass.
 
 ## Step 1 — Determine scope
 
@@ -56,6 +70,27 @@ every other flavor) and what "exported" means for the audit (Step 1).
   - **react / react-native / ionic / hilla-frontend (apps)**: simply every `export`ed function, class, interface,
     type alias, and enum in each in-scope file — there is no single public entry point to trace, since app code
     is consumed by the bundler, not by external importers.
+  - **nestjs**: every exported class in scope by its Nest role — **controllers** (`@Controller`: the class, plus
+    every route-handler method with what the endpoint does, a `@param` per `@Param()`/`@Query()`/`@Body()`
+    argument, `@returns` describing the response body, and `@throws` per `HttpException` subclass it can raise —
+    `NotFoundException`, `ConflictException`, …), **services/providers/repositories** (`@Injectable`: class and
+    public methods), **DTOs** (the class and each property, stating its validation constraints in words where the
+    `class-validator` decorators make them non-obvious), **modules** (`@Module`: a class-level comment saying what
+    the feature module provides and exports — Compodoc lists modules as their own pages), **guards, pipes,
+    interceptors, filters, and custom decorators** (class/factory plus `canActivate`/`transform`/`intercept`/
+    `catch`), **entities/schemas**, and exported interfaces/types/enums. Compodoc also counts the non-exported
+    `bootstrap` function in `src/main.ts` (verified on a Nest 12 scaffold: it was listed as `0 % for file
+    src/main.ts - bootstrap - under minimum per file`) — give it a one-line comment when `main.ts` is in scope
+    and Compodoc is the verifier.
+  - **nextjs**: every exported component (including the default-exported `page.tsx`/`layout.tsx`/`template.tsx`/
+    `loading.tsx`/`error.tsx`/`not-found.tsx` components — a one-line summary of what the route renders), its props
+    type, every exported custom hook in `'use client'` files, every **server action** exported from a `'use server'`
+    file or defined inline (inputs, the authentication/authorization it performs, what it revalidates/redirects to,
+    and `@throws`/the error state it returns), every **route handler** exported from `route.ts` (`GET`/`POST`/…:
+    the request it accepts, `ctx.params` route parameters, response status codes and body), `generateMetadata`/
+    `generateStaticParams`, and exported library functions under `lib/`. Route-segment config exports (`dynamic`,
+    `revalidate`, `runtime`, `fetchCache`, `metadata` objects, a `proxy.ts`/`middleware.ts` `config` matcher) need
+    at most a one-line comment and never an `@example`. Skip `next.config.*`, `next-env.d.ts`, and `.next/`.
   - **angular**: every exported class (`@Component`, `@Injectable`, `@Directive`, `@Pipe`), its public
     `@Input()`/`@Output()` members and public methods, and every exported interface/type/enum in scope — Compodoc's
     coverage percentage (Step 5) counts components, services, inputs, and outputs the same way it counts plain
@@ -161,7 +196,7 @@ or reorder members — this skill only adds/completes TSDoc comments.
 
 Which tool verifies depends on the flavor detected in Step 0.
 
-### library / react / react-native / ionic / hilla-frontend — TypeDoc
+### library / react / react-native / ionic / hilla-frontend (and nestjs / nextjs when TypeDoc is configured) — TypeDoc
 
 ```bash
 npx typedoc --emit none --treatWarningsAsErrors --validation.notDocumented true
@@ -193,6 +228,16 @@ npx typedoc --emit none --treatWarningsAsErrors --validation.notDocumented true
   `exports` map (react, react-native, ionic, hilla-frontend), pass `--entryPoints` explicitly, scoped to the
   in-scope files themselves, e.g. `--entryPoints src/features/foo/useFoo.ts --entryPoints src/features/foo/Foo.tsx`,
   rather than the whole `src/` tree, to keep the run scoped and fast.
+- **nextjs**: run `npx next typegen` first, and add `--validation.notExported false`. Verified locally on a Next
+  16.4 scaffold with TypeDoc 0.28 + TypeScript 5.9.3, `--entryPoints` per in-scope file and `--disableGit
+  --disableSources`: without typegen, TypeDoc stops on `error TS2304` for the global `LayoutProps` route helper
+  type (it type-checks the project first); after typegen it still warned `__global.LayoutProps, defined in
+  .next/types/routes.d.ts, is referenced by ... but not included in the documentation`, which
+  `--treatWarningsAsErrors` turns into a failure unrelated to any missing comment — `--validation.notExported
+  false` removes exactly that warning while the `does not have any documentation` warnings for `add`, the layout's
+  default export, and its `metadata` export remained (exit `4`).
+- **nestjs**: point `--entryPoints` at the in-scope files exactly as for app flavors above; Nest's `tsconfig.json`
+  already enables `experimentalDecorators`/`emitDecoratorMetadata`, which TypeDoc honors.
 - **Version-compatibility quirk (verified locally, worth checking before trusting a crash for a doc bug)**:
   TypeDoc 0.28.20 crashes outright (`TypeError: Cannot read properties of undefined (reading
   'PropertyDeclaration')`, not a warning) against a bare `npm install typescript`'s current default (TypeScript
@@ -201,7 +246,7 @@ npx typedoc --emit none --treatWarningsAsErrors --validation.notDocumented true
   than treating it as an undocumented-symbol issue — it needs a dependency fix, not a doc fix, and is out of this
   skill's scope to silently "fix" by downgrading a project dependency.
 
-### angular — Compodoc
+### angular (and nestjs when Compodoc is configured) — Compodoc
 
 ```bash
 npx compodoc -p tsconfig.json --silent --coverageTest <threshold> --coverageMinimumPerFile <threshold> --coverageTestShowOnlyFailed
@@ -222,6 +267,13 @@ npx compodoc -p tsconfig.json --silent --coverageTest <threshold> --coverageMini
   report-only rather than a full coverage listing.
 - `--coverageTestThresholdFail` defaults to `true` (non-zero exit on failure) — never pass `false`, that would
   turn a real gap into a silent warning.
+- Compodoc writes its HTML site (default `./documentation/`) even in coverage-test mode — pass `-d
+  "$TMPDIR/compodoc-out"` (or another scratch directory) so the run leaves nothing in the working tree; verified
+  locally on a Nest 12 scaffold that with `-d` no `documentation/` directory was created and the exit code (`1`,
+  coverage below threshold) was unchanged. **nestjs**: same command against the project's `tsconfig.json` (spec
+  files are left out of the coverage count — verified: `app.controller.spec.ts` was not listed); the scaffold's
+  own controller, service, and `main.ts` `bootstrap` each reported `0 % ... under minimum per file` before any
+  TSDoc was added.
 - Compodoc needs `-p <tsconfig>` pointing at a `tsconfig.json` that actually includes the in-scope files (verified
   locally it runs fine against a plain non-Angular `tsconfig.json` too, so this same invocation works even before
   Angular-specific decorators are involved) — if the project has a dedicated `tsconfig.doc.json` or similar,
@@ -236,7 +288,8 @@ is pre-existing — note it in the report but don't fix it unless the user asks.
 Per file in scope, state: how many exported symbols were already fully documented, how many gaps were found and
 filled (name each, with its kind), and the final doc-build result (TypeDoc: pass, or the exact warning text and
 symbol names that failed; Compodoc: the coverage percentage(s) achieved vs. the threshold, and the per-symbol
-lines it reported for anything still under the per-file minimum). If any argument resolved to a test file (Step
+lines it reported for anything still under the per-file minimum; audit-only for a `nestjs`/`nextjs` project with
+neither tool configured — say so explicitly rather than reporting a pass). If any argument resolved to a test file (Step
 1), name it and note it was excluded since test files carry no TSDoc requirement here. If any out-of-scope
 pre-existing doc-build failure surfaced in Step 5, mention it separately as a follow-up rather than silently
 leaving it out of the report. Never paste the raw TypeDoc/Compodoc console output or generated HTML — report only

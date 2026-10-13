@@ -1,11 +1,11 @@
 ---
 name: iru-release
 description: Convert the current development version into a final release. Must be run from the `develop` branch
-  (gitflow) — warns and stops otherwise. Detects the repository's ecosystem (Java/Maven, TypeScript/npm,
-  Android/Gradle, or Swift/Apple) from an `iru-explore` report already in this conversation or from the
+  (gitflow) — warns and stops otherwise. Detects the repository's ecosystem (Java/Kotlin JVM on Maven or Gradle, TypeScript/npm,
+  Android/Gradle, Swift/Apple, or PHP/Composer/WordPress/PrestaShop) from an `iru-explore` report already in this conversation or from the
   repository's manifests, and delegates the version bump itself to the matching installed
   `iru-<key>-bump-version` skill (`iru-java-bump-version`, `iru-typescript-bump-version`,
-  `iru-android-bump-version`, `iru-swift-bump-version`) rather than editing build files directly. Asks the user
+  `iru-android-bump-version`, `iru-swift-bump-version`, `iru-php-bump-version`) rather than editing build files directly. Asks the user
   for the release version (current pre-release value stripped, a patch bump, or a major bump) and the next
   upcoming pre-release version, creates a `release_x.y.z` branch off `develop`, updates README.md, `docs/antora.yml`,
   and any Antora page showing dependency snippets via the bump-version skill's own optional sync, creates/updates
@@ -46,13 +46,18 @@ touching any file.
   1. If `iru-explore` ran earlier in this conversation, read its `## Tech stack` report's `- Project type:` line
      (see `.claude/skills/iru-explore/SKILL.md` for the exact vocabulary — `java-library`, `java-springboot`,
      `java-springboot-hilla`, `typescript-library`, `react-web`, `angular-web`, `android-library`, `android-app`,
-     `swift-library`, `apple-app`, etc.) and derive the ecosystem key from it: `java-*` → `java`;
-     `typescript-library`/`react-web`/`angular-web`/`react-native-app`/`ionic-app` → `typescript`; `android-*` →
-     `android`; `swift-*`/`apple-app` → `swift`. If the `Project type:` line is `multiple`, ask the user which
+     `swift-library`, `apple-app`, etc.) and derive the ecosystem key from it: `java-*`/`kotlin-*` (`java-library`,
+     `java-springboot`, `java-springboot-hilla`, `kotlin-springboot`, `kotlin-springboot-hilla`, `java-quarkus`,
+     `kotlin-quarkus` — Maven or Gradle) → `java`;
+     `typescript-library`/`react-web`/`angular-web`/`nestjs`/`nextjs`/`react-native-app`/`ionic-app` → `typescript`; `android-*` →
+     `android`; `swift-*`/`apple-app` → `swift`; `php-*` → `php`. If the `Project type:` line is `multiple`, ask the user which
      module this release targets, since a single release cuts one version.
   2. Otherwise, detect it directly from manifests present at the repository root: `pom.xml` → `java`;
      `package.json` → `typescript`; `build.gradle`/`build.gradle.kts` with the Android Gradle Plugin applied →
-     `android`; `Package.swift`, or a `*.xcodeproj`/`project.yml`/`Project.swift` → `swift`. Ask the user which
+     `android`; `build.gradle`/`build.gradle.kts` without it (a plain JVM, Kotlin Spring Boot, or Quarkus Gradle
+     build) → `java`; `Package.swift`, or a `*.xcodeproj`/`project.yml`/`Project.swift` → `swift`; `composer.json`, a
+     WordPress plugin/theme header (`Plugin Name:` in the main PHP file, `Theme Name:` in `style.css`), or a
+     PrestaShop module main class (`extends Module`) → `php`. Ask the user which
      one this release targets if more than one manifest is found and it's genuinely ambiguous which is the
      release target.
 - **Find the installed bump-version skill** for that ecosystem:
@@ -64,7 +69,8 @@ touching any file.
   - **Match found**: read that skill's own `SKILL.md` and apply its documented "read the current version"
     mechanism directly to obtain the current value — every `iru-<key>-bump-version` skill in this catalog
     documents locating and reading the current version as the very first thing it does before writing anything
-    (e.g. `iru-java-bump-version`'s Step 3 locates the project's own `pom.xml` `<version>`;
+    (e.g. `iru-java-bump-version`'s Step 3 locates the project's own `pom.xml` `<version>`, or for a Gradle build
+    lists every `gradle.properties`/`build.gradle(.kts)`/`libs.versions.toml` version location;
     `iru-typescript-bump-version`'s Step 3 reads `package.json`'s `version` field;
     `iru-android-bump-version`'s Step 3 reads `lib/build.gradle.kts`'s `libraryVersion`;
     `iru-swift-bump-version`'s Step 5/"Library" case reads the latest git tag) — none of these skills expose a

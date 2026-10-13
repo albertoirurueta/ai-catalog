@@ -1,6 +1,7 @@
 ---
 name: iru-setup-java-gitignore
-description: Create or update the root `.gitignore` file for a Java project — compiled classes, logs, packaged
+description: >-
+  Create or update the root `.gitignore` file for a Java project — compiled classes, logs, packaged
   artifacts (jar/war/ear/zip), JVM crash logs, the build tool's output directory (Maven `/target/` or Gradle
   `build/`/`.gradle/`), IntelliJ/.idea entries, and, when detected, project-specific generated files such as a
   build-info properties file written by a Groovy/Maven plugin or an Antora docs build output directory. Invoke as

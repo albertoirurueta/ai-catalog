@@ -132,8 +132,9 @@ handling, validation, documentation requirements, etc.), and the language/toolin
 the right idioms and check for the right lint/static-analysis config — e.g. Checkstyle/PMD/SpotBugs rules for
 Java, ESLint / Prettier / Biome (`eslint.config.*`, `.prettierrc*`, `biome.json`) plus `tsconfig.json` (strictness
 flags) for JS/TS, Detekt / ktlint / Android Lint (`detekt.yml`, `.editorconfig` ktlint rules, `lint.xml`,
-`lintOptions`/`lint {}` in Gradle) for Kotlin/Android, SwiftLint / swift-format (`.swiftlint.yml`, `.swift-format`)
-for Swift, and so on — read any such config found rather than assuming defaults).
+`lintOptions`/`lint {}` in Gradle) for Kotlin/Android, PHPStan / Psalm / PHPCS / Pint / PHP-CS-Fixer
+(`phpstan.neon*`, `psalm.xml`, `phpcs.xml*`, `pint.json`, `.php-cs-fixer.dist.php`) for PHP, SwiftLint /
+swift-format (`.swiftlint.yml`, `.swift-format`) for Swift, and so on — read any such config found rather than assuming defaults).
 
 ## Step 6 — Delegate to the `code-review` skill when available
 
@@ -183,16 +184,53 @@ and the codebase's own architecture and conventions (from Step 5). Look for:
    view/ViewModel violating MVC/MVVM separation (state mutation in the view, business logic in the view layer),
    or a Compose/SwiftUI screen breaking unidirectional data flow. Judge this against how the codebase *actually*
    applies that pattern (from Step 5), not an idealized textbook version of it.
+3. **Stack-specific pitfalls** — framework traps a generic correctness pass tends to miss, for whichever stacks
+   Step 5 detected (only the ones actually in play), e.g.:
+   - **Kotlin + Spring Boot**: Spring/JPA classes relying on the `kotlin-spring` (all-open) and `kotlin-jpa`
+     (no-arg) compiler plugins — a final `@Configuration`/`@Transactional` class or an entity without them breaks
+     proxies/lazy loading silently; `data class` JPA entities (`equals`/`hashCode` over mutable, generated-id
+     state); `@Transactional` on `suspend fun` without a reactive transaction manager, or a coroutine launched
+     (`GlobalScope.launch`, a new scope) inside a transaction, losing the transaction context; `block()`/blocking
+     I/O on an event-loop thread; self-invocation bypassing `@Transactional`/`@Cacheable`.
+   - **Quarkus**: build-time CDI rules — beans looked up dynamically without `@Unremovable`, private injection
+     points (reflection, warnings), beans lacking a bean-defining annotation; `@Transactional` on the
+     entity/repository instead of the calling service/resource, or writes outside a transaction; blocking calls
+     in a `Uni`/`Multi` pipeline or a non-`@Blocking` reactive endpoint (event loop); reflection-based code
+     (Jackson on non-registered classes, `Class.forName`) without `@RegisterForReflection` when native builds are
+     used; Kotlin classes missing the all-open/no-arg configuration Quarkus doesn't add automatically.
+   - **PHP**: missing `declare(strict_types=1);` where the codebase uses it; mass assignment (`$guarded = []`,
+     `$request->all()` into `create()`/`fill()` instead of validated/`safe()` data); N+1 queries (missing
+     `with()`/eager loading in loops); unescaped output (`{!! !!}`, `echo $var`) and raw SQL built from input.
+     **WordPress**: missing nonce verification (`check_admin_referer`/`wp_verify_nonce`) and capability checks
+     (`current_user_can`) on state-changing handlers, AJAX/REST endpoints (`permission_callback`), unprepared
+     `$wpdb` queries (no `$wpdb->prepare`), input not sanitized (`sanitize_*`, `wp_unslash`) and output not
+     escaped late (`esc_html`/`esc_attr`/`esc_url`/`wp_kses`), unprefixed globals/functions. **PrestaShop**:
+     hooks registered in `install()` without matching `registerHook`/uninstall cleanup, `Tools::getValue()` input
+     used without validation/casting (`(int)`, `Validate::is*`), SQL through `Db::getInstance()` without `pSQL()`/
+     `bqSQL()`/`(int)` escaping, missing `$this->trans()`/admin token checks.
+   - **NestJS**: DTOs imported with `import type` (erases the class — `ValidationPipe` silently skips
+     validation); global pipes/guards/interceptors/filters registered via `app.useGlobal*()` in `main.ts` instead
+     of `APP_PIPE`/`APP_GUARD`/... providers (not applied in tests, not overridable), or registered from more than
+     one module; `REQUEST`-scoped providers bubbling scope up the injection chain, or per-request state kept on a
+     singleton; providers not exported/imported where used; ESM relative imports with the `.js` extension
+     "fixed" away.
+   - **Next.js**: server/client boundary — `'use client'` placed too high, hooks or browser APIs in Server
+     Components, non-serializable props crossing the boundary, server-only modules (secrets, DB) importable from
+     client code (no `server-only`); Server Actions without authentication/authorization and input validation
+     inside the action itself (they are public POST endpoints); caching semantics that don't match the project's
+     Next major version / `cacheComponents` setting (e.g. assuming `fetch` is cached by default on 15+, sync
+     `params`/`cookies()` on 15+/16, one-argument `revalidateTag` on 16, runtime data read inside `'use cache'`);
+     secrets exposed through `NEXT_PUBLIC_*` env vars.
 
 If Step 6 didn't run, also look for, using general best practices for the language in use:
 
-3. **Correctness bugs** — logic errors, edge cases the code doesn't handle, incorrect assumptions, concurrency
+4. **Correctness bugs** — logic errors, edge cases the code doesn't handle, incorrect assumptions, concurrency
    issues, resource leaks.
-4. **Security issues** — anything resembling the OWASP top 10 (injection, unsafe deserialization, missing input
+5. **Security issues** — anything resembling the OWASP top 10 (injection, unsafe deserialization, missing input
    validation at boundaries, secrets in code, etc.) relevant to the language/framework in play.
-5. **Test coverage** — new/changed behavior without a corresponding test, or tests that don't actually exercise
+6. **Test coverage** — new/changed behavior without a corresponding test, or tests that don't actually exercise
    the edge cases the change introduces.
-6. **Simplification/reuse/efficiency** — real, non-cosmetic opportunities: duplicated logic that already exists
+7. **Simplification/reuse/efficiency** — real, non-cosmetic opportunities: duplicated logic that already exists
    elsewhere in the codebase, unnecessary complexity, obvious inefficiencies. Skip nitpicks and pure style
    preferences that aren't backed by a documented convention.
 
