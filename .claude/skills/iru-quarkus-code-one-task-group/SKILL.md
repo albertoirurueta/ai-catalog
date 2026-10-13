@@ -105,18 +105,22 @@ code its `@QuarkusTest`s exercise) and reuse it for every scoped command.
 
 ### 1b. Classify every test class — the rule
 
-Run these per module (`<M>` = module directory, `.` for a single-module build). Patterns are portable ERE —
-`([^A-Za-z0-9_]|$)` stops `@QuarkusTest` from matching `@QuarkusTestResource`.
+Run these per module (`<M>` = module directory, `.` for a single-module build). Patterns are portable ERE,
+anchored to an annotation **at the start of a line** (`^[[:space:]]*@…`) so a Javadoc/KDoc or comment mention
+(`* see {@link QuarkusTest}`, `// unlike @QuarkusTest`) never misclassifies a class; `([^A-Za-z0-9_]|$)` stops
+`@QuarkusTest` from matching `@QuarkusTestResource`. A class annotated on the same line as other annotations
+(`@QuarkusTest @TestProfile(...)`) still matches; one written after another annotation on the same line
+(`@Tag("x") @QuarkusTest`) doesn't — if the counts look short, re-check with `grep -n '@Quarkus'`.
 
 ```bash
 # Container stage, always: packaged-artifact tests (Maven src/test; Gradle src/native-test, src/integrationTest)
-grep -rlE '@Quarkus(Main)?IntegrationTest([^A-Za-z0-9_]|$)' <M>/src --include='*.java' --include='*.kt'
+grep -rlE '^[[:space:]]*@Quarkus(Main)?IntegrationTest([^A-Za-z0-9_]|$)' <M>/src --include='*.java' --include='*.kt'
 # Full-app tests: unit or container stage, decided by the module rule below
-grep -rlE '@Quarkus(Main)?Test([^A-Za-z0-9_]|$)' <M>/src/test --include='*.java' --include='*.kt'
+grep -rlE '^[[:space:]]*@Quarkus(Main)?Test([^A-Za-z0-9_]|$)' <M>/src/test --include='*.java' --include='*.kt'
 # Unit stage, always
-grep -rlE '@QuarkusComponentTest([^A-Za-z0-9_]|$)' <M>/src/test --include='*.java' --include='*.kt'
+grep -rlE '^[[:space:]]*@QuarkusComponentTest([^A-Za-z0-9_]|$)' <M>/src/test --include='*.java' --include='*.kt'
 # Explicit containers: these files (and @QuarkusTest classes using them) are container stage
-grep -rlE '@(QuarkusTestResource|WithTestResource|Testcontainers)([^A-Za-z0-9_]|$)|org\.testcontainers\.' <M>/src/test --include='*.java' --include='*.kt'
+grep -rlE '^[[:space:]]*@(QuarkusTestResource|WithTestResource|Testcontainers)([^A-Za-z0-9_]|$)|^import[[:space:]]+(static[[:space:]]+)?org\.testcontainers\.' <M>/src/test --include='*.java' --include='*.kt'
 # Dev-Services-capable extensions in the module's build (add gradle/libs.versions.toml for a version catalog)
 find <M> -maxdepth 1 \( -name pom.xml -o -name build.gradle -o -name build.gradle.kts \) -exec grep -hoE 'quarkus-(jdbc-(postgresql|mysql|mariadb|mssql|oracle|db2)|reactive-(pg|mysql|mssql|oracle|db2)-client|mongodb-(client|panache)|redis-client|redis-cache|messaging-(kafka|amqp|rabbitmq|pulsar)|kafka-(client|streams)|oidc|elasticsearch-(rest|java)-client|hibernate-search-orm-elasticsearch|infinispan-client|apicurio-registry-avro|observability-devservices-lgtm|neo4j)([^A-Za-z0-9-]|$)' {} +
 # What the test profile configures for those services
@@ -296,15 +300,29 @@ prefixed to a Gradle command.
        for every target class this bucket changed or added. The measurement must come from the UNIT STAGE only:
        exactly these test classes, Dev Services disabled (<dev-services-off>), no verify, no Failsafe, no
        quarkusIntTest, nothing that starts Docker. <Maven: scope with -pl <module list> -am.> Quarkus specifics:
-       (1) Classes exercised by @QuarkusComponentTest are only visible to JaCoCo when io.quarkus:quarkus-jacoco is
-       on the test classpath (Quarkus >= 3.31): it instruments them offline and, by default, writes their data to
-       <module>/jacoco.exec in the module directory, not to the agent's exec file. On Maven, add
-       -Djacoco-agent.destfile=target/jacoco.exec so both land in one file before jacoco:report. On Gradle, in the
-       throwaway init script, also add `tasks.withType<Test>().configureEach { doFirst {
-       project.file(\"jacoco.exec\").delete() } }` and `tasks.withType<JacocoReport>().configureEach {
-       executionData(project.fileTree(project.projectDir) { include(\"jacoco.exec\") }) }`. (2) If container-free
-       @QuarkusTest classes are in the selection and quarkus-jacoco is present, also read its report
-       (target/jacoco-report/jacoco.xml or build/jacoco-report/jacoco.xml) and report it separately, labelled.
+       (1) Classes exercised by @QuarkusComponentTest (and, in the same run, by any container-free @QuarkusTest)
+       are only visible to JaCoCo through io.quarkus:quarkus-jacoco (Quarkus >= 3.31). Keep its data in its OWN
+       file and merge — never point it at the JaCoCo agent's exec file: two writers on one file in one JVM lose data
+       (a component-tested class drops to 0% as soon as a @QuarkusTest shares the run). If the build already wires
+       this (a surefire/test-task `jacoco-agent.destfile` of <build dir>/jacoco-quarkus.exec plus a jacoco `merge`
+       execution or a report reading both files), use it: Maven `test jacoco:merge@<merge execution id>
+       jacoco:report@<report execution id>`, Gradle `test jacocoTestReport`. Otherwise, ad hoc: Maven — run
+       `jacoco:prepare-agent test` with -Djacoco.exclClassLoaders='*QuarkusClassLoader'
+       -Djacoco-agent.destfile=target/jacoco-quarkus.exec -Dquarkus.jacoco.report=false, merge the two files with
+       the JaCoCo CLI (`mvn dependency:copy -Dartifact=org.jacoco:org.jacoco.cli:<jacoco version>:jar:nodeps
+       -DoutputDirectory=target/jacoco-cli`, then `java -jar target/jacoco-cli/org.jacoco.cli-<v>-nodeps.jar merge
+       target/jacoco.exec target/jacoco-quarkus.exec --destfile target/jacoco-merged.exec`), then
+       `jacoco:report -Djacoco.dataFile=target/jacoco-merged.exec`. Gradle — add to the throwaway init script, per
+       project: `tasks.withType<Test>().configureEach { val q = project.layout.buildDirectory
+       .file(\"jacoco-quarkus.exec\").get().asFile; jvmArgumentProviders.add(CommandLineArgumentProvider {
+       listOf(\"-Djacoco-agent.destfile=\" + q.absolutePath) }); doFirst { q.delete() };
+       extensions.findByType(JacocoTaskExtension::class.java)?.excludeClassLoaders = listOf(\"*QuarkusClassLoader\") }`
+       and `tasks.withType<JacocoReport>().configureEach { executionData(project.fileTree(project.layout
+       .buildDirectory) { include(\"jacoco/test.exec\", \"jacoco-quarkus.exec\") }) }` — a JVM argument, because
+       the Quarkus Gradle plugin resets the Test task's systemProperty() values. Add QUARKUS_JACOCO_REPORT=false to
+       the environment so quarkus-jacoco doesn't write (and wait for) its own second report. (2) Report from the
+       merged data only; quarkus-jacoco's own target/jacoco-report/ (if the project enables it) covers the same
+       classes and is not added on top.
        (3) Kover: report its figures and say whether component-test classes show any coverage. Report back, per
        target class, line and branch coverage with the report each came from, confirm the run was unit-stage only,
        and list any target class at 0% that a @QuarkusComponentTest in the selection exercises (coverage invisible
@@ -430,14 +448,17 @@ prefixed to a Gradle command.
    Release on **every** exit path — passed, failed, environmental failure, a blocked task, user interruption, a
    hard stop. A lock left behind blocks every later group (of every stack) for an hour.
 
-9. **Aggregate coverage — reported, never gated.** When `quarkus-jacoco` is present, 3.8's run writes its report
-   (`target/jacoco-report/jacoco.xml` / `build/jacoco-report/jacoco.xml`) covering everything that ran in the test
-   JVM. Via `iru-gate-runner`, read it for the bucket's target classes and report line/branch per class (or say it
-   doesn't exist and name what reports do). Note each class's delta against its 3.5 figure: a small delta means the
-   container tests check wiring; a large one (82% unit vs. 97% aggregate) means much of the class's behaviour is only
-   exercised with containers running — worth one line in Step 5. Never treat it as the gate, never re-run 3.5
-   against it, never re-run `verify` here to refresh it (that needs 3.8a's lock). Skip with a one-line note when 3.8
-   was unverified, skipped, or had no `quarkus-jacoco` — **the bucket's coverage verdict doesn't change**.
+9. **Aggregate coverage — reported, never gated.** 3.8's run produced execution data from both engines (the
+   agent's exec file and `quarkus-jacoco`'s, kept separate as in 3.5). Via `iru-gate-runner`, build one report from
+   their merge exactly as 3.5 does — the project's own merge/report executions (Maven `jacoco:merge@<id>
+   jacoco:report@<id>`, Gradle `jacocoTestReport`) or the JaCoCo CLI merge — **without re-running any test**, and
+   report line/branch per target class (or say no data exists and why). If the project only has `quarkus-jacoco`'s
+   own report (`target/jacoco-report/jacoco.xml` / `build/jacoco-report/jacoco.xml`), read that instead. Note each
+   class's delta against its 3.5 figure: a small delta means the container tests check wiring; a large one (82%
+   unit vs. 97% aggregate) means much of the class's behaviour is only exercised with containers running — worth
+   one line in Step 5. Never treat it as the gate, never re-run 3.5 against it, never re-run `verify` here to
+   refresh it (that needs 3.8a's lock). Skip with a one-line note when 3.8 was unverified or skipped — **the
+   bucket's coverage verdict doesn't change**.
 
 ## Step 4 — Finalize progress notes and notify the user
 
@@ -503,9 +524,17 @@ each with `jdbc-postgresql` + Panache, a plain unit test, a `@QuarkusComponentTe
   `@QuarkusIntegrationTest` via Failsafe, then wrote `target/jacoco-report/`. Gradle exposes `quarkusIntTest` and
   `testNative`.
 - Coverage: the plain JaCoCo agent reported **0%** for a class exercised only by `@QuarkusComponentTest`, with or
-  without `quarkus-jacoco`. With `quarkus-jacoco` present, its component-test data went to `<module>/jacoco.exec`
-  (and no `target/jacoco-report/` was written without a `@QuarkusTest`); `-Djacoco-agent.destfile=target/jacoco.exec`
-  (Maven) and the Gradle init-script `executionData(...)` fold both brought that class to 100%.
-- Not verified: Gradle container stage (no Docker socket inside the Gradle container), Kover with component tests,
+  without `quarkus-jacoco`. With `quarkus-jacoco` present and no `@QuarkusTest` in the run, its data went to
+  `<module>/jacoco.exec`. Pointing `jacoco-agent.destfile` at the agent's own `target/jacoco.exec` looked fine for a
+  pure unit-stage run but, with a `@QuarkusTest` sharing the run, dropped the component-tested class to its plain-test
+  figure and the resource to 0% (Maven, reproduced). The separate-file pattern — `jacoco-quarkus.exec` +
+  `exclClassLoaders=*QuarkusClassLoader` + merge — gave 100% for both, with and without a `@QuarkusTest`, on Maven
+  (JaCoCo CLI merge, then `jacoco:report -Djacoco.dataFile=…`) and Gradle (init script; `systemProperty()` from an
+  init script was silently ignored, the `jvmArgumentProviders` form works).
+- Classification greps are anchored at line start: a test class whose Javadoc mentions `@QuarkusTest`,
+  `@QuarkusIntegrationTest`, and `@QuarkusComponentTest` matched the unanchored pattern but none of the anchored
+  ones.
+- Not verified: the Gradle `quarkusIntTest` container stage, the `jacoco:merge@<id>` form against a
+  setup-generated build (that configuration was verified by `iru-setup-quarkus-service`), Kover with component tests,
   Compose Dev Services, `@QuarkusMainTest`, hexagonal multi-module builds with enforcer/ArchUnit, and Quarkus
   versions before 3.31 beyond the documented absence of component-test coverage support.

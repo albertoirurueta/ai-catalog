@@ -2,7 +2,7 @@
 name: iru-java-coverage
 description: Generate a code coverage report for a JVM (Java or Kotlin) project, scoped to the test selector given (same selector syntax as the `iru-java-test` skill), and report the exact line-coverage percentage for the specific class(es) touched. Maven — `mvn clean jacoco:prepare-agent test jacoco:report`, read from `target/site/jacoco/jacoco.csv`. Gradle (wrapper preferred, Kotlin DSL or Groovy) — JaCoCo via `./gradlew clean test --tests '<pattern>' jacocoTestReport` (CSV/XML under `build/reports/jacoco/test/`, both forced on through a throwaway init script when the build doesn't enable them), or Kover via `koverXmlReport` (`build/reports/kover/report.xml`) when the `org.jetbrains.kotlinx.kover` plugin is applied. Quarkus — also reads the `quarkus-jacoco` extension's report (`target/jacoco-report/` or `build/jacoco-report/`) for `@QuarkusTest` coverage. Falls back to the per-class HTML source report to show which lines/branches are still uncovered, and accounts for Kotlin's compiler-generated classes (`FooKt`, `Foo.Companion`, lambdas). Measures unit tests only — never runs Failsafe/`integrationTest`/`quarkusIntTest`. Invoke as `/iru-java-coverage <selector> [TargetClass1,TargetClass2,...]`, or `/iru-java-coverage` with no argument to run the full unit suite and report whole-project coverage. Use whenever the user wants to check, or verify a coverage bar (e.g. "at least 80% line coverage") for a class or set of classes, instead of eyeballing test output.
 model: haiku
-allowed-tools: Read Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(cat *) Bash(awk *) Bash(grep *) Bash(find *) Bash(ls *) Bash(mkdir *) Bash(python3 *) Bash(rm -f */jacoco.exec) Bash(rm -f jacoco.exec) Bash(QUARKUS_DEVSERVICES_ENABLED=false *)
+allowed-tools: Read Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(cat *) Bash(awk *) Bash(grep *) Bash(find *) Bash(ls *) Bash(mkdir *) Bash(python3 *) Bash(rm -f */jacoco.exec) Bash(rm -f jacoco.exec) Bash(QUARKUS_DEVSERVICES_ENABLED=false *) Bash(QUARKUS_JACOCO_REPORT=false *) Bash(java -jar *jacoco*cli*)
 ---
 
 # Java Coverage
@@ -236,18 +236,37 @@ figure is at least the higher of the two. A `@QuarkusTest` that needs Dev Servic
 unit test: when the caller's gate is "unit tests only", report its contribution separately, for information.
 
 **Quarkus `@QuarkusComponentTest` coverage** (verified on Quarkus 3.40). The ordinary JaCoCo agent reports **0%** for
-a class exercised only by `@QuarkusComponentTest`, whether or not `quarkus-jacoco` is present, because Quarkus
-transforms those classes. From Quarkus 3.31, `quarkus-jacoco` instruments component tests too, but writes their data
-to `<module>/jacoco.exec` (the module directory) and produces no `target/jacoco-report/` unless a `@QuarkusTest` also
-ran. Fold it into the ordinary report: on Maven add `-Djacoco-agent.destfile=target/jacoco.exec` to the Step 3
-command; on Gradle add to the init script, for each project, `tasks.withType<Test>().configureEach { doFirst {
-project.file("jacoco.exec").delete() } }` and `tasks.withType<JacocoReport>().configureEach { executionData(
-project.fileTree(project.projectDir) { include("jacoco.exec") }) }`. Without `quarkus-jacoco` (or on Quarkus < 3.31),
-report such classes as **unmeasured — exercised only by component tests**, never as 0% covered, and suggest adding the
-extension rather than adding it. Delete the stray `<module>/jacoco.exec` afterwards unless the project already
-ignores it. Container-free runs on Gradle disable Dev Services through the environment
-(`QUARKUS_DEVSERVICES_ENABLED=false ./gradlew …`) because `-D` doesn't reach the test JVM; on Maven
-`-Dquarkus.devservices.enabled=false` works.
+a class exercised only by `@QuarkusComponentTest`, whether or not `quarkus-jacoco` is present, because Quarkus loads
+those classes through its own class loader. From Quarkus 3.31, `quarkus-jacoco` instruments component tests (and
+`@QuarkusTest` subjects) itself; without a `@QuarkusTest` in the run its runtime writes to the `jacoco-agent.destfile`
+system property, default `<module>/jacoco.exec`. Keep that data in its **own** file and merge it with the agent's —
+never point `jacoco-agent.destfile` at the agent's exec file: two writers on one file in one JVM lose data (a
+component-tested class falls back to its plain-test figure, and `@QuarkusTest` subjects to 0%, as soon as a
+`@QuarkusTest` shares the run).
+
+- **The build already wires it** (a Surefire `systemPropertyVariables`/Gradle test-task `jacoco-agent.destfile` of
+  `<build dir>/jacoco-quarkus.exec`, the agent's `exclClassLoaders`/`excludeClassLoaders` = `*QuarkusClassLoader`, and
+  a `merge` execution or a `jacocoTestReport` reading both files): use it — Maven
+  `test jacoco:merge@<merge id> jacoco:report@<report id>` (ids from the pom), Gradle `test jacocoTestReport`.
+- **Maven, ad hoc**: add `-Djacoco.exclClassLoaders='*QuarkusClassLoader' -Djacoco-agent.destfile=target/jacoco-quarkus.exec
+  -Dquarkus.jacoco.report=false` to the Step 3 run (drop `jacoco:report` from it), then merge with the JaCoCo CLI —
+  `mvn dependency:copy -Dartifact=org.jacoco:org.jacoco.cli:<jacoco version>:jar:nodeps -DoutputDirectory=target/jacoco-cli`,
+  `java -jar target/jacoco-cli/org.jacoco.cli-<version>-nodeps.jar merge target/jacoco.exec target/jacoco-quarkus.exec
+  --destfile target/jacoco-merged.exec` — and report with `jacoco:report -Djacoco.dataFile=target/jacoco-merged.exec`.
+- **Gradle, ad hoc**: add to the throwaway init script, for each project, `tasks.withType<Test>().configureEach { val q =
+  project.layout.buildDirectory.file("jacoco-quarkus.exec").get().asFile; jvmArgumentProviders.add(
+  CommandLineArgumentProvider { listOf("-Djacoco-agent.destfile=" + q.absolutePath) }); doFirst { q.delete() };
+  extensions.findByType(JacocoTaskExtension::class.java)?.excludeClassLoaders = listOf("*QuarkusClassLoader") }` and
+  `tasks.withType<JacocoReport>().configureEach { executionData(project.fileTree(project.layout.buildDirectory) {
+  include("jacoco/test.exec", "jacoco-quarkus.exec") }) }`. It must be a JVM argument: a `systemProperty()` set from
+  an init script is reset by the Quarkus Gradle plugin and silently ignored. Run with `QUARKUS_JACOCO_REPORT=false` in
+  the environment so `quarkus-jacoco` doesn't write (and wait for) its own second report.
+
+Without `quarkus-jacoco` (or on Quarkus < 3.31), report such classes as **unmeasured — exercised only by component
+tests**, never as 0% covered, and suggest adding the extension rather than adding it. Delete a stray
+`<module>/jacoco.exec` left by an earlier run unless the project already ignores it. Container-free runs on Gradle
+disable Dev Services through the environment (`QUARKUS_DEVSERVICES_ENABLED=false ./gradlew …`) because `-D` doesn't
+reach the test JVM; on Maven `-Dquarkus.devservices.enabled=false` works.
 
 ## Step 5 — Report results
 

@@ -162,8 +162,8 @@ query/migration — a `@QuarkusTest` (`*Test`) the group skill will run. Cover e
 boundaries, and the happy path; one test class per production class.
 
 Then run the **plain and `@QuarkusComponentTest` classes this task added or changed**, and nothing else. Classify
-them by annotation first (`grep -lE '@Quarkus(Test|IntegrationTest|MainTest|MainIntegrationTest)([^A-Za-z0-9_]|$)'
-<files>` must return none of the files you pass):
+them by annotation first (`grep -lE '^[[:space:]]*@Quarkus(Test|IntegrationTest|MainTest|MainIntegrationTest)([^A-Za-z0-9_]|$)'
+<files>` must return none of the files you pass — anchored at line start so a Javadoc/KDoc mention doesn't count):
 
 ```bash
 # Maven
