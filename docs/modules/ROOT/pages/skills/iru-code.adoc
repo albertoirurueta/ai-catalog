@@ -1,6 +1,6 @@
 = Code
 :description: Executes implementation_plan.md end to end, implementing and validating each task group in order, then updates docs and archives the finished plan.
-:keywords: iru-code, claude code skill, implementation plan, automated coding, code quality gate, security baseline, test coverage, java, dotnet, typescript, android, swift, github issue
+:keywords: iru-code, claude code skill, implementation plan, automated coding, code quality gate, security baseline, test coverage, java, dotnet, typescript, kotlin, quarkus, php, nestjs, nextjs, android, swift, github issue
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -12,8 +12,10 @@ skill orchestrates the actual implementation work; it is the execution counterpa
 
 `iru-code` is the autonomous orchestration engine of the catalog. Given a plan produced by `iru-plan` (or by `iru-issue`,
 which runs `iru-plan` internally), it determines which language/framework key(s) are in play, captures a
-project-wide code-quality baseline (via `iru-java-code-quality`, `iru-dotnet-code-quality`, `iru-typescript-code-quality`,
-`iru-android-code-quality`, `iru-swift-code-quality`, or whichever `<key>-code-quality` skill matches) and a
+project-wide code-quality baseline (via `iru-java-code-quality`, `iru-kotlin-code-quality`, `iru-php-code-quality`,
+`iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-android-code-quality`, `iru-swift-code-quality`, resolved
+per key: framework keys share their language's gate, e.g. `java-springboot` uses the Java one, `kotlin-springboot` the
+Kotlin one, `quarkus` the Java or Kotlin one depending on the build, `nestjs`/`nextjs` the TypeScript one) and a
 project-wide security baseline (via `iru-check-security`), then works
 through every task **group** in plan order — dispatching each group to `iru-code-one-task-group`, which resolves
 each task's language and delegates to the matching `<key>-code-one-task-group` skill (implementing, testing,
@@ -135,25 +137,29 @@ flowchart TD
 Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than directly,
 so verbose report output stays out of `iru-code`'s own context window and only the distilled outcome comes back:
 
-* xref:skills/iru-java-code-quality.adoc[] / xref:skills/iru-dotnet-code-quality.adoc[] /
+* xref:skills/iru-java-code-quality.adoc[] / xref:skills/iru-kotlin-code-quality.adoc[] /
+  xref:skills/iru-php-code-quality.adoc[] / xref:skills/iru-dotnet-code-quality.adoc[] /
   xref:skills/iru-typescript-code-quality.adoc[] / xref:skills/iru-android-code-quality.adoc[] /
-  xref:skills/iru-swift-code-quality.adoc[] — Step 3 (project-wide baseline, once per language/framework key
+  xref:skills/iru-swift-code-quality.adoc[] — whichever one each key resolves to (`java`/`java-springboot` → Java;
+  `kotlin-springboot` and a Kotlin `quarkus` → Kotlin; `quarkus` on Java → Java; `php` → PHP; `typescript`/`nestjs`/
+  `nextjs` → TypeScript; other keys → `iru-<key>-code-quality`) — Step 3 (project-wide baseline, once per language/framework key
   involved) and Step 7 (final project-wide comparison against that baseline).
 * xref:skills/iru-check-security.adoc[] — Step 3 (project-wide baseline) and Step 7 (final comparison) — any increase
   is a hard stop, unlike the quality gate's "accept as-is" option.
 * A final full-build verification (Step 7), run once per language/framework key in the plan through
   `iru-gate-runner` as a raw command rather than via a skill: the full verification command the repository's
   `CLAUDE.md` names for that stack, else a per-key default (`mvn clean jacoco:prepare-agent install jacoco:report
-  javadoc:jar source:jar -P '!build-extras'` for `java`, `mvn -B -ntp clean verify` for `java-springboot`,
-  `dotnet build && dotnet test`, the package manager's `lint`/`typecheck`/`test` scripts for `typescript`,
-  `./gradlew build` for `android`, `swift build && swift test` or `xcodebuild build-for-testing` for `swift`);
+  javadoc:jar source:jar -P '!build-extras'` for `java` on Maven, `mvn -B -ntp clean verify` for `java-springboot`,
+  `./mvnw -B -ntp clean verify` or `./gradlew build` for `kotlin-springboot` and `quarkus` (container-backed tests
+  need Docker), `composer validate --strict` plus the project's composer test/lint scripts for `php`,
+  `dotnet build && dotnet test`, the package manager's `lint`/`typecheck`/`test` scripts for `typescript` (then
+  `npm run build` for `nestjs`/`nextjs`), `./gradlew build` for `android`, `swift build && swift test` or
+  `xcodebuild build-for-testing` for `swift`);
   skipped when no key could be resolved.
 
 === Invoked by
 
-* xref:skills/iru-issue.adoc[] — Step 6, when the user chooses automatic implementation over manual review,
-  invokes `iru-code` via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent so the whole
-  implementation run starts from a clean context.
+* xref:skills/iru-issue.adoc[] — Step 6, full implementation run in a clean context, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * Also invoked directly by a person via `/iru-code`, once a `iru-plan`-produced `implementation_plan.md` exists at
   the repository root — no orchestrating skill required.
 
@@ -163,7 +169,8 @@ so verbose report output stays out of `iru-code`'s own context window and only t
   and comparison (Steps 3 and 7) and the final build verification. Per-group implementation and validation
   (license headers, doc comments, scoped tests, coverage, per-group quality) is no longer spawned directly by
   `iru-code` — it happens two levels down, inside whichever `<key>-code-one-task-group` skill handles each group's
-  bucket of tasks.
+  bucket of tasks (Java, Spring Boot, Kotlin Spring Boot, Quarkus, PHP, .NET, TypeScript, NestJS, Next.js, Android,
+  Swift).
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per task group (Step 4)
   to invoke `iru-code-one-task-group`, so a plan with many groups doesn't accumulate every group's full
   implementation transcript in `iru-code`'s own context.

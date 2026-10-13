@@ -1,5 +1,5 @@
 = PR Description
-:description: Drafts a pull request description from the real code diff, against an inherited base branch, and opens or updates a PR on GitHub, Bitbucket, or Azure DevOps.
+:description: Drafts a pull request description from the real code diff, against an inherited base branch, and opens or updates a PR on GitHub, Bitbucket or Azure.
 :keywords: iru-pr-description, claude code skill, github, bitbucket, azure devops, pull request, base branch, draft pr description, git diff analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -86,19 +86,19 @@ to open a new pull request. When the work resolves a known ticket, the suggested
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-pr-description] --> B["Step 1: Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
+    A["Start /iru-pr-description"] --> B["Step 1: Detect repository host\n(GitHub/Bitbucket/Azure DevOps/TFS)"]
     B --> B2["Step 2: Resolve base branch\n(args, then this conversation's iru-issue run,\nthen the plan's 'Base branch:' line,\nthen the repository default)"]
     B2 --> C["Step 2: Determine current branch;\ncheck for changes against that base\n(stat only, not full diff)"]
-    C --> D{Any changes to describe?}
-    D -- no --> Z[Tell user, stop]
+    C --> D{"Any changes to describe?"}
+    D -- no --> Z["Tell user, stop"]
     D -- yes --> C2["Step 2: Delegate full diff read\n+ drafting to a sub-agent"]
     C2 --> E["Step 3: Check whether a PR\nalready exists via the host's own tool"]
     E --> F["Step 4: Show the drafted\ndescription to the user"]
-    F --> G[Strip/flag Mermaid if host is Bitbucket]
-    G --> H{PR already exists?}
+    F --> G["Strip/flag Mermaid if host is Bitbucket"]
+    G --> H{"PR already exists?"}
     H -- yes --> I["Step 5: Show existing body vs draft,\nask to replace"]
     I -- yes --> J["Edit PR body via host-matching tool"]
-    I -- no --> Y[Stop - draft is the deliverable]
+    I -- no --> Y["Stop - draft is the deliverable"]
     H -- no --> K["Step 6: Ask whether to commit,\npush, and open a new PR"]
     K -- decline --> Y
     K -- accept --> L["Collect branch name, destination\nbranch, and title via AskUserQuestion"]
@@ -117,11 +117,8 @@ DevOps MCP tools); it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-issue.adoc[] — Step 8 runs `iru-pr-description` to fill in the description of the pull request
-  it just opened for the ticket, passing the base branch it resolved and confirmed with the user in its Step 4.2
-  as a `base-branch` argument.
-* xref:skills/iru-release.adoc[] — Step 14 runs `iru-pr-description` to fill in the description of the release
-  branch's pull request, passing that PR's target branch (`main`/`master`) as a `base-branch` argument.
+* xref:skills/iru-issue.adoc[] — Step 8.4, to draft the PR description, passing base-branch.
+* xref:skills/iru-release.adoc[] — Step 11, fills in the release PR description.
 
 === Related agents
 

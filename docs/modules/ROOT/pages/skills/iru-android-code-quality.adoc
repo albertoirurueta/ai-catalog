@@ -104,9 +104,7 @@ Spotless/ktlint reports, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
-  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
-  baseline for the `android` language/framework key.
+* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for Android plans, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-android-code-one-task-group.adoc[] — Steps 1 and 3.6, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every class the
   bucket touches and later diff the post-change result against it.

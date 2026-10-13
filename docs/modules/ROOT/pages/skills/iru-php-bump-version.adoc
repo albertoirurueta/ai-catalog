@@ -1,0 +1,111 @@
+= PHP Bump Version
+:description: Sets a PHP project's version to an exact value in every flavor-specific location for Laravel, WordPress, PrestaShop or Composer libraries.
+:keywords: iru-php-bump-version, claude code skill, php, version bump, laravel, wordpress, prestashop, composer, release, dev version
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a PHP project's version to an exact, caller-supplied value across every file its flavor keeps a version in, following
+the catalog's `x.y.z-dev` development-version convention.
+
+== Purpose
+
+`iru-php-bump-version` never computes a version; it validates the given string (`X.Y.Z` or `X.Y.Z-dev`, flagging
+anything else) and applies it. An embedded Python helper with `--list` and `--dry-run` modes detects the flavor and
+rewrites exactly the known locations: Laravel `config/app.php` `'version'`; WordPress plugin or theme `Version:`
+header plus `<PREFIX>_VERSION` constant; PrestaShop `$this->version` plus a tracked `config.xml`. WordPress
+`readme.txt` `Stable tag:` is written only for release versions, and a `package.json` version is updated through
+`npm version --no-git-tag-version` so its lockfile follows. A plain Composer library has no in-tree version (the git tag
+is the version), so nothing changes and that is reported. The helper refuses to write when locations disagree until the
+user confirms. Step 5 documents the pre-release convention that `iru-release` calls it against, including the PrestaShop
+`VARCHAR(8)` truncation caveat for `-dev` values. It can optionally sync README and Antora version mentions.
+
+== Purpose group
+
+xref:index.adoc#group-php[PHP Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-php-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<new-version>`
+|Yes
+|Literal target version, such as `1.4.0` or `1.5.0-dev`. Never computed by this skill.
+|Asked for if missing.
+
+|`sync-files`
+|No
+|`yes` or `no`: also update README and Antora version mentions.
+|Ask when such mentions exist.
+
+|`next-version`
+|No
+|Upcoming development version that "Current development version" markers should show after a release. Only meaningful
+with `sync-files: yes`.
+|None
+
+|`dry-run`
+|No
+|`yes` prints the diff and writes nothing, running no mutating command.
+|`no`
+|===
+
+== Outputs
+
+* Updated version locations for the detected flavor, and a synchronized `package.json` and lockfile via npm for WordPress.
+* Optionally updated README and Antora mentions.
+* A report: flavor and detection, each location with its old value, the new version, every file touched (or that a library
+  changed nothing), whether `Stable tag:` was written, any PrestaShop upgrade-script note or `-dev` caveat, and the
+  `php -l` result.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: resolve inputs\nask for version if missing"] --> S1["Step 1: validate X.Y.Z or X.Y.Z-dev\nwarn and ask if non-conventional"]
+    S1 --> S2["Step 2: write helper, detect flavor,\nrun --list"]
+    S2 --> L{"Flavor is library?"}
+    L -- yes --> LR["Report: git tag is the version;\nnothing changed"]
+    L -- no --> M{"Required location missing\nor locations disagree?"}
+    M -- yes --> Q["Ask user: add location or align\nwith --force"]
+    M -- no --> S3
+    Q --> S3["Step 3: look for mirrored mentions"]
+    S3 --> D{"dry-run?"}
+    D -- yes --> DR["Step 4: show diff only; stop"]
+    D -- no --> S4["Step 4: apply helper;\nnpm version for package.json"]
+    S4 --> S6["Step 6: --list agreement and php -l"]
+    S6 --> S7{"Sync files?"}
+    S7 -- yes --> SY["Step 7: scoped README/Antora updates"]
+    S7 -- no --> S8
+    SY --> S8["Step 8: report"]
+    DR --> S8
+    LR --> S8
+....
+
+== Dependencies
+
+=== Invokes
+
+None — it runs an embedded Python helper and `npm version` directly. It points to `iru-typescript-bump-version`'s command
+only as a reference for pnpm/yarn `package.json` handling.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, version bump for PHP/Composer/WordPress/PrestaShop projects.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-php-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

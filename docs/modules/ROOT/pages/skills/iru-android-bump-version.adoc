@@ -48,6 +48,14 @@ flagged, not hard-stopped.
 Antora page showing a dependency snippet.
 |Ask — the skill asks once, after Step 2 confirms whether such mentions actually exist.
 
+|`next-version` (args)
+|No
+|The upcoming pre-release version (e.g. `1.5.0-SNAPSHOT`). Only meaningful with `sync-files: yes`: "Latest
+snapshot"/"Current development version" markers in README/Antora show it, while "Latest release" markers show
+`new-version`, so a release never regresses a development marker to the release value. `iru-release` passes it.
+|None — a development marker is then set to `new-version` only if that is itself a pre-release; otherwise it is left
+untouched and the report warns the caller to pass `next-version`.
+
 |`dry-run` (args)
 |No
 |When `yes`, compose and show the diff for every file that would change, then stop without writing anything or
@@ -60,7 +68,7 @@ running the Gradle sanity check.
 * `lib/build.gradle.kts`'s `val libraryVersion = "…"` updated to the new version, when a `lib` module exists.
 * `app/build.gradle.kts`'s `versionName` updated to the new version, when an `app` module exists; `versionCode`
   incremented by exactly 1 only when `<new-version>` does not end in `-SNAPSHOT` (left unchanged otherwise).
-* Optionally, `README.md`'s dependency snippet, `docs/antora.yml`'s `version:` field, and/or Antora pages with a
+* Optionally, `README.md`'s dependency snippet (release/development markers mapped using `next-version` when given), `docs/antora.yml`'s `version:` field, and/or Antora pages with a
   literal dependency snippet, if `sync-files` was accepted.
 * A `./gradlew -q help` sanity check confirming the rewritten Kotlin DSL is still syntactically valid (skipped on
   a `dry-run`).
@@ -73,7 +81,7 @@ running the Gradle sanity check.
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-android-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, dry-run]"] --> B{new-version given\nand not blank/whitespace?}
+    A["Start /iru-android-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, next-version, dry-run]"] --> B{new-version given\nand not blank/whitespace?}
     B -- no --> C["Ask user for the\ntarget version string"]
     C --> D
     B -- yes --> D["Validate shape against\nX.Y.Z / X.Y.Z-SNAPSHOT regex\n(warn, don't stop, if it doesn't match)"]
@@ -94,7 +102,7 @@ flowchart TD
     N --> Q
     Q -- no --> R["Ask whether to sync\nREADME / antora.yml / dependency pages"]
     R --> S
-    Q -- yes --> S["Update accepted files"]
+    Q -- yes --> S["Update accepted files\n(release vs. development markers\nmapped via next-version)"]
     S --> T["Report: old/new version, files changed,\nversionCode decision, gradlew result,\nreview-before-commit warning"]
 ....
 
@@ -107,9 +115,7 @@ check, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-release.adoc[] — Step 6, when the detected ecosystem is Android/Gradle, called twice per
-  release (once with the stripped release version, once with the next `x.y.(z+1)-SNAPSHOT` version) to apply
-  each computed version string in turn.
+* xref:skills/iru-release.adoc[] — Step 6, version bump for Android/Gradle projects.
 
 === Related agents
 

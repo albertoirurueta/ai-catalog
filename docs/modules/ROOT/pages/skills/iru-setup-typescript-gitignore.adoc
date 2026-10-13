@@ -1,6 +1,6 @@
 = Setup TypeScript Gitignore
-:description: Creates or updates a TypeScript/npm project's root .gitignore, announcing scratch vs update and asking Update, Keep as is or Replace.
-:keywords: iru-setup-typescript-gitignore, claude code skill, npm, node, angular, vite, react native, ionic, hilla, gitignore, bootstrap
+:description: Creates or updates a TypeScript/npm project's root .gitignore, including NestJS, Next.js and Prisma paths, asking Update, Keep as is or Replace.
+:keywords: iru-setup-typescript-gitignore, claude code skill, npm, nestjs, nextjs, prisma, angular, vite, react native, gitignore
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -14,7 +14,10 @@ change and getting explicit approval first.
 (`node_modules/`, build/output directories, test/coverage output, TypeScript incremental-build info, lint caches,
 env files, OS/editor noise) plus conditionally-detected sections for whichever package manager, frontend
 framework, and documentation tooling are actually present in the target repository — pnpm/Yarn debug logs,
-Angular, React/Vite (and Storybook), React Native/Expo, Ionic/Capacitor, Playwright, Turborepo, Istanbul/nyc,
+Angular, React/Vite (and Storybook), NestJS (logs, runtime and diagnostic files, test reports), Next.js (`.next/`,
+`next-env.d.ts`, `.vercel`, matching `create-next-app`), a Prisma client generated inside the source tree (the path is
+read from `schema.prisma`; migrations are never ignored), the repository-wide `.integration-test.lock/` used by the
+NestJS/Next.js coding skills, React Native/Expo, Ionic/Capacitor, Playwright, Turborepo, Istanbul/nyc,
 Antora docs build output, TypeDoc/Compodoc API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a
 Maven project. It never invents entries for things that aren't actually present. If `.gitignore` already exists,
 it is treated as sensitive: the skill announces it is updating rather than creating from scratch, reads it, composes
@@ -56,7 +59,7 @@ the Update / Keep / Replace question.
 |===
 
 Everything else is derived by exploring the target repository directly (`package.json`'s `packageManager` field and
-lockfile, `angular.json`, `vite.config.*`, `.storybook/`, `app.json` with an `"expo"` key, `capacitor.config.*`,
+lockfile, `angular.json`, `vite.config.*`, `.storybook/`, `nest-cli.json`, `next.config.*`, `prisma/schema.prisma`, `app.json` with an `"expo"` key, `capacitor.config.*`,
 `playwright.config.*`, `turbo.json`, `.nycrc`, `docs/antora.yml` / `docs/antora-playbook.yml`, `typedoc.json`, and a
 `pom.xml` depending on `hilla-spring-boot-starter` / `com.vaadin:hilla` or a `src/main/frontend/` directory).
 
@@ -70,7 +73,8 @@ lockfile, `angular.json`, `vite.config.*`, `.storybook/`, `app.json` with an `"e
   **Keep as is** (nothing written) or **Replace** (template-only draft; the hand-added lines that would be lost are
   listed) — or `on-existing` answers it. If the merged draft is identical to the current file, the question is
   skipped and the outcome is "kept as is".
-* A closing report naming which conditional sections (package manager, Angular, React/Vite, React Native/Expo,
+* A closing report naming which conditional sections (package manager, Angular, React/Vite, NestJS, Next.js, Prisma client,
+  integration-test lock, React Native/Expo,
   Ionic/Capacitor, Playwright, Turborepo, nyc, Antora, TypeDoc/Compodoc, Hilla) were included versus skipped and
   why, the action taken (created / updated / replaced / kept as is, and whether it came from the user or `on-existing`), which hand-added lines were preserved or dropped, plus warnings that detection is heuristic and that already-tracked files under a newly-ignored directory
   need a manual `git rm -r --cached`.
@@ -90,7 +94,7 @@ flowchart TD
     D1 -- no --> C
     C --> E{"Tracked files already\nunder dist/build/out?"}
     E -- yes --> F["Ask user: keep ignoring\nor drop from template"]
-    E -- no --> G["Detect project-specific additions:\npackage manager, Angular, React/Vite,\nReact Native/Expo, Ionic/Capacitor,\nPlaywright, Turborepo, nyc,\nAntora, TypeDoc/Compodoc, Hilla"]
+    E -- no --> G["Detect project-specific additions:\npackage manager, Angular, React/Vite,\nNestJS, Next.js, Prisma client, test lock,\nReact Native/Expo, Ionic/Capacitor,\nPlaywright, Turborepo, nyc,\nAntora, TypeDoc/Compodoc, Hilla"]
     F --> G
     G --> H["Compose merged draft and\ntemplate-only draft"]
     H --> I{"Did .gitignore\nalready exist?"}
@@ -112,10 +116,7 @@ None — `iru-setup-typescript-gitignore` is a leaf skill; it does not call any 
 
 === Invoked by
 
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 7 runs `iru-setup-typescript-gitignore` (via
-  `iru-isolated-skill-executor`) after the flavor-specific scaffold skill and `iru-setup-antora` have run, so it
-  can detect their generated files already in place. It forwards `on-existing` only if its own `args` received it; everything else is derived by
-  exploring the repository directly.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 7, root .gitignore, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

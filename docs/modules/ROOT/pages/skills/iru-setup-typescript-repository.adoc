@@ -1,21 +1,22 @@
 = Setup TypeScript Repository
-:description: End-to-end bootstrap or update of an npm/TypeScript repository of five flavors (library, react, angular, react-native, ionic) in one pass.
-:keywords: iru-setup-typescript-repository, claude code skill, npm, typescript, vite, angular, react native, ionic, sonar, repository bootstrap
+:description: End-to-end bootstrap or update of an npm/TypeScript repository of seven flavors (library, react, nextjs, angular, nestjs, react-native, ionic).
+:keywords: iru-setup-typescript-repository, claude code skill, npm, typescript, nextjs, nestjs, angular, react native, ionic, repository bootstrap
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-End-to-end bootstrap for an npm/TypeScript repository of any of five flavors. It collects the flavor, the
+End-to-end bootstrap for an npm/TypeScript repository of any of seven flavors. It collects the flavor, the
 project's identity, and the shared pipeline parameters once, announces whether it is setting up from scratch or
 updating an existing repository, then orchestrates six other skills in a fixed order so nothing is asked twice.
 
 == Purpose
 
 `iru-setup-typescript-repository` is the front door for starting (or catching up) a brand-new npm/TypeScript
-repository, whatever its shape — a published library, a React or Angular web app, or a React Native or Ionic
-mobile app. Rather than duplicating each flavor's scaffold logic, documentation setup, `.gitignore` rules, CI
+repository, whatever its shape — a published library, a React, Next.js or Angular web app, a NestJS backend
+service, or a React Native or Ionic mobile app. Rather than duplicating each flavor's scaffold logic, documentation setup, `.gitignore` rules, CI
 workflows, changelog bootstrapping, or README generation, it resolves the `flavor` and `mode`, gathers the
 project's identity and the shared pipeline parameters (open-source, publish/distribution, Sonar, integration
-branch, Node version, package manager, repository visibility, CI, CI test scope, GitHub Pages) once, and passes each
+branch, Node version, package manager, repository visibility, CI, CI test scope, GitHub Pages) plus the
+flavor-specific choices that shape later steps (NestJS `orm`/`database`, Next.js `output`/`e2e`) once, and passes each
 downstream skill only the `args` keys it actually accepts. It opens with a "Setup mode" statement and an inventory
 of every component it owns (absent / present / partial); the keep/update/replace question for pre-existing files is
 asked by each sub-skill, never by this orchestrator, and the final report lists the action taken per component.
@@ -44,8 +45,10 @@ Optionally followed by `args` (`key: value` lines, one per line) to pre-resolve 
 
 |`flavor`
 |No
-|`library`/`react`/`angular`/`react-native`/`ionic`. Resolved via two short `AskUserQuestion` rounds when absent
-(mobile app then React Native vs. Ionic), plus a further round for Ionic's own `framework` choice.
+|`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-native`/`ionic`. Pre-selected from an `iru-explore`
+`Project type:` line earlier in the conversation (confirmed with one question), otherwise resolved via two short
+`AskUserQuestion` rounds (web app then React/Next.js/Angular; mobile app then React Native vs. Ionic; backend
+service sets `nestjs` directly), plus a further round for Ionic's own `framework` choice.
 |Asked
 
 |`mode`
@@ -65,7 +68,8 @@ arrived via `args`, so they apply it instead of asking per pre-existing file.
 `organization-url` / `directory` / `storybook`
 |Yes (per flavor)
 |Free-text project-identity fields, asked directly; which apply depends on the resolved flavor (e.g. `scope` is
-library-only, `app-id` is Ionic-only, `description` is not collected for angular/react-native).
+library-only, `app-id` is Ionic-only, `description` is not collected for angular/react-native). `name` is mapped to
+each scaffold skill's own key (`package-name`, `app-name` or `name`).
 |None — user must supply
 
 |`open-source`
@@ -90,14 +94,15 @@ workflows, `security.yml`, or Dependabot config) and `ci-tests`/`pages` are not 
 
 |`ci-tests`
 |No
-|`unit`/`full`. Only asked when `ci: yes` for `react`/`angular`/`ionic`, the flavors with a Playwright e2e step in
-`build.yml`: unit tests only (recommended for private/internal) or unit plus e2e (recommended for public). Left
-unset for `library`/`react-native`.
+|`unit`/`full`. Only asked when `ci: yes` for `react`/`angular`/`ionic`, `nextjs` with `e2e: playwright`, and `nestjs`
+(whose e2e suite starts a real database via Testcontainers when `orm` is set): unit tests only (recommended for
+private/internal) or unit plus e2e (recommended for public). Left unset for `library`/`react-native` and `nextjs`
+with `e2e: none`.
 |Asked where applicable
 
 |`pages`
 |No
-|`yes`/`no`: publish the Antora site (and, for `react`/`angular`, the web app) to GitHub Pages. Defaults to `yes` for
+|`yes`/`no`: publish the Antora site (and, for `react`/`angular`/static `nextjs`, the web app) to GitHub Pages. Defaults to `yes` for
 public repositories without asking; for private/internal, `no` is recommended because Pages needs a paid plan and
 the site would be public.
 |`yes` if public, else asked
@@ -109,8 +114,9 @@ the site would be public.
 
 |`distribution`
 |No
-|React Native/Ionic only: `none`/`internal`/`store`.
-|`store` if open source, else asked (`internal` recommended)
+|React Native/Ionic: `none`/`internal`/`store`. NestJS and server-output Next.js: `none`/`internal` only, where
+`internal` pushes the container image to GHCR. Static Next.js export: forced to `none` without asking.
+|`store` if open source (mobile), else asked (`internal` recommended)
 
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No
@@ -127,9 +133,24 @@ the site would be public.
 |Ionic only: its own UI framework, `angular` or `react`.
 |Asked
 
+|`orm` / `database`
+|No
+|NestJS only: `none`/`typeorm`/`prisma`/`mongoose`/`drizzle` and `postgresql`/`mysql`/`mongodb` (asked only when
+`orm` is not `none`). Collected here because the workflows skill needs `orm`. `module-system` and `http` are left
+for the scaffold to ask.
+|`none`
+
+|`output` / `e2e`
+|No
+|Next.js only: `server` (standalone Node) or `static` (export, deployable to Pages), and `playwright`/`none`. Collected
+here because they change `release.yml` and `build.yml`. `router`, `cache-components` and `styling` are left for the
+scaffold to ask.
+|Asked
+
 |`integration-branch` / `stable-branch` / `node-version` / `package-manager`
 |No
-|Shared pipeline parameters fed to the scaffold and workflow skills.
+|Shared pipeline parameters fed to the scaffold and workflow skills. `integration-branch` is also forwarded to
+`iru-setup-typescript-library` only, for its changeset `baseBranch`.
 |`develop` / `main` / `24` / `npm`
 |===
 
@@ -139,7 +160,8 @@ Also accepted: `distribution`'s and `sonar`'s detail keys as listed above, and `
 
 * A "Setup mode" announcement (from scratch vs updating an existing repository) with a per-component inventory.
 * The flavor's own scaffold output — `package.json` and toolchain files (via `iru-setup-typescript-library`,
-  `iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, or `iru-setup-ionic-app`). When files
+  `iru-setup-react-web`, `iru-setup-nextjs-web`, `iru-setup-angular-web`, `iru-setup-nestjs-app`,
+  `iru-setup-react-native-app`, or `iru-setup-ionic-app`). When files
   already exist, the scaffold skill itself asks Update / Keep as is / Replace per file (or applies `on-existing`).
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * A root `.gitignore` covering `node_modules/`, build output, coverage, and the Antora build output (via
@@ -162,11 +184,11 @@ context for private repositories, the consolidated required-secrets table, decis
 flowchart TD
     A[Start /iru-setup-typescript-repository] --> B["Step 0: Parse args\n(key: value lines)"]
     B --> C{"Step 1: Resolve flavor &amp; mode"}
-    C -- flavor unset --> C1["AskUserQuestion:\nlibrary / react / angular / mobile app,\nthen react-native vs ionic,\nthen ionic framework"]
+    C -- flavor unset or\nfrom iru-explore --> C1["AskUserQuestion:\nlibrary / web app / backend service / mobile app,\nthen react vs nextjs vs angular,\nreact-native vs ionic, ionic framework"]
     C1 --> C2
     C -- flavor set --> C2["Announce setup mode:\nfrom scratch, or updating with\ncomponent inventory"]
     C2 --> D["Step 2: Collect project identity\n(skipped when mode existing and\npackage.json present)"]
-    D --> E["Step 3: Collect flavor-specific inputs\n(directory, storybook, app-slug,\nnative-builds, etc.)"]
+    D --> E["Step 3: Collect flavor-specific inputs\n(directory, storybook, app-slug,\nnative-builds, nestjs orm, nextjs output/e2e)"]
     E --> F["Step 4: Collect shared pipeline params\n(open-source, visibility, ci, publish/distribution,\nsonar, ci-tests, pages, branches, node, package manager)"]
     F --> I["Step 5: Run flavor's scaffold skill\n(via sub-agent; it asks\nUpdate / Keep / Replace per file)"]
     I -- user chose stop --> J[Stop entire pipeline; report]
@@ -174,7 +196,7 @@ flowchart TD
     K --> L["Step 7: Run setup-typescript-gitignore\n(via sub-agent)"]
     L --> L2{"Step 8: ci is no?"}
     L2 -- yes --> L3["Skip workflows and security block;\nrecord skipped in report"]
-    L2 -- no --> M["Derive docs-tool;\nrun setup-typescript-github-workflows\n(via sub-agent)"]
+    L2 -- no --> M["Derive docs-tool from flavor\n(or from disk for nextjs/nestjs);\nrun setup-typescript-github-workflows\n(via sub-agent)"]
     M -- workflows existed, user stopped --> N["Note in report;\ncontinue"]
     M -- ok --> N
     L3 --> N
@@ -196,6 +218,12 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
   library toolchain, passing identity and pipeline `args`.
 * xref:skills/iru-setup-react-web.adoc[] — Step 5, when `flavor: react`: scaffolds a Vite React app, passing
   identity, pipeline, and `storybook` `args` (no `publish`/`distribution` key).
+* xref:skills/iru-setup-nextjs-web.adoc[] — Step 5, when `flavor: nextjs`: scaffolds a Next.js app, passing
+  identity, `output`, `e2e`, `distribution`, `package-manager`, `node-version` and pipeline `args`; `router`,
+  `cache-components` and `styling` only if they arrived via `args`. `pages` is deliberately not sent.
+* xref:skills/iru-setup-nestjs-app.adoc[] — Step 5, when `flavor: nestjs`: scaffolds a NestJS service, passing
+  identity, `orm`, `database` (only when `orm` is not `none`), `distribution`, `package-manager`, `node-version` and
+  pipeline `args`; `module-system` and `http` only if they arrived via `args`.
 * xref:skills/iru-setup-angular-web.adoc[] — Step 5, when `flavor: angular`: scaffolds an Angular CLI app, passing
   identity (no `description`), `directory`, and pipeline `args`.
 * xref:skills/iru-setup-react-native-app.adoc[] — Step 5, when `flavor: react-native`: scaffolds an Expo-managed
@@ -211,8 +239,8 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
   tooling).
 * xref:skills/iru-setup-typescript-github-workflows.adoc[] — Step 8: writes the CI/CD workflows, passing `flavor`,
   the pipeline parameters (including `visibility`, `pages`, and `ci-tests` where resolved),
-  `publish`/`distribution`/`native-builds`/`framework` (only when the flavor uses them), and the derived `docs-tool`
-  as `args`. Skipped entirely when `ci: no`.
+  `publish`/`distribution`/`native-builds`/`framework`/`orm`/`output`/`e2e` (only when the flavor uses them), and the
+  derived `docs-tool` as `args`. Skipped entirely when `ci: no`.
 * xref:skills/iru-setup-changelog.adoc[] — Step 9: bootstraps the root `CHANGELOG.md`, invoked with no `args` (or
   only `on-existing` when supplied) since it works from the repository's own git tag/GitHub Release history.
 * xref:skills/iru-setup-readme.adoc[] — Step 10, last: bootstraps the root `README.md`, passing `sonar`, `ci`, and `pages`
@@ -220,8 +248,7 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
 
 === Invoked by
 
-* xref:skills/iru-setup-repository.adoc[] — Step 4, via `iru-isolated-skill-executor`, when the detected or
-  chosen project type is `typescript-library`/`react-web`/`angular-web`/`react-native-app`/`ionic-app`.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, TypeScript, web, NestJS, Next.js and mobile bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

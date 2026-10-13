@@ -1,0 +1,157 @@
+= Setup PHP PrestaShop
+:description: Scaffolds a PrestaShop 8 and 9 module with Composer, PHPUnit, PHPStan, PHP-CS-Fixer, a Symfony configuration page and a packaging script.
+:keywords: iru-setup-php-prestashop, claude code skill, prestashop, module, composer, phpunit, phpstan, php-cs-fixer, addons, docker
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a PrestaShop module for PrestaShop 8.x and 9.x in the repository root, or bring an existing module up to this
+catalog's toolchain, then prove the scaffold with its own unit, coverage, static-analysis, formatting and packaging
+gates.
+
+== Purpose
+
+`iru-setup-php-prestashop` treats the repository as the module directory, named after the module's technical name,
+because PrestaShop requires the directory, the main file and `$this->name` to match. It writes the main class
+extending `Module` (bootstrap, hook registration, `Configuration` defaults, new translation system), a tracked
+`config.xml`, a placeholder `logo.png`, `composer.json` (`type: prestashop-module`, PSR-4 `src/`, pinned platform PHP)
+with the catalog's shared scripts, a sample `displayFooter` hook, a Symfony back-office configuration page compatible
+with 8.x and 9.x (form type, data configuration, services, route, controller, Twig template), `upgrade/`,
+`translations/`, `index.php` guards and license headers (AFL-3.0 by convention, or OSL-3.0, MIT, proprietary, other).
+Tooling comprises `prestashop/php-dev-tools`, a stub-based PHPStan config that needs no shop, PHP-CS-Fixer, a PHPUnit
+unit suite with Clover/JUnit output, an optional Integration suite with a Docker `prestashop/prestashop` plus MariaDB
+dev shop, `bin/package.sh` for the distributable zip, and `sonar-project.properties` when Sonar is on. Dev-dependency
+versions are resolved by Composer under the pinned PHP platform, with a documented fallback table. On an existing
+module it adds tooling only and never the sample feature unless asked.
+
+== Purpose group
+
+xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-php-prestashop
+/iru-setup-php-prestashop
+name: Acme Greeting
+slug: acmegreeting
+----
+
+== Inputs
+
+Optional `args`, one `key: value` per line (supplied by `iru-setup-php-repository`).
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`name`, `slug`
+|No
+|Display name and technical name (lowercase letters and digits, starting with a letter; no hyphens).
+|Read from an existing module, else derived and confirmed or asked.
+
+|`vendor`, `namespace`
+|No
+|Composer vendor and PSR-4 namespace.
+|Git remote owner lowercased; `<Vendor>\<Name>`.
+
+|`description`, `developer-name`, `developer-email`, `organization-url`
+|No
+|Module and author metadata.
+|Asked when missing.
+
+|`tab`
+|No
+|Module-manager category such as `front_office_features`, `administration`, `payments_gateways`, `shipping_logistics`.
+|Asked; `front_office_features` recommended.
+
+|`license`
+|No
+|AFL-3.0, OSL-3.0, MIT, proprietary or other; selects headers and the `composer.json` license.
+|Asked; AFL-3.0 recommended.
+
+|`php-version`
+|No
+|PHP floor; sets `require.php`, `config.platform.php` and `ps_versions_compliancy`.
+|Asked; 8.1 (supports PrestaShop 8 and 9) recommended.
+
+|`open-source`, `visibility`, `ci`, `distribution`
+|No
+|Drive the Sonar recommendation and the closing notes.
+|`distribution` defaults to `none`; `visibility` from `gh repo view` when not given.
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`.
+|`cloud` recommended only for public open-source repositories, otherwise `none`.
+
+|`mode`
+|No
+|`new` or `existing`.
+|`new`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, applied to every pre-existing owned file.
+|`ask`
+|===
+
+== Outputs
+
+* The module skeleton and tooling files listed in the skill (main class, `config.xml`, `logo.png`, `composer.json`,
+  `config/`, `src/`, `views/`, `upgrade/`, `translations/`, `phpunit.xml.dist`, PHPStan configs and stubs,
+  `.php-cs-fixer.dist.php`, `.distignore`, `bin/package.sh`, optional `sonar-project.properties`), each created,
+  updated, replaced or kept as is.
+* Installed dev dependencies and verification results: Composer validation, PHP lint, unit tests, coverage line rate
+  (or unverified when no PCOV/Xdebug), PHPStan, PHP-CS-Fixer, the packaged zip contents, and optionally the Docker
+  shop check per PrestaShop major.
+* A report starting with the setup mode and covering identity, license, PHP floor and its source, dependency versions
+  (live or fallback), per-file action, gate results, distribution notes (PrestaShop Addons has no upload API; the
+  validator and checklist reminders), and warnings (review files, add a `LICENSE`, replace the logo, never install a
+  `-dev` zip on a real shop).
+* It never writes `LICENSE`, `.gitignore`, `README.md`, `CHANGELOG.md` or `docs/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-php-prestashop"] --> B["Step 0: parse args"]
+    B --> C["Step 1: survey for an existing module"]
+    C --> D{"Owned files\nalready exist?"}
+    D -- no --> E["Announce: creating from scratch"]
+    D -- yes --> F["Announce: updating existing module;\nask Update / Keep / Replace per file"]
+    F -- Stop chosen --> Z["Stop without changes"]
+    E --> G["Step 2: collect name, slug, vendor, namespace,\ntab, license, PHP floor, sonar"]
+    F --> G
+    G --> H["Step 3: infer repo info,\ncheck composer, php, docker"]
+    H --> I["Step 4: dependency versions\n(resolved by Composer, fallback table)"]
+    I --> J["Step 5: apply template decisions"]
+    J --> K["Step 6: write files, logo.png,\nchmod bin/package.sh"]
+    K --> L["Step 7: composer validate and require --dev;\nphp -l; tests; coverage; lint; format; package"]
+    L --> M{"Run the Docker\nshop check?"}
+    M -- yes --> N["shop:up, install, integration tests,\nlint:shop, shop:down; restore config.xml"]
+    M -- no --> O["Mark shop check not run"]
+    N --> P["Step 8: report mode, files, gates, notes"]
+    O --> P
+....
+
+== Dependencies
+
+=== Invokes
+
+None — this skill is a leaf: it uses Composer, PHP and Docker directly. Its conventions are the ones
+`iru-php-code-one-task` (`reference/prestashop.md`) enforces later, and the gate skills `iru-php-test`,
+`iru-php-coverage`, `iru-php-code-quality` and `iru-php-phpdoc` run on the result as is, but it does not call them.
+
+=== Invoked by
+
+* xref:skills/iru-setup-php-repository.adoc[] — Step 5, scaffold for a PrestaShop module, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — this skill runs inline and spawns no agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-php-prestashop/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,0 +1,118 @@
+= Next.js Code One Task Group
+:description: Implements one bucket of Next.js tasks, then validates once with unit coverage, quality, a next build route-table check, and lock-serialized Playwright.
+:keywords: iru-nextjs-code-one-task-group, claude code skill, nextjs, next build, playwright, vitest, jest, route table, coverage, implementation plan
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of Next.js tasks from a plan's task group end to end: one quality baseline up front, each task
+implemented via `iru-nextjs-code-one-task` (in parallel where safe), then a single consolidated validation that
+includes a production build and the end-to-end suite.
+
+== Purpose
+
+`iru-nextjs-code-one-task-group` is the Next.js counterpart to `iru-typescript-code-one-task-group` and reuses the
+TypeScript gate skills, each run through an `iru-gate-runner` agent. It detects the project profile once (Next.js
+14/15/16, App vs Pages Router, `cacheComponents`, `output` mode, Vitest or Jest, Playwright, package manager),
+captures a quality baseline and, when the bucket modifies existing routes, a baseline `next build` route table.
+
+Validation runs cheapest first: license headers, TSDoc, scoped unit tests, an 80% coverage gate measured from unit tests
+alone (thin async Server Component pages and framework wiring are named exceptions), the full unit suite, and ESLint/Biome
+plus `next typegen` and `tsc --noEmit` diffed against the baseline. Then one `next build` whose route table is parsed and
+compared against the baseline and each task's declared intent, flagging unexpected rendering-mode changes, and last the
+Playwright suite. Because builds and Playwright's web server cannot run concurrently, both stages sit behind the atomic
+`mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded wait of about 45 minutes, released on every
+exit path). A missing browser, occupied port or unavailable environment variable is reported as unverified, never as a pass.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-nextjs-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every Next.js task/sub-task in the bucket with its own text, the group's `Parallelizable` verdict, and any relevant
+"Current code state" context.
+|None — always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source and test files created or modified per task, via `iru-nextjs-code-one-task`.
+* License headers and TSDoc validated once for the bucket.
+* Unit tests with at least 80% line coverage for changed files, measured from unit tests only.
+* A parsed `next build` route table for the bucket's routes, with every unexpected rendering-mode change resolved or
+  recorded, and a Playwright result (passed, failed-and-fixed, flaky, not configured, or unverified).
+* `implementation_plan.md` with each task's checkbox checked and its pending note replaced by the final outcome.
+* A bucket summary for the caller: detected profile, per-task results, route-table result, accepted coverage exceptions,
+  e2e result, lock behavior and blockers.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: serialization rules read first"] --> S1["Step 1: detect profile once;\ncapture quality baseline"]
+    S1 --> RB{"Bucket modifies existing routes?"}
+    RB -- yes --> BB["Baseline next build route table\nunder the lock"]
+    RB -- no --> P
+    BB --> P{"Bucket Parallelizable?"}
+    P -- yes --> S2a["Step 2: implement all tasks concurrently\nprovider before consumer"]
+    P -- no --> S2b["Step 2: implement tasks one at a time"]
+    S2a --> C["Confirm/backfill each task's box; notify user"]
+    S2b --> C
+    C --> V["Step 3.1-3.6: license, TSDoc, unit tests,\n80% unit coverage, full suite, quality vs baseline"]
+    V -- failure traced to a task --> FIX["Fix that task; re-run affected checks"]
+    FIX --> V
+    V --> L["3.7a: acquire .integration-test.lock\nwait or break stale lock"]
+    L -- wait timeout --> U["Build and e2e reported unverified"]
+    L --> B["3.7: one next build;\nparse and compare route table"]
+    B -- environment failure --> U
+    B --> E{"Playwright configured and port free?"}
+    E -- no --> U
+    E -- yes --> PW["3.8: Playwright e2e, CI=1"]
+    PW --> R["3.8b: release lock"]
+    U --> R
+    R --> S4["Step 4: finalize progress notes; notify user"]
+    S4 --> S5["Step 5: report bucket outcome to caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-nextjs-code-one-task.adoc[] — Step 2, once per task (concurrently or sequentially), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+Each of the following runs via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent:
+
+* xref:skills/iru-typescript-code-quality.adoc[] — Step 1 baseline and Step 3.6 regression check (ESLint/Biome, typegen, tsc).
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers.
+* xref:skills/iru-typescript-tsdoc.adoc[] — Step 3.2, TSDoc for touched files.
+* xref:skills/iru-typescript-test.adoc[] — Steps 3.3, 3.5 (unit suite) and 3.8 (`e2e` selector for Playwright).
+* xref:skills/iru-typescript-coverage.adoc[] — Step 3.4, the unit-only 80% coverage gate.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key nextjs.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned per task in Step 2.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for the baselines, every validation gate, the
+  `next build` and the Playwright run.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-nextjs-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

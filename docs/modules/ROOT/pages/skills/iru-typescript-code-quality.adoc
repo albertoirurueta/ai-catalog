@@ -1,11 +1,11 @@
 = TypeScript Code Quality
-:description: Runs ESLint, tsc --noEmit, Prettier, and Stylelint/Oxlint when configured, then reports every issue found, grouped by tool and rule id.
-:keywords: iru-typescript-code-quality, claude code skill, eslint, typescript, tsc, prettier, stylelint, oxlint, static analysis, code quality report
+:description: Runs ESLint, Oxlint, Biome, tsc --noEmit, Prettier and Stylelint as configured, incl. NestJS and Next.js, and reports issues by tool and rule id.
+:keywords: iru-typescript-code-quality, claude code skill, eslint, oxlint, biome, tsc, prettier, nestjs, nextjs, static analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Run this project's TypeScript static-analysis and formatting tools — ESLint (flat config, plus Oxlint when it's
-set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, and Stylelint for CSS/SCSS when
+set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, Biome when the project chose it, and Stylelint for CSS/SCSS when
 configured — then report every issue found (file, line, rule id, message), grouped by tool and classified by rule
 id. This is a read-only reporting skill: it runs the configured tools and reports results, it does not fix issues
 unless asked to as an explicit follow-up.
@@ -14,11 +14,20 @@ unless asked to as an explicit follow-up.
 
 `iru-typescript-code-quality` gives a single, framework-aware lint/type-check/format pass across the npm
 ecosystem's fragmented tooling. It detects the project's framework (npm/TypeScript library, React, Angular, React
-Native, Ionic, Hilla frontend) from `package.json` to pick the right invocation (e.g. `ng lint` vs a direct
+Native, Ionic, Hilla frontend, NestJS, Next.js) from `package.json` to pick the right invocation (e.g. `ng lint` vs a direct
 `npx eslint`) and the right rule-id prefixes to classify against, verifies each tool's own config file actually
-exists before trusting a "zero issues" result from it, and — unlike Java's Checkstyle/PMD/SpotBugs trio, which
+exists before trusting a "zero issues" result from it, runs what the project's own `lint` script runs, and — unlike Java's Checkstyle/PMD/SpotBugs trio, which
 always analyze the whole project — every tool here except `tsc` accepts a glob directly, so a scoped invocation
 narrows what actually runs rather than just what gets reported.
+
+Framework-specific behavior:
+
+* *NestJS 12* scaffolds lint with Oxlint (`oxlint --type-aware`) plus Prettier and no ESLint, so Oxlint is the
+  primary linter there; older Nest projects use ESLint plus Prettier like any other ESLint project.
+* *Next.js 16* removed `next lint`, so the skill runs plain `eslint` with the `eslint-config-next` flat config
+  (`next lint` only on Next 15 or older, or `biome check` when the project chose Biome), and runs `next typegen`
+  before `tsc --noEmit` so the generated route types exist. Rule ids from `@next/next/*` and `jsx-a11y/*` are
+  classified alongside the usual ones.
 
 == Purpose group
 
@@ -49,9 +58,9 @@ graph and the reported diagnostic lines are filtered afterward to ones whose fil
 == Outputs
 
 * A plain-text summary in the conversation — never a written file.
-* Findings grouped first by tool (ESLint, Oxlint, `tsc`, Prettier, Stylelint), then by rule id/diagnostic code
+* Findings grouped first by tool (ESLint, Oxlint, Biome, `tsc`, Prettier, Stylelint), then by rule id/diagnostic code
   within each tool.
-* Per issue: file:line, rule id (or `TS<code>`), and message; Prettier findings are filed under a single
+* Per issue: file:line, rule id (or `TS<code>` or Biome `lint/<group>/<rule>` category), and message; Prettier findings are filed under a single
   `formatting` bucket since it has no rule ids.
 * A total issue count per tool and an overall total; a tool whose config isn't found is reported as "not
   configured, skipped" rather than a misleading clean pass.
@@ -64,15 +73,17 @@ graph and the reported diagnostic lines are filtered afterward to ones whose fil
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-typescript-code-quality\n(optional path-or-glob)"] --> B["Detect framework from package.json\n(library, react, angular, react-native, ionic, hilla-frontend)"]
+    A["Start /iru-typescript-code-quality\n(optional path-or-glob)"] --> B["Detect framework from package.json\n(library, react, angular, react-native, ionic, hilla-frontend, nestjs, nextjs)"]
     B --> C["Detect package manager\n(npm, pnpm, yarn) from lockfile/packageManager"]
     C --> D["Verify each tool's config exists\n(eslint.config.*/angular.json lint target,\ntsconfig.json, prettierrc, stylelintrc, oxlintrc)"]
-    D --> E{Tool configured?}
-    E -- no --> F["Report '&amp;lt;tool&amp;gt;: not configured, skipped'"]
+    D --> D2["Pick linter from the lint script:\nOxlint for NestJS 12, plain eslint for Next 16,\nng lint for Angular"]
+    D2 --> E{Tool configured?}
+    E -- no --> F["Report '&amp;lt;tool&amp;gt; not configured, skipped'"]
     E -- yes --> G["Run ESLint (or ng lint) --format json,\nOxlint --format json if configured"]
-    G --> H["Run tsc --noEmit --pretty false\n(-b for solution-style tsconfig)"]
+    G --> H["Run tsc --noEmit --pretty false\n(-b for solution-style tsconfig;\nnext typegen first on Next.js)"]
     H --> I["Run Prettier --list-different"]
-    I --> J["Run Stylelint --formatter json\nif CSS/SCSS files + config exist"]
+    I --> I2["Run Biome check\nif configured"]
+    I2 --> J["Run Stylelint --formatter json\nif CSS/SCSS files + config exist"]
     J --> K["Read each generated report"]
     K --> L{Scope argument given?}
     L -- yes --> M["Filter tsc diagnostics to matching files\n(other tools already scoped by glob)"]
@@ -93,12 +104,12 @@ reads their generated reports, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task group), via the
-  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture and later re-check a project-wide quality
-  baseline for the `typescript` language/framework key.
+* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for TypeScript, NestJS and Next.js, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-typescript-code-one-task-group.adoc[] — Steps 1 and 3.6, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every file
   the bucket touches and later diff the post-change result against it.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 1 and 3.7, lint, tsc and Prettier baseline and regression check, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 1 and 3.6, baseline and regression diff including typegen and tsc, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

@@ -1,0 +1,100 @@
+= Kotlin KDoc
+:description: Audits Kotlin classes, files or packages for complete KDoc, fills the gaps, wires Dokka module docs, and confirms the Dokka build passes.
+:keywords: iru-kotlin-kdoc, claude code skill, kotlin, kdoc, dokka, documentation audit, spring boot, quarkus, gradle, maven
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Make sure a set of Kotlin declarations, and the modules and packages they live in, carry complete, well-formed
+KDoc, filling in whatever is missing, then prove the result builds through the project's own Dokka tooling. It only
+adds or completes documentation comments and Dokka include files — never behavior, signatures or non-KDoc code.
+
+== Purpose
+
+`iru-kotlin-kdoc` covers JVM Kotlin projects — plain libraries, Kotlin Spring Boot and Kotlin Quarkus — on Gradle
+(`org.jetbrains.dokka`, Dokka 2 or Dokka 1) or Maven (`dokka-maven-plugin`). It discovers the project's own
+documentation bar (detekt `comments` rules, Dokka `documentedVisibilities` and `reportUndocumented`, contributor
+guides, observed practice) instead of assuming a fixed style, audits every in-scope declaration, then writes the
+missing KDoc grounded in the real implementation: `@property` for constructor-declared properties, `@param`,
+`@constructor`, `@return`, `@throws`, plus framework-aware treatment of Spring beans, `@ConfigurationProperties`,
+Quarkus CDI beans, `@ConfigMapping`, JAX-RS resources and JPA/Panache entities. It also ensures a `module.md` with
+`# Module` and `# Package` sections is wired into Dokka for every touched module and package. A clean Dokka run
+does not prove completeness, so the audit remains the completeness gate. Test sources, Java files (use
+`iru-java-javadoc`) and Android modules (use `iru-android-dokka`) are out of scope.
+
+== Purpose group
+
+xref:index.adoc#group-kotlin[Kotlin Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kotlin-kdoc <scope>
+/iru-kotlin-kdoc
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|Comma-separated class names, file paths, or a package glob. Test files, `.java` files and Android modules are
+dropped and named in the report.
+|Main-source `.kt` files touched by uncommitted changes plus commits on the current branch not yet on the base
+branch; an empty scope stops with "nothing to document".
+|===
+
+== Outputs
+
+* Edited `.kt` files with added or completed KDoc comments (no code, signature or annotation changes).
+* A created or extended `module.md` (`# Module` and `# Package` sections) per touched module, and the Dokka
+  `includes` wiring added when absent — the only build-file edit the skill makes.
+* A Dokka build result per module (Dokka version and mode, task used, output location, in-scope warnings fixed).
+* A report: declarations already documented, gaps found and filled, `@suppress`-excluded members, module/package
+  coverage status, arguments dropped, and out-of-scope pre-existing Dokka warnings as follow-ups.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kotlin-kdoc\n(optional scope)"] --> B["Step 1: Resolve scope and build tool\n(drop tests, .java, Android)"]
+    B --> C{"Scope empty?"}
+    C -- yes --> D["Report nothing to document and stop"]
+    C -- no --> E["Step 2: Discover the project's KDoc bar\n(detekt, Dokka config, guides, practice)"]
+    E --> F["Step 3: Audit each declaration\n(plus Spring, Quarkus, JPA checks)"]
+    F --> G["Step 4: Ensure module.md and\nincludes wiring per module and package"]
+    G --> H["Step 5: Write missing KDoc\ngrounded in the implementation"]
+    H --> I{"Dokka applied to\nthe module?"}
+    I -- no --> J["Report Dokka not configured;\nskip verification"]
+    I -- yes --> K["Step 6: Run the narrowest Dokka task\n(Gradle or Maven)"]
+    K --> L{"Warnings in\nin-scope files?"}
+    L -- yes --> M["Fix and re-run"]
+    M --> K
+    L -- no --> N["Step 7: Report"]
+    J --> N
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-kotlin-kdoc` is a leaf skill; it edits comments and runs the project's Dokka task directly. It refers
+to `iru-java-javadoc`, `iru-android-dokka` and `iru-kotlin-code-quality` only as pointers for work outside its
+scope.
+
+=== Invoked by
+
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 3.2, KDoc plus Dokka build, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 3.2, KDoc and Dokka for touched Kotlin classes, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+None — this skill does not spawn agents itself; callers run it inside an `iru-gate-runner` sub-agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kotlin-kdoc/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

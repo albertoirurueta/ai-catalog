@@ -234,8 +234,7 @@ sub-skill's own exploration/file reads out of this orchestrator's own context:
 
 === Invoked by
 
-* xref:skills/iru-setup-repository.adoc[] — Step 4, via the `iru-isolated-skill-executor` agent, when the
-  detected or chosen project type is `java-library`.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, Java library bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

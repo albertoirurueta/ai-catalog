@@ -176,9 +176,7 @@ None — `iru-setup-react-web` is a leaf skill; it does not call any other skill
 
 === Invoked by
 
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-react-web` (via
-  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]) as one of the flavor choices
-  when the detected/chosen project type is a React web app, passing the pre-resolved inputs via `args`.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5, flavor react scaffold, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runnable stand-alone.
 

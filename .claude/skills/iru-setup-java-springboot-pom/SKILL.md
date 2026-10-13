@@ -158,7 +158,7 @@ the files this skill owns already exist. Those are, per path:
   build-tool switch, not an update — say so and offer Stop (recommended) or Replace (writes the new build; the
   old one is left on disk for the user to delete once satisfied, never deleted by this skill).
 
-For each one that exists For each one that exists, warn and — unless `on-existing` says otherwise —
+For each one that exists, warn and — unless `on-existing` says otherwise —
 ask with `AskUserQuestion` (up to 4 files per call, one question each; the module poms may be asked as one
 grouped question, "all existing module poms", with a per-module override if the user wants one). Say concretely
 where an existing file disagrees with the manifest (e.g. "your root pom has `sonar-maven-plugin` but

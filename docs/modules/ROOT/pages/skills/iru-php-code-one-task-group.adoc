@@ -1,0 +1,130 @@
+= PHP Code One Task Group
+:description: Implements every PHP task in one plan bucket, then validates the whole group once, with fast-test coverage and a lock-serialized integration stage.
+:keywords: iru-php-code-one-task-group, claude code skill, php, laravel, wordpress, prestashop, composer, phpstan, pest, phpunit, integration lock
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of PHP tasks from a plan's task group end to end — a Laravel application, WordPress plugin or
+theme, PrestaShop module, or plain Composer library — with one quality baseline up front and one consolidated
+validation pass at the end, and with the container-backed integration stage serialized behind a repository-wide lock.
+
+== Purpose
+
+`iru-php-code-one-task-group` is the PHP counterpart to `iru-typescript-code-one-task-group`, carrying the
+integration-stage discipline of `iru-java-springboot-code-one-task-group`. Step 1 detects the project flavor, the
+environment (host PHP, Sail, ddev), the runner (Pest, PHPUnit, `artisan test`) and — decided by what a suite needs, not
+by its name — which suites are fast and which are integration (a Laravel feature suite on SQLite `:memory:` and Brain
+Monkey/WP_Mock tests are fast; `WP_UnitTestCase` suites and Sail/MySQL-backed tests are integration). It captures one
+pre-change `iru-php-code-quality` baseline, then implements each task through `iru-php-code-one-task` (in parallel
+agents when the group is marked parallelizable, except for tasks editing the same file). Step 3 validates the bucket
+once, cheapest first, every check delegated to an `iru-gate-runner` agent: license headers, PHPDoc, informational
+`composer validate`/`composer audit`, scoped fast tests, an 80% line-coverage gate measured from fast tests only, the
+full fast suite, PHPStan/Psalm/Pint/PHP-CS-Fixer/PHPCS diffed against the baseline (Rector findings informational), and
+last the integration stage behind the atomic `mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded
+~45-minute wait, released on every exit path). An integration stage that cannot run is reported unverified, never
+silently skipped, and never affects the coverage verdict.
+
+== Purpose group
+
+xref:index.adoc#group-php[PHP Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-php-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every PHP-tagged task/sub-task in the bucket with its own text, the group's `Parallelizable` verdict, and any relevant
+"Current code state" context.
+|None — always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source and test files created or modified per task, via `iru-php-code-one-task`.
+* License headers and PHPDoc kept current across every file the bucket touched, checked once for the whole bucket.
+* Fast tests reaching at least 80% line coverage for the changed/new classes (per file for procedural code), measured
+  without the integration suite.
+* No new PHPStan/Psalm/Pint/PHP-CS-Fixer/PHPCS issues versus the one baseline; security-relevant findings
+  (`WordPress.Security.*`, `WordPress.DB.*`, Psalm `Tainted*`) fixed or explicitly accepted.
+* `implementation_plan.md` with each task's checkbox checked and its note replaced by the final outcome (fast-test
+  coverage, quality, integration result).
+* A bucket report to the caller: detected flavor/environment/runner and the fast/integration selectors, per-task results,
+  Composer audit findings, informational Rector findings, accepted coverage exceptions, the integration outcome
+  (passed, fixed, unverified with reason, or no integration suite) and lock behavior, and any blocked task.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-php-code-one-task-group] --> S0["Step 0: only one integration run\nrepository-wide, enforced by the lock"]
+    S0 --> B["Step 1: detect flavor, environment, runner,\nfast vs integration suites, Docker availability"]
+    B --> B2["Capture one pre-change quality baseline\n(iru-php-code-quality, via iru-gate-runner)"]
+    B2 --> C{"Bucket Parallelizable?"}
+    C -- yes --> D["Step 2: invoke php-code-one-task for every task\nconcurrently; same-file tasks run sequentially"]
+    C -- no --> E["Step 2: invoke php-code-one-task\none at a time"]
+    D --> F["Confirm or backfill each task's box;\nnotify user; blocked tasks excluded"]
+    E --> F
+    F --> G["Step 3: derive scope from agent reports\nand git status/diff"]
+    G --> G1["3.1 license headers, 3.2 PHPDoc"]
+    G1 --> G2["3.3 composer validate and audit\n(informational)"]
+    G2 --> G3["3.4 scoped fast tests"]
+    G3 --> G4{"3.5 fast-test coverage\n80% per target?"}
+    G4 -- no --> G5["Add fast tests via the owning task"]
+    G5 --> G3
+    G4 -- yes --> G6["3.6 full fast suite"]
+    G6 --> G7{"3.7 new quality issues\nvs baseline?"}
+    G7 -- yes --> G8["Fix, re-run 3.4 and 3.6"]
+    G8 --> G7
+    G7 -- no --> H{"Integration suite exists,\nis affected, and Docker available?"}
+    H -- no --> H1["Report integration stage\nnot applicable or unverified"]
+    H -- yes --> I["3.8a: acquire mkdir lock\n(wait, break stale, or time out)"]
+    I -- timed out --> H1
+    I -- acquired --> J["3.8: confirm environment is up,\nrun integration suite once"]
+    J --> K["3.8b: release lock"]
+    K --> L["Step 4: replace each task note\nwith final outcome; notify user"]
+    H1 --> L
+    L --> M["Step 5: report the bucket's outcome\nto the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-php-code-one-task.adoc[] — Step 2, once per task in the bucket (concurrently or sequentially), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent; implements the task, writes its
+  tests, runs only the fast tests it touched and checks off its own checkbox.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent so reports stay out of
+this skill's context:
+
+* xref:skills/iru-php-code-quality.adoc[] — Step 1 (baseline) and Step 3.7 (regression check against it).
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
+* xref:skills/iru-php-phpdoc.adoc[] — Step 3.2, PHPDoc for the production files.
+* xref:skills/iru-php-test.adoc[] — Steps 3.4, 3.6 and 3.8, scoped fast tests, the full fast suite and the integration run.
+* xref:skills/iru-php-coverage.adoc[] — Step 3.5, fast-test line coverage for the bucket's targets.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key php.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — one per task in Step 2, so each task's
+  transcript stays out of this skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — the baseline (Step 1) and every validation check (Step 3),
+  including the lock-protected integration run.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-php-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

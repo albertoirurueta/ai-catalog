@@ -1,6 +1,6 @@
 = Setup Readme
-:description: Creates or refreshes a repository's root README.md with badges, a multi-stack status table, API doc links, and install/run instructions.
-:keywords: iru-setup-readme, claude code skill, readme, badges, ci, sonarqube, npm, maven central, swift package index, android, swift, typescript, documentation, installation instructions
+:description: Creates or refreshes a repository README.md with badges, a status table, doc links and install or run steps for libraries, services, apps and plugins.
+:keywords: iru-setup-readme, claude code skill, readme, badges, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, installation instructions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -14,28 +14,42 @@ real material supports.
 correspond to something actually present in the repository. It gathers project identity (repository/host,
 description, license, build tool, current and latest-released versions), taking the stack from `iru-explore`'s
 `Project type:` line — reused from earlier in the conversation when available, otherwise obtained by invoking
-`iru-explore` itself, so the manifest → project-type table (Java/Maven, Gradle/Kotlin, Vite+React, Angular CLI,
-Java/Spring Boot + Hilla, Expo/React Native, Ionic/Capacitor, Android library/application, Swift/Apple, plain
-TypeScript/npm) lives in exactly one place; only when `iru-explore` isn't installed does it fall back to a
-minimal one-manifest check. It gathers badge sources (CI
-status, SonarCloud/SonarQube, and package-registry badges for npm, Maven Central, and the Swift Package Index),
-a project status table that grows extra rows (platforms, Android min/target SDK, Kotlin/AGP, Swift tools/
-deployment targets, Node engine, TypeScript, framework) only for the stacks they apply to, documentation links
-(Antora site, Maven site report, Sonar dashboard, generated API docs — TypeDoc, Compodoc, Storybook, Dokka,
-DocC — confirmed wired into a GitHub Pages publish step, `CHANGELOG.md`), installation instructions matched to
-the actual build tool (Maven, Gradle Kotlin DSL with an optional version-catalog form, npm plus pnpm/yarn when
-the lockfile shows it, SwiftPM, Python, or — for distributed apps — store links or a "run it locally" command),
-and a "how it works" section with a runnable example grounded in the current public API — reusing an existing
-Antora overview/example rather than writing a divergent one if the docs site already covers it. A section whose
-source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is omitted rather than filled
-with placeholders. It announces whether it is creating the README **from scratch** or **updating an existing
-one**. If `README.md` already exists, the skill warns the user, preserves any hand-written section it doesn't know
-how to regenerate (e.g. "Contributing"), flags where the existing file contradicts this run's choices (stale Sonar
-badges under `sonar: none`, a github.io link under `pages: no`), and shows the proposed content as a diff before
-writing anything. The user then picks **Update** (recommended: merged draft, hand-written sections kept),
-**Keep as is** (file untouched; the report lists each mismatch), or **Replace** (only the generated sections are
-written, hand-written ones dropped). Under `ci: no` / `pages: no` it omits CI badges and never links a github.io
-site that nothing publishes, pointing at the `docs/` sources and the local Antora build command instead.
+`iru-explore` itself, so the manifest to project-type table lives in exactly one place; only when `iru-explore`
+isn't installed does it fall back to a minimal one-manifest check. Beyond the library and app stacks (Java/Maven,
+Gradle/Kotlin, Vite+React, Angular, Hilla, Expo, Ionic, Android, Swift, plain TypeScript), it tailors sections
+for Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress plugins and themes,
+PrestaShop modules, plain Composer packages, NestJS and Next.js. Identity is read from the file that owns it for
+each stack: `springboot-stack.yml`/`quarkus-stack.yml`, `gradle.properties`, `config/app.php` (Laravel), the
+WordPress plugin/theme headers, the PrestaShop module class, or git tags.
+
+Badges are only emitted for resources that exist: CI status, SonarCloud/SonarQube, npm, Maven Central, Swift
+Package Index, Packagist and WordPress.org (both only after a live check that the package or slug is published),
+static PHP/WordPress/PrestaShop requirement badges, and a GHCR container-image badge taken from the workflow's
+actual `images:` value. The project status table grows extra rows (platforms, SDKs, Kotlin, PHP, Swift tools,
+Node engine, TypeScript, framework, Distribution) only for the stacks they apply to. Documentation links cover the
+Antora site, Maven/Gradle site report, Sonar dashboard, generated API docs (TypeDoc, Compodoc, Storybook, Dokka
+including Spring Boot's `/api/kdoc/`, phpDocumentor, DocC, generated REST/gRPC/AsyncAPI docs), a static-export
+live site, registry/store pages and `CHANGELOG.md`.
+
+Libraries get an Installation section (Maven, Gradle with an optional version-catalog form, npm plus pnpm/yarn
+when the lockfile shows it, SwiftPM, Python, Composer). Services, web apps, plugins and modules get a Getting
+Started section instead, built only from commands the repository really defines: Spring Boot (`bootRun`/
+`spring-boot:run`, the `local` profile, Actuator health, `bootBuildImage`), Quarkus (dev mode, Dev UI, packaged
+jar, native, container image), Laravel (`composer run setup`/`dev`, optional Sail), WordPress (WordPress.org,
+GitHub Release zip, WPackagist, `wp-env`), PrestaShop (module zip upload), NestJS and Next.js, plus a pull snippet
+for a released GHCR image. The "how it works" section for a service is a `curl` against a real route; it is
+omitted entirely when there is no meaningful source yet. A WordPress `readme.txt` is read for facts but never
+written.
+
+The skill announces whether it is creating the README **from scratch** or **updating an existing one**. If
+`README.md` already exists, it warns the user, preserves any hand-written section it can't regenerate (e.g.
+"Contributing"), flags where the file contradicts this run's choices (stale Sonar badges under `sonar: none`, a
+github.io link under `pages: no`), and shows the proposed content as a diff before writing. A generator's stock
+README (Laravel, `create-next-app`, `nest new`, `quarkus create`) is recognised as boilerplate, so **Replace** is
+recommended over Update. The user picks **Update** (merged draft, hand-written sections kept), **Keep as is** (file
+untouched; the report lists each mismatch), or **Replace** (only generated sections written). Under `ci: no` /
+`pages: no` it omits CI badges and never links a github.io site that nothing publishes, pointing at the `docs/`
+sources and the local Antora build command instead.
 
 == Purpose group
 
@@ -77,7 +91,7 @@ even if stale `.github/workflows/*.yml` files exist. `ci: no` also implies `page
 |`pages`
 |No
 |`yes` or `no`. Only `no` changes behaviour: no `https://<owner>.github.io/<repo>` link is emitted (Antora site,
-Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC), because CI only uploads the built docs as a workflow
+Maven site report, TypeDoc/Compodoc/Storybook/Dokka/phpDocumentor/DocC, or a static-export site), because CI only uploads the built docs as a workflow
 artifact. Readers are pointed at `docs/` and the local `cd docs && npx antora antora-playbook.yml` build instead.
 |Detected from whether a workflow publishes to `gh-pages`.
 
@@ -96,8 +110,8 @@ and leaves the file untouched; `update`/`replace` are applied without asking (th
 |(all other inputs)
 |No
 |Everything else is derived by exploring the repository directly
-(`pom.xml`/`build.gradle`/`package.json`/`Package.swift`/Android Gradle modules/Xcode or Tuist project files,
-`git remote`, `.github/workflows/*.yml`, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, and source code),
+(`pom.xml`/`build.gradle*`/`composer.json`/`package.json`/`Package.swift`/WordPress plugin or theme headers/PrestaShop
+module class/Android Gradle modules/Xcode or Tuist project files, `git remote`, `.github/workflows/*.yml`, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, and source code),
 with the project type taken from `iru-explore`'s `Project type:` line (reused from the conversation, or obtained
 by invoking `iru-explore`).
 |Not applicable.
@@ -128,16 +142,16 @@ flowchart TD
     A0 --> B{"Step 1: README.md already\nexists at root?"}
     B -- no --> B1["Announce: creating from scratch"]
     B1 --> D
-    B -- yes --> B2["Announce: updating existing README;\nwarn that changes will be proposed"]
+    B -- yes --> B2["Announce: updating existing README;\nwarn that changes will be proposed\n(flag generator boilerplate)"]
     B2 -- on-existing is keep --> N
     B2 --> C["Read existing content"]
     C --> D
     C --> D["Step 2: Gather project identity\n(repo/host, description, license,\nmulti-stack detection, versions)"]
-    D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, npm/Maven Central/\nSwift Package Index)"]
-    E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/Swift/\nNode/TS/framework rows)"]
-    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, DocC;\nno github.io links under pages: no)"]
-    G --> H["Step 6: Compose installation\ninstructions (Gradle + version catalog,\npnpm/yarn, SwiftPM, store/run-locally)"]
-    H --> I["Step 7: Write how-it-works\nsection with a real example\n(via Explore agent)"]
+    D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, registry badges, PHP/WP/\nPrestaShop requirements, GHCR image)"]
+    E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/PHP/Swift/\nNode/TS/framework/Distribution rows)"]
+    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, phpDoc, DocC;\nno github.io links under pages: no)"]
+    G --> H["Step 6: Compose Installation or\nGetting Started (dependency snippets,\nservice/plugin run commands,\nGHCR pull, store links)"]
+    H --> I["Step 7: Write how-it-works\nsection with a real example\n(curl for services; via Explore agent)"]
     I --> J["Step 8: Compose remaining structural\nsections; preserve hand-written extras"]
     J --> K{"Did README.md\nalready exist?"}
     K -- no --> L["Write README.md directly"]
@@ -163,12 +177,14 @@ flowchart TD
 
 * xref:skills/iru-setup-java-library-repository.adoc[] — Step 8, the last of its six delegated skills, runs
   `iru-setup-readme` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 10, last in its chain, runs `iru-setup-readme` via
-  `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 10, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-android-repository.adoc[] — Step 9, last in its chain, runs `iru-setup-readme` via
   `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 * xref:skills/iru-setup-swift-repository.adoc[] — Step 10, last in its chain, runs `iru-setup-readme` via
   `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 9, README.md.
+* xref:skills/iru-setup-php-repository.adoc[] — Step 10, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-quarkus-repository.adoc[] — Step 8, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

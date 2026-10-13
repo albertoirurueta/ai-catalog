@@ -25,7 +25,8 @@ silently" — Step 1 still asks unless `on-existing` says otherwise.
 
 Look at the repository root for `CHANGELOG.md` (case-insensitive; also treat `CHANGELOG.rst`/`CHANGELOG.txt`/
 `HISTORY.md` as "already exists" — a repository may already maintain changelog-equivalent content under a
-different name).
+different name). A WordPress plugin/theme `readme.txt` with a `== Changelog ==` section does **not** count — it's the
+WordPress.org listing, owned by its own release process; this skill never edits it, but Step 3 reads it as a source.
 
 - **Not found**: tell the user "Creating `CHANGELOG.md` **from scratch** from the repository's release history"
   and continue to Step 2.
@@ -58,10 +59,18 @@ different name).
 
 - List git tags oldest-to-newest with their creation dates: `git for-each-ref --sort=creatordate --format
   '%(refname:short) %(creatordate:short)' refs/tags`.
+- Tags are version tags with or without a leading `v` (`v1.2.0`, `1.2.0`) whatever the stack — Maven/Gradle
+  (`pom.xml`, `gradle.properties`), npm (`package.json`), Laravel (`config/app.php` `version`), WordPress (plugin
+  header / `style.css` `Version:`), PrestaShop (module class `$this->version`) all release by tagging. Use the
+  tag's version (without `v`) as the heading; ignore non-version tags (e.g. `latest`, deploy markers). Never take a
+  heading from an in-tree version: a `-SNAPSHOT`/`-dev`/`-dev.N` value there is unreleased work, not a release.
 - **No tags at all**: there is no release history to reconstruct. Ask the user (via `AskUserQuestion` if
   available) whether to still create a minimal `CHANGELOG.md` containing just an `## [Unreleased]` section (Step
   6's format, with all commits so far treated as unreleased work), or to stop entirely since there's nothing to
-  backfill. Respect either choice; don't invent version numbers.
+  backfill. Respect either choice; don't invent version numbers. Exception: a WordPress plugin/theme released
+  through WordPress.org SVN can have real releases but no git tags — when its `readme.txt` `== Changelog ==` lists
+  versions, offer to backfill those entries (dated only if the text gives dates; otherwise undated headings, said
+  so in Step 7) instead of the Unreleased-only file.
 - **Tags found**: determine whether the repository is hosted on GitHub (`git remote get-url origin` matches
   `github.com`) and the `gh` CLI is available. If so, fetch richer data per tag:
   `gh release view <tag> --json tagName,name,body,publishedAt` (a tag may have no matching GitHub Release — that's
@@ -80,6 +89,8 @@ is the oldest tag):
 - **A non-empty GitHub Release body exists for `T`**: prefer it as the primary source — it's already
   human-curated. Use it to compose that release's entries (Step 4), lightly reformatted to Keep a Changelog style
   rather than copied verbatim if its structure doesn't already fit.
+- **No Release body, but a `readme.txt` `== Changelog ==` entry for `T`'s version** (WordPress plugin/theme):
+  use it the same way — it was written for users at release time.
 - **No usable Release body** (missing, empty, or GitHub Releases unavailable): derive the change set yourself.
   Read `git log P..T --oneline` and the actual diffs for commits that look meaningful (not just the commit
   subjects — terse messages like "Updated pom.xml" don't tell you whether it's a real dependency bump or a

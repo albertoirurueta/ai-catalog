@@ -100,6 +100,9 @@ not call any other skill in this catalog.
 * xref:skills/iru-java-code-one-task-group.adoc[] — Step 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to update Javadoc for every class the bucket touched and
   confirm the Javadoc build passes.
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 3.2, Javadoc for touched Java files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 3.2, Javadoc for touched Java classes, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Step 3.2, via `iru-gate-runner`. Skipped if not installed. Mostly confirms rather than backfills, since the per-task skill already requires full Javadoc — a lot of missing Javadoc here means that skill was bypassed.
 
 === Related agents
 

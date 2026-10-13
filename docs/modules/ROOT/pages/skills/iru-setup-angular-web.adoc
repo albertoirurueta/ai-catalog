@@ -168,10 +168,7 @@ invoking it.
 
 === Invoked by
 
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5 runs `iru-setup-angular-web` (via
-  `iru-isolated-skill-executor`) when the detected/chosen project type is `angular-web`, passing the pre-resolved
-  `name`, `directory`, `license`, developer/organization info, `open-source`, `sonar`, `storybook`, and `mode` via
-  `args`. Also runnable standalone.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5, flavor angular scaffold, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

@@ -120,10 +120,7 @@ sanity check, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-release.adoc[] — Step 6, when the detected ecosystem is Swift/Apple, called with the version
-  string `iru-release` computes: for a library, the single release version derived from the last git tag (there is
-  no in-tree dev/pre-release marker to bump back to afterward, unlike the Java/npm/Android paths); for an app,
-  whichever `MARKETING_VERSION` value the caller decides (a plain release string or a beta suffix).
+* xref:skills/iru-release.adoc[] — Step 6, version bump for Swift/Apple projects.
 
 === Related agents
 

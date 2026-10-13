@@ -61,7 +61,7 @@ only for an open-source public repository), `mode` (`new`/`existing`; informatio
 silently"), `on-existing` (`ask`/`keep`/`update`/`replace`; applied to every pre-existing file without asking, the
 warning still printed; meant for scripted runs), and four `security-*` opt-outs (`security-dependency-review`, `security-codeql`,
 `security-osv`, `security-gitleaks`) plus two security opt-ins (`security-owasp-dependency-check`,
-`security-mobsfscan`, app only) — so an orchestrating skill can supply them without re-prompting.
+`security-mobsfscan`, app only) — so an orchestrating skill can supply them without re-prompting. The shared scaffold keys `license`, `developer-name`, `developer-email` and `organization-url` are accepted but unused by the generated files (noted in the report if supplied).
 |None — if `args` is absent or doesn't match this format, every parameter is instead resolved by surveying
 the repository (module layout, existing `sonar {}`/`mavenPublishing {}` blocks, signing config, vendored
 JaCoCo CLI, branch names, README/Antora version wording) and asking the user for the rest — `flavor` is

@@ -1,23 +1,27 @@
 = TypeScript TSDoc
-:description: Audits TypeScript files for complete TSDoc on exported symbols, generates missing docs, then verifies the build with TypeDoc or Compodoc.
-:keywords: iru-typescript-tsdoc, claude code skill, typescript, tsdoc, typedoc, compodoc, angular, react, generate documentation
+:description: Audits TypeScript files for complete TSDoc on exported symbols, fills gaps, and verifies with TypeDoc or Compodoc, including NestJS and Next.js.
+:keywords: iru-typescript-tsdoc, claude code skill, typescript, tsdoc, typedoc, compodoc, nestjs, nextjs, angular, react
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Audit given TypeScript file(s)/scope for complete TSDoc coverage on every exported function, class, interface,
-type alias, and enum — React components' props interfaces and hooks, Angular components/services/inputs/outputs
+type alias, and enum — React components' props interfaces and hooks, Angular components/services/inputs/outputs,
+NestJS controllers/services/DTOs/modules/guards/pipes, and Next.js components/pages/server actions/route handlers
 included — generate any missing or incomplete TSDoc grounded in the actual code and current changes, then run
 the project's own doc-build tooling (TypeDoc or Compodoc) to confirm the result builds without warnings/errors.
 
 == Purpose
 
 `iru-typescript-tsdoc` closes TypeScript documentation gaps without assuming a fixed house style or framework: it
-first detects the project's flavor (library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend) to
-know which symbols count as "exported" and which tool verifies the result, discovers this project's own TSDoc bar
+first detects the project's flavor (library, React, Angular, React Native, Ionic, a Vaadin Hilla frontend, NestJS, or
+Next.js) to know which symbols count as "exported" and which tool verifies the result, discovers this project's own TSDoc bar
 (contributor guide, `typedoc.json`/`.compodocrc.json` settings, ESLint JSDoc/TSDoc rules, or observed practice),
 audits every in-scope symbol, fills in what's missing, and proves the result actually builds via TypeDoc or
 Compodoc — mirroring how `iru-java-javadoc` runs a Javadoc build rather than generating generic, possibly
-non-conforming comments.
+non-conforming comments. For NestJS (Compodoc preferred, else TypeDoc) and Next.js (TypeDoc), where neither tool is
+guaranteed to be installed, it never fetches one on the fly: it verifies with whichever the project configured and
+reports the run as audit-only ("doc build not verified") when neither is. The Next.js TypeDoc run needs
+`npx next typegen` first and `--validation.notExported false`.
 
 == Purpose group
 
@@ -52,9 +56,11 @@ files. If that default scope is empty, the skill tells the user there's nothing 
 * Edits (via the Edit tool) to the in-scope files, adding or completing TSDoc comments — no logic, signatures,
   formatting outside the added comments, or member ordering is changed.
 * A confirmed, warning-free doc-build pass: `npx typedoc --emit none --treatWarningsAsErrors
-  --validation.notDocumented true` for library/react/react-native/ionic/hilla-frontend, or `npx compodoc -p
-  tsconfig.json --silent --coverageTest <threshold> --coverageMinimumPerFile <threshold>
-  --coverageTestShowOnlyFailed` for angular.
+  --validation.notDocumented true` for library/react/react-native/ionic/hilla-frontend (and NestJS/Next.js when
+  TypeDoc is configured), or `npx compodoc -p tsconfig.json --silent --coverageTest <threshold>
+  --coverageMinimumPerFile <threshold> --coverageTestShowOnlyFailed` for angular (and NestJS when Compodoc is
+  configured). With neither tool configured on NestJS/Next.js, the run is audit-only and the report says the doc
+  build was not verified.
 * A plain-text report: per file, how many exported symbols were already documented vs. gaps found and filled
   (named, with kind); the final doc-build result (TypeDoc pass/fail detail, or Compodoc's coverage percentages
   vs. threshold); any excluded test-file argument; any out-of-scope pre-existing doc-build failure noted as a
@@ -67,7 +73,7 @@ files. If that default scope is empty, the skill tells the user there's nothing 
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-typescript-tsdoc\n(optional path-or-glob)"] --> B["Detect project flavor:\nhilla-frontend, react-native,\nionic, angular, react, or library"]
+    A["Start /iru-typescript-tsdoc\n(optional path-or-glob)"] --> B["Detect project flavor:\nhilla-frontend, react-native, ionic,\nnestjs, nextjs, angular, react, or library"]
     B --> C{Argument given?}
     C -- yes --> D["Resolve paths/globs;\ndrop test files from scope"]
     C -- no --> E["Scope to non-test .ts/.tsx files touched\nby uncommitted changes + branch commits\nnot on base"]
@@ -80,9 +86,11 @@ flowchart TD
     J --> K["Record every gap: symbol, kind,\nwhat's missing"]
     K --> L["Generate missing TSDoc grounded in\nimplementation + git diff + Step 2 conventions"]
     L --> M["Apply edits with the Edit tool"]
-    M --> N{Flavor?}
-    N -- angular --> O["Run npx compodoc with\ncoverageTest thresholds"]
-    N -- other --> P["Run npx typedoc --emit none\n--treatWarningsAsErrors\n--validation.notDocumented true"]
+    M --> N{Doc tool for flavor?}
+    N -- "angular, or nestjs with Compodoc" --> O["Run npx compodoc with\ncoverageTest thresholds"]
+    N -- "other, or nestjs/nextjs with TypeDoc" --> P["Run npx typedoc --emit none\n--treatWarningsAsErrors\n--validation.notDocumented true"]
+    N -- "nestjs/nextjs with neither tool" --> U["Audit-only: skip doc build,\nreport it as not verified"]
+    U --> S
     O --> Q{Fails or warns\non in-scope files?}
     P --> Q
     Q -- yes --> R["Fix offending comments,\nre-run until clean"]
@@ -102,12 +110,13 @@ source, and reports, it does not call any other skill in this catalog.
 * xref:skills/iru-typescript-code-one-task-group.adoc[] — Step 3.2, once per task group, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to update TSDoc for every file the group touched and
   confirm the project's doc-build tooling passes.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.2, TSDoc for touched source files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.2, TSDoc for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-typescript-code-one-task-group` (see
-  xref:skills/iru-typescript-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner`
-  sub-agent it spawns, not inline.
+None — this skill spawns no agents itself; callers run it inside an
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] sub-agent.
 
 == Source
 

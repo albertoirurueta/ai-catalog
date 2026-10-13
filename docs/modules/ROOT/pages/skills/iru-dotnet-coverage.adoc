@@ -103,6 +103,7 @@ does not call any other skill in this catalog.
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to check every changed/new class in the bucket meets the
   80% coverage bar (falling back to `dotnet test --collect:"XPlat Code Coverage"` directly if this skill is
   unavailable).
+* xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated through the `iru-gate-runner` agent so its full `coverage.cobertura.xml`-derived report never lands directly in this conversation, and so the whole suite runs once per batch rather than once per class.
 
 === Related agents
 

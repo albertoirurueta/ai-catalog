@@ -110,8 +110,13 @@ None — `iru-check-license` is a leaf skill; it does not call any other skill i
   Android language/framework key.
 * xref:skills/iru-swift-code-one-task-group.adoc[] — the same role (its Step 3.1), for tasks in the
   Swift language/framework key.
-* xref:skills/iru-code-one-task-group.adoc[] — for tasks whose language/framework has no matching
-  `<key>-code-one-task-group` skill installed, as part of its best-effort direct implementation path.
+* xref:skills/iru-code-one-task-group.adoc[] — Step 3, license headers in the best-effort fallback path, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-php-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Step 3.1, via `iru-gate-runner`. Skipped if not installed.
 
 === Related agents
 

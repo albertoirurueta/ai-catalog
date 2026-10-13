@@ -1,11 +1,12 @@
 = Setup Java Spring Boot Testcontainers
-:description: Writes one compose.yaml for a Spring Boot service, an API mock for its downstream REST/gRPC/GraphQL clients, and a Testcontainers harness launching both.
-:keywords: iru-setup-java-springboot-testcontainers, claude code skill, testcontainers, docker compose, integration tests, api mocking, microcks, wiremock, maven failsafe, healthcheck
+:description: Writes one compose.yaml for a Java or Kotlin Spring Boot service, an API mock for its REST/gRPC/GraphQL clients, and a Testcontainers harness using both.
+:keywords: iru-setup-java-springboot-testcontainers, claude code skill, testcontainers, docker compose, integration tests, api mocking, microcks, wiremock, kotlin, gradle
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Gives a Spring Boot service one definition of its runtime dependencies, used by both `mvn verify` and a developer
-running the application locally.
+Gives a Spring Boot service one definition of its runtime dependencies, used by both `mvn verify` (or
+`./gradlew integrationTest`) and a developer running the application locally. Works for Java or Kotlin services on
+Maven or Gradle.
 
 == Purpose
 
@@ -79,6 +80,19 @@ It also reads the manifest's `ci:` block, which only affects what it reports. Wi
 no Docker/Testcontainers stack starts in CI, and the report says so plainly. The CI runner memory-ceiling warning is
 likewise only given when `ci.tests: full`.
 
+=== Language and build tool
+
+The skill reads the manifest's `project.language` (`java`/`kotlin`, absent means `java`) and `project.buildTool`
+(`maven`/`gradle`, absent means `maven`). Java follows every step as written. Kotlin writes the test classes under
+`src/test/kotlin` from dedicated Kotlin templates (a `companion object` with `@JvmStatic` members, Testcontainers 2.x
+package names such as `org.testcontainers.postgresql.PostgreSQLContainer`, and `ComposeContainer(DockerImageName,
+File)` so no compose CLI is needed on the machine or CI runner, with that image tag pinned and recorded in the
+manifest). On Gradle it never redefines the `integrationTest` task: the `iru.integration-test` convention plugin
+written by xref:skills/iru-setup-java-springboot-pom.adoc[] already owns it, so the skill only verifies that every
+module holding an `*IT` applies that plugin, and adds mock Testcontainers dependencies as version-catalog aliases in
+`gradle/libs.versions.toml` rather than with literal versions in module build files. `compose.yaml`, the
+observability files and the mock configuration are identical for every language and build tool.
+
 == Purpose group
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -88,6 +102,7 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 [source]
 ----
 /iru-setup-java-springboot-testcontainers
+/iru-setup-java-springboot-testcontainers <args: key: value lines>
 ----
 
 == Inputs
@@ -102,6 +117,12 @@ xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 engine, Redis if cached, Kafka plus a Confluent Schema Registry if messaging is enabled, and Prometheus/Grafana if
 metrics are enabled. Caffeine needs no container and its absence is reported so it doesn't look like an omission.
 |`springboot-stack.yml` at the repository root
+
+|`project.language` / `project.buildTool`
+|No (manifest fields)
+|`java`/`kotlin` and `maven`/`gradle`. Select the Java or Kotlin test templates and the Maven (Failsafe/JaCoCo in the
+pom) or Gradle (`integrationTest` task from the convention plugin) wiring checks and verification commands.
+|`java` and `maven`
 
 |`mode`
 |No
@@ -162,10 +183,15 @@ are correct regardless — but verification is skipped and the setup is explicit
 * `stack.apiMock` written back into `springboot-stack.yml`.
 * The integration-test base class(es) — a shared `ComposeContainer`-based one for full-context tests, plus narrower
   per-adapter base classes that start only the one container that module needs, using `@ServiceConnection` where a
-  single container suffices and `@DynamicPropertySource` for the compose-based one. Each client's
+  single container suffices and `@DynamicPropertySource` for the compose-based one (Java under `src/test/java`, or
+  Kotlin under `src/test/kotlin`). Each client's
   `clients.<name>.base-url` is bound to the mock's randomly-assigned host port; a client-adapter `*IT` instead uses
   the tool's own Testcontainers module (`MicrocksContainer` / `WireMockContainer`), which starts in seconds against
-  the same contract rather than bringing up the whole stack.
+  the same contract rather than bringing up the whole stack. Its test-scope dependency is added through the root
+  pom's dependency management on Maven, or a `gradle/libs.versions.toml` alias on Gradle.
+* On Gradle, a verification (not a redefinition) that `iru.integration-test` is applied wherever an `*IT` exists, that
+  `./gradlew test` passes with Docker stopped, and that the aggregated coverage report includes the
+  `integrationTest` execution data.
 * Test-profile configuration per module, with the module's own migration tooling left enabled so a broken migration
   fails a test rather than a deploy.
 * A report stating whether the stack was created from scratch or updated, the action taken per pre-existing file
@@ -186,12 +212,13 @@ flowchart TD
     B3 --> B4["Add the mock service, mounting\napis/rest-client and apis/grpc-client;\ngenerate WireMock mappings from examples"]
     B4 --> C
     C --> D["Step 2: Write the integration-test base class(es)\n(ComposeContainer, wait strategies,\nstarted once per JVM, client base URLs\nbound to the mock)"]
-    D --> E["Step 3: Wire spring-boot-docker-compose\nfor the local profile (skip.in-tests)"]
+    D --> D2["Kotlin: use Kotlin templates under src/test/kotlin;\nGradle: verify the integrationTest convention plugin\nand use libs.versions.toml aliases"]
+    D2 --> E["Step 3: Wire spring-boot-docker-compose\nfor the local profile (skip.in-tests)"]
     E --> F["Step 4: Ensure migrations and test\nfixtures run against the containers;\nmock responses live in the contract"]
-    F --> G["Step 5: Verify Failsafe/Surefire split\nand coverage wiring"]
+    F --> G["Step 5: Verify Failsafe/Surefire split\n(or Gradle integrationTest split)\nand coverage wiring"]
     G -- mvn test needs Docker --> H["An IT is misnamed as *Test — fix the name"]
     H --> G
-    G --> I["Step 6: Verify via iru-gate-runner —\ncompose config, mvn test, mvn verify,\nlocal stack up/down, and that the mock\nimported its contracts and was really called"]
+    G --> I["Step 6: Verify via iru-gate-runner —\ncompose config, mvn test and verify\n(or ./gradlew test and integrationTest),\nlocal stack up/down, and that the mock\nimported its contracts and was really called"]
     I -->|"compose path, Kafka listeners,\nor Elasticsearch memory"| J["Iterate on the usual suspects"]
     J --> I
     I -- Docker unavailable --> K["Report as unverified"]
@@ -203,26 +230,26 @@ flowchart TD
 
 === Invokes
 
-None. It reads `springboot-stack.yml`, writes the compose file and test harness, and updates the manifest's image
+None — it does not call any skill. It reads `springboot-stack.yml`, writes the compose file and test harness, and updates the manifest's image
 tags and `stack.apiMock`.
 
-It does depend on xref:skills/iru-setup-java-springboot-apis.adoc[]'s output rather than invoking it: the client
+It also depends on xref:skills/iru-setup-java-springboot-pom.adoc[]'s output rather than invoking it: Failsafe/JaCoCo
+bindings on Maven, or the `iru.integration-test` convention plugin and version catalog on Gradle.
+
+Likewise it depends on xref:skills/iru-setup-java-springboot-apis.adoc[]'s output rather than invoking it: the client
 contracts that skill writes under `apis/rest-client/` and `apis/grpc-client/` are what the mock serves, and the
 `examples` it puts in them are what become the mocked responses.
 
 === Invoked by
 
-* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, fourth of seven sub-skills, via the
-  `iru-isolated-skill-executor` agent. Runs after xref:skills/iru-setup-java-springboot-apis.adoc[] because the
-  compose stack must know whether a schema registry is needed, and it completes the harness that the `*IT` tests
-  written by xref:skills/iru-setup-java-springboot-modules.adoc[] depend on.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, compose stack and integration-test harness, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runs standalone (`/iru-setup-java-springboot-testcontainers`) to add a container to an existing service.
 
 === Related agents
 
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for each of Step 6's verification commands, since a
-  full `mvn verify` against a container stack produces a very large log.
+  full `mvn verify` (or `./gradlew integrationTest`) against a container stack produces a very large log.
 
 == Source
 

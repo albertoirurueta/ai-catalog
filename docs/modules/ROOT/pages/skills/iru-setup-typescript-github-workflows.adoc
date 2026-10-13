@@ -1,37 +1,45 @@
 = Setup TypeScript GitHub Workflows
-:description: Creates or updates build, release, sync and security GitHub Actions workflows for npm/TypeScript repos, honouring ci-tests, pages and per-file choices.
-:keywords: iru-setup-typescript-github-workflows, claude code skill, npm, typescript, github actions, playwright, codeql, sonarqube, dependabot, ci/cd
+:description: Creates or updates build, release, sync and security GitHub Actions workflows plus Dependabot for seven npm/TypeScript flavors, honouring per-file choices.
+:keywords: iru-setup-typescript-github-workflows, claude code skill, npm, typescript, github actions, nestjs, nextjs, playwright, codeql, dependabot, ci/cd
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Scaffold or update the `build.yml`, `release.yml`, `sync.yml` (library/react/angular flavors only), and
+Scaffold or update the `build.yml`, `release.yml`, `sync.yml` (every flavor but react-native/ionic), and
 `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` that make up an npm/TypeScript
-repository's CI/CD release pipeline, for whichever of five flavors the repository actually is.
+repository's CI/CD release pipeline, for whichever of seven flavors the repository actually is.
 
 == Purpose
 
 `iru-setup-typescript-github-workflows` wires up the house pipeline for an npm/TypeScript repository of one of
-five flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI
-web app), `react-native` (an Expo app), or `ionic` (an Ionic + Capacitor hybrid app). `build.yml` runs install,
-lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on
-fork pull requests), Playwright e2e for the web flavors (only when `ci-tests: full`), a docs build
+seven flavors: `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI
+web app), `react-native` (an Expo app), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service),
+or `nextjs` (a Next.js web app with `output` `server` or `static`). `build.yml` runs install, lint, format check,
+typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), e2e
+per `ci-tests` (Playwright for the web flavors and Next.js; for NestJS the `test:e2e` suite with Testcontainers
+on the runner's Docker, after `prisma generate` when `orm: prisma`), the production build (plus an unpushed
+container-image build check when a NestJS/Next.js server image is distributed), a docs build
 (TypeDoc/Compodoc/Storybook) merged with an Antora build, and a GitHub Pages deploy from the stable branch only
-(when `pages: yes`; with `pages: no` the merged site is uploaded as a workflow artifact instead). `release.yml` is flavor-specific: npm
-publish via OIDC trusted publishing plus an optional Changesets version-PR job for `library`; a web-bundle deploy
-to Pages for `react`/`angular` (`dist/` for Vite, `dist/<project>/browser/` for Angular; with `pages: no` it only
-builds and uploads the bundle as an artifact, and hosting the app is left to the user); EAS or local Gradle/Xcode builds for `react-native`; Android/iOS store or
-internal artifacts for `ionic`. `sync.yml` (library/react/angular only) plus its companion
-`.github/scripts/sync_versions.py` merge the stable branch back into the integration branch and bump
-`package.json` to the next `x.y.(z+1)-dev.0` prerelease. `security.yml` runs the shared
-Dependabot/dependency-review/CodeQL/OSV-Scanner/gitleaks block. The skill ships generic example templates
-embedded in the skill file, resolves versions at run time against the npm registry and GitHub Releases API,
-and resolves every other placeholder from a survey of the target repository rather than guessing.
+(when `pages: yes`; with `pages: no` the merged site is uploaded as a workflow artifact instead).
+
+`release.yml` is flavor-specific: npm publish via OIDC trusted publishing plus an optional Changesets version-PR
+job for `library`; a web-bundle deploy to Pages for `react`/`angular` (`dist/` for Vite, `dist/<project>/browser/`
+for Angular) and for `nextjs` with `output: static` (the `out/` export, with `basePath` taken from
+`actions/configure-pages`); a multi-stage `Dockerfile` build pushed to GHCR for `nestjs` and `nextjs` `server`
+with `distribution: internal` (no `release.yml` at all with `distribution: none`); with `pages: no` the web
+flavors only build and upload the bundle as an artifact. EAS or local Gradle/Xcode builds for `react-native`;
+Android/iOS store or internal artifacts for `ionic`. `sync.yml` plus its companion
+`.github/scripts/sync_versions.py` (library/react/angular/nestjs/nextjs) merge the stable branch back into the
+integration branch and bump `package.json` to the next `x.y.(z+1)-dev.0` prerelease. `security.yml` runs the
+shared Dependabot (`npm`, plus `docker` when a `Dockerfile` exists) / dependency-review / CodeQL
+(`javascript-typescript`, plus `actions` for nestjs/nextjs) / OSV-Scanner / gitleaks block. The skill ships generic
+example templates embedded in the skill file, resolves versions at run time against the npm registry and GitHub
+Releases API, and resolves every other placeholder from a survey of the target repository rather than guessing.
 
 It announces whether it is creating the CI/CD workflows from scratch or updating an existing setup. For each
 workflow file that already exists it warns and asks **Update** (merge, preserving any step it doesn't own, with a
 diff shown), **Keep as is** (mismatches with this run's choices are listed in the report), or **Replace**
 (regenerate from the template, losing customizations), plus **Stop**; `on-existing` applies one answer to every
-file, and `mode: existing` alone no longer skips the question. For private or internal repositories it states the
+file, and `mode: existing` alone does not skip the question. For private or internal repositories it states the
 cost context (included Actions minutes per plan, macOS runner minutes about 10x Linux for the iOS release job,
 SonarCloud pricing, Pages availability) before asking about `sonar`, `ci-tests`, and `pages`.
 
@@ -56,58 +64,57 @@ Optionally followed by `args` (`key: value` lines).
 
 |`args` (`key: value` lines)
 |No (`flavor` is required once resolved)
-|Pre-resolved values, one `key: value` line each: `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`,
-required), `integration-branch`, `stable-branch`, `node-version`, `package-manager` (`npm`/`pnpm`/`yarn`),
-`open-source` (`yes`/`no`; defaulted from `visibility` and confirmed), `publish` (`yes`/`no`, library only), `distribution` (`none`/`internal`/`store`,
-react-native/ionic only), `sonar` (`cloud`/`self-hosted`/`none`) plus `sonar-organization`/
-`sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local`, react-native only), `framework`
-(`angular`/`react`, ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `visibility` (`public`/`private`/`internal`; detected via
-`gh repo view` or asked when absent; `internal` is treated like `private`), `ci-tests` (`unit`/`full`; `unit` omits
-the Playwright e2e steps from `build.yml`, no effect for `library`/`react-native`), `pages` (`yes`/`no`; defaults to
-`yes` without asking for public repositories, asked for private/internal with `no` recommended; `no` swaps the Pages
-deploy for artifact uploads and drops the `deploy-docs` job and Pages permissions), `on-existing`
-(`ask`/`keep`/`update`/`replace`, default `ask`; applied to every already-present workflow file without asking),
-`mode` (`new`/`existing` — informational only: it is echoed in the report and no longer skips Step 2's per-file
-question), and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`
-(each `yes`/`no`). When an orchestrating skill (such as `iru-setup-typescript-repository`) supplies these, the
-corresponding fact-finding bullet in Step 1's survey is skipped entirely for that value.
-|None — if `args` is absent or doesn't match this format, every parameter is instead resolved by surveying
-`package.json` and the repository, asking the user for anything that can't be inferred. Unresolved defaults:
-`integration-branch` `develop`, `stable-branch` `main`, `node-version` `24`, and the four `security-*` keys
-each `yes`.
+|Pre-resolved values, one `key: value` line each: `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`/
+`nestjs`/`nextjs`, required), `integration-branch`, `stable-branch`, `node-version`, `package-manager`
+(`npm`/`pnpm`/`yarn`), `open-source` (`yes`/`no`), `publish` (`yes`/`no`, library only), `distribution`
+(`none`/`internal`/`store` for react-native/ionic; `none`/`internal` for nestjs and nextjs `server`, where
+`internal` is a GHCR image), `output` (`server`/`static`, nextjs only), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/
+`drizzle`, nestjs only; `prisma` adds `prisma generate`), `e2e` (`playwright`/`none`, nextjs only), `sonar`
+(`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `native-builds`
+(`eas`/`local`, react-native only), `framework` (`angular`/`react`, ionic only), `docs-tool`
+(`typedoc`/`compodoc`/`storybook`/`none`), `visibility` (`public`/`private`/`internal`; detected via `gh repo view`
+or asked when absent; `internal` is treated like `private`), `ci-tests` (`unit`/`full`; `unit` omits the e2e steps),
+`pages` (`yes`/`no`; defaults to `yes` for public repositories, asked for private/internal with `no` recommended;
+`no` swaps every Pages deploy for artifact uploads), `on-existing` (`ask`/`keep`/`update`/`replace`),
+`mode` (`new`/`existing`, informational only), and `security-dependency-review`/`security-codeql`/`security-osv`/
+`security-gitleaks` (each `yes`/`no`). When an orchestrating skill supplies these, the corresponding
+fact-finding bullet in Step 1's survey is skipped entirely for that value.
+|None. If `args` is absent or doesn't match this format, every parameter is resolved by surveying `package.json`
+and the repository, asking the user for anything that can't be inferred. Unresolved defaults: `integration-branch`
+`develop`, `stable-branch` `main`, `node-version` `24`, `on-existing` `ask`, and the four `security-*` keys each `yes`.
 |===
 
 == Outputs
 
 * `.github/workflows/build.yml` and `.github/workflows/release.yml` — created fresh, or, if either already
   existed, updated (merged), replaced, or kept as is per the user's per-file choice (or `on-existing`).
+  `release.yml` is not written for `library` with `publish: no`, nor for `nestjs`/`nextjs` `server` with
+  `distribution: none`.
 * `.github/workflows/sync.yml` and `.github/scripts/sync_versions.py` — written together, only for the
-  `library`/`react`/`angular` flavors; never generated for `react-native`/`ionic`.
+  `library`/`react`/`angular`/`nestjs`/`nextjs` flavors; never generated for `react-native`/`ionic`.
 * `.github/workflows/security.yml` and `.github/dependabot.yml` — always created or updated, independent of
   `flavor`/`sonar`/`publish`/`distribution`.
-* Supporting files created if missing: `sonar-project.properties` (when `sonar` isn't `none`), and
-  `.gitignore` entries for `dist/`, `coverage/`, `docs/api/`, `docs/build/`, `storybook-static/`.
+* Supporting files created if missing: `sonar-project.properties` (when `sonar` isn't `none`, laid out per flavor),
+  and `.gitignore` entries for `dist/`, `coverage/`, `docs/api/`, `docs/build/`, `storybook-static/`.
 * A report stating from-scratch vs update, the per-file action (created / updated / replaced / kept as is) with every
-  mismatch listed for kept files (e.g. still runs e2e after `ci-tests: unit`, still deploys to Pages after
-  `pages: no`, still scans with Sonar after `sonar: none`), the `visibility` used and its cost context, and what
-  `ci-tests` and `pages` did.
-* A report of required repository secrets (per the flavor/`sonar`/`publish`/`distribution`/`native-builds`
-  actually resolved) and repository settings that must be enabled (Pages source and paid-plan note only when
-`pages: yes`), plus any open gaps (missing Playwright
-  config, missing `ExportOptions.plist`, README/Antora wording that didn't match `sync_versions.py`'s default
-  regexes, non-patch-level releases the bump default doesn't handle).
+  mismatch listed for kept files, the `visibility` used and its cost context, and what `ci-tests`, `pages`,
+  `distribution`/`output`, `orm`, `sonar`, `docs-tool`, and the security block did.
+* A report of required repository secrets and repository settings that must be enabled, plus any open gaps (missing
+  Playwright config, missing `ExportOptions.plist`, missing `Dockerfile`, `next.config` not reading
+  `PAGES_BASE_PATH`, README/Antora wording that didn't match `sync_versions.py`'s default regexes), ending with a
+  warning to review the workflows before relying on them.
 
 === Generated workflow files by flavor
 
-[cols="2,1,1,1,1,1", options="header"]
+[cols="2,1,1,1,1,1,1,1", options="header"]
 |===
-|File |`library` |`react` |`angular` |`react-native` |`ionic`
+|File |`library` |`react` |`angular` |`react-native` |`ionic` |`nestjs` |`nextjs`
 
-|`build.yml` |Yes |Yes |Yes |Yes |Yes
-|`release.yml` |Yes (publish job + optional Changesets version-PR) |Yes (Pages deploy, or bundle artifact only with `pages: no`) |Yes (Pages deploy, or bundle artifact only with `pages: no`) |Yes (EAS or local Gradle/Xcode) |Yes (Android/iOS store or internal artifacts)
-|`sync.yml` + `sync_versions.py` |Yes |Yes |Yes |No |No
-|`security.yml` |Yes |Yes |Yes |Yes |Yes
-|`.github/dependabot.yml` |Yes |Yes |Yes |Yes |Yes
+|`build.yml` |Yes |Yes |Yes |Yes |Yes |Yes (own template) |Yes (own template)
+|`release.yml` |Yes (publish job + optional Changesets version-PR; none with `publish: no`) |Yes (Pages deploy, or artifact only with `pages: no`) |Yes (Pages deploy, or artifact only with `pages: no`) |Yes (EAS or local Gradle/Xcode) |Yes (Android/iOS store or internal artifacts) |GHCR image with `distribution: internal`, else none |`static`: Pages deploy; `server`: GHCR image or none
+|`sync.yml` + `sync_versions.py` |Yes |Yes |Yes |No |No |Yes |Yes
+|`security.yml` |Yes |Yes |Yes |Yes |Yes |Yes (CodeQL also scans `actions`) |Yes (CodeQL also scans `actions`)
+|`.github/dependabot.yml` |Yes |Yes |Yes |Yes |Yes |Yes (plus `docker` with a `Dockerfile`) |Yes (plus `docker` with a `Dockerfile`)
 |===
 
 == Execution flow
@@ -115,11 +122,11 @@ each `yes`.
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-typescript-github-workflows] --> A2{"package.json exists?"}
+    A["Start /iru-setup-typescript-github-workflows"] --> A2{"package.json exists?"}
     A2 -- missing --> A3{"Stop or continue anyway?\n(AskUserQuestion)"}
     A3 -- stop --> Z1["End - no changes"]
     A3 -- continue, gaps flagged --> B
-    A2 -- exists --> B["Step 1: Parse args, then survey repo\n(flavor, visibility, ci-tests, pages,\npackage manager, node version, open-source,\npublish/distribution, sonar, docs-tool,\nbranches, npm scripts, Playwright)"]
+    A2 -- exists --> B["Step 1: Parse args, then survey repo\n(flavor, visibility, ci-tests, pages,\npackage manager, node version, open-source,\npublish/distribution/output/orm/e2e, sonar,\ndocs-tool, branches, npm scripts, Playwright)"]
     B --> C{"Step 2: Do build.yml/release.yml/sync.yml/\nsecurity.yml/dependabot.yml already exist?"}
     C -- none exist --> C1["Announce: creating\nfrom scratch"]
     C1 --> E
@@ -129,9 +136,9 @@ flowchart TD
     D -- ask --> D3["AskUserQuestion per file:\nUpdate / Keep as is / Replace / Stop"]
     D3 -- stop --> Z2["Report which files exist;\nno changes made"]
     D3 -- choices made --> E
-    D2 --> E["Step 3-4: Fill reference templates for the\nresolved flavor, gated by sonar, docs-tool,\nci-tests and pages"]
-    E --> F["Step 5: Create missing supporting files\n(sonar-project.properties, .gitignore entries)"]
-    F --> G["Step 6: Write or update build.yml, release.yml,\nsecurity.yml, dependabot.yml\n+ sync.yml/sync_versions.py for\nlibrary/react/angular flavors only\n(never touching files kept as is)"]
+    D2 --> E["Step 3-4: Fill reference templates for the\nresolved flavor, gated by sonar, docs-tool,\nci-tests, pages, distribution and output"]
+    E --> F["Step 5: Create missing supporting files\n(sonar-project.properties, .gitignore entries;\nflag missing Dockerfile, ExportOptions.plist)"]
+    F --> G["Step 6: Write or update build.yml, release.yml,\nsecurity.yml, dependabot.yml\n+ sync.yml/sync_versions.py for\nlibrary/react/angular/nestjs/nextjs\n(never touching files kept as is)"]
     G --> H["Step 7: List required repository\nsecrets and settings"]
     H --> I["Step 8: Report per-file actions, mismatches\nfor kept files, what was wired vs omitted,\nand warn to review before relying on the pipeline"]
 ....
@@ -141,19 +148,16 @@ flowchart TD
 === Invokes
 
 None — `iru-setup-typescript-github-workflows` is a leaf skill; it does not call any other skill in this
-catalog.
+catalog. It only recommends `iru-setup-antora`, the scaffold skills, and `iru-setup-typescript-gitignore` in
+prose when a prerequisite is missing.
 
 === Invoked by
 
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 8 (skipped when `ci: no`) runs `iru-setup-typescript-github-workflows` (via
-  the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent), passing the resolved
-  `flavor` and the shared pipeline parameters (branches, Node version, package manager, `open-source`,
-  `publish`/`distribution`, `sonar`, `docs-tool`, `visibility`, `ci-tests`, `pages`, `on-existing` when supplied) through `args` so this skill isn't asked again
-  for facts the orchestrator already collected.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 8, CI/CD workflows, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 
-None — this skill does not delegate any part of its work to a built-in agent.
+None — this skill does not delegate any part of its work to an agent.
 
 == Required repository secrets
 
@@ -182,10 +186,18 @@ Reported in Step 7 — only the rows that apply to what was actually generated (
 |`FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON`
 |`flavor: ionic` (or `react-native`), `distribution: internal`, and the user opted into Firebase App
 Distribution over a plain artifact upload
+
+|_(none)_
+|`flavor: nestjs`/`nextjs` — the GHCR push uses `GITHUB_TOKEN` (`packages: write`), the static-export Pages deploy
+uses the Pages OIDC token, and Testcontainers needs no credentials; only `SONAR_TOKEN` applies
 |===
 
 `GITHUB_TOKEN` needs no setup — GitHub Actions provides it automatically for `sync.yml`'s `gh` calls and
 `security.yml`'s `gitleaks`/CodeQL jobs.
+
+The first GHCR push for `nestjs`/`nextjs` creates a private package even from a public repository; make it public
+or grant the deploying host a pull token. The Testcontainers e2e step needs Docker on the runner (present on
+GitHub-hosted `ubuntu-latest`).
 
 == Source
 

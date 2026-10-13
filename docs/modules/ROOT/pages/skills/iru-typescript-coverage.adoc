@@ -1,6 +1,6 @@
 = TypeScript Coverage
-:description: Runs Vitest, Jest, or Angular's ng test with coverage enabled and reads coverage-summary.json/lcov.info for exact percentages.
-:keywords: iru-typescript-coverage, claude code skill, vitest, jest, angular, lcov, coverage-summary.json, code coverage report, unit testing
+:description: Runs Vitest, Jest or Angular ng test with coverage (NestJS and Next.js aware) and reads coverage-summary.json or lcov.info for exact percentages.
+:keywords: iru-typescript-coverage, claude code skill, vitest, jest, angular, nestjs, nextjs, lcov, coverage-summary.json, code coverage
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -8,7 +8,8 @@ Run the project's TypeScript/JavaScript test runner — Vitest, Jest, or Angular
 enabled, then read the exact percentages from the generated `coverage/coverage-summary.json` (falling back to
 `coverage/lcov.info` when the summary is missing or a specific file isn't in it). This is a read-only reporting
 skill: it measures and reports coverage, it does not add tests or modify source/test code unless asked to as an
-explicit follow-up.
+explicit follow-up. It also recognizes NestJS and Next.js projects, adjusting which suite is measured and which
+files are excluded.
 
 == Purpose
 
@@ -17,6 +18,16 @@ instead of an eyeballed guess from a runner's console output. It reuses `iru-typ
 scope which tests run, infers or accepts explicit target files, and — for files under the bar — points to the
 exact uncovered line ranges (collapsed from consecutive `DA:<line>,0` records in `lcov.info`) so a follow-up can
 target them precisely.
+
+Framework awareness (detected from `package.json`, on top of the runner detection):
+
+* *NestJS* (`@nestjs/core`) — measures the unit suite only (the default Vitest or Jest config, never the e2e
+  config, which boots the app and often needs Docker), excludes pure wiring files (`*.module.ts`, `src/main.ts`)
+  and generated code inside `src/` (for example a Prisma client) unless the project's own coverage config
+  includes them, and says so in the report.
+* *Next.js* (`next`) — measures Vitest (v8 provider) or Jest (via `next/jest`) coverage only; Playwright end-to-end
+  tests are never run or counted. Include globs target the app's own source, and a Server Component that cannot be
+  rendered in a unit test is reported as "only reachable through e2e" rather than as an untested file.
 
 == Purpose group
 
@@ -54,6 +65,8 @@ coverage, so a broader selector (a directory, or the full suite) is preferred wh
   it.
 * For files under the bar: uncovered line ranges collapsed from `lcov.info`'s `DA:` records (e.g.
   `src/math.ts: lines 66.66% — uncovered: 11, 17`).
+* For NestJS and Next.js, a note of which wiring files or generated code were excluded and which suites were
+  deliberately not measured (e2e, Playwright).
 * "Coverage not wired" (naming the missing package/config, e.g. `@vitest/coverage-v8`) instead of a false
   0%/100% when the coverage provider isn't installed.
 * A file that has zero tests is forced into the report at 0% (via the runner's include flag), not silently
@@ -66,14 +79,15 @@ coverage, so a broader selector (a directory, or the full suite) is preferred wh
 ....
 flowchart TD
     A["Start /iru-typescript-coverage\n(optional scope)"] --> B["Detect runner (Vitest, Jest,\nAngular ng test) and package manager,\nsame as iru-typescript-test"]
-    B --> C{Scope given?}
+    B --> B2["Detect framework: NestJS or Next.js\n(unit suite only, exclude wiring files)"]
+    B2 --> C{Scope given?}
     C -- yes --> D["Scope tests using\ntypescript-test's selector syntax"]
     C -- no --> E["Run whole suite,\nwhole-project coverage"]
     D --> F
     E --> F["Determine target file(s):\nexplicit list, or inferred from\nselector, or every file the report lists"]
     F --> G["Confirm coverage provider installed\n(@vitest/coverage-v8, coverage-istanbul, etc.)"]
     G --> H{Provider installed?}
-    H -- no --> I["Report &amp;quot;coverage not wired&amp;quot;\nnaming the missing package"]
+    H -- no --> I["Report 'coverage not wired'\nnaming the missing package"]
     H -- yes --> J["Run coverage command with lcov +\njson-summary reporters and include flag\nfor untested files"]
     J --> K{Run succeeded?}
     K -- no --> L["Report failure, stop\n(don't read a stale report)"]
@@ -101,6 +115,8 @@ coverage reports, it does not call any other skill in this catalog.
   the coverage bar.
 * xref:skills/iru-typescript-generate-all-tests.adoc[] — Steps 3 and 6, via
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`], to measure coverage before and after generating tests.
+* xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.5, 80% unit-only coverage gate, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.4, unit-only 80% coverage gate, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

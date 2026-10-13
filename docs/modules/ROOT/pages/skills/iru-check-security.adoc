@@ -98,10 +98,7 @@ on the output, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Steps 3 and 7, once per run (not per task), via its own `general-purpose` sub-agent,
-  to capture a project-wide security baseline before implementation begins and compare the final state against it
-  before archiving the plan. Any increase is treated as a hard stop, unlike the quality gate, since it risks
-  committing a real credential.
+* xref:skills/iru-code.adoc[] — Step 3 and 7, secret-scan baseline and final comparison, hard stop on increase, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

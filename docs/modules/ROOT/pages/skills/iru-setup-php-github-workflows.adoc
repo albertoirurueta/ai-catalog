@@ -1,0 +1,172 @@
+= Setup PHP GitHub Workflows
+:description: Creates or updates GitHub Actions CI, release, sync and security workflows for Laravel, WordPress plugin/theme and PrestaShop module repositories.
+:keywords: iru-setup-php-github-workflows, claude code skill, github actions, php, laravel, wordpress, prestashop, composer, psalm, dependabot
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds or updates the CI/CD and security pipeline for a PHP repository of one of four flavors — a Laravel
+application, a WordPress plugin, a WordPress block theme, or a PrestaShop module — driving everything through the
+composer scripts that the matching `iru-setup-php-*` scaffold defines.
+
+== Purpose
+
+`iru-setup-php-github-workflows` writes the GitHub Actions files a PHP repository needs, matched to its flavor and to
+cost-aware choices made up front:
+
+* `build.yml` — runs on pushes to the integration/stable branches, pull requests, and `workflow_dispatch`. It uses
+  `shivammathur/setup-php` with PCOV, `composer validate --strict`, a cached `composer install`, `composer audit`,
+  static analysis and coding style, and fast tests with Clover/JUnit coverage across a PHP matrix from the floor to
+  the newest supported release. With `ci-tests: full` it adds an integration job per flavor: Laravel against a
+  MySQL or PostgreSQL service container, WordPress inside the `@wordpress/env` test environment across a WordPress
+  matrix, PrestaShop inside the Docker shop of `tests/Integration/docker-compose.yml`. It also adds an optional
+  SonarCloud/SonarQube job (skipped on fork pull requests) and a docs job (Antora, plus phpDocumentor only when
+  `phpdoc.dist.xml` exists) deployed to GitHub Pages or uploaded as an artifact.
+* `release.yml` per `distribution` — a WordPress or PrestaShop zip attached to the GitHub Release (with `store`, also
+  a WordPress.org deploy or manual PrestaShop Addons upload instructions), or a Laravel image pushed to GHCR. Not
+  written with `distribution: none`.
+* `sync.yml` plus `.github/scripts/php_version.py` and `.github/scripts/sync_versions.py` — after a release from the
+  stable branch, a pull request merges it back into the integration branch with the next `x.(y+1).0-dev` version, the
+  convention `iru-php-bump-version` and `iru-release` use.
+* The shared security block — `security.yml` (dependency-review, CodeQL for `actions` and, when present, JS/TS,
+  a Psalm taint-analysis SARIF upload as the PHP code-scanning substitute because CodeQL has no PHP support,
+  OSV-Scanner, gitleaks) and `.github/dependabot.yml`.
+
+It announces whether it is creating the pipeline from scratch or updating an existing one, and asks per workflow file
+whether to Update, Keep as is, or Replace. Templates are validated with `actionlint`, and the commands the workflows
+contain are run locally first, so nothing is a guess.
+
+== Purpose group
+
+xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-php-github-workflows
+/iru-setup-php-github-workflows <args>
+----
+
+`args` is a block of `key: value` lines, one per line.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`flavor`
+|No
+|`laravel`, `wordpress-plugin`, `wordpress-theme` or `prestashop-module`.
+|Detected from `composer.json` and root markers
+
+|`integration-branch`
+|No
+|Branch that receives development work and the `sync.yml` pull request.
+|`develop`
+
+|`stable-branch`
+|No
+|Branch releases are cut from; docs deploy from it.
+|`main`
+
+|`php-version`
+|No
+|The PHP floor used for the test matrix.
+|`composer.json` platform or `require.php`
+
+|`open-source`, `visibility`
+|No
+|`visibility` is `public`, `private` or `internal` (`internal` counts as private).
+|`gh repo view`, else asked
+
+|`ci-tests`
+|No
+|`unit` or `full` (adds the integration job).
+|Asked; `unit` for private, `full` for public
+
+|`pages`
+|No
+|`yes` deploys docs to GitHub Pages; `no` uploads them as an artifact.
+|`yes` for public repositories, asked otherwise
+
+|`distribution`
+|No
+|`none`, `internal` or `store` (Laravel: `none` or `internal` only).
+|Asked; `store` for open-source WordPress, else `none`
+
+|`sonar`
+|No
+|`cloud`, `self-hosted` or `none`, plus `sonar-organization`, `sonar-project-key`, `sonar-host-url`.
+|Asked; `none` unless public open source
+
+|`mode`
+|No
+|`new` or `existing`; informational only.
+|None
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; pre-answers the per-file question.
+|`ask`
+
+|`security-dependency-review`, `security-codeql`, `security-taint`, `security-osv`, `security-gitleaks`
+|No
+|Each `yes` or `no`, toggling that security job.
+|`yes`
+|===
+
+Any other key (including `ci`) is ignored — invoking the skill means CI is wanted.
+
+== Outputs
+
+* `.github/workflows/build.yml`, and `release.yml` unless `distribution: none`.
+* `.github/workflows/sync.yml` with `.github/scripts/php_version.py` and `.github/scripts/sync_versions.py`
+  (made executable).
+* `.github/workflows/security.yml`, `.github/psalm/` configuration, and `.github/dependabot.yml`.
+* A report with the required secrets (`SONAR_TOKEN`, WordPress.org `SVN_USERNAME`/`SVN_PASSWORD`), repository
+  settings to check, the choices made, per-unit created / updated / replaced / kept as is, and every open gap
+  (missing composer scripts, no Antora setup, unverified integration jobs).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-php-github-workflows"] --> B["Step 1: parse args; detect flavor, slug,\ncomposer scripts, PHP matrix, docs, branches"]
+    B --> C["Ask cost-aware choices: visibility, sonar,\nci-tests, pages, distribution"]
+    C --> D{"Flavor recognised?"}
+    D -- plain Composer library --> E["Ask: Stop or Continue anyway"]
+    E -- Stop --> STOP["End without changes"]
+    E -- Continue --> F
+    D -- yes --> F["Step 2: announce scratch vs update;\nper existing file: Update / Keep / Replace / Stop"]
+    F -- Stop --> STOP
+    F --> G["Step 3: select templates —\nbuild, release, sync, security, dependabot"]
+    G --> H["Step 4: fill placeholders, apply gates;\nunresolved facts become open gaps"]
+    H --> I["Step 5: actionlint every workflow;\nrun the workflow commands locally\nvia iru-gate-runner"]
+    I -- findings --> H
+    I --> J["Step 6: write or update the files"]
+    J --> K["Step 7: report secrets, settings, choices,\nwarnings, open gaps"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — this skill calls no other skill. It only mentions `iru-setup-antora` (the Antora toolchain the docs job builds),
+`iru-php-code-quality` (flavor detection markers), and the `iru-setup-php-*` scaffolds (which define the composer
+scripts) as prerequisites to recommend, not to run.
+
+=== Invoked by
+
+* xref:skills/iru-setup-php-repository.adoc[] — Step 8, CI/CD and security workflows, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 5, runs the workflows' own commands locally
+  (`composer validate --strict`, `composer audit`, lint, format check, coverage, version helper) and returns compact
+  results.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-php-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

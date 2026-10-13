@@ -1,19 +1,23 @@
 = Setup Java Gitignore
-:description: Creates or updates a Java project's root .gitignore with build-tool, IDE and Antora output entries, asking Update, Keep or Replace if one exists.
-:keywords: iru-setup-java-gitignore, claude code skill, java, maven, gradle, gitignore, intellij, antora, build artifacts, on-existing, update keep replace
+:description: Creates or updates a JVM root .gitignore (Java or Kotlin, Maven or Gradle, Quarkus) with build, IDE, Antora entries; asks Update, Keep or Replace.
+:keywords: iru-setup-java-gitignore, claude code skill, java, kotlin, quarkus, maven, gradle, gitignore, antora, on-existing
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Create or update the root `.gitignore` for a Java project, using this repository's own `.gitignore` as the
+Create or update the root `.gitignore` for a JVM project (Java or Kotlin, Maven or Gradle, plain, Spring Boot or
+Quarkus), using this repository's own `.gitignore` as the
 concrete reference template — never overwriting an existing file without showing the user exactly what would
 change and getting an explicit Update / Keep / Replace decision first.
 
 == Purpose
 
-`iru-setup-java-gitignore` composes a Java-appropriate `.gitignore`: a universal base (compiled classes, logs,
+`iru-setup-java-gitignore` composes a JVM-appropriate `.gitignore`: a universal base (compiled classes, logs,
 packaged artifacts, JVM crash logs) plus conditionally-detected sections for the actual build tool (Maven
-`/target/` or Gradle `build/`/`.gradle/`), IDE files (IntelliJ, VS Code, Eclipse), a generated build-info
-properties file if a Groovy/Maven plugin writes one, and Antora documentation build output. It never invents
+`target/` or Gradle `build/`/`.gradle/`, with the wrapper jar kept tracked and source packages named `build` or
+`target` protected), Kotlin compiler caches (`.kotlin/`), Quarkus leftovers (`.quarkus/`, `quarkus.log*`, a stray
+`jacoco.exec`), the `.integration-test.lock/` directory used to serialize container-backed test runs, IDE files
+(IntelliJ, VS Code, Eclipse), a generated build-info properties file if a Groovy/Maven plugin writes one, and Antora
+documentation build output. It never invents
 entries for things that aren't actually present in the target repository. The skill announces whether it is
 creating `.gitignore` from scratch or updating an existing one. If `.gitignore` already exists, it is treated as
 sensitive: the skill reads it, warns, merges rather than duplicates, shows the user a diff, and asks whether to
@@ -49,7 +53,7 @@ orchestrator passes (e.g. `mode`, `open-source`) is ignored.
 |(everything else)
 |No
 |The skill derives everything else it needs by exploring the target repository directly (presence of
-`pom.xml`/`build.gradle`, `.idea/`/`.vscode`/Eclipse files, a build-info-writing plugin step, and
+`pom.xml`/`build.gradle*`, Kotlin sources, `io.quarkus` or Testcontainers usage, `.idea/`/`.vscode`/Eclipse files, a build-info-writing plugin step, and
 `docs/antora-playbook.yml`).
 |Not applicable.
 |===
@@ -63,8 +67,8 @@ orchestrator passes (e.g. `mode`, `open-source`) is ignored.
   (write the merged draft), Keep as is (no change), or Replace (write the pure-template version), unless
   `on-existing` decides.
 * A closing report stating whether the file was created, updated, replaced, or kept as is (and whether that came
-  from the user or `on-existing`), which conditional sections (build tool, IDE, build-info file, Antora build
-  output) were included versus skipped and why, the hand-added lines dropped by Replace, and the template entries
+  from the user or `on-existing`), which conditional sections (build tool, Kotlin, Quarkus, integration-test lock, IDE, build-info file, Antora
+  build output) were included versus skipped and why, the hand-added lines dropped by Replace, and the template entries
   still missing after Keep.
 
 == Execution flow
@@ -78,7 +82,7 @@ flowchart TD
     B -- yes --> D["Announce: updating existing;\nread existing content; warn"]
     B1 --> C
     D --> C["Compose universal base template\n(classes, logs, jars, crash logs)"]
-    C --> E["Detect project-specific additions:\nMaven/Gradle output dir, IDE files,\nbuild-info file, Antora build output"]
+    C --> E["Detect project-specific additions:\nMaven/Gradle output dir, Kotlin, Quarkus,\nintegration-test lock, IDE files,\nbuild-info file, Antora build output"]
     E --> F["Compose proposed content\n(merge with existing lines if any)"]
     F --> G{"Did .gitignore\nalready exist?"}
     G -- no --> H["Write .gitignore directly"]
@@ -104,6 +108,8 @@ None — `iru-setup-java-gitignore` is a leaf skill; it does not call any other 
   `pom.xml`/source layout and the Antora docs build output) already in place. It's invoked with no `args`
   (or only `on-existing`, when the orchestrator received it) — it derives everything else by exploring the
   repository directly. For an existing `.gitignore` it asks Update / Keep / Replace itself.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 9, root .gitignore.
+* xref:skills/iru-setup-quarkus-repository.adoc[] — Step 5, root .gitignore, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

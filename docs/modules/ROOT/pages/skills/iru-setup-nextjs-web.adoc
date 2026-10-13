@@ -1,0 +1,196 @@
+= Setup Next.js Web
+:description: Scaffolds a Next.js app with create-next-app flags plus Vitest, ESLint, Prettier, Playwright, TypeDoc, Sonar, static export or Docker, and a tested sample feature.
+:keywords: iru-setup-nextjs-web, claude code skill, nextjs, create-next-app, vitest, playwright, typedoc, app router, static export, scaffold
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a Next.js + TypeScript web application with `create-next-app`, driven entirely by explicit flags so saved
+preferences can never leak in, then layer this catalog's standard toolchain on top — Vitest with React Testing
+Library and jsdom, ESLint flat config with `eslint-config-next`, Prettier, `next typegen && tsc --noEmit`,
+Playwright against the production build, TypeDoc, optional Sonar, and either a GitHub Pages-ready static export or a
+container-ready server build — plus a tested sample feature. It also brings an existing Next.js app up to the same
+toolchain, announcing the mode and asking per artifact what to do with anything that already exists.
+
+== Purpose
+
+`iru-setup-nextjs-web` gives a repository a Next.js app whose npm script names (`lint`, `format`, `format:check`,
+`typecheck`, `test`, `coverage`, `test:e2e`, `build`, `start`, `docs`) are exactly the ones
+xref:skills/iru-setup-typescript-github-workflows.adoc[] calls for the `nextjs` flavor and the TypeScript gate skills
+detect. The sample feature (a `server-only` data layer, async Server Component pages, a Client Component leaf, a Server
+Action with Zod validation and an auth stub, Route Handlers, metadata, `loading`/`error`/`not-found`) is the living
+example of the `iru-nextjs-code-one-task` references, adapted to static export or the Pages Router where needed.
+Templates are kept in `reference/` next to the skill (`config-templates.md`, `app-router-samples.md`,
+`pages-router-samples.md`) and were verified in five router/output combinations. The `cache-components` choice
+determines the `16-prev` or `16-cc` coding profile later tasks apply.
+
+== Purpose group
+
+xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-nextjs-web
+----
+
+== Inputs
+
+Everything is optional: the skill is invoked stand-alone, or driven by
+xref:skills/iru-setup-typescript-repository.adoc[], which passes resolved values through `args` as newline-separated
+`key: value` lines so the matching Step 2 questions are skipped.
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`
+|No
+|Identity values written to `package.json` (`name`, `description`, `author`, `license`).
+|Asked in Step 2
+
+|`open-source`
+|No
+|`yes`/`no`; drives the recommended `sonar` value.
+|Asked
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`/`self-hosted`/`none`; gates `sonar-project.properties`.
+|Asked (`cloud` recommended only for public open source)
+
+|`router`
+|No
+|`app` or `pages`.
+|`app`
+
+|`output`
+|No
+|`server` (`next build` + `next start`) or `static` (`output: 'export'`, Pages-ready via `PAGES_BASE_PATH`).
+|Asked
+
+|`cache-components`
+|No
+|`yes`/`no`; App Router + server output only.
+|`no` (asked only when it matters)
+
+|`styling`
+|No
+|`tailwind` or `css-modules`.
+|`tailwind`
+
+|`e2e`
+|No
+|`playwright` or `none`.
+|`playwright`
+
+|`distribution`
+|No
+|`none` or `internal` (GHCR container image: `output: 'standalone'`, `Dockerfile`, health-check route).
+|Asked for `server`; always `none` for `static`
+
+|`docs-tool`
+|No
+|`typedoc` or `none`.
+|Asked (TypeDoc recommended)
+
+|`agents-md`
+|No
+|`yes`/`no`, passed to `create-next-app` as `--agents-md`/`--no-agents-md`.
+|`yes`
+
+|`package-manager`
+|No
+|`npm`, `pnpm` or `yarn`.
+|Lockfile present, else `npm`
+
+|`node-version`
+|No
+|Node major, used as the `Dockerfile`'s `NODE_VERSION`.
+|`24`
+
+|`visibility`, `ci`
+|No
+|Only used to key the Sonar recommendation (`internal` behaves like `private`; `ci: no` recommends `none`).
+|Resolved only if the Sonar question is asked; `ci` defaults to `yes`
+
+|`mode`
+|No
+|`new` or `existing`; `existing` never means silent update.
+|Derived in Step 1 (`next` in `dependencies` means `existing`)
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, answering Step 1's per-artifact question at once.
+|`ask`
+|===
+
+Contradictions are resolved rather than obeyed and reported: `output: static` forces `cache-components: no` and
+`distribution: none`, and `router: pages` forces `cache-components: no`.
+
+== Outputs
+
+* A Next.js app (`src/app` or `src/pages`) scaffolded by `create-next-app` with explicit flags, `version`
+  `0.1.0-dev.0`, `"private": true`, and a `next.config.ts` variant for the resolved `output`/`distribution`.
+* Vitest + React Testing Library + jsdom configuration (v8 coverage, 80% thresholds, lcov at `coverage/lcov.info`),
+  ESLint flat config, Prettier config, and the shared npm scripts listed in Purpose.
+* The sample feature with colocated unit tests (scaffold-from-scratch runs only), plus `playwright.config.ts` and
+  `e2e/` specs when `e2e: playwright`.
+* `typedoc.json` when `docs-tool: typedoc`; `sonar-project.properties` when `sonar` is not `none`; `Dockerfile` and
+  `.dockerignore` when `distribution: internal`.
+* `.gitignore` additions for Playwright, TypeDoc and the integration-test lock.
+* A final report with the mode, per-artifact action (created / updated / replaced / kept as is / removed),
+  resolved options and their sources, every verification result, and explicit warnings (auth stub, in-memory store,
+  static-export limits, secrets).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-nextjs-web"] --> B["Step 0: parse args, resolve contradictions"]
+    B --> C["Step 1: survey repository, detect router/output/styling"]
+    C --> D{"package.json without next?"}
+    D -- yes --> D1["Ask: scaffold into a subdirectory?"]
+    D -- no --> E{"Owned artifacts exist?"}
+    D1 --> E
+    E -- no --> E1["Announce: from scratch"]
+    E -- yes --> E2["Announce: updating existing setup"]
+    E2 --> F{"on-existing set?"}
+    F -- yes --> F1["Apply to every artifact"]
+    F -- no --> F2{"Ask per artifact:\nUpdate / Keep / Replace / Stop"}
+    F2 -- Stop --> Z["Report untouched; end"]
+    F2 -- other --> G
+    F1 --> G["Step 2: collect identity and options"]
+    E1 --> G
+    G --> H["Step 3: npx create-next-app with explicit flags"]
+    H --> I["Step 4: identity, version, next.config.ts, starter cleanup"]
+    I --> J["Step 5: Vitest + React Testing Library"]
+    J --> K["Step 6: ESLint and Prettier"]
+    K --> L["Step 7: sample feature and Playwright"]
+    L --> M["Step 8: TypeDoc, Sonar, Dockerfile"]
+    M --> N["Step 9: scripts and verification\nlint, format, typecheck, test, coverage, build"]
+    N --> O["Route table, Playwright, Docker health, TypeDoc checks"]
+    O --> P["Step 10: report mode, actions, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-nextjs-web` is a leaf skill; it does not call any other skill in this catalog. It runs
+`npx create-next-app`, the package manager, Playwright, TypeDoc and Docker directly. It mentions
+xref:skills/iru-setup-readme.adoc[] (owns the README), xref:skills/iru-setup-typescript-gitignore.adoc[] (maintains
+the full `.gitignore`) and xref:skills/iru-check-license.adoc[] only as follow-ups for the user or orchestrator.
+
+=== Invoked by
+
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5, flavor nextjs scaffold, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — all commands run directly in the skill's own context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-nextjs-web/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,0 +1,101 @@
+= Quarkus Code One Task
+:description: Implements a single implementation_plan.md task in a Quarkus service in Java or Kotlin, with tests, running only container-free test levels.
+:keywords: iru-quarkus-code-one-task, claude code skill, quarkus, java, kotlin, cdi, panache, quarkus component test, implementation plan, dev services
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests and checkbox update in a Quarkus service — nothing else. It is the
+narrowest execution unit for a Quarkus service in the `iru-code` pipeline; the calling
+`iru-quarkus-code-one-task-group` validates the whole bucket afterwards.
+
+== Purpose
+
+Three things distinguish this skill from the plain Java and Kotlin coding skills. Quarkus decides at build time, so
+the ArC CDI rules (bean-defining annotations, scopes, proxies, `@Unremovable`) are always read and, for Kotlin,
+the all-open and no-arg compiler-plugin configuration is checked and completed before any code is written. Two of
+Quarkus's four test levels start containers, so the skill runs only plain JUnit and `@QuarkusComponentTest`
+classes it touched, with Dev Services disabled — never `@QuarkusTest`, `@QuarkusIntegrationTest`, `mvn verify`
+or anything that starts a container or binds the test port — because sibling task agents run in parallel.
+Architecture is detected rather than assumed: hexagonal module rules apply only to a hexagonal multi-module
+build. Guidance is loaded on demand from the skill's own `reference/` directory (language file, CDI, testing, plus
+REST, Panache, Mutiny, configuration, native-image and hexagonal files only when the task needs them). It uses a
+medium model because the plan carries the hard reasoning.
+
+== Purpose group
+
+xref:index.adoc#group-quarkus[Quarkus Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-quarkus-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's own text, including its exact `implementation_plan.md` checkbox line(s), as passed by
+`iru-quarkus-code-one-task-group`.
+|None
+|===
+
+== Outputs
+
+* Production code and tests implementing the task, in the detected language (Java or Kotlin) and architecture.
+* For Kotlin, any all-open or no-arg build configuration added where the project centralizes build config.
+* The task's own checkbox (and covered sub-tasks) flipped to `[x]` in `implementation_plan.md` with a "group
+  validation pending" note — unless the task is blocked, in which case it stays untouched.
+* A short summary: language, architecture and files touched; build changes; plain and component tests run, and
+  every `@QuarkusTest` or `@QuarkusIntegrationTest` written but not run; coverage risks; any blocker; deliberate
+  deviations from `reference/`; pre-existing rule violations left alone.
+* No quality baseline, license headers, coverage or quality checks, full-suite runs, or container-starting tests.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-quarkus-code-one-task\n(task text)"] --> B["Step 0: Detect build tool, language,\narchitecture, Quarkus version, native build"]
+    B --> C["Step 1: Read reference/README.md\nand only the files the task needs"]
+    C --> D{"Kotlin module?"}
+    D -- yes --> E["Step 2: Check all-open and no-arg\nplugin config; add what is missing"]
+    D -- no --> F
+    E --> F["Step 3: Resolve where the code goes\n(hexagonal module or feature package)"]
+    F --> G["Step 4: Re-read current code\nand neighbours"]
+    G --> H["Step 5: Implement exactly the task"]
+    H --> I{"Blocker or ambiguity?"}
+    I -- yes --> J["Step 6: Ask the user,\nor report blocked and leave checkbox"]
+    I -- no --> K["Step 7: Write tests; run only plain and\n@QuarkusComponentTest with Dev Services off"]
+    K --> L{"Tests green?"}
+    L -- no --> M["Fix code or test and re-run"]
+    M --> K
+    L -- yes --> N["Step 8: Check off this task's checkbox"]
+    N --> O["Step 9: Report outcome"]
+    J --> O
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-quarkus-code-one-task` is a leaf skill that implements and tests directly. Its `reference/` files point
+to `iru-java-code-one-task`, `iru-java-springboot-code-one-task` and `iru-kotlin-kdoc` only as related guidance,
+and its validation duties are left to `iru-quarkus-code-one-task-group`.
+
+=== Invoked by
+
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 2, implements each task, running unit-stage tests only, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — this skill does not spawn agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-quarkus-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

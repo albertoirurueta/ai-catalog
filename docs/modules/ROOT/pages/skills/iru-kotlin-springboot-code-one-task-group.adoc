@@ -1,0 +1,125 @@
+= Kotlin Spring Boot Code One Task Group
+:description: Implements one bucket of Kotlin Spring Boot tasks, then validates it once, with unit coverage gating and lock-serialized Testcontainers integration tests.
+:keywords: iru-kotlin-springboot-code-one-task-group, claude code skill, kotlin, spring boot, maven, gradle, detekt, ktlint, testcontainers, jacoco, kover
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of Kotlin Spring Boot tasks from a plan's task group end to end: capture one pre-change quality
+baseline, run `iru-kotlin-springboot-code-one-task` once per task (in parallel when the group allows it), then
+validate the whole bucket once, cheapest check first and containers last.
+
+== Purpose
+
+`iru-kotlin-springboot-code-one-task-group` is the Kotlin counterpart to `iru-java-springboot-code-one-task-group`.
+It detects the build once (Maven or Gradle, hexagonal reactor or layered/feature service, Kotlin-only or mixed with
+Java, JaCoCo or Kover, how integration tests are wired, whether Docker is available), captures one detekt/ktlint
+baseline (plus Checkstyle/PMD/SpotBugs when touched modules hold Java sources), and implements each task through
+`iru-kotlin-springboot-code-one-task`. Parallel buckets run all tasks concurrently, except that port-before-adapter
+tasks and tasks sharing build-file changes are sequenced.
+
+It then validates the entire bucket in one pass, every check delegated to an `iru-gate-runner` agent: license
+headers, KDoc plus a Dokka build (and Javadoc for Java files), structural checks for hexagonal reactors (enforcer
+banned dependencies, ArchUnit, Gradle project-dependency direction), scoped unit tests, an 80% unit-only coverage gate,
+the full unit suite, and static analysis diffed against the baseline. Last comes the Testcontainers-backed integration
+stage (Maven Failsafe `verify` or the detected Gradle integration task), serialized repository-wide behind an atomic
+`mkdir`-based `.integration-test.lock` (owner file, stale after 60 minutes, bounded wait of about 45 minutes,
+released on every exit path, single-threaded). Integration tests never satisfy the coverage gate; the aggregate figure is
+reported for information only. Docker being unavailable means the integration stage is reported unverified, never
+silently skipped.
+
+== Purpose group
+
+xref:index.adoc#group-springboot[Spring Boot Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kotlin-springboot-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every Kotlin Spring Boot task/sub-task in the bucket with its own text, the group's `Parallelizable` verdict, and
+any relevant "Current code state" context.
+|None — always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source, test, build and migration files created or modified per task, via `iru-kotlin-springboot-code-one-task`.
+* License headers, KDoc (and Javadoc for Java files) validated once for the bucket.
+* Unit tests achieving at least 80% line coverage for changed classes, measured from unit tests alone (JaCoCo or Kover).
+* An integration-test result (passed, failed-and-fixed, or unverified with the reason) and, where available, an
+  informational aggregate coverage figure.
+* `implementation_plan.md` with each task's checkbox checked and its "group validation pending" note replaced by the
+  final outcome (unit-only coverage reported separately from the aggregate).
+* A bucket summary for the caller: detected shape, per-task results, structural result, static-analysis findings,
+  accepted coverage exceptions, integration result, lock behavior, build-configuration findings and blockers.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: serialization rules read first"] --> S1["Step 1: detect build once;\ncapture detekt/ktlint (and Java) baselines"]
+    S1 --> P{"Bucket Parallelizable?"}
+    P -- yes --> S2a["Step 2: implement all tasks concurrently,\nsequencing port-before-adapter and shared build files"]
+    P -- no --> S2b["Step 2: implement tasks one at a time"]
+    S2a --> C["Confirm/backfill each task's box; notify user"]
+    S2b --> C
+    C --> V1["Step 3.1-3.2: license headers, KDoc/Javadoc"]
+    V1 --> V3{"Hexagonal reactor?"}
+    V3 -- yes --> V3a["3.3: boundary checks\nenforcer, ArchUnit, project deps"]
+    V3 -- no --> V4["3.4-3.7: unit tests, 80% unit coverage,\nfull suite, static analysis vs baseline"]
+    V3a --> V4
+    V4 -- failure traced to a task --> FIX["Fix that task; re-run affected checks"]
+    FIX --> V4
+    V4 --> D{"Docker available and IT tests exist?"}
+    D -- no --> U["Integration stage reported unverified"]
+    D -- yes --> L["3.8a: acquire .integration-test.lock\nwait or break stale lock"]
+    L -- wait timeout --> U
+    L --> IT["3.8: integration tests, single-threaded"]
+    IT --> R["3.8b: release lock"]
+    R --> AG["3.9: aggregate coverage, reported only"]
+    U --> S4["Step 4: finalize progress notes; notify user"]
+    AG --> S4
+    S4 --> S5["Step 5: report bucket outcome to caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-kotlin-springboot-code-one-task.adoc[] — Step 2, once per task (concurrently or sequentially), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent; each implements its task and unit tests.
+
+Each of the following runs via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent:
+
+* xref:skills/iru-kotlin-code-quality.adoc[] — Step 1 baseline and Step 3.7 regression check (detekt and ktlint).
+* xref:skills/iru-java-code-quality.adoc[] — Steps 1 and 3.7, only when touched modules also hold Java sources.
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every touched file.
+* xref:skills/iru-kotlin-kdoc.adoc[] — Step 3.2, KDoc plus Dokka build verification.
+* xref:skills/iru-java-javadoc.adoc[] — Step 3.2, Javadoc for touched Java files.
+* xref:skills/iru-java-test.adoc[] — Steps 3.4 and 3.6, scoped and full unit suites (Maven or Gradle).
+* xref:skills/iru-java-coverage.adoc[] — Step 3.5, the unit-only 80% coverage gate (JaCoCo or Kover).
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key kotlin-springboot.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned per task in Step 2.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for the baselines (Step 1) and every validation,
+  integration and aggregate-coverage check (Step 3).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kotlin-springboot-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

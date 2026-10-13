@@ -1,0 +1,89 @@
+= PHP Code Quality
+:description: Runs a PHP project's wired static-analysis and style tools (PHPStan, Psalm, Pint, PHP-CS-Fixer, PHPCS, Rector) and reports issues by tool and rule id.
+:keywords: iru-php-code-quality, claude code skill, php, phpstan, psalm, phpcs, pint, php-cs-fixer, rector, static analysis
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run every static-analysis and coding-style tool a PHP project actually has wired and report every issue they find, grouped by tool and classified by rule id. It is report-only: it never fixes issues, applies Rector/Pint/PHP-CS-Fixer changes, updates a baseline, or edits tool configuration.
+
+== Purpose
+
+`iru-php-code-quality` gives a single, trustworthy quality pass for PHP projects of any flavor. It detects the flavor (Laravel application, WordPress plugin or theme, PrestaShop module, plain Composer library) from `composer.json` and file markers, which decides the expected tools and the rule-id prefixes that matter: Pint and Larastan for Laravel, PHPCS with WordPressCS and PHPCompatibilityWP for WordPress, PHP-CS-Fixer and PrestaShop's PHPStan config for PrestaShop, PHP-CS-Fixer/PHPCS with PHPStan or Psalm for libraries, and Rector when `rector.php` exists. It verifies that each tool's binary and configuration really exist before trusting a zero result, so a missing tool is reported as skipped and never as "0 issues". When the caller supplies a baseline (for example `iru-php-code-one-task-group` capturing one before a task group), only new-versus-baseline issues per rule id are reported.
+
+== Purpose group
+
+xref:index.adoc#group-php[PHP Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-php-code-quality
+/iru-php-code-quality <path-or-glob>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`path-or-glob`
+|No
+|Files, directories or globs to scope both the tools' run and the report (globs are expanded with `find` first, since the tools take paths).
+|None — each tool analyses what its own config lists.
+
+|Baseline (from the prompt)
+|No
+|A prior per-tool, per-rule-id issue count or itemized list from an earlier run, supplied by a calling skill. Reported as a diff, treating tools absent from the baseline as all-new.
+|None — full report. The project's own PHPStan/Psalm baseline files are always applied by the tools.
+|===
+
+Tool invocations, all read-only and writing their machine-readable report under `build/iru-php-cq-*`: PHPStan `--error-format=json` (with `--memory-limit=1G` for Larastan, phpstan-wordpress and the PrestaShop extension, which needs `_PS_ROOT_DIR_`), Psalm `--output-format=json`, Pint `--test` with a report file, PHP-CS-Fixer `check --format=json`, PHPCS `--report=json`, Rector `--dry-run --output-format=json`. PHP runs on the host when possible, otherwise in the project's Sail, ddev or wp-env container after `docker info` succeeds.
+
+== Outputs
+
+* An overall issue total across tools, the detected flavor and environment, then per tool: its total, the config and baseline in force, and a skipped/not-configured note where applicable.
+* Per tool, one line per rule-id bucket with its count (PHPStan `identifier`, Psalm `type`, fixer names, full PHPCS `source`, Rector class), and the `file:line — message` list for scoped runs or on request. Docblock-related rules are grouped so a caller can hand them to `iru-php-phpdoc`; WordPress security, database and i18n sniffs and Psalm `Tainted*` issues are listed first.
+* Config-level problems (stale baseline entries, invalid configuration, memory exhaustion, missing standards) are reported under a separate bucket, never as code issues. Expected-but-missing tools for the flavor are recommendations, not failures.
+* No raw JSON or diff is pasted, and no file, baseline or configuration is modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-php-code-quality\n(optional path or glob)"] --> B["Step 1: detect flavor\nand environment"]
+    B --> C{"PHP usable and\nvendor installed?"}
+    C -- no --> D["Stop: report missing PHP,\nvendor or no tooling wired"]
+    C -- yes --> E["Verify each tool's binary\nand config is wired"]
+    E --> F["Step 2: run each configured tool\nPHPStan, Psalm, Pint,\nPHP-CS-Fixer, PHPCS, Rector"]
+    F --> G{"Tool failed for a\nnon-code reason?"}
+    G -- yes --> H["Report the tooling cause,\nskip that tool"]
+    G -- no --> I["Parse JSON reports"]
+    H --> I
+    I --> J["Step 3: classify by tool\nand rule id"]
+    J --> K{"Baseline supplied?"}
+    K -- yes --> L["Keep only new-versus-baseline\nissues per rule id"]
+    K -- no --> M["Report totals, flavor,\nper-tool buckets"]
+    L --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-php-code-quality` is a leaf skill; it only runs the project's own analysis tools. It mentions `iru-php-phpdoc` only as the skill a caller can hand docblock findings to.
+
+=== Invoked by
+
+* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for PHP plans, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-php-code-one-task-group.adoc[] — Step 1 and 3.7, baseline and regression check, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+None — it spawns no agents itself. Calling skills normally run it inside an xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] sub-agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-php-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

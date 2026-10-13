@@ -28,10 +28,8 @@ agent only reads history and reports a summary.
 
 == Used by
 
-* xref:skills/iru-setup-changelog.adoc[] — Step 3, one agent per past release (or small batch), when the
-  repository's tag history is long enough that reading every diff inline would be context-heavy.
-* xref:skills/iru-release.adoc[] — Step 10, one agent for the single range since the previous release, to draft
-  `whats-new.adoc`/`CHANGELOG.md` without reading the raw `git log`/diff content inline.
+* xref:skills/iru-setup-changelog.adoc[] — Step 3, one agent per release (or batch) for long tag histories.
+* xref:skills/iru-release.adoc[] — Step 7, summarizes changes since the previous tag for whats-new and CHANGELOG.
 
 == Why this one specifically
 

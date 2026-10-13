@@ -1,0 +1,128 @@
+= NestJS Code One Task Group
+:description: Implements every NestJS task in one plan bucket, then validates the group once with unit coverage, type-check, build and a lock-serialized e2e stage.
+:keywords: iru-nestjs-code-one-task-group, claude code skill, nestjs, typescript, vitest, jest, prisma, e2e, testcontainers, integration lock
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of NestJS tasks from a plan's task group end to end: one quality baseline up front, each task
+implemented with its unit specs, then the whole bucket validated once — with the e2e stage serialized behind a
+repository-wide lock.
+
+== Purpose
+
+`iru-nestjs-code-one-task-group` is the NestJS counterpart to `iru-typescript-code-one-task-group`, built on the same
+gate skills (`iru-typescript-test`, `-coverage`, `-code-quality`, `-tsdoc`), each run through an `iru-gate-runner` agent.
+Step 1 detects the flavor once — ESM/Vitest or CommonJS/Jest, Express or Fastify, ORM, Prisma, builder, standard or
+monorepo mode, any architecture-boundary check, and whether the e2e suite exists and needs Docker. It captures one
+pre-change quality baseline, then implements each task through `iru-nestjs-code-one-task` (in parallel agents when
+allowed, except tasks that edit the same module or global-setup file or depend on each other's providers). Step 3
+validates cheapest first: `prisma generate` when Prisma is used, license headers, TSDoc, optional architecture
+boundaries, scoped unit tests, an 80% line and branch coverage gate from unit tests alone (with `*.module.ts`, `main.ts`
+and generated code excluded, and decorator-metadata branch artifacts accepted), the full unit suite, lint plus
+`tsc --noEmit` plus Prettier diffed against the baseline, a single `nest build`, and last the e2e stage behind the atomic
+`mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded ~45-minute wait, released on every exit path). E2E
+results never count toward coverage, and an e2e stage that needs Docker when it is unavailable is reported unverified.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-nestjs-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every NestJS-tagged task/sub-task in the bucket with its own text, the group's `Parallelizable` verdict, and any
+relevant "Current code state" context.
+|None — always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source files, unit specs and e2e specs created or modified per task, via `iru-nestjs-code-one-task`.
+* License headers and TSDoc kept current across the files the bucket touched.
+* Unit-test coverage of at least 80% lines and branches for changed/new source files, never satisfied by e2e tests.
+* No new lint, `tsc` or Prettier issues versus the baseline (every `tsc` error blocks, including in spec files), and a
+  successful `nest build`.
+* `implementation_plan.md` with each task's checkbox checked and its note replaced by the final outcome, quoting the
+  unit-only coverage and the e2e result separately.
+* A bucket report to the caller: detected flavor, per-task results, accepted coverage exceptions, type-check and build
+  results, the e2e outcome (passed, fixed, unverified with reason, or not wired) and lock behavior, and any blocked task.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-nestjs-code-one-task-group] --> S0["Step 0: only one e2e run\nrepository-wide, enforced by the lock"]
+    S0 --> B["Step 1: detect flavor, Prisma, builder,\narchitecture check, e2e and Docker need"]
+    B --> B2["Capture one pre-change quality baseline\n(iru-typescript-code-quality, via iru-gate-runner)"]
+    B2 --> C{"Bucket Parallelizable?"}
+    C -- yes --> D["Step 2: invoke nestjs-code-one-task for every task\nconcurrently; same-module tasks run sequentially"]
+    C -- no --> E["Step 2: invoke nestjs-code-one-task\none at a time"]
+    D --> F["Confirm or backfill each task's box;\nnotify user; blocked tasks excluded"]
+    E --> F
+    F --> G["Step 3: derive scope from agent reports\nand git status/diff"]
+    G --> G0["3.0 prisma generate (if Prisma)"]
+    G0 --> G1["3.1 license headers, 3.2 TSDoc,\n3.3 architecture boundaries (if configured)"]
+    G1 --> G2["3.4 scoped unit tests"]
+    G2 --> G3{"3.5 unit-only coverage\n80% lines and branches?"}
+    G3 -- no --> G4["Add unit tests via the owning task"]
+    G4 --> G2
+    G3 -- yes --> G5["3.6 full unit suite"]
+    G5 --> G6{"3.7 new lint, tsc or Prettier\nissues vs baseline?"}
+    G6 -- yes --> G7["Fix, re-run 3.4 and 3.6"]
+    G7 --> G6
+    G6 -- no --> G8["3.8 nest build once"]
+    G8 --> H{"E2E suite wired and\nDocker available if needed?"}
+    H -- no --> H1["Report e2e stage\nnot wired or unverified"]
+    H -- yes --> I["3.9a: acquire mkdir lock\n(wait, break stale, or time out)"]
+    I -- timed out --> H1
+    I -- acquired --> J["3.9: run e2e suite once"]
+    J --> K["3.9b: release lock"]
+    K --> L["Step 4: replace each task note\nwith final outcome; notify user"]
+    H1 --> L
+    L --> M["Step 5: report the bucket's outcome\nto the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-nestjs-code-one-task.adoc[] — Step 2, once per task in the bucket (concurrently or sequentially), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent; implements the task and its unit
+  specs and checks off its own checkbox.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent so reports stay out of
+this skill's context:
+
+* xref:skills/iru-typescript-code-quality.adoc[] — Step 1 (baseline) and Step 3.7 (lint, `tsc --noEmit`, Prettier vs baseline).
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
+* xref:skills/iru-typescript-tsdoc.adoc[] — Step 3.2, TSDoc for the source files.
+* xref:skills/iru-typescript-test.adoc[] — Steps 3.4, 3.6 and 3.9, scoped unit tests, the full unit suite and the e2e run.
+* xref:skills/iru-typescript-coverage.adoc[] — Step 3.5, unit-only coverage for the bucket's changed files.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key nestjs.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — one per task in Step 2, so each task's
+  transcript stays out of this skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — the baseline (Step 1) and every validation check (Step 3),
+  including `prisma generate`, the architecture check, `nest build` and the lock-protected e2e run.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-nestjs-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

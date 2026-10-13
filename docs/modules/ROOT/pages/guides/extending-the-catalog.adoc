@@ -46,7 +46,7 @@ partitions a plan group's tasks into buckets by key, and dispatches each bucket 
 skill. Neither orchestrator names `java`, `dotnet`, or `database` anywhere in its own instructions — they are
 just whatever happens to be installed.
 
-To add a new backend (say, `python` or `typescript`), create — carrying the `iru-` prefix every skill and
+To add a new backend (say, `python` or `go`), create — carrying the `iru-` prefix every skill and
 agent in this catalog uses (see xref:guides/creating-skills-and-agents.adoc[]) to avoid colliding with
 same-named skills installed from other marketplaces:
 
@@ -78,30 +78,39 @@ nothing else in the pipeline needs to change.
 `iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) is the front door for bootstrapping *any*
 repository this catalog supports: it detects a non-empty repository by running `iru-explore` and reading its
 `Project type:` line to pre-select a stack, or, on an empty one, asks the project type over up to four
-`AskUserQuestion` rounds of three concrete types each, every round ending in a "Something in the next group"
-escape hatch (Java/JVM, Android & Swift, mobile apps, Web/Node — twelve types in total), asks the shared inputs
+`AskUserQuestion` rounds of three options each, every round ending in a "Something in the next group"
+escape hatch (JVM services & libraries, Web & Node, PHP, Mobile & Apple — an option that bundles several types gets
+one bounded follow-up, e.g. web app → React / Next.js / Angular), asks the shared inputs
 (`open-source`, `visibility`, `ci`, `sonar`, `ci-tests`, `pages`, `publish`/`distribution`, …) once, and delegates
 to the matching stack orchestrator via `iru-isolated-skill-executor`. It first announces the setup mode (from
 scratch, or updating an existing repository with an inventory of the prior setup found); on an existing repository
 it forces `mode: existing` on that delegation, and every component sub-skill then warns about each pre-existing
 artifact it owns and asks Update / Keep as is / Replace instead of assuming a brand-new repo.
 
-Underneath the front door, each stack has its own orchestrator. The four `*-repository` orchestrators —
-`iru-setup-java-library-repository`, `iru-setup-typescript-repository`, `iru-setup-android-repository`,
-`iru-setup-swift-repository` — all run the same fixed six-step shape, standalone or via the front
+Underneath the front door, each stack has its own orchestrator. The six `*-repository` orchestrators —
+`iru-setup-java-library-repository`, `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`,
+`iru-setup-php-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository` — all run the same fixed
+six-step shape, standalone or via the front
 door: scaffold (the language/flavor-specific `iru-setup-<stack>-library`/`-app` skill, e.g.
 `iru-setup-typescript-repository`'s own `flavor` picks between `iru-setup-typescript-library`,
-`iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, `iru-setup-ionic-app`) →
+`iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, `iru-setup-ionic-app`,
+`iru-setup-nestjs-app`, `iru-setup-nextjs-web`; `iru-setup-php-repository`'s between `iru-setup-php-laravel`,
+`iru-setup-php-wordpress` (plugin or block theme), `iru-setup-php-prestashop`; `iru-setup-quarkus-repository` always
+runs `iru-setup-quarkus-service`, parameterized by `language`/`build-tool`/`layout`) →
 `iru-setup-antora` → `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog`
-→ `iru-setup-readme`. `iru-setup-java-springboot` is the exception: it runs a manifest-driven chain of its own
+→ `iru-setup-readme` (a stack may reuse a sibling's gitignore skill, as Quarkus reuses `iru-setup-java-gitignore`).
+`iru-setup-java-springboot` is the exception: it runs a manifest-driven chain of its own
 (interview → `springboot-stack.yml` → `iru-setup-java-springboot-pom`/`-modules`/`-apis`/`-hilla`/
 `-testcontainers`/`-platform`/`-github-workflows` → `iru-update-java-springboot-documentation` → gitignore/README/
-changelog) because a hexagonal Spring Boot reactor has far more to generate than a single scaffold step.
+changelog) because a hexagonal Spring Boot reactor has far more to generate than a single scaffold step; its
+`language: java|kotlin` and `build-tool: maven|gradle` args are how a *language* variant joins an existing chain
+without forking it — Kotlin is a branch inside each `iru-setup-java-springboot-*` sub-skill, not a parallel set of
+skills.
 `iru-setup-antora`, `iru-setup-changelog`, and `iru-setup-readme` are the three steps
 already generalized across the `*-repository` orchestrators — don't fork those; a new stack only ever needs its
 own scaffold, gitignore, and workflows skills.
 
-To add a 13th project type:
+To add a new project type:
 
 . Write the stack's own `iru-setup-<stack>-<flavor>` scaffold skill(s), `iru-setup-<stack>-gitignore`, and
   `iru-setup-<stack>-<ci-provider>-workflows` (embedding the shared security block — see
@@ -112,11 +121,13 @@ To add a 13th project type:
   the bootstrap one and only needed when the new stack's code should be *implemented* through `/iru-code`, not
   merely scaffolded.
 . Write the `iru-setup-<stack>-repository` orchestrator that chains the six steps above in order, following an
-  existing one (xref:skills/iru-setup-typescript-repository.adoc[] is the most recent template) for how it
+  existing one (xref:skills/iru-setup-typescript-repository.adoc[] and xref:skills/iru-setup-php-repository.adoc[] are the most recent flavor-routing templates) for how it
   collects shared inputs once and forwards each sub-skill only the `args` keys its own Step 0 accepts.
 . Register the new stack in the three places that don't discover it automatically:
   * `iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) Steps 2 and 4 — add it as a new option in
-    the relevant `AskUserQuestion` round and as a new delegation target.
+    the relevant `AskUserQuestion` round (every round already holds three options plus its escape hatch, so
+    either fold it into an existing option's follow-up question, the way "Web app" splits into React / Next.js /
+    Angular, or add a new round) and as a new delegation target.
   * `iru-explore` (xref:skills/iru-explore.adoc[]) Step 7 — add the new `Project type:` value (and its detection
     signal) to the table that line's vocabulary is a shared contract with `iru-setup-repository`.
   * `iru-setup-readme` (xref:skills/iru-setup-readme.adoc[]) Step 2 — add whatever manifest/build-file detection
@@ -133,7 +144,8 @@ are pluggable: which file carries the version, what "current pre-release" looks 
 command (if any) applies the bump. That pluggable piece is now a registry, the same shape as
 xref:_language_framework_backends_for_the_code_pipeline[]: `iru-release` runs `find .claude/skills -maxdepth 1
 -type d -name "iru-*-bump-version"` and delegates the actual edit to whichever `iru-<key>-bump-version` skill
-matches the project it detected (today: `java`, `typescript`, `android`, `swift`), falling back to asking the
+matches the project it detected (today: `java` (Maven or Gradle, Java or Kotlin), `typescript`, `android`,
+`swift`, `php`), falling back to asking the
 user which file to edit by hand if none is installed.
 
 To add a new ecosystem, create `iru-<key>-bump-version` following the sibling contract every existing one
@@ -196,8 +208,9 @@ diffs it against a baseline, and reports back a compact summary instead of the r
 gate (a dependency-vulnerability scan, an accessibility check, a performance budget) means writing one skill
 in that same shape — a single scan/check with a clear pass/fail and issue list — and then wiring a
 `iru-gate-runner` call for it into whichever `iru-<key>-code-one-task-group` skill(s) should run it as part of their
-per-bucket validation pass (xref:skills/iru-java-code-one-task-group.adoc[] Step 1/4 and
-xref:skills/iru-dotnet-code-one-task-group.adoc[]'s equivalent are the two current call sites). The new gate
+per-bucket validation pass (every validating group skill has one — e.g. xref:skills/iru-java-code-one-task-group.adoc[]
+Step 1/4, xref:skills/iru-php-code-one-task-group.adoc[], xref:skills/iru-nestjs-code-one-task-group.adoc[]; only
+xref:skills/iru-database-code-one-task-group.adoc[] runs no gates). The new gate
 doesn't need to touch `iru-gate-runner` itself — that agent already runs "whatever skill name it's told to run."
 
 == Custom agent shapes
@@ -223,7 +236,7 @@ be speculative.
 [[adding-a-project-type]]
 == Adding a project type
 
-The sections above cover each extension point in isolation; a genuinely new project type (a 13th stack, not just
+The sections above cover each extension point in isolation; a genuinely new project type (a new stack, not just
 a new flavor of an existing one) touches most of them at once. This checklist pulls the full set together in the
 order it's usually easiest to work through:
 

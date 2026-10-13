@@ -192,9 +192,7 @@ module-boundary check (Step 3.3, the enforcer rules plus the ArchUnit test) and 
 
 === Invoked by
 
-* xref:skills/iru-code-one-task-group.adoc[] — once per plan group, for that group's `java-springboot`-tagged
-  tasks. The key is discovered from this skill's directory name, so no orchestrator names Spring Boot anywhere in
-  its own instructions.
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key java-springboot.
 
 === Related agents
 

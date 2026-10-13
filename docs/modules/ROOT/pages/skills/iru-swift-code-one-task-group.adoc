@@ -123,8 +123,7 @@ lock) is run directly by `iru-gate-runner` rather than through a named skill, so
 
 === Invoked by
 
-* xref:skills/iru-code-one-task-group.adoc[] — Step 2, once for the whole bucket of tasks tagged (or defaulted
-  to) `swift`, via a direct `Skill` call.
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key swift.
 
 === Related agents
 

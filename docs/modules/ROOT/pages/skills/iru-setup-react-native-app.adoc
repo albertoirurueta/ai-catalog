@@ -164,12 +164,7 @@ as follow-up work for the user, but never invokes them itself.
 
 === Invoked by
 
-* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5, as one of five flavor choices (alongside
-  xref:skills/iru-setup-typescript-library.adoc[], xref:skills/iru-setup-react-web.adoc[],
-  xref:skills/iru-setup-angular-web.adoc[], and xref:skills/iru-setup-ionic-app.adoc[]), via the
-  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing the pre-resolved
-  `app-name`/`app-slug`/`app-directory`/`license`/developer info/`open-source`/`sonar`/`native-builds`/
-  `distribution`/`mode` via `args` so this skill's own questions are skipped. Also runnable standalone.
+* xref:skills/iru-setup-typescript-repository.adoc[] — Step 5, flavor react-native scaffold, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 === Related agents
 

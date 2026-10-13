@@ -1,11 +1,11 @@
 = Update Java Spring Boot Documentation
-:description: Creates and keeps current a Spring Boot service's Antora docs: architecture, use cases, database model, APIs, configuration and metrics, derived from code.
-:keywords: iru-update-java-springboot-documentation, claude code skill, antora, kroki, mermaid, service documentation, api documentation, configuration table, metrics table
+:description: Creates and refreshes a Java or Kotlin Spring Boot service's Antora docs: architecture, use cases, database model, APIs, configuration, metrics.
+:keywords: iru-update-java-springboot-documentation, claude code skill, antora, kroki, mermaid, kotlin, gradle, service documentation, api documentation, metrics
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Creates or refreshes the Antora documentation site for a DDD/hexagonal Spring Boot service, deriving every page from
-the contracts, entities, configuration classes, and Micrometer calls that are actually in the repository.
+Creates or refreshes the Antora documentation site for a DDD/hexagonal Spring Boot service (Java or Kotlin, Maven or
+Gradle), deriving every page from the contracts, entities, configuration classes, and Micrometer calls that are actually in the repository.
 
 == Purpose
 
@@ -27,6 +27,16 @@ rather than quietly reconciled.
 The same discipline surfaces genuine defects as a side effect of documenting: an endpoint whose spec security
 doesn't match its filter chain, an exception the code can throw but the spec doesn't document, a property that looks
 dynamic but isn't `@RefreshScope`d, a metric with unbounded tag cardinality, an index no query uses.
+
+== Language and build-tool variants
+
+The skill reads `project.language` (`java`/`kotlin`) and `project.buildTool` (`maven`/`gradle`) from
+`springboot-stack.yml` (absent means Java and Maven) and confirms both against the disk, which wins on disagreement.
+For Kotlin, pages quote code as `[source,kotlin]`, say KDoc where Java says Javadoc, and link the Dokka KDoc reference
+published under `api/kdoc/` from the overview — one link when Gradle aggregates Dokka at the root, one per module on
+Maven. On Gradle there is no enforcer: module boundaries are described through the ArchUnit test plus the declared
+`project(":...")` dependencies, and pages name `./gradlew` commands (`build`, `test`, `integrationTest`,
+`:boot:bootRun`). Kotlin pages also say whether coroutines are in play. Java services keep the pages unchanged.
 
 Unlike xref:skills/iru-setup-antora.adoc[], which installs Mermaid only, this skill also wires **Kroki** — Mermaid
 handles flows and sequences, while Kroki adds PlantUML, C4, and ERD, which is what the architecture and
@@ -75,7 +85,8 @@ warning is still printed). Any other `key: value` line is ignored.
 |`springboot-stack.yml`
 |No
 |Read for the declared stack, as intent to be checked against the code rather than as truth, including its `ci:`
-block (`enabled`, `pages`), which Step 7 uses to decide where the API reference links point.
+block (`enabled`, `pages`), which Step 7 uses to decide where the API reference links point, and
+`project.language`/`project.buildTool`, which select the Java/Kotlin and Maven/Gradle wording.
 |`springboot-stack.yml` at the repository root
 
 |The codebase
@@ -138,16 +149,18 @@ hand-written prose, list contradictions), **Keep as is** (only create missing pa
   levers usable as a fast mitigation during a degradation, and a legend.
 * `metrics.adoc` — the metric table with type, every tag key and its possible values, cardinality risk flagged, and
   where to scrape and view them locally.
+* For Kotlin services, a KDoc reference link on the overview and a short "Build, test and run" list using the
+  Gradle or Maven commands of the detected variant.
 * `nav.adoc` entries for every page created.
 * A report stating whether the page set was created or updated, the Step 0 option chosen, and per page created /
-  updated / replaced / kept as is, plus which `api-docs-url` variant was used.
+  updated / replaced / kept as is, plus which `api-docs-url` variant and which language/build-tool variant was used.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-update-java-springboot-documentation"] --> B["Step 0: Resolve scope; read the manifest\nas intent; announce scratch vs update;\ngather facts via the Explore agent"]
+    A["Start /iru-update-java-springboot-documentation"] --> B["Step 0: Resolve scope; read the manifest\nas intent; detect Java/Kotlin and Maven/Gradle; announce scratch vs update;\ngather facts via the Explore agent"]
     B -- pages exist, user chooses stop --> STOP[Stop without changes]
     B -- pages exist --> B2["Update / Keep as is / Replace\n(or on-existing)"]
     B2 --> C
@@ -156,7 +169,7 @@ flowchart TD
     D --> E
     C --> E["Install Kroki; amend the playbook\nalongside Mermaid"]
     E --> F["Step 2: Create or update the page set\nand nav.adoc, preserving hand-written prose"]
-    F --> G["Steps 3-11: derive each page —\noverview, architecture, use cases, database model,\nREST/gRPC/messaging APIs, configuration, metrics"]
+    F --> G["Steps 3-11: derive each page —\noverview, architecture, use cases, database model,\nREST/gRPC/GraphQL/messaging APIs, configuration, metrics"]
     G -- fact not derivable --> H["Write an explicit TODO: marker;\nnever invent prose"]
     H --> G
     G --> I["Step 12: Build the site;\nfix broken xrefs, tables, diagram syntax"]
@@ -173,9 +186,7 @@ flowchart TD
 
 === Invoked by
 
-* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, last of seven sub-skills, via the
-  `iru-isolated-skill-executor` agent, so the pages are derived from the finished codebase rather than an
-  in-progress one.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, Antora site and service page set, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also — and mainly — run standalone after any change to a contract, an entity, a configuration property, a metric, or
 a use case, since the pages are derived and go stale the moment the code moves.

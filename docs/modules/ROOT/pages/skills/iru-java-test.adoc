@@ -1,20 +1,21 @@
 = Java Test
-:description: Runs a Java project's JUnit suite via Maven Surefire, scoped to a class, method, package pattern, or tag expression, then reports a pass/fail summary.
-:keywords: iru-java-test, claude code skill, java, maven, junit, surefire, run unit tests, test selector
+:description: Runs a JVM project's JUnit tests via Maven Surefire or the Gradle test task (Java, Kotlin, Spring Boot, Quarkus), scoped by selector, and reports results.
+:keywords: iru-java-test, claude code skill, java, kotlin, maven, gradle, junit, quarkus, run unit tests, test selector
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Run a Java project's JUnit test suite through the Maven Surefire plugin (`mvn test`), scoped to whatever the
-caller asked for — everything, a single class, a single method, a wildcard/package pattern, or a JUnit 5 tag
-expression. This is a read-only reporting skill: it runs tests and summarizes the outcome, it does not fix
-failures unless asked to as an explicit follow-up.
+Run a JVM (Java or Kotlin) project's JUnit test suite through the Maven Surefire plugin (`mvn test`) or the Gradle
+`test` task (`./gradlew test --tests '<pattern>'`), scoped to whatever the caller asked for — everything, a single
+class, a single method, a wildcard/package pattern, or a tag expression. This is a read-only reporting skill: it runs
+tests and summarizes the outcome, it does not fix failures unless asked to as an explicit follow-up.
 
 == Purpose
 
 `iru-java-test` turns a loosely-specified request ("run the FooTest", "just the fast tests", "everything") into the
-correct Surefire invocation and a concise pass/fail summary. It exists so that running and narrowing down tests
-doesn't require hand-composing `-Dtest`/`-Dgroups` syntax each time, and so that a calling skill (or a human) gets
-back a short report instead of a full raw Maven log.
+correct invocation for the detected build tool and a concise pass/fail summary. It covers plain Java/Kotlin
+libraries, Spring Boot (Java or Kotlin), and Quarkus (Java or Kotlin). It exists so that running and narrowing down
+tests doesn't require hand-composing `-Dtest`/`-Dgroups`/`--tests` syntax each time, and so that a calling skill (or a
+human) gets back a short report instead of a full raw build log.
 
 == Purpose group
 
@@ -36,12 +37,19 @@ xref:index.adoc#group-java[Java Development Tooling]
 
 |`selector`
 |No
-|Names what to run: a test class, a class+method, several classes, a wildcard/package pattern, an exclusion, or a
-JUnit 5 tag expression. Mapped to the correct Surefire parameter per the table below.
-|None — omitting it runs the full suite (`mvn test`).
+|Names what to run: a test class (`FooTest`), a class+method (`FooTest#testSomething`, including a Kotlin backtick
+name), several classes, a wildcard/package pattern, an exclusion, or a tag expression, optionally prefixed with a
+module (`:service:FooTest` / `-pl service`). Mapped to the correct parameter for the detected build tool.
+|None — omitting it runs the full unit suite (`mvn test` / `./gradlew test`).
 |===
 
-The selector maps to Surefire parameters as follows:
+The build tool is detected first: `pom.xml` means Maven (`./mvnw` allowed when `mvn` is absent); `settings.gradle(.kts)`
+or `build.gradle(.kts)` without a `pom.xml` means Gradle (wrapper preferred, system `gradle` only as a stated
+fallback); when both exist the CI workflow decides, and if that doesn't settle it the user is asked once. An Android
+Gradle plugin means the project is Android and `iru-android-test` is the right skill instead. Multi-module builds are
+scoped to the named module(s) (`-pl <module> -am` for Maven, `:<module>:test` for Gradle).
+
+Maven selectors map to Surefire parameters as follows:
 
 [cols="3,3,3", options="header"]
 |===
@@ -92,55 +100,125 @@ The selector maps to Surefire parameters as follows:
 |`mvn test -Dgroups="fast & !flaky"`
 |===
 
-`#method` selection and `-Dgroups`/`-DexcludedGroups` tag filtering require JUnit 4.x, JUnit 5, or TestNG (not
-plain JUnit 3) — the skill checks the project's `pom.xml` if it's unsure which syntax applies. A selector that
-matches nothing fails the build with "No tests matching pattern..."; `-DfailIfNoSpecifiedTests=false` is only
-added when the user explicitly wants a missing-selector to be a silent no-op.
+Gradle selectors map to `--tests` filters, always placed immediately after the `test` task they filter:
+
+[cols="3,3,3", options="header"]
+|===
+|What the user wants |Parameter |Example
+
+|Everything
+|_(none)_
+|`./gradlew test`
+
+|One test class
+|`--tests` (simple or fully qualified name)
+|`./gradlew test --tests 'FooTest'`
+
+|One method in a class
+|`--tests` with `.` (not `#`)
+|`./gradlew test --tests 'FooTest.testSomething'`
+
+|Several classes/methods
+|repeat `--tests`
+|`./gradlew test --tests 'FooTest' --tests 'BarTest'`
+
+|Name or package pattern
+|`--tests` with `*`
+|`./gradlew test --tests '*ServiceTest'`
+
+|One module only
+|prefix the task path
+|`./gradlew :service:test --tests 'FooTest'`
+
+|Several modules
+|list each task plus `--continue`
+|`./gradlew :a:test :b:test --continue`
+|===
+
+A Maven-style selector passed by a caller is translated (`FooTest#method` becomes `--tests 'FooTest.method'`).
+Exclusions and JUnit 5 tag expressions have no Gradle command-line flag: the skill looks for a project property wired
+to them and, if none exists, tells the user the filter cannot be applied without editing the build script (which it
+never edits itself) and offers the closest class/package selector. A selector matching nothing fails the build in
+both tools ("No tests matching pattern..." / "No tests found for given includes"); the no-match-is-fine flags are only
+added when the user explicitly asks. `--rerun` (Gradle 7.6+) or `cleanTest` is used only when a re-run of an
+up-to-date scope is actually wanted.
+
+Kotlin notes: test sources in `src/test/kotlin` use the same selectors. Backtick method names compile to names with
+spaces, so the whole selector is single-quoted (`--tests 'FooTest.should parse input'`,
+`-Dtest='FooTest#should parse input'`); if such a name does not resolve, the skill widens to a wildcard on a
+distinctive prefix and says so in the report.
+
+Quarkus notes: `@QuarkusTest` classes are ordinary Surefire/`test`-task tests, but boot the application (slower).
+They may start Dev Services containers, which need a Docker/Podman daemon; a "Docker is not running"-style failure is
+reported as an environment failure, not a test failure, and Dev Services are disabled only if asked
+(`-Dquarkus.devservices.enabled=false` for Maven, the `QUARKUS_DEVSERVICES_ENABLED=false` environment variable for
+Gradle). `@QuarkusIntegrationTest`/`*IT` classes (and Testcontainers-backed Spring Boot `*IT` classes) are not part of
+the default run — they only run, under `mvn verify` or the Gradle `quarkusIntTest`/`integrationTest` task, on
+explicit request. `./gradlew build`/`check` and `mvn verify` are never used for a plain unit-test request.
 
 == Outputs
 
 * A plain-text summary in the conversation — never a written file.
-* Total tests run, failures, errors, and skipped counts.
+* Total tests run, failures, errors, and skipped counts — from Surefire's totals line for Maven, or from the JUnit
+  XML under `build/test-results/test/` (parsed with a short `python3` snippet) for Gradle, whose console only lists
+  failures.
 * If everything passed: a brief confirmation, without pasting the full log.
-* If there are failures/errors: the failing test names and the relevant assertion/exception output (falling back
-  to `target/surefire-reports/*.txt` if console output was truncated) — without unrelated passing-test noise.
-* No source or test code is ever modified.
+* If there are failures/errors: the failing test names and the relevant assertion/exception output (from
+  `target/surefire-reports/*.txt` or the `<failure>`/`<error>` element of the matching Gradle XML if the console
+  output was truncated) — without unrelated passing-test noise.
+* Environment failures (Docker/Dev Services/Testcontainers unavailable) reported separately from genuine test
+  failures, naming the test classes that could not run.
+* No source or test code (and no build script) is ever modified.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Start /java-test\n(optional selector)"] --> B{Selector given?}
-    B -- no --> C["Run mvn test\n(full suite)"]
-    B -- yes --> D["Map selector to -Dtest / -Dgroups /\n-DexcludedGroups syntax"]
-    D --> E["Compose mvn test command\nwith mapped parameters"]
-    E --> F["Run via Bash tool"]
-    C --> F
-    F --> G["Summarize Surefire output:\nrun / failures / errors / skipped"]
-    G --> H{Failures or errors?}
-    H -- yes --> I["Show failing test names +\nassertion/exception output\n(surefire-reports/*.txt if truncated)"]
-    H -- no --> J["Report: all passed, briefly"]
+    A["Start /iru-java-test\n(optional selector)"] --> B{"Build tool?"}
+    B -- "pom.xml" --> C["Maven (mvn / ./mvnw)"]
+    B -- "build.gradle(.kts)" --> D["Gradle (./gradlew preferred)"]
+    B -- "Android plugin" --> E["Stop: use iru-android-test"]
+    B -- "both present" --> F["Pick the tool CI uses,\nelse ask once"]
+    F --> C
+    F --> D
+    C --> G{"Selector given?"}
+    D --> G
+    G -- no --> H["Run full unit suite"]
+    G -- yes --> I["Map selector to -Dtest / -Dgroups\nor --tests (translate, quote Kotlin names)"]
+    I --> J{"Filter expressible\non the command line?"}
+    J -- "no (Gradle tag/exclusion)" --> K["Tell the user; offer closest\nclass/package selector"]
+    J -- yes --> L["Compose scoped command\n(per-module for multi-module)"]
+    K --> L
+    H --> M["Run via Bash"]
+    L --> M
+    M --> N["Summarize totals: Surefire line\nor Gradle JUnit XML"]
+    N --> O{"Failures, errors or\nenvironment failure?"}
+    O -- yes --> P["Show failing names + assertion output;\nreport Docker/Dev Services issues separately"]
+    O -- no --> Q["Report: all passed, briefly"]
 ....
 
 == Dependencies
 
 === Invokes
 
-None — `iru-java-test` is a leaf skill; it only runs Maven commands and reports on their output, it does not call any
-other skill in this catalog.
+None — `iru-java-test` is a leaf skill; it only runs Maven/Gradle commands and reports on their output, it does not
+call any other skill in this catalog (it points Android projects at `iru-android-test` but does not invoke it).
 
 === Invoked by
 
 * xref:skills/iru-java-code-one-task-group.adoc[] — Step 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to run the scoped tests for every class the bucket affected
   (falling back to `mvn test -Dtest=<TestClass>` directly if this skill is unavailable), plus a full-suite run.
+* xref:skills/iru-kotlin-springboot-code-one-task-group.adoc[] — Step 3.4 and 3.6, scoped and full unit suites, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 3.4, 3.6 and 3.8, scoped, full unit-stage and container-stage tests, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-java-generate-all-tests.adoc[] — Step 7, once, to confirm the full suite still passes after every class's tests have been written or extended; also delegated through `iru-gate-runner`.
+* xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Steps 3.4 and 3.6, via `iru-gate-runner`, told the module scope for the scoped run and given no selector for the reactor-wide one. Falls back to `mvn test -DskipITs` only if the skill isn't installed.
 
 === Related agents
 
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — `iru-java-code-one-task-group` (see
-  xref:skills/iru-java-code-one-task-group.adoc[]) always invokes this skill from inside a `iru-gate-runner` sub-agent
-  it spawns, not inline.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills invoke this skill from inside an
+  `iru-gate-runner` sub-agent they spawn, not inline.
 
 == Source
 

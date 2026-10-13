@@ -1,5 +1,5 @@
 = Issue
-:description: Takes a GitHub issue or Jira ticket end to end: confirms a base branch, explores and plans the work, implements it, then opens and reviews the pull request.
+:description: Takes a GitHub issue or Jira ticket end to end: confirms a base branch, explores and plans the work, implements it, then opens and reviews the PR.
 :keywords: iru-issue, claude code skill, github, jira, pull request, branch creation, base branch, issue to pr, code review, ticket automation
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -89,10 +89,10 @@ flowchart TD
     B -- no --> C["Ask user for a ticket id"]
     C -- still none --> Z["Stop: ticket id is required"]
     C -- given --> D
-    B -- yes --> D["Detect type: Jira key vs.\nbare number/#N (GitHub)"]
+    B -- yes --> D["Step 1-2: detect type: Jira key vs.\nbare number/#N (GitHub)"]
     D --> E["Fetch ticket via gh issue view\nor Jira MCP tools"]
-    E --> F["Classify as feature or hotfix\n(labels/iru-issue type, then title/body content,\nthen ask user if still ambiguous)"]
-    F --> F1{"Local run or cloud run?\n(claude/* branch name,\nsandbox/env markers)"}
+    E --> F["Step 3: classify as feature or hotfix\n(labels/iru-issue type, then title/body content,\nthen ask user if still ambiguous)"]
+    F --> F1{"Step 4: local run or cloud run?\n(claude/* branch name,\nsandbox/env markers)"}
     F1 -- local --> F2["Propose current branch\nas base branch"]
     F1 -- cloud --> F3["Propose repository default branch\nas base branch (never claude/*)"]
     F1 -- ambiguous --> F4["Ask user: local or cloud?"]
@@ -109,10 +109,10 @@ flowchart TD
     J -- automatic --> L["Delegate full code skill run\nto isolated-skill-executor agent"]
     L -- blocker reported --> M["Surface blocker to user and stop"]
     L -- security gate fired --> N["Hard stop: warn user what was\nflagged; do NOT attach, push,\nor open PR"]
-    L -- clean success --> AP{"Did iru-code archive\na plan (per its Step 9)?"}
+    L -- clean success --> AP{"Step 7: did iru-code archive\na plan (per its Step 9)?"}
     AP -- no --> O
     AP -- yes --> AP2["Attach archived plan to ticket:\ngh issue comment (GitHub) or\nJira attachment/comment"]
-    AP2 --> O["Confirm with user, then\npush branch"]
+    AP2 --> O["Step 8: confirm with user, then\npush branch"]
     O --> P["Open pull request as draft\n(placeholder body, host-appropriate\nticket reference)"]
     P --> Q["Invoke pr-description skill"]
     Q --> R["Re-confirm ticket reference\nstill in PR body"]
@@ -124,16 +124,16 @@ flowchart TD
 
 === Invokes
 
-* xref:skills/iru-explore.adoc[] — Step 5 runs `iru-explore` scoped to the ticket id as the first step of the
+* xref:skills/iru-explore.adoc[] — Step 5.1 runs `iru-explore` scoped to the ticket id as the first step of the
   explore → plan → code → PR pipeline.
-* xref:skills/iru-plan.adoc[] — Step 5 runs `iru-plan` scoped to the ticket id right after `iru-explore`, producing
+* xref:skills/iru-plan.adoc[] — Step 5.2 runs `iru-plan` scoped to the ticket id right after `iru-explore`, producing
   `implementation_plan.md`.
 * xref:skills/iru-code.adoc[] — Step 6, when the user chooses automatic implementation over manual review, runs
   `iru-code` via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent so the whole
   implementation run starts from a clean context rather than carrying the exploration/planning transcript into it.
-* xref:skills/iru-pr-description.adoc[] — Step 7 invokes it to draft the new pull request's description from
-  the actual diff, then re-checks its output still references the ticket.
-* xref:skills/iru-pr-review.adoc[] — Step 7 invokes it, passing both the new PR's id and the ticket id
+* xref:skills/iru-pr-description.adoc[] — Step 8.4 invokes it (passing `base-branch`) to draft the new pull request's
+  description from the actual diff; Step 8.5 then re-checks its output still references the ticket.
+* xref:skills/iru-pr-review.adoc[] — Step 8.6 invokes it, passing both the new PR's id and the ticket id
   explicitly (rather than relying on its own auto-detection), to leave an initial review on the PR.
 
 === Invoked by
@@ -145,8 +145,8 @@ picked up by a subsequent, separate `/iru-issue` invocation.
 === Related agents
 
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — wraps the entire `iru-code` run in Step 6,
-  so implementation happens in an isolated context and this skill can keep running afterward to open the pull
-  request in Step 7.
+  so implementation happens in an isolated context and this skill can keep running afterward to attach the plan
+  (Step 7) and open the pull request (Step 8).
 
 == Source
 

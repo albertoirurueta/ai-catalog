@@ -107,9 +107,7 @@ directly, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-release.adoc[] — Step 6, when the detected ecosystem is TypeScript/npm, called twice per
-  release (once with the stripped release version, once with the next `-dev.0` pre-release version) to apply
-  each computed version string in turn.
+* xref:skills/iru-release.adoc[] — Step 6, version bump for TypeScript/npm projects.
 
 === Related agents
 
