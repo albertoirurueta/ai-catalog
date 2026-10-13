@@ -1,26 +1,30 @@
 ---
 name: iru-setup-typescript-repository
-description: End-to-end bootstrap for an npm/TypeScript repository of any of five flavors — collects `flavor`
-  (`library`/`react`/`angular`/`react-native`/`ionic`, asked via `AskUserQuestion` in two short rounds when
-  absent), the project's identity (name/slug/scope/app-id, description, license, developer name/email/organization
-  URL), and the shared pipeline parameters (`open-source`, `publish` for libraries, `distribution` for apps, `sonar`
-  plus its detail keys, `visibility`, `ci`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`,
-  `node-version`, `package-manager`) once, then
-  orchestrates the flavor's scaffold skill (`iru-setup-typescript-library` / `iru-setup-react-web` /
-  `iru-setup-angular-web` / `iru-setup-react-native-app` / `iru-setup-ionic-app`) → `iru-setup-antora` →
-  `iru-setup-typescript-gitignore` → `iru-setup-typescript-github-workflows` → `iru-setup-changelog` →
-  `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is asked twice (the workflows
-  step is skipped entirely when `ci` is `no`). Invoke as
-  `/iru-setup-typescript-repository`, optionally with `args` (`key`/`value` lines) to pre-resolve `flavor`, `mode`
-  (`new`/`existing`), `open-source`, `publish`, `distribution`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `native-builds` (react-native), `framework` (ionic's own Angular/React choice),
-  `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default `24`),
-  `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when absent),
-  `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/
-  `replace`, forwarded only when supplied), and every identity field, skipping the matching question. Starts by
-  announcing whether it is setting up from scratch or updating an existing repository (with an inventory of
-  every component it owns marked absent/present/partial); each sub-skill then warns and asks keep/update/replace
-  for whatever it finds already present, and the final report lists the action taken per component. Use whenever bootstrapping (or catching up) a new npm/TypeScript repository's full
+description: >-
+  End-to-end bootstrap for an npm/TypeScript repository of any of seven flavors — collects `flavor`
+  (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-native`/`ionic`, asked via `AskUserQuestion` in two short
+  rounds when absent, or pre-selected from an `iru-explore` `Project type:` line), the project's identity
+  (name/slug/scope/app-id, description, license, developer name/email/organization URL), the flavor-specific
+  choices that shape later steps (NestJS `orm`/`database`, Next.js `output`/`e2e`), and the shared pipeline
+  parameters (`open-source`, `publish` for libraries, `distribution` for apps and services, `sonar` plus its detail
+  keys, `visibility`, `ci`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`, `node-version`,
+  `package-manager`) once, then orchestrates the flavor's scaffold skill (`iru-setup-typescript-library` /
+  `iru-setup-react-web` / `iru-setup-nextjs-web` / `iru-setup-angular-web` / `iru-setup-nestjs-app` /
+  `iru-setup-react-native-app` / `iru-setup-ionic-app`) → `iru-setup-antora` → `iru-setup-typescript-gitignore` →
+  `iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
+  `iru-isolated-skill-executor`, so nothing is asked twice (the workflows step is skipped entirely when `ci` is
+  `no`). Invoke as `/iru-setup-typescript-repository`, optionally with `args` (`key`/`value` lines) to pre-resolve
+  `flavor`, `mode` (`new`/`existing`), `open-source`, `publish`, `distribution`, `sonar` (+ `sonar-organization`/
+  `sonar-project-key`/`sonar-host-url`), `native-builds` (react-native), `framework` (ionic's own Angular/React
+  choice), `module-system`/`orm`/`database`/`http` (nestjs), `router`/`output`/`cache-components`/`styling`/`e2e`
+  (nextjs), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default
+  `24`), `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when
+  absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/
+  `update`/`replace`, forwarded only when supplied), and every identity field, skipping the matching question.
+  Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
+  inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
+  keep/update/replace for whatever it finds already present, and the final report lists the action taken per
+  component. Use whenever bootstrapping (or catching up) a new npm/TypeScript repository's full
   scaffold/docs/gitignore/CI/changelog/README pipeline in one pass, whatever its flavor, instead of running five to
   six skills separately and re-answering the same questions each time.
 model: haiku
@@ -28,9 +32,10 @@ model: haiku
 
 # Setup TypeScript Repository
 
-Bootstrap a brand-new (or catch up an existing) npm/TypeScript repository in one pass, for whichever of five
+Bootstrap a brand-new (or catch up an existing) npm/TypeScript repository in one pass, for whichever of seven
 flavors it is, by orchestrating six existing skills: the flavor's own scaffold skill (`iru-setup-typescript-library`,
-`iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, or `iru-setup-ionic-app`),
+`iru-setup-react-web`, `iru-setup-nextjs-web`, `iru-setup-angular-web`, `iru-setup-nestjs-app`,
+`iru-setup-react-native-app`, or `iru-setup-ionic-app`),
 `iru-setup-antora` (Antora documentation site), `iru-setup-typescript-gitignore` (root `.gitignore`),
 `iru-setup-typescript-github-workflows` (CI/CD workflows), `iru-setup-changelog` (root `CHANGELOG.md`), and
 `iru-setup-readme` (root `README.md`). This skill does not duplicate any of their logic — it collects the shared
@@ -68,11 +73,15 @@ node-version: 24
 package-manager: npm
 ```
 
-Recognized keys: `flavor` (`library`/`react`/`angular`/`react-native`/`ionic`), `mode` (`new`/`existing`),
-`open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only), `distribution` (`none`/`internal`/`store` —
-react-native/ionic only), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/
-`sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local` — react-native only), `framework`
-(`angular`/`react` — ionic's own UI framework only), `integration-branch`, `stable-branch`, `node-version`,
+Recognized keys: `flavor` (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-native`/`ionic`), `mode`
+(`new`/`existing`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only), `distribution`
+(`none`/`internal`/`store` for react-native/ionic; `none`/`internal` for nestjs/nextjs), `sonar`
+(`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`,
+`native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic's own UI framework
+only), the nestjs-only keys `module-system` (`esm`/`cjs`), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/`drizzle`),
+`database` (`postgresql`/`mysql`/`mongodb`), `http` (`express`/`fastify`), the nextjs-only keys `router`
+(`app`/`pages`), `output` (`server`/`static`), `cache-components` (`yes`/`no`), `styling`
+(`tailwind`/`css-modules`), `e2e` (`playwright`/`none`), `integration-branch`, `stable-branch`, `node-version`,
 `package-manager`, `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`),
 `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every
 file-writing sub-skill only when it arrived here via `args`), and every identity field named in Steps 2–3 below (`name`, `scope`, `app-id`, `description`,
@@ -82,12 +91,31 @@ If `args` is absent or doesn't look like this format, treat everything as unset 
 
 ## Step 1 — Resolve the flavor and mode
 
-Unless `flavor` was already supplied via `args`, resolve it in **two short rounds** (`AskUserQuestion` allows at
-most four options per question, and five flavors don't fit in one):
+Unless `flavor` was already supplied via `args`, first look for an `iru-explore` report earlier in this
+conversation (e.g. `iru-setup-repository` ran it) and read its `- Project type:` line verbatim; when it's one of
+the values below, pre-select the matching flavor and confirm it with a single `AskUserQuestion` (pre-selected
+flavor first, "Something else" second — which falls through to the rounds below) instead of asking from scratch.
+Without such a report, don't run `iru-explore` just for this — ask the rounds.
 
-- **Round 1**: *Library (published npm package)* / *React web app (Vite)* / *Angular web app* / *Mobile app
-  (React Native or Ionic)*.
-- **Round 2** (only if "Mobile app" was picked): *React Native (Expo-managed, over-the-air/EAS)* / *Ionic
+| `Project type:` (iru-explore) | `flavor` |
+|---|---|
+| `typescript-library` | `library` |
+| `react-web` | `react` |
+| `nextjs` | `nextjs` |
+| `angular-web` | `angular` |
+| `nestjs` | `nestjs` |
+| `react-native-app` | `react-native` |
+| `ionic-app (angular)` / `ionic-app (react)` | `ionic` (and `framework` from the parenthesis) |
+
+Otherwise resolve it in **two short rounds** (`AskUserQuestion` allows at most four options per question, and
+seven flavors don't fit in one):
+
+- **Round 1**: *Library (published npm package)* / *Web app (React + Vite, Next.js, or Angular)* / *Backend
+  service (NestJS)* / *Mobile app (React Native or Ionic)*. "Backend service" sets `flavor: nestjs` directly — it's
+  the only backend flavor, so no second round.
+- **Round 2a** (only if "Web app" was picked): *React (Vite single-page app)* / *Next.js (React framework — server
+  rendering or static export)* / *Angular (Angular CLI)*. Sets `flavor` to `react`, `nextjs`, or `angular`.
+- **Round 2b** (only if "Mobile app" was picked): *React Native (Expo-managed, over-the-air/EAS)* / *Ionic
   (Capacitor hybrid app, Angular or React UI)*. Sets `flavor` to `react-native` or `ionic` accordingly.
 - **If `ionic` was picked**, ask one further bounded question — Ionic's own UI framework, a separate concern from
   this orchestrator's `flavor` and recorded as the `framework` key: **Angular** or **React**. `iru-setup-ionic-app`
@@ -99,7 +127,9 @@ Map the resolved `flavor` to its scaffold skill for the rest of this run:
 |---|---|
 | `library` | `iru-setup-typescript-library` |
 | `react` | `iru-setup-react-web` |
+| `nextjs` | `iru-setup-nextjs-web` |
 | `angular` | `iru-setup-angular-web` |
+| `nestjs` | `iru-setup-nestjs-app` |
 | `react-native` | `iru-setup-react-native-app` |
 | `ionic` | `iru-setup-ionic-app` |
 
@@ -121,8 +151,11 @@ Right after resolving `mode`, before asking anything else, print a short **Setup
 
   | Component | Evidence checked |
   |---|---|
-  | Build manifest / toolchain | `package.json`, lockfile, `tsconfig.json`, flavor config (`angular.json`, `vite.config.*`, `app.json`, `capacitor.config.*`) |
-  | Source layout | `src/` (or the flavor's app directory) |
+  | Build manifest / toolchain | `package.json`, lockfile, `tsconfig.json`, flavor config (`angular.json`, `vite.config.*`, `next.config.*`, `nest-cli.json`, `app.json`, `capacitor.config.*`) |
+  | Source layout | `src/` (or the flavor's app directory; `app/`/`pages/` for Next.js without `src/`) |
+  | E2E test config | nextjs: `playwright.config.*` (+ `e2e/`); nestjs: `vitest.config.e2e.ts` or `test/jest-e2e.json` (+ `test/*.e2e-spec.ts`) — row only for these two flavors |
+  | Container image | `Dockerfile`, `.dockerignore` — row only for nestjs, and nextjs with `output: server` |
+  | ORM schema | nestjs with `orm` ≠ `none`: `prisma/schema.prisma` + `prisma.config.ts` (prisma), `drizzle.config.ts`, TypeORM data source / `src/**/migrations/` — row only when applicable |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | `.gitignore` | `.gitignore` |
   | CI workflows | each of `.github/workflows/build.yml`, `release.yml`, `sync.yml` (+ `.github/scripts/sync_versions.py`), `security.yml` |
@@ -153,13 +186,13 @@ For any field Step 0 already resolved from `args`, use that value directly. For 
 directly (plain conversation — these are free-text project-identity fields, not a bounded choice):
 
 - **name** — the project name. Mapped to each scaffold skill's own key: `package-name` (library), `app-name`
-  (react, react-native, ionic), or `name` (angular).
+  (react, nextjs, nestjs, react-native, ionic), or `name` (angular).
 - **scope** — **library only**: the npm scope without the leading `@` (optional — ask whether the package should be
   scoped at all before asking for the scope itself).
 - **app-id** — **ionic only**: the reverse-DNS application id, e.g. `com.example.myapp`.
 - **app-slug** — **react-native only**: kebab-case; default to a slugified `name` rather than asking open-endedly,
   confirming with the user only if they want something different.
-- **description** — one line. **Only asked for `library`/`react`/`ionic`** — `iru-setup-angular-web` and
+- **description** — one line. **Only asked for `library`/`react`/`nextjs`/`nestjs`/`ionic`** — `iru-setup-angular-web` and
   `iru-setup-react-native-app` accept no `description` key at all, so don't collect or pass one for those two
   flavors (a decision made here rather than inventing a key neither skill reads).
 - **Developer name**, **developer email**, **organizationUrl**.
@@ -191,8 +224,24 @@ Step 2). For any field Step 0 already resolved from `args`, use that value direc
   because `iru-setup-typescript-github-workflows` also needs it (Step 8) to pick the right `release.yml` variant.
 - **`ionic`**: `framework` was already resolved in Step 1. **`add-android`/`add-ios` are deliberately left unasked
   here** — they don't affect anything outside `iru-setup-ionic-app` itself, so that skill asks them directly.
+- **`nestjs`**: **orm** (`AskUserQuestion`, default **None**; options *None* / *TypeORM* / *Prisma* / *Other
+  (Mongoose or Drizzle)* — a follow-up picks between those two) and, only when `orm` ≠ `none`, **database**
+  (*PostgreSQL* (recommended) / *MySQL* / *MongoDB*; `mongoose` implies `mongodb`, so don't ask then, and don't
+  offer MongoDB for TypeORM/Prisma/Drizzle unless the user insists). Collected here, not left to the scaffold,
+  because `iru-setup-typescript-github-workflows` needs `orm` (Prisma needs a `prisma generate` step before
+  typecheck/build, and an ORM means the e2e suite starts a real database with Testcontainers) — which in turn
+  shapes Step 4's `ci-tests` explanation. **`module-system` and `http` are deliberately left unasked here** — they
+  don't affect anything outside `iru-setup-nestjs-app`, so that skill asks (or defaults: `esm`, `express`) them
+  itself.
+- **`nextjs`**: **output** (`AskUserQuestion`): *Server (Node server, `output: 'standalone'`)* (recommended when
+  the app needs server rendering at request time, Route Handlers, Server Actions, or a proxy) / *Static export
+  (`output: 'export'`, plain HTML/JS — can be hosted on GitHub Pages)*. Then **e2e** (*Playwright* (recommended) /
+  *None*). Both are collected here because they change `release.yml` (Pages deploy vs container image) and
+  `build.yml` (Playwright step), and decide which of `pages`/`distribution`/`ci-tests` Step 4 asks. **`router`,
+  `cache-components`, and `styling` are deliberately left unasked here** — they don't affect anything outside
+  `iru-setup-nextjs-web`, so that skill asks (or defaults: `app`, `no`, `tailwind`) them itself.
 
-`distribution` (react-native/ionic) is resolved in Step 4 alongside `open-source`/`sonar`, since its default
+`distribution` (react-native/ionic/nestjs/nextjs) is resolved in Step 4 alongside `open-source`/`sonar`, since its default
 depends on `open-source` per this catalog's shared convention.
 
 ## Step 4 — Collect the shared pipeline parameters
@@ -233,8 +282,17 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
   dependency-review, CodeQL, OSV-Scanner, gitleaks) was skipped with it.
 - **publish** — **library only**: default **Yes** when open-source is Yes; otherwise ask with **No** recommended
   (publishing to the public npm registry is meant for redistributable packages).
-- **distribution** — **react-native/ionic only**: `none`/`internal`/`store`. Default **`store`** when open-source
+- **distribution** — **react-native/ionic**: `none`/`internal`/`store`. Default **`store`** when open-source
   is Yes; otherwise ask with **`internal`** recommended (a closed-source app rarely targets the public stores).
+  **nestjs, and nextjs with `output: server`**: `none`/`internal` only — there is no store. `internal` = the
+  release builds the multi-stage, non-root `Dockerfile` image and pushes it to GitHub Container Registry (GHCR)
+  tagged with the release version; `none` = the scaffold still writes the `Dockerfile` for local use and
+  `build.yml` still builds the production output, but no `release.yml` is generated — deploying is the user's
+  follow-up. Ask with **`internal`** recommended (a service with nothing to deploy rarely makes sense), noting
+  that GHCR packages of a public repository are free while private packages count against the account's Packages
+  storage/transfer quota. **nextjs with `output: static`**: don't ask — set `distribution: none`; the static export
+  is deployed by `release.yml` to GitHub Pages when `pages: yes` (below), otherwise uploaded as a workflow
+  artifact.
 - **sonar** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?"
   `cloud`/`self-hosted`/`none`. Recommend **`cloud`** only when open-source is Yes **and** visibility is
   `public`; otherwise state that SonarCloud is free only for public open-source projects (a private project
@@ -251,22 +309,28 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
 Then, **only when `ci: yes`**:
 
 - **ci-tests** — "Which tests should CI run?" Only asked for `react`/`angular`/`ionic`, the flavors whose
-  `build.yml` has a Playwright e2e step: **Unit tests only** ("lint, typecheck, unit tests with coverage —
-  cheaper: fewer minutes, faster feedback; Playwright e2e stays local", recommended for private/internal) /
-  **Unit + e2e** (`full` — "also installs Playwright browsers and runs the e2e suite on every build; complete
-  verification, considerably more minutes", recommended for public). For `library`/`react-native` there's no
-  e2e step in this pipeline, so don't ask — leave `ci-tests` unset (unless `args` supplied it) and let the
-  workflows skill default it.
-- **pages** — the Antora docs site (Step 6) is always built, and for `react`/`angular` `release.yml` also
-  deploys the web app itself to GitHub Pages. Public: default **yes** without asking (state it in Step 11).
-  Private/internal: ask **No (Recommended)** ("CI still builds the docs — and for react/angular the release
-  bundle — and uploads them as workflow artifacts; nothing is published") vs **Yes** ("requires GitHub Pro,
+  `build.yml` has a Playwright e2e step, plus `nextjs` with `e2e: playwright` and `nestjs`: **Unit tests only**
+  ("lint, typecheck, unit tests with coverage — cheaper: fewer minutes, faster feedback; e2e stays local",
+  recommended for private/internal) / **Unit + e2e** (`full` — "also runs the e2e suite on every build; complete
+  verification, considerably more minutes", recommended for public). Phrase the e2e part per flavor: Playwright
+  browsers install + run (react/angular/ionic, and nextjs against a production `next build`); for `nestjs`, the
+  `test:e2e` suite (supertest against the bootstrapped app) — and when `orm` ≠ `none`, a real `database` started by
+  Testcontainers (GitHub-hosted Linux runners have Docker; it adds image pulls and minutes). For
+  `library`/`react-native`, and `nextjs` with `e2e: none`, there's no e2e step in this pipeline, so don't ask —
+  leave `ci-tests` unset (unless `args` supplied it) and let the workflows skill default it.
+- **pages** — the Antora docs site (Step 6) is always built, and for `react`/`angular` — and `nextjs` with
+  `output: static` — `release.yml` also deploys the web app itself to GitHub Pages (for `nestjs` and server-output
+  `nextjs`, Pages only ever hosts the docs; the app ships as the `distribution` image). Public: default **yes**
+  without asking (state it in Step 11). Private/internal: ask **No (Recommended)** ("CI still builds the docs —
+  and for react/angular/static nextjs the release bundle — and uploads them as workflow artifacts; nothing is
+  published") vs **Yes** ("requires GitHub Pro,
   Team, or Enterprise Cloud; the site will be PUBLIC on the internet unless you're on Enterprise Cloud with
-  private Pages access control"). For `react`/`angular`, add that with **No** the app isn't hosted anywhere by
-  this pipeline — the release produces a downloadable bundle and hosting it elsewhere is the user's follow-up.
+  private Pages access control"). For `react`/`angular`/static `nextjs`, add that with **No** the app isn't
+  hosted anywhere by this pipeline — the release produces a downloadable bundle and hosting it elsewhere is the
+  user's follow-up.
 
 These values (`open-source`, `visibility`, `ci`, `publish`/`distribution`, `sonar` + detail keys, `ci-tests`,
-`pages`) are passed through unchanged to the sub-skills that accept them — Step 5 (the scaffold skill), Step 8
+`pages`, plus Step 3's flavor-specific keys) are passed through unchanged to the sub-skills that accept them — Step 5 (the scaffold skill), Step 8
 (`iru-setup-typescript-github-workflows`), and Step 10 (`iru-setup-readme`) — so no sub-skill re-asks them.
 
 ## Step 5 — Run the flavor's scaffold skill
@@ -302,14 +366,28 @@ Agent({
 
 `integration-branch` (Step 4's answer, default `develop`) is forwarded **only** to the `library` flavor: it's the
 `baseBranch` `iru-setup-typescript-library` writes into `.changeset/config.json` when `publish: yes`, and without
-it that file silently defaults to `main` while Step 8's workflows run on `develop`. The other four scaffold skills
+it that file silently defaults to `main` while Step 8's workflows run on `develop`. The other six scaffold skills
 have no such key — never send it to them.
 
-The other four flavors follow the same shape, with only the `args` keys and skill name changed:
+The other six flavors follow the same shape, with only the `args` keys and skill name changed:
 
 - **`react`**: `iru-setup-react-web` — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
   `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
   supplied). No `publish`/`distribution` key exists for this skill — never send one. `keep-oxlint` is deliberately omitted (Step 3) so the sub-skill asks it.
+- **`nextjs`**: `iru-setup-nextjs-web` — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `output`, `e2e`, `distribution`, `package-manager`,
+  `node-version`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied), and `router`/`cache-components`/
+  `styling` **only if they arrived via Step 0's `args`** (otherwise the sub-skill asks them — Step 3).
+  `node-version` is the `Dockerfile` base image's Node major for `output: server`. `pages` is deliberately not
+  sent: a static export's GitHub Pages project-site `basePath` comes from the `PAGES_BASE_PATH` environment variable
+  that `iru-setup-typescript-github-workflows`' release job sets, read by `next.config` whatever `pages` is. No
+  `publish`/`storybook`/`pages` key exists for this skill — never send one.
+- **`nestjs`**: `iru-setup-nestjs-app` — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `orm`, `database` (only when `orm` ≠ `none`),
+  `distribution`, `package-manager`, `node-version`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied), and
+  `module-system`/`http` **only if they arrived via Step 0's `args`** (otherwise the sub-skill asks them — Step 3).
+  `node-version` is the `Dockerfile` base image's Node major. No `publish`/`storybook`/`pages` key exists for this
+  skill — never send one.
 - **`angular`**: `iru-setup-angular-web` — `name`, `directory`, `license`, `developer-name`, `developer-email`,
   `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
   supplied). No `description` key exists for this skill — never send one.
@@ -374,6 +452,7 @@ scaffold skill actually wires up, not assumed:
 | `react` | `storybook` if Step 3's `storybook` answer was Yes, else `none` |
 | `react-native` | `none` — `iru-setup-react-native-app` has no Storybook option at all |
 | `ionic` | `none` — `iru-setup-ionic-app` has no Storybook option at all |
+| `nextjs` / `nestjs` | read from disk after Step 5, not assumed: `typedoc` if `typedoc.json` exists or a `package.json` script runs `typedoc`, `compodoc` if a script runs `@compodoc/compodoc`/`compodoc`, else `none` |
 
 Format Steps 1–4's answers as `key: value` lines and invoke via `iru-isolated-skill-executor`:
 
@@ -384,9 +463,10 @@ Agent({
   prompt: "Invoke Skill({skill: \"iru-setup-typescript-github-workflows\", args: \"flavor: <flavor>\\n
     integration-branch: <integration-branch>\\nstable-branch: <stable-branch>\\nnode-version: <node-version>\\n
     package-manager: <package-manager>\\nopen-source: <open-source>\\npublish: <publish, library only>\\n
-    distribution: <distribution, react-native/ionic only>\\nsonar: <sonar>\\n
+    distribution: <distribution, react-native/ionic/nestjs/nextjs only>\\nsonar: <sonar>\\n
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
     native-builds: <native-builds, react-native only>\\nframework: <framework, ionic only>\\n
+    orm: <orm, nestjs only>\\noutput: <output, nextjs only>\\ne2e: <e2e, nextjs only>\\n
     docs-tool: <docs-tool>\\nvisibility: <visibility>\\nci-tests: <ci-tests, if resolved>\\npages: <pages>\\n
     mode: <mode>\\non-existing: <on-existing, only if supplied via args>\"}). Report back: whether it ran from
     scratch or as an update, and per file (build.yml/release.yml/sync.yml/security.yml/.github/dependabot.yml)
@@ -396,9 +476,12 @@ Agent({
 })
 ```
 
-Omit `publish`/`distribution`/`native-builds`/`framework` entirely when they don't apply to the resolved `flavor`
-(never send a key the flavor doesn't use), and omit `ci-tests` when Step 4 left it unset (`library`/
-`react-native`). `ci` itself is never forwarded — invoking the workflows skill means CI is wanted. `mode` is
+Omit `publish`/`distribution`/`native-builds`/`framework`/`orm`/`output`/`e2e` entirely when they don't apply to
+the resolved `flavor` (never send a key the flavor doesn't use — `distribution` is sent for
+react-native/ionic/nestjs/nextjs), and omit `ci-tests` when Step 4 left it unset (`library`/`react-native`/`nextjs`
+with `e2e: none`). `database` and the scaffold-only keys `module-system`, `http`, `router`, `cache-components`, and
+`styling` are never sent to the workflows skill — it accepts none of them and reads what it needs (lockfile,
+`package.json` scripts, `next.config.*`, the ORM's config) from disk. `ci` itself is never forwarded — invoking the workflows skill means CI is wanted. `mode` is
 always passed but is informational there: for every workflow file already present,
 `iru-setup-typescript-github-workflows` announces the update, warns, and asks Update / Keep / Replace / Stop
 per file (its Step 2) unless `on-existing` was forwarded. The four `security-*` keys
@@ -455,12 +538,16 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
 - **`ci`**: yes/no. With `no`, state that no workflows, `security.yml`, or `.github/dependabot.yml` were
   generated, that the shared security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) was
   skipped with them, and that `/iru-setup-typescript-github-workflows` can add them later.
-- **`ci-tests`** (when `ci: yes`): `unit`/`full`, or unset for `library`/`react-native`, and whether the
-  Playwright e2e block was included in `build.yml`.
+- **`ci-tests`** (when `ci: yes`): `unit`/`full`, or unset for `library`/`react-native`/`nextjs` with `e2e: none`,
+  and whether the e2e block (Playwright, or the NestJS `test:e2e` suite with Testcontainers) was included in
+  `build.yml`.
 - **`pages`** (when `ci: yes`): yes (defaulted for a public repository, or chosen) / no (docs — and the
-  `react`/`angular` release bundle — uploaded as workflow artifacts only; for `react`/`angular`, the app isn't
-  hosted anywhere by this pipeline, so hosting it is a follow-up for the user).
-- **`publish`** (library) / **`distribution`** (react-native, ionic): whether the corresponding scaffold config and
+  `react`/`angular`/static-`nextjs` release bundle — uploaded as workflow artifacts only; for those flavors the app
+  isn't hosted anywhere by this pipeline, so hosting it is a follow-up for the user).
+- **Flavor-specific choices**: nestjs `orm`/`database` (+ the `module-system`/`http` the scaffold resolved),
+  nextjs `output`/`e2e` (+ the `router`/`cache-components`/`styling` the scaffold resolved).
+- **`publish`** (library) / **`distribution`** (react-native, ionic, nestjs, server-output nextjs — `internal` =
+  container image pushed to GHCR; static nextjs is always `none`): whether the corresponding scaffold config and
   `release.yml` job were included — `yes`/non-`none` unless the user opted out (or the project isn't open source
   and declined it), stated plainly rather than left implicit.
 - **`sonar`**: `cloud`/`self-hosted`/`none`, and whether `sonar-project.properties` and the `Run SonarQube/SonarCloud
@@ -475,7 +562,8 @@ repository-settings notes (GitHub Pages source = GitHub Actions when `pages: yes
 `sync.yml`, the npmjs.com trusted-publisher relationship for `publish: yes`).
 
 List every decision made on the user's behalf: the license question's fixed MIT-first ordering (Step 2), leaving
-`keep-oxlint`/`add-android`/`add-ios` for their sub-skills to ask (Step 3), the mobile flavors' `docs-tool: none`
+`keep-oxlint`/`add-android`/`add-ios`/`module-system`/`http`/`router`/`cache-components`/`styling` for their
+sub-skills to ask (Step 3), forcing `distribution: none` for a static Next.js export (Step 4), the mobile flavors' `docs-tool: none`
 default (Step 8), and the four `security-*` flags left at their `yes` default (Step 8).
 
 Finish with an explicit **Warn explicitly** block, repeating each sub-skill's own closing warning:
@@ -485,6 +573,9 @@ Finish with an explicit **Warn explicitly** block, repeating each sub-skill's ow
   and that `npm run build && npm test && npm run typecheck` (or the flavor's equivalent scripts) succeed.
 - If `sonar: cloud`/`self-hosted` was chosen, a `SONAR_TOKEN` repository secret and an actual SonarCloud/SonarQube
   project matching `sonar.projectKey` still need to exist before a CI-run Sonar scan will succeed.
+- If `distribution: internal` was chosen for `nestjs`/`nextjs`, the image is pushed to GHCR with the workflow's
+  `GITHUB_TOKEN` (`packages: write`); a new package is private by default even for a public repository — change
+  its visibility in the package settings if it should be pullable anonymously.
 - If `publish: yes`/`distribution: store` was chosen, the registry/store credentials named in the secrets table
   still need to exist before a CI-driven publish/submit will succeed — nothing in this pipeline creates or stores
   them.

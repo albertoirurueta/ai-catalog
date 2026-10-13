@@ -106,6 +106,11 @@ flags are exactly the ones this skill reads:
   --coverage.exclude='src/main.ts'` removes them. For Jest, append the negated globs to `--collectCoverageFrom`
   (`--collectCoverageFrom='src/**/*.ts' --collectCoverageFrom='!**/*.module.ts' --collectCoverageFrom='!src/main.ts'`,
   verified on a CommonJS Nest 12 scaffold generated with `nest g application --type=cjs` and Jest 30 + ts-jest). Say in the report that these were excluded.
+- **Exclude generated code inside `src/`** too — a Prisma client generated into the source tree (the generator's
+  `output`, e.g. `src/generated/**`; read it from `prisma/schema.prisma`) and any other `**/generated/**` output:
+  `--coverage.exclude='src/generated/**'` for Vitest, `--collectCoverageFrom='!src/generated/**'` for Jest. On a
+  Prisma 7 scaffold it otherwise drops the measured total from 100% to ~83%. Prefer the project's own `coverage`
+  script/config when it already excludes these.
 - For a CommonJS project whose scripts invoke Jest as `node --experimental-vm-modules ./node_modules/jest/bin/jest.js`,
   use that same prefix instead of `npx jest`.
 
