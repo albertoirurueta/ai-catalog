@@ -1,0 +1,94 @@
+= Python Coverage
+:description: Measures line and branch coverage of a Python project's fast pytest suite with pytest-cov or coverage.py and reports per-target gaps from Cobertura XML.
+:keywords: iru-python-coverage, claude code skill, python, coverage, pytest-cov, coverage.py, cobertura, fastapi, django, branch coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Python project's fast (container-free) pytest suite with coverage.py enabled and report the exact, measured line and branch coverage for the files the caller cares about, read from a Cobertura XML report. It is a read-only measuring skill: it never adds tests, modifies source or test code, or changes coverage configuration unless asked to as a follow-up.
+
+== Purpose
+
+A coverage number is only meaningful if coverage is actually wired and the right code is measured. `iru-python-coverage` checks that `pytest-cov` (or at least `coverage`) is installed, reads the project's `[tool.coverage.*]` configuration (`source`, `omit`, `branch`, `fail_under`, `concurrency`), runs the fast selection with coverage, and computes line %, branch % and coverage.py's combined % from the XML. The gate run always deselects integration tests, because a figure that depends on Docker cannot be reproduced without it. A missing wiring, a run that wrote no report, or a target outside the measured source is reported instead of a misleading percentage.
+
+== Purpose group
+
+xref:index.adoc#group-python[Python Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-python-coverage
+/iru-python-coverage <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|Paths, node ids and `-k "<expr>"`, with exactly the syntax of `iru-python-test` Step 0.
+|The whole fast suite.
+
+|`targets`
+|No
+|Comma-separated source files, directories/packages, or dotted modules to report on. When absent they are inferred from the selector by naming convention.
+|Inferred from the selector, else every file in the report.
+
+|`bar: <N>`
+|No
+|The threshold the line coverage is judged against. The project's own `fail_under` is reported alongside, not used as the gate.
+|`80`
+
+|`integration` / `all`
+|No
+|Explicit request to also measure container-backed tests, run through `iru-python-test` Step 4 and reported separately as "not the gate value".
+|Not set — integration tests are always deselected.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation: the runner, how coverage was collected (pytest-cov or `coverage run`), the measured roots (`source` or the chosen `--cov=` packages), the test selection and what was deselected, and whether the tests passed.
+* Total line %, branch % and coverage.py's combined %, with a verdict on whether the line % meets the bar.
+* Per target (or per file): line % and branch %, and for every target under the bar the uncovered line ranges and partial branches.
+* Under-reported numbers are flagged, for example async SQLAlchemy code invisible without `concurrency = ["greenlet", "thread"]`.
+* The Cobertura report `build/coverage/coverage.xml` and the JUnit log are left in place when `build/` is gitignored, otherwise deleted. No source, test or configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-python-coverage\n(optional selector, targets, bar)"] --> B["Step 1: determine scope, runner\nand fast test selection"]
+    B --> C["Step 2: check coverage is wired\nand read coverage config"]
+    C --> D{"pytest-cov or\ncoverage installed?"}
+    D -- no --> E["Stop: report coverage\nnot wired"]
+    D -- yes --> F["Step 3: run the coverage build\nwith branch data to XML"]
+    F --> G{"Report written?"}
+    G -- no --> H["Report collection or\nusage error cause"]
+    G -- yes --> I["Step 4: read exact line and\nbranch coverage from Cobertura XML"]
+    I --> J["Step 5: report totals, per-target\ngaps and bar verdict"]
+    H --> J
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-python-coverage` is a leaf skill. It reuses the runner detection, pytest wiring and fast/integration split of xref:skills/iru-python-test.adoc[] by following the same rules, and borrows its container-backed lock procedure only when integration coverage is explicitly requested.
+
+=== Invoked by
+
+* xref:skills/iru-fastapi-code-one-task-group.adoc[] — the 80% coverage gate, measured from container-free tests alone, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-django-code-one-task-group.adoc[] — the 80% coverage gate, measured from container-free tests alone, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-python-coverage/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

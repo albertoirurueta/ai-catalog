@@ -24,7 +24,7 @@ for `.rst`/`.txt` files), or **Replace** (rebuild the whole file from history, l
 differently-named file it writes a new root `CHANGELOG.md` and leaves the old one for the user to delete).
 
 The skill is stack-agnostic: version tags (with or without a leading `v`) are the release markers whatever the
-build system — Maven/Gradle, npm, Laravel, WordPress, PrestaShop — and a `-SNAPSHOT`/`-dev` version found in-tree is
+build system — Maven/Gradle, npm, Laravel, WordPress, PrestaShop, Python (`pyproject.toml`) — and a `-SNAPSHOT`/`-dev`/PEP 440 `.dev0` version found in-tree is
 never used as a heading. A WordPress `readme.txt` changelog does not count as an existing changelog (it is owned by
 the WordPress.org release process and is never edited), but it is read as a source; a plugin released only through
 WordPress.org SVN with no git tags can have its `readme.txt` entries backfilled instead of an Unreleased-only file

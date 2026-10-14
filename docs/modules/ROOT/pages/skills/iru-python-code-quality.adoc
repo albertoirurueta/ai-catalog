@@ -1,0 +1,114 @@
+= Python Code Quality
+:description: Runs a Python project's wired Ruff, mypy, pyright, Bandit and djLint checks and reports issue counts by tool and rule id, with optional baseline diff.
+:keywords: iru-python-code-quality, claude code skill, python, ruff, mypy, pyright, bandit, djlint, lint, static analysis
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run every static-analysis and style tool a Python project actually has wired, Ruff (lint and format), mypy or pyright, and, when configured, Bandit, djLint and django-upgrade, and report every issue grouped by tool and by rule id. It is a read-only reporting skill: it never fixes issues, applies formatting, regenerates a baseline, or modifies tool configuration unless asked to as a follow-up.
+
+== Purpose
+
+Different Ruff or mypy versions report different rules, so `iru-python-code-quality` detects the project's environment runner and mirrors the project's real invocation from CI, pre-commit, and Makefile or tox targets. It verifies which tools are installed and configured, runs each one in read-only mode with machine-readable output scoped to the requested paths, parses the reports into tool, rule id and issue, and reports counts. A tool that is not wired is named as skipped, and a tool that broke (Ruff exit 2, a mypy plugin that cannot import Django settings) is reported as a tooling failure, never as "0 issues". When a calling skill supplies a baseline, only new issues are reported.
+
+== Purpose group
+
+xref:index.adoc#group-python[Python Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-python-code-quality
+/iru-python-code-quality <scope>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|One or more files or directories (`app/services/books.py`, `apps/catalog/`). Shell globs are expanded and non-existent paths are dropped with a note.
+|None — each tool checks what its own configuration lists.
+
+|baseline
+|No
+|Per-tool/per-rule-id counts, or an itemized `tool rule file:line` list, supplied in the calling prompt, used to report only new issues.
+|None — plain counts are reported.
+|===
+
+Tools and how they count as wired:
+
+[cols="1,3", options="header"]
+|===
+|Tool |Wired when
+
+|Ruff lint
+|`[tool.ruff]`, `ruff.toml` or a CI/pre-commit `ruff check`; unconfigured Ruff runs with its defaults and says so
+
+|Ruff format
+|`[tool.ruff.format]` or a CI/pre-commit format step; Black is checked instead when the project uses it
+
+|mypy
+|`[tool.mypy]`, `mypy.ini`, or a CI/pre-commit step (including the pydantic and django-stubs plugins)
+
+|pyright
+|`[tool.pyright]`, `pyrightconfig.json` or a CI step; run in addition to mypy when both are configured
+
+|Bandit
+|Only when configured; otherwise security lint is reported via Ruff `S` rules
+
+|djLint
+|Only when configured, lint mode only, never reformat
+
+|django-upgrade
+|Only when configured, always with `--check`
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation: an overall total first, then per tool whether it ran or was skipped (and why), the config and version in force, its total, and one line per rule-id bucket with its count.
+* A `file:line — message` list when the scope is smaller than the whole project or on request; per-rule lists are capped at 20 entries with "(+N more)".
+* Special Ruff families are called out: `S*` security first, `D*` docstrings (handed to `iru-python-docstrings`), `DJ*` and `FAST*` framework rules, and `invalid-syntax`.
+* With a baseline, only issues new since it are reported, matched on tool, rule id and file rather than line numbers.
+* Tool failures get their own line with the first error line. Temporary reports under `build/iru-python-cq-*` are deleted. No source or configuration is ever modified, and no `--fix`, write-mode formatter or `# noqa` is applied.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-python-code-quality\n(optional scope and baseline)"] --> B["Step 0: resolve inputs and\ndetect the environment runner"]
+    B --> C["Step 1: verify which tools\nare wired"]
+    C --> D{"Any tool wired?"}
+    D -- no --> E["Stop: report no Python\nquality tooling wired"]
+    D -- yes --> F["Step 2: run each wired tool\nread-only to build/ reports"]
+    F --> G["Step 3: parse every report into\ntool, rule id and issues"]
+    G --> H{"Baseline supplied?"}
+    H -- yes --> I["Step 4: keep only new issues\nagainst the baseline"]
+    H -- no --> J["Step 4: bucket by tool\nand rule id"]
+    I --> K["Report totals, skipped tools\nand tool failures"]
+    J --> K
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-python-code-quality` is a leaf skill. It follows the runner detection of xref:skills/iru-python-test.adoc[] by reference but does not call it.
+
+=== Invoked by
+
+* xref:skills/iru-fastapi-code-one-task-group.adoc[] — baseline capture before the work and a diffed re-run after it, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-django-code-one-task-group.adoc[] — baseline capture before the work and a diffed re-run after it, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-code.adoc[] — names it as the code-quality gate for the `fastapi` and `django` plan keys.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-python-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

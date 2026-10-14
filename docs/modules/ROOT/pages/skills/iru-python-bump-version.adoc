@@ -1,0 +1,118 @@
+= Python Bump Version
+:description: Sets a Python project's version to an exact PEP 440 value in pyproject.toml, __version__ literals, Django settings, FastAPI and uv.lock.
+:keywords: iru-python-bump-version, claude code skill, python, version bump, pep 440, pyproject, uv, fastapi, django, release
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a Python project's version to an exact, caller-supplied value across every file that must agree with it,
+following the catalog's PEP 440 `X.Y.Z.dev0` development-version convention.
+
+== Purpose
+
+`iru-python-bump-version` never computes a version; it validates the given string as PEP 440 (warning on
+non-canonical forms such as `1.4.0-dev`, which normalizes to `1.4.0.dev0`) and applies it. An embedded Python helper
+with `--list`, `--dry-run` and `--force` modes surveys and rewrites exactly the known locations: `pyproject.toml`
+`[project].version` and `[tool.poetry].version`, legacy `setup.cfg` and `setup.py` literals, tracked `__version__`
+literals, Django `VERSION` or `APP_VERSION` settings, and a `FastAPI(version=...)` literal only when it equals the
+package version. File-based dynamic versions are followed to their source file; for a VCS-derived version (hatch-vcs,
+setuptools-scm and similar) it reports that the git tag is the version and changes nothing. It refreshes `uv.lock`
+with `uv lock` when the lockfile records the project's own version, and refuses to write when locations disagree
+until the user confirms. Step 5 documents the pre-release convention that `iru-release` calls it against, and it can
+optionally sync `docs/antora.yml` and README or Antora version mentions.
+
+== Purpose group
+
+xref:index.adoc#group-python[Python Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-python-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<new-version>`
+|Yes
+|Literal target version, such as `1.4.0` or `1.5.0.dev0`. Never computed by this skill.
+|Asked for if missing.
+
+|`sync-files`
+|No
+|`yes` or `no`: also update `docs/antora.yml` and README and Antora version mentions.
+|Ask when such mentions exist.
+
+|`next-version`
+|No
+|Upcoming development version that "Current development version" markers should show after a release. Only meaningful
+with `sync-files: yes`.
+|None
+
+|`dry-run`
+|No
+|`yes` prints the diff and writes nothing, running no mutating command.
+|`no`
+|===
+
+== Outputs
+
+* Updated version locations for the detected project, and a refreshed `uv.lock` when it records the project's own
+  version.
+* Optionally updated `docs/antora.yml`, README and Antora mentions.
+* A report: each location with its old value, the new version and whether it was normalized to canonical PEP 440,
+  every file touched (or that a VCS-derived version changed nothing), any disagreement aligned with `--force`, any
+  FastAPI API version left alone, and the sanity-check result (`--list` agreement, `uv lock --check`, `ast.parse`).
+* A warning to review the diff before committing, and that a `.devN` version uploaded to PyPI is permanent.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: resolve inputs\nask for version if missing"] --> S1["Step 1: write helper,\nvalidate PEP 440 version"]
+    S1 --> S2["Step 2: survey version locations\nwith --list"]
+    S2 --> V{"VCS-derived\ndynamic version?"}
+    V -- yes --> VR["Report: git tag is the version;\nnothing changed"]
+    V -- no --> M{"No location found\nor locations disagree?"}
+    M -- yes --> Q["Ask user: add location or align\nwith --force"]
+    M -- no --> S3
+    Q --> S3["Step 3: look for mirrored mentions"]
+    S3 --> S4{"Step 4: dry-run?"}
+    S4 -- yes --> DR["Show diff only; stop"]
+    S4 -- no --> AP["Step 4: apply helper;\nrun uv lock"]
+    AP --> S6["Step 6: sanity check\n--list, uv lock --check, ast.parse"]
+    S6 --> S7{"Step 7: sync files?"}
+    S7 -- yes --> SY["Scoped docs/antora.yml,\nREADME and Antora updates"]
+    S7 -- no --> S8
+    SY --> S8["Step 8: report"]
+    DR --> S8
+    VR --> S8
+....
+
+== Dependencies
+
+=== Invokes
+
+None — it runs an embedded Python helper and `uv lock` directly. Step 5 is a documented convention for callers rather
+than an invocation.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, version bump for Python, FastAPI and Django projects.
+
+Also referenced (not invoked) by xref:skills/iru-setup-python-repository.adoc[], xref:skills/iru-setup-python-django.adoc[],
+xref:skills/iru-setup-python-fastapi.adoc[] and xref:skills/iru-setup-python-github-workflows.adoc[], whose scaffolds
+and `sync.yml` workflow follow the `X.Y.Z.dev0` convention this skill maintains.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-python-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

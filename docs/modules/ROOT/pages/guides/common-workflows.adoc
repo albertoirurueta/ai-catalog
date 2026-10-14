@@ -75,7 +75,8 @@ a|
 |xref:skills/iru-code.adoc[`iru-code`]
 a|
 * Captures a project-wide code-quality baseline per plan key (`iru-java-code-quality`, `iru-kotlin-code-quality`,
-  `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-php-code-quality`, `iru-android-code-quality`,
+  `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-php-code-quality`, `iru-python-code-quality`,
+  `iru-android-code-quality`,
   `iru-swift-code-quality`, …) and a security baseline (`iru-check-security`) before making any change
 * Works through `implementation_plan.md` one task group at a time, dispatching each to
   xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`], which resolves each task's language and delegates
@@ -89,6 +90,8 @@ a|
   xref:skills/iru-nestjs-code-one-task-group.adoc[`iru-nestjs-code-one-task-group`],
   xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`],
   xref:skills/iru-php-code-one-task-group.adoc[`iru-php-code-one-task-group`],
+  xref:skills/iru-fastapi-code-one-task-group.adoc[`iru-fastapi-code-one-task-group`],
+  xref:skills/iru-django-code-one-task-group.adoc[`iru-django-code-one-task-group`],
   xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
   xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`], or (for database-tagged tasks)
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`] (or implements it directly if
@@ -97,7 +100,7 @@ a|
   sequential instead), then paired with tests reaching at least 80% line coverage — verified against a real
   coverage report, not estimated — plus license headers and language-appropriate doc comments, all validated
   once per group rather than once per task; container-backed stages (Testcontainers, Quarkus Dev Services, NestJS
-  e2e, Next.js Playwright, WordPress `wp-env`) run serialized behind one repository-wide `.integration-test.lock`
+  e2e, Next.js Playwright, WordPress `wp-env`, the FastAPI/Django PostgreSQL integration tier) run serialized behind one repository-wide `.integration-test.lock`
   and never count toward the coverage gate
 * Re-checks the quality and security baselines at the end (a security regression is a hard stop, unlike a
   quality regression, which the user can accept or turn into follow-up tasks), runs a full local build, and
@@ -170,11 +173,11 @@ supports — it works the same way whether the repository is brand new or alread
 
 === On a brand-new, empty repository
 
-`/iru-setup-repository` finds nothing to detect, so it asks the project type itself, over up to four short
+`/iru-setup-repository` finds nothing to detect, so it asks the project type itself, over up to five short
 `AskUserQuestion` rounds rather than one long list. Each round offers three options plus a "Something in
 the next group" escape hatch that moves on to the next round: JVM services & libraries (Java library, Spring Boot
 service, Quarkus service), Web & Node (TypeScript/npm library, web app, NestJS backend service), PHP (Laravel
-application, WordPress plugin or block theme, PrestaShop module), and Mobile & Apple (Android, Apple,
+application, WordPress plugin or block theme, PrestaShop module), Python (FastAPI service, Django project), and Mobile & Apple (Android, Apple,
 cross-platform mobile app); the last round's escape hatch is "None of these", which ends the run with a plain "no
 orchestrator for this stack" report. An option that bundles several types gets one short follow-up right away —
 web app → React / Next.js / Angular, WordPress → plugin / block theme, Android → library / app, Apple → Swift
@@ -260,6 +263,11 @@ because the stack is already known:
   tests plus `wp-env` integration tests), or `flavor: prestashop-module` (PrestaShop 8.x/9.x,
   `prestashop/php-dev-tools`); `php-version` sets the supported floor and `distribution` decides whether a
   WordPress.org/PrestaShop Addons package or a Laravel container image is produced.
+* **Python** — `/iru-setup-python-repository` with `args: flavor: fastapi` (`iru-setup-python-fastapi`; `database`/`orm`
+  pick an optional SQLModel/SQLAlchemy persistence layer with Alembic) or `flavor: django`
+  (`iru-setup-python-django`; `api` picks DRF or Django Ninja), both with pytest, Ruff, and mypy; `python-version` sets
+  the supported floor and `distribution` decides whether a container image is pushed to GHCR. A plain Python package
+  (no FastAPI/Django) has no scaffold, but the `iru-python-*` gate skills still apply to it.
 * **Android** — `/iru-setup-android-repository` with `args: flavor: library` (a `lib/` module plus a Compose
   `app/` sample, following the Android reference-repository conventions) or `flavor: app` (a single `app/`
   module).
@@ -283,10 +291,10 @@ into a final, tagged release: it must be run from `develop` (this catalog follow
 if it isn't. It is not Maven-only — the version-bump step itself is delegated to whichever
 `iru-<key>-bump-version` skill (xref:guides/extending-the-catalog.adoc#_release_generation_for_other_ecosystems[]
 covers the registry) matches the project's detected ecosystem (`java` — Java or Kotlin, Maven or Gradle —,
-`typescript`, `android`, `swift`, `php` today), so the same `/iru-release` flow applies whether the version lives in
+`typescript`, `android`, `swift`, `php`, `python` today), so the same `/iru-release` flow applies whether the version lives in
 `pom.xml`, a Gradle build or `gradle.properties`, `package.json`, a Gradle version catalog, a Swift package
 manifest, or a PHP project's own version location (Laravel `config/app.php`, a WordPress plugin/theme header, a
-PrestaShop module class).
+PrestaShop module class), or a Python project's `pyproject.toml` (PEP 440 `.devN` pre-releases).
 
 [mermaid]
 ....

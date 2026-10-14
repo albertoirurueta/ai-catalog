@@ -2,28 +2,29 @@
 name: iru-setup-readme
 description: >-
   Create or update the root `README.md` for a repository — a brief description, badges (CI status,
-  SonarCloud/SonarQube, npm, Maven Central, Packagist, WordPress.org, PHP version, GHCR container image, Swift
-  Package Index, etc.), a project status table (language, versions, framework, platforms, license, CI, quality
+  SonarCloud/SonarQube, npm, Maven Central, Packagist, PyPI, WordPress.org, PHP/Python version, GHCR container
+  image, Swift Package Index, etc.), a project status table (language, versions, framework, platforms, license, CI, quality
   tools, distribution), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API
-  docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor, CHANGELOG), installation instructions
-  (Maven/Gradle/npm/Composer/SwiftPM/etc. dependency snippets, or a "run it locally"/container-image/store-listing
+  docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor/Sphinx, OpenAPI/Swagger UI, CHANGELOG),
+  installation instructions (Maven/Gradle/npm/Composer/uv/pip/SwiftPM/etc. dependency snippets, or a "run it locally"/container-image/store-listing
   section for services, web apps, WordPress plugins/themes and PrestaShop modules, matched to the project's actual
   stack and build tool — Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress,
-  PrestaShop, NestJS, Next.js, and the earlier library/app stacks), and a short "how it works" section with a
+  PrestaShop, NestJS, Next.js, FastAPI, Django, plain Python packages, and the earlier library/app stacks), and a short "how it works" section with a
   runnable example. Invoke as `/iru-setup-readme`, optionally with `args` (one key/value pair per line, all
   optional) — `sonar` set to `none` suppresses Sonar badges and dashboard links even when a `sonar {}` block or
   `sonar-project.properties` exists, `ci` set to `no` omits CI status badges, `pages` set to `no` avoids linking a
   github.io documentation site (or Next.js static export) that won't be published, and `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs, default `ask`) pre-answers the existing-README question — so an
   orchestrator's resolved choices produce a README matching them. Explores the repository's actual state
-  (`pom.xml`/`build.gradle*`/`gradle.properties`/`composer.json`/`package.json`/`Package.swift`/WordPress plugin
+  (`pom.xml`/`build.gradle*`/`gradle.properties`/`composer.json`/`package.json`/`pyproject.toml`/`uv.lock`/
+  `Package.swift`/WordPress plugin
   or theme headers/PrestaShop module class/Android Gradle modules/Xcode or Tuist project files/etc., git remote,
   GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every
   section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is
   omitted rather than filled with placeholders or invented content; a WordPress `readme.txt` is a separate file
   this skill never replaces. Announces whether it is creating the README from scratch or updating an existing one;
   if `README.md` already exists (including a generator's stock README from `laravel new`, `create-next-app`, `nest
-  new` or `quarkus create`), warns the user and shows the proposed content as a diff before writing anything,
+  new`, `quarkus create` or `uv init`), warns the user and shows the proposed content as a diff before writing anything,
   asking whether to Update it (merged draft, hand-written sections kept), Keep it as is, or Replace it
   (regenerated, hand-written sections dropped). Use whenever a repository needs a README bootstrapped or refreshed
   from what's actually there, instead of hand-writing it.
@@ -50,7 +51,7 @@ with the values they resolved. Every key is optional; any other key (e.g. `mode`
   if stale `.github/workflows/*.yml` files exist on disk (the run chose no workflows, so a badge would point at a
   pipeline that isn't maintained — or, on a fresh repository, doesn't exist). `ci: no` also implies `pages: no`.
 - **`pages: <yes|no>`** — only `no` changes behaviour: Step 5 never links a `https://<owner>.github.io/<repo>` URL
-  (Antora site, Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor, or a Next.js/React/Angular
+  (Antora site, Maven site report, TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor/Sphinx, or a Next.js/React/Angular
   static export deployed as the site itself), because nothing publishes there — CI only uploads the built docs (or
   `out/`) as a workflow artifact. Point readers at the docs sources instead (`docs/` in the repository, built
   locally with `cd docs && npx antora antora-playbook.yml`) when an Antora site exists, and at the local
@@ -79,7 +80,8 @@ Look at the repository root for `README.md`.
   - **Generator boilerplate**: if the existing file is the stock README a project generator wrote — Laravel's own
     (the `laravel.com` logo lockup, `laravel/framework` badges, "About Laravel"), `create-next-app`'s ("This is a
     Next.js project bootstrapped with…"), `nest new`'s (the NestJS logo, "A progressive Node.js framework…"),
-    `quarkus create`'s ("This project uses Quarkus, the Supersonic Subatomic Java Framework"), or the like — say
+    `quarkus create`'s ("This project uses Quarkus, the Supersonic Subatomic Java Framework"), `uv init`'s empty
+    `README.md`, or the like — say
     so: it describes the generator or framework, not this project, and its badges point at someone else's
     repository. Nothing in it counts as a hand-written section to preserve, and Step 9 recommends **Replace**
     instead of **Update**.
@@ -94,11 +96,11 @@ Look at the repository root for `README.md`.
   every GitHub-specific link/badge later and note this in Step 11's report rather than guessing a URL scheme.
 - **Description/tagline**: prefer, in order, `project.description` in a `springboot-stack.yml`/`quarkus-stack.yml`
   manifest, a `<description>` in `pom.xml`, a `description` in the root `build.gradle.kts`, a `"description"` in
-  `package.json` or `composer.json`, the `Description:` header of a WordPress main plugin file or theme
+  `package.json` or `composer.json`, `[project].description` in `pyproject.toml`, the `Description:` header of a WordPress main plugin file or theme
   `style.css`, a PrestaShop module class's `$this->description`, or an existing Antora
   `docs/modules/ROOT/pages/index.adoc` overview paragraph. Skip a generator's untouched default — `composer.json`
   still reading "The skeleton application for the Laravel framework." (with `"name": "laravel/laravel"`), Spring
-  Initializr's "Demo project for Spring Boot", and the like describe the template, not this project. If
+  Initializr's "Demo project for Spring Boot", `uv init`'s "Add your description here", and the like describe the template, not this project. If
   none remain, ask the user for a one-sentence description rather than inventing one — this is the first thing a
   reader sees.
 - **License**: look for `LICENSE`/`LICENSE.txt`/`LICENSE.md` at the root. Identify common licenses by their actual
@@ -106,7 +108,8 @@ Look at the repository root for `README.md`.
   can confidently name, still link to it but describe it generically ("see `LICENSE`") rather than guessing a name.
   If no license file exists, omit the License section entirely — don't claim a license the repository doesn't
   declare. A license the project declares in its own metadata — a WordPress `License:` header, `composer.json`/
-  `package.json` `"license"` SPDX id — may still fill Step 4's License row (say "declared in <file>; no `LICENSE`
+  `package.json` `"license"` SPDX id, `pyproject.toml` `[project].license` (an SPDX expression, or the legacy
+  `{ text = … }`/`{ file = … }` table) — may still fill Step 4's License row (say "declared in <file>; no `LICENSE`
   file") and be flagged in Step 11, but there is no License section linking a file that doesn't exist.
 - **Primary language, framework, and build tool**: reuse `iru-explore`'s `- Project type:` line rather than
   re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
@@ -119,12 +122,15 @@ Look at the repository root for `README.md`.
     names.
   - Only if `iru-explore` isn't installed in this repository, fall back to a minimal one-manifest check — `pom.xml`
     → Java/Maven, `build.gradle*` → Gradle (Android when a module applies `com.android.library`/
-    `com.android.application`), `package.json` → npm/TypeScript, `composer.json` → PHP, `Package.swift`/
+    `com.android.application`), `package.json` → npm/TypeScript, `composer.json` → PHP, `pyproject.toml` →
+    Python (FastAPI when `fastapi` is a dependency, Django when `manage.py` exists), `Package.swift`/
     `*.xcodeproj`/`project.yml`/`Project.swift` → Swift/Apple — and say in Step 11 that the framework flavor wasn't
     detected.
   - The project types this skill tailors sections for beyond plain libraries/apps (Steps 3–7): `java-springboot`/
     `kotlin-springboot` (+ `-hilla`), `java-quarkus`/`kotlin-quarkus`, `php-laravel`, `php-wordpress-plugin`,
-    `php-wordpress-theme`, `php-prestashop-module`, `php-library`, `nestjs`, `nextjs`. For the JVM services, also
+    `php-wordpress-theme`, `php-prestashop-module`, `php-library`, `nestjs`, `nextjs`, `python-fastapi`,
+    `python-django`, `python-library`. For the Python types, also note the package manager (uv when `uv.lock`
+    exists; Poetry/PDM/pipenv only when their lockfile is what's committed) — every command later uses it. For the JVM services, also
     note the language (Kotlin when `src/main/kotlin` holds the sources / the Kotlin plugin is applied) and the build
     tool (Maven, or Gradle with the Kotlin DSL) — every command later in this skill depends on both.
   - A repository can have more than one manifest (e.g. a Maven library with an Antora docs site under `docs` that
@@ -154,6 +160,14 @@ Look at the repository root for `README.md`.
   - PrestaShop module: the main module class (`<module>.php` extending `Module`) — `$this->name` (the technical
     name/zip name), `$this->version`, `$this->displayName`, and `$this->ps_versions_compliancy` (`min`/`max`); a
     tracked `config.xml` `<version>` must agree with it.
+  - Python (`python-fastapi`/`python-django`/`python-library`): `[project].name` and `[project].version` in
+    `pyproject.toml` — the single version source (pre-releases use PEP 440's `.dev0` suffix, e.g. `0.2.0.dev0`;
+    runtime code reads it via `importlib.metadata.version()`, so never take it from `__version__` or
+    `docs/antora.yml`, which only mirror it). A `dynamic = ["version"]` project takes it from the backend's
+    configured source (e.g. `[tool.hatch.version] path`) or git tags — say which in Step 11. The Python floor is
+    `requires-python` (e.g. `>=3.12`), the CI/runtime version `.python-version` or the workflows' `python-version`
+    (e.g. `3.13`), and the framework version from `uv.lock`'s `fastapi`/`django` (`djangorestframework`,
+    `django-ninja`) `[[package]]` entry (or `poetry.lock`/`pdm.lock`), never from the dependency range.
   - Plain Composer package (`php-library`): `"name"` from `composer.json`; the version comes from git tags (Composer
     packages carry no in-tree version, like SwiftPM).
   - Swift: the package name from `Package.swift`, with the version taken from git tags (SwiftPM has no in-file
@@ -162,7 +176,7 @@ Look at the repository root for `README.md`.
     `Project.swift`, depending on which of Xcode/XcodeGen/Tuist generates the project).
   - Also find the latest released version for any stack: `git tag --sort=-v:refname | head -1` (or `gh release
     list --limit 1` if on GitHub with `gh` available). If the current version has no `-SNAPSHOT`/prerelease
-    suffix (`-SNAPSHOT`, `-dev`, `-dev.N`, `-rc.N`, …) and matches the latest tag, there's only one version to show,
+    suffix (`-SNAPSHOT`, `-dev`, `-dev.N`, `-rc.N`, Python's `.devN`/`rcN`, …) and matches the latest tag, there's only one version to show,
     not a "current dev / latest release" pair. Strip a leading `v` from tags when comparing.
 
 ## Step 3 — Gather badge sources
@@ -209,6 +223,13 @@ SonarCloud project that isn't configured yet.
     `packagist/php-v/…` path is a redirect to this one), each linking to `https://packagist.org/packages/<vendor>/<name>`.
     Never for a Laravel application (`"type": "project"`), a PrestaShop module, or the untouched `laravel/laravel`
     skeleton name — those aren't Packagist packages.
+  - **PyPI** (`python-library` only — never a FastAPI/Django service, which ships as an image) — only when a
+    release workflow publishes there (`pypa/gh-action-pypi-publish`, or `uv publish`) **and** `curl -sf
+    https://pypi.org/pypi/<name>/json` succeeds (the project is live): version `https://img.shields.io/pypi/v/<name>`,
+    supported Pythons `https://img.shields.io/pypi/pyversions/<name>` (from the classifiers), and monthly
+    downloads `https://img.shields.io/pypi/dm/<name>`, each linking to `https://pypi.org/project/<name>/`. `<name>`
+    is `[project].name` normalized (lowercase, runs of `-_.` → `-`). A library whose wheels are only attached to
+    GitHub Releases gets no PyPI badge.
   - **WordPress.org** (`php-wordpress-plugin`/`php-wordpress-theme`) — live badges only when the slug is actually
     published: `curl -sf "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&request%5Bslug%5D=<slug>"`
     (themes: `…/themes/info/1.2/?action=theme_information&request%5Bslug%5D=<slug>`) succeeds — an unknown slug is
@@ -233,6 +254,12 @@ SonarCloud project that isn't configured yet.
     `composer.json` `require.php` (or the WordPress `Requires PHP:` header) written as `>=8.3` and URL-encoded
     (`%3E%3D8.3`; in shields static badges `-` must be doubled as `--`, `_` as `__`, and a space is `%20`). No link,
     or link to `https://www.php.net/supported-versions.php`.
+  - **Python version** (any Python project not covered by the PyPI `pyversions` badge):
+    `https://img.shields.io/badge/python-<range>-3776AB?logo=python&logoColor=white`, where `<range>` is
+    `requires-python` URL-encoded (`>=3.12` → `%3E%3D3.12`), linking to `https://devguide.python.org/versions/`
+    or nothing. Add the framework the same way when pinned in the lock —
+    `https://img.shields.io/badge/FastAPI-<x.y.z>-009688?logo=fastapi&logoColor=white` /
+    `https://img.shields.io/badge/Django-<x.y>-092E20?logo=django&logoColor=white`.
   - **WordPress requirement** for an unpublished plugin/theme: `https://img.shields.io/badge/WordPress-%3E%3D<min>-21759B?logo=wordpress&logoColor=white`
     from `Requires at least:`.
   - **PrestaShop compatibility** (`php-prestashop-module`): `https://img.shields.io/badge/PrestaShop-<majors>-DF0067`
@@ -242,7 +269,8 @@ SonarCloud project that isn't configured yet.
     `composer.json` `homepage`/`support`, existing README), never a guessed one.
 - **Container image** (services/web apps that publish one): when a workflow pushes to GHCR — `docker/login-action`
   with `registry: ghcr.io` plus `docker/build-push-action`/`docker/metadata-action` `images: ghcr.io/<owner>/<image>`,
-  or Quarkus' `-Dquarkus.container-image.registry=ghcr.io` (Jib or Docker builder) — add
+  or Quarkus' `-Dquarkus.container-image.registry=ghcr.io` (Jib or Docker builder), or the Python services' root
+  `Dockerfile` built and pushed by `release.yml` — add
   `https://img.shields.io/badge/ghcr.io-<image>-2496ED?logo=docker&logoColor=white` linking to
   `https://github.com/<owner>/<repo>/pkgs/container/<image>`. Take `<image>` from the workflow's `images:` value (its
   last path segment), not from the repository name, and lowercase `<owner>` (registry paths are lowercase; the
@@ -269,14 +297,15 @@ Compose a small table from whatever Steps 2–3 actually resolved; omit rows wit
 | Kotlin / AGP | Android/Kotlin-Gradle only: Kotlin version and Android Gradle Plugin version, when pinned explicitly                           |
 | Kotlin | Kotlin JVM services (Spring Boot / Quarkus): the Kotlin version from `gradle/libs.versions.toml` or the POM's `kotlin.version`, plus the JDK toolchain |
 | PHP | PHP projects only: the floor from `composer.json` `require.php` (or `Requires PHP:`), e.g. `>= 8.3`                            |
+| Python | Python projects only: `requires-python` (e.g. `>= 3.12`) plus the version CI runs (`.python-version` / workflow `python-version`, e.g. `3.13`), and the package manager (uv / Poetry / PDM) |
 | Swift tools / deployment targets | Swift only: the Swift tools version from `Package.swift` and the platform deployment targets it declares          |
 | Node engine | npm-based projects only: the `engines.node` range from `package.json`, if one is declared                                     |
 | TypeScript | TypeScript projects only: the `typescript` version pinned in `package.json`/`package-lock.json`                               |
-| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, Next.js, NestJS, Spring Boot from the catalog/parent POM, Quarkus `quarkus.platform.version`, Laravel from `composer.lock`), or the host compatibility (WordPress `Requires at least` – `Tested up to`; PrestaShop `ps_versions_compliancy` range) |
+| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, Next.js, NestJS, Spring Boot from the catalog/parent POM, Quarkus `quarkus.platform.version`, Laravel from `composer.lock`, FastAPI / Django (+ DRF or Django Ninja) from `uv.lock`), or the host compatibility (WordPress `Requires at least` – `Tested up to`; PrestaShop `ps_versions_compliancy` range) |
 | License | The license identified in Step 2, if any                                                                                       |
 | CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds"); omitted when Step 0 resolved `ci: no` |
-| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Kover, Checkstyle, SpotBugs, PMD, detekt, ktlint, ESLint, oxlint, Prettier, PHPStan/Larastan, Pint, PHPCS/WPCS, PHP-CS-Fixer, Pest/PHPUnit, SwiftLint, etc.) |
-| Distribution | Services/apps/plugins only, from the release workflow actually present: container image on GHCR, static export on GitHub Pages, WordPress.org directory (SVN deploy), installable zip attached to GitHub Releases (WordPress, PrestaShop), deploy workflow to an environment; omitted when nothing is published |
+| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Kover, Checkstyle, SpotBugs, PMD, detekt, ktlint, ESLint, oxlint, Prettier, PHPStan/Larastan, Pint, PHPCS/WPCS, PHP-CS-Fixer, Pest/PHPUnit, Ruff, mypy, pytest + coverage.py, pip-audit, SwiftLint, etc.) |
+| Distribution | Services/apps/plugins (and published Python libraries) only, from the release workflow actually present: container image on GHCR, PyPI, sdist/wheel attached to GitHub Releases (`uv build`), static export on GitHub Pages, WordPress.org directory (SVN deploy), installable zip attached to GitHub Releases (WordPress, PrestaShop), deploy workflow to an environment; omitted when nothing is published |
 
 Omit every row in this extended set (platforms through framework, and Distribution) that doesn't apply to the
 detected stack — a plain Java/Maven library still shows only the original rows.
@@ -313,6 +342,13 @@ and skip the published API-docs links below.
     `/api/kdoc/<module-path>/` per module when the root doesn't aggregate); read the workflow's copy step.
   - **phpDocumentor** (PHP): a `phpdoc run --config phpdoc.dist.xml` step merged into the Pages site, normally at
     `https://<owner>.github.io/<repo>/api` — only when `phpdoc.dist.xml` exists.
+  - **Sphinx** (Python): a `sphinx-build … docs/api build/api-docs` step (sources `docs/api/conf.py` +
+    `index.rst`, next to the Antora `docs/antora.yml`) whose output the workflow copies under the Antora site's
+    `api/`, normally `https://<owner>.github.io/<repo>/api` — only when `docs/api/conf.py` exists.
+  - **OpenAPI schema** (FastAPI/Django services): a FastAPI `scripts/export_openapi.py` writing
+    `build/api-docs/openapi.json`, or Django `manage.py spectacular --file build/api-docs/openapi.yaml` (DRF +
+    drf-spectacular), merged into the same `api/` folder — link the published file. The running service's own
+    interactive docs (Swagger UI/ReDoc) belong in Step 6's Getting Started, not here as a github.io link.
   - **Generated REST/gRPC/AsyncAPI docs** (Spring Boot services): the `generated-docs` directories the build
     workflow merges under `/api/` — link the index the workflow actually produces, if any.
   - **DocC** (Swift): a `docc`/`xcodebuild docbuild` step (often via `docc-render`/`Swift-DocC-Plugin`) feeding a
@@ -325,7 +361,7 @@ and skip the published API-docs links below.
   When the build workflow *also* deploys the Antora docs to Pages, both share one Pages site and whichever deployed
   last wins (the workflows skill's "Decision made" note); link the URL the repository's workflows actually leave
   in place and flag the overlap in Step 11 rather than promising both.
-- **Registry/store pages**: the WordPress.org directory page, Packagist page, or GHCR package page from Step 3,
+- **Registry/store pages**: the WordPress.org directory page, Packagist or PyPI page, or GHCR package page from Step 3,
   when those badges were included (a reader without badges rendered still needs the link).
 - **SonarCloud/SonarQube dashboard**: reuse the link built in Step 3.
 - **Changelog**: if `CHANGELOG.md` exists at the root, link to it directly (`CHANGELOG.md`).
@@ -353,7 +389,10 @@ versa:
   matching `.product(name: "<ProductName>", package: "<PackageName>")` target dependency (read the real product
   name from `Package.swift`'s `products`), and the equivalent steps for Xcode users ("File > Add Package
   Dependencies…", paste the repository URL, select the product).
-- **Python**: `pip install <package-name>`, using the real project name from `pyproject.toml`/`setup.py`.
+- **Python** (`python-library`, only when Step 3 confirmed it on PyPI): `uv add <name>` and `pip install <name>`
+  (the real `[project].name`), plus the `requires-python` floor. Not on PyPI: `uv add
+  "<name> @ git+https://github.com/<owner>/<repo>@<tag>"` only when a release tag exists, or the wheel URL a
+  GitHub Release actually attaches — never an invented index.
 - **Composer** (`php-library`, only when Step 3 confirmed it on Packagist): `composer require <vendor>/<name>`
   (add `--dev` only if the package is a dev tool by its own `composer.json` `type`/description), plus the PHP floor.
 
@@ -432,6 +471,30 @@ never copy a value from `.env`/`.env.example` that looks like a secret — list 
   `SwaggerModule.setup('<path>', …)` exists. Tests: `npm test`, `npm run test:e2e` (needs Docker when it uses
   Testcontainers). Docker: `docker build -t <name> .` and `docker run --env-file .env -p 3000:3000 <name>` (port
   from `EXPOSE`).
+- **FastAPI** (`python-fastapi`): prerequisites = Python from `.python-version`/`requires-python`, **uv**, Docker
+  when `compose.yaml` or `integration`-marked (testcontainers) tests exist. Setup: `uv sync` (creates `.venv` from
+  `uv.lock`), `cp .env.example .env` when one exists, listing the `APP_*` keys the `pydantic-settings` class in
+  `app/settings.py` declares (names only); `docker compose up -d db` when a compose file has a database service,
+  then `uv run alembic upgrade head` when `alembic.ini` exists. Run: `uv run fastapi dev` (reload, uses
+  `[tool.fastapi] entrypoint`; else `uv run fastapi dev app/main.py`), production-style `uv run fastapi run` —
+  `http://localhost:8000`, with Swagger UI at `/docs`, ReDoc at `/redoc` and the schema at `/openapi.json` (unless
+  `docs_url`/`redoc_url`/`openapi_url` are overridden or disabled in `app/main.py`), and the health routes the
+  code declares (the catalog's scaffold: `/healthz`, `/readyz`). Tests: `uv run pytest -m "not integration"`
+  (fast tier), `uv run pytest -m integration` (needs Docker); quality `uv run ruff check .`, `uv run ruff format
+  --check .`, `uv run mypy .`. Docker: `docker compose up --build` when `compose.yaml` exists (Postgres + one-shot
+  `migrate` + app), else `docker build -t <name> .` and `docker run --env-file .env -p 8000:8000 <name>` (port
+  from `EXPOSE`).
+- **Django** (`python-django`): prerequisites as FastAPI. Setup: `uv sync`, `cp .env.example .env` (key names
+  only — e.g. `DJANGO_SECRET_KEY`, `DATABASE_URL`, as `config/settings/*.py` reads them), `docker compose up -d db`
+  when present, then `uv run python manage.py migrate` and optionally `uv run python manage.py createsuperuser`.
+  Run: `uv run python manage.py runserver` (`http://localhost:8000`; settings module from `manage.py`/
+  `DJANGO_SETTINGS_MODULE`, e.g. `config.settings.local`); the admin at `/admin/` when `django.contrib.admin` is
+  routed; with DRF + drf-spectacular, the Swagger UI / ReDoc / schema at the paths `config/urls.py` maps to
+  `SpectacularSwaggerView`/`SpectacularRedocView`/`SpectacularAPIView` (e.g. `/api/schema/swagger-ui/`); with
+  Django Ninja, the `NinjaAPI` docs path (default `<api-prefix>/docs`). Tests: `uv run pytest -m "not
+  integration"` / `uv run pytest -m integration`; checks `uv run python manage.py check` and `uv run python
+  manage.py makemigrations --check --dry-run`. Docker: `docker compose up --build` (one-shot `migrate` service +
+  Gunicorn app), or `docker build`/`docker run` with the `EXPOSE`d port and env var names only.
 - **Next.js** (`nextjs`): `npm ci`, `npm run dev` (`http://localhost:3000`), `npm run build`, then — server output
   (`output: 'standalone'` or default) — `npm run start`; static export (`output: 'export'`) — the site is written to
   `out/`, previewed with any static server (e.g. `npx serve out`), and, when Step 5 found the Pages deploy, live at
@@ -451,6 +514,9 @@ never copy a value from `.env`/`.env.example` that looks like a secret — list 
   (Ionic), `./gradlew installDebug` (Android), `xcodebuild -scheme <Scheme> -destination …` or "open in Xcode and
   run" (Apple platforms) — pick the one command that actually matches the project's own scripts/Gradle
   tasks/scheme rather than a generic default.
+- **Python library** (`python-library`) development, after the Installation snippet: `uv sync`, `uv run pytest`,
+  `uv run ruff check .`, `uv run mypy .`, `uv build` (sdist + wheel in `dist/`) — only the tools actually
+  configured in `pyproject.toml`.
 - If the build tool isn't one of the above, or the project isn't actually published/publishable/runnable yet (no
   registry/repository/run config found), omit the Installation section and note the gap in Step 11 rather than
   guessing coordinates.
@@ -474,10 +540,14 @@ This is the most judgment-heavy part — ground it in what the code actually doe
 - For a service or web app the example is a request against a real endpoint, not a library call: a `curl`
   against a route a controller actually declares (Spring `@RestController`/`@*Mapping`, Quarkus/JAX-RS `@Path`,
   NestJS `@Controller`/`@Get`, a Laravel `routes/api.php`/`routes/web.php` entry, a Next.js route handler or
-  page), with the request/response shape read from its DTOs and the port from Step 6. For a WordPress plugin/theme,
+  page, a FastAPI `APIRouter` `@router.get`/`@router.post` included by `app/main.py` (mind its `prefix`), a Django
+  DRF `ViewSet` registered on a router or a plain view / `NinjaAPI` operation wired in `config/urls.py` /
+  `apps/<x>/urls.py`), with the request/response shape read from its DTOs (Pydantic/SQLModel `XCreate`/`XPublic`
+  models, DRF serializers, Ninja schemas) and the port from Step 6. For a WordPress plugin/theme,
   show what a site builder actually uses — the block name, shortcode, `add_filter`/`add_action` hook it exposes, or
   the theme's templates/patterns; for a PrestaShop module, the hooks it registers in `install()` and its
-  configuration page.
+  configuration page. For a `python-library`, a short Python snippet importing its public API (what the package's
+  `__init__.py` exports / `__all__`).
 - If the repository has no meaningful source yet (a brand-new, scaffolded-but-empty project), omit this section
   entirely rather than writing a placeholder example. A catalog scaffold's sample feature (e.g. a `books` sample)
   is real, runnable code — it may be shown, labeled as the sample it is.
@@ -541,7 +611,7 @@ summarize: which sections were included versus omitted and why (e.g. "no Install
 config found", "no CI badges — no GitHub Actions workflows present"), any fact that had to be inferred rather than
 confirmed (e.g. an Antora Pages URL assumed from convention), and every badge/link suppressed by Step 0's
 `sonar: none`/`ci: no`/`pages: no`, and every registry/store badge withheld because the package/slug/image
-isn't live yet (Packagist, WordPress.org, GHCR) together with the check used. For WordPress projects, state that
+isn't live yet (Packagist, PyPI, WordPress.org, GHCR) together with the check used. For WordPress projects, state that
 `readme.txt` was left untouched. Remind the user to double-check the "How It Works"/example section
 specifically, since it's the part most dependent on this skill's reading of the current API rather than on
 mechanically-derived facts like versions or badge URLs.

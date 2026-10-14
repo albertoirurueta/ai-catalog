@@ -2,10 +2,10 @@
 name: iru-release
 description: Convert the current development version into a final release. Must be run from the `develop` branch
   (gitflow) — warns and stops otherwise. Detects the repository's ecosystem (Java/Kotlin JVM on Maven or Gradle, TypeScript/npm,
-  Android/Gradle, Swift/Apple, or PHP/Composer/WordPress/PrestaShop) from an `iru-explore` report already in this conversation or from the
+  Android/Gradle, Swift/Apple, PHP/Composer/WordPress/PrestaShop, or Python/FastAPI/Django) from an `iru-explore` report already in this conversation or from the
   repository's manifests, and delegates the version bump itself to the matching installed
   `iru-<key>-bump-version` skill (`iru-java-bump-version`, `iru-typescript-bump-version`,
-  `iru-android-bump-version`, `iru-swift-bump-version`, `iru-php-bump-version`) rather than editing build files directly. Asks the user
+  `iru-android-bump-version`, `iru-swift-bump-version`, `iru-php-bump-version`, `iru-python-bump-version`) rather than editing build files directly. Asks the user
   for the release version (current pre-release value stripped, a patch bump, or a major bump) and the next
   upcoming pre-release version, creates a `release_x.y.z` branch off `develop`, updates README.md, `docs/antora.yml`,
   and any Antora page showing dependency snippets via the bump-version skill's own optional sync, creates/updates
@@ -50,14 +50,16 @@ touching any file.
      `java-springboot`, `java-springboot-hilla`, `kotlin-springboot`, `kotlin-springboot-hilla`, `java-quarkus`,
      `kotlin-quarkus` — Maven or Gradle) → `java`;
      `typescript-library`/`react-web`/`angular-web`/`nestjs`/`nextjs`/`react-native-app`/`ionic-app` → `typescript`; `android-*` →
-     `android`; `swift-*`/`apple-app` → `swift`; `php-*` → `php`. If the `Project type:` line is `multiple`, ask the user which
+     `android`; `swift-*`/`apple-app` → `swift`; `php-*` → `php`; `python-*` (`python-fastapi`, `python-django`,
+     `python-library`) → `python`. If the `Project type:` line is `multiple`, ask the user which
      module this release targets, since a single release cuts one version.
   2. Otherwise, detect it directly from manifests present at the repository root: `pom.xml` → `java`;
      `package.json` → `typescript`; `build.gradle`/`build.gradle.kts` with the Android Gradle Plugin applied →
      `android`; `build.gradle`/`build.gradle.kts` without it (a plain JVM, Kotlin Spring Boot, or Quarkus Gradle
      build) → `java`; `Package.swift`, or a `*.xcodeproj`/`project.yml`/`Project.swift` → `swift`; `composer.json`, a
      WordPress plugin/theme header (`Plugin Name:` in the main PHP file, `Theme Name:` in `style.css`), or a
-     PrestaShop module main class (`extends Module`) → `php`. Ask the user which
+     PrestaShop module main class (`extends Module`) → `php`; `pyproject.toml` (or `setup.py`/`setup.cfg`) →
+     `python`. Ask the user which
      one this release targets if more than one manifest is found and it's genuinely ambiguous which is the
      release target.
 - **Find the installed bump-version skill** for that ecosystem:
@@ -73,12 +75,15 @@ touching any file.
     lists every `gradle.properties`/`build.gradle(.kts)`/`libs.versions.toml` version location;
     `iru-typescript-bump-version`'s Step 3 reads `package.json`'s `version` field;
     `iru-android-bump-version`'s Step 3 reads `lib/build.gradle.kts`'s `libraryVersion`;
-    `iru-swift-bump-version`'s Step 5/"Library" case reads the latest git tag) — none of these skills expose a
+    `iru-swift-bump-version`'s Step 5/"Library" case reads the latest git tag;
+    `iru-python-bump-version` reads `pyproject.toml`'s `[project].version`) — none of these skills expose a
     separate read-only invocation mode, reading is simply their first ordinary step, so apply that same
     locate-and-read logic here rather than inventing a different one. Also read that skill's own dedicated
     pre-release-convention section (`iru-java-bump-version`'s Step 5, `iru-typescript-bump-version`'s Step 5,
-    `iru-android-bump-version`'s Step 5, `iru-swift-bump-version`'s Step 5) to know this ecosystem's convention
-    for the rest of this skill (e.g. `-SNAPSHOT` for Java/Android, `-dev.N` for npm, "the release is the git tag
+    `iru-android-bump-version`'s Step 5, `iru-swift-bump-version`'s Step 5, and the equivalent pre-release-convention
+    section of `iru-php-bump-version`/`iru-python-bump-version`) to know this ecosystem's convention
+    for the rest of this skill (e.g. `-SNAPSHOT` for Java/Android, `-dev.N` for npm, PEP 440 `.devN` such as `1.4.0.dev0` for
+    Python, "the release is the git tag
     itself, there is no in-tree pre-release marker" for a Swift library).
   - **No match installed**: fall back to asking the user which file carries the version (e.g. `pom.xml`,
     `package.json`) and what its pre-release suffix convention is — don't guess a bump-version skill into
@@ -86,11 +91,14 @@ touching any file.
     (Step 12) that the version bump in Step 6 will need to be done by hand, since no matching
     `iru-<key>-bump-version` skill is installed in this repository's `.claude/skills/`.
 - The current version **must be a pre-release per that ecosystem's convention** (e.g. ends in `-SNAPSHOT` for
-  Java/Android, `-dev.N` for npm) — if it isn't, tell the user there's nothing to release and stop. This check
+  Java/Android, `-dev.N` for npm, `.devN` for Python) — if it isn't, tell the user there's nothing to release and stop. This check
   doesn't apply the same way to a Swift library, which has no in-tree pre-release marker at all: its "current
   version" is simply the latest git tag (`git describe --tags --abbrev=0`); a Swift app's `MARKETING_VERSION` is
   likewise always a plain release-shaped string, per `iru-swift-bump-version`'s Step 5 — for either, skip this
   specific check and treat the latest tag/current `MARKETING_VERSION` as the version to bump from.
+  The same applies to a Python project whose version is VCS-derived (hatch-vcs, setuptools-scm — `iru-python-bump-version`
+  reports "derived from git tags" and changes nothing): treat the latest tag as the version to bump from and the
+  release tag itself as the release.
 - Find the latest released version: `git tag --sort=-v:refname | head -1` (falls back to "no previous release" if
   there are no tags — a first release).
 - Check the working tree is clean (`git status`). If there are uncommitted changes, stop and ask the user to
@@ -108,7 +116,7 @@ Compute three candidates and present them with `AskUserQuestion` (previews help 
 string for each):
 
 - **Current pre-release value stripped** (e.g. Java/Android `1.4.0-SNAPSHOT` → `1.4.0`, npm `1.4.0-dev.0` →
-  `1.4.0`, per the convention detected in Step 2) — recommended default; this repo's convention is to already
+  `1.4.0`, Python `1.4.0.dev0` → `1.4.0`, per the convention detected in Step 2) — recommended default; this repo's convention is to already
   bump the pre-release marker to the next planned minor right after the previous release, so this is normally the
   right one. For a Swift library, where there is no in-tree pre-release marker, this option is instead simply
   "the next semver bump from the latest tag" (see `iru-swift-bump-version`'s Step 5).

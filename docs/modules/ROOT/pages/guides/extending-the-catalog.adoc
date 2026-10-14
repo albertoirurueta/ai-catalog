@@ -77,9 +77,9 @@ nothing else in the pipeline needs to change.
 
 `iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) is the front door for bootstrapping *any*
 repository this catalog supports: it detects a non-empty repository by running `iru-explore` and reading its
-`Project type:` line to pre-select a stack, or, on an empty one, asks the project type over up to four
+`Project type:` line to pre-select a stack, or, on an empty one, asks the project type over up to five
 `AskUserQuestion` rounds of three options each, every round ending in a "Something in the next group"
-escape hatch (JVM services & libraries, Web & Node, PHP, Mobile & Apple — an option that bundles several types gets
+escape hatch (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple — an option that bundles several types gets
 one bounded follow-up, e.g. web app → React / Next.js / Angular), asks the shared inputs
 (`open-source`, `visibility`, `ci`, `sonar`, `ci-tests`, `pages`, `publish`/`distribution`, …) once, and delegates
 to the matching stack orchestrator via `iru-isolated-skill-executor`. It first announces the setup mode (from
@@ -87,15 +87,16 @@ scratch, or updating an existing repository with an inventory of the prior setup
 it forces `mode: existing` on that delegation, and every component sub-skill then warns about each pre-existing
 artifact it owns and asks Update / Keep as is / Replace instead of assuming a brand-new repo.
 
-Underneath the front door, each stack has its own orchestrator. The six `*-repository` orchestrators —
+Underneath the front door, each stack has its own orchestrator. The seven `*-repository` orchestrators —
 `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`,
-`iru-setup-php-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository` — all run the same fixed
+`iru-setup-php-repository`, `iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository` — all run the same fixed
 six-step shape, standalone or via the front
 door: scaffold (the language/flavor-specific `iru-setup-<stack>-library`/`-app` skill, e.g.
 `iru-setup-typescript-repository`'s own `flavor` picks between `iru-setup-typescript-library`,
 `iru-setup-react-web`, `iru-setup-angular-web`, `iru-setup-react-native-app`, `iru-setup-ionic-app`,
 `iru-setup-nestjs-app`, `iru-setup-nextjs-web`; `iru-setup-php-repository`'s between `iru-setup-php-laravel`,
-`iru-setup-php-wordpress` (plugin or block theme), `iru-setup-php-prestashop`; `iru-setup-quarkus-repository` always
+`iru-setup-php-wordpress` (plugin or block theme), `iru-setup-php-prestashop`; `iru-setup-python-repository`'s between
+`iru-setup-python-fastapi`, `iru-setup-python-django`; `iru-setup-quarkus-repository` always
 runs `iru-setup-quarkus-service`, parameterized by `language`/`build-tool`/`layout`) →
 `iru-setup-antora` → `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog`
 → `iru-setup-readme` (a stack may reuse a sibling's gitignore skill, as Quarkus reuses `iru-setup-java-gitignore`).
@@ -145,7 +146,7 @@ command (if any) applies the bump. That pluggable piece is now a registry, the s
 xref:_language_framework_backends_for_the_code_pipeline[]: `iru-release` runs `find .claude/skills -maxdepth 1
 -type d -name "iru-*-bump-version"` and delegates the actual edit to whichever `iru-<key>-bump-version` skill
 matches the project it detected (today: `java` (Maven or Gradle, Java or Kotlin), `typescript`, `android`,
-`swift`, `php`), falling back to asking the
+`swift`, `php`, `python`), falling back to asking the
 user which file to edit by hand if none is installed.
 
 To add a new ecosystem, create `iru-<key>-bump-version` following the sibling contract every existing one
@@ -209,7 +210,8 @@ gate (a dependency-vulnerability scan, an accessibility check, a performance bud
 in that same shape — a single scan/check with a clear pass/fail and issue list — and then wiring a
 `iru-gate-runner` call for it into whichever `iru-<key>-code-one-task-group` skill(s) should run it as part of their
 per-bucket validation pass (every validating group skill has one — e.g. xref:skills/iru-java-code-one-task-group.adoc[]
-Step 1/4, xref:skills/iru-php-code-one-task-group.adoc[], xref:skills/iru-nestjs-code-one-task-group.adoc[]; only
+Step 1/4, xref:skills/iru-php-code-one-task-group.adoc[], xref:skills/iru-nestjs-code-one-task-group.adoc[],
+xref:skills/iru-fastapi-code-one-task-group.adoc[]; only
 xref:skills/iru-database-code-one-task-group.adoc[] runs no gates). The new gate
 doesn't need to touch `iru-gate-runner` itself — that agent already runs "whatever skill name it's told to run."
 

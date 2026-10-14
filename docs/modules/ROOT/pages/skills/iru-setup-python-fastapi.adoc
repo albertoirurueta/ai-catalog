@@ -1,0 +1,154 @@
+= Setup Python FastAPI
+:description: Scaffolds a FastAPI service with uv or updates an existing one, adding a layered tested app, Alembic, Sphinx docs, Dockerfile, compose and Sonar config.
+:keywords: iru-setup-python-fastapi, claude code skill, fastapi, uv, sqlmodel, sqlalchemy, alembic, pytest, testcontainers, ruff, mypy, python bootstrap
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds a FastAPI service with uv, or brings an existing FastAPI service up to date, and layers this catalog's Python toolchain and a small, tested application skeleton on top.
+
+== Purpose
+
+`iru-setup-python-fastapi` runs `uv init --bare` and `uv add` with pinned ranges (`fastapi[standard]`, Pydantic 2, pydantic-settings, SQLModel or plain SQLAlchemy 2.0 async, Alembic), then writes:
+
+* The layered `app/` package: `main.py` (app factory, lifespan, exception handlers), `settings.py` (`APP_` prefix, `SecretStr`), `dependencies.py` (`Annotated` aliases), `db.py`, `routers/`, `services/` (with a `Protocol` port), `data/` adapters and `models/`.
+* `/healthz` and `/readyz` probes and one sample CRUD resource (router, service, repository) with fast tests on in-memory SQLite and a testcontainers PostgreSQL integration tier marked `@pytest.mark.integration`.
+* Alembic with an async `env.py`, a naming convention and a reviewed initial revision; optional PyJWT and pwdlib Argon2 bearer-token auth.
+* Every tool config in `pyproject.toml` (Ruff, mypy strict with the Pydantic plugin, pytest markers, coverage with an 80% floor and XML at `build/coverage/coverage.xml`), `scripts/export_openapi.py` and Sphinx API docs sources in `docs/api/`.
+* A multi-stage non-root uv `Dockerfile`, `.dockerignore`, `compose.yaml` (`postgres:18`, a one-shot `migrate`, the app), `.env.example` and, when Sonar is enabled, `sonar-project.properties`.
+
+The generated code is the first exemplar of the `iru-fastapi-code-one-task` conventions, and its commands, paths and markers are the scaffold contract that the `iru-python-*` gate skills and `iru-setup-python-github-workflows` rely on. The skill announces whether it is scaffolding from scratch or updating an existing service and, per owned artifact that already exists, asks **Update** / **Keep as is** / **Replace** (or **Stop**) unless `on-existing` pre-answers. Replace is never offered for application source, tests or applied migrations.
+
+== Purpose group
+
+xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-python-fastapi
+----
+
+When called from `iru-setup-python-repository`, the resolved answers arrive as `args` `key: value` lines.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`name`, `package`, `description`
+|No
+|Distribution name (lowercase kebab-case, also the image name), snake_case package identifier (used for Compose and database names) and description.
+|Repository directory name; asked
+
+|`license`, `developer-name`, `developer-email`, `organization-url`
+|No
+|`[project]` license (SPDX) and authors.
+|Asked (existing services: read from `pyproject.toml`)
+
+|`python-version`
+|No
+|CPython minor for `.python-version` and the `Dockerfile`; `requires-python` stays `>=3.12`.
+|`3.13`
+
+|`database`
+|No
+|`postgresql`, `sqlite` or `none` (in-memory adapter, no ORM, no Alembic).
+|`postgresql`
+
+|`orm`
+|No
+|`sqlmodel` or `sqlalchemy`; ignored with `database: none`.
+|`sqlmodel`
+
+|`auth`
+|No
+|`yes` or `no`: sample bearer-token login protecting write endpoints.
+|`no`
+
+|`open-source`, `visibility`, `ci`, `distribution`
+|No
+|Shared pipeline vocabulary. `visibility` and `ci` only drive the Sonar recommendation; `distribution` is recorded for the report (the `Dockerfile` is always written).
+|Asked or derived (`gh repo view`)
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; writes `sonar-project.properties` unless `none`.
+|Asked; `none` recommended for private repositories
+
+|`mode`
+|No
+|`new` or `existing`. Informational: never means "update silently".
+|Derived: root `pyproject.toml` present means `existing`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, pre-answering the per-artifact question for scripted runs.
+|`ask`
+|===
+
+Other keys (`ci-tests`, `pages`, `publish`, `flavor`, and so on) are ignored. An existing `pyproject.toml` that is not a FastAPI service (Django, a library, Flask) stops the skill; a non-uv runner offers **Adopt uv** or **Stop**.
+
+== Outputs
+
+* `pyproject.toml`, `uv.lock` and `.python-version` with version `0.1.0.dev0` and all tool sections.
+* The `app/` package and `tests/` (`conftest.py`, `fakes.py`, `unit/`, and `integration/` with PostgreSQL).
+* With a database: `alembic.ini`, `migrations/` (async `env.py`, `script.py.mako`, `versions/0001_create_book_table.py`).
+* With `auth: yes`: `app/security.py`, auth models and router, and the auth versions of settings, dependencies and tests.
+* `scripts/export_openapi.py`, `docs/api/conf.py` and `docs/api/index.rst`.
+* `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env.example`, and `sonar-project.properties` when Sonar is enabled.
+* A report: mode, per-component action (created / updated / replaced / kept as is / removed / skipped), resolved shape, versions and drift past the pins, each verification command and result (unverified items such as Docker-dependent steps called out), and warnings (review identity and Sonar keys, never commit `.env`, run migrations once per release, one Uvicorn process per container).
+
+No `.gitignore`, workflows, `CHANGELOG.md`, `README.md` or Antora files are written; the orchestrator runs the dedicated skills for those next.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-python-fastapi"] --> B["Step 0: resolve inputs"]
+    B --> C["Step 1: survey repository;\nannounce mode"]
+    C -- "not a FastAPI project" --> STOP["End without changes"]
+    C -- Stop --> STOP
+    C --> D["Step 2: collect identity and options"]
+    D --> E["Step 3: toolchain and versions"]
+    E --> F["Step 4: project manifest with uv"]
+    F --> G["Step 5: tool configuration"]
+    G --> H["Step 6: application skeleton"]
+    H --> I{"database not none?"}
+    I -- yes --> J["Step 7: persistence"]
+    I -- no --> L
+    J --> K{"auth yes?"}
+    K -- yes --> K2["Step 8: auth"]
+    K -- no --> L["Step 9: tests"]
+    K2 --> L
+    L --> M["Step 10: OpenAPI export and Sphinx docs"]
+    M --> N["Step 11: Dockerfile, compose, .env.example"]
+    N --> O{"Sonar enabled?"}
+    O -- yes --> P["Step 12: sonar-project.properties"]
+    O -- no --> Q
+    P --> Q["Step 13: lock, format, lint-fix"]
+    Q --> R["Step 14: verify with canonical commands"]
+    R -- failure --> S["Fix what this skill wrote"]
+    S --> R
+    R --> T["Step 15: report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It runs `uv`, `docker` and `curl` directly and reads its own `reference/` files (tooling, app, persistence, auth, Docker and Sonar templates). Step 14 runs the commands that the `iru-python-*` gate skills and the workflows call, without invoking those skills. The generated code follows the `iru-fastapi-code-one-task` conventions.
+
+=== Invoked by
+
+* xref:skills/iru-setup-python-repository.adoc[] — scaffold step, flavor fastapi, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-python-fastapi/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

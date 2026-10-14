@@ -1,13 +1,13 @@
 = Gate Runner
-:description: Claude Code agent that runs one quality gate skill (tests, coverage, lint, license, docs, security, build) across all JVM, PHP, TS, .NET, mobile stacks
-:keywords: iru-gate-runner, claude code agent, quality gate, test coverage, code quality lint, license headers, security scan, gradle, kotlin, quarkus, php, nestjs, nextjs, lcov, jacoco, kover, phpstan, detekt, eslint
+:description: Claude Code agent that runs one quality gate skill (tests, coverage, lint, license, docs, security, build) across JVM, PHP, Python, TS, .NET, mobile stacks
+:keywords: iru-gate-runner, claude code agent, quality gate, test coverage, code quality lint, license headers, security scan, gradle, kotlin, quarkus, php, python, fastapi, django, pytest, ruff, nestjs, nextjs, lcov, jacoco, kover, phpstan, detekt, eslint
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 A custom agent that runs a single verification/quality-gate skill — tests, coverage, code-quality/lint, license
 headers, doc-comment audits, security scans, or a full project build — across any of the catalog's language
 tracks (Java and Kotlin on Maven or Gradle, Spring Boot, Quarkus, PHP, .NET, TypeScript including NestJS and
-Next.js, Android, Swift), in an isolated context, optionally diffs the result against a baseline, and reports back
+Next.js, Python including FastAPI and Django, Android, Swift), in an isolated context, optionally diffs the result against a baseline, and reports back
 only a compact, structured summary.
 
 == Purpose
@@ -17,7 +17,7 @@ dozen call sites across `iru-code`, `iru-code-one-task-group`, and every `<key>-
 (`iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`,
 `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`,
 `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`,
-`iru-android-code-one-task-group`, `iru-swift-code-one-task-group`): invoke a verification skill, diff it against a
+`iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`): invoke a verification skill, diff it against a
 baseline if one is given, and return only the distilled outcome — never the raw
 Surefire/JaCoCo/lcov/clover.xml/xccov/SARIF/checkstyle-result.xml/pmd.xml/spotbugsXml.xml/eslint/detekt/ktlint/
 phpstan/psalm/phpcs/swiftlint/detect-secrets output or a full build log. Centralizing the "report back only X, not
@@ -27,23 +27,23 @@ to be — once.
 It always prefers invoking the matching Claude Code skill over a raw command:
 
 * Tests — `iru-java-test` (Maven or Gradle, Java or Kotlin sources), `iru-dotnet-test`, `iru-typescript-test`,
-  `iru-php-test` (Pest/PHPUnit), `iru-android-test`, `iru-swift-test`.
+  `iru-php-test` (Pest/PHPUnit), `iru-python-test` (pytest, incl. pytest-django), `iru-android-test`, `iru-swift-test`.
 * Coverage — `iru-java-coverage` (JaCoCo from Maven or Gradle, `quarkus-jacoco`, or Kover), `iru-dotnet-coverage`,
   `iru-typescript-coverage` (lcov line/branch %), `iru-php-coverage` (PHPUnit/Pest Clover XML line %; branch
-  coverage reported as unavailable rather than invented), `iru-android-coverage` (JaCoCo XML line/branch %),
+  coverage reported as unavailable rather than invented), `iru-python-coverage` (coverage.py Cobertura XML line/branch %), `iru-android-coverage` (JaCoCo XML line/branch %),
   `iru-swift-coverage` (llvm-cov/`xccov` %).
 * Code quality/lint — `iru-java-code-quality` (Checkstyle/PMD/SpotBugs), `iru-dotnet-code-quality` (StyleCop/CA
   rules), `iru-kotlin-code-quality` (detekt/ktlint), `iru-typescript-code-quality` (ESLint/Biome/oxlint),
   `iru-php-code-quality` (PHPStan/Psalm error identifiers, PHPCS/Pint/PHP-CS-Fixer sniffs and rules),
-  `iru-android-code-quality` (Detekt/ktlint/Android Lint), `iru-swift-code-quality` (SwiftLint) — all keyed by the
+  `iru-python-code-quality` (Ruff rule codes, mypy error codes, Bandit test ids), `iru-android-code-quality` (Detekt/ktlint/Android Lint), `iru-swift-code-quality` (SwiftLint) — all keyed by the
   tool's own stable rule id so a baseline diff matches on rule plus file, not on message text or shifting line
   numbers.
 * Doc-comment audits — `iru-java-javadoc`, `iru-kotlin-kdoc` (KDoc/Dokka), `iru-dotnet-docfx`,
-  `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-android-dokka`, `iru-swift-docc`.
-* `iru-check-license`, `iru-check-security`, and full project builds (Maven, Gradle, npm, Composer, ...).
+  `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (docstrings + Sphinx), `iru-android-dokka`, `iru-swift-docc`.
+* `iru-check-license`, `iru-check-security`, and full project builds (Maven, Gradle, npm, Composer, uv, ...).
 
 It falls back to the equivalent raw command (`mvn test -Dtest=X`, `./gradlew test --tests X`, `dotnet test --filter`,
-`vendor/bin/phpunit --filter X`, ...) only when the prompt says the matching skill is unavailable or none exists in
+`vendor/bin/phpunit --filter X`, `uv run pytest tests/test_x.py`, ...) only when the prompt says the matching skill is unavailable or none exists in
 the repository. If an invoked skill needs a decision only a person can make (for example `iru-check-license`'s
 header convention or `iru-check-security`'s audit labeling), the agent lets that skill surface its own question and
 relays the user's choice in its report, and it never modifies files beyond what the invoked skill does itself.
@@ -97,6 +97,8 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
 * xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 1, 3, baseline and every validation check.
 * xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 1, 3, baseline, every gate, next build and Playwright runs.
 * xref:skills/iru-php-code-one-task-group.adoc[] — Step 1, 3, baseline and every validation check.
+* xref:skills/iru-fastapi-code-one-task-group.adoc[] — Step 1, 3, baseline and every validation check (xref:skills/iru-python-test.adoc[], xref:skills/iru-python-coverage.adoc[], xref:skills/iru-python-code-quality.adoc[], xref:skills/iru-python-docstrings.adoc[], license headers, container-backed integration runs).
+* xref:skills/iru-django-code-one-task-group.adoc[] — Step 1, 3, baseline and every validation check (xref:skills/iru-python-test.adoc[], xref:skills/iru-python-coverage.adoc[], xref:skills/iru-python-code-quality.adoc[], xref:skills/iru-python-docstrings.adoc[], license headers, container-backed integration runs).
 * xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 1, 3, baseline, validation, container-stage and coverage runs.
 * xref:skills/iru-setup-java-springboot-apis.adoc[] — Step 7, runs generation and compile verification.
 * xref:skills/iru-setup-java-springboot-github-workflows.adoc[] — Step 5, runs the workflow's Maven/Gradle commands locally first.

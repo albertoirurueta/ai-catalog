@@ -1,7 +1,7 @@
 ---
 name: iru-explore
 description: >-
-  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Expo/React Native, Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
+  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), Expo/React Native, Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -297,7 +297,19 @@ fallback when manifests are absent or ambiguous:
       `config.xml`, and/or `prestashop/*` dependencies in `composer.json` → PrestaShop module.
     - Any other `composer.json` package (a `type` of `library`, or none, with PSR-4 `autoload`) → plain PHP
       library/package.
-  - `requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py` → Python; check for `django`, `flask`, `fastapi`.
+  - `requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py` → Python; record `requires-python` and the
+    project/package manager (`uv.lock` → uv, `poetry.lock` → Poetry, `pdm.lock` → PDM, `Pipfile.lock` → Pipenv,
+    otherwise pip/`requirements*.txt`) and the test runner (pytest, pytest-django, or Django's `manage.py test`),
+    then tell the kind of project apart:
+    - `django` among the dependencies plus a `manage.py` at the root (or the directory the module lives in) →
+      Django project. Also record the settings module (`DJANGO_SETTINGS_MODULE` in `manage.py`/pytest config, e.g.
+      `config.settings.local`), the app layout (`apps/<app>/` vs. root-level apps), and the API layer:
+      `djangorestframework` (DRF), `django-ninja` (Ninja), or neither.
+    - `fastapi` among the dependencies (+ a `FastAPI(` app object, typically `app/main.py` or `src/<pkg>/main.py`)
+      → FastAPI service. Also record the layout (`app/` layered, `src/<pkg>/`, or hexagonal ports/adapters), the
+      persistence layer (SQLModel, SQLAlchemy 2.0 — sync or async —, or none) and whether Alembic is present.
+    - `flask`, `pyramid`, `tornado`, etc. — other Python web frameworks (no catalog key: `other`).
+    - None of those, with a `[project]`/`[tool.poetry]` table or a `setup.py` → plain Python library/package.
   - `Podfile`, `Package.swift`, `project.yml`, `Project.swift`, `*.xcodeproj`/`*.xcworkspace` → Swift and/or
     Objective-C:
     - `Package.swift` (SwiftPM) — its `products:` array tells library vs. executable (`.library(...)` vs.
@@ -380,11 +392,14 @@ Summarize for the user in plain text (no file output unless asked):
   - Project type: <one of: java-library, java-springboot, java-springboot-hilla, kotlin-springboot,
     kotlin-springboot-hilla, java-quarkus, kotlin-quarkus, typescript-library, react-web, angular-web, nestjs,
     nextjs, php-laravel, php-wordpress-plugin, php-wordpress-theme, php-prestashop-module, php-library,
+    python-fastapi, python-django, python-library,
     android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos), react-native-app,
     ionic-app (angular|react), dotnet, other, unknown>
   - Build & layout: <JVM backends: e.g. "Gradle (Kotlin DSL, wrapper), hexagonal reactor (domain/, application/,
     infrastructure/, api/)" or "Maven (wrapper), layered single-module"; NestJS: e.g. "ESM, Vitest, TypeORM";
-    Next.js: e.g. "Next 16, App Router, cacheComponents: true"; PHP: e.g. "PHP ^8.3, Pest" — omit for other stacks>
+    Next.js: e.g. "Next 16, App Router, cacheComponents: true"; PHP: e.g. "PHP ^8.3, Pest"; Python: e.g. "Python
+    >=3.12, uv, pytest, app/ layered, SQLModel async + Alembic" or "Python >=3.12, uv, pytest-django, DRF,
+    config.settings" — omit for other stacks>
   - Antora docs: <e.g. docs/ (antora.yml component "my-lib") — or "none found">
   - Repository host: <e.g. GitHub (github.com/org/repo) — or Bitbucket / Azure DevOps / TFS, with base URL — or
     "no remote configured" — or "none — not a git repository">
@@ -422,6 +437,9 @@ Summarize for the user in plain text (no file output unless asked):
   | `php-wordpress-theme`     | `style.css` with a `Theme Name:` header and/or `theme.json`                                 |
   | `php-prestashop-module`   | Class `extends Module` (+ `config.xml`, `prestashop/*` deps)                                |
   | `php-library`             | Any other `composer.json` package (no Laravel/WordPress/PrestaShop markers)                |
+  | `python-fastapi`          | `fastapi` dependency (+ a `FastAPI(` app, e.g. `app/main.py`)                              |
+  | `python-django`           | `django` dependency + a `manage.py`                                                        |
+  | `python-library`          | Any other Python package (`pyproject.toml`/`setup.py`, no Django/FastAPI/other web framework) |
   | `android-library`         | Gradle `com.android.library` plugin (direct or via `libs.versions.toml` alias)             |
   | `android-app`             | Gradle `com.android.application` plugin (direct or via `libs.versions.toml` alias)         |
   | `swift-library`           | `Package.swift` with a `.library(...)` product                                             |
@@ -429,7 +447,7 @@ Summarize for the user in plain text (no file output unless asked):
   | `react-native-app`        | `expo`/`react-native` deps (+ `app.json`/`metro.config.js`/`eas.json`, `ios/`+`android/`)   |
   | `ionic-app`               | `@ionic/angular` or `@ionic/react` (+ `@capacitor/core`, `capacitor.config.*`)              |
   | `dotnet`                  | `*.csproj`/`*.fsproj`/`*.sln` present (library, ASP.NET Core, MAUI/Xamarin, WPF/WinForms)   |
-  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, plain Python, Go, Rust, Ruby, C/C++) |
+  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Go, Rust, Ruby, C/C++) |
   | `unknown`                 | Nothing in Step 5 matched any manifest or source-level signal                              |
 
   - `apple-app` lists its detected target platforms in parentheses, using the platform keys `ios`, `ipados`,
@@ -446,6 +464,9 @@ Summarize for the user in plain text (no file output unless asked):
   - **PHP**: Laravel, WordPress, and PrestaShop markers take precedence over `php-library` (a Laravel app or a
     PrestaShop module also has a `composer.json`). A WordPress plugin that ships blocks is still
     `php-wordpress-plugin`; a repository holding both a plugin and a theme is `multiple`.
+  - **Python**: Django and FastAPI markers take precedence over `python-library`. A Django project that also
+    mounts a FastAPI app (or the reverse) is classified by its primary entry point (`manage.py` → `python-django`);
+    two independent services in one repository are `multiple`. Flask/Pyramid/Tornado projects are `other`.
   - **Hilla frontend vs. Next.js/NestJS**: a `package.json` under a Spring Boot module's `src/main/frontend/` is
     part of the `*-springboot-hilla` value, never a separate `nextjs`/`react-web` module.
   - Examples: `- Project type: kotlin-quarkus` with `- Build & layout: Gradle (Kotlin DSL, wrapper), layered

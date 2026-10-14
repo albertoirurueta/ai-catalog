@@ -61,9 +61,11 @@ WordPress.org listing, owned by its own release process; this skill never edits 
   '%(refname:short) %(creatordate:short)' refs/tags`.
 - Tags are version tags with or without a leading `v` (`v1.2.0`, `1.2.0`) whatever the stack — Maven/Gradle
   (`pom.xml`, `gradle.properties`), npm (`package.json`), Laravel (`config/app.php` `version`), WordPress (plugin
-  header / `style.css` `Version:`), PrestaShop (module class `$this->version`) all release by tagging. Use the
+  header / `style.css` `Version:`), PrestaShop (module class `$this->version`), Python (`pyproject.toml`
+  `[project].version`) all release by tagging. Use the
   tag's version (without `v`) as the heading; ignore non-version tags (e.g. `latest`, deploy markers). Never take a
-  heading from an in-tree version: a `-SNAPSHOT`/`-dev`/`-dev.N` value there is unreleased work, not a release.
+  heading from an in-tree version: a `-SNAPSHOT`/`-dev`/`-dev.N` value (or Python's PEP 440 `.dev0`, e.g.
+  `0.2.0.dev0`) there is unreleased work, not a release.
 - **No tags at all**: there is no release history to reconstruct. Ask the user (via `AskUserQuestion` if
   available) whether to still create a minimal `CHANGELOG.md` containing just an `## [Unreleased]` section (Step
   6's format, with all commits so far treated as unreleased work), or to stop entirely since there's nothing to
