@@ -1,0 +1,148 @@
+= Setup Python Django
+:description: Scaffolds a Django 6.1 project with uv or updates an existing one, adding split settings, custom user, tested sample app, DRF or Ninja, Docker and Sonar.
+:keywords: iru-setup-python-django, claude code skill, django, uv, django rest framework, django ninja, pytest-django, factory boy, gunicorn, whitenoise, python bootstrap
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds a Django 6.1 project with uv and `startproject`, or brings an existing Django project up to date, and layers this catalog's Python toolchain and a small, tested project skeleton on top.
+
+== Purpose
+
+`iru-setup-python-django` runs `uv init --bare`, `uv add` and `django-admin startproject config .`, then post-processes the result:
+
+* A PEP 621 `pyproject.toml` (`version = "0.1.0.dev0"`, `uv_build` backend) with Ruff (including `DJ` rules, Google docstrings), mypy strict with django-stubs, pytest-django, and coverage with an 80% floor and Cobertura XML at `build/coverage/coverage.xml`.
+* A split settings package `config/settings/{base,local,test,production}.py` driven by fail-fast environment variables, plus `config/env.py`.
+* Apps under `apps/`: `apps.accounts` (custom user created before the first migration), `apps.core` (abstract `TimeStampedModel`, `/healthz` and `/readyz` probes) and a sample `catalog` app (model, `@transaction.atomic` service, admin, API).
+* The API as Django REST Framework with drf-spectacular (default), Django Ninja, or none.
+* Fast tests on in-memory SQLite and, for PostgreSQL, an `integration` tier on a testcontainers PostgreSQL.
+* WhiteNoise, Gunicorn (`gthread` on WSGI, or `uvicorn_worker.UvicornWorker` on ASGI for Ninja), Sphinx API docs under `docs/api/`, a multi-stage non-root `Dockerfile`, `.dockerignore`, `compose.yaml` (`postgres:18`, one-shot `migrate`, `app`), `.env.example`, and `sonar-project.properties` when Sonar is enabled.
+
+The generated code is the first exemplar of the `iru-django-code-one-task` conventions, and every verification command is the one the CI workflows and the `iru-python-*` gate skills run. The skill announces whether it is scaffolding from scratch or updating an existing project and, per owned artifact that already exists, asks **Update** / **Keep as is** / **Replace** (or **Stop**) unless `on-existing` pre-answers. Replace is not offered for `manage.py`, settings, `config/urls.py` or apps.
+
+== Purpose group
+
+xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-python-django
+----
+
+When called from `iru-setup-python-repository`, the resolved answers arrive as `args` `key: value` lines.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`name`, `package`, `description`
+|No
+|Distribution name (lowercase kebab-case, also image and compose project name), snake_case identifier (names the default PostgreSQL database and user) and description.
+|Repository directory name; asked
+
+|`license`, `developer-name`, `developer-email`, `organization-url`
+|No
+|`[project]` license (SPDX; "No license" adds the `Private :: Do Not Upload` classifier) and authors.
+|Asked (existing projects: read from `pyproject.toml`)
+
+|`python-version`
+|No
+|CPython minor (3.12 to 3.14) for `.python-version`, the `Dockerfile` and Sonar; `requires-python` stays `>=3.12`.
+|`3.13`
+
+|`database`
+|No
+|`postgresql` or `sqlite`. `none` is invalid because Django auth, sessions and admin need a database.
+|`postgresql`
+
+|`api`
+|No
+|`drf`, `ninja` or `none`. Fixed by an existing project's installed API framework.
+|`drf`
+
+|`open-source`, `visibility`, `ci`, `distribution`
+|No
+|Shared pipeline vocabulary. `visibility` and `ci` only drive the Sonar recommendation; `distribution` is reported only (the `Dockerfile` is always written).
+|Asked or derived (`gh repo view`)
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; writes `sonar-project.properties` unless `none`.
+|Asked; `none` recommended for private repositories
+
+|`mode`
+|No
+|`new` or `existing`. Informational: never means "update silently".
+|Derived: `manage.py` plus Django dependency means `existing`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`, pre-answering the per-artifact question for scripted runs.
+|`ask`
+|===
+
+Other keys (`ci-tests`, `pages`, `publish`, `orm`, and so on) are ignored. A Python project that is not Django (a FastAPI service, a library) stops the skill. An existing project with migrations on the default `auth.User` keeps its user model and skips `apps.accounts`.
+
+== Outputs
+
+* `pyproject.toml`, `uv.lock` and `.python-version` with all tool sections.
+* `manage.py`, `config/` (settings package, `env.py`, `urls.py`, `asgi.py`, `wsgi.py`, and `api.py` for Ninja), `gunicorn.conf.py`.
+* `apps/core/`, `apps/accounts/` and, for new projects or on request, `apps/catalog/` with its API files and generated first migrations.
+* `tests/` (`conftest.py`, `factories.py`, fast tier, and `integration/` with PostgreSQL).
+* `docs/api/conf.py` and the API reference pages.
+* `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env.example`, and `sonar-project.properties` when Sonar is enabled.
+* A report: mode, per-component action (created / updated / replaced / kept as is / removed), resolved choices and server type, versions from `uv.lock`, each verification command and result (unverified items such as Docker-dependent steps called out), and warnings (review identity and Sonar keys, never commit `.env` or `db.sqlite3`, production environment variables, migrations once per release, integration tests need Docker).
+
+No `.gitignore`, workflows, `CHANGELOG.md`, `README.md` or Antora files are written; the orchestrator runs the dedicated skills for those next.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-python-django"] --> B["Step 0: resolve inputs"]
+    B --> C["Step 1: survey repository;\nannounce mode"]
+    C -- "not a Django project" --> STOP["End without changes"]
+    C -- Stop --> STOP
+    C --> D["Step 2: collect identity and options"]
+    D --> E["Step 3: toolchain and versions"]
+    E --> F{"New project?"}
+    F -- yes --> G["Step 4: scaffold with uv and startproject"]
+    F -- no --> H["Skip scaffold"]
+    G --> I["Step 5: pyproject.toml"]
+    H --> I
+    I --> J["Step 6: settings and entry points"]
+    J --> K["Step 7: apps, custom user, first migrations"]
+    K --> L["Step 8: tests"]
+    L --> M["Step 9: Sphinx API docs"]
+    M --> N["Step 10: Dockerfile, compose, .env.example"]
+    N --> O{"Sonar enabled?"}
+    O -- yes --> P["Step 11: sonar-project.properties"]
+    O -- no --> Q
+    P --> Q["Step 12: format"]
+    Q --> R["Step 13: verify with gate commands"]
+    R -- failure --> S["Fix what this skill wrote"]
+    S --> R
+    R --> T["Step 14: report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None. It runs `uv`, `docker` and `curl` directly and reads its own `reference/` files (project, settings, sample app and tests, DRF or Ninja, docs, Docker and Sonar templates). Step 13 runs the commands that the `iru-python-*` gate skills and the workflows call, without invoking those skills. The generated code follows the `iru-django-code-one-task` conventions.
+
+=== Invoked by
+
+* xref:skills/iru-setup-python-repository.adoc[] — scaffold step, flavor django, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-python-django/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

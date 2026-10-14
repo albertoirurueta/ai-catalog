@@ -7,19 +7,19 @@ description: >-
   `java-library`, Spring Boot services (`java-springboot`, `java-springboot-hilla`, `kotlin-springboot`,
   `kotlin-springboot-hilla`), Quarkus services (`java-quarkus`, `kotlin-quarkus`), `typescript-library`,
   `react-web`, `nextjs`, `angular-web`, `nestjs`, PHP (`php-laravel`, `php-wordpress-plugin`,
-  `php-wordpress-theme`, `php-prestashop-module`), `android-library`, `android-app`, `swift-library`, `apple-app`
+  `php-wordpress-theme`, `php-prestashop-module`), Python (`python-fastapi`, `python-django`), `android-library`, `android-app`, `swift-library`, `apple-app`
   (`ios`/`ipados`/`macos`/`watchos`), `react-native-app`, `ionic-app` (`angular`/`react`) — by surveying the
   working directory (running `iru-explore` first when it already holds code) to detect which one applies, asking
   only the shared, cross-cutting questions the detected/chosen type still needs, then delegating the actual
   scaffold to the matching stack orchestrator (`iru-setup-java-library-repository`, `iru-setup-java-springboot`,
   `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-  `iru-setup-android-repository`, or `iru-setup-swift-repository`) via `iru-isolated-skill-executor`. Accepts
+  `iru-setup-python-repository`, `iru-setup-android-repository`, or `iru-setup-swift-repository`) via `iru-isolated-skill-executor`. Accepts
   `args` (`key: value` lines) to pre-resolve `project-type`, `open-source`, `visibility`
   (`public`/`private`/`internal`, otherwise detected via `gh repo view` or asked), `ci` (`yes`/`no`), `ci-tests`
   (`unit`/`full`), `pages` (`yes`/`no`), `publish`, `distribution`, `sonar`
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, the stack-shape keys `language`, `build-tool`,
-  `layout`, and `frontend` (JVM services), `platforms`, `framework`, `native-builds`, `integration-branch`,
+  `layout`, and `frontend` (JVM services), `python-version`, `platforms`, `framework`, `native-builds`, `integration-branch`,
   `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` — forwarding each only
   to the delegated orchestrator whose own `args` contract actually accepts it, and never asking a question
   `args` already answered or one the delegated orchestrator asks itself. Asks whether CI workflows are wanted,
@@ -29,7 +29,7 @@ description: >-
   an inventory of the prior setup it found); on an existing repository it runs `iru-explore` first and forces
   `mode: existing`, and every delegated component then warns about each pre-existing artifact and asks whether to
   keep, update, or replace it. Use whenever a user wants to bootstrap (or catch up) a repository and either
-  doesn't know or shouldn't have to know which of this catalog's seven stack-specific setup orchestrators to
+  doesn't know or shouldn't have to know which of this catalog's eight stack-specific setup orchestrators to
   invoke directly.
 model: sonnet
 ---
@@ -39,10 +39,10 @@ model: sonnet
 The catalog's single bootstrap front door. This skill does not scaffold anything itself — it detects or asks which
 of the supported project types the repository is (or should become), collects the handful of questions that are
 genuinely shared across every stack (open source, repository visibility, CI/CD and its test scope, Sonar, GitHub
-Pages, publish/distribution, and a few flavor-specific inputs), and then hands off to exactly one of seven existing
+Pages, publish/distribution, and a few flavor-specific inputs), and then hands off to exactly one of eight existing
 stack orchestrators, each of which asks its own project-identity questions (groupId/artifactId, package/app name,
 slug, etc.) and its own stack-shape questions (JVM language/build tool/layout/frontend, NestJS ORM, Next.js output,
-PHP version floor, ...) and does the actual scaffolding.
+PHP version floor, Python version/database/ORM/API, ...) and does the actual scaffolding.
 
 ## Step 0 — Resolve inputs
 
@@ -79,13 +79,14 @@ library types only), `distribution` (`none`/`internal`/`store` — app types onl
 (`maven`/`gradle`), `frontend` (`none`/`hilla` — Spring Boot only), and `layout` (`single`/`hexagonal` — Quarkus
 only) — **never asked here** (the delegated orchestrator asks them itself), only forwarded when supplied via `args`
 or pre-set by Step 1's detection — `platforms` (Apple app / Swift library), `framework` (Ionic's `angular`/`react`),
-`native-builds` (React Native's `eas`/`local`), plus the
+`native-builds` (React Native's `eas`/`local`), `python-version` (Python only — likewise never asked here), plus the
 pass-through-only keys `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`,
 `organization-url` (see Step 3's closing note — this skill never asks for these itself, it only forwards them when
 supplied). Every key found here is resolved — skip the matching question below. Any **other** `key: value` line
 (e.g. `name`/`scope`/`description`/`node-version`/`package-manager`/`orm`/`database`/`output`/`e2e` for
 `iru-setup-typescript-repository`, `slug`/`vendor`/`php-version` for `iru-setup-php-repository`,
 `group-id`/`artifact-id`/`java-version` for `iru-setup-quarkus-repository`,
+`name`/`package`/`description`/`database`/`orm`/`api` for `iru-setup-python-repository`,
 `group-id`/`artifact-id`/`namespace` for `iru-setup-android-repository`) is kept as an opaque pass-through: Step 4
 forwards it verbatim only if the delegated orchestrator's own Step 0, read on disk there, recognizes the key, and
 Step 5 lists every line that was dropped because no delegated skill accepts it — never silently (without this
@@ -97,7 +98,8 @@ If `args` is absent or doesn't look like this format, treat everything as unset 
 Check whether the working directory already holds a real repository before asking anything: `git ls-files | head`
 returning any output, or any of these manifests present at any depth worth a shallow `find`/`ls` check —
 `pom.xml`, `build.gradle`/`build.gradle.kts`, `settings.gradle`/`settings.gradle.kts`, `package.json`,
-`composer.json`, a root `style.css`/`theme.json` (WordPress theme), `Package.swift`, `*.xcodeproj`, `project.yml`,
+`composer.json`, a root `style.css`/`theme.json` (WordPress theme), `pyproject.toml`, `requirements.txt`, `manage.py`,
+`setup.py`, `Package.swift`, `*.xcodeproj`, `project.yml`,
 `Project.swift`, `*.csproj`/`*.sln`.
 
 - **Non-empty** (a real, at-least-partially-scaffolded repository): run `Skill({skill: "iru-explore"})` with no
@@ -116,13 +118,14 @@ which documents the exact same list and derivation table, so never paraphrase or
 ```
 java-library, java-springboot, java-springboot-hilla, kotlin-springboot, kotlin-springboot-hilla, java-quarkus,
 kotlin-quarkus, typescript-library, react-web, angular-web, nestjs, nextjs, php-laravel, php-wordpress-plugin,
-php-wordpress-theme, php-prestashop-module, php-library, android-library, android-app, swift-library,
+php-wordpress-theme, php-prestashop-module, php-library, python-fastapi, python-django, python-library,
+android-library, android-app, swift-library,
 apple-app (ios, ipados, macos, watchos), react-native-app, ionic-app (angular|react), dotnet, other, unknown
 ```
 
 (`multiple` is also possible — handled above, not a project type in its own right.) Map a detected value straight
 to its Step 2 option and the stack-shape `args` it pre-sets — offer that option as the first choice, labeled
-"(detected)", instead of running the full four-round interview, and forward the pre-set keys in Step 4 so the
+"(detected)", instead of running the full five-round interview, and forward the pre-set keys in Step 4 so the
 delegated orchestrator confirms rather than re-asks them:
 
 | Detected `Project type:` | Step 2 option | Delegated orchestrator | Pre-set `args` |
@@ -143,6 +146,8 @@ delegated orchestrator confirms rather than re-asks them:
 | `php-wordpress-plugin` | WordPress plugin or theme → plugin | `iru-setup-php-repository` | `flavor: wordpress-plugin` |
 | `php-wordpress-theme` | WordPress plugin or theme → block theme | `iru-setup-php-repository` | `flavor: wordpress-theme` |
 | `php-prestashop-module` | PrestaShop module | `iru-setup-php-repository` | `flavor: prestashop-module` |
+| `python-fastapi` | FastAPI service | `iru-setup-python-repository` | `flavor: fastapi` |
+| `python-django` | Django project | `iru-setup-python-repository` | `flavor: django` |
 | `android-library` | Android → library | `iru-setup-android-repository` | `flavor: library` |
 | `android-app` | Android → app | `iru-setup-android-repository` | `flavor: app` |
 | `swift-library` | Apple → Swift library | `iru-setup-swift-repository` | `flavor: library` |
@@ -166,6 +171,12 @@ delegated orchestrator confirms rather than re-asks them:
   `iru-php-code-quality`, `iru-php-phpdoc`) and `iru-setup-antora`, `iru-setup-php-gitignore`,
   `iru-setup-changelog`, `iru-setup-readme` can still be run individually — and stop here for this run, exactly
   like `dotnet` below.
+- `python-library` — a plain Python package (no FastAPI/Django). This catalog has **no scaffold skill for it**
+  (`iru-setup-python-repository` covers FastAPI and Django only). Report that plainly — project type detected:
+  `python-library`; no bootstrap orchestrator to delegate to; the Python gate skills (`iru-python-test`,
+  `iru-python-coverage`, `iru-python-code-quality`, `iru-python-docstrings`) and `iru-setup-antora`,
+  `iru-setup-python-gitignore`, `iru-setup-changelog`, `iru-setup-readme` can still be run individually — and stop
+  here for this run, exactly like `dotnet` below.
 - `dotnet` — this catalog has **no bootstrap orchestrator for .NET**. Report that plainly (project type detected:
   `dotnet`; no `iru-setup-dotnet-repository`-style skill exists in this catalog to delegate to) and stop here for
   this run rather than falling through to Step 2 — there is nothing to offer.
@@ -184,14 +195,15 @@ Right after the survey (and before asking anything in Steps 2–3), tell the use
 
   | Component | Evidence to check |
   |---|---|
-  | Build manifest | `pom.xml`, `build.gradle(.kts)`/`settings.gradle(.kts)` (+ `gradle/libs.versions.toml`, `build-logic/`), `package.json`, `composer.json`, `Package.swift`, `*.xcodeproj`/`project.yml`/`Project.swift`; stack manifests `springboot-stack.yml`/`quarkus-stack.yml` |
-  | Source layout | `src/` (`src/main/java`/`src/main/kotlin`), hexagonal modules (`domain/`, `application/`, `infrastructure/`, `api/`), `lib/`/`app/` modules, `Sources/`/`Tests/`, Laravel `app/`+`artisan`, the WordPress main plugin file / `style.css`+`theme.json`, the PrestaShop `<module>.php`+`config.xml` |
+  | Build manifest | `pom.xml`, `build.gradle(.kts)`/`settings.gradle(.kts)` (+ `gradle/libs.versions.toml`, `build-logic/`), `package.json`, `composer.json`, `pyproject.toml` (+ `uv.lock`/`poetry.lock`, `.python-version`), `Package.swift`, `*.xcodeproj`/`project.yml`/`Project.swift`; stack manifests `springboot-stack.yml`/`quarkus-stack.yml` |
+  | Source layout | `src/` (`src/main/java`/`src/main/kotlin`), hexagonal modules (`domain/`, `application/`, `infrastructure/`, `api/`), `lib/`/`app/` modules, `Sources/`/`Tests/`, Laravel `app/`+`artisan`, the WordPress main plugin file / `style.css`+`theme.json`, the PrestaShop `<module>.php`+`config.xml`, FastAPI `app/main.py` (+ `alembic/`), Django `manage.py`+`config/`+`apps/` |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | `.gitignore` | `.gitignore` |
   | CI workflows | each file under `.github/workflows/` (listed individually) |
   | Dependabot | `.github/dependabot.yml` |
   | Sonar config | `sonar-project.properties`, `sonar.*` properties in `pom.xml`, a `sonar {}` block in Gradle |
-  | Quality config | `checkstyle.xml`, `detekt.yml`, `.editorconfig`, `phpstan.neon(.dist)`, `phpcs.xml.dist`, `pint.json`, `.php-cs-fixer.dist.php`, ESLint/oxlint/Biome config |
+  | Quality config | `checkstyle.xml`, `detekt.yml`, `.editorconfig`, `phpstan.neon(.dist)`, `phpcs.xml.dist`, `pint.json`, `.php-cs-fixer.dist.php`, `[tool.ruff]`/`[tool.mypy]` in `pyproject.toml` (or `ruff.toml`/`mypy.ini`), `.pre-commit-config.yaml`, ESLint/oxlint/Biome config |
+  | Container | `Dockerfile`, `.dockerignore`, `compose.yaml`/`docker-compose.yml` (service stacks: Quarkus, NestJS, Laravel, FastAPI, Django) |
   | Changelog | `CHANGELOG.md` (or `CHANGELOG.rst`/`CHANGELOG.txt`/`HISTORY.md`) |
   | README | `README.md` |
   | License | `LICENSE`/`LICENSE.txt`/`LICENSE.md`/`COPYING` |
@@ -210,10 +222,10 @@ action actually taken per component.
 Skip this step entirely when `project-type` was already resolved — either supplied via `args`, or detected in
 Step 1 and confirmed by the user (offered as that option's first entry, labeled "(detected)").
 
-Otherwise resolve it with `AskUserQuestion`, in up to four rounds (the tool caps each question at four options,
-so each round offers three concrete project types plus one explicit escape hatch). Rounds 1–3 end with a fourth
+Otherwise resolve it with `AskUserQuestion`, in up to five rounds (the tool caps each question at four options,
+so each round offers three concrete project types plus one explicit escape hatch). Rounds 1–4 end with a fourth
 option, **"Something in the next group"**, whose label names the theme the next round covers (e.g. "Something in
-the next group (mobile/native)") — picking it moves on to the next round without forcing a pick. Round 4 is the
+the next group (mobile/native)") — picking it moves on to the next round without forcing a pick. Round 5 is the
 last round, so its fourth option is instead **"None of these"**: choosing it means `project-type: other` — ask the
 user to describe the stack in one line, and report per Step 5 that this catalog has no bootstrap orchestrator for
 it (the same outcome as a detected `dotnet`/`other` in Step 1) rather than guessing a delegated skill to force it
@@ -225,8 +237,11 @@ instead of walking them through the remaining rounds.
 - **Round 2 — "Web & Node"** (only if Round 1 ended on the escape hatch): TypeScript/npm library / Web app ("React,
   Next.js, or Angular") / NestJS backend service / Something in the next group (PHP).
 - **Round 3 — "PHP"** (only if Round 2 ended on the escape hatch): Laravel application / WordPress plugin or block
-  theme / PrestaShop module / Something in the next group (mobile & Apple).
-- **Round 4 — "Mobile & Apple"** (only if Round 3 ended on the escape hatch): Android ("library or app") / Apple
+  theme / PrestaShop module / Something in the next group (Python).
+- **Round 4 — "Python"** (only if Round 3 ended on the escape hatch): FastAPI service ("FastAPI + SQLModel/SQLAlchemy,
+  Alembic, container image") / Django project ("Django + DRF or Ninja, PostgreSQL, container image") / Something in
+  the next group (mobile & Apple).
+- **Round 5 — "Mobile & Apple"** (only if Round 4 ended on the escape hatch): Android ("library or app") / Apple
   ("Swift library or iOS/iPadOS/macOS/watchOS app") / Cross-platform mobile app ("React Native or Ionic") / None of
   these.
 
@@ -248,8 +263,9 @@ Kotlin), build tool (Maven or Gradle), Quarkus layout (single module or hexagona
 Spring Boot is Maven-only) — asking them here too would double-ask. The final `project-type` (e.g.
 `kotlin-springboot-hilla`, `java-quarkus`) is whatever those answers make it; Step 5 reports it from the delegated
 run. The same rule holds for every other stack-shape key (`orm`/`database` for NestJS, `output`/`e2e` for Next.js,
-`php-version` for PHP): this front door forwards them only when Step 0's `args` or Step 1's detection supplied them,
-and otherwise leaves them to the orchestrator.
+`php-version` for PHP, `database`/`orm`/`api`/`python-version` for Python): this front door forwards them only when
+Step 0's `args` or Step 1's detection supplied them, and otherwise leaves them to the orchestrator —
+`iru-setup-python-repository` asks all four itself.
 
 | Option (→ follow-up) | `project-type` key | Delegated skill | `flavor`/extra arg |
 |---|---|---|---|
@@ -265,6 +281,8 @@ and otherwise leaves them to the orchestrator.
 | WordPress → Plugin | `php-wordpress-plugin` | `iru-setup-php-repository` | `flavor: wordpress-plugin` |
 | WordPress → Block theme | `php-wordpress-theme` | `iru-setup-php-repository` | `flavor: wordpress-theme` |
 | PrestaShop module | `php-prestashop-module` | `iru-setup-php-repository` | `flavor: prestashop-module` |
+| FastAPI service | `python-fastapi` | `iru-setup-python-repository` | `flavor: fastapi` |
+| Django project | `python-django` | `iru-setup-python-repository` | `flavor: django` |
 | Android → Library | `android-library` | `iru-setup-android-repository` | `flavor: library` |
 | Android → App | `android-app` | `iru-setup-android-repository` | `flavor: app` |
 | Apple → Swift library | `swift-library` | `iru-setup-swift-repository` | `flavor: library`, `platforms` |
@@ -274,14 +292,15 @@ and otherwise leaves them to the orchestrator.
 
 A user who wants a plain Composer PHP library (no Laravel/WordPress/PrestaShop) ends on "None of these" or types
 it via *Other* — handle it like a detected `php-library` in Step 1 (no orchestrator; point at the individually
-runnable PHP gate and repository-file skills).
+runnable PHP gate and repository-file skills). Likewise a plain Python package (no FastAPI/Django) is handled like
+a detected `python-library`.
 
 ## Step 3 — Ask the shared inputs once
 
 Ask only what the resolved `project-type` actually needs, skipping anything already resolved by `args` or by
 Step 1's detection. Every question here uses `AskUserQuestion` (header ≤ 12 characters, 2–4 options, recommended
 option first and labeled "(Recommended)") and follows this catalog's shared open-source- and visibility-driven
-convention (see any of the seven delegated orchestrators' own Step 0–4 for the identical wording this mirrors). Ask
+convention (see any of the eight delegated orchestrators' own Step 0–4 for the identical wording this mirrors). Ask
 them in the order below — `visibility` and `ci` change the recommendations of everything after them.
 
 1. **open-source** — is this repository open source? Yes / No, asked directly with no default. Drives the
@@ -323,7 +342,7 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      `security.yml`, no `.github/dependabot.yml`, no sync script) — and with it the shared security block
      (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks); for a Spring Boot service (any
      `*-springboot*` type) that also means no deploy/undeploy workflows, so deployment has to be done manually, and
-     for every type with a release-time image or package (Quarkus, NestJS, Next.js, PHP flavors) no `release.yml`.
+     for every type with a release-time image or package (Quarkus, NestJS, Next.js, PHP flavors, Python flavors) no `release.yml`.
      Questions 5 and 6 are then not asked.
 4. **sonar** — "Configure SonarCloud / SonarQube and send CI analysis and coverage reports to it?"
    `cloud`/`self-hosted`/`none`. Recommend **`cloud`** only when the repository is **public AND open source**.
@@ -342,7 +361,10 @@ them in the order below — `visibility` and `ci` change the recommendations of 
    the `test:e2e` suite, with a Testcontainers database when an ORM is chosen (`nestjs`); Playwright against a
    production build (`nextjs`, when it has an e2e suite); the database-backed integration suite via Sail compose
    (`php-laravel`), the `WP_UnitTestCase` integration suite under `wp-env`/Docker (`php-wordpress-plugin`/
-   `php-wordpress-theme`), and the optional real-shop Docker integration suite (`php-prestashop-module`); emulator-backed
+   `php-wordpress-theme`), and the optional real-shop Docker integration suite (`php-prestashop-module`); the pytest
+   `integration` tier against PostgreSQL started by testcontainers/Docker, plus Alembic upgrade/downgrade checks for
+   FastAPI (`python-fastapi`/`python-django`, only with `database: postgresql` — SQLite has no integration tier;
+   container image pulls make `full` noticeably costlier on a private repository); emulator-backed
    instrumented tests (`android-library`/`android-app` — the emulator job runs on Linux with KVM, and emulator time
    is billed minutes on a private repository); Playwright e2e (`react-web`/`angular-web`, and any e2e suite of
    `react-native-app`/`ionic-app`); XCUITest UI tests on every selected destination (`apple-app`, every macOS minute
@@ -371,7 +393,7 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      for redistributable artifacts, which usually isn't the point of closed-source code.
    - **`distribution`** — app types (`android-app`, `apple-app`, `react-native-app`, `ionic-app`):
      `none`/`internal`/`store`. Default **`store`** only when open source; otherwise ask with **`internal`**
-     recommended, `none` as the local-install-only alternative. The service and PHP types use the same key with
+     recommended, `none` as the local-install-only alternative. The service, PHP, and Python types use the same key with
      their own value sets and meanings — offer only the values the delegated orchestrator accepts:
      - **Quarkus service** — `registry`/`none`: **Registry (Recommended)** = a container image pushed to GHCR when
        a release is published (free for public repositories; storage/transfer quotas for private ones); **None** =
@@ -388,6 +410,11 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      - **`php-prestashop-module`** — `none`/`internal`/`store`: `internal` = the installable module zip attached to
        the GitHub Release; `store` = the same zip plus instructions for uploading it to the PrestaShop Addons
        marketplace by hand (Addons has no upload API). Default **`none`**.
+     - **`python-fastapi`/`python-django`** — `none`/`internal`/`store` (never `publish` — an application has no PyPI
+       publishing; the multi-stage, non-root `Dockerfile` is always written): `none` = CI builds and tests only, no
+       `release.yml`; `internal` = on release, the image is pushed to GHCR as a **private** package (counts against
+       the account's Packages quota); `store` = the same image as a **public** GHCR package. Default **`store`** when
+       open source **and** public; otherwise **`internal`** recommended, `none` second.
 8. **Conditional, per resolved type**:
    - **Apple app / Swift library** — Apple platforms (`AskUserQuestion`, multi-select, at least one required):
      `ios` / `ipados` / `macos` / `watchos`. Pre-fill from Step 1's detected `apple-app (…)` parenthetical when
@@ -401,19 +428,21 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      detected `ionic-app (…)` parenthetical when present.
    - **React Native app** — native-builds (`AskUserQuestion`, two options, default **`eas`**): does CI build the
      iOS/Android binaries via cloud builds (`eas`), or does it need a full local native toolchain (`local`)?
-   - **Spring Boot / Quarkus / NestJS / Next.js / PHP** — nothing here. Their stack-shape questions are asked by
+   - **Spring Boot / Quarkus / NestJS / Next.js / PHP / Python** — nothing here. Their stack-shape questions are asked by
      the delegated orchestrator, never by this front door (see Step 2): `language`, `build-tool`, and `frontend` by
      `iru-setup-java-springboot`; `language`, `build-tool`, `layout`, and `java-version` by
      `iru-setup-quarkus-repository` (which skips the first three in `mode: existing`, detecting them from the
      build); `orm`/`database` (NestJS) and `output`/`e2e` (Next.js) by `iru-setup-typescript-repository`;
-     `php-version` (the PHP floor) and the identity/slug/license questions by `iru-setup-php-repository`. Whatever
+     `php-version` (the PHP floor) and the identity/slug/license questions by `iru-setup-php-repository`;
+     `python-version`, `database`, `orm` (FastAPI), `api` (Django), and the identity/license questions by
+     `iru-setup-python-repository`. Whatever
      Step 1 detected or `args` supplied for these keys is forwarded in Step 4, so the orchestrator confirms it
      instead of asking again — and nothing is ever asked twice.
 
 `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` are
 **never actively asked here** — this front door only forwards them when they arrived via its own `args`
 (`iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-`iru-setup-android-repository`, and `iru-setup-swift-repository` all accept these as `args` keys and would
+`iru-setup-python-repository`, `iru-setup-android-repository`, and `iru-setup-swift-repository` all accept these as `args` keys and would
 otherwise ask their own equivalent question; `iru-setup-java-library-repository` and `iru-setup-java-springboot`
 accept none of them and always ask their own identity/branch questions directly
 regardless of what this skill would pass). Asking them here would either duplicate a question the delegated skill
@@ -430,14 +459,15 @@ the table above once actually invoking:
 - `.claude/skills/iru-setup-quarkus-repository/SKILL.md`
 - `.claude/skills/iru-setup-typescript-repository/SKILL.md`
 - `.claude/skills/iru-setup-php-repository/SKILL.md`
+- `.claude/skills/iru-setup-python-repository/SKILL.md`
 - `.claude/skills/iru-setup-android-repository/SKILL.md`
 - `.claude/skills/iru-setup-swift-repository/SKILL.md`
 - `.claude/skills/iru-explore/SKILL.md` Step 7, for the `## Tech stack` report shape Step 1 already relied on.
 - `.claude/agents/iru-isolated-skill-executor.md`, for how it runs a named skill and reports back.
 
-Then delegate via `iru-isolated-skill-executor`, exactly one of the seven, always passing `mode` and every shared
+Then delegate via `iru-isolated-skill-executor`, exactly one of the eight, always passing `mode` and every shared
 input Step 3 resolved (omitting any key the target skill's own Step 0 doesn't recognize — never send an invented
-key). All seven orchestrators accept the cost/CI keys `visibility`, `ci`, `ci-tests`, and `pages`, plus
+key). All eight orchestrators accept the cost/CI keys `visibility`, `ci`, `ci-tests`, and `pages`, plus
 `on-existing`: always send `visibility` and `ci`; send `ci-tests` and `pages` only when `ci: yes` (they're
 meaningless otherwise); send `on-existing` **only** when it arrived via this skill's own `args` — never invent a
 value, so an interactive run leaves every component free to warn and ask per pre-existing artifact:
@@ -497,6 +527,11 @@ and `pages` (when `ci: yes`), and `on-existing` (when supplied via `args`), per 
   Step 3), `sonar` (+ detail keys), `php-version` only when supplied via `args`, plus the same pass-through
   branch/license/developer keys and identity keys (`name`, `slug`, `vendor`, `namespace`, `description`) when
   supplied. Never send `publish` — it ignores it.
+- **`python-fastapi`** / **`python-django`** → `iru-setup-python-repository`, `args`: `flavor` (`fastapi`/`django`),
+  `mode`, `open-source`, the cost/CI keys, `distribution` (`none`/`internal`/`store`, per Step 3), `sonar` (+ detail
+  keys), `python-version`/`database`/`orm` (FastAPI)/`api` (Django) only when supplied via `args`, plus the same
+  pass-through `integration-branch`/`stable-branch`/`license`/`developer-name`/`developer-email`/`organization-url`
+  and identity keys (`name`, `package`, `description`) when supplied. Never send `publish` — it ignores it.
 - **`android-library`** / **`android-app`** → `iru-setup-android-repository`, `args`: `flavor` (`library`/`app`),
   `mode`, `open-source`, the cost/CI keys, `publish` (library) / `distribution` (app), `sonar` (+ detail keys),
   plus the same pass-through branch/license/developer keys when supplied (the `android-app` example above).
@@ -513,7 +548,7 @@ question itself (or, if it has no such question, that the choice can't be applie
 Each delegated orchestrator parses its own `args` (its own Step 0) and asks the user about anything genuinely left
 out — its own project identity, its own `mode`-driven survey, `branching`/`generator`/`signing`/toolchain toggles,
 the stack-shape questions this front door leaves to it (JVM language/build tool/layout/frontend, NestJS ORM,
-Next.js output/e2e, PHP version floor), and (for `java-library`/`java-springboot`) branch/license/developer
+Next.js output/e2e, PHP version floor, Python version/database/ORM/API), and (for `java-library`/`java-springboot`) branch/license/developer
 identity that this front door never collects.
 `AskUserQuestion` surfaces to the user the same way whether invoked directly or from inside the isolated
 sub-agent — including each component's own keep/update/replace question for a pre-existing artifact, which this
@@ -551,7 +586,8 @@ Summarize for the user:
 - When `ci: no`: that no workflows were generated, that the shared security block (Dependabot, dependency-review,
   CodeQL, OSV-Scanner, gitleaks) was skipped with them (and, for Spring Boot, the deploy/undeploy workflows), that
   any Sonar configuration is build-side only with no CI step sending reports, and that re-running the stack's
-  `-github-workflows` skill (e.g. `/iru-setup-android-github-workflows`) adds them later.
+  `-github-workflows` skill (e.g. `/iru-setup-android-github-workflows`, `/iru-setup-python-github-workflows`) adds
+  them later.
 - Any key Step 4 couldn't forward because the target orchestrator's on-disk Step 0 didn't recognize it.
 - One **consolidated secrets/environments table**, merged from the delegated orchestrator's own table (repository
   secrets such as `SONAR_TOKEN`, publish/store credentials, signing material, and any CI environment it named) —
@@ -569,6 +605,6 @@ Summarize for the user:
     source, `pages: yes` only because the repository is public) — so the user can correct a wrong guess before
     relying on it.
 
-If Step 1 or Step 2 ended on `dotnet`/`php-library`/`other`/no orchestrator available, report that outcome plainly instead of
+If Step 1 or Step 2 ended on `dotnet`/`php-library`/`python-library`/`other`/no orchestrator available, report that outcome plainly instead of
 the above (project type identified, no bootstrap orchestrator exists in this catalog for it, no delegation was
 attempted) rather than fabricating a report for a run that never happened.

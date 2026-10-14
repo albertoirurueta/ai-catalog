@@ -1,0 +1,83 @@
+= FastAPI Code One Task
+:description: Implements one FastAPI plan task with its fast tests and any Alembic revision, detecting layout, runner, persistence and async, then checks off its box.
+:keywords: iru-fastapi-code-one-task, claude code skill, fastapi, python, pydantic, sqlalchemy, alembic, pytest, implementation plan
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out one task from a FastAPI `implementation_plan.md` — the implementation, its tests, any Alembic revision and the checkbox update — against a FastAPI service, and nothing else. It is the narrowest execution unit for FastAPI projects in the `iru-code` pipeline and runs on a medium model, since the plan already carries the hard reasoning and the guidance lives in `reference/`.
+
+== Purpose
+
+`iru-fastapi-code-one-task` exists because FastAPI punishes some mistakes silently: a table model used as the response model leaks columns, blocking I/O inside `async def` stalls every request, and a forgotten `include_router`, an `@app.on_event` hook or an engine created at import time all import fine. The reference files mostly exist to prevent those. It also runs only the fast test files it touched, leaving the integration tier, coverage, Ruff/mypy and the full suite to the group.
+
+It works in any FastAPI service, not only the catalog scaffold, and detects from files the app root and app object, the runner prefix (`uv run --frozen`, `poetry run`, `pdm run`, `pipenv run`, `.venv/bin/` or bare `python -m`), Python, FastAPI and Pydantic versions, the layout (layered `app/`, the Full Stack template, `src/<pkg>/` or ports and adapters), the persistence stack (SQLModel, SQLAlchemy 2.0, legacy, other or none) with Alembic, sync versus async, the test style and the Ruff/mypy/pyright configuration. It then reads `reference/README.md` and only the reference files the task needs (`code-style.md` and `testing.md` always; routers and dependencies, validation and schemas, persistence, settings and lifespan, async and concurrency, security, streaming and files, or hexagonal on demand).
+
+== Purpose group
+
+xref:index.adoc#group-python[Python Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-fastapi-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's own text from the plan, including its exact `implementation_plan.md` checkbox line(s).
+|None.
+|===
+
+== Outputs
+
+* Source changes for the single task, including the router, dependency, service or model and the `include_router` wiring, plus a new reviewed Alembic revision with a reversible `downgrade()` when the schema changes. Touched files are formatted with the project's Ruff or Black/isort.
+* Fast tests next to the code that are run and green, and `integration` tests where correctness depends on the real engine, which are written but never run.
+* Enforced rules: full types and `Annotated` markers, docstrings with `Raises:`, no table model as a response model, no blocking call in `async def`, `extra="forbid"` on write models, no new dependency or tool-config change unless asked, no `print` or secrets.
+* The task's own checkbox (and covered sub-tasks) flipped to `[x]` in `implementation_plan.md` with a "group validation pending" note; a blocked task is left unchecked.
+* A short report: detected shape and reference files read, files touched and any Alembic revision, fast test results, integration tests left for the group, blockers, deviations from `reference/`, and silent-defect patterns noticed nearby.
+* It never runs the integration tier, coverage, Ruff/mypy as a gate, license or docstring audits, Alembic against a database, Docker or the full suite.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-fastapi-code-one-task\n(task text + checkbox line)"] --> B["Step 1: detect shape, then read\nonly the needed reference files"]
+    B --> C["Step 2: re-check current code,\nmain.py and dependencies"]
+    C --> D["Step 3: implement the task,\nincluding any Alembic revision"]
+    D --> E{"Step 5: blocker, ambiguity,\ninsecure ask or new dependency?"}
+    E -- yes --> F["Ask the user or report blocked,\nleave checkbox untouched"]
+    E -- no --> G["Step 4: write fast tests\nand integration tests"]
+    G --> H["Run only the fast test files touched"]
+    H --> I{"Fast tests green?"}
+    I -- no --> J["Fix code or test,\nre-run"]
+    J --> H
+    I -- yes --> K["Step 6: check off this task's checkbox,\ngroup validation pending"]
+    K --> L["Step 7: report outcome\nto the caller"]
+    F --> L
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-fastapi-code-one-task` does not call other skills; it reads its own `reference/` files and runs the project's fast-test command and Alembic revision generation directly.
+
+=== Invoked by
+
+* xref:skills/iru-fastapi-code-one-task-group.adoc[] — Step 2, implements each task and its fast tests, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+None — it spawns no agents itself. Its caller may run several instances in parallel agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-fastapi-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

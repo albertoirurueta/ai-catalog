@@ -1,0 +1,185 @@
+= Setup Python GitHub Workflows
+:description: Creates or updates uv-driven GitHub Actions CI, release, sync and security workflows for FastAPI and Django repositories, with GHCR image publishing.
+:keywords: iru-setup-python-github-workflows, claude code skill, github actions, python, uv, fastapi, django, ghcr, dependabot, pip-audit
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds or updates the CI/CD and security pipeline for a Python web repository of either flavor — a FastAPI service
+or a Django project — driving everything through the uv commands that the matching `iru-setup-python-*` scaffold
+defines.
+
+== Purpose
+
+`iru-setup-python-github-workflows` writes the GitHub Actions files a FastAPI or Django repository needs, matched to
+its flavor and to cost-aware choices made up front:
+
+* `build.yml` — runs on pushes to the integration/stable branches, pull requests, and `workflow_dispatch`. It uses
+  `astral-sh/setup-uv` with `uv sync --locked`, Ruff lint and format checks, mypy, and (for Django) `manage.py check`,
+  `makemigrations --check --dry-run` and the DRF or Ninja schema validation. Fast tests run with Cobertura coverage
+  (80% floor) and JUnit XML, across a Python matrix only for `ci-tests: full` on a public repository. A `migrations`
+  job runs against a PostgreSQL service container (or a SQLite file): Alembic upgrade/check/single-head/downgrade for
+  FastAPI, `check --deploy` with production settings plus `migrate --check` for Django. With `ci-tests: full` and
+  `database: postgresql` it adds a testcontainers-backed integration job. It also builds the container image without
+  pushing it, adds an optional SonarCloud/SonarQube job (skipped on fork pull requests), and a docs job (Antora plus
+  Sphinx API docs and the OpenAPI document) deployed to GitHub Pages or uploaded as an artifact.
+* `release.yml` per `distribution` — on a published GitHub Release: version check against the tag, `uv build`
+  sdist and wheel attached to the release, and the root `Dockerfile` pushed to GHCR (private for `internal`, public for
+  `store`). Not written with `distribution: none`. There is deliberately no PyPI publishing.
+* `sync.yml` plus `.github/scripts/python_version.py` and `.github/scripts/sync_versions.py` — after a release from the
+  stable branch, a pull request merges it back into the integration branch with the next PEP 440 `X.(Y+1).0.dev0`
+  version and a refreshed `uv.lock`, the convention `iru-python-bump-version` and `iru-release` use.
+* The shared security block — `security.yml` (dependency-review, CodeQL for `python` and `actions`, OSV-Scanner over
+  `uv.lock`, gitleaks, plus this stack's `pip-audit` job) and `.github/dependabot.yml` (uv or pip, github-actions,
+  docker, docker-compose, npm for the Antora toolchain).
+
+It announces whether it is creating the pipeline from scratch or updating an existing one, and asks per workflow file
+whether to Update, Keep as is, Replace, or Stop. Templates are validated with `actionlint`, and the commands the
+workflows contain are run locally first, so nothing is a guess.
+
+== Purpose group
+
+xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-python-github-workflows
+/iru-setup-python-github-workflows <args>
+----
+
+`args` is a block of `key: value` lines, one per line.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`flavor`
+|No
+|`fastapi` or `django`.
+|Detected from `manage.py` and `pyproject.toml` dependencies
+
+|`integration-branch`
+|No
+|Branch that receives development work and the `sync.yml` pull request.
+|`develop`
+
+|`stable-branch`
+|No
+|Branch releases are cut from; docs deploy from it.
+|`main`
+
+|`python-version`
+|No
+|The primary CI Python version; the matrix runs from the `requires-python` floor upward.
+|`.python-version`, else `3.13`
+
+|`database`
+|No
+|`postgresql`, `sqlite` or `none` (FastAPI only); decides the migrations and integration jobs.
+|Detected from dependencies
+
+|`orm`, `api`
+|No
+|`orm` for FastAPI; `api` (`drf`, `ninja` or `none`) for Django, selecting the schema check.
+|Detected from the project
+
+|`open-source`, `visibility`
+|No
+|`visibility` is `public`, `private` or `internal` (`internal` counts as private).
+|`gh repo view`, else asked
+
+|`ci-tests`
+|No
+|`unit` or `full` (adds the integration job and, when public, the Python matrix).
+|Asked; `unit` for private, `full` for public
+
+|`pages`
+|No
+|`yes` deploys docs to GitHub Pages; `no` uploads them as an artifact.
+|`yes` for public repositories, asked otherwise
+
+|`distribution`
+|No
+|`none`, `internal` or `store`.
+|Asked; `store` for open source, else `internal` when a `Dockerfile` exists, else `none`
+
+|`sonar`
+|No
+|`cloud`, `self-hosted` or `none`, plus `sonar-organization`, `sonar-project-key`, `sonar-host-url`.
+|Asked; `none` unless public open source
+
+|`mode`
+|No
+|`new` or `existing`; informational only.
+|None
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; pre-answers the per-file question.
+|`ask`
+
+|`security-dependency-review`, `security-codeql`, `security-osv`, `security-gitleaks`, `security-pip-audit`
+|No
+|Each `yes` or `no`, toggling that security job.
+|`yes`
+|===
+
+Any other key (including `ci` and `publish`) is ignored — invoking the skill means CI is wanted.
+
+== Outputs
+
+* `.github/workflows/build.yml`, and `release.yml` unless `distribution: none`.
+* `.github/workflows/sync.yml` with `.github/scripts/python_version.py` and `.github/scripts/sync_versions.py`
+  (made executable).
+* `.github/workflows/security.yml` and `.github/dependabot.yml`.
+* A report with the required secrets (`SONAR_TOKEN` when Sonar is enabled), repository settings to check (workflow
+  permissions for pull requests, Pages source, code scanning, GHCR package visibility), the choices made, per-unit
+  created / updated / replaced / kept as is, and every open gap (missing contract tooling, no Antora setup, no
+  `Dockerfile`, unverified Docker-based jobs).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-python-github-workflows"] --> B["Step 1: parse args; survey flavor, uv runner,\nPython matrix, database, container, docs, branches"]
+    B --> C["Ask cost-aware choices: visibility, sonar,\nci-tests, pages, distribution"]
+    C --> D{"Flavor and uv runner recognised?"}
+    D -- no --> E["Ask: Stop or Continue anyway"]
+    E -- Stop --> STOP["End without changes"]
+    E -- Continue --> F
+    D -- yes --> F["Step 2: announce scratch vs update;\nper existing file: Update / Keep / Replace / Stop"]
+    F -- Stop --> STOP
+    F --> G["Step 3: select templates -\nbuild, release, sync and scripts,\nsecurity, dependabot"]
+    G --> H["Step 4: fill placeholders, apply gates;\nunresolved facts become open gaps"]
+    H --> I["Step 5: actionlint every workflow;\nrun the workflow commands locally\nvia iru-gate-runner"]
+    I -- findings --> H
+    I --> J["Step 6: write or update the files"]
+    J --> K["Step 7: report secrets, settings, choices,\nwarnings, open gaps"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — this skill calls no other skill. It only mentions `iru-setup-antora` (the Antora toolchain the docs job builds),
+`iru-explore` (flavor detection markers), `iru-python-bump-version` and `iru-release` (the version convention
+`sync.yml` follows), and the `iru-setup-python-fastapi` / `iru-setup-python-django` scaffolds (which define the uv
+commands) as prerequisites to recommend, not to run.
+
+=== Invoked by
+
+* xref:skills/iru-setup-python-repository.adoc[] — Step 8, CI/CD and security workflows, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 5, runs the workflows' own commands locally
+  (`uv sync --locked`, Ruff, mypy, tests with coverage, Django checks, Sphinx build, `uv build`, pip-audit, the version
+  helper) and returns compact results.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-python-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

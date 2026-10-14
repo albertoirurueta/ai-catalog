@@ -133,7 +133,9 @@ the right idioms and check for the right lint/static-analysis config — e.g. Ch
 Java, ESLint / Prettier / Biome (`eslint.config.*`, `.prettierrc*`, `biome.json`) plus `tsconfig.json` (strictness
 flags) for JS/TS, Detekt / ktlint / Android Lint (`detekt.yml`, `.editorconfig` ktlint rules, `lint.xml`,
 `lintOptions`/`lint {}` in Gradle) for Kotlin/Android, PHPStan / Psalm / PHPCS / Pint / PHP-CS-Fixer
-(`phpstan.neon*`, `psalm.xml`, `phpcs.xml*`, `pint.json`, `.php-cs-fixer.dist.php`) for PHP, SwiftLint /
+(`phpstan.neon*`, `psalm.xml`, `phpcs.xml*`, `pint.json`, `.php-cs-fixer.dist.php`) for PHP, Ruff / mypy
+(`[tool.ruff]`/`[tool.mypy]` in `pyproject.toml`, `ruff.toml`/`.ruff.toml`, `mypy.ini`/`setup.cfg`, the
+`[tool.django-stubs]`/pydantic mypy plugins) plus `[tool.pytest.ini_options]` markers for Python, SwiftLint /
 swift-format (`.swiftlint.yml`, `.swift-format`) for Swift, and so on — read any such config found rather than assuming defaults).
 
 ## Step 6 — Delegate to the `code-review` skill when available
@@ -214,6 +216,20 @@ and the codebase's own architecture and conventions (from Step 5). Look for:
      one module; `REQUEST`-scoped providers bubbling scope up the injection chain, or per-request state kept on a
      singleton; providers not exported/imported where used; ESM relative imports with the `.js` extension
      "fixed" away.
+   - **FastAPI**: blocking I/O (sync DB driver, `requests`, `time.sleep`) inside an `async def` path operation or
+     dependency (use `def` to run it in the threadpool, or an async client); request/response bodies as raw
+     `dict` instead of Pydantic models, or a `response_model`/return type that leaks fields (the table model
+     instead of `XPublic`, password hashes); an `AsyncSession` shared across requests/tasks instead of a
+     per-request `Depends` yield dependency; `@app.on_event` instead of `lifespan`; settings read from
+     `os.environ` ad hoc instead of the `pydantic-settings` dependency; tests hitting real services instead of
+     `app.dependency_overrides`; an Alembic migration missing for a model change.
+   - **Django**: N+1 queries (missing `select_related`/`prefetch_related`, no `assertNumQueries`); a model change
+     without its migration (or a hand-edited applied one); multi-write services without `@transaction.atomic`,
+     or side effects (emails, tasks) not deferred with `transaction.on_commit`; business logic in signals,
+     views or serializers instead of services; raw SQL / `.extra()` / `RawSQL` built from input; DRF viewsets
+     without explicit `permission_classes`/queryset scoping to the requesting user, or serializers with
+     `fields = "__all__"`; settings with a default `SECRET_KEY`/`DEBUG = True` outside local/test; references
+     to `auth.User` instead of `settings.AUTH_USER_MODEL`/`get_user_model()`.
    - **Next.js**: server/client boundary — `'use client'` placed too high, hooks or browser APIs in Server
      Components, non-serializable props crossing the boundary, server-only modules (secrets, DB) importable from
      client code (no `server-only`); Server Actions without authentication/authorization and input validation

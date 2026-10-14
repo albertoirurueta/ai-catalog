@@ -1,20 +1,20 @@
 = Setup Repository
 :description: Catalog-wide bootstrap front door: detects the project type, announces new vs existing setup, asks cost-aware inputs, delegates to a stack orchestrator.
-:keywords: iru-setup-repository, claude code skill, bootstrap, project type detection, java, typescript, android, swift, orchestrator, askuserquestion
+:keywords: iru-setup-repository, claude code skill, bootstrap, project type detection, java, typescript, python, fastapi, django, android, swift, orchestrator, askuserquestion
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 The catalog's single entry point for bootstrapping any repository. It does not scaffold anything itself — it
-detects or asks which of the supported project types applies (Java, Spring Boot, Quarkus, TypeScript, web, NestJS, PHP, Android, Swift/Apple and cross-platform mobile), announces whether the run is a from-scratch setup
+detects or asks which of the supported project types applies (Java, Spring Boot, Quarkus, TypeScript, web, NestJS, PHP, Python (FastAPI and Django), Android, Swift/Apple and cross-platform mobile), announces whether the run is a from-scratch setup
 or an update of an existing repository, collects the handful of questions genuinely shared across every stack, and
-hands off to exactly one of seven existing stack orchestrators.
+hands off to exactly one of eight existing stack orchestrators.
 
 == Purpose
 
 `iru-setup-repository` exists so a user doesn't need to already know which of this catalog's stack-specific
 orchestrators (`iru-setup-java-library-repository`, `iru-setup-java-springboot`,
 `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-`iru-setup-android-repository`, `iru-setup-swift-repository`) applies to their
+`iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`) applies to their
 repository. It surveys the working directory (running `iru-explore` when it already holds code) to detect the
 project type, asks only the cross-cutting questions the detected/chosen type still needs, and delegates the
 actual scaffolding — the downstream orchestrator asks its own project-identity questions and does the real work.
@@ -69,7 +69,7 @@ sonar: cloud
 |Any value from the shared vocabulary (`java-library`, `java-springboot`, `java-springboot-hilla`,
 `kotlin-springboot`, `kotlin-springboot-hilla`, `java-quarkus`, `kotlin-quarkus`, `typescript-library`, `react-web`,
 `nextjs`, `angular-web`, `nestjs`, `php-laravel`, `php-wordpress-plugin`, `php-wordpress-theme`,
-`php-prestashop-module`, `php-library`, `android-library`, `android-app`, `swift-library`, `apple-app`,
+`php-prestashop-module`, `php-library`, `python-fastapi`, `python-django`, `python-library`, `android-library`, `android-app`, `swift-library`, `apple-app`,
 `react-native-app`, `ionic-app`, `dotnet`, `other`, `unknown`). Pre-resolves Step 2 when supplied.
 |Detected by Step 1's `iru-explore` survey, or asked in Step 2
 
@@ -125,7 +125,7 @@ built and uploaded as a workflow artifact only.
 |`distribution`
 |No
 |App project types: `none`/`internal`/`store`. Quarkus: `registry`/`none` (GHCR image); NestJS: `internal`/`none`;
-Laravel: `none`/`internal`; WordPress and PrestaShop: `none`/`internal`/`store`. Never asked for Spring Boot, `react-web`,
+Laravel: `none`/`internal`; WordPress and PrestaShop: `none`/`internal`/`store`; FastAPI and Django: `none`/`internal`/`store` (GHCR image). Never asked for Spring Boot, `react-web`,
 `angular-web`, or `nextjs` (the latter decided downstream from its output mode).
 |`store` only when open source, otherwise asked with `internal` recommended (flavor-specific defaults for the service and PHP types)
 
@@ -154,7 +154,7 @@ self-hosted SonarQube as the second option
 |`flavor`
 |No
 |The delegated orchestrator's own flavor value (for example `library`/`react`/`nextjs`/`angular`/`nestjs`/
-`react-native`/`ionic` for TypeScript, `laravel`/`wordpress-plugin`/`wordpress-theme`/`prestashop-module` for PHP);
+`react-native`/`ionic` for TypeScript, `laravel`/`wordpress-plugin`/`wordpress-theme`/`prestashop-module` for PHP, `fastapi`/`django` for Python);
 usually redundant with `project-type` and can be left unset.
 |Derived from `project-type` per Step 2's mapping table
 
@@ -164,6 +164,11 @@ usually redundant with `project-type` and can be left unset.
 Never asked here; forwarded only when supplied via `args` or pre-set by Step 1's detection, otherwise the delegated
 orchestrator asks them.
 |Detected from the build (Kotlin Spring Boot build tool), else left to the orchestrator
+
+|`python-version`
+|No
+|Python version floor for the Python flavors. Never asked here; forwarded only when supplied via `args`, otherwise `iru-setup-python-repository` asks it.
+|Left to the orchestrator
 
 |`platforms`
 |No
@@ -214,7 +219,7 @@ library gets a follow-up multi-select for `tvos`/`visionos`/`linux`, appended to
 
 |Other `key: value` lines
 |No
-|Opaque pass-through (for example `name`, `scope`, `orm`, `database`, `output`, `e2e`, `slug`, `vendor`, `php-version`,
+|Opaque pass-through (for example `name`, `package`, `description`, `scope`, `orm`, `database`, `api`, `output`, `e2e`, `slug`, `vendor`, `php-version`,
 `group-id`, `artifact-id`, `java-version`, `namespace`). Forwarded verbatim only when the delegated orchestrator's own
 Step 0 recognizes the key; dropped keys are listed in the final report.
 |None
@@ -235,7 +240,7 @@ Step 0 recognizes the key; dropped keys are listed in the final report.
   forwarded; one consolidated secrets/environments table; and an explicit warning block (review every generated
   file; every listed secret and matching external account must already exist; which values were inferred rather
   than asked).
-* When the detected or chosen type is `dotnet`, `php-library`, `other` or otherwise unsupported: a plain report that no bootstrap orchestrator
+* When the detected or chosen type is `dotnet`, `php-library`, `python-library` (a plain Python package; the Python gate skills and individual repository-file skills can still be run by hand), `other` or otherwise unsupported: a plain report that no bootstrap orchestrator
   exists in this catalog for it, with no delegation attempted.
 
 == Execution flow
@@ -249,14 +254,14 @@ flowchart TD
     C --> C1["Announce: updating an existing repository;\nprint component inventory\n(absent / present / partial)"]
     D --> D1["Announce: setting up from scratch"]
     C1 --> E{"Detected project type"}
-    E -- "dotnet / php-library" --> G["Report: no bootstrap\norchestrator for it; stop"]
+    E -- "dotnet / php-library / python-library" --> G["Report: no bootstrap\norchestrator for it; stop"]
     E -- "other / unknown / multiple" --> F
     E -- "a supported type" --> H["Pre-select matching\nStep 2 option as (detected)"]
     H --> I
-    D1 --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 4 AskUserQuestion rounds of 3 types\n+ 'Something in the next group':\nJVM, Web and Node, PHP, Mobile and Apple\n(bounded follow-ups for bundled options)"]
-    F -- "'None of these'\nin round 4" --> G
+    D1 --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 5 AskUserQuestion rounds of 3 types\n+ 'Something in the next group':\nJVM, Web and Node, PHP, Python, Mobile and Apple\n(bounded follow-ups for bundled options)"]
+    F -- "'None of these'\nin round 5" --> G
     F -- "resolved" --> I["Step 3: Ask shared inputs once, in order:\nopen-source, visibility (args, gh, or ask),\nci, sonar, ci-tests, pages,\npublish/distribution, conditional questions\n(cost notes per visibility)"]
-    I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of seven\nstack orchestrators\n(each component warns and asks\nkeep / update / replace)"]
+    I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of eight\nstack orchestrators\n(each component warns and asks\nkeep / update / replace)"]
     J --> K["Step 5: Report mode, resolved inputs,\nper-component actions and mismatches,\ncost notes, secrets table, warnings"]
 ....
 
@@ -267,7 +272,7 @@ flowchart TD
 * xref:skills/iru-explore.adoc[] — Step 1, directly (not via a sub-agent), and only when the working directory is
   non-empty: reads its `## Tech stack` report's `- Project type:` line to pre-select Step 2's option and set
   `mode: existing`.
-* Exactly one of the following seven, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+* Exactly one of the following eight, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
   agent in Step 4, chosen by the resolved `project-type` — never more than one per run outside the `multiple`
   case:
 ** xref:skills/iru-setup-java-library-repository.adoc[] — for `java-library`.
@@ -278,6 +283,8 @@ flowchart TD
    `angular-web`, `nestjs`, `react-native-app`, `ionic-app` (via its own `flavor` arg).
 ** xref:skills/iru-setup-php-repository.adoc[] — for `php-laravel`, `php-wordpress-plugin`, `php-wordpress-theme`,
    `php-prestashop-module` (via its own `flavor` arg).
+** xref:skills/iru-setup-python-repository.adoc[] — for `python-fastapi`, `python-django` (via its own `flavor`
+   arg: `fastapi` or `django`).
 ** xref:skills/iru-setup-android-repository.adoc[] — for `android-library`, `android-app` (via its own `flavor`
    arg).
 ** xref:skills/iru-setup-swift-repository.adoc[] — for `swift-library`, `apple-app` (via its own `flavor` arg).

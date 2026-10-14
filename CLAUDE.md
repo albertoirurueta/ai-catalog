@@ -45,25 +45,26 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   dispatches each group, in order, to `iru-code-one-task-group`, which resolves each task's language and delegates
   to the matching `iru-<key>-code-one-task-group` skill. Installed keys: `java`, `java-springboot`,
   `kotlin-springboot`, `quarkus` (Java or Kotlin, detected inside), `dotnet`, `typescript`, `nestjs`, `nextjs`,
-  `php` (Laravel / WordPress plugin or theme / PrestaShop module, detected inside), `android`, `swift`, `database`
+  `php` (Laravel / WordPress plugin or theme / PrestaShop module, detected inside), `fastapi`, `django`, `android`,
+  `swift`, `database`
   — each key `<key>` has an `iru-<key>-code-one-task-group` + `iru-<key>-code-one-task` pair (keys are discovered
   from the installed directories, never hardcoded). The group skill captures one quality baseline for the whole
   group, runs `iru-<key>-code-one-task` once per task — in parallel when the group allows it (`database` is always
   sequential) — and validates the group once (license → doc comments → tests → 80% coverage → quality diff vs
   baseline), instead of once per task. Coding skills detect build tool (Maven / Gradle KTS / Gradle Groovy,
-  npm/pnpm/yarn, Composer) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
+  npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
   container-backed or server-starting stage (Spring Testcontainers, Quarkus Dev Services, NestJS e2e, Next.js
-  Playwright, WordPress `wp-env`) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
+  Playwright, WordPress `wp-env`, Python testcontainers `integration`-marked pytest tests) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
   `.integration-test.lock` (owner file, stale after 60 min, released on every exit path, gitignored); Docker
   unavailable makes that stage "unverified", never silently skipped, and the coverage gate counts only tests
   that need no containers.
 - **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
-  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to four
-  `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node, PHP, Mobile & Apple), every
+  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to five
+  `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple), every
   round ending in a "Something in the next group" escape hatch (the last in "None of these"); an option bundling
   several types (Web app → React/Next.js/Angular, WordPress → plugin/block theme, Android, Apple, cross-platform
   mobile) gets one bounded follow-up, while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
-  `layout`/`frontend`, NestJS `orm`, Next.js `output`) are left to the orchestrator, asks the shared inputs once, and delegates to the
+  `layout`/`frontend`, NestJS `orm`, Next.js `output`, Python `database`/`orm`/`api`/`python-version`) are left to the orchestrator, asks the shared inputs once, and delegates to the
   matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
   so every sub-skill takes its update path instead of assuming a brand-new repo. The front door and every
   orchestrator first announce the **setup mode** — "from scratch" or "updating an existing repository" plus an
@@ -73,19 +74,21 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   **Keep as is** (report mismatches with this run's choices) / **Replace** (regenerate, customizations lost), with
   a **Stop** option where it makes sense; `mode: existing` alone never means "update silently" — only an explicit
   `on-existing` does. Final reports repeat the mode and the per-component action (created / updated / replaced /
-  kept as is / skipped (ci: no)). The six `*-repository`
+  kept as is / skipped (ci: no)). The seven `*-repository`
   stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`,
-  `iru-setup-typescript-repository`, `iru-setup-php-repository`, `iru-setup-android-repository`,
-  `iru-setup-swift-repository` — each also run standalone, and each chains the
+  `iru-setup-typescript-repository`, `iru-setup-php-repository`, `iru-setup-python-repository`,
+  `iru-setup-android-repository`, `iru-setup-swift-repository` — each also run standalone, and each chains the
   same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
   `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`
   (Quarkus reuses `iru-setup-java-gitignore`). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
   `react`, `angular`, `react-native`, `ionic`, `nestjs` (`iru-setup-nestjs-app`), or `nextjs` (`iru-setup-nextjs-web`);
   `iru-setup-php-repository`'s picks `laravel`, `wordpress-plugin`, `wordpress-theme` (block theme), or
-  `prestashop-module` (`iru-setup-php-laravel` / `-wordpress` / `-prestashop`); `iru-setup-quarkus-repository`
+  `prestashop-module` (`iru-setup-php-laravel` / `-wordpress` / `-prestashop`); `iru-setup-python-repository`'s picks
+  `fastapi` (`iru-setup-python-fastapi`) or `django` (`iru-setup-python-django`), sharing
+  `iru-setup-python-gitignore`/`iru-setup-python-github-workflows`; `iru-setup-quarkus-repository`
   (via `iru-setup-quarkus-service`, `quarkus-stack.yml` manifest) takes `language: java|kotlin`,
   `build-tool: maven|gradle` (Gradle = Kotlin DSL), and `layout: single|hexagonal`.
-  `iru-setup-java-springboot` is the seventh orchestrator but follows its own manifest-driven chain instead: it
+  `iru-setup-java-springboot` is the eighth orchestrator but follows its own manifest-driven chain instead: it
   interviews the user once, writes a `springboot-stack.yml` manifest, delegates the reactor's generation to its
   `iru-setup-java-springboot-*` sub-skills (pom, modules, apis, optional hilla, testcontainers, platform,
   github-workflows) plus `iru-update-java-springboot-documentation` for the Antora site, and only then fills the
@@ -120,7 +123,8 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   it discovers the installed `iru-<key>-bump-version` skills (`find .claude/skills -maxdepth 1 -type d -name
   "iru-*-bump-version"`, currently `java` (Java or Kotlin, Maven or Gradle), `typescript`, `android`, `swift`,
   `php` (Laravel `config/app.php`, WordPress plugin/theme headers, PrestaShop module class; `x.y.z-dev`
-  convention)) and delegates the actual version-file edit to whichever key matches the detected project, keeping
+  convention), `python` (`pyproject.toml` `[project].version` + `__version__` literals; PEP 440 `x.y.z.dev0`
+  convention; VCS-derived versions left to the git tag)) and delegates the actual version-file edit to whichever key matches the detected project, keeping
   its own branch/PR/label/changelog steps ecosystem-agnostic.
 - **Android reference repository**: every `iru-*android*` skill's embedded templates are genericized from a single
   real repository, https://github.com/albertoirurueta/irurueta-android-glutils (`lib/` + Compose `app/`,
@@ -129,7 +133,7 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   site + Dokka under `api/`, `develop`/`main` branching with `-SNAPSHOT` on `develop` and a `sync.yml`) documented
   in each skill rather than silently reintroduced.
 - **Guidance sources for the newer stacks**: the Kotlin, Spring Boot (Java/Kotlin), Quarkus, PHP/Laravel, NestJS,
-  and Next.js coding references (each `iru-<key>-code-one-task/reference/` routing table) and their setup skills
+  Next.js, FastAPI, and Django coding references (each `iru-<key>-code-one-task/reference/` routing table) and their setup skills
   are grounded in the author's docs repository, https://github.com/albertoirurueta/docs (cited in each
   `reference/README.md` Sources as "irurueta docs: <page path>"); WordPress and PrestaShop aren't covered there,
   so those references/scaffolds follow the official docs (developer.wordpress.org handbooks + WordPress Coding
@@ -150,8 +154,9 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
   reports back only a compact summary. Gate skills it runs: `iru-<lang>-test`/`-coverage`/`-code-quality` for
   `java` (Maven or Gradle, Java or Kotlin sources; coverage from JaCoCo, `quarkus-jacoco`, or Kover), `dotnet`,
   `typescript` (incl. NestJS/Next.js, `e2e` selector), `php` (Pest/PHPUnit, Clover, PHPStan/Psalm/PHPCS),
-  `android`, `swift`; `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`,
-  `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-android-dokka`, `iru-swift-docc`; plus
+  `python` (pytest incl. pytest-django, `integration` selector; coverage.py Cobertura; Ruff/mypy/Bandit — shared by
+  the `fastapi` and `django` keys), `android`, `swift`; `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`,
+  `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (Ruff `D` + Sphinx build), `iru-android-dokka`, `iru-swift-docc`; plus
   `iru-check-license`/`iru-check-security`. Used throughout `iru-code`, `iru-code-one-task-group`, and every
   `iru-<key>-code-one-task-group` that validates (all but `database`), and recommended by `iru-plan` for the scoped
   test-run step it writes into generated plans.

@@ -117,14 +117,14 @@ npm i @djencks/asciidoctor-mathjax
 Determine three values first:
 
 - **`name`**: a short slug for the project — the Antora *component* name, used in `start_page` references like
-  `<name>::index.adoc`. Derive it from the project identifier (Maven `artifactId`, npm package `name`, Go module
-  base name, etc.), lowercased with no spaces.
+  `<name>::index.adoc`. Derive it from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml`
+  `[project].name`, Go module base name, etc.), lowercased with no spaces.
 - **`title`**: the human-readable project name (e.g. from a README's top heading, `pom.xml`'s `<name>`, or
   `package.json`'s `name` capitalized).
 - **`version`**: the current release version, preferring, in order: (1) the latest GitHub release
   (`gh release view --json tagName -q .tagName` or `gh api repos/{owner}/{repo}/releases/latest`), (2) the latest
   git tag (`git tag --sort=-v:refname | head -1`), (3) the project manifest's version with any pre-release suffix
-  like `-SNAPSHOT` stripped. If none of these resolve, ask the user for a starting version rather than guessing.
+  like `-SNAPSHOT` (or Python's PEP 440 `.dev0`) stripped. If none of these resolve, ask the user for a starting version rather than guessing.
 
 Write (or, if `antora.yml` already exists and Step 2's answer was **Update**, only correct genuinely wrong fields
 rather than rewriting the whole file; under **Replace**, rewrite it from this template, carrying over the existing
@@ -260,7 +260,8 @@ repository's `getting-started.adoc` does for its Maven coordinates.
 ## Step 9 — Write `reference.adoc` (links of interest)
 
 Discover what generated reports and external dashboards this repository actually has before listing them — don't
-list a report that isn't actually produced anywhere. Check for: a Javadoc/API-doc generation step, a coverage
+list a report that isn't actually produced anywhere. Check for: a Javadoc/API-doc generation step (Sphinx for Python, built from `docs/api/` and published
+under the site's `api/`), a coverage
 tool (JaCoCo, Istanbul/nyc, coverage.py) and where its report is published, a test-report plugin (Surefire, JUnit
 HTML reporter), a SonarCloud/SonarQube project, and the repository's own GitHub URL. Link only what's confirmed to
 exist (check CI config, `pom.xml`/`package.json` plugins, or existing GitHub Pages settings), in a table like this

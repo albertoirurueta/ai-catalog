@@ -1,0 +1,108 @@
+= Python Docstrings
+:description: Audits Python code for complete PEP 257 docstrings, fills the gaps in the project's convention, and verifies with Ruff, interrogate and an API-docs build.
+:keywords: iru-python-docstrings, claude code skill, python, docstrings, pep 257, ruff, sphinx, fastapi, django, interrogate
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Make sure a set of Python modules carry complete, well-formed docstrings, filling in whatever is missing, then prove
+the result is valid through Ruff's docstring rules and the project's own API-docs build. It only adds or completes
+docstrings — it never changes behavior, signatures, type hints, decorators or any non-docstring code.
+
+== Purpose
+
+`iru-python-docstrings` detects the project flavor (Django, FastAPI or plain library) and the runner (`uv run`,
+`poetry run`, `pdm run`, `pipenv run`, `.venv/bin/`), then discovers the project's real docstring bar: the Ruff
+pydocstyle convention (Google by default, or numpy, pep257 or reST when the project says so), Ruff `D` selection and
+ignores, `interrogate` settings, the API-docs tool and contributor guides. It audits every public module, package,
+class, function, method and property, generates docstrings grounded in the actual code and current changes without
+restating what type hints already say, and verifies the result with Ruff `D` rules (forced on even when the project
+does not enable them), the advisory preview pydoclint `DOC` rules, `interrogate` when configured, and a Sphinx,
+MkDocs plus mkdocstrings or pdoc build with warnings as errors into a throwaway directory.
+
+It is framework-aware: Django migrations are never touched, FastAPI route and Pydantic model docstrings become
+OpenAPI descriptions so developer-only sections go after a form feed (handling the resulting Ruff `D301`), and
+DRF or Django Ninja view docstrings feed their schema the same way. Test code is out of scope and its existing
+docstrings are never stripped.
+
+== Purpose group
+
+xref:index.adoc#group-python[Python Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-python-docstrings <path-or-glob>
+/iru-python-docstrings
+----
+
+Comma-separated paths, globs or dotted module names are accepted.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`path-or-glob`
+|No
+|One or more files, directories, globs or dotted module names resolving to `.py` files. Test files, virtualenvs,
+generated code, Django `migrations/`, `manage.py` and Alembic revisions are dropped and named in the report.
+|Non-test `.py` files touched by uncommitted changes plus commits on the current branch not yet on the base
+branch; an empty scope stops with "nothing to document".
+|===
+
+== Outputs
+
+* Edited `.py` files with added or completed docstrings, plus an API-docs entry (for example an `automodule`
+  directive) when the project lists modules explicitly and a new public module was listed nowhere.
+* A per-file report: symbols already documented, gaps found and filled (kind and what was added), and any API-docs
+  entry added.
+* The verification result per tool that ran — Ruff `D`, Ruff `DOC` (advisory), interrogate coverage against
+  `fail-under`, and the Sphinx, MkDocs or pdoc build — and which tools were unavailable or not configured.
+* The convention used and where it came from, arguments dropped as tests or migrations, and out-of-scope
+  pre-existing failures as follow-ups. Raw tool output is never pasted.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-python-docstrings\n(optional paths)"] --> B["Step 0: Detect flavor\n(django, fastapi, library) and runner"]
+    B --> C["Step 1: Determine scope,\ndrop tests, migrations, generated code"]
+    C --> D{"Scope empty?"}
+    D -- yes --> E["Report nothing to document and stop"]
+    D -- no --> F["Step 2: Discover the project's docstring bar\n(convention, Ruff, interrogate, docs tool)"]
+    F --> G["Step 3: Audit each file\nwith Ruff D rules and a full read"]
+    G --> H["Step 4: Generate the missing docstrings\nand API-docs entries"]
+    H --> I["Step 5: Verify with Ruff D and DOC,\ninterrogate, API-docs build"]
+    I --> J{"New warnings in\nin-scope files?"}
+    J -- yes --> K["Fix the docstrings and re-run"]
+    K --> I
+    J -- no --> L["Step 6: Report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-python-docstrings` is a leaf skill; it edits docstrings and runs the project's own Ruff, interrogate and
+Sphinx, MkDocs or pdoc tooling directly. It reuses `iru-explore`'s flavor markers and `iru-update-docs`'s scope
+approach by convention, but calls none of them.
+
+=== Invoked by
+
+* xref:skills/iru-fastapi-code-one-task-group.adoc[] — Step 3, docstrings for touched production files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-django-code-one-task-group.adoc[] — Step 3, docstrings for touched production files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+Also referenced (not invoked) by xref:skills/iru-python-code-quality.adoc[] (it names this skill as the fixer for Ruff
+`D*` findings), xref:skills/iru-setup-python-repository.adoc[], xref:skills/iru-setup-repository.adoc[] and
+xref:skills/iru-setup-python-github-workflows.adoc[] (as one of the gate skills the scaffolds are verified against).
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[] — callers run this skill inside an `iru-gate-runner` sub-agent; the skill does not spawn agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-python-docstrings/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

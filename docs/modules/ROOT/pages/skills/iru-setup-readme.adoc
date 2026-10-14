@@ -1,6 +1,6 @@
 = Setup Readme
 :description: Creates or refreshes a repository README.md with badges, a status table, doc links and install or run steps for libraries, services, apps and plugins.
-:keywords: iru-setup-readme, claude code skill, readme, badges, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, installation instructions
+:keywords: iru-setup-readme, claude code skill, readme, badges, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, installation instructions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -18,25 +18,25 @@ description, license, build tool, current and latest-released versions), taking 
 isn't installed does it fall back to a minimal one-manifest check. Beyond the library and app stacks (Java/Maven,
 Gradle/Kotlin, Vite+React, Angular, Hilla, Expo, Ionic, Android, Swift, plain TypeScript), it tailors sections
 for Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress plugins and themes,
-PrestaShop modules, plain Composer packages, NestJS and Next.js. Identity is read from the file that owns it for
+PrestaShop modules, plain Composer packages, NestJS, Next.js, FastAPI, Django and plain Python packages. Identity is read from the file that owns it for
 each stack: `springboot-stack.yml`/`quarkus-stack.yml`, `gradle.properties`, `config/app.php` (Laravel), the
-WordPress plugin/theme headers, the PrestaShop module class, or git tags.
+WordPress plugin/theme headers, the PrestaShop module class, `pyproject.toml` (`[project].name`/`version`, `requires-python`, with framework versions from `uv.lock`), or git tags.
 
 Badges are only emitted for resources that exist: CI status, SonarCloud/SonarQube, npm, Maven Central, Swift
-Package Index, Packagist and WordPress.org (both only after a live check that the package or slug is published),
-static PHP/WordPress/PrestaShop requirement badges, and a GHCR container-image badge taken from the workflow's
+Package Index, Packagist, PyPI (Python libraries only) and WordPress.org (all only after a live check that the package or slug is published),
+static PHP/Python/WordPress/PrestaShop requirement badges (plus FastAPI/Django framework badges), and a GHCR container-image badge taken from the workflow's
 actual `images:` value. The project status table grows extra rows (platforms, SDKs, Kotlin, PHP, Swift tools,
 Node engine, TypeScript, framework, Distribution) only for the stacks they apply to. Documentation links cover the
 Antora site, Maven/Gradle site report, Sonar dashboard, generated API docs (TypeDoc, Compodoc, Storybook, Dokka
-including Spring Boot's `/api/kdoc/`, phpDocumentor, DocC, generated REST/gRPC/AsyncAPI docs), a static-export
+including Spring Boot's `/api/kdoc/`, phpDocumentor, DocC, Sphinx, generated REST/gRPC/AsyncAPI docs and OpenAPI schemas for FastAPI/Django), a static-export
 live site, registry/store pages and `CHANGELOG.md`.
 
 Libraries get an Installation section (Maven, Gradle with an optional version-catalog form, npm plus pnpm/yarn
-when the lockfile shows it, SwiftPM, Python, Composer). Services, web apps, plugins and modules get a Getting
+when the lockfile shows it, SwiftPM, Python via `uv add`/`pip install` when live on PyPI, Composer). Services, web apps, plugins and modules get a Getting
 Started section instead, built only from commands the repository really defines: Spring Boot (`bootRun`/
 `spring-boot:run`, the `local` profile, Actuator health, `bootBuildImage`), Quarkus (dev mode, Dev UI, packaged
 jar, native, container image), Laravel (`composer run setup`/`dev`, optional Sail), WordPress (WordPress.org,
-GitHub Release zip, WPackagist, `wp-env`), PrestaShop (module zip upload), NestJS and Next.js, plus a pull snippet
+GitHub Release zip, WPackagist, `wp-env`), PrestaShop (module zip upload), NestJS, Next.js, FastAPI (`uv sync`, `uv run fastapi dev`, Swagger UI at `/docs`) and Django (`manage.py migrate`/`runserver`, admin, schema docs), plus a pull snippet
 for a released GHCR image. The "how it works" section for a service is a `curl` against a real route; it is
 omitted entirely when there is no meaningful source yet. A WordPress `readme.txt` is read for facts but never
 written.
@@ -91,7 +91,7 @@ even if stale `.github/workflows/*.yml` files exist. `ci: no` also implies `page
 |`pages`
 |No
 |`yes` or `no`. Only `no` changes behaviour: no `https://<owner>.github.io/<repo>` link is emitted (Antora site,
-Maven site report, TypeDoc/Compodoc/Storybook/Dokka/phpDocumentor/DocC, or a static-export site), because CI only uploads the built docs as a workflow
+Maven site report, TypeDoc/Compodoc/Storybook/Dokka/phpDocumentor/DocC/Sphinx, or a static-export site), because CI only uploads the built docs as a workflow
 artifact. Readers are pointed at `docs/` and the local `cd docs && npx antora antora-playbook.yml` build instead.
 |Detected from whether a workflow publishes to `gh-pages`.
 
@@ -110,7 +110,7 @@ and leaves the file untouched; `update`/`replace` are applied without asking (th
 |(all other inputs)
 |No
 |Everything else is derived by exploring the repository directly
-(`pom.xml`/`build.gradle*`/`composer.json`/`package.json`/`Package.swift`/WordPress plugin or theme headers/PrestaShop
+(`pom.xml`/`build.gradle*`/`composer.json`/`package.json`/`pyproject.toml`/`uv.lock`/`Package.swift`/WordPress plugin or theme headers/PrestaShop
 module class/Android Gradle modules/Xcode or Tuist project files, `git remote`, `.github/workflows/*.yml`, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, and source code),
 with the project type taken from `iru-explore`'s `Project type:` line (reused from the conversation, or obtained
 by invoking `iru-explore`).
@@ -147,9 +147,10 @@ flowchart TD
     B2 --> C["Read existing content"]
     C --> D
     C --> D["Step 2: Gather project identity\n(repo/host, description, license,\nmulti-stack detection, versions)"]
-    D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, registry badges, PHP/WP/\nPrestaShop requirements, GHCR image)"]
-    E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/PHP/Swift/\nNode/TS/framework/Distribution rows)"]
-    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, phpDoc, DocC;\nno github.io links under pages: no)"]
+    D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, registry badges, PHP/WP/\nPrestaShop/Python requirements, PyPI, GHCR image)"]
+    E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/PHP/Swift/\nNode/TS/Python/framework/Distribution rows)"]
+    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, phpDoc, DocC, Sphinx,
+OpenAPI schema;\nno github.io links under pages: no)"]
     G --> H["Step 6: Compose Installation or\nGetting Started (dependency snippets,\nservice/plugin run commands,\nGHCR pull, store links)"]
     H --> I["Step 7: Write how-it-works\nsection with a real example\n(curl for services; via Explore agent)"]
     I --> J["Step 8: Compose remaining structural\nsections; preserve hand-written extras"]

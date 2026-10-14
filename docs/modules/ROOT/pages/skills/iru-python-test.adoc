@@ -1,0 +1,119 @@
+= Python Test
+:description: Runs a Python project's pytest suite through uv, Poetry, PDM, Pipenv or venv, splits fast from integration tests, and reports a compact JUnit summary.
+:keywords: iru-python-test, claude code skill, python, pytest, pytest-django, fastapi, django, junit, testcontainers, run tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Python project's pytest suite through whichever environment runner it actually uses, scope the run to what the caller asked for, and report a compact pass/fail summary parsed from pytest's own JUnit XML log. It is a read-only reporting skill: it never fixes a failing test, edits code, installs dependencies, relocks, or starts databases unless asked to as a follow-up.
+
+== Purpose
+
+Python projects differ in how they are run: `uv run --frozen`, `poetry run`, `pdm run`, `pipenv run`, a project `.venv`, or a bare interpreter. `iru-python-test` detects the runner, confirms pytest is really installed, reads the pytest configuration (markers, `addopts`, async mode, `DJANGO_SETTINGS_MODULE`) and detects plugins (pytest-django, anyio, pytest-asyncio, xdist, testcontainers). It then separates fast, container-free tests from integration tests that need Docker or a real database, runs exactly the requested selection, and reports counts and failures. A selector that matched nothing, a bad invocation, an unwired runner and an unavailable Docker daemon are each reported plainly, never as a clean run or as "0 tests".
+
+== Purpose group
+
+xref:index.adoc#group-python[Python Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-python-test
+/iru-python-test <selector>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`selector`
+|No
+|Any combination of a path, a node id (`tests/test_x.py::TestClass::test_name`), `-k "<expression>"`, and one leading keyword: `fast`, `integration`, or `all` (`unit` is a synonym of `fast`).
+|`fast` — the container-free selection of the whole suite.
+
+|`lock: held`
+|No
+|A `key: value` line passed by a calling skill that already holds `.integration-test.lock`, so this skill neither acquires nor releases it.
+|Not set — the skill takes the lock itself for container-backed selections.
+|===
+
+Runner resolution (first match wins):
+
+[cols="2,3", options="header"]
+|===
+|Signal |Runner
+
+|`uv.lock` and `uv` on PATH
+|`uv run --frozen` (never plain `uv run`, which can relock)
+
+|`poetry.lock` and `poetry`
+|`poetry run`
+
+|`pdm.lock` and `pdm`
+|`pdm run`
+
+|`Pipfile.lock` and `pipenv`
+|`pipenv run`
+
+|`.venv/bin/python`
+|`.venv/bin/python -m`
+
+|none of the above
+|`python -m`, with a warning that results may not match CI
+|===
+
+Fast versus integration is decided from an `integration` marker declared in the pytest config, else a `tests/integration/` directory, else there is no split. Container-backed selections check `docker info` first and are serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` directory (owner file, stale after 60 minutes, released on every exit path).
+
+== Outputs
+
+* A plain-text summary in the conversation: the runner and selection used, total/passed/failed/error/skipped counts parsed from a JUnit XML log (`build/test-results/pytest.xml`, or `pytest-integration.xml` for the integration selection), and for each failure the `classname::name` with the first line of its message. Errors (fixtures, collection failures) are counted separately from assertion failures.
+* For `all`, the fast and integration halves are reported separately, together with whether the lock was acquired, waited for, or held by the caller.
+* An integration stage that could not run is reported as unverified (Docker unavailable, blocked by a concurrent run, database unreachable), never as passed or as failed tests.
+* Exit code 5 (no tests collected) is reported as "selector matched nothing" and exit code 4 as a bad invocation. Wiring problems (pytest not installed, pytest-django missing, no async plugin) are named as such.
+* No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-python-test\n(optional selector)"] --> B["Step 0: parse keyword,\npaths, node ids, -k, lock"]
+    B --> C["Step 1: detect environment runner\nuv, Poetry, PDM, Pipenv, venv"]
+    C --> D{"pytest installed\nin the environment?"}
+    D -- no --> E["Stop: report no test\nrunner wired"]
+    D -- yes --> F["Step 2: read pytest config\nand detect plugins"]
+    F --> G["Step 3: classify fast vs\nintegration and build command"]
+    G --> H{"Container-backed\nselection?"}
+    H -- no --> J["Step 5: run pytest with\n--junitxml and read exit code"]
+    H -- yes --> I["Step 4: check Docker and\nacquire .integration-test.lock"]
+    I --> K{"Docker up and\nlock acquired?"}
+    K -- no --> L["Report integration as\nunverified"]
+    K -- yes --> J
+    J --> M["Parse JUnit XML:\ntotals and failures"]
+    M --> N["Release the lock"]
+    N --> O["Step 6: report counts,\nnothing-matched, failures,\nenvironment problems"]
+    L --> O
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-python-test` is a leaf skill; it only runs pytest commands and reports on their output.
+
+=== Invoked by
+
+* xref:skills/iru-fastapi-code-one-task-group.adoc[] — fast tests per bucket, the full fast suite, and the container-backed integration run (with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-django-code-one-task-group.adoc[] — fast tests per bucket, the full fast suite, and the container-backed integration run (with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+Its selector syntax, runner detection and fast/integration split are also reused by xref:skills/iru-python-coverage.adoc[] and xref:skills/iru-python-code-quality.adoc[].
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-python-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

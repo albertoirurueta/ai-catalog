@@ -1,6 +1,6 @@
 = AI Catalog
-:description: 130 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, .NET, TypeScript, NestJS, Next.js, Android and Swift work.
-:keywords: claude code skills, claude code agents, ai catalog, java and kotlin development, spring boot and quarkus bootstrap, php development, typescript nestjs nextjs, android development, swift development, skill catalog
+:description: 144 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, Python, .NET, TypeScript, Next.js, Android and Swift work.
+:keywords: claude code skills, claude code agents, ai catalog, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android development, swift development, skill catalog
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -218,6 +218,16 @@ features, and where the underlying models genuinely differ.
 |Implement a bucket of database tasks sequentially, one task at a time — no baseline or bucket-wide validation.
 |xref:skills/iru-database-code-one-task-group.adoc[]
 
+|`iru-django-code-one-task`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Implements one Django plan task (models, migrations, DRF/Ninja APIs, admin) with fast pytest tests and checks off its box.
+|xref:skills/iru-django-code-one-task.adoc[]
+
+|`iru-django-code-one-task-group`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Implements one bucket of Django tasks, then validates the bucket once, with the PostgreSQL integration tier behind a repo-wide lock.
+|xref:skills/iru-django-code-one-task-group.adoc[]
+
 |`iru-dotnet-code-one-task`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
 |Implement a single .NET plan task's code and tests only — validation is handled by `iru-dotnet-code-one-task-group`.
@@ -257,6 +267,16 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Read-only repository and ticket exploration that reports tech stack and a normalized Project type line.
 |xref:skills/iru-explore.adoc[]
+
+|`iru-fastapi-code-one-task`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Implements one FastAPI plan task (routers, Pydantic schemas, services, Alembic migrations) with fast pytest tests.
+|xref:skills/iru-fastapi-code-one-task.adoc[]
+
+|`iru-fastapi-code-one-task-group`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Implements one bucket of FastAPI tasks, then validates the bucket once, with the PostgreSQL integration tier behind a repo-wide lock.
+|xref:skills/iru-fastapi-code-one-task-group.adoc[]
 
 |`iru-generate-skill-docs`
 |xref:index.adoc#group-tooling[Catalog Tooling]
@@ -453,6 +473,31 @@ features, and where the underlying models genuinely differ.
 |Reviews an open PR by id for ticket intent, convention drift and stack pitfalls; posts findings only after confirmation.
 |xref:skills/iru-pr-review.adoc[]
 
+|`iru-python-bump-version`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Sets a Python project's version in pyproject.toml and related locations, optionally syncing README and Antora mentions.
+|xref:skills/iru-python-bump-version.adoc[]
+
+|`iru-python-code-quality`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Runs Ruff, mypy/Pyright, Bandit and framework linters as wired and reports issues by rule code.
+|xref:skills/iru-python-code-quality.adoc[]
+
+|`iru-python-coverage`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Runs pytest with coverage.py and reports exact per-module line and branch coverage from Cobertura XML.
+|xref:skills/iru-python-coverage.adoc[]
+
+|`iru-python-docstrings`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Audits Python modules for complete docstrings, fills gaps in the project's style, and verifies with Ruff and Sphinx.
+|xref:skills/iru-python-docstrings.adoc[]
+
+|`iru-python-test`
+|xref:index.adoc#group-python[Python Development Tooling]
+|Runs a Python project's pytest suite (incl. pytest-django) via uv, Poetry, PDM or a venv and reports a summary.
+|xref:skills/iru-python-test.adoc[]
+
 |`iru-quarkus-code-one-task`
 |xref:index.adoc#group-quarkus[Quarkus Development Tooling]
 |Implements one plan task in a Quarkus service (Java/Kotlin) with tests, running only container-free test levels.
@@ -617,6 +662,31 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
 |Scaffolds a WordPress plugin or block theme with Composer, WPCS, PHPStan, Brain Monkey and wp-env tests.
 |xref:skills/iru-setup-php-wordpress.adoc[]
+
+|`iru-setup-python-django`
+|xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+|Scaffolds or updates a Django project with DRF or Ninja, pytest-django, Ruff, mypy, a Dockerfile and a tested sample app.
+|xref:skills/iru-setup-python-django.adoc[]
+
+|`iru-setup-python-fastapi`
+|xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+|Scaffolds or updates a FastAPI service with SQLModel/SQLAlchemy, Alembic, pytest, Ruff, mypy and a Dockerfile.
+|xref:skills/iru-setup-python-fastapi.adoc[]
+
+|`iru-setup-python-github-workflows`
+|xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+|Scaffolds build, release, sync, security and Dependabot GitHub workflows for a FastAPI or Django repository.
+|xref:skills/iru-setup-python-github-workflows.adoc[]
+
+|`iru-setup-python-gitignore`
+|xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+|Creates or updates the root .gitignore for Python projects with FastAPI/Django sections, never ignoring lock files.
+|xref:skills/iru-setup-python-gitignore.adoc[]
+
+|`iru-setup-python-repository`
+|xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+|Orchestrator: bootstraps a FastAPI or Django repository end to end — scaffold, Antora, gitignore, workflows, changelog, README.
+|xref:skills/iru-setup-python-repository.adoc[]
 
 |`iru-setup-quarkus-github-workflows`
 |xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
@@ -799,7 +869,7 @@ file of their own and are instead described together in xref:agents/overview.ado
 |xref:agents/iru-change-summarizer.adoc[]
 
 |`iru-gate-runner`
-|Run a single verification/quality-gate skill (tests, coverage, lint, license, docs, security, build) for any supported stack — Java/Kotlin on Maven or Gradle, PHP, .NET, TypeScript incl. NestJS/Next.js, Android, Swift — and report back only a compact summary, optionally vs. a baseline.
+|Run a single verification/quality-gate skill (tests, coverage, lint, license, docs, security, build) for any supported stack — Java/Kotlin on Maven or Gradle, PHP, Python (FastAPI/Django), .NET, TypeScript incl. NestJS/Next.js, Android, Swift — and report back only a compact summary, optionally vs. a baseline.
 |xref:agents/iru-gate-runner.adoc[]
 
 |`iru-isolated-skill-executor`
@@ -820,8 +890,8 @@ partial setup — so a new Java library starts out matching the same conventions
 Reach for this group when standing up a **brand-new repository**, or when bringing one with an older or partial
 setup in line with the house pattern. `iru-setup-repository` is the catalog-wide front door: it detects a
 non-empty repository (via `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the
-project type over up to four `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node,
-PHP, Mobile & Apple — each with a "Something in the next group" escape hatch, the last ending in "None of these";
+project type over up to five `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node,
+PHP, Python, Mobile & Apple — each with a "Something in the next group" escape hatch, the last ending in "None of these";
 .NET is detected but has no orchestrator to offer), asks the shared inputs once — `open-source`, the repository's `visibility` (detected via
 `gh` when possible), whether GitHub workflows are wanted at all (`ci`), Sonar, whether CI runs unit tests only or
 the full suite (`ci-tests`), GitHub Pages (`pages`), and `publish`-or-`distribution` — quoting the cost
@@ -831,6 +901,7 @@ orchestrator — `iru-setup-java-library-repository`, xref:index.adoc#group-serv
 (Java or Kotlin), xref:index.adoc#group-quarkus-bootstrap[`iru-setup-quarkus-repository`],
 xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
 xref:index.adoc#group-php-bootstrap[`iru-setup-php-repository`],
+xref:index.adoc#group-python-bootstrap[`iru-setup-python-repository`],
 xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`], or
 xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. Every
 run announces whether it is setting the repository up **from scratch** or **updating an existing one** (with an
@@ -843,7 +914,7 @@ already has a `pom.xml`).
 ====
 
 * xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] — catalog-wide front door: detects/asks a
-  repository's project type and delegates to one of seven stack orchestrators.
+  repository's project type and delegates to one of eight stack orchestrators.
 * xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
   or updates a Java library repository end to end in one pass.
 * xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
@@ -1008,6 +1079,34 @@ scaffold (`iru-setup-php-laravel`, `iru-setup-php-wordpress`, or `iru-setup-php-
 * xref:skills/iru-setup-php-github-workflows.adoc[`iru-setup-php-github-workflows`] — build, release, sync,
   security, and Dependabot workflows (PHP version matrix, Psalm taint analysis, Pages).
 
+[[group-python-bootstrap]]
+=== Python Bootstrap
+
+Scaffolding (or updating) a Python web repository end to end — a FastAPI service or a Django project.
+
+[TIP]
+====
+`iru-setup-python-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It resolves the flavor, project identity, Python version,
+database/ORM (FastAPI) or API style (Django), and pipeline parameters once, then chains the same six-step shape as
+the other `*-repository` orchestrators: scaffold (`iru-setup-python-fastapi` or `iru-setup-python-django`) →
+`iru-setup-antora` → `iru-setup-python-gitignore` → `iru-setup-python-github-workflows` → `iru-setup-changelog` →
+`iru-setup-readme`, each via `iru-isolated-skill-executor`. Each member also runs standalone. A plain Python package
+(no FastAPI/Django) has no scaffold here; the xref:index.adoc#group-python[Python Development Tooling] gate skills
+still apply to it.
+====
+
+* xref:skills/iru-setup-python-repository.adoc[`iru-setup-python-repository`] — orchestrator: bootstraps a FastAPI
+  or Django repository end to end in one pass.
+* xref:skills/iru-setup-python-fastapi.adoc[`iru-setup-python-fastapi`] — creates (or updates) a FastAPI service with
+  an optional database layer and Alembic, pytest, Ruff/mypy, a Dockerfile, and a tested sample slice.
+* xref:skills/iru-setup-python-django.adoc[`iru-setup-python-django`] — creates (or updates) a Django project with
+  DRF or Django Ninja, pytest-django, Ruff/mypy, a Dockerfile, and a tested sample app.
+* xref:skills/iru-setup-python-gitignore.adoc[`iru-setup-python-gitignore`] — creates or merges the root
+  `.gitignore` with FastAPI/Django sections, never ignoring lock files.
+* xref:skills/iru-setup-python-github-workflows.adoc[`iru-setup-python-github-workflows`] — build, release
+  (container image to GHCR), sync, security, and Dependabot workflows.
+
 [[group-android-bootstrap]]
 === Android Bootstrap
 
@@ -1110,7 +1209,8 @@ individually (`/iru-explore`, `/iru-plan`) ahead of, or instead of, the full `/i
 implement anything directly — it dispatches each of `iru-plan`'s dependency-aware task groups, in order, to
 `iru-code-one-task-group`, which resolves each task's language and delegates to whichever
 xref:index.adoc#group-java[Java], xref:index.adoc#group-springboot[Spring Boot] (Java or Kotlin),
-xref:index.adoc#group-quarkus[Quarkus], xref:index.adoc#group-php[PHP], xref:index.adoc#group-dotnet[.NET],
+xref:index.adoc#group-quarkus[Quarkus], xref:index.adoc#group-php[PHP], xref:index.adoc#group-python[Python]
+(FastAPI and Django), xref:index.adoc#group-dotnet[.NET],
 xref:index.adoc#group-typescript[TypeScript] (incl. NestJS and Next.js), xref:index.adoc#group-android[Android],
 xref:index.adoc#group-swift[Swift], or xref:index.adoc#group-database[Database] Development Tooling group skill
 matches, and brackets the whole run
@@ -1138,6 +1238,8 @@ with quality and security baselines (xref:index.adoc#group-maintenance[Repositor
   xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
   xref:skills/iru-nestjs-code-one-task-group.adoc[`iru-nestjs-code-one-task-group`],
   xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`],
+  xref:skills/iru-fastapi-code-one-task-group.adoc[`iru-fastapi-code-one-task-group`],
+  xref:skills/iru-django-code-one-task-group.adoc[`iru-django-code-one-task-group`],
   xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
   xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`],
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`]) — or a best-effort direct
@@ -1433,6 +1535,42 @@ gate and the integration stage (e.g. `wp-env`) serialized behind `.integration-t
 * xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`] — sets a PHP project's version in every
   Laravel/WordPress/PrestaShop location; called by `iru-release` when the detected ecosystem is PHP.
 
+[[group-python]]
+=== Python Development Tooling
+
+The Python counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing plan tasks in a
+FastAPI service or a Django project, plus the point-in-time checks (pytest, coverage.py, Ruff/mypy/Bandit,
+docstrings/Sphinx) and a version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group, one tool chain over: `iru-code-one-task-group` dispatches every bucket tagged
+`fastapi` or `django` to `iru-fastapi-code-one-task-group` or `iru-django-code-one-task-group`, which captures one
+quality baseline, runs the matching `-code-one-task` skill once per task (in parallel when allowed), and validates
+the bucket once via the shared `iru-python-*` skills below — with the fast-test 80% coverage gate and the
+PostgreSQL/testcontainers integration tier serialized behind `.integration-test.lock`.
+====
+
+* xref:skills/iru-fastapi-code-one-task-group.adoc[`iru-fastapi-code-one-task-group`] — implements a FastAPI bucket
+  and validates it once: license headers, docstrings, fast tests, coverage, a quality diff, and a locked integration
+  run.
+* xref:skills/iru-fastapi-code-one-task.adoc[`iru-fastapi-code-one-task`] — implements a single FastAPI task with
+  its fast tests; called once per task by `iru-fastapi-code-one-task-group`.
+* xref:skills/iru-django-code-one-task-group.adoc[`iru-django-code-one-task-group`] — the same bucket-level
+  validation for Django, adding `manage.py check` and a migrations-are-current check.
+* xref:skills/iru-django-code-one-task.adoc[`iru-django-code-one-task`] — implements a single Django task with its
+  fast tests; called once per task by `iru-django-code-one-task-group`.
+* xref:skills/iru-python-test.adoc[`iru-python-test`] — runs pytest (incl. pytest-django) through the project's
+  runner (uv, Poetry, PDM, or a venv) and reports a JUnit-based summary.
+* xref:skills/iru-python-coverage.adoc[`iru-python-coverage`] — measures coverage with coverage.py and reports exact
+  per-module line/branch percentages from Cobertura XML.
+* xref:skills/iru-python-code-quality.adoc[`iru-python-code-quality`] — runs Ruff, mypy/Pyright, Bandit, and
+  framework-specific linters as wired, reporting issues by tool and rule code.
+* xref:skills/iru-python-docstrings.adoc[`iru-python-docstrings`] — audits and fills docstrings in the project's
+  style, verifying with Ruff and a Sphinx build.
+* xref:skills/iru-python-bump-version.adoc[`iru-python-bump-version`] — sets a Python project's version; called by
+  `iru-release` when the detected ecosystem is Python.
+
 [[group-dotnet]]
 === .NET Development Tooling
 
@@ -1523,7 +1661,7 @@ and scanning for accidentally committed secrets.
 ====
 
 * xref:skills/iru-release.adoc[`iru-release`] — cuts a release branch, bumps versions via the ecosystem's
-  `iru-<key>-bump-version` skill (Java/Kotlin, TypeScript, Android, Swift, PHP), drafts release notes/changelog, and
+  `iru-<key>-bump-version` skill (Java/Kotlin, TypeScript, Android, Swift, PHP, Python), drafts release notes/changelog, and
   opens the release PR.
 * xref:skills/iru-update-docs.adoc[`iru-update-docs`] — brings the Antora documentation module up to date with
   changes already made to the code.
@@ -1613,8 +1751,8 @@ how agents differ from skills in how they're triggered.
 
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs a single verification/quality-gate skill and reports back
   only a compact summary, optionally diffed against a baseline. Used throughout `iru-code`, `iru-code-one-task-group`,
-  and every `<key>-code-one-task-group` skill (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, .NET, TypeScript,
-  NestJS, Next.js, Android, Swift), plus the `generate-all-tests` skills for every language and several bootstrap
+  and every `<key>-code-one-task-group` skill (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, FastAPI, Django,
+  .NET, TypeScript, NestJS, Next.js, Android, Swift), plus the `generate-all-tests` skills for every language and several bootstrap
   skills (verifying a scaffold or generated workflow actually builds).
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs one named skill end to end in a
   fresh context so the caller can keep running afterward. Used by xref:skills/iru-issue.adoc[`iru-issue`] to delegate the
@@ -1627,6 +1765,7 @@ how agents differ from skills in how they're triggered.
   xref:skills/iru-setup-quarkus-repository.adoc[`iru-setup-quarkus-repository`],
   xref:skills/iru-setup-typescript-repository.adoc[`iru-setup-typescript-repository`],
   xref:skills/iru-setup-php-repository.adoc[`iru-setup-php-repository`],
+  xref:skills/iru-setup-python-repository.adoc[`iru-setup-python-repository`],
   xref:skills/iru-setup-android-repository.adoc[`iru-setup-android-repository`],
   xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`]) to delegate each of the bootstrap
   skills it orchestrates.
@@ -1694,6 +1833,14 @@ flowchart LR
         SETUP_PHP_PRESTASHOP["iru-setup-php-prestashop"]
         SETUP_PHP_REPOSITORY["iru-setup-php-repository"]
         SETUP_PHP_WORDPRESS["iru-setup-php-wordpress"]
+    end
+
+    subgraph GROUP_PYTHON_BOOTSTRAP["Python Bootstrap"]
+        SETUP_PYTHON_DJANGO["iru-setup-python-django"]
+        SETUP_PYTHON_FASTAPI["iru-setup-python-fastapi"]
+        SETUP_PYTHON_GITHUB_WORKFLOWS["iru-setup-python-github-workflows"]
+        SETUP_PYTHON_GITIGNORE["iru-setup-python-gitignore"]
+        SETUP_PYTHON_REPOSITORY["iru-setup-python-repository"]
     end
 
     subgraph GROUP_ANDROID_BOOTSTRAP["Android Bootstrap"]
@@ -1802,6 +1949,18 @@ flowchart LR
         PHP_TEST["iru-php-test"]
     end
 
+    subgraph GROUP_PYTHON["Python Development Tooling"]
+        DJANGO_CODE_ONE_TASK["iru-django-code-one-task"]
+        DJANGO_CODE_ONE_TASK_GROUP["iru-django-code-one-task-group"]
+        FASTAPI_CODE_ONE_TASK["iru-fastapi-code-one-task"]
+        FASTAPI_CODE_ONE_TASK_GROUP["iru-fastapi-code-one-task-group"]
+        PYTHON_BUMP_VERSION["iru-python-bump-version"]
+        PYTHON_CODE_QUALITY["iru-python-code-quality"]
+        PYTHON_COVERAGE["iru-python-coverage"]
+        PYTHON_DOCSTRINGS["iru-python-docstrings"]
+        PYTHON_TEST["iru-python-test"]
+    end
+
     subgraph GROUP_DOTNET[".NET Development Tooling"]
         DOTNET_CODE_ONE_TASK["iru-dotnet-code-one-task"]
         DOTNET_CODE_ONE_TASK_GROUP["iru-dotnet-code-one-task-group"]
@@ -1861,6 +2020,7 @@ flowchart LR
     CODE -.-> JAVA_CODE_QUALITY
     CODE -.-> KOTLIN_CODE_QUALITY
     CODE -.-> PHP_CODE_QUALITY
+    CODE -.-> PYTHON_CODE_QUALITY
     CODE -.-> SWIFT_CODE_QUALITY
     CODE -.-> TYPESCRIPT_CODE_QUALITY
     CODE --> UPDATE_DOCS
@@ -1874,6 +2034,8 @@ flowchart LR
     CODE_ONE_TASK_GROUP --> NESTJS_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> NEXTJS_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> PHP_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> FASTAPI_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> DJANGO_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> QUARKUS_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> SWIFT_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> TYPESCRIPT_CODE_ONE_TASK_GROUP
@@ -1942,6 +2104,18 @@ flowchart LR
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_COVERAGE
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_PHPDOC
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_TEST
+    FASTAPI_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    FASTAPI_CODE_ONE_TASK_GROUP -.-> FASTAPI_CODE_ONE_TASK
+    FASTAPI_CODE_ONE_TASK_GROUP -.-> PYTHON_CODE_QUALITY
+    FASTAPI_CODE_ONE_TASK_GROUP -.-> PYTHON_COVERAGE
+    FASTAPI_CODE_ONE_TASK_GROUP -.-> PYTHON_DOCSTRINGS
+    FASTAPI_CODE_ONE_TASK_GROUP -.-> PYTHON_TEST
+    DJANGO_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    DJANGO_CODE_ONE_TASK_GROUP -.-> DJANGO_CODE_ONE_TASK
+    DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_CODE_QUALITY
+    DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_COVERAGE
+    DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_DOCSTRINGS
+    DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_TEST
     PLAN --> EXPLORE
     PR_REVIEW --> EXPLORE
     QUARKUS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
@@ -1955,6 +2129,7 @@ flowchart LR
     RELEASE --> ANDROID_BUMP_VERSION
     RELEASE --> JAVA_BUMP_VERSION
     RELEASE --> PHP_BUMP_VERSION
+    RELEASE --> PYTHON_BUMP_VERSION
     RELEASE --> PR_DESCRIPTION
     RELEASE --> SWIFT_BUMP_VERSION
     RELEASE --> TYPESCRIPT_BUMP_VERSION
@@ -1991,6 +2166,13 @@ flowchart LR
     SETUP_PHP_REPOSITORY -.-> SETUP_PHP_PRESTASHOP
     SETUP_PHP_REPOSITORY -.-> SETUP_PHP_WORDPRESS
     SETUP_PHP_REPOSITORY -.-> SETUP_README
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_DJANGO
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_FASTAPI
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_GITHUB_WORKFLOWS
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_GITIGNORE
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_README
     SETUP_QUARKUS_REPOSITORY -.-> SETUP_ANTORA
     SETUP_QUARKUS_REPOSITORY -.-> SETUP_CHANGELOG
     SETUP_QUARKUS_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
@@ -2005,6 +2187,7 @@ flowchart LR
     SETUP_REPOSITORY -.-> SETUP_JAVA_LIBRARY_REPOSITORY
     SETUP_REPOSITORY -.-> SETUP_JAVA_SPRINGBOOT
     SETUP_REPOSITORY -.-> SETUP_PHP_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_PYTHON_REPOSITORY
     SETUP_REPOSITORY -.-> SETUP_QUARKUS_REPOSITORY
     SETUP_REPOSITORY -.-> SETUP_SWIFT_REPOSITORY
     SETUP_REPOSITORY -.-> SETUP_TYPESCRIPT_REPOSITORY
@@ -2062,6 +2245,8 @@ flowchart LR
     NESTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
     NEXTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
     PHP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    FASTAPI_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    DJANGO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
     QUARKUS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
     SETUP_ANDROID_APP -.spawns.-> AGT_GATE
     SETUP_ANDROID_LIBRARY -.spawns.-> AGT_GATE
@@ -2074,6 +2259,7 @@ flowchart LR
     SETUP_JAVA_SPRINGBOOT_POM -.spawns.-> AGT_GATE
     SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS -.spawns.-> AGT_GATE
     SETUP_PHP_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_PYTHON_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
     SETUP_QUARKUS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
     SETUP_QUARKUS_SERVICE -.spawns.-> AGT_GATE
     SETUP_SWIFT_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
@@ -2092,11 +2278,14 @@ flowchart LR
     NESTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     NEXTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     PHP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    FASTAPI_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    DJANGO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     QUARKUS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     SETUP_ANDROID_REPOSITORY -.spawns.-> AGT_ISE
     SETUP_JAVA_LIBRARY_REPOSITORY -.spawns.-> AGT_ISE
     SETUP_JAVA_SPRINGBOOT -.spawns.-> AGT_ISE
     SETUP_PHP_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_PYTHON_REPOSITORY -.spawns.-> AGT_ISE
     SETUP_QUARKUS_REPOSITORY -.spawns.-> AGT_ISE
     SETUP_REPOSITORY -.spawns.-> AGT_ISE
     SETUP_SWIFT_REPOSITORY -.spawns.-> AGT_ISE
@@ -2170,15 +2359,17 @@ flowchart TD
     FD --> Q["iru-setup-quarkus-repository"]
     FD --> T["iru-setup-typescript-repository"]
     FD --> PH["iru-setup-php-repository"]
+    FD --> PY["iru-setup-python-repository"]
     FD --> A["iru-setup-android-repository"]
     FD --> SW["iru-setup-swift-repository"]
     Q --> Q1["iru-setup-quarkus-service → iru-setup-antora →\niru-setup-java-gitignore → iru-setup-quarkus-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     T --> T1["library / react / nextjs / angular / nestjs /\nreact-native / ionic scaffold → iru-setup-antora →\niru-setup-typescript-gitignore → iru-setup-typescript-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     PH --> P1["iru-setup-php-laravel / -wordpress / -prestashop →\niru-setup-antora → iru-setup-php-gitignore →\niru-setup-php-github-workflows → iru-setup-changelog → iru-setup-readme"]
+    PY --> PY1["iru-setup-python-fastapi / -django →\niru-setup-antora → iru-setup-python-gitignore →\niru-setup-python-github-workflows → iru-setup-changelog → iru-setup-readme"]
 ....
 
 `iru-setup-repository` is the usual way in: it detects a non-empty repository's type via `iru-explore` (or asks
-over up to four rounds — JVM services & libraries, Web & Node, PHP, Mobile & Apple), collects the shared,
+over up to five rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple), collects the shared,
 cost-aware inputs once, and delegates to exactly one orchestrator via `iru-isolated-skill-executor`, forwarding
 `mode: existing` when the repository already has content.
 
@@ -2263,15 +2454,15 @@ flowchart LR
 
 `iru-code` itself doesn't implement anything directly: for every task group it dispatches to
 xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`], which resolves each task's language and delegates
-to whichever `iru-<key>-code-one-task-group` skill matches (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, .NET,
-TypeScript, NestJS, Next.js, Android, or Swift — e.g.
+to whichever `iru-<key>-code-one-task-group` skill matches (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, FastAPI,
+Django, .NET, TypeScript, NestJS, Next.js, Android, or Swift — e.g.
 xref:skills/iru-java-code-one-task-group.adoc[`iru-java-code-one-task-group`]) — each of which captures
 one quality baseline for the whole bucket, implements its tasks (in parallel when the group allows it), and
 validates the bucket once via its own group's tests/coverage/quality/doc skills, instead of once per task. A
 bucket tagged `database` instead goes to xref:skills/iru-database-code-one-task-group.adoc[
 `iru-database-code-one-task-group`], which is deliberately simpler — always sequential, with no baseline or
 bucket-wide validation of its own. The whole run is bracketed with project-wide quality
-(the plan key's own `iru-<key>-code-quality` skill — Java, Kotlin, PHP, .NET, TypeScript, Android, or Swift) and security (`iru-check-security`) baselines — if quality regresses,
+(the plan key's own `iru-<key>-code-quality` skill — Java, Kotlin, PHP, Python, .NET, TypeScript, Android, or Swift) and security (`iru-check-security`) baselines — if quality regresses,
 follow-up issues can be filed on whichever tracker the plan itself originated from (GitHub via `gh issue create`,
 or Jira via xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`]) — updating documentation via
 `iru-update-docs` once both pass, and archiving the plan under a filename that embeds the originating ticket id
@@ -2284,10 +2475,10 @@ tickets, and any attached prior implementation plans for extra context.
 === Generating a release
 
 `iru-release` must be run from `develop`, is ecosystem-agnostic (Java/Kotlin on Maven or Gradle, TypeScript/npm,
-Android/Gradle, Swift/Apple, or PHP/Composer), and delegates the actual version-file edit to that ecosystem's own installed
+Android/Gradle, Swift/Apple, PHP/Composer, or Python/FastAPI/Django), and delegates the actual version-file edit to that ecosystem's own installed
 xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`]/xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`]/
 xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]/
-xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`]
+xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`]/xref:skills/iru-python-bump-version.adoc[`iru-python-bump-version`]
 skill (called with `sync-files: yes`, which folds in refreshing `README.md`/`docs/antora.yml`/Antora dependency
 snippets), keeping only the release notes and PR description as its own work. See
 xref:guides/common-workflows.adoc#generating-a-release[] for a more detailed walkthrough.

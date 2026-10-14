@@ -23,11 +23,11 @@ DevOps, or TFS) and the language(s)/framework(s) in play — both in the existin
 being requested — so its "Tech stack" report can be reused directly by later skills (`iru-plan`, `iru-code`,
 `iru-update-docs`, PR/branch creation) instead of each re-detecting the same facts. Language/framework detection
 covers Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin),
-NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Expo/React Native,
+NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), Expo/React Native,
 Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks in addition to
-the classic Java/.NET/Python/Go/Rust ones — for JVM backends it also records the build tool (Maven vs. Gradle
+the classic Java/.NET/Go/Rust ones — for JVM backends it also records the build tool (Maven vs. Gradle
 Kotlin/Groovy DSL, wrapper) and whether the layout is a hexagonal multi-module reactor or layered, and for NestJS,
-Next.js, and PHP the module format/test runner/router/version details — and the report boils that detection down to a single normalized `Project type:` line — the
+Next.js, PHP, and Python (requires-python, package manager, test runner, settings module/API layer/persistence) the module format/test runner/router/version details — and the report boils that detection down to a single normalized `Project type:` line — the
 shared vocabulary the `iru-setup-repository` bootstrap front door reads to pre-select the right stack orchestrator
 on an existing repository. This works even when the current
 working directory isn't a git repository at all: it warns the user once, records that explicitly, and keeps going
@@ -134,6 +134,15 @@ general codebase tour.
 |`php-library`
 |Any other Composer package with no Laravel/WordPress/PrestaShop markers
 
+|`python-fastapi`
+|FastAPI service (`fastapi` dependency plus a `FastAPI(` app, e.g. `app/main.py`)
+
+|`python-django`
+|Django project (`django` dependency plus a `manage.py`)
+
+|`python-library`
+|Any other Python package (`pyproject.toml`/`setup.py`, no Django/FastAPI/other web framework)
+
 |`android-library`
 |Gradle `com.android.library` module
 
@@ -156,7 +165,7 @@ general codebase tour.
 |.NET project (`*.csproj`/`*.fsproj`/`*.sln`)
 
 |`other`
-|A stack was detected but has no key above (e.g. Vue, Flutter, plain Python, Go, Rust, Ruby, C/C++)
+|A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Go, Rust, Ruby, C/C++)
 
 |`unknown`
 |Nothing matched any manifest or source-level signal
@@ -165,7 +174,7 @@ general codebase tour.
 |More than one module with a distinct project type — followed by one `<module-path>: <type>` sub-line per module
 |===
 * An optional **`Build & layout:`** line for JVM backends (build tool, wrapper, hexagonal vs. layered), NestJS
-  (module format, test runner, persistence), Next.js (version, router, `cacheComponents`), and PHP (version, test runner).
+  (module format, test runner, persistence), Next.js (version, router, `cacheComponents`), PHP (version, test runner), and Python (`requires-python`, package manager, test runner, FastAPI layout/persistence/Alembic, or Django settings module/app layout/DRF vs. Ninja). Django and FastAPI markers win over `python-library`; Flask/Pyramid/Tornado are `other`.
 * If a documentation MCP (e.g. Confluence, Notion) is connected: a **Related documentation** section listing
   relevant pages found (title, link, one-line summary), or a note that none was relevant/connected.
 * A **Related past implementation plans** section covering both the local `.archive/` check and, for a Jira
@@ -208,7 +217,7 @@ flowchart TD
     E --> J["General orientation pass:\narchitecture, modules, recent git\nhistory (skipped if not a git repo)"]
     I --> O["Check .archive/ for a plan whose\ntopic overlaps the current task"]
     J --> O
-    O --> K["Detect tech stack (incl. Spring Boot/Quarkus,\nNestJS, Next.js, PHP, Vite+React, Angular,\nHilla, Expo/RN, Ionic, Android, SwiftPM/Xcode)\n+ Antora docs; derive normalized\nProject type: line"]
+    O --> K["Detect tech stack (incl. Spring Boot/Quarkus,\nNestJS, Next.js, PHP, Python (FastAPI/Django), Vite+React, Angular,\nHilla, Expo/RN, Ionic, Android, SwiftPM/Xcode)\n+ Antora docs; derive normalized\nProject type: line"]
     K --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- yes --> N["Search it for pages relevant\nto the ticket/codebase"]
     M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ epic/linked tickets,\n+ Related documentation)"]

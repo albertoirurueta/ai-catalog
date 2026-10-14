@@ -1,0 +1,178 @@
+= Setup Python Repository
+:description: Bootstraps a FastAPI or Django repository end to end: scaffold, Antora docs, gitignore, CI workflows, changelog and README from one set of answers.
+:keywords: iru-setup-python-repository, claude code skill, python, fastapi, django, uv, github actions, bootstrap, orchestrator, ghcr
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a Python web repository of one of two flavors — a FastAPI service or a Django project — by
+orchestrating the flavor's scaffold skill and the shared repository-level skills in one pass, collecting every shared
+parameter once.
+
+== Purpose
+
+`iru-setup-python-repository` is the Python stack orchestrator, run stand-alone or from the `iru-setup-repository`
+front door. It resolves the `flavor` (from `args`, an `iru-explore` `Project type:` line of `python-fastapi` or
+`python-django`, or on-disk markers such as a root `manage.py` or `fastapi`/`django` in `pyproject.toml`, otherwise
+asked), the project identity (name, import package, description, per-flavor license, developer details), the Python
+version (checked live against devguide.python.org or endoflife.date, catalog default 3.13, never below 3.12), the
+flavor's shape (`database`, plus `orm` for FastAPI or `api` for Django), and the shared pipeline parameters
+(`open-source`, `visibility`, `ci`, `ci-tests`, `pages`, `distribution` as a GHCR container image, `sonar` and its
+detail keys, branches), each with visibility-aware cost guidance. It then runs, each through the
+`iru-isolated-skill-executor` agent so only a short summary returns: the scaffold skill, `iru-setup-antora`,
+`iru-setup-python-gitignore`, `iru-setup-python-github-workflows` (skipped entirely when `ci` is `no`),
+`iru-setup-changelog`, and `iru-setup-readme`.
+
+It announces the setup mode first (from scratch vs updating an existing repository, with a per-component inventory
+marked absent/present/partial); each sub-skill then asks Update / Keep as is / Replace for what it finds. Plain Python
+libraries (`python-library`) and other web frameworks such as Flask are out of scope and stop the run. Existing
+Poetry, PDM or pipenv projects stay in scope: the scaffold keeps the existing manager instead of silently migrating
+to uv.
+
+== Purpose group
+
+xref:index.adoc#group-python-bootstrap[Python Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-python-repository
+/iru-setup-python-repository <args as key: value lines>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`flavor`
+|No
+|`fastapi` or `django`.
+|Detected from an `iru-explore` report or on-disk markers, otherwise asked.
+
+|`mode`
+|No
+|`new` or `existing`.
+|`existing` when a manifest or flavor marker exists (confirmed), else `new`.
+
+|`open-source`, `visibility`
+|No
+|Whether the project is open source; `public`, `private` or `internal`.
+|`visibility` detected via `gh repo view`, else asked; open source plus private is flagged as contradictory.
+
+|`ci`, `ci-tests`, `pages`
+|No
+|Generate workflows; `unit` or `full` CI tests (flavor-specific meaning); publish the Antora site to Pages.
+|`ci` asked (Yes recommended); `ci-tests` and `pages` asked only with `ci: yes`; `pages` defaults to `yes` when public.
+
+|`distribution`
+|No
+|`none`, `internal` (private GHCR image) or `store` (public GHCR image). There is no PyPI publishing.
+|`store` for public open source; otherwise asked with `internal` recommended.
+
+|`sonar`, `sonar-organization`, `sonar-project-key`, `sonar-host-url`
+|No
+|`cloud`, `self-hosted` or `none`, plus its detail keys.
+|`cloud` recommended only for public open source, otherwise `none`.
+
+|`python-version`
+|No
+|CPython minor the project runs on (`.python-version`, Docker base image, CI); `requires-python` floor stays `>=3.12`.
+|Live lookup; catalog default `3.13`.
+
+|`database`
+|No
+|`postgresql`, `sqlite` or `none` (`none` is not offered for Django).
+|Asked; PostgreSQL recommended.
+
+|`orm`
+|No
+|`sqlmodel` or `sqlalchemy`; FastAPI only, and only when `database` is not `none`.
+|Asked; SQLModel recommended.
+
+|`api`
+|No
+|`drf`, `ninja` or `none`; Django only.
+|Asked; Django REST Framework recommended.
+
+|`integration-branch`, `stable-branch`
+|No
+|Branches used by the workflows.
+|`develop` and `main`.
+
+|Identity keys
+|No
+|`name`, `package`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`.
+|Asked; skipped in `existing` mode where `pyproject.toml` already carries them.
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; forwarded to every file-writing sub-skill only when supplied.
+|`ask` (inside each sub-skill).
+|===
+
+Unknown keys (for example `publish`) are ignored, as is `orm` for Django and `api` for FastAPI.
+
+== Outputs
+
+* A scaffolded FastAPI or Django project with tests, quality configuration, Sphinx API docs sources and container
+  files, via the scaffold skill.
+* An Antora docs site, a root `.gitignore`, `CHANGELOG.md` and `README.md`, via the delegated skills.
+* Unless `ci: no`, GitHub Actions workflows (`build`, `release`, `sync`, `security`) and Dependabot.
+* A final report: the setup mode, resolved flavor and mode, identity and license, Python version and its source,
+  database/ORM/API shape, branches, a per-component action table (created / updated / replaced / kept as is /
+  skipped (ci: no) / not written), the verification results, what was wired or omitted and why, the required-secrets
+  table, and explicit warnings.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-python-repository"] --> B["Step 0: resolve inputs from args"]
+    B --> C["Step 1: resolve flavor and mode,\nannounce setup mode and inventory"]
+    C --> C1{"Python library or other framework?"}
+    C1 -- yes --> C2["Stop - out of scope"]
+    C1 -- no --> D["Step 2: collect identity and license"]
+    D --> E["Step 3: collect Python version\nand flavor shape"]
+    E --> F["Step 4: collect shared pipeline parameters"]
+    F --> G["Step 5: flavor scaffold skill"]
+    G --> G1{"User stopped with no usable project?"}
+    G1 -- yes --> G2["Stop"]
+    G1 -- no --> H["Step 6: iru-setup-antora"]
+    H --> I["Step 7: iru-setup-python-gitignore"]
+    I --> J{"ci: no?"}
+    J -- yes --> K["Step 8 skipped"]
+    J -- no --> L["Step 8: iru-setup-python-github-workflows"]
+    K --> M["Step 9: iru-setup-changelog"]
+    L --> M
+    M --> N["Step 10: iru-setup-readme"]
+    N --> O["Step 11: report per-component actions,\nsecrets table and warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-setup-python-fastapi.adoc[] — Step 5, scaffold for the `fastapi` flavor (via `iru-isolated-skill-executor`).
+* xref:skills/iru-setup-python-django.adoc[] — Step 5, scaffold for the `django` flavor (via `iru-isolated-skill-executor`).
+* xref:skills/iru-setup-antora.adoc[] — Step 6, Antora documentation site (via `iru-isolated-skill-executor`).
+* xref:skills/iru-setup-python-gitignore.adoc[] — Step 7, root `.gitignore` (via `iru-isolated-skill-executor`).
+* xref:skills/iru-setup-python-github-workflows.adoc[] — Step 8, CI/CD and security workflows, skipped when `ci: no`
+(via `iru-isolated-skill-executor`).
+* xref:skills/iru-setup-changelog.adoc[] — Step 9, root `CHANGELOG.md` (via `iru-isolated-skill-executor`).
+* xref:skills/iru-setup-readme.adoc[] — Step 10, root `README.md` (via `iru-isolated-skill-executor`).
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] — Step 4, FastAPI/Django bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — Steps 5-10, runs each sub-skill in a
+fresh context so only a short completion summary returns.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-python-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

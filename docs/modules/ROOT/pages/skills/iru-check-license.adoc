@@ -12,14 +12,14 @@ it never changes code logic, signatures, formatting, or existing non-header comm
 
 `iru-check-license` closes the gap between a repository's declared license and what its individual files actually
 say at the top. It never assumes a fixed license or a fixed header format: it reads the repository's own
-`LICENSE`-family file (and any license identifier declared in `pom.xml`/`package.json`/etc.) to know *which*
+`LICENSE`-family file (and any license identifier declared in `pom.xml`/`package.json`/`pyproject.toml`/etc. — for Python, `[project].license` as an SPDX expression or the legacy table, plus `License ::` classifiers) to know *which*
 license applies, then learns the *exact* header wording and comment-syntax convention from files that already
 carry one — falling back to drafting a standard header, shown to the user for explicit accept/reject, only when
 no file in the repository has one yet. It makes no assumption about language or project layout, discovering the
 real source/test roots and file extensions present each run — including Android Gradle module source sets,
 SwiftPM's `Sources/`/`Tests/`, Hilla's embedded frontend, and React Native/Capacitor's native `ios/`/`android/`
-directories — and it knows the native comment syntax for `.kt`, `.swift`, and `.ts`/`.tsx` headers alongside the
-languages it already covered. When no repo-wide inception year is stamped in a config field (e.g. Maven's
+directories, and Python packages (`src/<pkg>/`, FastAPI's `app/`, Django's `config/` + `apps/`) — and it knows the native comment syntax for `.kt`, `.swift`, `.py` (a block of `#` lines, never a docstring) and `.ts`/`.tsx` headers alongside the
+languages it already covered. For Python it keeps a shebang and PEP 263 encoding line on lines 1-2 with the header inserted after them, and skips generated Django/Alembic migrations and empty `__init__.py` files unless existing ones are headered. When no repo-wide inception year is stamped in a config field (e.g. Maven's
 `<inceptionYear>` or a Gradle library module's `lib/build.gradle.kts`), it falls back to each file's first-commit
 year, or, when a single repo-wide year is needed and no field supplies one, to the repository's own first-commit
 year.
@@ -48,7 +48,7 @@ xref:index.adoc#group-maintenance[Repository Maintenance]
 |None — defaults to every source and test file in the repository's discovered source roots (`src/main`/`src/test`
 for Maven/Gradle Java; `app/src/main`/`lib/src/main` for Android Gradle module source sets; `Sources/`/`Tests/`
 for SwiftPM; `src/main/frontend` for Hilla's embedded frontend; `ios/`/`android/` for React Native/Capacitor
-native projects; `src/`/`lib/`/`test/` for other stacks), skipping generated/vendored directories and non-code
+native projects; the packages `pyproject.toml` builds plus `tests/`/`scripts/` for Python; `src/`/`lib/`/`test/` for other stacks), skipping generated/vendored directories and non-code
 files.
 |===
 
