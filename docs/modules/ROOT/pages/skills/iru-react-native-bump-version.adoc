@@ -1,0 +1,148 @@
+= React Native Bump Version
+:description: Sets a React Native app's version (Expo or Metro) across package.json, app config, and native files, bumping store build numbers only on releases.
+:keywords: iru-react-native-bump-version, claude code skill, react native, expo, metro, eas, versioncode, marketing_version, bump version
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a React Native app's version to an exact literal value across every file that needs to agree with it. A React
+Native app has two versions: the npm one in `package.json` (followed by `iru-release`, git tags, `CHANGELOG.md`, and
+README mentions) and the store-facing one the stores and devices see -- `app.json`/`app.config.*` for an Expo app,
+the native `android/` and `ios/` projects for a bare React Native CLI app. This skill keeps both in step and never
+computes a version itself.
+
+== Purpose
+
+`iru-react-native-bump-version` handles both toolchains this catalog supports. For `expo`, it updates `package.json`
+plus the lockfile, then `app.json`'s `expo.version` or the `version` literal of a dynamic `app.config.ts`/`.js`; the
+`ios.buildNumber`/`android.versionCode` values are left to EAS when `eas.json` makes EAS own them and incremented in
+the app config otherwise, and `android/`/`ios/` are never edited. A computed dynamic config is reported, never
+guessed at. For `metro`, it updates `package.json`, `versionName`/`versionCode` in `android/app/build.gradle(.kts)`,
+and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in every build configuration of `project.pbxproj` (plus `Info.plist`
+literals when the plist doesn't route through build settings).
+
+Store-facing values only ever receive a release: a `x.y.z-dev.N` pre-release changes `package.json` (and lockfile)
+alone, while a release `x.y.z` also sets the app/native version and increments each build number by exactly 1. Step 5
+of the skill is the authoritative statement of this convention for callers such as `iru-release`.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-react-native-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|The exact target version (e.g. `1.4.0`, `1.4.1-dev.0`). Checked against the `X.Y.Z`/`X.Y.Z-dev.N` convention; a
+valid semver string outside it is flagged and confirmed, and any value containing `-` or `+` is treated as a
+pre-release that never reaches store-facing files.
+|None -- the skill asks for it if omitted; empty or whitespace-containing values are rejected.
+
+|`sync-files` (args)
+|No
+|Whether to also update README/Antora version mentions (`docs/antora.yml`'s `version:` for releases only).
+|Ask -- once, after Step 2 confirms such mentions exist.
+
+|`next-version` (args)
+|No
+|The upcoming pre-release (e.g. `1.5.0-dev.0`). Only meaningful with `sync-files: yes`, so a release never
+regresses a development marker. `iru-release` passes it.
+|None -- development markers are updated only if `new-version` is itself a pre-release.
+
+|`dry-run` (args)
+|No
+|When `yes`, print every diff and write nothing (no `npm version`, no sanity checks).
+|`no`
+
+|`toolchain` (args)
+|No
+|`expo` or `metro`; overrides the detection (e.g. a repository mid-migration).
+|Detected from `package.json`.
+
+|`package` (args)
+|No
+|Name or path of the app's `package.json` when it isn't at the repository root (monorepo `apps/mobile/`);
+accepted for parity with `iru-typescript-bump-version`, which forwards its arguments here.
+|Repository root.
+|===
+
+== Outputs
+
+* `package.json` and its lockfile updated via the package manager's version command with `--no-git-tag-version`
+  (for every value, release or pre-release).
+* Expo, release only: `app.json` `expo.version` (or an `app.config.*` `version` literal) updated; `ios.buildNumber`/
+  `android.versionCode` incremented unless EAS owns them (`appVersionSource: "remote"`, or `autoIncrement` on a
+  local source).
+* Metro, release only: `versionName`/`versionCode` in `android/app/build.gradle(.kts)`, `MARKETING_VERSION`/
+  `CURRENT_PROJECT_VERSION` in every build configuration of `ios/<App>.xcodeproj/project.pbxproj`, and
+  `Info.plist` literals when present.
+* Optionally, README/Antora version mentions if `sync-files` was accepted.
+* Read-back checks: `npx expo config` (Expo); `plutil`/`xcodebuild -showBuildSettings` and a Gradle read-back
+  (Metro), each reported as "not run" when its tooling is unavailable.
+* A report of the toolchain, old/new values, build numbers changed or left alone and why, and a warning to review the
+  diff before committing. No commit or tag is created.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-react-native-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, next-version,\ndry-run, toolchain, package]"] --> B["Step 0: resolve inputs\nask for new-version if missing"]
+    B --> C["Step 1: validate X.Y.Z / X.Y.Z-dev.N\nflag and confirm otherwise"]
+    C --> D["Step 2: detect toolchain\nand survey files"]
+    D --> E{react-native or expo\nin dependencies?}
+    E -- no --> F["Stop: not a React Native app,\nuse iru-typescript-bump-version"]
+    E -- yes --> G["Step 3: read current values"]
+    G --> H["Step 4: npm / pnpm / yarn version\n--no-git-tag-version\n(package.json + lockfile)"]
+    H --> I{"Release value?\n(no - or + suffix)"}
+    I -- no --> J["Step 6 skipped for store files:\nonly package.json changed"]
+    I -- yes --> K{Toolchain?}
+    K -- expo --> L["Step 6: expo.version in app.json\nor app.config literal;\nbuild numbers +1 unless EAS owns them"]
+    K -- metro --> M["Step 6: android versionName/versionCode,\niOS MARKETING_VERSION /\nCURRENT_PROJECT_VERSION, Info.plist literals"]
+    J --> N{dry-run: yes?}
+    L --> N
+    M --> N
+    N -- yes --> O["Step 7: print diffs only"]
+    N -- no --> P["Step 7: write, then read back with\nnpx expo config / plutil / xcodebuild / Gradle"]
+    P --> Q{Rewrite broke a file?}
+    Q -- yes --> R["Stop and show the error"]
+    Q -- no --> S
+    O --> S{sync-files accepted?}
+    S -- yes --> T["Step 8: update README / antora.yml /\nAntora pages with marker mapping"]
+    S -- no --> U
+    T --> U["Step 9: report and\nreview-before-commit warning"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-react-native-bump-version` is a leaf skill; it runs the package manager's version command and
+`python3` file rewrites, plus optional read-back checks, without calling any other skill. It follows
+xref:skills/iru-typescript-bump-version.adoc[]'s Step 4 (package manager table) and Step 6 (sync) rules by
+reference only.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] -- Step 6, version bump for `react-native-app` projects (the `react-native` key is
+  preferred over `typescript`).
+* xref:skills/iru-typescript-bump-version.adoc[] -- Step 0.5, which hands React Native apps (`react-native` or `expo`
+  in `dependencies`) here, forwarding its arguments unchanged, and stops.
+
+=== Related agents
+
+None -- this skill runs inline; it is not invoked from inside a custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-react-native-bump-version/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

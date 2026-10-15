@@ -20,6 +20,8 @@ lambda classes), and, for classes under the bar, points to the exact uncovered l
 or XML report. It measures unit tests only and never runs Failsafe, `verify`, `integrationTest` or `quarkusIntTest`.
 Android Gradle builds are redirected to `iru-android-coverage`.
 
+When the Kotlin Multiplatform plugin is applied anywhere in the build, the skill stops and points to xref:skills/iru-kmp-coverage.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-java[Java Development Tooling]
@@ -77,6 +79,7 @@ user is asked which class(es) matter).
 ....
 flowchart TD
     A["Start /iru-java-coverage\n(optional selector, target classes)"] --> B["Step 0: detect build tool\nand coverage engine"]
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-coverage"]
     B --> B1{Android Gradle plugin?}
     B1 -- yes --> B2["Defer to iru-android-coverage"]
     B1 -- no --> C["Step 1: scope tests with\niru-java-test selector syntax\n(unit tests only)"]
@@ -110,6 +113,8 @@ flowchart TD
 None — `iru-java-coverage` is a leaf skill; it only runs Maven/Gradle commands and reads the generated reports. It
 reuses the build-tool detection and selector syntax documented in xref:skills/iru-java-test.adoc[], and redirects
 Android Gradle builds to xref:skills/iru-android-coverage.adoc[], but it does not call either skill.
+
+It also points Kotlin Multiplatform projects at xref:skills/iru-kmp-coverage.adoc[] but does not invoke it.
 
 === Invoked by
 

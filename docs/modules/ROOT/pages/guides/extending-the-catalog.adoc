@@ -87,9 +87,10 @@ scratch, or updating an existing repository with an inventory of the prior setup
 it forces `mode: existing` on that delegation, and every component sub-skill then warns about each pre-existing
 artifact it owns and asks Update / Keep as is / Replace instead of assuming a brand-new repo.
 
-Underneath the front door, each stack has its own orchestrator. The seven `*-repository` orchestrators —
+Underneath the front door, each stack has its own orchestrator. The eight `*-repository` orchestrators —
 `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`,
-`iru-setup-php-repository`, `iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository` — all run the same fixed
+`iru-setup-php-repository`, `iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`,
+`iru-setup-kmp-repository` — all run the same fixed
 six-step shape, standalone or via the front
 door: scaffold (the language/flavor-specific `iru-setup-<stack>-library`/`-app` skill, e.g.
 `iru-setup-typescript-repository`'s own `flavor` picks between `iru-setup-typescript-library`,
@@ -97,7 +98,10 @@ door: scaffold (the language/flavor-specific `iru-setup-<stack>-library`/`-app` 
 `iru-setup-nestjs-app`, `iru-setup-nextjs-web`; `iru-setup-php-repository`'s between `iru-setup-php-laravel`,
 `iru-setup-php-wordpress` (plugin or block theme), `iru-setup-php-prestashop`; `iru-setup-python-repository`'s between
 `iru-setup-python-fastapi`, `iru-setup-python-django`; `iru-setup-quarkus-repository` always
-runs `iru-setup-quarkus-service`, parameterized by `language`/`build-tool`/`layout`) →
+runs `iru-setup-quarkus-service`, parameterized by `language`/`build-tool`/`layout`; `iru-setup-kmp-repository` always
+runs `iru-setup-kmp-app`, parameterized by `ui`; and a *toolchain* variant such as React Native's `toolchain:
+expo|metro` is a parameter of one scaffold skill, `iru-setup-react-native-app`, forwarded by its orchestrator to the
+matching workflows skill too, rather than a separate flavor) →
 `iru-setup-antora` → `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog`
 → `iru-setup-readme` (a stack may reuse a sibling's gitignore skill, as Quarkus reuses `iru-setup-java-gitignore`).
 `iru-setup-java-springboot` is the exception: it runs a manifest-driven chain of its own
@@ -145,8 +149,8 @@ are pluggable: which file carries the version, what "current pre-release" looks 
 command (if any) applies the bump. That pluggable piece is now a registry, the same shape as
 xref:_language_framework_backends_for_the_code_pipeline[]: `iru-release` runs `find .claude/skills -maxdepth 1
 -type d -name "iru-*-bump-version"` and delegates the actual edit to whichever `iru-<key>-bump-version` skill
-matches the project it detected (today: `java` (Maven or Gradle, Java or Kotlin), `typescript`, `android`,
-`swift`, `php`, `python`), falling back to asking the
+matches the project it detected (today: `java` (Maven or Gradle, Java or Kotlin), `typescript`, `react-native`,
+`android`, `kmp`, `swift`, `php`, `python`), falling back to asking the
 user which file to edit by hand if none is installed.
 
 To add a new ecosystem, create `iru-<key>-bump-version` following the sibling contract every existing one

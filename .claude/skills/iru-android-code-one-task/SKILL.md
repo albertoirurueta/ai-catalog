@@ -17,6 +17,8 @@ that live in `reference/` rather than being re-derived per task.
 
 ## Step 1 — Detect the module, then read only the reference material this task needs
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-code-one-task` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 An Android scaffold from this catalog (`iru-setup-android-library`/`iru-setup-android-app`) has one or two Gradle
 modules: `lib` (the library, `com.android.library`) and, for a library repository, an `app` sample module
 (`com.android.application`, typically Compose) that exercises it; an app-only repository has just `app`. Before

@@ -1,0 +1,119 @@
+= KMP Code One Task
+:description: Implements one Kotlin Multiplatform task from an implementation plan in the right source set, with tests and compile checks for every target it feeds.
+:keywords: iru-kmp-code-one-task, claude code skill, kotlin multiplatform, kmp, expect actual, compose multiplatform, ios interop, implementation plan, task implementation
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests, and checkbox update in a Kotlin Multiplatform (Android + iOS) app —
+nothing else. This is the narrowest execution unit for a `kmp` task in the `iru-code` pipeline:
+`iru-kmp-code-one-task-group` calls it once per task in a bucket (potentially many at once, in parallel agents via
+`iru-isolated-skill-executor`).
+
+== Purpose
+
+`iru-kmp-code-one-task` is the Kotlin Multiplatform counterpart of `iru-android-code-one-task` and
+`iru-swift-code-one-task`. It detects the project shape at runtime (the `iru-setup-kmp-app` layout of `shared/` +
+`androidApp/` + XcodeGen-generated `iosApp/`, or the JetBrains wizard's single `composeApp/` module; which Android
+plugin the shared module uses; shared Compose Multiplatform UI vs native UI per platform; iOS host capability),
+decides which module and source set(s) the task belongs to (`commonMain` first), and loads only the matching files
+from its own `reference/` directory — mandatory rules, code style, and project structure always; testing, KDoc,
+shared logic, Compose Multiplatform or native UI, iOS interop, and security as the task requires.
+
+It then re-checks the current code state (reading every `actual` of an `expect`, and the Swift callers of any
+public declaration), implements exactly what the task specifies, writes or updates tests in the matching test
+source set, and compile-checks every target the touched source sets feed. Two things set it apart from the
+Android and Swift equivalents: a `commonMain` change must compile for both Android and iOS, and Swift is a
+first-class consumer of the shared module's public API. If the task did not stop on a blocker it immediately checks
+off its own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note. It
+does not capture a quality baseline, add license headers, run tests, coverage or linters, run Dokka, link the iOS
+framework, or boot a simulator — all of that happens once per bucket in `iru-kmp-code-one-task-group`.
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Task description
+|Yes
+|The task's own text, including its exact `implementation_plan.md` checkbox line(s) and its sub-tasks' text, plus
+any relevant "Current code state" context.
+|None — always invoked with a specific task's text, normally by `iru-kmp-code-one-task-group`.
+|===
+
+== Outputs
+
+* Production code in the right module and source set (`commonMain` first, then `androidMain`, `iosMain`,
+  `androidApp`, or Swift in `iosApp`), with `actual`s for every target of any new `expect`, KDoc on every
+  public/internal declaration, and updated Swift callers when a public signature they use changed.
+* New or updated tests in the matching source set: `commonTest`, the Android host-test set, `iosTest`,
+  `androidApp/src/test`, or `iosApp` XCTest — written but not run.
+* A regenerated Xcode project (`xcodegen generate`) when `iosApp/project.yml` changed; the generated framework,
+  header, and `.xcodeproj` are never edited by hand.
+* `implementation_plan.md` with this task's checkbox (and its sub-tasks') checked and a "group validation pending"
+  note naming the module(s), source sets, and files touched; left untouched if the task stopped on a blocker.
+* A short summary back to the caller: layout, Android plugin and UI mode detected; module(s)/source sets touched and
+  reference files read; files touched and tests added/updated per source set; compile-check result per target
+  (passed, failed and fixed, failed outside scope, or unavailable); public API changes visible to Swift; any
+  deviation from `reference/` and pre-existing mandatory-rule violations noticed; and whether the task stopped on a
+  blocker.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-kmp-code-one-task] --> B["Step 0: detect layout, Android plugin,\nUI mode, iOS project, tooling, host"]
+    B --> C{"KMP module found?"}
+    C -- no --> C1[Report blocker: task mis-tagged]
+    C -- yes --> D["Step 1: decide module + source sets;\nread reference/README.md and only\nthe files the task needs"]
+    D --> E["Step 2: re-read current code;\nall actuals of an expect;\nSwift callers of public API"]
+    E --> F["Step 3: implement exactly the task\n(commonMain first, then actuals,\nthen app/Swift callers)"]
+    F --> G["Step 4: write/update tests in the\nmatching source set (not run)"]
+    G --> H["Step 5: one Gradle invocation to\ncompile-check every target fed;\nxcodegen + build-for-testing if Swift changed"]
+    H --> I{"Compile failure?"}
+    I -- in this task's code --> F
+    I -- outside scope --> J["Re-run once; note in report"]
+    I -- no --> K
+    J --> K{"Step 6: blocker or\nneeds user decision?"}
+    K -- yes --> L["Ask user / report blocked;\nleave checkbox untouched"]
+    K -- no --> M["Step 7: check off this task's\ncheckbox with 'group validation\npending' note"]
+    M --> N["Step 8: report outcome"]
+    L --> N
+....
+
+== Dependencies
+
+=== Invokes
+
+None. `iru-kmp-code-one-task` does not invoke any other catalog skill or spawn any agent — it only reads its
+`reference/` files, edits the code, test, and plan files the task names, and runs the Gradle wrapper (and, on
+macOS, `xcodegen`/`xcodebuild`) directly for compile-checks.
+
+=== Invoked by
+
+* xref:skills/iru-kmp-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a single
+  batch of `Agent` calls, when the group is marked parallelizable; one at a time otherwise), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's full text
+  including its exact checkbox line(s). That caller re-reads `implementation_plan.md` afterward to confirm the
+  checkbox this skill already flipped landed, then replaces the "pending" note with the final validation outcome.
+
+=== Related agents
+
+None spawned by this skill itself; it is run inside an
+xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent by its caller.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

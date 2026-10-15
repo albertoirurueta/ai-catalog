@@ -1,6 +1,7 @@
 ---
 name: iru-typescript-bump-version
-description: Set an npm/TypeScript project's version to an exact value, updating `package.json` and syncing the lockfile for whichever package manager the project uses (npm, pnpm, or yarn). Invoke as `/iru-typescript-bump-version <new-version>` where `<new-version>` is the literal target version (e.g. `1.4.0` or `1.4.1-dev.0`) — this skill does not compute bumps itself, it only applies the value it's given (`iru-release` computes the release/next-dev values per the pre-release convention documented in this file and passes each one through in turn). Also accepts `args`: `package: <name-or-path>` to pick one package in an npm/pnpm/yarn workspace (asks if omitted and more than one `package.json` with a `version` field exists), and `sync-files: yes|no` (default: ask) to also update README/Antora version mentions the same way `iru-release`'s Java path does. Reports the old and new version and every file touched. Use whenever the user, or another skill such as `iru-release`, needs an npm-ecosystem project's version set to a specific value instead of hand-editing `package.json`.
+description: >-
+  Set an npm/TypeScript project's version to an exact value, updating `package.json` and syncing the lockfile for whichever package manager the project uses (npm, pnpm, or yarn). Invoke as `/iru-typescript-bump-version <new-version>` where `<new-version>` is the literal target version (e.g. `1.4.0` or `1.4.1-dev.0`) — this skill does not compute bumps itself, it only applies the value it's given (`iru-release` computes the release/next-dev values per the pre-release convention documented in this file and passes each one through in turn). Also accepts `args`: `package: <name-or-path>` to pick one package in an npm/pnpm/yarn workspace (asks if omitted and more than one `package.json` with a `version` field exists), and `sync-files: yes|no` (default: ask) to also update README/Antora version mentions the same way `iru-release`'s Java path does. A React Native app (`react-native` or `expo` in `dependencies`, either toolchain — Expo or a bare React Native CLI/Metro app) is handed, with the same arguments, to `iru-react-native-bump-version` when that skill is installed, since its shipped version lives in `app.json`/`app.config.*` or the native `android/`/`ios/` projects rather than `package.json` alone; only without it does this skill bump `package.json` for such an app, and it says the app's store version was not touched. Reports the old and new version and every file touched. Use whenever the user, or another skill such as `iru-release`, needs an npm-ecosystem project's version set to a specific value instead of hand-editing `package.json`.
 model: haiku
 ---
 
@@ -25,6 +26,27 @@ Parse the invocation:
     Antora "Latest snapshot"/"Current development version"-style markers should show after a release, while
     "Latest release" markers show `<new-version>`. Only meaningful with `sync-files: yes`; `iru-release` passes it
     so a release never regresses a development marker to the release value (see Step 6).
+
+## Step 0.5 — Hand React Native apps to `iru-react-native-bump-version`
+
+Read the target `package.json` (the root one, or the `package:` from `args`). If `react-native` or `expo` is in its
+`dependencies`, it is a React Native app — an Expo app (`expo` present, even with `android/`/`ios/` prebuild
+output) or a bare React Native CLI app on the Metro toolchain — and the version the stores see is not
+`package.json`'s: it's `app.json`/`app.config.*` `expo.version` (expo) or `versionName`/`versionCode` in
+`android/app/build.gradle` and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in `ios/<App>.xcodeproj` (metro).
+
+- **`iru-react-native-bump-version` installed** (`find .claude/skills -maxdepth 1 -type d -name
+  "iru-react-native-bump-version"`, run from the repository root): invoke it with exactly the arguments this skill
+  received — `Skill({skill: "iru-react-native-bump-version", args: "<new-version>\n<every args line as given>"})` —
+  relay its report, and stop. It updates `package.json` + the lockfile the same way Step 4 does, plus the app/native
+  version files, under the same `x.y.z-dev.N` convention (Step 5).
+- **Not installed**: continue with this skill as usual (it only updates `package.json` + the lockfile and the
+  Step 6 mirrors), and say prominently in the Step 7 report that the app's shipped version (`expo.version`, or the
+  native `versionName`/`MARKETING_VERSION`) was **not** updated and needs `iru-react-native-bump-version` or a
+  manual edit.
+
+A React Native **library** (`react-native` only in `peerDependencies`/`devDependencies`, no app config and no
+`android/app`/`ios/*.xcodeproj` app project) is an ordinary npm package — keep it here.
 
 ## Step 1 — Validate the version string
 
@@ -123,23 +145,11 @@ above on its own (verified: `1.2.3` → `1.2.4-dev.0` in one command) — a call
 precomputing the next-dev string by hand, as long as it's running against npm specifically (pnpm/yarn's
 `prerelease` bump-type support was not separately verified here).
 
-**Expo / React Native apps (`react-native-app` projects scaffolded by `iru-setup-react-native-app`) are the one
-flavor where `package.json` is not the version the app ships.** That scaffold's `eas.json` sets
-`appVersionSource: "remote"` with `autoIncrement: true`, which means:
-
-- EAS owns the **build numbers** (`ios.buildNumber` / `android.versionCode`): they live on EAS's servers and are
-  auto-incremented per production build. This skill never touches them, and neither should `iru-release` —
-  `eas build:version:set`/`eas build:version:sync` are the only sanctioned ways to change them.
-- The **user-facing version** is `app.json`'s `expo.version` (or the `version` field of a dynamic
-  `app.config.ts`/`app.config.js`) — Expo, EAS, and the stores never read `package.json`'s `version`.
-- This skill's Step 4 only updates `package.json` (+ lockfile). So for this flavor `iru-release` must: (1) call
-  this skill with the release value as usual, so `package.json`, the git tag, README/Antora mentions, and
-  `CHANGELOG.md` stay consistent; (2) also set `expo.version` to that **same release value** — either by
-  passing `sync-files: yes` (Step 6 lists `app.json` among the mirrored files) or by editing it directly; and
-  (3) **not** write the next-dev `x.y.(z+1)-dev.0` value into `expo.version` at all — a `-dev.N` string is not
-  a valid store version, so the pre-release bump stays in `package.json` alone while `expo.version` keeps the
-  last released value until the next release. Detect the flavor from `expo` in `package.json`'s dependencies
-  plus an `app.json`/`app.config.*` with an `expo` key.
+**React Native apps** (Expo or bare React Native CLI/Metro) follow this same `package.json` convention, but their
+store-facing version lives elsewhere — `app.json`/`app.config.*` `expo.version` and EAS-owned or app-config build
+numbers for Expo, `versionName`/`versionCode` and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` for Metro — and
+must only ever carry release values. That rule now belongs to **`iru-react-native-bump-version`** (its Step 5 is
+the authoritative convention for both toolchains); Step 0.5 hands such apps to it.
 
 ## Step 6 — Optionally sync other files that mirror the version
 
@@ -163,11 +173,8 @@ such marker → `<new-version>`.
   versions there).
 - Any Antora page under `docs/modules/ROOT/pages/` showing an install/dependency snippet with a literal version
   string (`grep -rl '"version":\|@[0-9]\+\.[0-9]\+\.[0-9]\+' docs/modules/ROOT/pages/*.adoc`).
-- **`app.json`'s `expo.version`** (Expo / React Native apps only — see Step 5): the value the app actually ships
-  with. Update it only when `<new-version>` is a plain release version; for a `-dev.N` pre-release leave it
-  untouched (and say so in the report), since a pre-release string is not a valid store version. Never touch
-  `ios.buildNumber`/`android.versionCode` — EAS owns those. For a dynamic `app.config.ts`/`app.config.js`, edit
-  the `version` literal there instead, or report that the value is computed and must be updated by hand.
+- React Native apps' `app.json`/`app.config.*`/native version files are **not** mirrored here — see Step 0.5
+  (`iru-react-native-bump-version` owns them).
 
 This is offered, not automatic — these files may be intentionally out of step with `package.json` (e.g. a README
 badge pulling live from npm rather than a hardcoded string), so don't rewrite anything the user didn't confirm.

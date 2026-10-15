@@ -16,6 +16,8 @@ catalog's per-task validation used to spend redundantly. It is the Gradle/Kotlin
 bucket may span two Gradle modules (`lib`, `app`) rather than one project. It uses a medium model on purpose: the
 plan already carries the hard reasoning; this skill drives execution of it.
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-code-one-task-group` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 ## Step 1 — Detect the touched module(s), then capture one pre-change quality baseline for the whole bucket
 
 Before implementing anything, determine which Gradle module(s) this bucket's tasks touch — `lib`, `app`, or both —

@@ -2,10 +2,11 @@
 name: iru-release
 description: Convert the current development version into a final release. Must be run from the `develop` branch
   (gitflow) — warns and stops otherwise. Detects the repository's ecosystem (Java/Kotlin JVM on Maven or Gradle, TypeScript/npm,
-  Android/Gradle, Swift/Apple, PHP/Composer/WordPress/PrestaShop, or Python/FastAPI/Django) from an `iru-explore` report already in this conversation or from the
+  React Native (Expo or bare CLI/Metro), Android/Gradle, Kotlin Multiplatform (Android + iOS), Swift/Apple, PHP/Composer/WordPress/PrestaShop, or Python/FastAPI/Django) from an `iru-explore` report already in this conversation or from the
   repository's manifests, and delegates the version bump itself to the matching installed
   `iru-<key>-bump-version` skill (`iru-java-bump-version`, `iru-typescript-bump-version`,
-  `iru-android-bump-version`, `iru-swift-bump-version`, `iru-php-bump-version`, `iru-python-bump-version`) rather than editing build files directly. Asks the user
+  `iru-react-native-bump-version`, `iru-android-bump-version`, `iru-kmp-bump-version`, `iru-swift-bump-version`,
+  `iru-php-bump-version`, `iru-python-bump-version`) rather than editing build files directly. Asks the user
   for the release version (current pre-release value stripped, a patch bump, or a major bump) and the next
   upcoming pre-release version, creates a `release_x.y.z` branch off `develop`, updates README.md, `docs/antora.yml`,
   and any Antora page showing dependency snippets via the bump-version skill's own optional sync, creates/updates
@@ -49,13 +50,20 @@ touching any file.
      `swift-library`, `apple-app`, etc.) and derive the ecosystem key from it: `java-*`/`kotlin-*` (`java-library`,
      `java-springboot`, `java-springboot-hilla`, `kotlin-springboot`, `kotlin-springboot-hilla`, `java-quarkus`,
      `kotlin-quarkus` — Maven or Gradle) → `java`;
-     `typescript-library`/`react-web`/`angular-web`/`nestjs`/`nextjs`/`react-native-app`/`ionic-app` → `typescript`; `android-*` →
-     `android`; `swift-*`/`apple-app` → `swift`; `php-*` → `php`; `python-*` (`python-fastapi`, `python-django`,
+     `typescript-library`/`react-web`/`angular-web`/`nestjs`/`nextjs`/`ionic-app` → `typescript`;
+     `react-native-app (expo|metro)` → `react-native` (its bump skill owns `package.json` plus the store-facing
+     version — `app.json`'s `expo.version` for Expo, `android/app/build.gradle` + the iOS `MARKETING_VERSION` for
+     Metro; fall back to `typescript` only when `iru-react-native-bump-version` isn't installed, and then warn that
+     the store-facing version must be updated by hand); `android-*` → `android`; `kmp-app (…)` → `kmp` (fall back
+     to `android` only when `iru-kmp-bump-version` isn't installed, and warn that the iOS `MARKETING_VERSION`
+     must be updated by hand); `swift-*`/`apple-app` → `swift`; `php-*` → `php`; `python-*` (`python-fastapi`, `python-django`,
      `python-library`) → `python`. If the `Project type:` line is `multiple`, ask the user which
      module this release targets, since a single release cuts one version.
   2. Otherwise, detect it directly from manifests present at the repository root: `pom.xml` → `java`;
-     `package.json` → `typescript`; `build.gradle`/`build.gradle.kts` with the Android Gradle Plugin applied →
-     `android`; `build.gradle`/`build.gradle.kts` without it (a plain JVM, Kotlin Spring Boot, or Quarkus Gradle
+     `package.json` with a `react-native` or `expo` dependency → `react-native`; any other `package.json` →
+     `typescript`; a Gradle build applying the Kotlin Multiplatform plugin (`kotlin("multiplatform")` /
+     `org.jetbrains.kotlin.multiplatform`) with iOS targets → `kmp`; `build.gradle`/`build.gradle.kts` with the
+     Android Gradle Plugin applied → `android`; `build.gradle`/`build.gradle.kts` without it (a plain JVM, Kotlin Spring Boot, or Quarkus Gradle
      build) → `java`; `Package.swift`, or a `*.xcodeproj`/`project.yml`/`Project.swift` → `swift`; `composer.json`, a
      WordPress plugin/theme header (`Plugin Name:` in the main PHP file, `Theme Name:` in `style.css`), or a
      PrestaShop module main class (`extends Module`) → `php`; `pyproject.toml` (or `setup.py`/`setup.cfg`) →
@@ -75,14 +83,16 @@ touching any file.
     lists every `gradle.properties`/`build.gradle(.kts)`/`libs.versions.toml` version location;
     `iru-typescript-bump-version`'s Step 3 reads `package.json`'s `version` field;
     `iru-android-bump-version`'s Step 3 reads `lib/build.gradle.kts`'s `libraryVersion`;
+    `iru-react-native-bump-version` reads `package.json`'s `version`; `iru-kmp-bump-version` reads the root
+    `gradle.properties`' `VERSION_NAME`;
     `iru-swift-bump-version`'s Step 5/"Library" case reads the latest git tag;
     `iru-python-bump-version` reads `pyproject.toml`'s `[project].version`) — none of these skills expose a
     separate read-only invocation mode, reading is simply their first ordinary step, so apply that same
     locate-and-read logic here rather than inventing a different one. Also read that skill's own dedicated
     pre-release-convention section (`iru-java-bump-version`'s Step 5, `iru-typescript-bump-version`'s Step 5,
     `iru-android-bump-version`'s Step 5, `iru-swift-bump-version`'s Step 5, and the equivalent pre-release-convention
-    section of `iru-php-bump-version`/`iru-python-bump-version`) to know this ecosystem's convention
-    for the rest of this skill (e.g. `-SNAPSHOT` for Java/Android, `-dev.N` for npm, PEP 440 `.devN` such as `1.4.0.dev0` for
+    section of `iru-react-native-bump-version`/`iru-kmp-bump-version`/`iru-php-bump-version`/`iru-python-bump-version`) to know this ecosystem's convention
+    for the rest of this skill (e.g. `-SNAPSHOT` for Java/Android/KMP, `-dev.N` for npm and React Native, PEP 440 `.devN` such as `1.4.0.dev0` for
     Python, "the release is the git tag
     itself, there is no in-tree pre-release marker" for a Swift library).
   - **No match installed**: fall back to asking the user which file carries the version (e.g. `pom.xml`,

@@ -32,6 +32,8 @@ Gradle would otherwise never run the remaining tools; a task that failed because
 report. If none of the tasks exists, the skill reports that none of these tools is configured and stops without
 editing the build.
 
+When the Kotlin Multiplatform plugin is applied anywhere in the build, the skill stops and points to xref:skills/iru-kmp-code-quality.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-java[Java Development Tooling]
@@ -84,6 +86,7 @@ report there does not mean stricter Maven-style rulesets were applied.
 ....
 flowchart TD
     A["Start /iru-java-code-quality\n(optional path-or-class-name)"] --> B{"Step 0: Build tool and languages?"}
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-code-quality"]
     B -- "Android Gradle plugin" --> B1["Stop: use iru-android-code-quality"]
     B -- "pure Kotlin project" --> B2["Stop: use iru-kotlin-code-quality"]
     B -- "Maven" --> C["Step 1: mvn clean compile checkstyle:checkstyle\npmd:pmd spotbugs:spotbugs"]
@@ -110,6 +113,8 @@ flowchart TD
 None — `iru-java-code-quality` is a leaf skill; it only runs Maven/Gradle commands and reads the generated
 Checkstyle/PMD/SpotBugs reports. It names `iru-kotlin-code-quality` and `iru-android-code-quality` as the right
 skills for Kotlin and Android code but does not invoke them.
+
+It also points Kotlin Multiplatform projects at xref:skills/iru-kmp-code-quality.adoc[] but does not invoke it.
 
 === Invoked by
 

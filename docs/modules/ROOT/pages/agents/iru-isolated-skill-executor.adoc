@@ -46,7 +46,13 @@ might be asked to run.
   xref:skills/iru-swift-code-one-task-group.adoc[] — Step 2, once per task in a bucket, to invoke the matching
   `<key>-code-one-task` skill in a fresh context, concurrently when the bucket is marked parallelizable — the same
   reason as their Java/.NET/Spring Boot siblings above.
+* xref:skills/iru-kmp-code-one-task-group.adoc[] and xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 2,
+  once per task in a bucket, to invoke `iru-kmp-code-one-task` / `iru-react-native-code-one-task` in a fresh
+  context, concurrently when the bucket is marked parallelizable — the same reason as their siblings above.
 * xref:skills/iru-setup-repository.adoc[] — Step 4, runs the chosen stack orchestrator in a fresh context.
+* xref:skills/iru-setup-kmp-repository.adoc[] — Steps 4–9, once per each of the six bootstrap skills it chains
+  (`iru-setup-kmp-app`, `iru-setup-antora`, `iru-setup-kmp-gitignore`, `iru-setup-kmp-github-workflows`,
+  `iru-setup-changelog`, `iru-setup-readme`), since each re-derives what it needs from the filesystem.
 * xref:skills/iru-setup-java-library-repository.adoc[] — Steps 3–8, once per each of the six bootstrap skills it
   orchestrates, since every one of them re-derives what it needs from the filesystem rather than from anything
   said earlier in the conversation.

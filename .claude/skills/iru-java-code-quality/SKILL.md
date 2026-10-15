@@ -15,7 +15,7 @@ This skill only runs static analysis and reports results — it does not fix iss
 
 - Detect the build tool exactly as `iru-java-test`'s Step 0 does (`pom.xml` → Maven; `settings.gradle(.kts)`/
   `build.gradle(.kts)` → Gradle, `./gradlew` preferred over `gradle`; Android Gradle plugin → use
-  `iru-android-code-quality` instead).
+  `iru-android-code-quality` instead; Kotlin Multiplatform plugin → use `iru-kmp-code-quality` instead).
 - **Kotlin sources are not analyzed by these tools.** Checkstyle and PMD parse Java source only, so anything under
   `src/main/kotlin` (or `.kt` files anywhere) is invisible to them. SpotBugs works on bytecode, so it does see
   compiled Kotlin classes, but its findings there are dominated by Kotlin compiler-generated patterns (null-check

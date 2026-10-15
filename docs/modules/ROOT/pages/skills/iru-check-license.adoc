@@ -117,6 +117,8 @@ None — `iru-check-license` is a leaf skill; it does not call any other skill i
 * xref:skills/iru-php-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Step 3.1, via `iru-gate-runner`. Skipped if not installed.
+* xref:skills/iru-kmp-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-code-quality
-description: Run this project's TypeScript static-analysis and formatting tools — ESLint (flat config, plus Oxlint when it's set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, and Stylelint for CSS/SCSS when configured — then report every issue found (file, line, rule id, message), grouped by tool and classified by rule id. Invoke as `/iru-typescript-code-quality` to check the whole project, or `/iru-typescript-code-quality <path-or-glob>` to scope both the run and the report to specific files — unlike Java's Checkstyle/PMD/SpotBugs trio, ESLint/tsc/Prettier/Stylelint all accept a glob directly, so a scoped invocation narrows what actually runs. Detects the project's framework (npm/TypeScript library, React, Angular, React Native, Ionic, Hilla frontend, NestJS, Next.js) from `package.json` to pick the right invocation (`ng lint` vs `npx eslint`; Oxlint `oxlint --type-aware src/ test/` plus Prettier as the primary linter of a NestJS 12 scaffold, ESLint on older Nest projects; for Next.js 16 plain `eslint` with the `eslint-config-next` flat config since `next lint` was removed, `next lint` only on Next 15 or older, or Biome `biome check` when the project chose it; and `next typegen` before `tsc --noEmit` so the generated `PageProps`/`LayoutProps`/`RouteContext` route types exist) and the right rule-id prefixes to classify against (`@next/next/*`, `jsx-a11y/*`, Oxlint's `typescript(...)`/`eslint(...)` codes, Biome's `lint/<group>/<rule>` categories), and verifies each tool's own config file actually exists before trusting a "zero issues" result from it. When the prompt supplies a baseline (a prior per-rule-id issue count from an earlier run of this skill, e.g. captured by `iru-typescript-code-one-task-group` before a task group's changes), reports only the new-vs-baseline diff per rule id instead of the full current list. Use whenever the user wants a lint/type-check/format pass called out separately from `iru-typescript-test`/`iru-typescript-coverage`, instead of eyeballing `npm run lint` output.
+description: Run this project's TypeScript static-analysis and formatting tools — ESLint (flat config, plus Oxlint when it's set up alongside ESLint), `tsc --noEmit` type-checking, Prettier `--check`, and Stylelint for CSS/SCSS when configured — then report every issue found (file, line, rule id, message), grouped by tool and classified by rule id. Invoke as `/iru-typescript-code-quality` to check the whole project, or `/iru-typescript-code-quality <path-or-glob>` to scope both the run and the report to specific files — unlike Java's Checkstyle/PMD/SpotBugs trio, ESLint/tsc/Prettier/Stylelint all accept a glob directly, so a scoped invocation narrows what actually runs. Detects the project's framework (npm/TypeScript library, React, Angular, React Native, Ionic, Hilla frontend, NestJS, Next.js) from `package.json` to pick the right invocation (`ng lint` vs `npx eslint`; Oxlint `oxlint --type-aware src/ test/` plus Prettier as the primary linter of a NestJS 12 scaffold, ESLint on older Nest projects; for Next.js 16 plain `eslint` with the `eslint-config-next` flat config since `next lint` was removed, `next lint` only on Next 15 or older, or Biome `biome check` when the project chose it; and `next typegen` before `tsc --noEmit` so the generated `PageProps`/`LayoutProps`/`RouteContext` route types exist; for React Native, `@react-native/eslint-config` on a bare React Native CLI/`metro` app — the legacy `.eslintrc.js` + ESLint 8 the current template still ships, or its `/flat` export under an `eslint.config.js` — versus `eslint-config-expo` (`eslint-config-expo/flat` in the `eslint.config.js` that `npx expo lint` writes) on an `expo` app, always run as plain `eslint` over the whole app because `expo lint` only lints `src/`, `app/`, and `components/`, with Prettier scoped to source files so the native `android/`/`ios/` projects aren't flagged and `tsc --noEmit` read against Expo's TypeScript 6 `types` default) and the right rule-id prefixes to classify against (`@next/next/*`, `jsx-a11y/*`, Oxlint's `typescript(...)`/`eslint(...)` codes, Biome's `lint/<group>/<rule>` categories), and verifies each tool's own config file actually exists before trusting a "zero issues" result from it. When the prompt supplies a baseline (a prior per-rule-id issue count from an earlier run of this skill, e.g. captured by `iru-typescript-code-one-task-group` before a task group's changes), reports only the new-vs-baseline diff per rule id instead of the full current list. Use whenever the user wants a lint/type-check/format pass called out separately from `iru-typescript-test`/`iru-typescript-coverage`, instead of eyeballing `npm run lint` output.
 model: haiku
 ---
 
@@ -18,8 +18,11 @@ consistent across all of them): inspect `package.json` — `@vaadin/hilla`/`hill
 Maven `pom.xml` or a `src/main/frontend/` directory → `hilla-frontend`; `expo` or `react-native` in dependencies
 → `react-native`; `@ionic/angular` or `@ionic/react` + `@capacitor/core` → `ionic`; `@nestjs/core` → `nestjs`;
 `next` → `nextjs`; `@angular/core` → `angular`; `react` + `vite` → `react`; otherwise → `library`. This decides
-which rule-id prefixes matter (Step 3) and, for Angular, NestJS, and Next.js, how lint and type-checking are
-invoked (below).
+which rule-id prefixes matter (Step 3) and, for Angular, NestJS, Next.js, and React Native, how lint and
+type-checking are invoked (below). For `react-native`, also resolve the **toolchain** with the rule every React
+Native skill in this catalog shares: `expo` in `dependencies` → **expo** (even when `android/`/`ios/` exist as
+`npx expo prebuild` output); `react-native` without `expo` → **metro** (bare React Native CLI app; Expo also
+bundles with Metro, the name only distinguishes the two toolchains).
 
 **What "the project's linter" is, per framework** — read the `lint` script in `package.json` and run what it runs
 (with this skill's JSON/report flags added), rather than assuming ESLint:
@@ -49,6 +52,43 @@ invoked (below).
   name 'LayoutProps'.`, and after `next typegen` the same command exited `0`. A `TS2304` for those names is a
   missing-typegen artifact, never a real finding. `next typegen` exists from Next 15.5; on older versions there
   are no such helper types and plain `tsc --noEmit` is correct.
+- **React Native, `metro` toolchain** (bare React Native CLI app) — verified on a fresh React Native CLI 20.2 /
+  React Native 0.87.1 TypeScript template: `"lint": "eslint ."`, ESLint **8.57** with a **legacy `.eslintrc.js`**
+  (`module.exports = { root: true, extends: '@react-native' };`, i.e. `@react-native/eslint-config`), Prettier
+  **2.8.8** with `.prettierrc.js`, and a `tsconfig.json` extending `@react-native/typescript-config` (which sets
+  `"types": ["jest"]`). Run `npx eslint --format json --no-error-on-unmatched-pattern -o eslint-report.json .`
+  exactly as item 1 below — ESLint 8 picks up `.eslintrc.js` on its own (verified: it linted `App.tsx`,
+  `__tests__/App.test.tsx`, `index.js`, and the root config files, exit `0`). Projects that migrated to ESLint 9
+  use `@react-native/eslint-config/flat` (the package's `exports` map has `"./flat"`) from an `eslint.config.js`;
+  handle them like any flat-config project, but verified locally that ESLint 9.39 with that flat export (0.87.1)
+  **crashes** on `.js` files — `TypeError: Error while loading rule 'ft-flow/define-flow-type':
+  context.getAllComments is not a function` (an `eslint-plugin-ft-flow` incompatibility), exit `2` — report that as
+  "ESLint crashed: plugin incompatible with ESLint 9", never as zero issues or as a lint finding. The native
+  `android/` and `ios/` projects contain no lintable TypeScript; if ESLint ever reports files there, they're
+  Gradle/CocoaPods helper scripts, not app code.
+- **React Native, `expo` toolchain** — the blank `create-expo-app` template ships **no** linter, formatter, or lint
+  script at all; `npx expo lint` (verified, Expo SDK 57) installs `eslint` 9 + `eslint-config-expo`, writes an
+  `eslint.config.js` (`require("eslint-config-expo/flat")` inside `defineConfig([...])`, `ignores: ["dist/*"]`) and
+  adds `"lint": "expo lint"`. **Don't run `expo lint` itself for this skill**: per `npx expo lint --help` it lints
+  only `src/`, `app/`, and `components/` by default, so a root `App.tsx` (the blank template's only component) is
+  silently skipped — run plain `npx eslint --format json --no-error-on-unmatched-pattern -o eslint-report.json .`
+  instead (verified: it linted `App.tsx`, `index.ts`, and `eslint.config.js`, and an unresolved import surfaced as
+  `import/no-unresolved`). Older Expo projects (SDK ≤ 52) may still have a legacy `.eslintrc.js` with
+  `extends: 'expo'` — the same `npx eslint` command handles it. No `eslint.config.*`/`.eslintrc*` → "ESLint: not
+  configured, skipped" (and say `npx expo lint` would set it up).
+- **Type-checking a React Native project** is plain `npx tsc --noEmit -p tsconfig.json --pretty false` for both
+  toolchains (Expo's `tsconfig.json` extends `expo/tsconfig.base`, which already sets `noEmit`). One verified trap
+  for **expo**: TypeScript 6 changed the default of `compilerOptions.types` to `[]`, and `expo/tsconfig.base` doesn't
+  set it, so once Jest tests exist `tsc` reports `error TS2593: Cannot find name 'test'` / `TS2304: Cannot find name
+  'expect'` in every test file even with `@types/jest` installed (verified on TypeScript 6.0.3); adding
+  `"types": ["jest"]` to the app's `tsconfig.json` cleared them. Report those as one "tsconfig `types` lacks `jest`"
+  configuration finding rather than N separate type errors. The metro template's `@react-native/typescript-config`
+  already sets `"types": ["jest"]`.
+- **Prettier on React Native** — always pass an explicit source glob, `npx prettier --list-different
+  "**/*.{js,jsx,ts,tsx}"`, rather than `.`: the metro template has a `.prettierrc.js` but no `.prettierignore`, so
+  `prettier --list-different .` flagged `ios/<App>/Images.xcassets/**/Contents.json` and `package.json` on the
+  untouched scaffold (verified, exit `1`), while the scoped glob exited `0` (Prettier skips `node_modules/` on its
+  own). The blank Expo template has no Prettier at all — "Prettier: not configured" unless the project added it.
 
 **Package manager**: from `packageManager` in `package.json`, else the lockfile present —
 `package-lock.json` → npm, `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn. Run every command below through it:
@@ -141,7 +181,8 @@ instead of silently omitting it or reporting a misleading "0 issues".
    files under a project — it always type-checks the whole project graph `tsconfig.json` resolves; when `[scope]`
    is given, run the full command unscoped and then filter the reported lines to ones whose `<file>` prefix
    matches `[scope]`, the same "run whole, report scoped" pattern `iru-java-code-quality` uses for Checkstyle/PMD.
-3. **Prettier** — `npx prettier --list-different [scope or "."]`. Verified locally: with `--check` (the more
+3. **Prettier** — `npx prettier --list-different [scope or "."]` (React Native: `[scope or
+   "**/*.{js,jsx,ts,tsx}"]`, see above — never `.`, which reaches into `ios/`/`android/`). Verified locally: with `--check` (the more
    commonly documented flag), the human-readable progress line (`Checking formatting...`) goes to **stdout** but
    the actual `[warn] <file>` lines and the summary (`Code style issues found in the above file. Run Prettier
    with --write to fix.`) go to **stderr** — easy to lose if only stdout is captured. `--list-different` avoids
@@ -201,8 +242,11 @@ without stating its source is ambiguous — `no-unused-vars` exists in both ESLi
   `react-hooks/rules-of-hooks`, `@angular-eslint/no-empty-lifecycle-method`, Next.js's `@next/next/*` rules from
   `eslint-config-next` such as `@next/next/no-img-element`/`@next/next/no-html-link-for-pages` plus the
   `jsx-a11y/*`, `react/*`, and `import/*` rules that config enables (verified on Next 16.4: an `<img>` without
-  `alt` produced `@next/next/no-img-element` and `jsx-a11y/alt-text`, both severity `1`), bare ESLint-core ids like
-  `prefer-const`/`eqeqeq` with no prefix). A `null` `ruleId` (parsing errors ESLint itself can't attribute to a
+  `alt` produced `@next/next/no-img-element` and `jsx-a11y/alt-text`, both severity `1`), React Native's
+  `@react-native/eslint-config` ids (`react-native/no-inline-styles`, `@react-native/no-deep-imports`,
+  `ft-flow/*`, `jest/*`, `react-hooks/*`, `eslint-comments/*`) and `eslint-config-expo`'s (`expo/*` such as
+  `expo/no-env-var-destructuring`, plus `import/*` — verified: an unresolved import produced `import/no-unresolved`),
+  bare ESLint-core ids like `prefer-const`/`eqeqeq` with no prefix). A `null` `ruleId` (parsing errors ESLint itself can't attribute to a
   rule) gets its own `<parse-error>` bucket.
 - **Oxlint** — bucket by `code` verbatim (`eslint(no-unused-vars)`, `typescript-eslint(no-explicit-any)`,
   `typescript(no-floating-promises)`) — report these separately from ESLint's buckets even when the rule name

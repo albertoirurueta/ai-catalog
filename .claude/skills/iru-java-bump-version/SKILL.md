@@ -83,6 +83,9 @@ don't hard-stop on a non-matching but plausible string, only flag it, mirroring 
     Steps 3–4's Gradle path. Prefer the wrapper (`./gradlew`) over a system `gradle` for Step 6.
   - Both present → use the one the CI workflow (`.github/workflows/*.yml`) builds with; ask the user if that
     doesn't settle it.
+  - The Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`) applied
+    anywhere → stop and point the user at `iru-kmp-bump-version`, which owns the KMP app's
+    `VERSION_NAME`/`VERSION_CODE` and the iOS `MARKETING_VERSION`.
   - An Android Gradle plugin applied anywhere (`grep -rlE "com\.android\.(application|library)|android-(application|library)" --include='*.gradle*' --include='libs.versions.toml' .`)
     → stop and point the user at `iru-android-bump-version`, which owns the Android
     `libraryVersion`/`versionName`/`versionCode` layout.

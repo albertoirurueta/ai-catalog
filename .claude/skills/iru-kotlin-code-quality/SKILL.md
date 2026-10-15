@@ -12,7 +12,8 @@ Run whichever Kotlin static-analysis tools a JVM project actually has wired — 
 issue they find. This skill only runs static analysis and reports results: it does not fix issues, and it never
 adds or modifies detekt/ktlint/Spotless configuration (a missing tool is reported, not installed — that's a
 follow-up the user drives). Android modules (`com.android.library`/`com.android.application` applied) are out of
-scope — hand those to `iru-android-code-quality`, which also runs Android Lint.
+scope — hand those to `iru-android-code-quality`, which also runs Android Lint — and so are Kotlin Multiplatform
+modules (`kotlin("multiplatform")` applied), which belong to `iru-kmp-code-quality`.
 
 ## Step 0 — Resolve inputs and the build tool
 

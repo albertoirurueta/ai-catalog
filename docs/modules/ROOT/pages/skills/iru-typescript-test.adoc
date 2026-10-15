@@ -1,6 +1,6 @@
 = TypeScript Test
-:description: Runs a TypeScript project's unit tests via Vitest, Jest or ng test, plus opt-in NestJS and Next.js e2e suites, scoped by selector, and reports results.
-:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, nestjs, nextjs, playwright, e2e tests
+:description: Runs TypeScript unit tests via Vitest, Jest or ng test, plus opt-in NestJS, Next.js and React Native e2e suites, scoped by selector, and reports results.
+:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, nestjs, nextjs, react native, maestro, detox, playwright, e2e tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -29,6 +29,9 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 /iru-typescript-test
 /iru-typescript-test <selector>
 /iru-typescript-test e2e [<selector>]
+/iru-typescript-test e2e
+lock: held
+configuration: <detox-configuration>
 ----
 
 == Inputs
@@ -45,9 +48,19 @@ pattern. Mapped to the matching runner's scoping flags per the table below.
 
 |`e2e` / `unit` keyword
 |No
-|Leading keyword (NestJS and Next.js only) that picks the suite. `e2e` runs the end-to-end suite instead of the
+|Leading keyword (NestJS, Next.js and React Native only) that picks the suite. `e2e` runs the end-to-end suite instead of the
 unit suite and scopes it with the rest of the selector; `unit` means the same as no keyword.
 |`unit`
+
+|`lock: held`
+|No
+|`key: value` line from a calling skill: the caller already holds the repository-wide `.integration-test.lock`, so a React Native `e2e` run must not acquire or release it. Ignored for every other selector.
+|Not set — React Native `e2e` takes the lock itself.
+
+|`configuration: <name>`
+|No
+|React Native `e2e` with Detox only: the `.detoxrc.js` configuration to run (`ios.sim.debug`, `android.emu.debug`, ...).
+|Derived from `.detoxrc.js` (single configuration, else a `*.debug` one for the current platform); asked when still ambiguous.
 |===
 
 The runner and its invocation are resolved as follows:
@@ -110,10 +123,11 @@ An unmatched file/directory selector is a hard failure (non-zero exit) for all t
 `-t`/`--filter` name pattern against files that do match is not a failure — every runner reports the matched
 tests as skipped and exits `0`.
 
-=== NestJS and Next.js
+=== NestJS, Next.js and React Native
 
-`@nestjs/core` in `dependencies` marks a NestJS project and `next` marks a Next.js project; both still run on Vitest
-or Jest, detected as above, and the framework only changes which suite counts as "unit" and how `e2e` resolves:
+`@nestjs/core` in `dependencies` marks a NestJS project, `next` a Next.js project, and `react-native` or `expo` a React
+Native project; all still run on Vitest or Jest, detected as above, and the framework only changes which suite counts
+as "unit", how failures are explained, and how `e2e` resolves:
 
 * *NestJS* — unit tests are `*.spec.ts` next to the source and e2e tests are `test/*.e2e-spec.ts`, kept apart by
   two configs so the default run never picks up e2e files: ESM/Vitest (`vitest.config.ts` plus
@@ -123,6 +137,21 @@ or Jest, detected as above, and the framework only changes which suite counts as
 * *Next.js* — unit/component tests run on Vitest (`vitest.config.mts`) or Jest via `next/jest`; e2e is Playwright
   (`@playwright/test` plus `playwright.config.*`), which builds and starts the app, so it only runs on an explicit
   `e2e` selector and never by default. Cypress-only projects are reported as "Cypress e2e present, not run".
+* *React Native* — always Jest (never Vitest), with the toolchain resolved first: `expo` in `dependencies` is `expo`
+  (even with prebuild `android/`/`ios/`), otherwise `metro` (bare CLI app). The preset is read from the Jest config:
+  `jest-expo` (or a platform variant; `jest-expo/universal` multiplies test counts per platform project and the report
+  says so) for expo, `@react-native/jest-preset` or the legacy `react-native` preset for metro. A preset contradicting
+  the toolchain still runs but is flagged. Unit tests live in `__tests__/` or beside the source; `.maestro/` and
+  `e2e/` flows are never matched by the default run. Failures are reported by cause: an untranspiled ESM/Flow package
+  needing `transformIgnorePatterns`, a native module without a Jest mock, or React Native Testing Library 14's
+  un-awaited `render`.
+
+React Native `e2e` picks Detox (`.detoxrc.*` plus the `detox` devDependency) or else Maestro (`.maestro/` flows), runs it
+through its own JUnit/JSON reporter, and reports "React Native e2e suite not wired" when neither exists. Preconditions
+are checked in order (tool installed, a booted simulator/emulator, the repository lock, Metro answering on port 8081,
+started and later stopped by the skill when it wasn't running) and any miss is reported as "unverified (reason)", never
+as a pass. Unlike NestJS/Next.js, whose callers take `.integration-test.lock`, React Native `e2e` acquires and
+releases that lock itself unless `lock: held` is passed.
 
 An `e2e` selector on any other project is reported as unsupported and the skill stops. A failure caused by a missing
 database, Docker/Testcontainers daemon, Playwright browsers, or a failed `next build` is reported as an environment
@@ -140,7 +169,7 @@ uses Testcontainers.
 * A selector that matched no files is reported plainly as "matched no test files", distinct from a genuinely
   clean 0-failure run; a name pattern that matched no individual tests is reported plainly as "0 of N tests
   matched the filter", distinct from "all passed".
-* For NestJS and Next.js, the report states which suite ran (unit or e2e), so a green unit run is never read as e2e
+* For NestJS, Next.js and React Native, the report states which suite ran (unit or e2e), so a green unit run is never read as e2e
   coverage. Playwright runs are parsed from its own JSON reporter shape (`stats` and nested `suites[].specs[]`).
 * No source or test code is ever modified.
 
@@ -149,12 +178,13 @@ uses Testcontainers.
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-typescript-test\n(optional selector)"] --> B["Read package.json / angular.json\nto detect runner + package manager"]
+    A["Start /iru-typescript-test\n(optional selector, lock / configuration lines)"] --> A0["Step 0: parse selector and\nkey: value lines"]
+    A0 --> B["Read package.json / angular.json\nto detect runner + package manager"]
     B --> C{Runner detected?}
     C -- no --> D["Stop: report\n&quot;no test runner wired&quot;"]
     C -- yes, ng test with\nrunner=karma --> E["Stop: report Karma\nnot supported by this skill"]
-    C -- yes --> C2{"NestJS or Next.js\nwith e2e keyword?"}
-    C2 -- "e2e, env missing\n(Docker / browsers / build)" --> C3["Report e2e not run:\nenvironment failure"]
+    C -- yes --> C2{"NestJS, Next.js or React Native\nwith e2e keyword?"}
+    C2 -- "e2e, env missing\n(Docker / browsers / build /\ndevice / Metro / lock)" --> C3["Report e2e not run:\nenvironment failure / unverified"]
     C2 -- "e2e, ready" --> F
     C2 -- "no" --> F{Selector given?}
     F -- no --> G["Full-suite command\n(vitest run / jest / ng test --watch=false)"]
@@ -188,6 +218,7 @@ output, it does not call any other skill in this catalog.
   via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.4, 3.6 and 3.9, unit tests, full unit suite and e2e run, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.3, 3.5 and 3.8, unit suites and Playwright via the e2e selector, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Steps 3.3 and 3.5, scoped and full Jest unit runs, and Step 3.10, the Maestro/Detox `e2e` selector with `lock: held` (the caller already owns the lock), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

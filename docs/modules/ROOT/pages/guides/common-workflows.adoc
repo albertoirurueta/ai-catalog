@@ -76,7 +76,7 @@ a|
 a|
 * Captures a project-wide code-quality baseline per plan key (`iru-java-code-quality`, `iru-kotlin-code-quality`,
   `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-php-code-quality`, `iru-python-code-quality`,
-  `iru-android-code-quality`,
+  `iru-android-code-quality`, `iru-kmp-code-quality`,
   `iru-swift-code-quality`, …) and a security baseline (`iru-check-security`) before making any change
 * Works through `implementation_plan.md` one task group at a time, dispatching each to
   xref:skills/iru-code-one-task-group.adoc[`iru-code-one-task-group`], which resolves each task's language and delegates
@@ -93,7 +93,10 @@ a|
   xref:skills/iru-fastapi-code-one-task-group.adoc[`iru-fastapi-code-one-task-group`],
   xref:skills/iru-django-code-one-task-group.adoc[`iru-django-code-one-task-group`],
   xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
-  xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`], or (for database-tagged tasks)
+  xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`],
+  xref:skills/iru-kmp-code-one-task-group.adoc[`iru-kmp-code-one-task-group`] (Kotlin Multiplatform),
+  xref:skills/iru-react-native-code-one-task-group.adoc[`iru-react-native-code-one-task-group`] (React Native, Expo
+  or Metro), or (for database-tagged tasks)
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`] (or implements it directly if
   no matching skill applies), checking off boxes as it goes
 * Each task group's tasks are implemented in parallel when the plan allows it (database task groups are always
@@ -181,7 +184,7 @@ application, WordPress plugin or block theme, PrestaShop module), Python (FastAP
 cross-platform mobile app); the last round's escape hatch is "None of these", which ends the run with a plain "no
 orchestrator for this stack" report. An option that bundles several types gets one short follow-up right away —
 web app → React / Next.js / Angular, WordPress → plugin / block theme, Android → library / app, Apple → Swift
-library / Apple app, cross-platform → React Native / Ionic — while Spring Boot and Quarkus get none here: their
+library / Apple app, cross-platform → React Native / Kotlin Multiplatform / Ionic — while Spring Boot and Quarkus get none here: their
 language (Java or Kotlin), build tool (Maven or Gradle), Quarkus layout, and Hilla frontend are asked by their own
 orchestrators. .NET is recognised by `iru-explore` but never offered here, because the catalog has no
 .NET bootstrap orchestrator. Once the type is known, it announces that it is setting the repository up **from
@@ -191,7 +194,9 @@ otherwise asked); `ci` — whether to generate GitHub Actions workflows at all; 
 receives CI analysis and coverage reports (+ its organization/project-key/host details); `ci-tests` — `unit` only or
 the `full` suite (integration / instrumentation / e2e); `pages` — whether docs are deployed to GitHub Pages; and
 `publish` (libraries) or `distribution` (apps) — plus the flavor-specific ones the chosen type needs (`platforms` for Swift/Apple,
-`framework` for Ionic, `native-builds` for React Native). License and developer identity are never asked by the
+`framework` for Ionic, `toolchain` (`expo` or `metro`) and — for Expo only — `native-builds` for React Native).
+Kotlin Multiplatform's UI approach (`ui: compose` for Compose Multiplatform shared UI, `ui: native` for Jetpack
+Compose + SwiftUI over shared logic) is asked by its own orchestrator. License and developer identity are never asked by the
 front door; each stack orchestrator asks its own.
 
 Visibility matters because the CI choices cost differently (per GitHub's current pricing — double-check your plan):
@@ -271,6 +276,13 @@ because the stack is already known:
 * **Android** — `/iru-setup-android-repository` with `args: flavor: library` (a `lib/` module plus a Compose
   `app/` sample, following the Android reference-repository conventions) or `flavor: app` (a single `app/`
   module).
+* **Kotlin Multiplatform** — `/iru-setup-kmp-repository` (scaffold via `iru-setup-kmp-app`): a `shared/` KMP module
+  (Android + iOS targets), an `androidApp/` host and an XcodeGen-generated SwiftUI `iosApp/`, with `ui: compose` or
+  `ui: native`, detekt/ktlint/Android Lint/SwiftLint, Kover coverage on the JVM/Android side, Dokka, and CI that
+  splits Linux (shared + Android) from macOS (iOS) jobs.
+* **React Native** — `/iru-setup-typescript-repository` with `args: flavor: react-native` and `toolchain: expo` (Expo
+  framework: Expo Router, EAS or local prebuild builds) or `toolchain: metro` (bare React Native CLI: committed
+  `android/`/`ios/` projects, CocoaPods, Gradle/Xcode CI jobs and store release).
 * **Swift/Apple** — `/iru-setup-swift-repository` with `args: flavor: library` for a SwiftPM package, or
   `flavor: app` for an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS app (add `platforms` to scope the
   targets when `app`).
@@ -291,8 +303,9 @@ into a final, tagged release: it must be run from `develop` (this catalog follow
 if it isn't. It is not Maven-only — the version-bump step itself is delegated to whichever
 `iru-<key>-bump-version` skill (xref:guides/extending-the-catalog.adoc#_release_generation_for_other_ecosystems[]
 covers the registry) matches the project's detected ecosystem (`java` — Java or Kotlin, Maven or Gradle —,
-`typescript`, `android`, `swift`, `php`, `python` today), so the same `/iru-release` flow applies whether the version lives in
-`pom.xml`, a Gradle build or `gradle.properties`, `package.json`, a Gradle version catalog, a Swift package
+`typescript`, `react-native`, `android`, `kmp`, `swift`, `php`, `python` today), so the same `/iru-release` flow applies whether the version lives in
+`pom.xml`, a Gradle build or `gradle.properties`, `package.json` (plus a React Native app's `app.json` or native
+`versionName`/`MARKETING_VERSION`, or a KMP app's `iosApp` xcconfig), a Gradle version catalog, a Swift package
 manifest, or a PHP project's own version location (Laravel `config/app.php`, a WordPress plugin/theme header, a
 PrestaShop module class), or a Python project's `pyproject.toml` (PEP 440 `.devN` pre-releases).
 

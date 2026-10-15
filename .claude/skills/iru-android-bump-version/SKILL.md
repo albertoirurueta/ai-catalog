@@ -28,6 +28,8 @@ convention (`iru-release`) for the Java ecosystem.
 
 ## Step 0 — Resolve inputs
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-bump-version` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 Parse the invocation:
 
 - The positional argument is `<new-version>` — the exact target version string (e.g. `1.2.0`, `1.2.0-SNAPSHOT`).

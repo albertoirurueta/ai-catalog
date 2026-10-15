@@ -1,6 +1,6 @@
 = Setup TypeScript GitHub Workflows
-:description: Creates or updates build, release, sync and security GitHub Actions workflows plus Dependabot for seven npm/TypeScript flavors, honouring per-file choices.
-:keywords: iru-setup-typescript-github-workflows, claude code skill, npm, typescript, github actions, nestjs, nextjs, playwright, codeql, dependabot, ci/cd
+:description: Creates or updates build, release, sync and security GitHub Actions workflows plus Dependabot for seven npm/TypeScript flavors incl. Expo and Metro React Native, per-file choices.
+:keywords: iru-setup-typescript-github-workflows, claude code skill, npm, typescript, github actions, react native, metro, maestro, codeql, dependabot, ci/cd
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -12,7 +12,7 @@ repository's CI/CD release pipeline, for whichever of seven flavors the reposito
 
 `iru-setup-typescript-github-workflows` wires up the house pipeline for an npm/TypeScript repository of one of
 seven flavors: `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI
-web app), `react-native` (an Expo app), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service),
+web app), `react-native` (an Expo app, or a bare React Native Community CLI app on the Metro toolchain), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service),
 or `nextjs` (a Next.js web app with `output` `server` or `static`). `build.yml` runs install, lint, format check,
 typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), e2e
 per `ci-tests` (Playwright for the web flavors and Next.js; for NestJS the `test:e2e` suite with Testcontainers
@@ -26,12 +26,21 @@ job for `library`; a web-bundle deploy to Pages for `react`/`angular` (`dist/` f
 for Angular) and for `nextjs` with `output: static` (the `out/` export, with `basePath` taken from
 `actions/configure-pages`); a multi-stage `Dockerfile` build pushed to GHCR for `nestjs` and `nextjs` `server`
 with `distribution: internal` (no `release.yml` at all with `distribution: none`); with `pages: no` the web
-flavors only build and upload the bundle as an artifact. EAS or local Gradle/Xcode builds for `react-native`;
-Android/iOS store or internal artifacts for `ionic`. `sync.yml` plus its companion
+flavors only build and upload the bundle as an artifact. For `react-native` with `toolchain: expo`, EAS or local
+Gradle/Xcode builds per `native-builds`; with `toolchain: metro`, `build.yml` gains native jobs on top of the shared
+`build` job — an `android` job on Linux (JDK 17, Gradle cache, `./gradlew assembleDebug testDebugUnitTest lint`), a
+cost-gated macOS `ios` job (`bundle install`, cached `pod install`, unsigned simulator `xcodebuild`) and, only with
+`ci-tests: full`, an `e2e-android` job running Maestro flows on a `reactivecircus/android-emulator-runner` emulator —
+and `release.yml` signs an AAB with the upload keystore and uploads it to Google Play (internal track for
+`distribution: internal`, production for `store`) and archives/exports/uploads the iOS app to TestFlight with an App
+Store Connect API key (with `distribution: none`, only unsigned/debug-signed proof builds). Android/iOS store or
+internal artifacts for `ionic`. `sync.yml` plus its companion
 `.github/scripts/sync_versions.py` (library/react/angular/nestjs/nextjs) merge the stable branch back into the
 integration branch and bump `package.json` to the next `x.y.(z+1)-dev.0` prerelease. `security.yml` runs the
-shared Dependabot (`npm`, plus `docker` when a `Dockerfile` exists) / dependency-review / CodeQL
-(`javascript-typescript`, plus `actions` for nestjs/nextjs) / OSV-Scanner / gitleaks block. The skill ships generic
+shared Dependabot (`npm`, plus `docker` when a `Dockerfile` exists, and `gradle` for `/android` plus `bundler` for the
+Gemfile on react-native/metro) / dependency-review / CodeQL (`javascript-typescript`, plus `actions` for
+nestjs/nextjs/react-native-metro, `java-kotlin` with a manual Gradle compile and, on public repositories only,
+`swift` with a manual simulator build for react-native/metro) / OSV-Scanner / gitleaks block. The skill ships generic
 example templates embedded in the skill file, resolves versions at run time against the npm registry and GitHub
 Releases API, and resolves every other placeholder from a survey of the target repository rather than guessing.
 
@@ -40,7 +49,9 @@ workflow file that already exists it warns and asks **Update** (merge, preservin
 diff shown), **Keep as is** (mismatches with this run's choices are listed in the report), or **Replace**
 (regenerate from the template, losing customizations), plus **Stop**; `on-existing` applies one answer to every
 file, and `mode: existing` alone does not skip the question. For private or internal repositories it states the
-cost context (included Actions minutes per plan, macOS runner minutes about 10x Linux for the iOS release job,
+cost context (included Actions minutes per plan, macOS runner minutes about 10x Linux for the iOS release job and, for
+Metro, the `build.yml` iOS simulator job (limited to stable-branch pushes and manual runs on private repositories
+unless `ci-tests` is `full`),
 SonarCloud pricing, Pages availability) before asking about `sonar`, `ci-tests`, and `pages`.
 
 == Purpose group
@@ -70,10 +81,12 @@ Optionally followed by `args` (`key: value` lines).
 (`none`/`internal`/`store` for react-native/ionic; `none`/`internal` for nestjs and nextjs `server`, where
 `internal` is a GHCR image), `output` (`server`/`static`, nextjs only), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/
 `drizzle`, nestjs only; `prisma` adds `prisma generate`), `e2e` (`playwright`/`none`, nextjs only), `sonar`
-(`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `native-builds`
-(`eas`/`local`, react-native only), `framework` (`angular`/`react`, ionic only), `docs-tool`
+(`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `toolchain`
+(`expo`/`metro`, react-native only; detected from `package.json` and the committed native projects when absent, asked
+only if neither resolves it), `native-builds` (`eas`/`local`, react-native with `toolchain: expo` only — never sent
+for metro), `framework` (`angular`/`react`, ionic only), `docs-tool`
 (`typedoc`/`compodoc`/`storybook`/`none`), `visibility` (`public`/`private`/`internal`; detected via `gh repo view`
-or asked when absent; `internal` is treated like `private`), `ci-tests` (`unit`/`full`; `unit` omits the e2e steps),
+or asked when absent; `internal` is treated like `private`), `ci-tests` (`unit`/`full`; `unit` omits the e2e steps — for metro, the Maestro `e2e-android` job — and keeps the macOS `ios` job gated on private repositories),
 `pages` (`yes`/`no`; defaults to `yes` for public repositories, asked for private/internal with `no` recommended;
 `no` swaps every Pages deploy for artifact uploads), `on-existing` (`ask`/`keep`/`update`/`replace`),
 `mode` (`new`/`existing`, informational only), and `security-dependency-review`/`security-codeql`/`security-osv`/
@@ -93,14 +106,16 @@ and the repository, asking the user for anything that can't be inferred. Unresol
 * `.github/workflows/sync.yml` and `.github/scripts/sync_versions.py` — written together, only for the
   `library`/`react`/`angular`/`nestjs`/`nextjs` flavors; never generated for `react-native`/`ionic`.
 * `.github/workflows/security.yml` and `.github/dependabot.yml` — always created or updated, independent of
-  `flavor`/`sonar`/`publish`/`distribution`.
+  `flavor`/`sonar`/`publish`/`distribution`. For react-native with `toolchain: metro`, CodeQL becomes a
+  `javascript-typescript` / `actions` / `java-kotlin` (plus `swift` on public repositories only) matrix and Dependabot
+  adds `gradle` (`/android`) and `bundler` entries.
 * Supporting files created if missing: `sonar-project.properties` (when `sonar` isn't `none`, laid out per flavor),
   and `.gitignore` entries for `dist/`, `coverage/`, `docs/api/`, `docs/build/`, `storybook-static/`.
 * A report stating from-scratch vs update, the per-file action (created / updated / replaced / kept as is) with every
   mismatch listed for kept files, the `visibility` used and its cost context, and what `ci-tests`, `pages`,
   `distribution`/`output`, `orm`, `sonar`, `docs-tool`, and the security block did.
 * A report of required repository secrets and repository settings that must be enabled, plus any open gaps (missing
-  Playwright config, missing `ExportOptions.plist`, missing `Dockerfile`, `next.config` not reading
+  Playwright config, missing `ExportOptions.plist`, missing `Dockerfile`, missing `Gemfile.lock`/`ios/Podfile.lock` on metro, `next.config` not reading
   `PAGES_BASE_PATH`, README/Antora wording that didn't match `sync_versions.py`'s default regexes), ending with a
   warning to review the workflows before relying on them.
 
@@ -110,11 +125,11 @@ and the repository, asking the user for anything that can't be inferred. Unresol
 |===
 |File |`library` |`react` |`angular` |`react-native` |`ionic` |`nestjs` |`nextjs`
 
-|`build.yml` |Yes |Yes |Yes |Yes |Yes |Yes (own template) |Yes (own template)
-|`release.yml` |Yes (publish job + optional Changesets version-PR; none with `publish: no`) |Yes (Pages deploy, or artifact only with `pages: no`) |Yes (Pages deploy, or artifact only with `pages: no`) |Yes (EAS or local Gradle/Xcode) |Yes (Android/iOS store or internal artifacts) |GHCR image with `distribution: internal`, else none |`static`: Pages deploy; `server`: GHCR image or none
+|`build.yml` |Yes |Yes |Yes |Yes (`metro`: plus `android`, `ios`, optional `e2e-android` jobs) |Yes |Yes (own template) |Yes (own template)
+|`release.yml` |Yes (publish job + optional Changesets version-PR; none with `publish: no`) |Yes (Pages deploy, or artifact only with `pages: no`) |Yes (Pages deploy, or artifact only with `pages: no`) |Yes (`expo`: EAS or local Gradle/Xcode; `metro`: signed AAB to Google Play plus TestFlight upload, or unsigned proof builds with `distribution: none`) |Yes (Android/iOS store or internal artifacts) |GHCR image with `distribution: internal`, else none |`static`: Pages deploy; `server`: GHCR image or none
 |`sync.yml` + `sync_versions.py` |Yes |Yes |Yes |No |No |Yes |Yes
-|`security.yml` |Yes |Yes |Yes |Yes |Yes |Yes (CodeQL also scans `actions`) |Yes (CodeQL also scans `actions`)
-|`.github/dependabot.yml` |Yes |Yes |Yes |Yes |Yes |Yes (plus `docker` with a `Dockerfile`) |Yes (plus `docker` with a `Dockerfile`)
+|`security.yml` |Yes |Yes |Yes |Yes (`metro`: CodeQL also scans `actions`, `java-kotlin`, and `swift` on public repos) |Yes |Yes (CodeQL also scans `actions`) |Yes (CodeQL also scans `actions`)
+|`.github/dependabot.yml` |Yes |Yes |Yes |Yes (`metro`: plus `gradle` and `bundler`) |Yes |Yes (plus `docker` with a `Dockerfile`) |Yes (plus `docker` with a `Dockerfile`)
 |===
 
 == Execution flow
@@ -126,7 +141,7 @@ flowchart TD
     A2 -- missing --> A3{"Stop or continue anyway?\n(AskUserQuestion)"}
     A3 -- stop --> Z1["End - no changes"]
     A3 -- continue, gaps flagged --> B
-    A2 -- exists --> B["Step 1: Parse args, then survey repo\n(flavor, visibility, ci-tests, pages,\npackage manager, node version, open-source,\npublish/distribution/output/orm/e2e, sonar,\ndocs-tool, branches, npm scripts, Playwright)"]
+    A2 -- exists --> B["Step 1: Parse args, then survey repo\n(flavor, toolchain, visibility, ci-tests, pages,\npackage manager, node version, open-source,\npublish/distribution/output/orm/e2e, sonar,\ndocs-tool, branches, npm scripts, Playwright)"]
     B --> C{"Step 2: Do build.yml/release.yml/sync.yml/\nsecurity.yml/dependabot.yml already exist?"}
     C -- none exist --> C1["Announce: creating\nfrom scratch"]
     C1 --> E
@@ -136,8 +151,8 @@ flowchart TD
     D -- ask --> D3["AskUserQuestion per file:\nUpdate / Keep as is / Replace / Stop"]
     D3 -- stop --> Z2["Report which files exist;\nno changes made"]
     D3 -- choices made --> E
-    D2 --> E["Step 3-4: Fill reference templates for the\nresolved flavor, gated by sonar, docs-tool,\nci-tests, pages, distribution and output"]
-    E --> F["Step 5: Create missing supporting files\n(sonar-project.properties, .gitignore entries;\nflag missing Dockerfile, ExportOptions.plist)"]
+    D2 --> E["Step 3-4: Fill reference templates for the\nresolved flavor/toolchain, gated by sonar, docs-tool,\nci-tests, pages, distribution and output"]
+    E --> F["Step 5: Create missing supporting files\n(sonar-project.properties, .gitignore entries;\nflag missing Dockerfile, ExportOptions.plist,\nGemfile.lock/Podfile.lock on metro)"]
     F --> G["Step 6: Write or update build.yml, release.yml,\nsecurity.yml, dependabot.yml\n+ sync.yml/sync_versions.py for\nlibrary/react/angular/nestjs/nextjs\n(never touching files kept as is)"]
     G --> H["Step 7: List required repository\nsecrets and settings"]
     H --> I["Step 8: Report per-file actions, mismatches\nfor kept files, what was wired vs omitted,\nand warn to review before relying on the pipeline"]
@@ -172,20 +187,23 @@ Reported in Step 7 — only the rows that apply to what was actually generated (
 |`sonar` is `cloud` or `self-hosted`
 
 |`EXPO_TOKEN`
-|`flavor: react-native`, `native-builds: eas`
+|`flavor: react-native`, `toolchain: expo`, `native-builds: eas`
 
 |`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
-|`flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none`
+|`flavor: react-native` (`toolchain: expo` with `native-builds: local`, or `toolchain: metro` — there the Play App Signing upload keystore) or `flavor: ionic`, and `distribution` isn't `none`
 
 |`APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64`
-|`flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none`
+|`flavor: react-native` (`toolchain: expo` with `native-builds: local`, or `toolchain: metro`) or `flavor: ionic`, and `distribution` isn't `none`
 
 |`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
-|`flavor: ionic`, `distribution: store`
+|`flavor: ionic` with `distribution: store`, or `flavor: react-native` with `toolchain: metro` and `distribution` isn't `none` (internal or production track)
 
 |`FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON`
-|`flavor: ionic` (or `react-native`), `distribution: internal`, and the user opted into Firebase App
+|`flavor: ionic` (or `react-native` with `toolchain: expo`), `distribution: internal`, and the user opted into Firebase App
 Distribution over a plain artifact upload
+
+|_(none for CI)_
+|`flavor: react-native`, `toolchain: metro` — the `build.yml` `android`/`ios`/`e2e-android` jobs and CodeQL legs need no secret (unsigned simulator build, debug-keystore e2e APK)
 
 |_(none)_
 |`flavor: nestjs`/`nextjs` — the GHCR push uses `GITHUB_TOKEN` (`packages: write`), the static-export Pages deploy

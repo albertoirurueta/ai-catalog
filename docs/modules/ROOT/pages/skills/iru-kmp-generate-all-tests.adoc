@@ -1,0 +1,130 @@
+= KMP Generate All Tests
+:description: Brings a Kotlin Multiplatform module's JVM-measured test coverage to 80% per class, writing kotlin.test tests in the matching source set until it clears.
+:keywords: iru-kmp-generate-all-tests, claude code skill, kotlin multiplatform, kmp, kotlin.test, turbine, kover, commontest, generate unit tests, coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Bring one Kotlin Multiplatform module's unit test coverage up to a minimum bar — 80% line coverage, measured on the
+JVM/Android host runs — in one pass: find every class with no test at all or with measured coverage below the bar,
+then write or extend tests for each until it clears it. Kotlin Multiplatform/Gradle only; it never runs against, or
+falls back to, another stack.
+
+== Purpose
+
+`iru-kmp-generate-all-tests` answers "bring this whole module's test coverage up to a bar" rather than "write tests
+for this one class/task", which `iru-kmp-code-one-task` and the `iru-code` pipeline already handle per task. It
+picks the module (default `shared`, or `composeApp` in the wizard layout, or `androidApp` when scoped to it), uses
+the `Explore` agent to inventory every production class with its source set and the module's existing test
+conventions, and delegates to `iru-kmp-coverage` (through `iru-gate-runner`) for the exact, measured percentage per
+class.
+
+Each test goes in the source set matching the code under test — `commonTest` for `commonMain` (running on every
+target), the Android host-test set for `androidMain`, `iosTest` for `iosMain`, `androidApp/src/test` for the app —
+defaulting to `kotlin.test` + `runTest` + Turbine (when present) + hand-written fakes (MockK never in `commonTest`;
+Mokkery only if already applied). Kotlin/Native has no coverage tool, so `iosMain`/`appleMain`/`nativeMain` classes
+are "not measurable", get behavior tests only when invoked with `ios: yes`, and never count against the bar. It adds
+only test code; production code is touched only when a class is genuinely untestable as written, and that is
+reported explicitly. It stops immediately if the repository is not a Kotlin Multiplatform Gradle project, or has no
+JVM test target to measure.
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-generate-all-tests [scope]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|One module (`:shared`, `androidApp`) or a comma-separated list of classes within it; each class's module and
+source set are resolved from its file path. Also accepted as a `scope:` line in `args`.
+|`shared` (or `composeApp` when it is the only KMP module); asked via `AskUserQuestion` when several KMP modules
+exist and none is named.
+
+|`ios`
+|No
+|`yes` or `no`, passed as an `ios:` line in `args`. With `yes`, `iosMain` classes lacking an `iosTest` test get
+behavior-only tests, and the final suite run includes the iOS stage.
+|`no`
+|===
+
+== Outputs
+
+* New or extended test files in the source set matching each class: `commonTest`, the Android host-test set
+  (`androidHostTest` or `androidUnitTest`), `iosTest` (only with `ios: yes`), or `androidApp/src/test`.
+* Occasionally, a minimal testability change to a class under test (e.g. extracting a common interface and injecting
+  it) — only when a class is genuinely untestable as written, and always called out explicitly.
+* A report: module scoped, candidate count and classes excluded as having no testable logic, conventions followed,
+  how many were already at or above 80% and how many iOS-only classes were not measurable, before/after line
+  coverage per class touched, any class still below 80% after two extension attempts (with uncovered lines and
+  likely reason), and the full-suite result per target including any unverified iOS stage.
+* No license headers, KDoc, code-quality fixes, on-device Android tests, or `iosApp` XCTest tests unless explicitly
+  requested.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-kmp-generate-all-tests] --> B["Step 0: parse scope and ios args"]
+    B --> C{"KMP module and\nGradle wrapper found?"}
+    C -- no --> C1[Stop: Kotlin Multiplatform\nGradle only]
+    C -- yes --> D["Step 1: pick module (ask if several);\nlist Gradle tasks; note host capability"]
+    D --> D1{"JVM test target\nexists?"}
+    D1 -- no --> D2[Stop: coverage needs a host-test\nsource set]
+    D1 -- yes --> E["Step 2: Explore agent inventories every class,\nits source set, and the test convention"]
+    E --> F["Step 3: gate-runner runs kmp-coverage once\nover every candidate (batched if large)"]
+    F --> G["Step 4: classify - missing tests / below 80% /\nsufficient / not measurable (iOS)"]
+    G --> H["Step 5: one agent per class (parallel batches)\nwrites or extends tests in the matching source set;\ncompile-check touched test source sets"]
+    H --> I["Step 6: re-measure via kmp-coverage"]
+    I --> J{"Still below 80%?"}
+    J -- yes, attempts left --> H
+    J -- yes, 2 attempts used --> K[Report as residual gap]
+    J -- no --> L["Step 7: gate-runner runs kmp-test full suite\n(android, plus ios when in scope)"]
+    K --> L
+    L --> M{"Failures caused\nby this run?"}
+    M -- yes --> N[Fix regression; re-run]
+    N --> L
+    M -- no --> O["Step 8: final report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-kmp-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated
+  through the `iru-gate-runner` agent so the Kover report never lands directly in this conversation and the JVM
+  suite runs once per batch rather than once per class.
+* xref:skills/iru-kmp-test.adoc[] — Step 7, once, to confirm the full suite still passes (Android, and iOS when
+  `ios: yes` or a `commonTest` file changed on a macOS host with Xcode); delegated through `iru-gate-runner`, which
+  lets the skill take `.integration-test.lock` itself for any iOS stage.
+
+=== Invoked by
+
+None from inside this catalog — it is a top-level entry point invoked directly by a person who wants coverage
+brought up across one KMP module in one pass, independent of the `/iru-code`/`/iru-issue` pipeline (which handles
+per-task test-writing via `iru-kmp-code-one-task`). `iru-android-generate-all-tests` only points to it in prose when
+it detects a Kotlin Multiplatform project, and `iru-kmp-coverage` mentions it as a possible consumer of its report.
+
+=== Related agents
+
+* xref:agents/overview.adoc[`Explore`] — Step 2, to build the class/test-file inventory across the module without
+  reading every source file directly.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-kmp-coverage`/`iru-kmp-test`
+  and report back only a compact summary instead of a raw coverage/test log.
+* xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per class needing
+  new or extended tests, dispatched concurrently since each only touches its own test file.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-generate-all-tests/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

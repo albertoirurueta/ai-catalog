@@ -1,0 +1,130 @@
+= KMP Bump Version
+:description: Sets a Kotlin Multiplatform app's version to an exact value across gradle.properties and the iOS Config.xcconfig, never writing SNAPSHOT values to iOS.
+:keywords: iru-kmp-bump-version, claude code skill, kotlin multiplatform, kmp, version_name, version_code, marketing_version, xcconfig, bump version
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a Kotlin Multiplatform (Android + iOS) app's version to an exact literal value in every file that must agree with
+it: the shared Gradle side (`gradle.properties`' `VERSION_NAME`/`VERSION_CODE`, read by the Android app) and the iOS
+host app's Xcode build settings (`MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`). This skill never computes a version
+itself; it applies exactly the string it is given, after validating its shape.
+
+== Purpose
+
+`iru-kmp-bump-version` is the two-platform counterpart of `iru-android-bump-version` and `iru-swift-bump-version`.
+`VERSION_NAME` always becomes the new version; for a release value only (no `-SNAPSHOT` suffix), `VERSION_CODE` is
+incremented by one and the iOS `MARKETING_VERSION` is set to the release with `CURRENT_PROJECT_VERSION` set to the
+new `VERSION_CODE`, so the Android and iOS build numbers stay identical. A `-SNAPSHOT` (or any pre-release) value is
+never written to an iOS file, because App Store Connect rejects it. The skill detects the layout at runtime and falls
+back to `libs.versions.toml` entries, literals in the Android app module's build script, XcodeGen `project.yml`, a
+literal `Info.plist`, or a committed `project.pbxproj` when the `iru-setup-kmp-app` layout isn't present. Step 5 of
+the skill is the authoritative statement of the KMP pre-release convention for callers such as `iru-release`.
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|The exact target version (e.g. `1.2.0`, `1.3.0-SNAPSHOT`). Validated against the `X.Y.Z`/`X.Y.Z-SNAPSHOT`
+convention; a plausible but different scheme is flagged and confirmed, not hard-stopped. Empty or
+whitespace-containing values are rejected up front.
+|None -- the skill asks for it if omitted.
+
+|`sync-files` (args)
+|No
+|Whether to also update README/Antora version mentions (`README.md`, `docs/antora.yml`'s `version:` for releases
+only, Antora pages with a literal version).
+|Ask -- once, after Step 2 confirms such mentions exist.
+
+|`next-version` (args)
+|No
+|The upcoming pre-release version. Only meaningful with `sync-files: yes`: "Latest release" markers show
+`new-version`, development/"Latest snapshot" markers show this value, so a release never regresses a development
+marker. `iru-release` passes it.
+|None -- a development marker is then updated only if `new-version` is itself a snapshot; otherwise it is left
+untouched and the report warns.
+
+|`dry-run` (args)
+|No
+|When `yes`, compose and print every diff, then stop without writing anything or running the sanity check.
+|`no`
+|===
+
+== Outputs
+
+* `gradle.properties`: `VERSION_NAME` set to the new version; `VERSION_CODE` incremented by exactly 1 only for a
+  release (unchanged for a snapshot). Fallbacks: `gradle/libs.versions.toml` version entries, or `versionName`/
+  `versionCode` literals in the Android app module's build script.
+* iOS, release values only: `iosApp/Configuration/Config.xcconfig` `MARKETING_VERSION` set to the release and
+  `CURRENT_PROJECT_VERSION` set to the new `VERSION_CODE`. Fallbacks: XcodeGen `project.yml`, a literal
+  `Info.plist`, or a committed `project.pbxproj`. For a snapshot the iOS side is left untouched and the report says so.
+* Optionally, README/Antora version mentions mapped by release vs. development marker, if `sync-files` was accepted.
+* A sanity check (`./gradlew -q help`, a `properties` read-back, and an `xcodegen`/`xcodebuild` round-trip when
+  available), skipped on a dry run.
+* A report of old and new values for every field and file, the fallback used (if any), and a warning to review the
+  diff before committing.
+* No commit or tag is created.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kmp-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, next-version, dry-run]"] --> B["Step 0: resolve inputs\nask for new-version if missing"]
+    B --> C["Step 1: validate X.Y.Z / X.Y.Z-SNAPSHOT\nwarn and confirm if different"]
+    C --> D["Step 2: survey Gradle-side and iOS-side\nversion sources"]
+    D --> E{Gradle-side source found?}
+    E -- no --> F["Hard stop: ask for the\ncorrect location"]
+    E -- yes --> G["Step 3: rewrite Gradle side\ngradle.properties, else libs.versions.toml,\nelse build script literals"]
+    G --> H{"Release value?\n(no -SNAPSHOT)"}
+    H -- no --> I["Step 4 skipped: iOS left untouched\nVERSION_CODE unchanged"]
+    H -- yes --> J["VERSION_CODE + 1\nStep 4: rewrite iOS side\nxcconfig, else project.yml / Info.plist / pbxproj\nCURRENT_PROJECT_VERSION = new VERSION_CODE"]
+    I --> K{dry-run: yes?}
+    J --> K
+    K -- yes --> L["Step 7: print diffs only\nskip sanity check"]
+    K -- no --> M["Step 6: sanity check\n./gradlew -q help, properties read-back,\nxcodegen / xcodebuild round-trip"]
+    M --> N{Build scripts still configure?}
+    N -- no --> O["Stop and show the error"]
+    N -- yes --> P
+    L --> P{sync-files accepted?}
+    P -- yes --> Q["Step 8: update README / antora.yml /\nAntora pages with marker mapping"]
+    P -- no --> R
+    Q --> R["Step 9: report old/new values,\nfiles changed, review-before-commit warning"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-kmp-bump-version` is a leaf skill; it only runs shell/`python3` file rewrites and sanity checks
+(`./gradlew`, optionally `xcodegen`/`xcodebuild`). Its Step 4b reuses the `project.yml` rewrite snippet from
+xref:skills/iru-swift-bump-version.adoc[] by reference, but does not invoke that skill.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] -- Step 6, version bump for `kmp-app` projects (called once for the release value
+  and once for the next development value).
+* xref:skills/iru-java-bump-version.adoc[] -- redirects here when the Kotlin Multiplatform plugin is detected, since
+  this skill owns the KMP app's `VERSION_NAME`/`VERSION_CODE` and the iOS `MARKETING_VERSION`.
+
+=== Related agents
+
+None -- this skill runs inline; it is not invoked from inside a custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-bump-version/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

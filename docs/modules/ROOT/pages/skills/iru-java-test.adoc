@@ -17,6 +17,8 @@ libraries, Spring Boot (Java or Kotlin), and Quarkus (Java or Kotlin). It exists
 tests doesn't require hand-composing `-Dtest`/`-Dgroups`/`--tests` syntax each time, and so that a calling skill (or a
 human) gets back a short report instead of a full raw build log.
 
+When the Kotlin Multiplatform plugin is applied anywhere in the build, the skill stops and points to xref:skills/iru-kmp-test.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-java[Java Development Tooling]
@@ -176,6 +178,7 @@ explicit request. `./gradlew build`/`check` and `mvn verify` are never used for 
 ....
 flowchart TD
     A["Start /iru-java-test\n(optional selector)"] --> B{"Build tool?"}
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-test"]
     B -- "pom.xml" --> C["Maven (mvn / ./mvnw)"]
     B -- "build.gradle(.kts)" --> D["Gradle (./gradlew preferred)"]
     B -- "Android plugin" --> E["Stop: use iru-android-test"]
@@ -204,6 +207,8 @@ flowchart TD
 
 None — `iru-java-test` is a leaf skill; it only runs Maven/Gradle commands and reports on their output, it does not
 call any other skill in this catalog (it points Android projects at `iru-android-test` but does not invoke it).
+
+It also points Kotlin Multiplatform projects at xref:skills/iru-kmp-test.adoc[] but does not invoke it.
 
 === Invoked by
 

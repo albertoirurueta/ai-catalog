@@ -18,6 +18,8 @@ to hand-edit Kotlin DSL build scripts or reason about `versionCode` semantics. B
 validate a free-form version string the way npm's `version` command does, this skill validates with a regex
 instead and rewrites each file with a targeted `python3` substitution.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-bump-version.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -82,6 +84,7 @@ running the Gradle sanity check.
 ....
 flowchart TD
     A["Start /iru-android-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, next-version, dry-run]"] --> B{new-version given\nand not blank/whitespace?}
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-bump-version"]
     B -- no --> C["Ask user for the\ntarget version string"]
     C --> D
     B -- yes --> D["Validate shape against\nX.Y.Z / X.Y.Z-SNAPSHOT regex\n(warn, don't stop, if it doesn't match)"]
@@ -112,6 +115,8 @@ flowchart TD
 
 None — `iru-android-bump-version` is a leaf skill; it only runs shell/`python3` file rewrites and a Gradle sanity
 check, it does not call any other skill in this catalog.
+
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-bump-version.adoc[] (a hand-off, not an invocation).
 
 === Invoked by
 

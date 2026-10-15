@@ -1,7 +1,7 @@
 ---
 name: iru-explore
 description: >-
-  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), Expo/React Native, Ionic/Capacitor, Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
+  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), React Native (Expo vs. bare React Native CLI/Metro toolchain), Ionic/Capacitor, Kotlin Multiplatform (Compose Multiplatform vs. native UI), Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -257,6 +257,18 @@ fallback when manifests are absent or ambiguous:
       reference Android *library* shape — the app is the library's sample/demo, not a second deliverable — so
       record the library as the project type and the sample module as a sub-line, rather than treating them as
       two unrelated modules (see Step 7's `android-library` rule).
+    - **Kotlin Multiplatform**: a `kotlin("multiplatform")` / `org.jetbrains.kotlin.multiplatform` plugin (directly
+      or via a `kotlin-multiplatform`/`kotlinMultiplatform` alias in `gradle/libs.versions.toml`), with
+      `src/commonMain/` (+ `androidMain/`, `iosMain/`) source sets, → a KMP module. An Android target
+      (`androidTarget()`, the `com.android.kotlin.multiplatform.library` plugin, or `com.android.library` in the
+      same module) plus iOS targets (`iosArm64()`/`iosSimulatorArm64()`/`iosX64()`) and an `iosApp/` Xcode (or
+      XcodeGen `project.yml`) host app → a KMP mobile app. Record the UI approach: the Compose Multiplatform plugin
+      (`org.jetbrains.compose` + `org.jetbrains.kotlin.plugin.compose`) with composables in `commonMain` → `compose`
+      (shared UI); shared logic only, with Jetpack Compose/Views in the Android app module and SwiftUI/UIKit in
+      `iosApp/` → `native`. Record the module layout (`shared/` + `androidApp/` + `iosApp/`, or the JetBrains
+      wizard's single `composeApp/` module) and the test/coverage plugins (Kover, detekt, ktlint) on the `Build &
+      layout:` line. A `com.android.application` module that only exists to host the KMP `shared` module is part
+      of the KMP app — never a separate `android-app`, and never `multiple`.
   - `*.csproj`/`*.fsproj`/`*.sln` → C#/.NET (or F#); check for `Microsoft.AspNetCore.*` (ASP.NET Core), `*.Maui`/
     Xamarin (cross-platform mobile), WPF/WinForms project types.
   - `package.json` → JavaScript/TypeScript; check `dependencies`/`devDependencies`:
@@ -265,10 +277,15 @@ fallback when manifests are absent or ambiguous:
       web app.
     - `@vaadin/hilla`, alongside a `src/main/frontend/` directory → the frontend half of a Hilla app (see the
       `pom.xml` bullet above for its Spring Boot backend half).
-    - `expo` and/or `react-native` → Expo / React Native app; corroborated by `app.json`/`app.config.*` (Expo app
-      config), `metro.config.js` (Metro bundler), `eas.json` (Expo Application Services), and/or native `ios/`
-      and `android/` project directories (present in a bare/ejected React Native app, typically absent in a
-      managed Expo app).
+    - `expo` and/or `react-native` → React Native app. Record its **toolchain**: `expo` among the dependencies →
+      `expo` (Expo framework — corroborated by `app.json`/`app.config.*` with an `expo` key, `eas.json`,
+      `expo-router`; committed `ios/`/`android/` directories in an Expo app are `npx expo prebuild`/CNG output
+      and don't change the answer); `react-native` without `expo` → `metro` (bare React Native Community CLI
+      project — corroborated by `metro.config.js`, `@react-native-community/cli*` devDependencies,
+      `index.js` calling `AppRegistry.registerComponent`, and committed native `android/` (Gradle) and `ios/`
+      (`Podfile`, `*.xcworkspace`) projects). Expo also bundles with Metro, so `metro.config.js` alone doesn't
+      decide it — the `expo` dependency does. Also record the navigation library (`expo-router` vs.
+      `@react-navigation/*`) and the e2e tool if any (`.maestro/` flows, a `.detoxrc.js`).
     - `@ionic/angular` or `@ionic/react` → Ionic, with which of the two deps is present telling you the
       underlying framework (Angular vs. React) Ionic is layered on; `@capacitor/core` plus a
       `capacitor.config.*` and/or `ionic.config.json` corroborate it as an Ionic/Capacitor hybrid app rather
@@ -393,13 +410,15 @@ Summarize for the user in plain text (no file output unless asked):
     kotlin-springboot-hilla, java-quarkus, kotlin-quarkus, typescript-library, react-web, angular-web, nestjs,
     nextjs, php-laravel, php-wordpress-plugin, php-wordpress-theme, php-prestashop-module, php-library,
     python-fastapi, python-django, python-library,
-    android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos), react-native-app,
-    ionic-app (angular|react), dotnet, other, unknown>
+    android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos),
+    react-native-app (expo|metro), ionic-app (angular|react), kmp-app (compose|native), dotnet, other, unknown>
   - Build & layout: <JVM backends: e.g. "Gradle (Kotlin DSL, wrapper), hexagonal reactor (domain/, application/,
     infrastructure/, api/)" or "Maven (wrapper), layered single-module"; NestJS: e.g. "ESM, Vitest, TypeORM";
     Next.js: e.g. "Next 16, App Router, cacheComponents: true"; PHP: e.g. "PHP ^8.3, Pest"; Python: e.g. "Python
     >=3.12, uv, pytest, app/ layered, SQLModel async + Alembic" or "Python >=3.12, uv, pytest-django, DRF,
-    config.settings" — omit for other stacks>
+    config.settings"; React Native: e.g. "Expo SDK 57, Expo Router, EAS, Maestro" or "RN 0.8x CLI (Metro), React
+    Navigation, CocoaPods"; KMP: e.g. "Gradle (Kotlin DSL, wrapper), shared/ + androidApp/ + iosApp/ (XcodeGen),
+    Kover, detekt, ktlint" — omit for other stacks>
   - Antora docs: <e.g. docs/ (antora.yml component "my-lib") — or "none found">
   - Repository host: <e.g. GitHub (github.com/org/repo) — or Bitbucket / Azure DevOps / TFS, with base URL — or
     "no remote configured" — or "none — not a git repository">
@@ -445,9 +464,10 @@ Summarize for the user in plain text (no file output unless asked):
   | `swift-library`           | `Package.swift` with a `.library(...)` product                                             |
   | `apple-app`               | `Package.swift` `.executable(...)` product, or an Xcode/XcodeGen/Tuist app target          |
   | `react-native-app`        | `expo`/`react-native` deps (+ `app.json`/`metro.config.js`/`eas.json`, `ios/`+`android/`)   |
+  | `kmp-app`                 | Kotlin Multiplatform plugin with Android + iOS targets (+ `iosApp/`, `commonMain/`)         |
   | `ionic-app`               | `@ionic/angular` or `@ionic/react` (+ `@capacitor/core`, `capacitor.config.*`)              |
   | `dotnet`                  | `*.csproj`/`*.fsproj`/`*.sln` present (library, ASP.NET Core, MAUI/Xamarin, WPF/WinForms)   |
-  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Go, Rust, Ruby, C/C++) |
+  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Go, Rust, Ruby, C/C++, a KMP library with no app) |
   | `unknown`                 | Nothing in Step 5 matched any manifest or source-level signal                              |
 
   - `apple-app` lists its detected target platforms in parentheses, using the platform keys `ios`, `ipados`,
@@ -456,6 +476,11 @@ Summarize for the user in plain text (no file output unless asked):
     detected in Step 5.
   - `ionic-app` lists its underlying framework in parentheses — `ionic-app (angular)` or `ionic-app (react)` —
     from whichever of `@ionic/angular`/`@ionic/react` was found.
+  - `react-native-app` lists its toolchain in parentheses — `react-native-app (expo)` or `react-native-app (metro)`
+    — per Step 5's rule (the `expo` dependency decides; committed native folders alone don't).
+  - `kmp-app` lists its UI approach in parentheses — `kmp-app (compose)` (Compose Multiplatform shared UI) or
+    `kmp-app (native)` (shared logic, platform-native UI). Its Android host module (`androidApp/`) and `iosApp/`
+    are part of the same value, never extra `android-app`/`apple-app` entries or `multiple`.
   - **Java vs. Kotlin** (Spring Boot / Quarkus): pick the `kotlin-*` value when Kotlin is the build's primary
     language (Kotlin plugin applied and production sources mainly under `src/main/kotlin/`); a Java build with a
     few Kotlin files stays `java-*`. A **hexagonal multi-module reactor** (`domain`/`application`/`infrastructure`/

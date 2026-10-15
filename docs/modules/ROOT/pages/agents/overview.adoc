@@ -61,6 +61,8 @@ naming a specific type. It has the same tool access as the main conversation.
   follow) before continuing with the rest of their own work.
 * xref:skills/iru-pr-description.adoc[] — Step 2, reads the full diff and drafts the description text.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, runs iru-setup-antora mid-run.
+* xref:skills/iru-kmp-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per class needing tests, each
+  reading only its own source file (and any existing test file) to write or extend that class's tests.
 * xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 5 spawns one sub-agent per file needing tests,
   dispatched concurrently in batches, each reading only its own source file (and any existing test file) to
   write or extend that file's tests.

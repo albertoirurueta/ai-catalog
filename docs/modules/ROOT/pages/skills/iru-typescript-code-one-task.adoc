@@ -1,5 +1,5 @@
 = TypeScript Code One Task
-:description: Implements one TypeScript task from an implementation plan, loading only the reference material its detected framework needs, then checks it off.
+:description: Implements one TypeScript task from a plan, loading only its framework's reference material, handing React Native apps to their own key, then checks it off.
 :keywords: iru-typescript-code-one-task, claude code skill, typescript, react, angular, react native, ionic, hilla, vitest, jest, tsdoc, implementation plan
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -14,7 +14,9 @@ once per task in a bucket (potentially many at once, in parallel agents).
 calls once per task. Given one task's own text (what to build, the named file(s)/component(s)/function(s), the
 described behavior, its exact `implementation_plan.md` checkbox line(s), and any sub-tasks), it first detects the
 project's framework from `package.json` (and, for a Maven-hosted frontend, the root `pom.xml`) — plain npm/TypeScript
-library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend — then loads only the matching guidance from
+library, React, Angular, Ionic, or a Vaadin Hilla frontend; a React Native app (`expo` or `react-native`) now has
+its own key, so when `iru-react-native-code-one-task` is installed the task is handed to it and this skill stops,
+with only a minimal built-in fallback otherwise — then loads only the matching guidance from
 its own bundled `reference/` directory, re-checks the current code state, implements exactly what's specified, and
 writes/updates tests. If the task didn't stop on a blocker, it then immediately checks off that task's own checkbox
 (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, before reporting back — so
@@ -63,8 +65,10 @@ cases implied by the TSDoc `@throws` contracts.
 |Component/state/testing conventions for an Angular CLI project.
 
 |`react-native.md`
-|Detected framework is **react-native** (`expo` or `react-native` in dependencies)
-|Component/state/testing conventions for an Expo/React Native project.
+|Detected framework is **react-native** *and* `iru-react-native-code-one-task` is not installed
+|A pointer to the `react-native` key plus a minimal fallback (toolchain detection, never editing Expo prebuild
+output, Expo Router default exports, platform files, RNTL testing, security and UI basics). When the key is
+installed, the task was already handed over and this file is not read.
 
 |`ionic.md`
 |Detected framework is **ionic** (`@ionic/angular`/`@ionic/react` with `@capacitor/core`)
@@ -75,6 +79,9 @@ cases implied by the TSDoc `@throws` contracts.
 `src/main/frontend/` directory)
 |Component/state/testing conventions for a Vaadin Hilla frontend.
 |===
+
+`reference/README.md` also notes that the full React Native guidance and its sources live in
+`iru-react-native-code-one-task/reference/`.
 
 Exactly one framework file is read — the one matching the detected framework — never more than one, and none at
 all when the classification is **library**. The skill also notes the test runner (Vitest, Jest, or `ng test`) and
@@ -133,8 +140,10 @@ guessing at what the reference would have said.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
   pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
   the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
+* For a React Native task with `iru-react-native-code-one-task` installed: that skill's report, relayed as this
+  skill's Step 7 report with a note about the hand-off (and that the plan should tag such tasks `react-native`).
 * A short summary handed back to the caller: the detected framework and which `reference/` file(s) were actually
-  read, the file(s) touched, tests added/updated, whether the run stopped on a blocker, and any deliberate
+  read (for react-native, whether the task was handed over or the minimal fallback was used), the file(s) touched, tests added/updated, whether the run stopped on a blocker, and any deliberate
   deviation from `reference/` (a file that still uses `any`, a default export kept because the framework requires
   one, a file whose existing member order or style already diverges) so it reads as a decision rather than an
   oversight.
@@ -147,13 +156,15 @@ flowchart TD
     A["Start /iru-typescript-code-one-task\n(task description)"] --> B["Step 1: read package.json (+ pom.xml);\nclassify framework"]
     B --> B1{"Framework?"}
     B1 -- "hilla-spring-boot-starter\nor src/main/frontend/" --> B2["hilla-frontend"]
-    B1 -- "expo or react-native" --> B3["react-native"]
+    B1 -- "expo or react-native" --> B3{"iru-react-native-code-one-task\ninstalled?"}
+    B3 -- yes --> B8["Invoke it with the task text;\nrelay its report as Step 7; stop"]
+    B3 -- no --> B9["react-native (minimal fallback)"]
     B1 -- "&amp;#64;ionic/* + capacitor" --> B4["ionic"]
     B1 -- "&amp;#64;angular/core" --> B5["angular"]
     B1 -- "react + vite" --> B6["react"]
     B1 -- "none of the above" --> B7["library"]
     B2 --> C
-    B3 --> C
+    B9 --> C
     B4 --> C
     B5 --> C
     B6 --> C
@@ -176,8 +187,11 @@ follows the surrounding code and reports the divergence in Step 7.
 
 === Invokes
 
-None — `iru-typescript-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads
-its own `reference/` directory and edits the code and test files the task names. License headers, TSDoc audits,
+* xref:skills/iru-react-native-code-one-task.adoc[] — Step 1, when the detected framework is `react-native` and
+  that skill is installed; it receives the task's full text unchanged and this skill stops after relaying its
+  report.
+
+Otherwise it calls no other skill in this catalog. It reads its own `reference/` directory and edits the code and test files the task names. License headers, TSDoc audits,
 scoped tests, coverage, and quality checks all live in `iru-typescript-code-one-task-group`.
 
 === Invoked by
@@ -189,6 +203,8 @@ scoped tests, coverage, and quality checks all live in `iru-typescript-code-one-
   afterward to confirm the checkbox this skill already flipped landed, backfilling it only if a rare concurrent-
   write race clobbered it, then replaces the "pending" note with the final validation outcome once the whole
   bucket's validation passes.
+* xref:skills/iru-react-native-code-one-task.adoc[] — names this skill as its counterpart and the basis for its
+  conventions; it does not invoke it.
 
 === Related agents
 

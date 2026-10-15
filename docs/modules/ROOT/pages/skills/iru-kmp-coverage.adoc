@@ -1,0 +1,165 @@
+= KMP Coverage
+:description: Generates Kover line/branch coverage for a Kotlin Multiplatform project's JVM and Android targets, with per-module, per-class figures and uncovered lines.
+:keywords: iru-kmp-coverage, claude code skill, kotlin multiplatform, kmp, kover, coverage, line coverage, branch coverage, jacoco xml, xccov
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run the Kover coverage a Kotlin Multiplatform (Android + iOS) project has wired and report exact, measured
+line/branch coverage for the requested scope -- per class, per module and for the whole project. This is a
+report-only skill: it never adds tests or modifies source, test or build files.
+
+== Purpose
+
+`iru-kmp-coverage` checks whether the Kover Gradle plugin is wired (root aggregation via
+`dependencies { kover(project(":x")) }`, per-module only, or not at all), runs the matching `koverXmlReport` task,
+and parses the JaCoCo-format XML into totals, per-module and per-class line/branch percentages -- each class mapped
+back to its module and source set -- plus the uncovered line numbers of classes under the bar. Coverage comes from
+the JVM test runs only (Android host tests, `jvmTest`, the app's `testDebugUnitTest`, which Kover triggers itself).
+Kotlin/Native has no coverage tool, so `iosMain`/`appleMain`/`nativeMain` code is listed as "not measurable" and
+never fails the gate, while `commonMain` code is measured through the JVM targets' runs of `commonTest`. When Kover
+is absent it reports "coverage not wired" naming what is missing, never a false 0% or 100%. It is the KMP
+equivalent of xref:skills/iru-android-coverage.adoc[] and the Kover path of xref:skills/iru-java-coverage.adoc[].
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-coverage
+/iru-kmp-coverage [scope]
+/iru-kmp-coverage [scope]
+tests: <pattern>
+bar: <percent>
+module: <gradle path>
+ios-app: yes|no
+lock: held
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`[scope]`
+|No
+|Comma-separated class simple names (`Greeter`), source paths, or a module (`:shared`, `androidApp`).
+|None -- the whole project.
+
+|`tests`
+|No
+|A Gradle `--tests` pattern narrowing the test run (same syntax as xref:skills/iru-kmp-test.adoc[]). Coverage then
+reflects only those tests.
+|Whole suite
+
+|`bar`
+|No
+|Line-coverage threshold in percent used for the `BELOW`/`MEETS` verdicts.
+|80
+
+|`module`
+|No
+|Restrict the run to one Gradle module.
+|All modules
+
+|`ios-app`
+|No
+|`yes` also collects informational Xcode coverage of the SwiftUI host app's Swift code (`xcodebuild test
+-enableCodeCoverage YES` + `xccov`), behind `.integration-test.lock`.
+|`no`
+
+|`lock`
+|No
+|`held` when the caller already holds `.integration-test.lock`.
+|Not held
+|===
+
+Report task by setup (Step 2):
+
+[cols="2,2,2", options="header"]
+|===
+|Setup |Command |XML
+
+|Root aggregation
+|`./gradlew koverXmlReport`
+|`build/reports/kover/report.xml`
+
+|KMP module, all JVM targets
+|`./gradlew :shared:koverXmlReport`
+|`shared/build/reports/kover/report.xml`
+
+|KMP module, Android target only
+|`./gradlew :shared:koverXmlReportAndroid`
+|`shared/build/reports/kover/reportAndroid.xml`
+
+|Android app module, debug variant
+|`./gradlew :androidApp:koverXmlReportDebug`
+|`androidApp/build/reports/kover/reportDebug.xml`
+|===
+
+== Outputs
+
+* A plain-text report in the conversation -- never a written file.
+* The engine and setup used (root aggregation or per-module), the report path(s), and the test pattern if `tests:`
+  narrowed the run.
+* Total, per-module and per in-scope class line/branch percentages taken from the XML counters, each judged against
+  `bar`; for classes under the bar, their uncovered line numbers.
+* **Not measurable**: every Kotlin/Native source set with code (e.g. `shared:iosMain`), stated as excluded from the
+  gate rather than as 0%.
+* **Coverage not wired** (naming what is missing) instead of any percentage when no Kover is found.
+* The informational `iosApp` Swift figure when `ios-app: yes`, or why it was skipped.
+* No tests, source or build files are ever added or modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kmp-coverage\n(scope + key: value lines)"] --> B["Step 0: resolve scope, tests,\nbar, module, ios-app, lock;\ncheck JDK / Android SDK / gradlew"]
+    B --> C["Step 1: detect Kover wiring"]
+    C --> D{"Kover wired?"}
+    D -- no --> E{"AGP unit-test coverage\non Android app?"}
+    E -- yes --> F["Measure that module only,\nsay KMP module is unmeasured"]
+    E -- no --> Z["Stop: report\n'coverage not wired'"]
+    D -- "root aggregation" --> G["Step 2: ./gradlew koverXmlReport"]
+    D -- "per module" --> H["Step 2: run each module's\nkoverXmlReport task separately"]
+    G --> I{"tests: given?"}
+    H --> I
+    I -- yes --> J["Step 3: name the test task\nwith --tests, then the report task"]
+    I -- no --> K{"Underlying tests\nfailed?"}
+    J --> K
+    K -- yes --> Y["Report the test/compile failure\nand stop"]
+    K -- no --> L["Step 4: parse Kover XML\n(totals, per module, per class,\nuncovered lines, not measurable)"]
+    F --> M
+    L --> N{"ios-app: yes?"}
+    N -- yes --> O["Step 5: acquire lock, xcodebuild test\n-enableCodeCoverage, xccov (informational)"]
+    N -- no --> M["Step 6: report"]
+    O --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-kmp-coverage` is a leaf skill; it only runs Gradle, `xcodebuild`/`xccov` and inline `python3` parsing,
+and it does not call any other skill in this catalog. It reuses the prerequisite checks, `--tests` semantics and
+lock protocol described in xref:skills/iru-kmp-test.adoc[] by reference only.
+
+=== Invoked by
+
+* xref:skills/iru-kmp-code-one-task-group.adoc[] -- Step 3.4, the 80% line-coverage gate for the classes the bucket
+  touched, through the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-kmp-generate-all-tests.adoc[] -- Step 3, to measure real coverage for every candidate class in one
+  pass (and again when re-measuring in Step 6), through the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- both callers always run this skill from inside an
+  `iru-gate-runner` sub-agent, so the large Kover report never lands in their own context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-coverage/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

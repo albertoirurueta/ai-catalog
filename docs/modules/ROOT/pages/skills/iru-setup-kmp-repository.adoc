@@ -1,0 +1,204 @@
+= Setup KMP Repository
+:description: Bootstraps or updates a Kotlin Multiplatform Android and iOS app repository: Gradle and Xcode scaffold, Antora docs, gitignore, CI, changelog, README.
+:keywords: iru-setup-kmp-repository, claude code skill, kotlin multiplatform, kmp, compose multiplatform, ios, android, github actions, antora, readme
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a Kotlin Multiplatform (Android + iOS) app repository. It resolves the UI shape, branching
+model and mode once, collects the app's identity and shared pipeline parameters once, prints a setup-mode statement
+(from scratch, or an inventory of the prior setup it found), then orchestrates six other skills in a fixed order so
+nothing is asked twice.
+
+== Purpose
+
+`iru-setup-kmp-repository` is the KMP stack orchestrator invoked by `iru-setup-repository` (project type `kmp-app`)
+or run standalone. Rather than duplicating Gradle/Xcode scaffolding, documentation setup, `.gitignore` generation,
+CI/CD authoring, changelog bootstrapping or README generation, it passes each downstream skill only the `args` keys
+that skill's own Step 0 accepts. It always invokes the scaffold skill, even in `mode: existing`: every component
+sub-skill announces whether it is creating or updating, warns about the prior setup it owns, and asks Update / Keep
+as is / Replace per file (or applies `on-existing` when it arrived via `args`).
+
+Unlike the Android and Swift orchestrators there is no `flavor` question: only KMP apps are scaffolded (a shared
+KMP module consumed by an Android app and an iOS app); a KMP library published to Maven Central is out of scope.
+`ui` is `compose` (Compose Multiplatform shared UI) or `native` (Jetpack Compose on Android plus SwiftUI on iOS over
+shared logic). Pipeline questions are cost-aware: `visibility` drives recommendations about Actions minutes, the
+roughly 10x macOS multiplier (`ios-ci`), SonarCloud pricing and GitHub Pages availability, and `ci: no` skips the
+workflows step entirely (security block included).
+
+== Purpose group
+
+xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-kmp-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ui`
+|No
+|`compose` or `native`. Detected from `shared/build.gradle.kts` (Compose plugin) or `composeApp/` and confirmed,
+otherwise asked via `AskUserQuestion`.
+|Detected or asked (Compose Multiplatform recommended)
+
+|`branching`
+|No
+|`gitflow` (integration + stable branch, `sync.yml`) or `main-only` (single stable branch, no `sync.yml`).
+|Asked; `gitflow` recommended
+
+|`mode`
+|No
+|`new` or `existing`. Defaults to `existing` (confirmed) when `settings.gradle.kts` exists, otherwise `new` without
+asking. Every sub-skill still asks per pre-existing file.
+|Detected from disk
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. Never asked here; forwarded to component sub-skills only when supplied.
+|`ask` (sub-skills ask)
+
+|Identity fields (`app-name`, `application-id`, `bundle-id`, `namespace`, `license`, `developer-name`,
+`developer-email`, `organization-url`, optionally `project-name`, `version-name`, `version-code`, `team-id`)
+|Yes (unresolved ones)
+|Free-text identity asked in Step 2 using the keys `iru-setup-kmp-app` reads; skipped entirely when
+`settings.gradle.kts` already exists. `bundle-id` and `namespace` default from `application-id`.
+|None — user must supply
+
+|`integration-branch`, `stable-branch`, `java-version`, `min-sdk`, `ios-deployment-target`
+|No
+|Shared pipeline parameters asked in Step 3 with defaults; branch and Java values are skipped when `ci: no`, and
+the integration branch for `main-only`.
+|`develop`, `main`, `17`, `26`, resolved by the scaffold
+
+|`open-source`, `visibility`
+|No
+|`visibility` is detected with `gh repo view` or asked; open source with a private repository is flagged as
+contradictory. `internal` behaves like `private`.
+|Asked or detected
+
+|`ci`
+|No
+|`yes`/`no`: generate GitHub Actions workflows at all. `no` skips Step 7 and the `ios-ci`/`ci-tests`/`pages`
+questions.
+|Asked
+
+|`ios-ci`
+|No
+|`all`, `stable` or `none`: when the macOS job runs.
+|Asked; `all` recommended for public, `stable` for private
+
+|`ci-tests`
+|No
+|`unit` or `full` (also the iOS app's XCTest bundle on a simulator).
+|Asked
+
+|`pages`
+|No
+|`yes`/`no`: publish docs to GitHub Pages or upload as a workflow artifact.
+|`yes` for public; asked otherwise (`no` recommended)
+
+|`distribution`
+|No
+|`none`, `internal` (Firebase + TestFlight) or `store` (Google Play + TestFlight).
+|`store` when open source; otherwise asked, `internal` recommended
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
+|Asked
+
+|`compile-sdk`, `target-sdk`, `runner`, `xcode-version`
+|No
+|Passed through only if supplied; otherwise left to the scaffold or workflows skill.
+|Resolved downstream
+
+|`publish`
+|No
+|Accepted and ignored (an app has no Maven Central path); noted in the report.
+|None
+|===
+
+== Outputs
+
+* The Gradle/Xcode scaffold — `shared/` KMP module, `androidApp/`, XcodeGen `iosApp/`, quality and Sonar wiring
+  (via `iru-setup-kmp-app`), created or updated per file group according to the user's answers.
+* A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
+* Root and per-module `.gitignore` files (via `iru-setup-kmp-gitignore`).
+* CI/CD workflows — `build.yml`, `release.yml`, `sync.yml` + `sync_versions.py` (gitflow), `security.yml` and
+  `.github/dependabot.yml` (via `iru-setup-kmp-github-workflows`); none when `ci: no`.
+* A root `CHANGELOG.md` (via `iru-setup-changelog`) and a root `README.md` (via `iru-setup-readme`).
+* A final report: setup mode, resolved `ui`/`branching`/`mode`, identity, license and pipeline parameters, a
+  per-component table with the action taken (created / updated / replaced / kept as is / skipped (`ci: no`)), the
+  consolidated required-secrets table (omitted when no workflows were generated), toolchain versions from live
+  lookup versus fallback, decisions made on the user's behalf, and an explicit warning block.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-kmp-repository] --> B["Step 0: Parse args\n(ui, branching, mode, visibility, ci, ios-ci,\nci-tests, pages, identity, pipeline params)"]
+    B --> C["Step 1: Resolve ui, branching, mode\nand print Setup mode\n(from scratch, or inventory of prior setup)"]
+    C --> D["Step 2: Collect app identity\n(skipped when settings.gradle.kts exists)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, ios-ci, sonar,\nci-tests, pages, distribution)"]
+    E --> G["Step 4: Run iru-setup-kmp-app\n(via sub-agent)\nasks Update / Keep / Replace / Stop"]
+    G -- user chose stop --> STOP[Stop entire pipeline; report]
+    G -- ok --> H["Step 5: Run iru-setup-antora"]
+    H --> I["Step 6: Run iru-setup-kmp-gitignore"]
+    I --> CI{"ci: no?"}
+    CI -- yes --> K["Step 7 skipped\n(no workflows or security block)"]
+    CI -- no --> J["Step 7: Run iru-setup-kmp-github-workflows"]
+    J -- "user chose stop,\nnote it and continue" --> K2["Step 8: Run iru-setup-changelog"]
+    J -- ok --> K2
+    K --> K2
+    K2 --> L["Step 9: Run iru-setup-readme"]
+    L --> M["Step 10: Report setup mode, per-component actions,\nrequired secrets, review warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent rather than a direct `Skill` call, so only a short completion summary flows back and the scaffold's long
+template listings stay out of this orchestrator's context. Every sub-agent is launched with
+`run_in_background: false` since each step depends on the previous one's files being on disk:
+
+* xref:skills/iru-setup-kmp-app.adoc[] — Step 4: writes or updates the `shared/`, `androidApp/` and `iosApp/`
+  scaffold, passing Step 2's identity fields and Step 3's pipeline parameters as `args`. Always invoked, even in
+  `mode: existing`. The first Gradle run downloads Gradle, the Android SDK platform and the Kotlin/Native toolchain,
+  so it is the slow step.
+* xref:skills/iru-setup-antora.adoc[] — Step 5: scaffolds or updates the Antora site, with no `args` (only
+  `on-existing` when supplied).
+* xref:skills/iru-setup-kmp-gitignore.adoc[] — Step 6: writes or updates root and per-module `.gitignore` files,
+  with no `args` (only `on-existing` when supplied).
+* xref:skills/iru-setup-kmp-github-workflows.adoc[] — Step 7, skipped entirely when `ci: no`: writes the CI/CD,
+  release and security workflows, passing `branching`, branches, `java-version`, `ios-ci`, `ci-tests`, `pages`,
+  `distribution`, Sonar keys and related args.
+* xref:skills/iru-setup-changelog.adoc[] — Step 8: bootstraps or updates `CHANGELOG.md` from the repository's tag
+  and release history.
+* xref:skills/iru-setup-readme.adoc[] — Step 9, last: bootstraps or updates `README.md`, passing only `sonar`, `ci`,
+  `pages` (and `on-existing` when supplied).
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] — Step 4, `kmp-app` bootstrap (`ui` taken from the detected project type),
+  via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+It can also be run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per sub-skill
+  (Steps 4–9), so all six sub-skills' exploration transcripts don't accumulate in this orchestrator's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-kmp-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -19,7 +19,7 @@ missing KDoc grounded in the real implementation: `@property` for constructor-de
 Quarkus CDI beans, `@ConfigMapping`, JAX-RS resources and JPA/Panache entities. It also ensures a `module.md` with
 `# Module` and `# Package` sections is wired into Dokka for every touched module and package. A clean Dokka run
 does not prove completeness, so the audit remains the completeness gate. Test sources, Java files (use
-`iru-java-javadoc`) and Android modules (use `iru-android-dokka`) are out of scope.
+`iru-java-javadoc`) and Android modules (use `iru-android-dokka`) and Kotlin Multiplatform modules (use xref:skills/iru-kmp-dokka.adoc[]) are out of scope.
 
 == Purpose group
 
@@ -61,7 +61,7 @@ branch; an empty scope stops with "nothing to document".
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-kotlin-kdoc\n(optional scope)"] --> B["Step 1: Resolve scope and build tool\n(drop tests, .java, Android)"]
+    A["Start /iru-kotlin-kdoc\n(optional scope)"] --> B["Step 1: Resolve scope and build tool\n(drop tests, .java, Android,\nKotlin Multiplatform)"]
     B --> C{"Scope empty?"}
     C -- yes --> D["Report nothing to document and stop"]
     C -- no --> E["Step 2: Discover the project's KDoc bar\n(detekt, Dokka config, guides, practice)"]
@@ -83,7 +83,7 @@ flowchart TD
 === Invokes
 
 None — `iru-kotlin-kdoc` is a leaf skill; it edits comments and runs the project's Dokka task directly. It refers
-to `iru-java-javadoc`, `iru-android-dokka` and `iru-kotlin-code-quality` only as pointers for work outside its
+to `iru-java-javadoc`, `iru-android-dokka`, `iru-kmp-dokka` and `iru-kotlin-code-quality` only as pointers for work outside its
 scope.
 
 === Invoked by

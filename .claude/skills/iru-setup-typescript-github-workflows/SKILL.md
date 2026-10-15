@@ -4,7 +4,8 @@ description: >-
   Create or update the `build.yml`, `release.yml`, `sync.yml` (every flavor but react-native/ionic), and
   `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for an npm/TypeScript repository of one of
   seven flavors — `library` (a published npm package), `react` (a Vite/React web app), `angular` (an Angular CLI web
-  app), `react-native` (an Expo app), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service), or
+  app), `react-native` (an Expo app, or a bare React Native Community CLI app on the Metro toolchain — `toolchain`
+  `expo`/`metro`), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service), or
   `nextjs` (a Next.js web app, `output` `server` or `static`). `build.yml` runs on every push to the
   integration/stable branches, every pull request, and `workflow_dispatch` — checkout, Node setup with dependency
   caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan
@@ -18,13 +19,22 @@ description: >-
   to Pages; for `nextjs` with `output` `static` it builds the static export (`out/`, `basePath` taken from
   `actions/configure-pages` so project pages work) and deploys it to Pages; for `nestjs` and `nextjs` `server` with
   `distribution` `internal` it builds the multi-stage `Dockerfile` and pushes the image to GHCR (Buildx, metadata,
-  build-push), while `distribution` `none` writes no `release.yml`; for `react-native` it runs EAS or local
-  Gradle/Xcode builds per `native-builds`; for `ionic` it builds Android/iOS store or internal artifacts per
+  build-push), while `distribution` `none` writes no `release.yml`; for `react-native` with `toolchain` `expo` it
+  runs EAS or local Gradle/Xcode builds per `native-builds`; for `react-native` with `toolchain` `metro` `build.yml`
+  adds a Linux Android job (JDK 17, Gradle cache, `./gradlew assembleDebug testDebugUnitTest lint` from `android/`),
+  a cost-gated macOS iOS job (`bundle install`, cached `pod install`, unsigned `xcodebuild build` for the
+  simulator) and, with `ci-tests` `full`, Maestro flows on a `reactivecircus/android-emulator-runner` emulator,
+  while `release.yml` signs an AAB with the upload keystore from secrets and uploads it to Google Play (internal
+  track for `distribution` `internal`, production for `store`) and archives/exports/uploads the iOS app to
+  TestFlight with an App Store Connect API key; for `ionic` it builds Android/iOS store or internal artifacts per
   `distribution`. `sync.yml` + `.github/scripts/sync_versions.py` (library/react/angular/nestjs/nextjs) merge the
   stable branch back into the integration branch and bump `package.json`'s version to the next `x.y.(z+1)-dev.0`
   prerelease plus README/Antora version mentions. `security.yml` runs the shared Dependabot (`npm`, plus `docker`
-  when a `Dockerfile` exists) / dependency-review / CodeQL (`javascript-typescript`, `build-mode` `none`, plus
-  `actions` for nestjs/nextjs) / OSV-Scanner / gitleaks block. Invoke as `/iru-setup-typescript-github-workflows`.
+  when a `Dockerfile` exists; `gradle` for `/android` and `bundler` for the Gemfile on react-native/metro) /
+  dependency-review / CodeQL (`javascript-typescript`, `build-mode` `none`, plus `actions` for
+  nestjs/nextjs/react-native-metro, plus `java-kotlin` with a manual Gradle compile for react-native/metro and
+  `swift` with a manual simulator build on public metro repositories) / OSV-Scanner / gitleaks block. Invoke as
+  `/iru-setup-typescript-github-workflows`.
   Ships with generic example templates (genericized, no real repo/org names) embedded in this skill file. Announces
   whether it is creating the workflows from scratch or updating existing ones; creates all workflows (and the
   sync/security scripts) from scratch if none exist, and for each one that already exists warns and asks per file
@@ -37,7 +47,9 @@ description: >-
   `none`/`internal` for nestjs and nextjs `server`, where `internal` is a GHCR image), `output` (`server`/`static` —
   nextjs only), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/`drizzle` — nestjs only; `prisma` adds the `prisma
   generate` step), `e2e` (`playwright`/`none` — nextjs only), `sonar` (`cloud`/`self-hosted`/`none`, +
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (`eas`/`local` — react-native only),
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `toolchain` (`expo`/`metro` — react-native only;
+  detected from `package.json` when absent), `native-builds` (`eas`/`local` — react-native with `toolchain` `expo`
+  only),
   `framework` (`angular`/`react` — ionic only), `docs-tool` (`typedoc`/`compodoc`/`storybook`/`none`), `visibility`
   (`public`/`private`/`internal` — detected via `gh` when absent, drives the cost notes and defaults), `ci-tests`
   (`unit`/`full` — `unit` drops the e2e steps; asked when absent), `pages` (`yes`/`no` — `no` replaces every GitHub
@@ -66,7 +78,10 @@ repository, for whichever `flavor` the repository actually is:
   only runs on a push to the stable branch. The `nestjs`/`nextjs` flavors use their own `build.yml` template
   (Step 3) with the same shape plus `prisma generate` (NestJS + Prisma), the production `build`, the e2e suite
   per `ci-tests` (NestJS `test:e2e` with Testcontainers on the runner's Docker; Next.js Playwright), and an
-  unpushed image build when a container image is distributed.
+  unpushed image build when a container image is distributed. The `react-native` flavor with `toolchain: metro`
+  keeps that same `build` job and adds native jobs (Step 3's metro `build.yml` template): an `android` job on
+  Linux, an `ios` job on macOS gated by `visibility`/`ci-tests` (macOS minutes cost ~10× Linux), and — only with
+  `ci-tests: full` — an `e2e-android` job running the Maestro flows on an emulator.
 - **`release.yml`** — flavor-specific; see Step 3. Always triggered by `release: [published]` (plus
   `workflow_dispatch` for a manual re-run) so a continuous-deployment push to the stable branch never
   accidentally re-publishes or re-signs a release artifact. For `react`/`angular` it deploys the web app to
@@ -83,13 +98,17 @@ repository, for whichever `flavor` the repository actually is:
 - **`security.yml`** — runs on every pull request and push to the integration/stable branches: a
   `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job
   (`github/codeql-action@v4`, language `javascript-typescript`, `build-mode: none` — no compile step is
-  needed for JS/TS analysis; `nestjs`/`nextjs` also scan the `actions` language — the workflows themselves),
+  needed for JS/TS analysis; `nestjs`/`nextjs` also scan the `actions` language — the workflows themselves;
+  `react-native` with `toolchain: metro` also scans `actions`, the committed Android Kotlin/Java sources
+  (`java-kotlin`, manual Gradle compile) and, on public repositories only, the iOS Swift sources (`swift`, manual
+  simulator build on macOS) — see the `security.yml` notes),
   an OSV-Scanner job (the `google/osv-scanner-action` reusable workflow), and a
   `gitleaks` job (`gitleaks/gitleaks-action@v3`) — each individually omittable via `args` (defaulting to on;
   see Step 1).
 - **`.github/dependabot.yml`** — grouped weekly dependency updates for the `npm` ecosystem and for
   `github-actions` itself, plus `docker` (base-image bumps) when the repository has a `Dockerfile` (the
-  `nestjs`/`nextjs`-server image). Always generated (or updated) regardless of the four `security-*` `args` keys
+  `nestjs`/`nextjs`-server image), and `gradle` (`/android`) + `bundler` (the Gemfile that pins CocoaPods) for
+  `react-native` with `toolchain: metro`. Always generated (or updated) regardless of the four `security-*` `args` keys
   above — it's baseline repository hygiene, not an optional CI job.
 
 This skill is designed for npm/TypeScript projects produced by the matching scaffold skill
@@ -150,6 +169,17 @@ e2e: playwright         # nextjs only: playwright | none
 docs-tool: compodoc     # nestjs: compodoc | typedoc | none ; nextjs: typedoc | none
 ```
 
+A `react-native` run adds:
+
+```
+flavor: react-native
+toolchain: metro        # expo | metro
+native-builds: eas      # expo only: eas | local — never sent for metro
+distribution: store     # none | internal | store
+ci-tests: unit          # metro: full adds the Maestro emulator job; expo: no e2e step
+docs-tool: none
+```
+
 Parse any such lines from `args` first. For each key found there, use that value directly — skip the
 corresponding fact-finding bullet below entirely for it. If `args` is absent or doesn't look like this
 format, treat everything as unset and gather every fact below as usual.
@@ -174,9 +204,14 @@ format, treat everything as unset and gather every fact below as usual.
     minutes, faster feedback. Playwright e2e browser tests stay local." Recommend for private/internal repos.
   - **Unit + e2e** (`full`) — "Also installs Playwright browsers and runs the e2e suite on every build (web
     flavors) — complete verification, considerably more minutes." Recommend for public repos.
-  For `library`/`react-native` (no e2e step in this pipeline) the choice has no effect on `build.yml` — say so
-  and default to `unit` without asking unless a Playwright config or another e2e runner (Detox, Maestro) is
-  actually configured in the repository. For `nestjs`, word **Unit + e2e** as "Also runs the `test:e2e`
+  For `library` and `react-native` with `toolchain: expo` (no e2e step in this pipeline) the choice has no
+  effect on `build.yml` — say so and default to `unit` without asking unless a Playwright config or another e2e
+  runner (Detox, Maestro) is actually configured in the repository. For `react-native` with `toolchain: metro`,
+  word **Unit + e2e** as "Also builds a release APK and runs the Maestro flows (`.maestro/`) on an Android
+  emulator booted by `reactivecircus/android-emulator-runner` on a KVM-enabled Linux runner — roughly 10–20 extra
+  Linux minutes per run, and runs the macOS iOS simulator build on every pull request too (see the cost context
+  below)"; **Unit tests only** keeps the Maestro flows local (they need a booted emulator/simulator and Metro,
+  which `iru-typescript-test`'s `e2e` selector runs behind `.integration-test.lock`). For `nestjs`, word **Unit + e2e** as "Also runs the `test:e2e`
   suite — with Testcontainers starting the real database in the runner's Docker when an ORM is configured;
   GitHub's `ubuntu-latest` runners ship Docker, so nothing extra is installed, but each run pulls the database
   image". For `nextjs` with `e2e: none` the choice has no effect (default `unit` without asking).
@@ -204,6 +239,15 @@ format, treat everything as unset and gather every fact below as usual.
   dependencies → `react-native`; `@ionic/angular` or `@ionic/react` + `@capacitor/core` → `ionic`;
   `@angular/core` → `angular`; `react` + `vite` (or `@vitejs/plugin-react`) → `react`; otherwise → `library`.
   Ask the user to confirm if the detection is ambiguous (e.g. both `react` and `@capacitor/core` present).
+- **`toolchain`** (`react-native` only; skip if supplied via `args`): the catalog-wide rule — `expo` in
+  `dependencies` → `expo`, even when `android/`/`ios/` exist (they're `expo prebuild` / Continuous Native
+  Generation output); a `react-native` dependency without `expo`, plus `metro.config.js`, committed `android/` +
+  `ios/` projects, or `@react-native-community/cli` in `devDependencies` → `metro`. Expo also bundles with Metro
+  under the hood — the value names which of the two toolchains the user chose (Expo framework vs. the bare React
+  Native Community CLI app whose native projects are committed and built directly), not the bundler. Ask
+  (**Expo** recommended / **Metro (bare React Native CLI)**) only if neither signal resolves it. Everything below
+  marked "metro" applies only to `toolchain: metro`; `toolchain: expo` keeps every pre-existing react-native
+  behaviour unchanged.
 - **Package manager** (skip if `package-manager` supplied via `args`): `packageManager` field in
   `package.json`, else lockfile present — `package-lock.json` → `npm`, `pnpm-lock.yaml` → `pnpm`,
   `yarn.lock` → `yarn` (and for `yarn`, check for `.yarnrc.yml` to tell Yarn Berry apart from Yarn Classic —
@@ -225,7 +269,14 @@ format, treat everything as unset and gather every fact below as usual.
   directly — `none` (CI builds only, nothing is signed or uploaded), `internal` (a signed build artifact, or
   a Firebase App Distribution / TestFlight-internal push if they opt in — ask a follow-up yes/no, default
   "just the artifact, no extra secrets"), or `store` (Google Play / App Store Connect production track,
-  needs the signing/API-key secrets in Step 7's table).
+  needs the signing/API-key secrets in Step 7's table). For `react-native` with `toolchain: metro` the three
+  values mean: `none` — `release.yml` only proves the release builds (an AAB signed with the template's debug
+  keystore, uploaded as a workflow artifact, plus an unsigned iOS archive); `internal` — the AAB is signed with
+  the upload keystore and sent to Google Play's **internal testing** track, and the iOS build is uploaded to
+  **TestFlight**; `store` — same signing, Play **production** track, and TestFlight as the staging point for
+  App Store review (submitting the build for review stays a manual App Store Connect step, as in
+  `iru-setup-swift-github-workflows`). No Firebase follow-up question for metro — Play's internal track is the
+  internal channel.
 - **`distribution`** (`nestjs`, and `nextjs` with `output: server`; skip if supplied via `args`): `internal`
   when a root `Dockerfile` exists (the scaffolds write one only for `internal`), else `none`; confirm with the
   user. `internal` ⇒ `release.yml` pushes the image to GHCR (`ghcr.io/<owner>/<image-name>`); `none` ⇒ no
@@ -248,7 +299,8 @@ format, treat everything as unset and gather every fact below as usual.
 - **`Dockerfile`** (`nestjs`/`nextjs`): note whether a root `Dockerfile` exists — it gates the image build
   check in `build.yml`, `release.yml`'s GHCR job, and Dependabot's `docker` entry. `distribution: internal`
   without a `Dockerfile` is an open gap (re-run the scaffold skill), never a reason to invent one here.
-- **`native-builds`** (react-native flavor only; skip if supplied via `args`): ask the user `eas` (Expo
+- **`native-builds`** (react-native flavor with `toolchain: expo` only — never asked or used for `metro`, whose
+  native projects are always built locally by Gradle/`xcodebuild`; skip if supplied via `args`): ask the user `eas` (Expo
   Application Services — simplest, but the free tier is capped at 15 builds/platform/month) or `local`
   (self-hosted Gradle on `ubuntu-latest` + `xcodebuild` on `macos-latest`, no EAS account needed but slower
   runners and the repository must manage its own signing material).
@@ -315,6 +367,37 @@ format, treat everything as unset and gather every fact below as usual.
   `<ios-workspace>`/`<ios-scheme>` by running `npx expo prebuild --platform ios` once locally (or `--no-install`
   when CocoaPods isn't available) and reading the basename of `ios/*.xcworkspace`; if prebuild can't be run
   here, derive the name from `expo.name` and flag it as unverified in Step 8's report.
+- **Native project facts** (`react-native` with `toolchain: metro` only), read from the committed native projects
+  rather than assumed:
+  - `<ios-workspace>`/`<ios-scheme>`: the React Native Community CLI template names both after `app.json`'s
+    `name` — `ios/<AppName>.xcodeproj` is committed, `ios/<AppName>.xcworkspace` appears after the first `pod
+    install`, and the shared scheme is `<AppName>`. Read the basename of `ios/*.xcodeproj` (the workspace may not
+    exist yet in a fresh clone) and confirm the scheme with `xcodebuild -list -project ios/<AppName>.xcodeproj`
+    when Xcode is available.
+  - `<android-package-name>`: `applicationId` in `android/app/build.gradle` (Groovy DSL in the template), needed
+    for the Play upload when `distribution` isn't `none`.
+  - `<rn-java-version>`: `17` — React Native's Gradle plugin declares `jvmToolchain(17)` and the official
+    environment guide installs JDK 17; use a different value only if `android/` explicitly configures another
+    toolchain. `android/gradle/wrapper/gradle-wrapper.properties` and `android/build.gradle`'s `ndkVersion`/
+    `compileSdkVersion`/`buildToolsVersion` need no workflow input — `android-actions/setup-android` accepts the
+    SDK licenses so the Android Gradle Plugin downloads any missing NDK/platform/build-tools on first use.
+  - `<ruby-version>`: `.ruby-version` at the app root when present (then drop the `ruby-version:` input —
+    `ruby/setup-ruby` reads the file itself); otherwise `3.4`, which satisfies the template Gemfile's `ruby
+    ">= 2.6.10"` and is the line its `bigdecimal`/`logger`/`benchmark`/`mutex_m`/`nkf` gems exist for. Check that
+    `Gemfile.lock` and `ios/Podfile.lock` are committed — `bundler-cache: true` and the Pods cache key both hash
+    them; a missing lockfile is an open gap (re-run `bundle install` / `bundle exec pod install` locally and
+    commit it), not something to generate here. The template also commits `.bundle/config`
+    (`BUNDLE_PATH: vendor/bundle`), which matches the path `ruby/setup-ruby`'s `bundler-cache` installs into, and
+    `ios/.xcode.env` (how Xcode's build phases find `node`) — both must stay committed. Every iOS job sets
+    `LANG: en_US.UTF-8`: `pod install` fails with `Encoding::CompatibilityError` under a non-UTF-8 locale
+    (reproduced locally).
+  - **Release signing hooks**: whether `android/app/build.gradle`'s `release` build type still uses
+    `signingConfigs.debug` (the template default) or a project-specific `signingConfigs.release`. The metro
+    `release.yml` signs through the Android Gradle Plugin's `android.injected.signing.*` properties, which override
+    either, so nothing in `build.gradle` has to change — only note it in Step 8.
+  - **App directory**: if `package.json`/`android/`/`ios/` live in a subdirectory (the scaffold's `app-directory`
+    isn't `.`), every metro job needs `defaults: run: working-directory: <app-directory>` plus prefixed paths in
+    `uses:` inputs (`cache-dependency-path`, artifact paths, `hashFiles`) — note it as an adjustment in Step 8.
 - **Playwright** (`react`/`angular`/`ionic` only, and only when `ci-tests: full`): check for a
   `playwright.config.ts` and an `e2e`/`e2e:ci` script. If absent, the e2e step in `build.yml` has nothing to
   run — note this as an open gap; the scaffold skills for these flavors are expected to have wired it already.
@@ -331,11 +414,26 @@ is `private`/`internal`, state once, per GitHub's current pricing (tell the user
 standard GitHub-hosted runners are free for public repositories, while private/internal ones consume the
 account's included minutes (2,000/month on GitHub Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud) and
 are then billed per minute; **macOS runner minutes cost roughly 10× Linux** (Linux 2-core $0.006/min, macOS
-$0.062/min). That matters here for the `react-native` (`native-builds: local`) and `ionic` flavors, whose
-`release.yml` `ios` job runs on `macos-latest`: a single iOS archive often takes 15–30 minutes, which at the ~10× macOS
+$0.062/min). That matters here for the `react-native` (`toolchain: expo` with `native-builds: local`, and every
+`toolchain: metro` project) and `ionic` flavors, whose `release.yml` `ios` job runs on macOS: a single iOS archive often takes 15–30 minutes, which at the ~10× macOS
 rate is roughly 150–300 Linux-equivalent minutes each (an estimate — check your plan's billing page), so a few
 dozen iOS builds a month can exhaust a 2,000-minute Free budget on their own (EAS builds run on Expo's infrastructure, not on Actions minutes). Dependabot update runs on standard
 hosted runners are free.
+
+`react-native` with `toolchain: metro` is the one flavor here that also runs macOS in **`build.yml`** (the `ios`
+simulator build — `pod install` plus a full React Native compile, typically 10–20 minutes, i.e. ~100–200
+Linux-equivalent minutes per run on a private repository) and, on public repositories only, in `security.yml`'s
+`swift` CodeQL leg. So the `ios` job is gated like the Swift and Ionic iOS jobs, from the resolved
+`visibility`/`ci-tests` rather than an extra question:
+
+| `visibility` | `ci-tests` | `ios` job runs on |
+|---|---|---|
+| `public` | any | every pull request and push (macOS is free on public repositories) |
+| `private`/`internal` | `full` | every pull request and push — the user opted into complete verification |
+| `private`/`internal` | `unit` | pushes to `<stable-branch>` and `workflow_dispatch` only (`if:` on the job), so day-to-day pull requests spend no macOS minutes; the Android job and the JS checks still run everywhere |
+
+State the resulting gate in Step 8, and that a team that never wants macOS CI minutes can delete the `ios` job and
+rely on `release.yml`'s archive (or a local `xcodebuild`).
 
 The four `security-*` keys each default to `yes` when not supplied via `args` and are not otherwise
 surveyed — this skill always adds/keeps the corresponding `security.yml` job unless the user (or an
@@ -386,20 +484,23 @@ Per-file handling once decided:
   - For `build.yml`: preserve any step that isn't one of the pipeline stages this skill owns
     (install/lint/format/typecheck/test/coverage, optional Sonar, optional e2e, `prisma generate`/build/image build
     check for nestjs/nextjs, docs build, Pages deploy or
-    docs-artifact upload) — e.g. a Slack notification step or an extra matrix entry stays untouched. Only add
+    docs-artifact upload, and for react-native/metro the `android`/`ios`/`e2e-android` jobs and the `ios` job's
+    `if:` gate) — e.g. a Slack notification step or an extra matrix entry stays untouched. Only add
     missing stages or correct outdated ones (wrong action version, wrong script name, a stage that should now
     be gated on/off per `sonar`/`docs-tool`/`ci-tests`/`pages`, etc.), and don't reorder steps this skill
     doesn't own.
   - For `release.yml`: preserve any job/step outside this flavor's owned jobs; only correct the
-    publish/build/signing/deploy jobs per the resolved `publish`/`distribution`/`native-builds`/`output`/`pages` values (the GHCR image job for
-    nestjs/nextjs-server, the static-export Pages job for nextjs-static).
+    publish/build/signing/deploy jobs per the resolved `publish`/`distribution`/`toolchain`/`native-builds`/`output`/`pages` values (the GHCR image job for
+    nestjs/nextjs-server, the static-export Pages job for nextjs-static, the `android`/`ios` signing and
+    Play/TestFlight upload jobs for react-native/metro). An existing `fastlane/Fastfile` driving the metro release
+    is foreign — keep it and report it rather than replacing it with raw `xcodebuild` steps.
   - For `sync.yml`/`sync_versions.py`: preserve any file the script updates beyond
     `package.json`/`README.md`/the Antora docs that a prior customization added, and preserve any extra
     workflow step the same way. Only correct the pipeline stages this skill owns.
   - For `security.yml`: preserve any job this skill doesn't own; only add/remove/update the
     `dependency-review`/CodeQL/OSV-Scanner/gitleaks jobs per the resolved `security-*` `args` (Step 1).
   - For `.github/dependabot.yml`: preserve any `updates:` entry for an ecosystem this skill doesn't manage
-    (e.g. `maven` for a sibling backend); only add/update the `npm`, `github-actions`, and (when a `Dockerfile` exists) `docker` entries.
+    (e.g. `maven` for a sibling backend); only add/update the `npm`, `github-actions`, (when a `Dockerfile` exists) `docker`, and (react-native/metro) `gradle`/`bundler` entries.
 
 Missing files are always created from the template, whatever was decided for the existing ones.
 
@@ -426,21 +527,26 @@ back to the versions confirmed current as of **September 2026**, listed here:
 | `actions/configure-pages` | `v6` | |
 | `actions/setup-python` | `v7` | used only by `sync.yml` |
 | `actions/setup-java` | `v6` | used only by the react-native/ionic Android jobs (Gradle needs a JDK) |
-| `android-actions/setup-android` | `v4` | Android SDK/cmdline-tools setup for the Android release jobs |
+| `android-actions/setup-android` | `v4` | Android SDK/cmdline-tools setup for the Android release jobs (and every react-native/metro Android job) |
+| `gradle/actions/setup-gradle` | `v6` | react-native/metro Android jobs — Gradle wrapper/dependency cache (`v6.4.0` latest as of October 2026), same action `iru-setup-android-github-workflows` uses |
+| `reactivecircus/android-emulator-runner` | `v2` | react-native/metro `e2e-android` job only (`ci-tests: full`) — `v2.38.0` latest as of October 2026 |
+| `ruby/setup-ruby` | `v1` | react-native/metro iOS jobs — Ruby + `bundler-cache` for the Gemfile that pins CocoaPods (`v1.329.0` latest as of October 2026; the project only publishes the floating `v1` major) |
+| `maxim-lobanov/setup-xcode` | `v1` | react-native/metro iOS jobs, same action `iru-setup-swift-github-workflows` uses |
+| `apple-actions/upload-testflight-build` | `v5` | react-native/metro `release.yml`, `distribution` ≠ `none` — same action and API-key inputs (`issuer-id`/`api-key-id`/`api-private-key`) as `iru-setup-swift-github-workflows` |
 | `pnpm/action-setup` | `v6` | only when `package-manager: pnpm` — `setup-node`'s built-in `cache: pnpm` needs `pnpm` already on `PATH`, which this action provides; without it the cache step fails with "Dependency lock file is not found" even though `pnpm-lock.yaml` exists |
 | `actions/dependency-review-action` | `v5` | |
 | `github/codeql-action` (`init`/`analyze`) | `v4` | resolve via `.../tags`, not `.../releases/latest` — that endpoint returns the unrelated `codeql-bundle-*` tag |
 | `SonarSource/sonarqube-scan-action` | `v8` | resolve via `.../tags` too, for the same reason |
 | `google/osv-scanner-action` (reusable workflow) | `v2` | pin the workflow ref, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0` |
 | `gitleaks/gitleaks-action` | `v3` | |
-| `actions/cache` | `v6` | `nextjs` only — persists `.next/cache` between builds, as Next.js's CI guide recommends |
+| `actions/cache` | `v6` | `nextjs` — persists `.next/cache` between builds, as Next.js's CI guide recommends; react-native/metro — caches `ios/Pods` keyed on `ios/Podfile.lock` |
 | `docker/setup-buildx-action` | `v4` | `nestjs`/`nextjs` (`output: server`) with a `Dockerfile` — image build check and GHCR release |
 | `docker/login-action` | `v4` | GHCR release only |
 | `docker/metadata-action` | `v6` | GHCR release only |
 | `docker/build-push-action` | `v7` | image build check (`push: false`) and GHCR release |
 | `changesets/action` | `v2` | library flavor only |
 | `expo/expo-github-action` | `v9` | react-native/`native-builds: eas` only — the repository publishes `v5`…`v9` tags (`git ls-remote --tags`), so the ref needs the `v` prefix like every other action here; a bare `@9` doesn't resolve |
-| `r0adkll/upload-google-play` | `v1` | ionic/`distribution: store` Android upload only |
+| `r0adkll/upload-google-play` | `v1` | ionic/`distribution: store` Android upload, and react-native/metro with `distribution` `internal` (track `internal`) or `store` (track `production`) |
 | `wzieba/Firebase-Distribution-Github-Action` | `v1` | only if the user opted into Firebase App Distribution for `distribution: internal` |
 
 npm's trusted publishing (OIDC, no `NPM_TOKEN` secret, automatic provenance) requires **npm ≥ 11.5.1** —
@@ -781,6 +887,223 @@ Notes specific to this template:
 - **`nextjs` with `output: static` and `pages: yes`** shares one Pages site between `deploy-docs` (this file)
   and the app deploy (`release.yml`), exactly like `react`/`angular` — the same "Decision made" note under the
   react/angular `release.yml` template applies, including the option of shipping the docs under `out/docs/`.
+
+### `build.yml` template — `react-native` flavor, `toolchain: metro`
+
+The `build` job is the generic `build.yml` template's `build` job above, **verbatim** — install, lint, format
+check, typecheck, `coverage` (Jest with `@react-native/jest-preset`, lcov at `coverage/lcov.info`), the optional
+Sonar scan, the docs/Antora build and the Pages/artifact tail, with no Playwright block — plus its `deploy-docs`
+job when `pages: yes`. Only the job's display name changes. Append these jobs after it (`toolchain: expo` keeps
+the generic template alone — its native projects are generated, not committed, so there is nothing native to
+build in CI outside `release.yml`):
+
+```yaml
+  # ... `build` (named "Lint, typecheck and unit tests") and, with pages: yes, `deploy-docs` — verbatim from the
+  # generic build.yml template above ...
+
+  android:
+    name: Android build, unit tests and lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # Only when package-manager: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      # node_modules is required on this job too: React Native's Gradle plugin, autolinking and Codegen all
+      # resolve from node_modules/ (settings.gradle includes @react-native/gradle-plugin from there)
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      - name: Install dependencies
+        run: <install-command>
+
+      - name: Set up JDK <rn-java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '<rn-java-version>'
+
+      # Accepts the SDK licenses so the Android Gradle Plugin can download the NDK/platform/build-tools versions
+      # android/build.gradle pins (ndkVersion, compileSdkVersion, buildToolsVersion) on first use
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      # Gradle wrapper, dependency and build-output caching (the same action iru-setup-android-github-workflows uses)
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build, unit-test and lint the debug variant
+        working-directory: android
+        run: ./gradlew assembleDebug testDebugUnitTest lint
+
+      - name: Upload Android Lint report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-lint-report
+          path: android/app/build/reports/lint-results-*.html
+          retention-days: 14
+
+  ios:
+    name: iOS simulator build (unsigned)
+    # <ios-ci-condition> — per Step 1's cost table: omit this `if:` entirely for a public repository or
+    # ci-tests: full; for a private/internal repository with ci-tests: unit keep it, so pull requests spend no
+    # macOS minutes
+    if: github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', '<stable-branch>')
+    runs-on: <macos-runner>
+    # CocoaPods aborts with Encoding::CompatibilityError under a non-UTF-8 locale
+    env:
+      LANG: en_US.UTF-8
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: <xcode-version>
+
+      # Only when package-manager: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      # The Podfile runs `node` to locate react_native_pods.rb inside node_modules
+      - name: Install dependencies
+        run: <install-command>
+
+      # Installs the Gemfile's pinned CocoaPods (and its activesupport/xcodeproj constraints) and caches the gems,
+      # keyed on Gemfile.lock. Drop `ruby-version:` when the app root has a .ruby-version file
+      - name: Set up Ruby and the Gemfile's CocoaPods
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '<ruby-version>'
+          bundler-cache: true
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v6
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: ${{ runner.os }}-pods-
+
+      - name: Install pods
+        working-directory: ios
+        run: bundle exec pod install
+
+      # Compile-only proof for the iOS side: a simulator build needs no signing identity, no provisioning profile
+      # and no secrets. xcbeautify ships on GitHub's macOS images
+      - name: Build for the iOS simulator (unsigned)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -workspace <ios-workspace>.xcworkspace -scheme <ios-scheme> -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | xcbeautify
+
+  # Omit this whole job unless ci-tests: full (Step 1)
+  e2e-android:
+    name: Maestro e2e on an Android emulator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # The emulator needs hardware acceleration, which GitHub-hosted Linux runners don't expose by default —
+      # the same step iru-setup-android-github-workflows uses
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Only when package-manager: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      - name: Install dependencies
+        run: <install-command>
+
+      - name: Set up JDK <rn-java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '<rn-java-version>'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # A release APK embeds the JS bundle, so no Metro server has to run beside the emulator. The template's
+      # release build type signs with the debug keystore, which is all an emulator install needs; building only
+      # the emulator's ABI roughly quarters the native compile time
+      - name: Build the release APK for the emulator ABI
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run Maestro flows on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: <emulator-api-level>
+          target: google_apis
+          arch: x86_64
+          script: |
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
+            maestro test .maestro/ --format junit --output maestro-report.xml
+
+      - name: Upload Maestro results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-results
+          path: |
+            maestro-report.xml
+            ~/.maestro/tests/
+          retention-days: 14
+```
+
+Notes specific to this template:
+
+- **Why four jobs instead of one**: the JS checks, the Android build and the iOS build share nothing but
+  `node_modules`, and each native build takes several minutes; separate jobs run in parallel, fail
+  independently, and let the macOS job be gated on its own. The Sonar scan stays in `build` (it only needs
+  `coverage/lcov.info`); `sonar-project.properties` already excludes `android/**`/`ios/**`, so native code is not
+  sent to Sonar.
+- **No `.integration-test.lock` in CI**: the lock serializes emulator/simulator/Metro use on a developer machine
+  (`iru-typescript-test`'s `e2e` selector); each GitHub-hosted job has its own VM and its own emulator, so the
+  workflow neither takes nor needs it.
+- **Detox instead of Maestro**: when Step 1 found `.detoxrc.js` and no `.maestro/`, replace the two Maestro steps
+  with `npx detox build --configuration android.emu.release` before the emulator step and `npx detox test
+  --configuration android.emu.release --headless` as its `script:` — and say so in Step 8; the Maestro shape is
+  the default because `iru-setup-react-native-app` scaffolds `.maestro/smoke.yaml`.
+- **iOS e2e is not generated**: a Maestro/Detox run on an iOS simulator would add a second, much longer macOS
+  job per run (simulator boot + Release build); keep it local (`iru-typescript-test e2e`) unless the user asks.
+- **`<emulator-api-level>`**: `35` by default — the same default as `iru-setup-android-github-workflows`'s
+  `api-level`, independent of the template's `compileSdkVersion`/`targetSdkVersion`.
 
 ### `release.yml` template — `library` flavor
 
@@ -1149,7 +1472,7 @@ Notes specific to this template:
   variables are injected at run time. `NEXT_PUBLIC_*` values are inlined at **build** time, so a Next.js image is
   built per environment if those differ — flag that in Step 8 when the project uses any.
 
-### `release.yml` template — `react-native` flavor, `native-builds: eas`
+### `release.yml` template — `react-native` flavor, `toolchain: expo`, `native-builds: eas`
 
 ```yaml
 name: Release
@@ -1193,7 +1516,7 @@ jobs:
         run: eas submit --platform all --non-interactive --profile production
 ```
 
-### `release.yml` template — `react-native` flavor, `native-builds: local`
+### `release.yml` template — `react-native` flavor, `toolchain: expo`, `native-builds: local`
 
 ```yaml
 name: Release
@@ -1335,7 +1658,7 @@ jobs:
           path: ios/build/*.ipa
 ```
 
-Notes specific to both `react-native` variants:
+Notes specific to both `react-native` `toolchain: expo` variants:
 
 - **Runner cost**: the `local` variant's `ios` job runs on `macos-latest`, whose minutes cost roughly 10×
   Linux per GitHub's current pricing — free on a public repository, but on a private/internal one each iOS
@@ -1363,6 +1686,268 @@ Notes specific to both `react-native` variants:
   only. If the user wants an automated Play Console/App Store Connect upload from the `local` path too, that's
   additional scope beyond this skill's remit; note it as a follow-up rather than improvising an untested
   upload step.
+
+### `release.yml` template — `react-native` flavor, `toolchain: metro`
+
+Triggered like every sibling release workflow — a published GitHub Release (which creates the `v<version>` tag
+`iru-release` cuts) plus `workflow_dispatch` — and built from the committed `android/`/`ios/` projects directly
+(no prebuild step: on metro they are source, not generated output). Version numbers come from the files
+`iru-react-native-bump-version` already bumped on the release branch (`versionName`/`versionCode` in
+`android/app/build.gradle`, `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in the `.pbxproj`); this workflow never
+edits them. The signing/upload model reuses the Android and Swift workflow skills': an upload keystore decoded
+from secrets plus `r0adkll/upload-google-play` (as `iru-setup-android-github-workflows`' workflow-level upload),
+and `xcodebuild` cloud-managed signing with an App Store Connect API key plus `apple-actions/upload-testflight-build`
+(as `iru-setup-swift-github-workflows`' `signing: api-key` path).
+
+```yaml
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android release bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # Only when package-manager: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      - name: Install dependencies
+        run: <install-command>
+
+      - name: Set up JDK <rn-java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '<rn-java-version>'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # distribution: none only — proves the release variant (JS bundle + Hermes bytecode + every ABI) builds.
+      # The template's release build type signs with the debug keystore, so this AAB is NOT uploadable to Play;
+      # drop this step, and keep the signed block below, when distribution is internal/store
+      - name: Build release bundle (debug-signed, not distributable)
+        working-directory: android
+        run: ./gradlew bundleRelease
+
+      # Omit from here to the Google Play upload if distribution: none. The keystore is written outside the
+      # checkout ($RUNNER_TEMP) so it can never be committed or uploaded as an artifact by accident
+      - name: Decode Android upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      # The Android Gradle Plugin's injected-signing properties (what Android Studio's "Generate Signed Bundle"
+      # passes) override whatever signingConfig android/app/build.gradle assigns to the release build type — the
+      # template's signingConfigs.debug or a project-specific signingConfigs.release — so build.gradle needs no
+      # CI-specific edits and the passwords never touch gradle.properties
+      - name: Build signed release bundle
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      # <play-track>: `internal` for distribution: internal, `production` for distribution: store
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: <android-package-name>
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: <play-track>
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+  ios:
+    name: iOS archive
+    runs-on: <macos-runner>
+    # CocoaPods aborts with Encoding::CompatibilityError under a non-UTF-8 locale
+    env:
+      LANG: en_US.UTF-8
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: <xcode-version>
+
+      # Only when package-manager: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node <node-version>
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+
+      - name: Install dependencies
+        run: <install-command>
+
+      - name: Set up Ruby and the Gemfile's CocoaPods
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '<ruby-version>'
+          bundler-cache: true
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v6
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: ${{ runner.os }}-pods-
+
+      - name: Install pods
+        working-directory: ios
+        run: bundle exec pod install
+
+      # distribution: none only — compiles the Release configuration (JS bundle included) with signing disabled;
+      # nothing distributable comes out of it. Drop this step, and keep the signed block below, otherwise
+      - name: Archive (unsigned)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -workspace <ios-workspace>.xcworkspace -scheme <ios-scheme> -configuration Release archive \
+            -destination 'generic/platform=iOS' -archivePath build/<ios-scheme>.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO | xcbeautify
+
+      # Omit from here to the end if distribution: none. Decodes the base64 API key once into a file (for
+      # xcodebuild) and into a multi-line env var (the TestFlight action's api-private-key takes the raw .p8
+      # content, not a path) — same step as iru-setup-swift-github-workflows
+      - name: Write the App Store Connect API key
+        env:
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          echo "$API_KEY_BASE64" | base64 -d > "$RUNNER_TEMP/AuthKey.p8"
+          {
+            echo "APP_STORE_CONNECT_API_PRIVATE_KEY<<EOF"
+            cat "$RUNNER_TEMP/AuthKey.p8"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      # Cloud-managed automatic signing: -allowProvisioningUpdates + the API key let xcodebuild create/fetch the
+      # distribution certificate and App Store profile itself. The template project sets no DEVELOPMENT_TEAM, so
+      # it is passed here
+      - name: Archive (signed)
+        working-directory: ios
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild -workspace <ios-workspace>.xcworkspace -scheme <ios-scheme> -configuration Release archive \
+            -destination 'generic/platform=iOS' -archivePath build/<ios-scheme>.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$API_KEY_ID" \
+            -authenticationKeyIssuerID "$API_ISSUER_ID" \
+            CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=<team-id> | xcbeautify
+
+      - name: Write ExportOptions.plist
+        working-directory: ios
+        run: |
+          cat > ExportOptions.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string><team-id></string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export IPA
+        working-directory: ios
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+        run: |
+          xcodebuild -exportArchive -archivePath build/<ios-scheme>.xcarchive -exportPath build/export \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$API_KEY_ID" \
+            -authenticationKeyIssuerID "$API_ISSUER_ID"
+
+      # distribution: internal and store alike — TestFlight is where every App Store build lands first;
+      # submitting it for App Review (store) stays a manual App Store Connect step
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v5
+        with:
+          app-path: ios/build/export/<ios-scheme>.ipa
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          api-private-key: ${{ env.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release.ipa
+          path: ios/build/export/*.ipa
+```
+
+Notes specific to this template:
+
+- **Signing material never lands in the repository**: the keystore goes to `$RUNNER_TEMP` and the passwords
+  reach Gradle only as `-P` properties from step-level `env:` (never interpolated into the script text), and
+  the `.p8` key likewise lives in `$RUNNER_TEMP`. Unlike the `expo`/`local` and `ionic` templates, nothing is
+  appended to `android/gradle.properties`, so a project-specific `signingConfigs.release` that reads its own
+  property names keeps working locally while CI's injected values win.
+- **Upload keystore vs. app signing key**: with Play App Signing (the default for new apps) the secret is the
+  *upload* key; Google re-signs with the app signing key. The very first AAB of a brand-new app must be uploaded
+  by hand in the Play Console before `r0adkll/upload-google-play` can publish to any track — flag this in Step 8.
+- **`versionCode` must grow** on every upload Play accepts; `iru-react-native-bump-version` increments it (and
+  `CURRENT_PROJECT_VERSION`) on each release value, so re-running this workflow for the same release fails at
+  the upload step by design.
+- **`<team-id>`** (Apple Developer Team ID) has no run-time source — ask for it, as
+  `iru-setup-swift-github-workflows` does. `ExportOptions.plist` is written inline (unlike the expo variants,
+  which expect a committed `ios/ExportOptions.plist`); `method: app-store` is the long-standing value newer
+  Xcode releases still accept as an alias of `app-store-connect`.
+- **iOS signing alternative**: a team that manages its distribution certificate by hand (a `.p12`) or with
+  `fastlane match` swaps the API-key archive flags for a keychain import or `bundle exec fastlane match appstore
+  --readonly`, exactly as described in `iru-setup-swift-github-workflows`' `release.yml` notes — the template
+  Gemfile is already there, so adding `gem 'fastlane'` is the only prerequisite. If the repository already has a
+  `fastlane/Fastfile`, prefer driving archive/export/upload through its lanes and say so in Step 8.
+- **Runner cost**: the `ios` job runs on `<macos-runner>` (~10× Linux per GitHub's current pricing) once per
+  published release; the `android` job compiles every ABI's native code, so expect 15–25 Linux minutes.
 
 ### `release.yml` template — `ionic` flavor
 
@@ -1563,7 +2148,8 @@ Runs once a GitHub Release is published, provided it was published from the stab
 request that merges the released branch back into the integration branch and bumps the development
 prerelease version via the companion `sync_versions.py` script (below). Skip this whole workflow — don't
 generate it — for the `react-native`/`ionic` flavors: their app version is normally driven by store submission
-tooling (EAS `autoIncrement`, or the build number bumped alongside a store listing), not by a `package.json`
+tooling (EAS `autoIncrement`, or the build number bumped alongside a store listing — for `toolchain: metro`,
+`iru-react-native-bump-version` run by `iru-release` on the release branch), not by a `package.json`
 prerelease convention; note this omission explicitly in Step 8's report so the user isn't left wondering why
 no `sync.yml` was written for those flavors.
 
@@ -1953,7 +2539,105 @@ Notes specific to this template:
           category: /language:${{ matrix.language }}
   ```
 
-  The other five flavors keep the single-language job unchanged.
+  The other flavors keep the single-language job unchanged — except `react-native` with `toolchain: metro`
+  below (`toolchain: expo` keeps the single-language job: its native projects are generated at build time, so
+  there is no committed native source to analyze).
+- **`react-native` with `toolchain: metro`**: the committed `android/` (Kotlin `MainActivity`/`MainApplication`
+  plus any native modules) and `ios/` (Swift `AppDelegate` plus any native modules) are first-party source, so the
+  `codeql` job becomes a matrix with per-language build modes. Decision, documented here so every run makes the
+  same one: `java-kotlin` uses `build-mode: manual` — CodeQL's `none` mode extracts Java only, never Kotlin, and
+  the template's Android sources are all Kotlin — with a compile of just the app module's Kotlin/Java (no C++,
+  no packaging) on Linux; `swift` always needs a real build on macOS (`build-mode: manual`, the same unsigned
+  simulator build as `build.yml`), so its leg is included only when `visibility: public` (macOS minutes are free
+  there) and omitted on private/internal repositories, which Step 8 reports along with how to add it back. Replace
+  the `codeql` job with:
+
+  ```yaml
+  codeql:
+    name: CodeQL analysis (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    env:
+      LANG: en_US.UTF-8   # CocoaPods (swift leg) needs a UTF-8 locale
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+            runner: ubuntu-latest
+          - language: actions
+            build-mode: none
+            runner: ubuntu-latest
+          - language: java-kotlin
+            build-mode: manual
+            runner: ubuntu-latest
+          # visibility: public only — drop this entry on private/internal repositories (Step 1's cost context)
+          - language: swift
+            build-mode: manual
+            runner: <macos-runner>
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+      - name: Set up Node <node-version>
+        if: matrix.build-mode == 'manual'
+        uses: actions/setup-node@v7
+        with:
+          node-version: <node-version>
+          cache: <package-manager>
+      - name: Install dependencies
+        if: matrix.build-mode == 'manual'
+        run: <install-command>
+      - name: Set up JDK <rn-java-version>
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '<rn-java-version>'
+      - name: Set up Android SDK
+        if: matrix.language == 'java-kotlin'
+        uses: android-actions/setup-android@v4
+      - name: Set up Gradle
+        if: matrix.language == 'java-kotlin'
+        uses: gradle/actions/setup-gradle@v6
+      - name: Set up Ruby and the Gemfile's CocoaPods
+        if: matrix.language == 'swift'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '<ruby-version>'
+          bundler-cache: true
+      - name: Install pods
+        if: matrix.language == 'swift'
+        working-directory: ios
+        run: bundle exec pod install
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      # --no-build-cache: CodeQL only sees compiler invocations that actually run, so a cache hit would leave the
+      # database empty
+      - name: Compile the Android app's Kotlin/Java sources
+        if: matrix.language == 'java-kotlin'
+        working-directory: android
+        run: ./gradlew --no-build-cache :app:compileDebugKotlin :app:compileDebugJavaWithJavac
+      - name: Build the iOS app for the simulator
+        if: matrix.language == 'swift'
+        working-directory: ios
+        run: |
+          xcodebuild -workspace <ios-workspace>.xcworkspace -scheme <ios-scheme> -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
+  ```
+
+  `actions` is scanned for metro for the same reason as nestjs/nextjs: its `release.yml` handles signing keys and
+  store credentials.
 - None of these four jobs need a repository secret beyond the automatically provided `GITHUB_TOKEN` — don't
   add any of them to Step 7's secrets table.
 - If `github.com` public-repository default CodeQL setup is simpler for this repository than a workflow-based
@@ -2003,6 +2687,33 @@ For the `ionic` flavor, add a second `npm` entry with `directory: /android` only
 separately and isn't an ecosystem Dependabot's `npm` updater covers; a `gradle` ecosystem entry is a
 reasonable follow-up but out of this skill's generated scope, note it in Step 8 instead of adding it silently).
 
+For `react-native` with `toolchain: metro`, the committed native projects carry their own dependency manifests,
+so add two entries (the `npm` entry still covers every React Native package, including the ones autolinking
+pulls into Gradle and CocoaPods):
+
+```yaml
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    groups:
+      gradle-dependencies:
+        patterns:
+          - "*"
+
+  # The Gemfile pins CocoaPods and its activesupport/xcodeproj constraints
+  - package-ecosystem: bundler
+    directory: /
+    schedule:
+      interval: weekly
+```
+
+Dependabot has no CocoaPods ecosystem, so `ios/Podfile.lock` is refreshed only when `pod install` runs after an
+`npm` bump — say so in Step 8. Expect most `gradle` pull requests to touch only the Gradle wrapper and the
+handful of versions in `android/build.gradle`'s `ext {}` block; the Android Gradle Plugin itself is versioned by
+React Native's Gradle plugin and moves with `react-native` upgrades, which should go through the React Native
+Upgrade Helper rather than an isolated Dependabot bump.
+
 If `.github/dependabot.yml` already exists with entries for other ecosystems (e.g. `maven` for a sibling
 backend), preserve them — only add or update the `npm` and `github-actions` entries above (see Step 2).
 
@@ -2024,7 +2735,16 @@ user or note it as an open gap in Step 8's report instead of silently guessing.
 | `<sonar-host-url>` | Step 1 Sonar survey / `args`; only needed when `sonar: self-hosted` |
 | `<web-dist-dir>` | `react`/`angular` only (release.yml's Pages deploy): `dist` for `react` (Vite's default `build.outDir`); `dist/<project>/browser` for `angular`, read from `angular.json`'s build `outputPath` per Step 1 (never the bare `dist`, which holds no `index.html` on Angular) |
 | `<ios-workspace>` / `<ios-scheme>` | `react-native` with `native-builds: local` only: the basename of `ios/*.xcworkspace` after `npx expo prebuild --platform ios` (both share the name — `expo prebuild` derives it from `app.json`'s `expo.name` with non-alphanumeric characters stripped), per Step 1's survey. Not used by `ionic`, whose Capacitor project is always `ios/App/App.xcworkspace` + scheme `App` |
-| `<android-package-name>` | `android/app/build.gradle`'s `applicationId`, only when `flavor: ionic` and `distribution: store` |
+| `<ios-workspace>` / `<ios-scheme>` (metro) | `react-native` with `toolchain: metro`: the basename of the committed `ios/*.xcodeproj` (the React Native CLI template names project, workspace and shared scheme after `app.json`'s `name`, e.g. `ios/MyApp.xcworkspace` + scheme `MyApp`), per Step 1 |
+| `<android-package-name>` | `android/app/build.gradle`'s `applicationId`, when `flavor: ionic` and `distribution: store`, or `react-native` with `toolchain: metro` and `distribution` ≠ `none` |
+| `<rn-java-version>` | react-native/metro: `17` (React Native's Gradle plugin `jvmToolchain(17)`), per Step 1 |
+| `<ruby-version>` | react-native/metro: `.ruby-version` when present (then drop the input), else `3.4` |
+| `<macos-runner>` | react-native/metro iOS jobs: `macos-26` (the GitHub-hosted GA image, same default as `iru-setup-swift-github-workflows`' `runner`) |
+| `<xcode-version>` | react-native/metro iOS jobs: `latest-stable` (`maxim-lobanov/setup-xcode` resolves it against the image), or an exact version when React Native's release notes require one the image's default doesn't meet |
+| `<ios-ci-condition>` | react-native/metro `build.yml` `ios` job: keep the template's `if:` only for `private`/`internal` + `ci-tests: unit`; drop it otherwise (Step 1's cost table) |
+| `<emulator-api-level>` | react-native/metro `e2e-android` job: `35` |
+| `<play-track>` | react-native/metro: `internal` for `distribution: internal`, `production` for `distribution: store` |
+| `<team-id>` | react-native/metro with `distribution` ≠ `none`: the Apple Developer Team ID, asked directly (no run-time source) |
 | `<image-name>` | `nestjs`/`nextjs` (`output: server`) with `distribution: internal`: `package.json`'s `name` without its `@scope/` prefix, lowercase (GHCR path segment; the scaffolds set it to the repository slug) — the final reference is `ghcr.io/<owner-lowercased>/<image-name>` |
 
 Also apply the `sonar`/`docs-tool`/`publish`/`distribution`/`native-builds`/`flavor`/`ci-tests`/`pages` gating
@@ -2043,6 +2763,11 @@ with `e2e: playwright` and `ci-tests: full`); the two Docker steps only with `di
 `Dockerfile`; the `security.yml` CodeQL matrix variant and Dependabot's `docker` entry per Step 3. `release.yml`
 for these flavors: `nextjs` + `output: static` → the static-export template; `nestjs` or `nextjs` +
 `output: server` → the GHCR template when `distribution: internal`, **no file** when `distribution: none`.
+For `react-native`, `toolchain` picks the templates: `expo` → the generic `build.yml` plus the `native-builds`
+`eas`/`local` `release.yml`; `metro` → the metro `build.yml` (generic `build` job + `android`/`ios`, plus
+`e2e-android` only with `ci-tests: full`), the metro `release.yml` (unsigned/debug-signed proof builds for
+`distribution: none`, signed Play + TestFlight uploads otherwise), the metro CodeQL matrix (with the `swift` leg
+only for `visibility: public`), and Dependabot's `gradle`/`bundler` entries.
 
 ## Step 5 — Handle missing supporting files
 
@@ -2072,7 +2797,7 @@ Before writing the workflows, make sure the files they depend on exist:
   | `library` | `iru-setup-typescript-library` Step 5 | `sonar.sources=src`, `sonar.tests=test`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info`, `sonar.exclusions=**/dist/**` |
   | `react` | `iru-setup-react-web` Step 8 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.test.tsx,**/*.test.ts`, `sonar.exclusions=**/e2e/**,**/dist/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
   | `angular` | `iru-setup-angular-web` Step 13 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts`, `sonar.javascript.lcov.reportPaths=coverage/<project>/lcov.info` (`<project>` = the `angular.json` project name), `sonar.exclusions=**/dist/**,**/docs/api/**` |
-  | `react-native` | `iru-setup-react-native-app` Step 5 | `sonar.sources=.`, `sonar.tests=.`, `sonar.test.inclusions=**/__tests__/**,**/*.test.ts,**/*.test.tsx`, `sonar.exclusions`/`sonar.test.exclusions=android/**,ios/**,node_modules/**,coverage/**,.expo/**,dist/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
+  | `react-native` | `iru-setup-react-native-app` Step 5 | `sonar.sources=.`, `sonar.tests=.`, `sonar.test.inclusions=**/__tests__/**,**/*.test.ts,**/*.test.tsx`, `sonar.exclusions`/`sonar.test.exclusions=android/**,ios/**,node_modules/**,coverage/**,.expo/**,dist/**` (metro: also `vendor/**`, where a local `bundle install --path vendor/bundle` puts gems), `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
   | `ionic` | `iru-setup-ionic-app` Step 10 | `sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts` (`framework: angular`) or `**/*.test.ts,**/*.test.tsx` (`react`), `sonar.javascript.lcov.reportPaths=coverage/app/lcov.info` (`angular` — the Ionic starter's fixed `app` project key) or `coverage/lcov.info` (`react`), `sonar.exclusions=android/**,ios/**,e2e/**,coverage/**,www/**` (`angular`) / `...,dist/**` (`react`) |
   | `nestjs` | `iru-setup-nestjs-app` | `sonar.sources=src`, `sonar.tests=src,test`, `sonar.test.inclusions=**/*.spec.ts,**/*.e2e-spec.ts`, `sonar.exclusions=**/dist/**,**/docs/api/**` (plus the generated Prisma client directory when it lives under `src/`), `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
   | `nextjs` | `iru-setup-nextjs-web` | `sonar.sources=src` (or `app` when the project has no `src/` directory), `sonar.tests=src,e2e`, `sonar.test.inclusions=**/*.test.ts,**/*.test.tsx,e2e/**`, `sonar.exclusions=**/.next/**,**/out/**,**/docs/api/**`, `sonar.javascript.lcov.reportPaths=coverage/lcov.info` |
@@ -2082,8 +2807,12 @@ Before writing the workflows, make sure the files they depend on exist:
 - **`.changeset/config.json` missing, `flavor: library`, and `publish: yes`**: recommend the user re-run
   `iru-setup-typescript-library` (or `npx changeset init`) so the `version-pr` job in `release.yml` has
   something to act on. Skip this step entirely if `publish: no` — that job is omitted.
-- **`ExportOptions.plist` missing under `ios/`, `flavor` is `react-native` or `ionic`, and `distribution`
-  isn't `none`**: flag this prominently — the iOS export step in `release.yml` will fail without it. This
+- **`Gemfile.lock` or `ios/Podfile.lock` missing, `flavor: react-native`, `toolchain: metro`**: flag it — the
+  iOS jobs' `bundler-cache` and Pods cache key hash them, and an uncommitted `Podfile.lock` lets every CI run
+  resolve different pod versions. Recommend running `bundle install` and `cd ios && bundle exec pod install`
+  locally and committing both (`iru-setup-react-native-app` does this for a fresh metro scaffold).
+- **`ExportOptions.plist` missing under `ios/`, `flavor` is `react-native` (`toolchain: expo`) or `ionic`, and
+  `distribution` isn't `none`** (the metro `release.yml` writes its own inline): flag this prominently — the iOS export step in `release.yml` will fail without it. This
   file is project-specific (team id, export method) and this skill doesn't generate it.
 - **`next.config` not reading `PAGES_BASE_PATH`, `flavor: nextjs`, `output: static`, `pages: yes`**: flag it —
   the project site's assets would 404 — and show the two lines to add (`basePath: process.env.PAGES_BASE_PATH ??
@@ -2119,10 +2848,11 @@ the user needs to go create:
 |---|---|---|
 | `SONAR_TOKEN` | Auth token for the SonarQube/SonarCloud scan | `sonar` is `cloud` or `self-hosted` |
 | `EXPO_TOKEN` | Auth token for `expo/expo-github-action`, used by `eas build`/`eas submit` | `flavor: react-native`, `native-builds: eas` |
-| `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` | Signs the Android release bundle | `flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
-| `APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64` | Drives `xcodebuild`'s automatic cloud-managed signing (`-allowProvisioningUpdates` + the `-authenticationKey*` trio) on both the archive and the `.ipa` export — the key needs the App Manager or Admin role; no certificate/profile secrets are needed unless the team switched to the manually-managed alternative described under the react-native template | `flavor: react-native` (`native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Uploads the signed `.aab` straight to a Play Console track | `flavor: ionic`, `distribution: store` |
-| `FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase App Distribution push | `flavor: ionic` (or `react-native`), `distribution: internal`, and the user opted into Firebase App Distribution over a plain artifact upload (Step 1) |
+| `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` | Signs the Android release bundle — for metro, the Play App Signing **upload** keystore (`base64 -i upload.keystore`), passed to Gradle as `android.injected.signing.*` properties | `flavor: react-native` (`toolchain: metro`, or `toolchain: expo` with `native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
+| `APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64` | Drives `xcodebuild`'s automatic cloud-managed signing (`-allowProvisioningUpdates` + the `-authenticationKey*` trio) on both the archive and the `.ipa` export — the key needs the App Manager or Admin role; no certificate/profile secrets are needed unless the team switched to the manually-managed alternative described under the react-native template. For metro it also authenticates `apple-actions/upload-testflight-build` | `flavor: react-native` (`toolchain: metro`, or `toolchain: expo` with `native-builds: local`) or `flavor: ionic`, and `distribution` isn't `none` |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Uploads the signed `.aab` straight to a Play Console track — the service account needs release permissions for the app in Play Console → Users and permissions | `flavor: ionic`, `distribution: store`; or `flavor: react-native`, `toolchain: metro`, `distribution` `internal` (internal track) or `store` (production track) |
+| `FIREBASE_ANDROID_APP_ID` / `FIREBASE_SERVICE_ACCOUNT_JSON` | Firebase App Distribution push | `flavor: ionic` (or `react-native` with `toolchain: expo`), `distribution: internal`, and the user opted into Firebase App Distribution over a plain artifact upload (Step 1) |
+| *(none for CI)* | The metro `build.yml` (`android`/`ios`/`e2e-android`) and its CodeQL legs need no secret — the simulator build is unsigned and the e2e APK uses the template's debug keystore | `flavor: react-native`, `toolchain: metro` |
 | *(none)* | The `nestjs`/`nextjs` GHCR push authenticates with `GITHUB_TOKEN` (`packages: write`), the static-export Pages deploy with the Pages OIDC token, and Testcontainers needs no credentials — no secret row for these flavors beyond `SONAR_TOKEN` | `flavor: nestjs`/`nextjs` |
 
 `GITHUB_TOKEN` needs no setup — GitHub Actions provides it automatically, used by `sync.yml`'s `gh` calls and
@@ -2146,6 +2876,11 @@ repository, the `release.yml` workflow file, and the `publish` job/environment e
 otherwise fail with an authentication error even though `id-token: write` is set correctly here. Call all of
 this out explicitly in Step 8's report, since each is easy to miss and fails on the very first real run
 without it.
+For `react-native` with `toolchain: metro` and `distribution` ≠ `none`, also call out: the app must already exist
+in Play Console with **one AAB uploaded manually** (the Play Developer API can't create an app or its first
+release), Play App Signing enrolled so the secret is the upload key, and the service account granted release
+permissions; and the app record must exist in App Store Connect for the bundle id in the Xcode project, with
+`<team-id>` matching the team that owns it.
 
 ## Step 8 — Report and warn
 
@@ -2165,11 +2900,13 @@ State explicitly what was wired versus omitted, and why:
 
 - **`visibility`**: the value and whether it was detected via `gh` or asked; when `private`/`internal`,
   repeat the cost context from Step 1 (included minutes per plan, macOS ~10×) and which generated jobs run on
-  `macos-latest` (the `ios` release job for `react-native`/`local` and `ionic`), telling the user to
+  macOS (the `ios` release job for `react-native` `expo`/`local`, `react-native` `metro` and `ionic`, plus the
+  metro `build.yml` `ios` job and its gate), telling the user to
   double-check their plan's current pricing.
 - **`ci-tests`**: `unit` or `full`, and whether that removed the Playwright e2e block (web flavors, `nextjs`
   with `e2e: playwright`) or the Testcontainers `test:e2e` step (`nestjs`), or had no effect
-  (`library`/`react-native`/`nextjs` with `e2e: none`, which have no e2e step here).
+  (`library`/`react-native` with `toolchain: expo`/`nextjs` with `e2e: none`, which have no e2e step here); for
+  metro, whether the Maestro `e2e-android` job was added and how it moved the `ios` job's gate.
 - **`pages`**: `yes` (deploy to GitHub Pages — defaulted without asking for a public repository, or chosen by
   the user for a private one) or `no` (docs, and for `react`/`angular`/`nextjs`-static the release bundle, uploaded as workflow
   artifacts only). For `react`/`angular`/`nextjs`-static with `pages: no`, state plainly that the app is not hosted anywhere by
@@ -2188,11 +2925,20 @@ State explicitly what was wired versus omitted, and why:
 - **`publish`** (library only): yes/no — if `yes`, the `publish` job and (if `.changeset/config.json` exists)
   the `version-pr` job were generated; if `no`, both were omitted and `release.yml` was not written for the
   library flavor (no jobs would remain) — say so explicitly rather than listing it among the created files.
+- **`toolchain`** (react-native only): `expo` or `metro`, and whether it came from `args` or was detected (name
+  the signal — `expo` dependency, `metro.config.js`, committed `android/`/`ios/`). For `metro`: the `ios` job's
+  gate from Step 1's cost table (every PR/push vs. stable-branch pushes + manual runs), whether `e2e-android`
+  was generated (`ci-tests: full`) and with Maestro or Detox, the resolved `<ios-workspace>`/`<ios-scheme>`,
+  `<android-package-name>`, `<rn-java-version>` and `<ruby-version>`, whether `Gemfile.lock`/`ios/Podfile.lock`
+  are committed, whether the CodeQL `swift` leg was included (public) or omitted (private/internal — re-add the
+  matrix entry to opt in, at macOS rates), and that Dependabot can't update CocoaPods.
 - **`distribution`/`native-builds`** (react-native/ionic only): which signing/store jobs were generated versus
   the plain-artifact fallback, and which secret rows were included versus left out of Step 7's table. For a
   signed iOS job, state that it relies on `xcodebuild`'s automatic cloud-managed signing (API key with the App
   Manager/Admin role, `-allowProvisioningUpdates`) and that a team using a manually managed distribution
-  certificate needs the keychain-import alternative described under the react-native template instead.
+  certificate needs the keychain-import alternative described under the react-native template instead. For
+  metro, name the Play track (`internal`/`production`) and that iOS builds stop at TestFlight (App Review
+  submission stays manual), or — for `distribution: none` — that only debug-signed/unsigned proof builds run.
 - **`<web-dist-dir>`** (react/angular only): the directory `release.yml` deploys to Pages, or uploads as the
   release artifact when `pages: no` (`dist` or
   `dist/<project>/browser`) and where it was read from.

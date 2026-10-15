@@ -12,6 +12,8 @@ not add tests or modify source/test code unless asked to as a follow-up.
 
 ## Step 0 — Resolve inputs
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-coverage` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 `[scope]` is a comma-separated list of class simple names (`Foo`, `Foo,Bar`) or `src/main/...` source paths, or
 absent (whole-module report). If the calling skill/prompt passes explicit `key: value` lines (e.g. `module: app`,
 a baseline percentage/bar), honor them and skip the matching inference below. Resolve the module the same way

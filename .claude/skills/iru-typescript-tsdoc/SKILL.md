@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-tsdoc
-description: Audit given TypeScript file(s)/scope for complete TSDoc coverage on every exported function, class, interface, type alias, and enum (React components' props interfaces and hooks, Angular components/services/inputs/outputs, NestJS controllers/route handlers/services/DTOs/modules/guards/pipes, and Next.js exported components/pages/layouts/server actions/route handlers/hooks included) — `/** ... */` with `@param`/`@returns`/`@throws` where applicable and `@example` on public entry points — generate any missing or incomplete TSDoc grounded in the actual code and current changes, then run the project's own doc-build tooling (TypeDoc or Compodoc, whichever the project uses — Compodoc is common on NestJS) to confirm the result builds without warnings/errors; for NestJS and Next.js, where neither tool is guaranteed to be installed, it verifies with whichever one the project actually configured and reports the run as audit-only when neither is. Invoke as `/iru-typescript-tsdoc <path-or-glob>` (comma-separated paths/globs accepted), or `/iru-typescript-tsdoc` with no argument to scope to files touched by uncommitted changes plus commits on the current branch not yet on the base branch. Works against any TypeScript project (npm/TypeScript library, React, Angular, React Native, Ionic, a Vaadin Hilla frontend, NestJS, or Next.js) — it detects the project's flavor and doc toolchain at runtime rather than assuming one. Use whenever the user wants TSDoc completeness checked and filled in for specific files, instead of relying on a full docs-site build to surface gaps.
+description: Audit given TypeScript file(s)/scope for complete TSDoc coverage on every exported function, class, interface, type alias, and enum (React components' props interfaces and hooks, Angular components/services/inputs/outputs, NestJS controllers/route handlers/services/DTOs/modules/guards/pipes, and Next.js exported components/pages/layouts/server actions/route handlers/hooks included) — `/** ... */` with `@param`/`@returns`/`@throws` where applicable and `@example` on public entry points — generate any missing or incomplete TSDoc grounded in the actual code and current changes, then run the project's own doc-build tooling (TypeDoc or Compodoc, whichever the project uses — Compodoc is common on NestJS) to confirm the result builds without warnings/errors; for NestJS, Next.js, and React Native apps, where neither tool is guaranteed to be installed, it verifies with whichever one the project actually configured and reports the run as audit-only when neither is. Invoke as `/iru-typescript-tsdoc <path-or-glob>` (comma-separated paths/globs accepted), or `/iru-typescript-tsdoc` with no argument to scope to files touched by uncommitted changes plus commits on the current branch not yet on the base branch. Works against any TypeScript project (npm/TypeScript library, React, Angular, Ionic, a Vaadin Hilla frontend, NestJS, Next.js, or a React Native app on either toolchain — `expo` or a bare React Native CLI/`metro` app, with TypeDoc entry points limited to the in-scope TypeScript files so the native `android/`/`ios/` projects, `.expo/`, config files and the root `index.js`/`index.ts` registration entry never enter the run, and audit-only when the app has no TypeDoc configured) — it detects the project's flavor and doc toolchain at runtime rather than assuming one. Use whenever the user wants TSDoc completeness checked and filled in for specific files, instead of relying on a full docs-site build to surface gaps.
 model: sonnet
 ---
 
@@ -21,7 +21,9 @@ Framework detection rule (shared with every other skill in this catalog's TypeSc
 checks here so the doc bar and verification command match what the rest of the pipeline assumes):
 
 - `@vaadin/hilla`/`hilla-spring-boot-starter` in `pom.xml`, or a `src/main/frontend/` directory → **hilla-frontend**
-- `expo` or `react-native` in `package.json` dependencies → **react-native**
+- `expo` or `react-native` in `package.json` dependencies → **react-native** — toolchain **expo** when `expo` is a
+  dependency (even with `android/`/`ios/` present as `npx expo prebuild` output), otherwise **metro** (bare React
+  Native CLI app; Expo also bundles with Metro — the name only distinguishes the two toolchains)
 - `@ionic/angular` or `@ionic/react` + `@capacitor/core` in `package.json` → **ionic**
 - `@nestjs/core` in `package.json` → **nestjs**
 - `next` in `package.json` → **nextjs**
@@ -30,8 +32,8 @@ checks here so the doc bar and verification command match what the rest of the p
 - none of the above → **library**
 
 This drives two things later: which build tool verifies the docs (Step 5 — Compodoc for `angular`, TypeDoc for
-every other flavor except `nestjs`/`nextjs`, which use whichever of the two the project actually configured, or
-neither) and what "exported" means for the audit (Step 1).
+every other flavor except `nestjs`/`nextjs`/`react-native`, which use whichever tool the project actually
+configured, or none) and what "exported" means for the audit (Step 1).
 
 **Doc tool for `nestjs`/`nextjs`** — these app flavors often ship no doc tool at all, so never fetch one on the fly
 with a bare `npx typedoc`/`npx compodoc` (that downloads and runs a tool the project never chose):
@@ -40,6 +42,9 @@ with a bare `npx typedoc`/`npx compodoc` (that downloads and runs a tool the pro
   and routes) — use it when `@compodoc/compodoc` is a devDependency or a `.compodocrc*`/`compodoc` script exists.
   Otherwise use TypeDoc when `typedoc` is a devDependency or a `typedoc.json` exists. Neither → **audit-only**.
 - **nextjs**: TypeDoc when `typedoc` is a devDependency or a `typedoc.json` exists; otherwise **audit-only**.
+- **react-native** (both toolchains): same rule as nextjs — TypeDoc only when `typedoc` is a devDependency or a
+  `typedoc.json` exists (neither the React Native CLI template nor `create-expo-app` ships one); otherwise
+  **audit-only**.
 - **Audit-only** means Steps 1-4 still run in full (the audit and the generated TSDoc don't depend on a build
   tool), Step 5 is skipped, and the Step 6 report says "doc build not verified: no TypeDoc/Compodoc configured in
   this project" — never a pass.
@@ -70,6 +75,16 @@ with a bare `npx typedoc`/`npx compodoc` (that downloads and runs a tool the pro
   - **react / react-native / ionic / hilla-frontend (apps)**: simply every `export`ed function, class, interface,
     type alias, and enum in each in-scope file — there is no single public entry point to trace, since app code
     is consumed by the bundler, not by external importers.
+  - **react-native specifics** (both toolchains): screens/components (a one-line summary of what the screen
+    renders, plus its props type — React Navigation screens' `route.params` shape, Expo Router routes' search
+    params), hooks, and services are in scope; so is a Turbo Module/Codegen spec (`Native*.ts` exporting `interface
+    Spec extends TurboModule`) — document each method with what the native side does, its `@param`s, and the
+    promise's resolve/reject contract, since the TypeScript spec is the only shared contract between the JS and the
+    Kotlin/Obj-C++ implementations. Never in scope: anything under `android/`, `ios/`, `.expo/`, `node_modules/`;
+    `metro.config.js`, `babel.config.js`, `react-native.config.js`, `app.config.*`, `jest.config.*`; and the root
+    `index.js`/`index.ts` that only calls `AppRegistry.registerComponent`/`registerRootComponent` — drop them from
+    the scope like test files and say so in the report. An Expo Router `_layout.tsx`/route file's default export
+    gets a one-line summary and never an `@example`.
   - **nestjs**: every exported class in scope by its Nest role — **controllers** (`@Controller`: the class, plus
     every route-handler method with what the endpoint does, a `@param` per `@Param()`/`@Query()`/`@Body()`
     argument, `@returns` describing the response body, and `@throws` per `HttpException` subclass it can raise —
@@ -196,7 +211,7 @@ or reorder members — this skill only adds/completes TSDoc comments.
 
 Which tool verifies depends on the flavor detected in Step 0.
 
-### library / react / react-native / ionic / hilla-frontend (and nestjs / nextjs when TypeDoc is configured) — TypeDoc
+### library / react / ionic / hilla-frontend (and nestjs / nextjs / react-native when TypeDoc is configured) — TypeDoc
 
 ```bash
 npx typedoc --emit none --treatWarningsAsErrors --validation.notDocumented true
@@ -238,6 +253,27 @@ npx typedoc --emit none --treatWarningsAsErrors --validation.notDocumented true
   default export, and its `metadata` export remained (exit `4`).
 - **nestjs**: point `--entryPoints` at the in-scope files exactly as for app flavors above; Nest's `tsconfig.json`
   already enables `experimentalDecorators`/`emitDecoratorMetadata`, which TypeDoc honors.
+- **react-native** (both toolchains, only when TypeDoc is configured — Step 0): `--entryPoints` per in-scope
+  `.ts`/`.tsx` file, never a directory glob, so nothing under `android/`/`ios/`/`.expo/` and no config or root
+  `index.js`/`index.ts` file is ever an entry point. Verified locally with TypeDoc 0.28.20 + TypeScript 6.0.3 on
+  both scaffolds (`--entryPoints App.tsx` on the React Native CLI 0.87.1 app; `--entryPoints App.tsx --entryPoints
+  src/math.ts` on the Expo SDK 57 app; `--disableGit --disableSources` since neither had an `origin`): each
+  undocumented default-exported component was reported as `default (CallSignature) ... does not have any
+  documentation` (exit `4`), and after adding a one-line comment the metro run exited `0`. Two things the run
+  depends on beyond the comments themselves:
+  - **TypeDoc type-checks the whole `tsconfig.json` program first**, test files included — so a type error anywhere
+    stops it with exit `3` before any doc validation. Verified on the Expo app: with Jest tests present and
+    TypeScript 6's `types: []` default (which `expo/tsconfig.base` doesn't override), TypeDoc failed on `error
+    TS2593: Cannot find name 'test'` in `__tests__/App.test.tsx`; adding `"types": ["jest"]` to the app's
+    `tsconfig.json` fixed it (the metro template's `@react-native/typescript-config` already sets it). Report such a
+    failure as "TypeDoc blocked by type errors (see `iru-typescript-code-quality`)", not as a doc gap — fixing the
+    tsconfig is out of this skill's scope.
+  - Expo's base tsconfig excludes `android`/`ios`; the metro template's `include: ["**/*.ts", "**/*.tsx"]` only
+    excludes `node_modules` and `Pods`, which is harmless because the native projects hold no TypeScript — but if an
+    `android/`/`ios/` `.ts` file ever shows up in a TypeDoc error, it's a tsconfig scoping issue to report, not a
+    file to document.
+  - The TypeDoc 0.28.20 + TypeScript 6.0.3 crash described below did **not** reproduce on either React Native
+    scaffold (both ship TypeScript 6.0.3) — still check `npm ls typescript typedoc` if TypeDoc throws a `TypeError`.
 - **Version-compatibility quirk (verified locally, worth checking before trusting a crash for a doc bug)**:
   TypeDoc 0.28.20 crashes outright (`TypeError: Cannot read properties of undefined (reading
   'PropertyDeclaration')`, not a warning) against a bare `npm install typescript`'s current default (TypeScript
@@ -288,7 +324,7 @@ is pre-existing — note it in the report but don't fix it unless the user asks.
 Per file in scope, state: how many exported symbols were already fully documented, how many gaps were found and
 filled (name each, with its kind), and the final doc-build result (TypeDoc: pass, or the exact warning text and
 symbol names that failed; Compodoc: the coverage percentage(s) achieved vs. the threshold, and the per-symbol
-lines it reported for anything still under the per-file minimum; audit-only for a `nestjs`/`nextjs` project with
+lines it reported for anything still under the per-file minimum; audit-only for a `nestjs`/`nextjs`/`react-native` project with
 neither tool configured — say so explicitly rather than reporting a pass). If any argument resolved to a test file (Step
 1), name it and note it was excluded since test files carry no TSDoc requirement here. If any out-of-scope
 pre-existing doc-build failure surfaced in Step 5, mention it separately as a follow-up rather than silently

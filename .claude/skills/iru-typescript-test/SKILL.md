@@ -1,6 +1,7 @@
 ---
 name: iru-typescript-test
-description: Run a TypeScript/npm project's unit test suite through whichever runner the project actually has wired — Vitest (`vitest run`), Jest (`jest`), or the Angular CLI's Vitest-backed unit-test builder (`ng test --watch=false`) — optionally scoped to a file, directory, or test-name pattern. Also recognizes NestJS (`@nestjs/core` — ESM/Vitest with `vitest.config.ts` + `vitest.config.e2e.ts`, or CommonJS/Jest with `jest.config.ts` + `test/jest-e2e.json`; unit `*.spec.ts` by default, the `test/*.e2e-spec.ts` suite only on an explicit `e2e` selector, reporting a missing database/Docker/Testcontainers runtime as an environment failure rather than a test failure) and Next.js (`next` — Vitest via `vitest.config.mts` or Jest via `next/jest`; Playwright end-to-end tests, which build and start the app, only on an explicit `e2e` selector, never by default). Invoke as `/iru-typescript-test` to run every unit test, or `/iru-typescript-test <selector>` where `<selector>` is a file path, a directory, or a `-t "<name pattern>"` filter (combinable with a file/directory), optionally prefixed with `e2e` (NestJS/Next.js only) to run the end-to-end suite instead. Report-only — never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down TypeScript/JavaScript unit (or, on request, NestJS/Next.js end-to-end) tests instead of invoking the runner by hand.
+description: >-
+  Run a TypeScript/npm project's unit test suite through whichever runner the project actually has wired — Vitest (`vitest run`), Jest (`jest`), or the Angular CLI's Vitest-backed unit-test builder (`ng test --watch=false`) — optionally scoped to a file, directory, or test-name pattern. Also recognizes NestJS (`@nestjs/core` — ESM/Vitest with `vitest.config.ts` + `vitest.config.e2e.ts`, or CommonJS/Jest with `jest.config.ts` + `test/jest-e2e.json`; unit `*.spec.ts` by default, the `test/*.e2e-spec.ts` suite only on an explicit `e2e` selector, reporting a missing database/Docker/Testcontainers runtime as an environment failure rather than a test failure) and Next.js (`next` — Vitest via `vitest.config.mts` or Jest via `next/jest`; Playwright end-to-end tests, which build and start the app, only on an explicit `e2e` selector, never by default) and React Native for both toolchains (`expo` — Jest with the `jest-expo` preset; `metro`, a bare React Native CLI app — Jest with `@react-native/jest-preset`, or the legacy `react-native` preset on older templates; untranspiled-package `transformIgnorePatterns` failures, missing native-module mocks, and un-awaited React Native Testing Library 14 calls are named as such; device end-to-end tests — Maestro `.maestro/` flows by default, Detox when `.detoxrc.js` is present — only on an explicit `e2e` selector, needing a booted simulator/emulator and Metro on port 8081, serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path; a caller that already holds it passes `lock: held`), and reported "unverified" — never silently skipped — when no device is available). Invoke as `/iru-typescript-test` to run every unit test, or `/iru-typescript-test <selector>` where `<selector>` is a file path, a directory, or a `-t "<name pattern>"` filter (combinable with a file/directory), optionally prefixed with `e2e` (NestJS/Next.js/React Native only) to run the end-to-end suite instead. Report-only — never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down TypeScript/JavaScript unit (or, on request, NestJS/Next.js/React Native end-to-end) tests instead of invoking the runner by hand.
 model: haiku
 ---
 
@@ -10,6 +11,16 @@ Run the project's unit tests through whichever test runner it actually has confi
 whatever the user asked for, and report a compact pass/fail summary parsed from the runner's own JSON reporter.
 This skill only runs tests and reports results — it does not fix failures or modify source/test code unless
 asked to as a follow-up.
+
+## Step 0 — Parse the arguments
+
+The argument string is a selector (Step 2) plus optional `key: value` lines from a calling skill:
+
+- **`lock: held`** — the caller (e.g. `iru-react-native-code-one-task-group`) already holds the repository-wide
+  `.integration-test.lock`; a React Native `e2e` run must not acquire or release it here (Step 2, React Native e2e).
+  Ignored for every other selector.
+- **`configuration: <name>`** — React Native `e2e` with Detox only: the `.detoxrc.js` configuration to run
+  (`ios.sim.debug`, `android.emu.debug`, …). Asked/derived in Step 2 when absent.
 
 ## Step 1 — Detect the runner, the package manager, and confirm it is actually wired
 
@@ -29,9 +40,9 @@ Never assume a runner from the framework alone — read `package.json` (and `ang
   in a broken CI job and must not be conflated.
 
 **Framework detection** (shared with `iru-typescript-coverage`/`-code-quality`/`-tsdoc`): `@nestjs/core` in
-`dependencies` → **nestjs**; `next` in `dependencies` → **nextjs**. Both still run on Vitest or Jest, detected
-exactly as above — the framework only changes which suite counts as "unit" and how the opt-in `e2e` selector
-(Step 2) is resolved:
+`dependencies` → **nestjs**; `next` in `dependencies` → **nextjs**; `react-native` or `expo` in `dependencies` →
+**react-native**. All three still run on Vitest or Jest, detected exactly as above — the framework only changes
+which suite counts as "unit", how failures are explained, and how the opt-in `e2e` selector (Step 2) is resolved:
 
 - **NestJS** — two flavors, both with unit tests as `*.spec.ts` next to the source and end-to-end tests as
   `test/*.e2e-spec.ts`, kept apart by two separate configs so the default run never picks up e2e files:
@@ -55,6 +66,48 @@ exactly as above — the framework only changes which suite counts as "unit" and
   executes, so an e2e run is slow (minutes) and can fail on a build error unrelated to the tests — never run it
   unless the `e2e` selector asks for it. Cypress (`cypress.config.*`) is out of scope for this skill — report it as
   "Cypress e2e present, not run" if the user asks for e2e and only Cypress is wired.
+- **React Native** — two toolchains, both unit-tested with **Jest** (never Vitest — the React Native runtime and its
+  Flow-typed sources need Babel through `babel-jest`). Resolve the **toolchain** first (same rule every React Native
+  skill in this catalog uses): `expo` in `dependencies` → **expo**, even when `android/`/`ios/` exist (they're
+  `npx expo prebuild` / Continuous Native Generation output); `react-native` without `expo`, plus a
+  `metro.config.js`, committed `android/` + `ios/`, or `@react-native-community/cli` → **metro** (a bare React
+  Native CLI app). Expo bundles with Metro too — "metro" names the toolchain users pick, not the only one that uses
+  Metro. Then read the Jest **preset** (`preset` in `jest.config.{js,ts}`, or `jest.preset` in `package.json`):
+  - **expo** → `jest-expo` (or a platform variant: `jest-expo/ios`, `jest-expo/android`, `jest-expo/web`,
+    `jest-expo/universal`). The blank `create-expo-app` template ships **no** test setup at all — `jest-expo` +
+    `jest` + `@types/jest` are added by `iru-setup-react-native-app` (or `npx expo install --dev jest-expo jest
+    @types/jest`); without them, Step 1's "no test runner wired" rule applies. `jest-expo/universal` runs every
+    test once per platform project, so totals are a multiple of the test count — say so rather than reporting
+    "4× as many tests as files suggest".
+  - **metro** → `@react-native/jest-preset` on current templates (verified: the React Native CLI 20.2 /
+    React Native 0.87.1 TypeScript template writes `module.exports = { preset: '@react-native/jest-preset' };` and
+    there is no `react-native/jest-preset.js` any more), or `preset: 'react-native'` on templates from before the
+    preset moved into its own package. Both are the same preset; treat either as wired.
+  - A preset that contradicts the toolchain (e.g. `react-native` preset in an Expo app) still runs — mention it in
+    the report, since Expo SDK modules then aren't auto-mocked and native-module failures (below) become likely.
+
+  Unit tests live in `__tests__/` (the metro template's `__tests__/App.test.tsx`) or next to the source as
+  `*.test.ts(x)`; device end-to-end flows live in `.maestro/` (Maestro) or `e2e/` (Detox) and are never picked up
+  by Jest's default `testMatch` — only the `e2e` selector (Step 2) runs them.
+
+  **React Native–specific unit failures** — recognize these in the parsed results (Step 3) and report them by cause,
+  never as unexplained test failures, and never "fix" them (report-only):
+  - **Untranspiled package** — a whole suite fails to run with `Jest encountered an unexpected token` /
+    `SyntaxError: Cannot use import statement outside a module`, pointing into `node_modules/<pkg>/`. The package
+    ships untranspiled ESM/Flow and isn't in the preset's `transformIgnorePatterns` allow-list
+    (`@react-native/jest-preset`: `node_modules/(?!((jest-)?react-native|@react-native(-community)?)/)`; `jest-expo`
+    additionally allows `expo`, `@expo`, `react-navigation`, `@react-navigation`, `@sentry/react-native`, … —
+    both read from the installed presets). Report "suite `<file>` failed to run: `<pkg>` must be added to
+    `transformIgnorePatterns`". Verified locally by importing an ESM-only fake package from a test in the metro app.
+  - **Native module without a Jest mock** — `Invariant Violation: TurboModuleRegistry.getEnforcing(...): '<Name>'
+    could not be found`, `NativeModule: <Name> is null`, or `Cannot read properties of undefined` thrown from a
+    library's native bridge. Jest runs no native code; the library's own mock (e.g. its `jest/` setup file) must be
+    registered with `jest.mock(...)` in a `setupFiles`/`jest.setup.js`. Report "native module `<Name>` not mocked".
+    Verified locally: `TurboModuleRegistry.getEnforcing('RNFakeModule')` fails with exactly that first line.
+  - **React Native Testing Library 14** (`@testing-library/react-native` ≥ 14) made `render`, `fireEvent.*`, and
+    `renderHook` return promises — a test that calls `render(<App />)` without `await` fails with
+    `` `render` function has not been called `` from the next `screen.*` query (verified locally on 14.1.0). Report
+    "RNTL 14: `render` not awaited" rather than a component bug.
 
 Determine the package manager from `packageManager` in `package.json`, or the lockfile present:
 `package-lock.json` → npm, `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn. Invoke the runner's binary directly
@@ -108,11 +161,12 @@ built-in Vitest 4.0.8 runner) in `$TMPDIR/iru-verify/typescript/test/{vitest-pro
   behavior; it is not required for the `vitest run` / `jest` / `ng test --watch=false` forms themselves, since
   each already runs once and exits by explicit flag/subcommand rather than by CI auto-detection.
 
-### The `e2e` selector (NestJS and Next.js only)
+### The `e2e` selector (NestJS, Next.js, and React Native only)
 
 Without a leading `e2e` keyword, every row above runs the **unit** suite only — for NestJS that is the default
 `vitest.config.ts`/`jest.config.ts`, which matches `*.spec.ts` and never `*.e2e-spec.ts`; for Next.js it is the
-Vitest/Jest suite, never Playwright. `unit` as a leading keyword is accepted and means the same as no keyword.
+Vitest/Jest suite, never Playwright; for React Native it is the Jest suite, never Maestro/Detox. `unit` as a leading
+keyword is accepted and means the same as no keyword.
 A leading `e2e` keyword switches to the end-to-end suite, with the rest of the selector scoping it the same way:
 
 | What the user wants | NestJS, Vitest (ESM) | NestJS, Jest (CommonJS) | Next.js, Playwright |
@@ -122,8 +176,8 @@ A leading `e2e` keyword switches to the end-to-end suite, with the rest of the s
 | Name pattern | `... -t "<pattern>"` | `... -t "<pattern>"` | `playwright test -g "<pattern>"` |
 
 (Use the config path the project's own `test:e2e` script names, per Step 1, in place of the scaffold defaults
-shown.) `e2e` on a project that is neither NestJS nor Next.js is not supported — say so and stop rather than
-guessing at a runner.
+shown.) React Native's e2e forms are in their own subsection below. `e2e` on a project that is none of NestJS,
+Next.js, or React Native is not supported — say so and stop rather than guessing at a runner.
 
 E2E runs depend on things unit tests don't, and a failure caused by them is an **environment failure**, not a test
 failure — report it as such, naming the cause, and never as failing tests:
@@ -143,6 +197,86 @@ failure — report it as such, naming the cause, and never as failing tests:
   `Error: Process from config.webServer was not able to start`, or a `next build` compile error printed before any
   test ran are environment/build failures, not test failures.
 
+NestJS and Next.js e2e runs are serialized by their callers (`iru-nestjs-code-one-task-group`/
+`iru-nextjs-code-one-task-group` take `.integration-test.lock` around this skill's invocation); React Native e2e
+takes the lock itself unless `lock: held` says the caller already did, because it also starts Metro on a fixed port
+and drives a shared simulator/emulator — two concurrent runs would fight over both.
+
+### React Native e2e (Maestro or Detox)
+
+**Pick the framework**: a `.detoxrc.js`/`.detoxrc.json` (or a `"detox"` key in `package.json`) plus `detox` in
+`devDependencies` → **Detox**; otherwise a `.maestro/` directory of flow YAML files → **Maestro** (this catalog's
+default for both toolchains; `iru-setup-react-native-app` writes `.maestro/smoke.yaml`). Neither → report "React
+Native e2e suite not wired", not zero tests.
+
+| What the user wants | Maestro | Detox (`<cfg>` = `configuration:` arg or chosen below) |
+|---|---|---|
+| Whole e2e suite | `maestro test --format junit --output <path>.xml .maestro/` | `detox build -c <cfg>` then `detox test -c <cfg> --json --outputFile=<path>.json` |
+| One flow / file | `maestro test --format junit --output <path>.xml .maestro/login.yaml` | `detox test -c <cfg> e2e/login.test.ts --json --outputFile=<path>.json` |
+| Name/tag filter | `maestro test --include-tags=<tag> ... .maestro/` (Maestro filters by flow `tags:`, not by name) | `detox test -c <cfg> --testNamePattern "<pattern>" ...` |
+
+- **Detox configuration**: read the `configurations` keys of `.detoxrc.js` (e.g. `ios.sim.debug`,
+  `ios.sim.release`, `android.emu.debug`, `android.att.debug`). With no `configuration:` arg, prefer the single
+  configuration if there is one, else a `*.debug` one for the current platform (iOS only on macOS); ask when still
+  ambiguous. `detox build` compiles the native app (minutes) — run it once per invocation, before `detox test`.
+  Unknown `detox test` options are forwarded to its Jest runner, which is why the Jest `--json`/`--outputFile`/
+  `--testNamePattern` flags above work there (**unverified locally** — `detox test --help` was read from Detox
+  20.51.4, but no Detox suite was run).
+- **Maestro** runs against an app that is **already installed** on the device — a debug/development build
+  (`npx react-native run-ios`/`run-android` for metro, `npx expo run:ios`/`run:android` for an Expo development
+  build). This skill never builds or installs the app unless asked; a flow failing on `launchApp` because the
+  `appId` isn't installed is an environment failure.
+
+**Preconditions, checked in this order — any miss makes the run "unverified (<reason>)", never passed, never N
+failed tests, never silently skipped:**
+
+1. **Tool installed**: `command -v maestro` (installed outside npm — `curl -Ls "https://get.maestro.mobile.dev" |
+   bash` per Maestro's docs; this skill never installs it) or `npx detox --version`.
+2. **A device**: iOS — `xcrun simctl list devices booted` lists a `(Booted)` simulator (macOS only); Android —
+   `adb devices` (from `$ANDROID_HOME/platform-tools`) lists a line ending in `device`. Maestro needs one already
+   booted. Detox boots the simulator/AVD its configuration names itself, so for Detox check instead that it exists
+   (`xcrun simctl list devices` contains the configured `device.type`; `emulator -list-avds` contains the configured
+   `avdName`). None → "unverified (no booted simulator/emulator)".
+3. **The repository lock** (below), unless `lock: held`.
+4. **Metro on port 8081** — needed by every debug/development build (Detox `*.release` configurations embed the JS
+   bundle and skip this): `curl -s http://localhost:8081/status` returns `packager-status:running` when a bundler
+   is up (verified locally for both toolchains). If it isn't, start it in the background from the app directory —
+   `npx react-native start --port 8081` (metro) or `npx expo start --port 8081` (expo; set `CI=1` so it doesn't
+   prompt) — and poll `/status` for up to ~90 seconds (both reached `packager-status:running` within that window
+   locally). Something else listening on 8081 without that status line → "unverified (port 8081 busy)". Only stop
+   a Metro this run started (`pkill -f "react-native start --port 8081"` / `pkill -f "expo start --port 8081"`),
+   and stop it before releasing the lock.
+
+**Lock protocol** (same directory, owner file, staleness rule, and release discipline as every other
+container/server/device stage in this catalog — `iru-python-test`'s Step 4, the `*-code-one-task-group` skills'
+Step 3 lock): at the repository root (`git rev-parse --show-toplevel`, else the current directory),
+
+```bash
+mkdir .integration-test.lock 2>/dev/null && echo ACQUIRED || echo HELD
+```
+
+- **`ACQUIRED`** — write `.integration-test.lock/owner` (via `Write`) with "iru-typescript-test react-native e2e",
+  the selector, and `date -u +'%Y-%m-%dT%H:%M:%SZ'`. If `.integration-test.lock/` isn't in the root `.gitignore`,
+  say so in the report (this skill doesn't edit `.gitignore`).
+- **`HELD`** — say the run is waiting (naming the holder from `cat .integration-test.lock/owner`), re-run the `mkdir`
+  roughly every 30 seconds, and never start Metro or the device run meanwhile.
+- **Stale lock** — `find .integration-test.lock -maxdepth 0 -mmin +60` returns the directory: report what the owner
+  file said, break it (`rm -f .integration-test.lock/owner && rmdir .integration-test.lock`), acquire fresh, say so.
+- **Wait timeout** — still held after ~45 minutes and not stale → "unverified — blocked by a concurrent
+  integration run".
+- **Release on every exit path** (passed, failed, environment failure, interruption), after stopping any Metro this
+  run started: `rm -f .integration-test.lock/owner && rmdir .integration-test.lock`. Never release a lock taken
+  under `lock: held`.
+
+**Environment failures, not test failures**: `detox build` compile/Gradle/CocoaPods errors, `DetoxRuntimeError`
+about a missing/unbootable device, Metro `Unable to resolve module` red-screen errors caught before the first
+assertion, and Maestro failing to connect to a device. Device e2e results never count toward the 80% unit coverage
+gate (`iru-typescript-coverage` measures the Jest suite only).
+
+None of the Maestro/Detox commands above were run locally (no simulator/emulator was booted, Maestro isn't
+installed here) — they follow the tools' documented CLIs and are **unverified locally**; the Metro start/status
+probe and the lock commands are the verified parts.
+
 ## Step 3 — Run with a JSON reporter and parse it
 
 Always keep the runner's normal console reporter for a human glancing at the log, and add a JSON reporter written
@@ -160,7 +294,10 @@ fresh `@nestjs/cli` 12 ESM scaffold (Vitest 4.1) in `$TMPDIR/iru-verify/typescri
 default `vitest run` with the JSON reporter picked up only `src/app.controller.spec.ts`, and `vitest run --config
 ./vitest.config.e2e.ts` with the same flags picked up only `test/app.e2e-spec.ts`, both writing the shape below.
 A Next.js 16.4 scaffold with a `vitest.config.mts` (`@vitejs/plugin-react`, `jsdom`, `resolve.tsconfigPaths`)
-wrote the same shape too, resolving the `@/*` alias without a plugin.
+wrote the same shape too, resolving the `@/*` alias without a plugin. React Native, both toolchains, verified in
+`$TMPDIR/iru-verify/react-native/{BareApp,expo-app}`: `npx jest --json --outputFile=<path>.json` on a fresh React
+Native CLI 20.2 / React Native 0.87.1 app (Jest 29.7, `@react-native/jest-preset`) and on a `create-expo-app`
+blank-typescript SDK 57 app with `jest-expo` 57 + `@testing-library/react-native` 14.1 wrote the same shape.
 
 **Playwright** (Next.js `e2e` only) has its own JSON shape: `npx playwright test [scope] --reporter=list,json` with
 `PLAYWRIGHT_JSON_OUTPUT_NAME=<path>.json` set in the environment (the `json` reporter otherwise writes to stdout,
@@ -212,6 +349,20 @@ Parse:
 - For each `testResults[].assertionResults[]` entry with `status === "failed"`, take `fullName` (or
   `ancestorTitles.join(" > ") + " > " + title` if `fullName` is absent) as the failing test's name, and the
   **first line** of `failureMessages[0]` as its assertion message — never dump the full stack trace.
+- **A suite that failed to run** (a syntax/transform error, a throwing import, a missing module) has
+  `testResults[].status === "failed"` with an **empty** `assertionResults` and its error in `testResults[].message`
+  — its tests are never counted, so `numTotalTests` can be `0` and `numFailedTests` `0` while the run still exits
+  non-zero (Jest also sets `numRuntimeErrorTestSuites`). Report each such file as "suite `<name>` failed to run:
+  <first non-blank line of `message` after the `● Test suite failed to run` header>" — never as a clean or empty
+  run. Verified locally (Jest 29.7, `@react-native/jest-preset` 0.87.1): an untranspiled `node_modules` import
+  produced `numTotalTests: 0` with `Jest encountered an unexpected token` in that suite's `message`.
+
+**Maestro** (React Native `e2e`) writes JUnit XML with `--format junit --output <path>.xml`: one `<testcase>` per
+flow (its `name` is the flow file/name), a `<failure>` child on failure. Count `testcase` elements for the total and
+those with a `<failure>`/`<error>` child for failures; the failing flow's message is the first line of that child's
+`message` attribute or text. **Detox** forwards `--json --outputFile` to Jest, so its report has the Jest shape
+above. Both are **unverified locally** (no device run) — confirm the element/field names against the first real
+report before relying on them.
 
 Delete the scratch JSON output file after parsing (or write it under a `.gitignore`d/scratch location) so it
 doesn't get committed as build noise.
@@ -224,9 +375,15 @@ doesn't get committed as build noise.
   "selector `<x>` matched no test files" — not as 0 passed/0 failed, since that reads as a clean run.
 - If a `-t`/`--filter` name pattern matched no individual tests within otherwise-matched files (Step 2's
   exit-0-but-all-skipped case), report that plainly too — it is easy to mistake for "all passed".
-- State which suite ran (unit, or NestJS/Next.js `e2e`) whenever the project is NestJS or Next.js, so "all passed"
-  on the unit suite is never read as e2e coverage. An e2e environment failure (Step 2) is reported as "e2e not
-  run/aborted: <cause>" with the first line of the error — never as N failed tests.
+- State which suite ran (unit, or NestJS/Next.js/React Native `e2e`) whenever the project is NestJS, Next.js, or
+  React Native, so "all passed" on the unit suite is never read as e2e coverage. An e2e environment failure (Step 2)
+  is reported as "e2e not run/aborted: <cause>" with the first line of the error — never as N failed tests. For a
+  React Native project also state the toolchain (`expo`/`metro`) and Jest preset detected, and for an `e2e` run the
+  framework (Maestro/Detox and configuration), the device used, whether Metro was already running or started (and
+  stopped) by this run, and whether the lock was acquired here, held by the caller, or broken as stale. A missing
+  device/tool is "e2e unverified: <reason>".
+- Name each React Native–specific failure by its cause (Step 1): untranspiled package (`transformIgnorePatterns`),
+  native module not mocked, RNTL 14 call not awaited.
 - On failures, list each failing test's name (`fullName`) and the first line of its assertion message
   (`failureMessages[0]`'s first line) — nothing more per failure, and no noise about the passing tests.
 - Do not attempt to fix failing tests or modify source/test code unless the user asks for that as a next step.

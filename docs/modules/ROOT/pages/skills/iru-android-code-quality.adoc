@@ -22,6 +22,8 @@ Checkstyle-format XML or SARIF, Spotless's console output, ktlint's text/XML rep
 on the Gradle console, and can scope its summary to a single file/class even though none of these tools expose a
 per-file CLI selector — the underlying Gradle run always analyzes the whole module.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-code-quality.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -78,6 +80,7 @@ module from `scope`.
 ....
 flowchart TD
     A["Start /iru-android-code-quality\n(optional scope, module:, baseline)"] --> B["Resolve module (:lib default or :app)\nand scope from inputs"]
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-code-quality"]
     B --> C["Verify which tools are wired:\nLint (always), Detekt (plugin applied?),\nktlint (Spotless spotlessCheck or\nstandalone ktlintCheck?)"]
     C --> D["Run each wired tool via Gradle\n(lintDebug, detekt, spotlessCheck/ktlintCheck)"]
     D --> E{"Underlying compile step\nfailed outright?"}
@@ -102,12 +105,15 @@ flowchart TD
 None — `iru-android-code-quality` is a leaf skill; it only runs Gradle tasks and reads the generated Lint/Detekt/
 Spotless/ktlint reports, it does not call any other skill in this catalog.
 
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-code-quality.adoc[] (a hand-off, not an invocation).
+
 === Invoked by
 
 * xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for Android plans, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-android-code-one-task-group.adoc[] — Steps 1 and 3.6, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every class the
   bucket touches and later diff the post-change result against it.
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 1 and 3, only when the app's `android/` directory can be targeted as the Gradle root (otherwise it runs Android Lint directly), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, for the baseline and the post-change comparison.
 
 === Related agents
 

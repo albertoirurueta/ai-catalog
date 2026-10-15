@@ -1,0 +1,154 @@
+= KMP Test
+:description: Runs a Kotlin Multiplatform project's tests per target (Android host, JVM, app unit tests, iOS simulator, XCTest) and reports a compact pass/fail summary.
+:keywords: iru-kmp-test, claude code skill, kotlin multiplatform, kmp, gradle, junit, xctest, ios simulator, run tests, test selector
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Kotlin Multiplatform (Android + iOS) project's tests on each target it actually has -- the shared module's
+Android host (JVM) tests, `jvmTest`, the Android app's `testDebugUnitTest`, the Kotlin/Native iOS simulator tests
+and the SwiftUI host app's XCTest bundle -- scoped to whatever the caller asked for, and report a compact
+per-target summary parsed from JUnit XML (Gradle) and `.xcresult` (Xcode). This is a report-only skill: it never
+fixes failing tests or modifies source/test code.
+
+== Purpose
+
+`iru-kmp-test` discovers the KMP modules, Android app modules and `iosApp/` host project at runtime, lists the real
+test task names from `./gradlew <module>:tasks --all` (instead of assuming one plugin's naming), and runs the
+matching stages. Android/JVM stages run on any host; iOS stages run only on macOS with a full Xcode and an iOS
+Simulator runtime and are otherwise reported "unverified", never "passed". Every stage that boots a simulator is
+serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` directory (owner file, stale
+after 60 minutes, released on every exit path). It also detects the "selector matched nothing" cases: Gradle fails
+the JVM task with "No tests found for given includes", whereas a Kotlin/Native simulator task exits 0 and writes no
+XML, and an unmatched `-only-testing:` yields zero tests. It is the KMP equivalent of
+xref:skills/iru-android-test.adoc[] and xref:skills/iru-swift-test.adoc[].
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-test
+/iru-kmp-test <scope>
+/iru-kmp-test <scope>
+target: android|ios|all
+module: <gradle path>
+destination: <xcodebuild destination>
+lock: held
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<scope>`
+|No
+|A test class (`GreeterTest`), class+method (`GreeterTest#greets`), wildcard/package pattern, a test file path (its
+source set picks the targets: `commonTest` runs every target, `androidHostTest`/`androidUnitTest`/`jvmTest` run
+Android/JVM only, `iosTest`/`appleTest`/`nativeTest` run iOS only, `iosApp/...` runs the XCTest stage), a module
+(`:shared`, `androidApp`) or a source-set name.
+|None -- every test task of every in-scope target.
+
+|`target`
+|No
+|`android` runs the JVM stages only; `ios` runs the iOS stages only (Kotlin/Native simulator tests and the `iosApp`
+XCTest bundle); `all` runs both.
+|`all`
+
+|`module`
+|No
+|Restrict the run to one Gradle module (`:shared`, `:androidApp`, `:composeApp`).
+|All modules
+
+|`destination`
+|No
+|An `xcodebuild` destination overriding the simulator picked for the XCTest stage.
+|First available iPhone simulator
+
+|`lock`
+|No
+|`held` when the caller already holds `.integration-test.lock`; the skill then neither acquires nor releases it.
+|Not held -- the skill acquires it for simulator stages.
+|===
+
+Stage-to-task mapping (Step 2):
+
+[cols="2,3", options="header"]
+|===
+|Stage |Task (first that exists)
+
+|Android host tests of a KMP module
+|`testAndroidHostTest` (or any `test<Name>HostTest`), else `testDebugUnitTest`
+
+|JVM target
+|`jvmTest`, only when a `jvm()` target exists
+
+|Android app module
+|`testDebugUnitTest`
+
+|Kotlin/Native iOS
+|`iosSimulatorArm64Test` on Apple silicon, `iosX64Test` on Intel
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation -- never a written file.
+* One line per target (Android host, JVM, Android app, iOS simulator, `iosApp` XCTest): **passed** (counts),
+  **failed** (counts, each failing `Class#test`, assertion message, first stack line and the XML/`.xcresult` path),
+  **no matching tests for `<pattern>`**, **timed out**, **not applicable**, or **unverified (reason)**.
+* An explicit callout when a test fails on one target only, which usually means an `actual` implementation differs.
+* The lock is mentioned only when it was anything other than an immediate acquire.
+* No source or test code is ever modified; raw Gradle/`xcodebuild` output is never pasted.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kmp-test\n(optional scope + key: value lines)"] --> B["Step 0: resolve scope,\ntarget, module, destination, lock"]
+    B --> C["Step 1: detect KMP modules,\nAndroid app, iosApp;\ncheck JDK, Android SDK, gradlew"]
+    C --> D{"KMP module found?"}
+    D -- no --> Z["Stop: not a KMP project\n(point to iru-android-test / iru-java-test)"]
+    D -- yes --> E["Step 2: list test tasks per module\n(./gradlew tasks --all)"]
+    E --> F["Step 3: run Android/JVM stages\n(--tests repeated per task, --continue)"]
+    F --> G{"iOS stages in scope and\nmacOS + Xcode + runtime?"}
+    G -- no --> H["Mark iOS stages unverified\n(state what is missing)"]
+    G -- yes --> I["Step 4: acquire\n.integration-test.lock\n(wait / break stale / time out)"]
+    I --> J["Run Kotlin/Native\niosSimulatorArm64Test"]
+    J --> K["Step 5: xcodebuild test on iosApp\n(XcodeGen if needed)\nparse .xcresult"]
+    K --> L["Release lock"]
+    H --> M["Step 6: parse JUnit XML\nper task directory"]
+    L --> M
+    M --> N{"Build failed before\nproducing results?"}
+    N -- yes --> O["Report the compile or\nconfiguration error"]
+    N -- no --> P["Step 7: report per-target\npass / fail / no matching tests /\ntimed out / unverified"]
+    O --> P
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-kmp-test` is a leaf skill; it only runs `./gradlew`, `xcodebuild`, `xcrun`, `xcodegen` and small
+inline `python3` parsers, and it does not call any other skill in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-kmp-code-one-task-group.adoc[] -- Step 3.3 (scoped Android/JVM tests, `target: android`), Step 3.5
+  (full Android/JVM suite) and Step 3.7 (iOS stage, `target: ios`, behind the shared lock), always through the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-kmp-generate-all-tests.adoc[] -- Step 7, to run the full suite once and confirm the generated tests
+  cause no regressions.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- both callers always run this skill from inside an
+  `iru-gate-runner` sub-agent they spawn, not inline, so the compact summary is all that reaches their context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-test/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

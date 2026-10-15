@@ -21,6 +21,8 @@ example names that specific package or project).
 
 ## Step 1 — Determine scope
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-dokka` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 - **Argument provided** (comma-separated class names, file paths, or a package glob): resolve each to its file. If
   given a simple class/object name, locate it via `find`/`grep` across every module's main source root
   (`src/main/java` and `src/main/kotlin`, whichever this project actually uses — both are valid for Kotlin) rather

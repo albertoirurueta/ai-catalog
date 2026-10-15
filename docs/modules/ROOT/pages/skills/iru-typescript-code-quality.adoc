@@ -1,5 +1,5 @@
 = TypeScript Code Quality
-:description: Runs ESLint, Oxlint, Biome, tsc --noEmit, Prettier and Stylelint as configured, incl. NestJS and Next.js, and reports issues by tool and rule id.
+:description: Runs ESLint, Oxlint, Biome, tsc --noEmit, Prettier and Stylelint as configured, incl. NestJS, Next.js and React Native, and reports issues by tool and rule id.
 :keywords: iru-typescript-code-quality, claude code skill, eslint, oxlint, biome, tsc, prettier, nestjs, nextjs, static analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -28,6 +28,14 @@ Framework-specific behavior:
   (`next lint` only on Next 15 or older, or `biome check` when the project chose Biome), and runs `next typegen`
   before `tsc --noEmit` so the generated route types exist. Rule ids from `@next/next/*` and `jsx-a11y/*` are
   classified alongside the usual ones.
+* *React Native* resolves a toolchain first (`expo` in dependencies means expo, even with prebuild output;
+  `react-native` without `expo` means metro, a bare CLI app). Metro apps use `@react-native/eslint-config` (the
+  legacy `.eslintrc.js` with ESLint 8, or its `/flat` export; an ESLint 9 crash from an incompatible plugin is
+  reported as a crash, never as zero issues), expo apps use `eslint-config-expo`. Both run as plain `eslint` over
+  the whole app because `expo lint` only covers `src/`, `app/` and `components/`. Prettier is scoped to source
+  files (`**/*.{js,jsx,ts,tsx}`) so the native `android/`/`ios/` projects are not flagged, and `tsc --noEmit` on
+  Expo with TypeScript 6 may need `"types": ["jest"]`, reported as a single configuration finding. Rule ids from
+  `react-native/*`, `@react-native/*`, `ft-flow/*`, `expo/*` and `import/*` are classified.
 
 == Purpose group
 
@@ -73,10 +81,10 @@ graph and the reported diagnostic lines are filtered afterward to ones whose fil
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-typescript-code-quality\n(optional path-or-glob)"] --> B["Detect framework from package.json\n(library, react, angular, react-native, ionic, hilla-frontend, nestjs, nextjs)"]
+    A["Start /iru-typescript-code-quality\n(optional path-or-glob)"] --> B["Detect framework from package.json\n(library, react, angular, react-native [expo or metro], ionic, hilla-frontend, nestjs, nextjs)"]
     B --> C["Detect package manager\n(npm, pnpm, yarn) from lockfile/packageManager"]
     C --> D["Verify each tool's config exists\n(eslint.config.*/angular.json lint target,\ntsconfig.json, prettierrc, stylelintrc, oxlintrc)"]
-    D --> D2["Pick linter from the lint script:\nOxlint for NestJS 12, plain eslint for Next 16,\nng lint for Angular"]
+    D --> D2["Pick linter from the lint script:\nOxlint for NestJS 12, plain eslint for Next 16,\nplain eslint for React Native (not expo lint),\nng lint for Angular"]
     D2 --> E{Tool configured?}
     E -- no --> F["Report '&amp;lt;tool&amp;gt; not configured, skipped'"]
     E -- yes --> G["Run ESLint (or ng lint) --format json,\nOxlint --format json if configured"]
@@ -110,6 +118,8 @@ reads their generated reports, it does not call any other skill in this catalog.
   the bucket touches and later diff the post-change result against it.
 * xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 1 and 3.7, lint, tsc and Prettier baseline and regression check, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 1 and 3.6, baseline and regression diff including typegen and tsc, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 1 baseline capture and the Step 3 quality
+  regression check for React Native apps, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

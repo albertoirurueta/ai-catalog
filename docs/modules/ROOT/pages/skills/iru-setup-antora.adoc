@@ -130,6 +130,7 @@ None — `iru-setup-antora` is a leaf skill; it does not call any other skill in
   already in place.
 * xref:skills/iru-setup-php-repository.adoc[] — Step 6, Antora docs site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-quarkus-repository.adoc[] — Step 4, Antora documentation site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-kmp-repository.adoc[] — Step 5, Antora docs site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, right after the KMP app scaffold and before the workflows step.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, bootstraps the Antora site if docs/antora.yml is absent, via a xref:agents/overview.adoc[`general-purpose`] sub-agent.
 * xref:skills/iru-build-docs.adoc[] — Step 1, conditionally: only when no `antora.yml` is found anywhere in the repository, and only after asking the user whether to bootstrap Antora documentation now.
 
