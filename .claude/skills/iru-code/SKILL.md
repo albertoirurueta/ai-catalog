@@ -216,10 +216,13 @@ keys Step 3 collected). Resolve the command for each key as follows:
    - `nextjs`: the same scripts as `typescript`, then `npm run build` (`next build` — the build itself type-checks
      and verifies routes/caching rules)
    - `android`: `./gradlew build`
-   - `kmp`: `./gradlew build` (compiles every target and runs every target's tests — iOS targets only on macOS
-     with Xcode; on any other host say in Step 9 that the iOS side is unverified), then, on macOS, the iOS host
-     app's `xcodebuild build` for a simulator destination (regenerating the project first with `xcodegen generate`
-     when `iosApp/project.yml` exists)
+   - `kmp`: `./gradlew build -x iosSimulatorArm64Test -x iosX64Test` (compiles every target and runs the JVM/Android
+     tests; the excluded Kotlin/Native simulator test tasks would boot a simulator outside the repository-wide
+     `.integration-test.lock` — drop an `-x` for a task the build doesn't define), then, on macOS with Xcode, the iOS
+     tests through `iru-kmp-test` with `target: ios` (it takes `.integration-test.lock` itself and reports
+     "unverified" when no simulator runtime is available) and the iOS host app's `xcodebuild build` for a
+     simulator destination (regenerating the project first with `xcodegen generate` when `iosApp/project.yml`
+     exists); on any other host say in Step 9 that the iOS side is unverified
    - `react-native`: the same scripts as `typescript` (`lint`, `typecheck`, `test`); then for the `metro`
      toolchain `./gradlew assembleDebug` from `android/` and, on macOS, `pod install` + `xcodebuild build` of
      `ios/<App>.xcworkspace` for a simulator destination; for the `expo` toolchain `npx expo export` (the

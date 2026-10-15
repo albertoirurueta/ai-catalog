@@ -60,8 +60,9 @@ touching any file.
      `python-library`) → `python`. If the `Project type:` line is `multiple`, ask the user which
      module this release targets, since a single release cuts one version.
   2. Otherwise, detect it directly from manifests present at the repository root: `pom.xml` → `java`;
-     `package.json` with a `react-native` or `expo` dependency → `react-native`; any other `package.json` →
-     `typescript`; a Gradle build applying the Kotlin Multiplatform plugin (`kotlin("multiplatform")` /
+     `package.json` with `react-native` or `expo` in its `dependencies` (an app) → `react-native`; any other
+     `package.json` — including a React Native *library*, which lists `react-native` only in
+     `peerDependencies`/`devDependencies` — → `typescript`; a Gradle build applying the Kotlin Multiplatform plugin (`kotlin("multiplatform")` /
      `org.jetbrains.kotlin.multiplatform`) with iOS targets → `kmp`; `build.gradle`/`build.gradle.kts` with the
      Android Gradle Plugin applied → `android`; `build.gradle`/`build.gradle.kts` without it (a plain JVM, Kotlin Spring Boot, or Quarkus Gradle
      build) → `java`; `Package.swift`, or a `*.xcodeproj`/`project.yml`/`Project.swift` → `swift`; `composer.json`, a

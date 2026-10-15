@@ -87,8 +87,12 @@ an Expo store version accepts one.
 Honor `args: toolchain` if given; otherwise read `package.json`:
 
 - `expo` in `dependencies` → **expo** — even when `android/`/`ios/` exist (prebuild/CNG output).
-- `react-native` in `dependencies` without `expo`, plus a `metro.config.js`, committed `android/` + `ios/`, or
-  `@react-native-community/cli` in `devDependencies` → **metro**.
+- `react-native` in `dependencies` without `expo` → **metro**, on that signal alone (the catalog's detection rule,
+  as in `iru-explore`). A `metro.config.js`, committed `android/` + `ios/`, or `@react-native-community/cli` in
+  `devDependencies` only corroborate it — a monorepo package whose CLI devDependency is hoisted to the root, or
+  whose native projects live elsewhere, is still metro. When `android/app/build.gradle(.kts)` or
+  `ios/*.xcodeproj` can't be found, Step 6 bumps `package.json` and reports each missing native file instead of
+  guessing a path.
 - Neither `react-native` nor `expo` in `dependencies` → this isn't a React Native app; tell the user to use
   `iru-typescript-bump-version` and stop. (A React Native *library* — `react-native` only in `peerDependencies` — is
   an ordinary npm package and belongs there too.)

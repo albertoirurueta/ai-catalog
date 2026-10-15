@@ -6,7 +6,7 @@ description: >-
   files (keeping `.env.example`), OS and editor noise — and, when detected, framework-specific generated paths for
   Angular, React (Vite/Storybook), NestJS (logs, runtime/diagnostic files, test reports), Next.js (`.next/`,
   `next-env.d.ts`, `.vercel`, matching `create-next-app`'s own template), a Prisma client generated inside the
-  source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js coding skills, React
+  source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js/React Native coding and e2e skills, React
   Native (Expo, or a bare React Native CLI/Metro app — Gradle/Xcode/CocoaPods/Bundler outputs, keeping the
   template's committed `debug.keystore`), Ionic/Capacitor native projects, Playwright, Antora docs, TypeDoc/Compodoc
   API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as
@@ -198,12 +198,13 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
   ignore `prisma/migrations/` — migrations are committed. With the legacy `prisma-client-js` provider and no
   `output`, the client lands in `node_modules/` and needs no line.
 
-- **Repository-wide integration-test lock** (NestJS or Next.js detected above, or a `.integration-test.lock/`
-  directory already exists): add
+- **Repository-wide integration-test lock** (NestJS, Next.js, or React Native — either toolchain, `expo` or
+  `metro` — detected, or a `.integration-test.lock/` directory already exists): add
   ```gitignore
   .integration-test.lock/
   ```
-  This is the atomic `mkdir` lock `iru-nestjs-code-one-task-group` / `iru-nextjs-code-one-task-group` (and the JVM
+  This is the atomic `mkdir` lock `iru-nestjs-code-one-task-group` / `iru-nextjs-code-one-task-group` /
+  `iru-react-native-code-one-task-group` and `iru-typescript-test`'s React Native `e2e` selector (and the JVM
   coding skills) take to serialize container-backed/e2e stages; it must never be committed, and adding it here
   saves those skills from having to patch `.gitignore` mid-run.
 

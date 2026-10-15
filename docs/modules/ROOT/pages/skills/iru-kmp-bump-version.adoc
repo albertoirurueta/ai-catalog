@@ -12,7 +12,7 @@ itself; it applies exactly the string it is given, after validating its shape.
 == Purpose
 
 `iru-kmp-bump-version` is the two-platform counterpart of `iru-android-bump-version` and `iru-swift-bump-version`.
-`VERSION_NAME` always becomes the new version; for a release value only (no `-SNAPSHOT` suffix), `VERSION_CODE` is
+`VERSION_NAME` always becomes the new version; for a release value only (plain `X.Y.Z` — no `-SNAPSHOT` or other pre-release suffix), `VERSION_CODE` is
 incremented by one and the iOS `MARKETING_VERSION` is set to the release with `CURRENT_PROJECT_VERSION` set to the
 new `VERSION_CODE`, so the Android and iOS build numbers stay identical. A `-SNAPSHOT` (or any pre-release) value is
 never written to an iOS file, because App Store Connect rejects it. The skill detects the layout at runtime and falls
@@ -90,7 +90,7 @@ flowchart TD
     D --> E{Gradle-side source found?}
     E -- no --> F["Hard stop: ask for the\ncorrect location"]
     E -- yes --> G["Step 3: rewrite Gradle side\ngradle.properties, else libs.versions.toml,\nelse build script literals"]
-    G --> H{"Release value?\n(no -SNAPSHOT)"}
+    G --> H{"Release value?\n(plain X.Y.Z)"}
     H -- no --> I["Step 4 skipped: iOS left untouched\nVERSION_CODE unchanged"]
     H -- yes --> J["VERSION_CODE + 1\nStep 4: rewrite iOS side\nxcconfig, else project.yml / Info.plist / pbxproj\nCURRENT_PROJECT_VERSION = new VERSION_CODE"]
     I --> K{dry-run: yes?}

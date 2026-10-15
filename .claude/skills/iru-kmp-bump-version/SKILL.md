@@ -47,8 +47,10 @@ Android `-SNAPSHOT` + `versionCode` rule) and `iru-swift-bump-version`'s Step 4 
     writing anything or running Step 6 — say plainly in the report that nothing was modified.
 
 Reject, before touching anything, a `<new-version>` that is obviously not a version (empty, or contains
-whitespace). Throughout this skill, **release** means `<new-version>` does not end in `-SNAPSHOT`; **snapshot** means
-it does.
+whitespace). Throughout this skill, **release** means `<new-version>` is exactly `X.Y.Z` (three dot-separated
+integers, `re.fullmatch(r"\d+\.\d+\.\d+", v)`); **snapshot** means anything else — `-SNAPSHOT`, but also any other
+pre-release suffix (`-rc.1`, `-beta`) the user chose to proceed with in Step 1. A snapshot never bumps a version code
+and never reaches an iOS file, which is how the hard rule in Step 1 is enforced rather than merely stated.
 
 ## Step 1 — Validate the version string
 
@@ -122,7 +124,7 @@ by exactly 1 **only for a release** and left unchanged for a snapshot (Step 5 ex
 python3 - gradle.properties "<new-version>" "<dry-run>" <<'PY'
 import re, sys, difflib
 path, new_version, dry = sys.argv[1], sys.argv[2], sys.argv[3] == "yes"
-release = not new_version.endswith("-SNAPSHOT")
+release = re.fullmatch(r"\d+\.\d+\.\d+", new_version) is not None
 orig = text = open(path).read()
 name = re.search(r'(?m)^[ \t]*VERSION_NAME[ \t]*[=:][ \t]*([^\r\n]*)$', text)
 if not name:
@@ -178,7 +180,7 @@ PY
 python3 - <module>/build.gradle.kts "<new-version>" "<dry-run>" <<'PY'
 import re, sys, difflib
 path, new_version, dry = sys.argv[1], sys.argv[2], sys.argv[3] == "yes"
-release = not new_version.endswith("-SNAPSHOT")
+release = re.fullmatch(r"\d+\.\d+\.\d+", new_version) is not None
 orig = text = open(path).read()
 name = re.search(r'''(versionName\s*=?\s*)(["'])([^"']*)\2''', text)
 if not name:
@@ -207,7 +209,7 @@ documented here, and say which rule was applied in the report.
 
 ## Step 4 — Rewrite the iOS side (release values only)
 
-**Skip this whole step for a snapshot** and say so in the report ("iOS version left at `<current>` — `-SNAPSHOT`
+**Skip this whole step for a snapshot** (any value that isn't plain `X.Y.Z` — see Step 0) and say so in the report ("iOS version left at `<current>` — `-SNAPSHOT`
 values are never written to Xcode build settings"). For a release, `MARKETING_VERSION` becomes `<new-version>` and
 `CURRENT_PROJECT_VERSION` becomes **the new `VERSION_CODE` from Step 3** (so Android `versionCode` and the iOS build
 number stay identical); when the Gradle side has no version code at all, pass an empty string and the snippets fall
@@ -364,7 +366,7 @@ library module published alongside the app) → `<new-version>`.
 python3 - README.md "<new-version>" "<next-version or empty>" "<dry-run>" <<'PY'
 import re, sys, difflib
 path, new_version, next_version, dry = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "yes"
-release = not new_version.endswith("-SNAPSHOT")
+release = re.fullmatch(r"\d+\.\d+\.\d+", new_version) is not None
 VER = r'\d+\.\d+\.\d+(?:-SNAPSHOT)?'
 orig = open(path).read()
 out, notes = [], []
