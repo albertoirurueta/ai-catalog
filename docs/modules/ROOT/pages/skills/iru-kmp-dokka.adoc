@@ -1,0 +1,109 @@
+= KMP Dokka
+:description: Audits and fills KDoc across every Kotlin Multiplatform source set (expect/actual aware), wires module.md, and verifies the Dokka 2 multiplatform build.
+:keywords: iru-kmp-dokka, claude code skill, kotlin multiplatform, kmp, kdoc, dokka, expect actual, module.md, documentation audit
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Make sure a set of Kotlin Multiplatform declarations -- and the module(s)/package(s) they live in -- carry
+complete, well-formed KDoc across `commonMain`, `androidMain`, `iosMain`/`appleMain`/`nativeMain` (and `jvmMain`
+when present) plus the Android app module's sources, filling in whatever is missing and proving the result builds
+through the project's own Dokka multiplatform setup.
+
+== Purpose
+
+`iru-kmp-dokka` is the KMP equivalent of `iru-android-dokka`/`iru-kotlin-kdoc`. It adds the KMP-specific rule that
+the `expect` declaration carries the KDoc and its `actual`s inherit it (an `actual` gets its own KDoc only for
+genuinely platform-specific behavior), while platform-only public API (an `iosMain`-only helper, Compose
+`MainViewController()`, an `androidMain`-only extension) is documented where it lives. It discovers the project's own
+documentation bar (detekt `comments` rules, Dokka `documentedVisibilities`/`reportUndocumented`, contributor guides,
+observed practice) instead of assuming a fixed style, ensures Dokka `module.md` (`# Module` / `# Package`) coverage
+wired through `includes.from(...)`, generates missing KDoc grounded in the actual code and current changes, and runs
+the Dokka 2 task (`dokkaGeneratePublicationHtml`, else `dokkaGenerate`; Dokka 1 `dokkaHtml` fallback). It only adds
+or completes documentation comments (plus `module.md` and its wiring) and never changes behavior or signatures. Swift
+code in `iosApp/` is out of scope (see xref:skills/iru-swift-docc.adoc[]).
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-dokka <scope>
+/iru-kmp-dokka
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`scope`
+|No
+|Comma-separated list of class names, file paths, or a package glob. A simple name that matches an `expect` also
+pulls in its `actual`s (and vice versa). Test source sets, `.swift` files, and build scripts are dropped and named in
+the report.
+|Every main-source `.kt` file touched by uncommitted changes plus commits on the current branch not yet on the base
+branch.
+|===
+
+== Outputs
+
+* New or completed KDoc comments in the in-scope main source sets, with the KDoc placed on the `expect` side of each
+  `expect`/`actual` pair unless an `actual` has genuinely platform-specific behavior.
+* A created or extended `module.md` (`# Module` / `# Package` sections) per touched module that has Dokka applied,
+  plus the `includes.from("module.md")` wiring added to its existing `dokka {}` block -- the only build-file edit
+  the skill makes.
+* A Dokka run per module (HTML under `<module>/build/dokka/html/index.html` unless relocated) with its warnings
+  (unresolved links per source set, `Undocumented:` lines tagged `(common)`/`(android)`/`(ios)` when
+  `reportUndocumented` is on).
+* A report grouped by source set: declarations already documented, gaps found and filled, `@suppress` exclusions,
+  Dokka result and version/mode, the `iosMain` part flagged as unverified on a non-macOS host, arguments dropped, and
+  pre-existing out-of-scope warnings.
+* Nothing else changes: no behavior, signatures, tests, detekt/ktlint fixes, or Dokka plugin configuration.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kmp-dokka [scope]"] --> B["Step 1: determine scope\nresolve names/paths/globs, or git changes\npull in expect/actual counterparts"]
+    B --> C{Scope empty?}
+    C -- yes --> Z["Say nothing to document\nand stop"]
+    C -- no --> D["Step 2: discover the project's KDoc bar\n(guides, detekt comments rules,\nDokka visibilities, observed practice)"]
+    D --> E["Step 3: audit each declaration\nexpect/actual rule, platform-only API,\ncomposables, tags, enum entries"]
+    E --> F["Step 4: ensure module.md and\n# Package sections exist and are wired"]
+    F --> G{Dokka applied\nto the module?}
+    G -- no --> H["Write module.md, report\nDokka not configured, skip Step 6"]
+    G -- yes --> I["Step 5: generate missing KDoc\ngrounded in the code and every actual"]
+    H --> I
+    I --> J["Step 6: run Dokka 2\ndokkaGeneratePublicationHtml / dokkaGenerate\nor Dokka 1 dokkaHtml"]
+    J --> K{In-scope warnings?}
+    K -- yes --> L["Fix KDoc and re-run\nuntil none remain"]
+    L --> J
+    K -- no --> M["Step 7: report per source set\nand per module"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-kmp-dokka` is a leaf skill; it edits KDoc/`module.md` directly and runs Gradle's Dokka tasks, without
+calling any other skill or agent in this catalog.
+
+=== Invoked by
+
+* xref:skills/iru-kmp-code-one-task-group.adoc[] -- Step 3, validating the KDoc of the group's new or changed
+  classes (run through an `iru-gate-runner` agent so the Dokka output never lands in the caller's context).
+* xref:skills/iru-kotlin-kdoc.adoc[] -- redirects Kotlin Multiplatform projects here instead of auditing them itself.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[] -- runs this skill as a documentation gate on behalf of
+  `iru-kmp-code-one-task-group`.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-dokka/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

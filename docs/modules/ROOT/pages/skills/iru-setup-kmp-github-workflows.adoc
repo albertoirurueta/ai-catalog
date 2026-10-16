@@ -1,0 +1,257 @@
+= Setup KMP GitHub Workflows
+:description: Scaffolds GitHub Actions CI/CD, release and security workflows plus Dependabot for a Kotlin Multiplatform Android and iOS app, with cost-gated macOS jobs.
+:keywords: iru-setup-kmp-github-workflows, claude code skill, kotlin multiplatform, kmp, github actions, ios, xcodebuild, kover, dokka, dependabot
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold or update the GitHub Actions CI/CD and security workflows, plus a Dependabot config, for a Kotlin
+Multiplatform (Android + iOS) app repository produced by `iru-setup-kmp-app`.
+
+== Purpose
+
+`iru-setup-kmp-github-workflows` combines the two sibling pipelines this catalog already has —
+`iru-setup-android-github-workflows` (Gradle, Android Lint SARIF, signed bundle to Google Play / Firebase,
+`sync.yml`) and `iru-setup-swift-github-workflows` (macOS runner choice, XcodeGen, `xcodebuild`, App Store Connect
+API key to TestFlight, Swift CodeQL) — around one cost rule: the JVM/Android half runs on cheap Linux runners on
+every change, while the iOS half needs macOS, whose minutes cost roughly 10x Linux on a private repository, so
+when it runs is an explicit choice (`ios-ci`: `all`, `stable` or `none`).
+
+`build.yml` has a Linux `android` job (detekt, ktlint, Android Lint with SARIF upload, JVM/Android host tests, root
+Kover report and an 80% `koverVerify`, `assembleDebug`, optional `./gradlew sonar`), a cost-gated macOS `ios` job
+(Kotlin/Native `iosSimulatorArm64Test`, `xcodegen generate`, SwiftLint, and `xcodebuild build` or, with
+`ci-tests: full`, `xcodebuild test` of the `iosApp` scheme on the newest iOS simulator), and an Antora + Dokka docs
+job deployed to GitHub Pages (`pages: yes`) or uploaded as a workflow artifact (`pages: no`). `release.yml` depends
+on `distribution` (`internal`: Firebase App Distribution + TestFlight; `store`: Google Play + TestFlight). `sync.yml`
+with `.github/scripts/sync_versions.py` (gitflow only) merges the release back into the integration branch and bumps
+`VERSION_NAME` to the next `-SNAPSHOT`. `security.yml` holds the shared security block (dependency-review, CodeQL
+`java-kotlin` with a manual JVM build, optional CodeQL `swift` on macOS, OSV-Scanner, gitleaks), and Dependabot
+covers `gradle` and `github-actions`.
+
+The skill announces whether it is creating the pipeline from scratch or updating an existing one; for every
+pre-existing workflow, script or Dependabot file it names each concrete mismatch with this run's choices and asks
+Update / Keep as is / Replace (Stop on the first question), unless `on-existing` decides. Standalone it resolves
+`visibility`, `sonar`, `ios-ci`, `ci-tests` and `pages` with cost facts for that visibility; there is no `ci` key,
+since invoking the skill means CI is wanted. Templates live in the skill's `reference/workflow-templates.md`, and
+action versions are looked up at run time with a recorded fallback table.
+
+== Purpose group
+
+xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-kmp-github-workflows
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`branching`
+|No
+|`gitflow` or `main-only`. `main-only` writes no `sync.yml`/`sync_versions.py`.
+|`gitflow`
+
+|`integration-branch`, `stable-branch`
+|No
+|Branch names, confirmed against `git branch -a`.
+|`develop`, `main`
+
+|`java-version`
+|No
+|JDK for `actions/setup-java`; the scaffold's JVM target is 17.
+|`17`
+
+|`runner`, `xcode-version`
+|No
+|macOS runner label and the Xcode version for `maxim-lobanov/setup-xcode`.
+|`macos-26`; the runner image's default Xcode (fallback `26.6`)
+
+|`ios-ci`
+|No
+|When the macOS `ios` job runs: `all`, `stable` (stable branch and manual runs only) or `none`.
+|Asked: `all` recommended for public, `stable` for private/internal
+
+|`ci-tests`
+|No
+|`unit` (Kotlin/Native simulator tests plus `xcodebuild build`) or `full` (also `xcodebuild test` of `iosAppTests`).
+Irrelevant with `ios-ci: none`.
+|`full` for public; asked for private/internal with `unit` recommended
+
+|`pages`
+|No
+|`yes`/`no`: deploy docs to GitHub Pages, or only upload them as the `docs-site` artifact.
+|`yes` for public; asked for private/internal with `no` recommended
+
+|`distribution`
+|No
+|`none`, `internal` or `store`; `none` writes no `release.yml`.
+|`store` when open source, otherwise asked with `internal` recommended
+
+|`play-track`
+|No
+|Google Play track when `distribution: store`.
+|`production`
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`. Read from the root `build.gradle.kts` `sonar {}` block when present; otherwise
+asked (`cloud` recommended only for public open-source repositories).
+|Detected or asked
+
+|`open-source`, `visibility`
+|No
+|Shared vocabulary. `visibility` is detected with `gh repo view` or asked; `internal` behaves like `private`.
+|Detected or asked
+
+|`mode`, `on-existing`
+|No
+|`mode` is informational only. `on-existing` (`ask`/`keep`/`update`/`replace`) is applied to every pre-existing file
+without asking, with the warning still printed.
+|`ask`
+
+|`security-dependency-review`, `security-codeql`, `security-osv`, `security-gitleaks`, `security-codeql-swift`
+|No
+|Gate one `security.yml` job each. The Swift CodeQL job is macOS-based.
+|`yes`; `security-codeql-swift` is `no` for private/internal repositories
+
+|`license`, `developer-*`, `organization-url`, `publish`, `ui`, identity keys
+|No
+|Accepted and ignored; named in the report if supplied.
+|None
+|===
+
+== Outputs
+
+[cols="1,3", options="header"]
+|===
+|File |Written when
+
+|`.github/workflows/build.yml`
+|Always
+
+|`.github/workflows/release.yml`
+|`distribution` is not `none`
+
+|`.github/workflows/sync.yml` and `.github/scripts/sync_versions.py`
+|`branching: gitflow`
+
+|`.github/workflows/security.yml`
+|Always (individual jobs gated by the `security-*` keys)
+
+|`.github/dependabot.yml`
+|Always (existing non-owned ecosystems are preserved)
+|===
+
+* Each file is created when absent; when it existed, it is updated, replaced or kept as is per the user's answer or
+  `on-existing`. Choosing Stop writes nothing. The report states the action per file and, for a kept file, each
+  mismatch with this run's choices.
+* If `shared/build.gradle.kts` or `iosApp/project.yml` is missing (for example a single `composeApp/` layout or a
+  committed `.xcodeproj`), the skill warns, asks whether to stop or continue, and lists every adaptation it made.
+* Verification: `actionlint` (or a Ruby YAML parse fallback) on every workflow, `py_compile` on
+  `sync_versions.py`, and, when the scaffold is present, the `android` job's Gradle commands run through
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`]. Anything needing GitHub's runners or secrets is reported as
+  unverified locally.
+* A final report with the mode, per-file actions, wired or omitted features, the required-secrets table below, and
+  repository settings to change.
+
+Required secrets (only the rows that apply to what was generated):
+
+[cols="2,3,2", options="header"]
+|===
+|Secret |Purpose |Only needed when
+
+|`SONAR_TOKEN`
+|Sonar scan authentication
+|`sonar` is not `none`
+
+|`ANDROID_KEYSTORE_BASE64`
+|Release keystore, decoded to `androidApp/release.jks`
+|`distribution` is not `none`
+
+|`ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
+|Exported as `SIGNING_STORE_PASSWORD`/`SIGNING_KEY_ALIAS`/`SIGNING_KEY_PASSWORD`
+|`distribution` is not `none`
+
+|`PLAY_SERVICE_ACCOUNT_JSON`
+|Google Play service account for the upload action
+|`distribution: store`
+
+|`FIREBASE_APP_ID` / `FIREBASE_SERVICE_CREDENTIALS`
+|Firebase App Distribution upload
+|`distribution: internal`
+
+|`APP_STORE_CONNECT_API_KEY_ID` / `APP_STORE_CONNECT_API_KEY_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY_BASE64`
+|App Store Connect API key: automatic signing, export and TestFlight upload
+|`distribution` is not `none`
+
+|`APPLE_TEAM_ID`
+|Apple Developer Team ID (overrides `Config.xcconfig`'s `TEAM_ID`)
+|`distribution` is not `none`
+
+|`GITHUB_TOKEN`
+|`sync.yml`'s `gh` calls, CodeQL and gitleaks
+|Automatic
+|===
+
+Repository settings called out: "Workflow permissions" must allow Actions to create pull requests (gitflow
+`sync.yml`); with `pages: yes`, Pages source must be GitHub Actions (and a Pro, Team or Enterprise Cloud plan for a
+private repository); a Google Play app record and the App Store Connect bundle id must exist before the first
+upload. TestFlight to App Store submission stays a manual step.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-kmp-github-workflows] --> B["Step 0: Resolve inputs\n(parse args; standalone: visibility, sonar,\nios-ci, ci-tests, pages)"]
+    B --> C["Step 1: Survey repository\n(modules, task names, applicationId,\nAntora docs, branches, existing files)"]
+    C --> L{"shared/ and iosApp/project.yml\npresent?"}
+    L -- no --> L1["Warn; ask stop or continue\nwith adapted commands"]
+    L -- yes --> D
+    L1 --> D{"Workflow files\nalready exist?"}
+    D -- none --> D1["Announce: creating from scratch"]
+    D -- some --> D2["Announce: updating; name mismatches"]
+    D2 --> E{"on-existing set?"}
+    E -- yes --> F
+    E -- no --> E2{"Per file: Update / Keep as is /\nReplace (Stop on first question)"}
+    E2 -- stop --> Z["Report existing files; no changes"]
+    E2 -- choices --> F
+    D1 --> F["Step 2: Look up action versions\n(git ls-remote, fallback table)"]
+    F --> G["Step 3: Render templates\n(build, release, sync, security, dependabot)"]
+    G --> H["Step 4: Write files per decision"]
+    H --> I["Step 5: Verify\n(actionlint, py_compile, Gradle commands\nvia iru-gate-runner)"]
+    I --> J["Step 6: Report mode, per-file actions,\nrequired secrets, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None by skill call. In Step 5 it runs the `android` job's Gradle commands locally through the
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent to confirm that task names and report paths referenced by
+the workflows exist; it references `iru-setup-kmp-app` (task-name contract), `iru-setup-antora`,
+`iru-setup-android-github-workflows` and `iru-setup-swift-github-workflows` only as conventions, never invoking
+them.
+
+=== Invoked by
+
+* xref:skills/iru-setup-kmp-repository.adoc[] — Step 7 (skipped when `ci: no`), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing `branching`, branches,
+  `java-version`, `ios-ci`, `ci-tests`, `runner`, `xcode-version`, `open-source`, `visibility`, `pages`,
+  `distribution`, the Sonar keys, `mode` and `on-existing` so nothing is asked twice.
+
+It can also be run directly by a person to add or refresh the pipeline later.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs the local Gradle verification of the task names the
+  workflows reference (Step 5).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-kmp-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -6,10 +6,12 @@ description: >-
   files (keeping `.env.example`), OS and editor noise — and, when detected, framework-specific generated paths for
   Angular, React (Vite/Storybook), NestJS (logs, runtime/diagnostic files, test reports), Next.js (`.next/`,
   `next-env.d.ts`, `.vercel`, matching `create-next-app`'s own template), a Prisma client generated inside the
-  source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js coding skills, React
-  Native/Expo, Ionic/Capacitor native projects, Playwright, Antora docs, TypeDoc/Compodoc API docs, and a Spring
-  Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as `/iru-setup-typescript-gitignore`, optionally
-  with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs.
+  source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js/React Native coding and e2e skills, React
+  Native (Expo, or a bare React Native CLI/Metro app — Gradle/Xcode/CocoaPods/Bundler outputs, keeping the
+  template's committed `debug.keystore`), Ionic/Capacitor native projects, Playwright, Antora docs, TypeDoc/Compodoc
+  API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as
+  `/iru-setup-typescript-gitignore`, optionally with an `args` line setting `on-existing` to
+  `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs.
   Announces whether it is creating `.gitignore` from scratch or updating an existing one; if one already exists it
   never overwrites it silently — it warns, shows the proposed merge as a diff, and asks Update (merge, keeping
   hand-added entries) / Keep as is / Replace (template only, hand-added entries lost). Mirrors the
@@ -100,8 +102,8 @@ directory out from under files that are already tracked.
 
 Don't guess; only add a section below when the thing it targets is actually present in the target repository. Use
 the same manifest signals `iru-explore` and the sibling TypeScript setup skills rely on: `package.json`,
-`angular.json`, `nest-cli.json`, `next.config.*`, `app.json`, `capacitor.config.*`, `prisma/schema.prisma`, `pom.xml`,
-`docs/antora.yml` (or `docs/antora-playbook.yml`), and `typedoc.json`.
+`angular.json`, `nest-cli.json`, `next.config.*`, `app.json`, `metro.config.js`, `capacitor.config.*`,
+`prisma/schema.prisma`, `pom.xml`, `docs/antora.yml` (or `docs/antora-playbook.yml`), and `typedoc.json`.
 
 - **Package manager–specific debug logs**: inspect `package.json`'s `packageManager` field and the lockfile present
   at the root.
@@ -196,39 +198,136 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
   ignore `prisma/migrations/` — migrations are committed. With the legacy `prisma-client-js` provider and no
   `output`, the client lands in `node_modules/` and needs no line.
 
-- **Repository-wide integration-test lock** (NestJS or Next.js detected above, or a `.integration-test.lock/`
-  directory already exists): add
+- **Repository-wide integration-test lock** (NestJS, Next.js, or React Native — either toolchain, `expo` or
+  `metro` — detected, or a `.integration-test.lock/` directory already exists): add
   ```gitignore
   .integration-test.lock/
   ```
-  This is the atomic `mkdir` lock `iru-nestjs-code-one-task-group` / `iru-nextjs-code-one-task-group` (and the JVM
+  This is the atomic `mkdir` lock `iru-nestjs-code-one-task-group` / `iru-nextjs-code-one-task-group` /
+  `iru-react-native-code-one-task-group` and `iru-typescript-test`'s React Native `e2e` selector (and the JVM
   coding skills) take to serialize container-backed/e2e stages; it must never be committed, and adding it here
   saves those skills from having to patch `.gitignore` mid-run.
 
-- **React Native / Expo** (`app.json` with an `"expo"` key, `expo` or `react-native` in `package.json`
-  dependencies, and no `capacitor.config.*` — see the Ionic/Capacitor case below, which takes precedence when
-  both signals are present): add
-  ```gitignore
-  .expo/
-  .expo-shared/
-  expo-env.d.ts
-  web-build/
-  *.jks
-  *.p8
-  *.p12
-  *.mobileprovision
-  *.keystore
-  android/app/build/
-  android/.gradle/
-  android/local.properties
-  ios/Pods/
-  ios/build/
-  DerivedData/
-  ```
-  These paths assume a bare/prebuilt React Native layout (`android/`, `ios/` at the project root, as `expo
-  prebuild` or `react-native init` produce them). If the project stays fully managed (no `android/`/`ios/`
-  directories committed), the `android/`/`ios/`-prefixed lines are harmless no-ops but still worth including since
-  `expo prebuild` can be run later.
+- **React Native** (`react-native` or `expo` in `package.json` dependencies, or `app.json` with an `"expo"` key, and
+  no `capacitor.config.*` — see the Ionic/Capacitor case below, which takes precedence when both signals are
+  present). Look for that `package.json` at the root **and** in an app subdirectory (`iru-setup-react-native-app`
+  scaffolds into `<app-directory>`, usually the app slug, whenever the root isn't empty). Pick the toolchain with
+  the catalog-wide rule — `expo` in `dependencies` → **Expo** (even when `android/`/`ios/` exist: that's
+  prebuild output); `react-native` without `expo`, plus `metro.config.js`, committed `android/` + `ios/`, or
+  `@react-native-community/cli` in `devDependencies` → **Metro** (a bare React Native CLI app) — and add the one
+  matching block below. **Path prefix**: every line below containing a `/` before its end is anchored to the
+  `.gitignore`'s directory by git, so when the app lives in `<app-directory>` ≠ `.`, prefix those lines with
+  `<app-directory>/` (e.g. `mobile/android/app/build/`, `mobile/ios/Pods/`); slash-free patterns (`*.p12`,
+  `DerivedData/`, `xcuserdata/`, `.metro-health-check*`) match at any depth and stay as they are.
+
+  - **Expo** (`toolchain: expo`): add
+    ```gitignore
+    .expo/
+    .expo-shared/
+    expo-env.d.ts
+    web-build/
+    .metro-health-check*
+    *.jks
+    *.p8
+    *.p12
+    *.mobileprovision
+    *.keystore
+    android/app/build/
+    android/.gradle/
+    android/local.properties
+    ios/Pods/
+    ios/build/
+    DerivedData/
+    ```
+    These paths assume a prebuilt layout (`android/`, `ios/` at the app root, as `expo prebuild` produces them). If
+    the project stays fully managed (no `android/`/`ios/` directories committed), the `android/`/`ios/`-prefixed
+    lines are harmless no-ops but still worth including since `expo prebuild` can be run later. `create-expo-app`'s
+    own template goes further and ignores the generated native folders outright (`/ios`, `/android`, under a
+    `# generated native folders` comment, which Continuous Native Generation regenerates); offer those two lines
+    instead of the `android/…`/`ios/…` ones when `git ls-files -- android ios` (prefixed) is empty, and never when
+    the team already commits prebuild output.
+  - **Metro** (`toolchain: metro`): add
+    ```gitignore
+    # Android / Gradle
+    android/app/build/
+    android/build/
+    android/.gradle/
+    android/.kotlin/
+    android/app/.cxx/
+    android/local.properties
+    *.iml
+    *.hprof
+    *.keystore
+    !debug.keystore
+    *.jks
+
+    # iOS / Xcode / CocoaPods
+    ios/Pods/
+    ios/build/
+    ios/.xcode.env.local
+    xcuserdata/
+    *.xcuserstate
+    *.xccheckout
+    *.moved-aside
+    *.hmap
+    *.ipa
+    *.pbxuser
+    !default.pbxuser
+    *.mode1v3
+    !default.mode1v3
+    *.mode2v3
+    !default.mode2v3
+    *.perspectivev3
+    !default.perspectivev3
+    DerivedData/
+
+    # Signing material
+    *.p8
+    *.p12
+    *.mobileprovision
+
+    # Ruby / Bundler (CocoaPods is pinned by the Gemfile)
+    vendor/bundle/
+
+    # Metro / bundle artifacts
+    .metro-health-check*
+    *.jsbundle
+
+    # fastlane
+    **/fastlane/report.xml
+    **/fastlane/Preview.html
+    **/fastlane/screenshots
+    **/fastlane/test_output
+    ```
+    Compared, line by line, against the `.gitignore` that `@react-native-community/cli` 20.2.0's default
+    TypeScript template (React Native 0.87) writes into the app directory, and against what an actual
+    `npm install` + `./gradlew assembleDebug` + `bundle install` + `bundle exec pod install` + `xcodebuild` run
+    left untracked in October 2026 (`android/.gradle/`, `android/build/`, `android/app/build/`,
+    `android/app/.cxx/`, `ios/Pods/`, `ios/build/`, `ios/.xcode.env.local`, `vendor/bundle/`) — verified with
+    the base template + this block, `<app-directory>/`-prefixed, as the only `.gitignore`: every one of those
+    paths ends up ignored and every file the template means to commit (`android/app/debug.keystore`,
+    `.bundle/config`, `Gemfile`/`Gemfile.lock`, `ios/Podfile`/`Podfile.lock`, `ios/.xcode.env`,
+    `ios/<AppName>.xcworkspace`) stays visible to `git status`. Deliberate
+    differences from the template: its unanchored `.gradle` and `local.properties` are written as the concrete
+    `android/…` paths above (its `build/`, `.idea`, `/coverage` and `.DS_Store` are already covered by the base
+    template's `build/`, `.idea/`, `coverage/`, `.DS_Store` — the explicit `android/…/build/`/`ios/build/` lines
+    stay so the block still works if a project drops the base `build/` line for a committed build directory);
+    `**/Pods/` and `/vendor/bundle/` become `ios/Pods/` and `vendor/bundle/` (prefix both with `<app-directory>/`
+    as above); signing material (`*.jks`, `*.p8`, `*.p12`, `*.mobileprovision`) is added — an upload keystore or
+    an App Store Connect key must never be committed. **Keep `!debug.keystore`**: the template commits
+    `android/app/debug.keystore` on purpose (the public debug signing key Gradle's `debug` — and, until a real
+    upload key is injected, `release` — build type uses), so a bare `*.keystore` would break a fresh clone's
+    `assembleDebug`. **Don't ignore `.bundle/`**: the template commits `.bundle/config` (it sets
+    `BUNDLE_PATH: "vendor/bundle"`), and `Gemfile.lock`, `ios/Podfile.lock`, `ios/.xcode.env` and
+    `ios/<AppName>.xcworkspace` are committed too — none of them may match an ignore line. Metro's own transform
+    cache lives in the OS temp directory, not the project, so `.metro-health-check*` is its only in-tree file.
+    If Detox is configured (`.detoxrc.js`/`.detoxrc.json`, or `detox` in `devDependencies`), also add its default
+    artifacts directory:
+    ```gitignore
+    artifacts/
+    ```
+    (or the `artifacts.rootDir` the Detox config sets). Maestro writes its reports outside the project by
+    default, so it needs no line.
 
 - **Ionic / Capacitor** (`capacitor.config.ts`/`capacitor.config.json` at the root, or `@capacitor/core` in
   `package.json` dependencies): add
@@ -318,9 +417,9 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
 ## Step 4 — Compose the proposed content
 
 Concatenate Step 2's base template with whichever Step 3 sections actually matched, each under its own comment
-header for readability (e.g. `# Angular`, `# NestJS`, `# Next.js`, `# Prisma generated client`, `# Playwright`,
-`# Vaadin Hilla frontend`). If Step 1 found an existing
-`.gitignore`, compose two drafts:
+header for readability (e.g. `# Angular`, `# NestJS`, `# Next.js`, `# React Native (Metro)`,
+`# Prisma generated client`, `# Playwright`, `# Vaadin Hilla frontend`). If Step 1 found an existing `.gitignore`,
+compose two drafts:
 
 - **Merged** (the Update draft): keep any of the existing file's lines that aren't already covered by the
   composed template (hand-added project-specific ignores must survive), and don't repeat a line that's already
@@ -368,6 +467,8 @@ already existed — which hand-added lines were preserved (Update) or dropped (R
 - Which values were inferred versus verified: the Vaadin Hilla block (Step 3) was checked against Vaadin's current
   published source-control documentation, and the NestJS and Next.js blocks against the `.gitignore` files that
   `nest new` (`@nestjs/cli` 12) and `create-next-app` (Next.js 16) generate, as part of authoring this skill; the
-  Prisma path is read from the project's own schema; every other Step 3 section is inferred
+  Prisma path is read from the project's own schema; the React Native Metro block was compared against the
+  `.gitignore` the `@react-native-community/cli` 20.2.0 template writes and the untracked output of a real native
+  build (October 2026); every other Step 3 section is inferred
   purely from local manifest/config-file signals in the target repository and should be spot-checked against the
   project's actual generated output once its scaffold exists.

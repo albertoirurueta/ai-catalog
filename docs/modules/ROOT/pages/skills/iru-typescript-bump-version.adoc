@@ -7,7 +7,8 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 Set an npm/TypeScript project's version to an exact literal value across every file that needs to agree with
 it: `package.json`, the lockfile of whichever package manager the project uses, and — optionally — any
 README/Antora mentions of the current version. This skill never computes a version itself; it only applies
-the exact string it is given, after checking that the string looks like an attempted version at all.
+the exact string it is given, after checking that the string looks like an attempted version at all. React
+Native apps are handed to `iru-react-native-bump-version`, which owns their store-facing version files.
 
 == Purpose
 
@@ -15,7 +16,8 @@ the exact string it is given, after checking that the string looks like an attem
 deterministic skill that a caller (typically `iru-release`) can invoke twice per release — once to strip the
 pre-release suffix for the release itself, once to open the next development cycle — without either caller
 having to know npm/pnpm/yarn's differing version commands or lockfile quirks. It detects the package manager
-in play, finds the right `package.json` (asking when a workspace or a Hilla-managed frontend makes that
+in play, hands React Native apps (Expo or bare CLI/Metro) to `iru-react-native-bump-version` when it is
+installed, finds the right `package.json` (asking when a workspace or a Hilla-managed frontend makes that
 ambiguous), and runs that package manager's own `version` command so the lockfile stays consistent.
 
 == Purpose group
@@ -47,7 +49,8 @@ up front.
 |Which workspace package to bump, by name or path, when more than one `package.json` with a `version` field
 exists.
 |None — the skill asks which package (or whether to bump every workspace member in lockstep) when the
-repository has more than one and this isn't given.
+repository has more than one and this isn't given. Forwarded unchanged to `iru-react-native-bump-version`
+for React Native apps.
 
 |`sync-files` (args)
 |No
@@ -68,6 +71,9 @@ none do.
   if `sync-files` was accepted.
 * A report of the old and new version, every file actually changed, anything skipped and why, and which parts
   of the process were verified locally (npm, pnpm) versus not (Yarn Classic/Berry) and should be spot-checked.
+* For a React Native app with `iru-react-native-bump-version` installed: that skill's report is relayed
+  instead. Without it, only `package.json` and the lockfile are updated and the report states prominently that
+  the app's shipped version (`expo.version` or the native `versionName`/`MARKETING_VERSION`) was not touched.
 * No commit or git tag is created — this skill only edits files.
 
 == Execution flow
@@ -78,7 +84,11 @@ flowchart TD
     A["Start /iru-typescript-bump-version\n&amp;lt;new-version&amp;gt; [args: package, sync-files]"] --> B{new-version given\nand not blank/whitespace?}
     B -- no --> C["Ask user for a valid\nsemver-shaped version string"]
     C --> D
-    B -- yes --> D["Detect package manager:\npackageManager field, then lockfile present\n(npm / pnpm / yarn Classic / yarn Berry)"]
+    B -- yes --> B2{"react-native or expo in\ndependencies (app, not library)?"}
+    B2 -- yes, skill installed --> RN["Invoke iru-react-native-bump-version\nwith same arguments; relay report; stop"]
+    B2 -- yes, not installed --> B3["Continue; flag in report that app\nstore version was not updated"]
+    B3 --> D
+    B2 -- no --> D["Detect package manager:\npackageManager field, then lockfile present\n(npm / pnpm / yarn Classic / yarn Berry)"]
     D --> E["Find every package.json\nwith a version field"]
     E --> F{More than one found?}
     F -- no --> H
@@ -102,12 +112,17 @@ flowchart TD
 
 === Invokes
 
-None — `iru-typescript-bump-version` is a leaf skill; it only runs package-manager commands and edits files
-directly, it does not call any other skill in this catalog.
+* xref:skills/iru-react-native-bump-version.adoc[] — Step 0.5, for React Native apps (`react-native` or `expo`
+  in `dependencies`), when installed; receives the same arguments and its report is relayed. React Native
+  libraries stay in this skill.
+
+Otherwise it only runs package-manager commands and edits files directly.
 
 === Invoked by
 
 * xref:skills/iru-release.adoc[] — Step 6, version bump for TypeScript/npm projects.
+* xref:skills/iru-react-native-bump-version.adoc[] — hands a React Native *library* (no app config or native
+  app project) back here, since it is an ordinary npm package.
 
 === Related agents
 

@@ -1,0 +1,122 @@
+= Setup KMP Gitignore
+:description: Creates or gap-fills the root and per-module .gitignore files for a Kotlin Multiplatform Android and iOS app, keeping the Gradle wrapper jar tracked.
+:keywords: iru-setup-kmp-gitignore, claude code skill, kotlin multiplatform, kmp, gitignore, xcodegen, gradle, keystore, antora
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+`iru-setup-kmp-gitignore` composes the root `.gitignore` plus a one-line `/build` `.gitignore` for each Gradle module
+of a Kotlin Multiplatform (Android + iOS) app — the `shared/` + `androidApp/` + `iosApp/` layout produced by
+`iru-setup-kmp-app`, or the JetBrains wizard's older single `composeApp/` module. It announces whether it is creating
+files from scratch or updating existing ones, and never overwrites an existing `.gitignore` silently.
+
+== Purpose
+
+The skill merges this catalog's two mobile gitignore skills (`iru-setup-android-gitignore` and
+`iru-setup-swift-gitignore`) into one template trimmed to what a KMP app produces. The unconditional root base covers
+Gradle and Kotlin noise (including the root `.kotlin/` cache), `local.properties`, IDE files, APK/AAB/IPA outputs,
+signing material (`*.jks`, `*.keystore`, `*.p8`, `*.p12`, `*.mobileprovision`, `*.cer`), Firebase/Google service
+files, Xcode output, the Antora `docs/build/` output and the transient `.integration-test.lock/` directory.
+Conditional sections are added only when detected: the XcodeGen-generated `iosApp/iosApp.xcodeproj/` (only when a
+`project.yml` exists, so a hand-maintained `.xcodeproj` stays tracked), CocoaPods `Pods/` and Fastlane output.
+
+It deliberately has no `*.jar` pattern so `gradle/wrapper/gradle-wrapper.jar` stays tracked, and it confirms this
+with `git check-ignore`. For every pre-existing file whose proposed content differs, it shows a diff and asks Update
+(merge, keep hand-added lines) / Keep as is / Replace, unless `on-existing` decides. `iosApp/` never gets its own
+`.gitignore`.
+
+== Purpose group
+
+xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-kmp-gitignore
+----
+
+Optionally with `args` as `key: value` lines (see Inputs).
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`mode`
+|No
+|`new` or `existing`. `existing` never means "update silently": every pre-existing file still goes through the
+Update / Keep as is / Replace question unless `on-existing` decides it.
+|Detected from whether a root `.gitignore` exists.
+
+|`modules`
+|No
+|Comma- or space-separated Gradle module directories that each get their own `/build` `.gitignore`.
+|Every `include(":...")` entry in `settings.gradle.kts`/`settings.gradle`; else whichever of `shared`/`androidApp`/
+`composeApp` exist; else asked (default `shared, androidApp`).
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. How each already-existing `.gitignore` is treated; the warning and diff are
+still shown. Meant for scripted runs.
+|`ask`
+|===
+
+== Outputs
+
+* A root `.gitignore` — created, or when it already existed, updated (merged), replaced with the bare template, or
+  kept as is.
+* A `<module>/.gitignore` containing `/build` for each resolved module, handled the same way; skipped when its
+  content already matches.
+* A closing report with the setup mode, the per-file action (created / updated / replaced / kept as is, and whether
+  the user or `on-existing` chose it, with the template lines a kept file still lacks), which conditional sections
+  (XcodeGen, CocoaPods, Fastlane) were included or skipped and why, and confirmation that
+  `gradle/wrapper/gradle-wrapper.jar` is still not ignored.
+* Warnings to review the files before committing, to untrack newly ignored paths with `git rm -r --cached`, and never
+  to commit keystores, `.p8`/`.p12` keys, provisioning profiles or Google service files.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-kmp-gitignore] --> B["Step 0: Resolve mode, on-existing, modules\n(settings.gradle.kts includes, fallback dirs,\nor ask user)"]
+    B --> C["Step 1: Survey: project.yml, tracked .xcodeproj,\nPodfile, fastlane/, Antora, existing .gitignore files"]
+    C --> D{"Any .gitignore\nalready exists?"}
+    D -- no --> E["Announce: creating from scratch"]
+    D -- yes --> F["Announce: updating existing,\nlist existing files"]
+    E --> G["Steps 2-4: Root base template,\nper-module /build, detected conditional sections"]
+    F --> G
+    G --> H["Step 5: Compose flush-left content\n(merge with existing lines if any)"]
+    H --> I{"File already existed\nand differs?"}
+    I -- no --> J["Step 7: Write file directly"]
+    I -- yes --> K["Step 6: Show diff, ask per file\n(or apply on-existing):\nUpdate, Keep as is, Replace"]
+    K -- Update --> J
+    K -- Replace --> J2["Write bare template"]
+    K -- Keep as is --> L["Leave file untouched"]
+    J --> M["Report per file and action,\nconfirm gradle-wrapper.jar not ignored"]
+    J2 --> M
+    L --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-kmp-gitignore` is a leaf skill; it does not call any other skill in this catalog. It only mirrors
+`iru-setup-android-gitignore` and `iru-setup-swift-gitignore` as reference templates.
+
+=== Invoked by
+
+* xref:skills/iru-setup-kmp-repository.adoc[] — Step 6 runs `iru-setup-kmp-gitignore` (through an isolated skill
+  executor) after `iru-setup-kmp-app` and `iru-setup-antora`, so it can detect the generated `settings.gradle.kts`
+  modules, `iosApp/project.yml` and the Antora build output.
+
+=== Related agents
+
+None — this skill does not delegate any part of its work to an agent itself (its orchestrator runs it inside an
+xref:agents/iru-isolated-skill-executor.adoc[]).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-kmp-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

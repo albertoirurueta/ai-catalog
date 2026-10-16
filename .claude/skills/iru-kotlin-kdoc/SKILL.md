@@ -15,7 +15,8 @@ them into the Dokka configuration) — it does not change behavior, signatures, 
 (`src/test/kotlin`, `src/test/java`, `src/integrationTest/**`, `src/testFixtures/**`) carry no KDoc requirement —
 don't add KDoc there even if named explicitly — but never strip or "clean up" KDoc a test class already has. Java
 files in a mixed module are out of scope here (use `iru-java-javadoc`); Android modules (an Android Gradle plugin
-applied) belong to `iru-android-dokka`. Make no assumptions about the repository — discover its conventions and
+applied) belong to `iru-android-dokka`, and Kotlin Multiplatform modules (the `kotlin("multiplatform")` plugin
+applied) to `iru-kmp-dokka`. Make no assumptions about the repository — discover its conventions and
 Dokka setup fresh each run.
 
 ## Step 1 — Determine scope and build tool

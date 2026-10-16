@@ -113,7 +113,8 @@ Look at the repository root for `README.md`.
   file") and be flagged in Step 11, but there is no License section linking a file that doesn't exist.
 - **Primary language, framework, and build tool**: reuse `iru-explore`'s `- Project type:` line rather than
   re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
-  Expo/React Native, Ionic/Capacitor, Android library/app, SwiftPM/XcodeGen/Tuist, plain TypeScript/npm library,
+  React Native (Expo or bare CLI/Metro), Ionic/Capacitor, Kotlin Multiplatform app, Android library/app,
+  SwiftPM/XcodeGen/Tuist, plain TypeScript/npm library,
   and so on), and duplicating it here would drift the first time it gains a signal:
   - If an `iru-explore` report with a `- Project type:` line is already available earlier in this conversation,
     use it — just confirm the manifest(s) it names are still present.
@@ -148,7 +149,13 @@ Look at the repository root for `README.md`.
     (where the Spring Boot scaffold keeps them), else `group =`/`version =` in the root `build.gradle.kts` (where
     the Quarkus generator writes them); the
     artifact name is `rootProject.name` in `settings.gradle.kts`. Quarkus on Maven: `pom.xml` as above.
-  - npm/Vite/Angular/Expo/Ionic/TypeScript/NestJS/Next.js: the `"name"`/`"version"` in `package.json`.
+  - npm/Vite/Angular/Expo/Ionic/TypeScript/NestJS/Next.js: the `"name"`/`"version"` in `package.json`. A React
+    Native app's store-facing version lives elsewhere — `app.json`'s `expo.version` (Expo) or
+    `android/app/build.gradle` `versionName` / the iOS `MARKETING_VERSION` (Metro) — show that one in the status
+    table when it differs from `package.json`'s.
+  - Kotlin Multiplatform app (`kmp-app`): `VERSION_NAME` in the root `gradle.properties` (falling back to the
+    Android app module's `versionName`), the app name from `rootProject.name` in `settings.gradle.kts`, and the
+    Kotlin / Compose Multiplatform / AGP versions from `gradle/libs.versions.toml`.
   - Laravel: `'version' => env('APP_VERSION', '<x.y.z[-dev]>')` in `config/app.php` (never a `composer.json`
     `"version"` field — the app has none); the PHP floor from `composer.json` `require.php` (or
     `config.platform.php`) and the Laravel version from `composer.lock`'s `laravel/framework` entry.
@@ -301,7 +308,7 @@ Compose a small table from whatever Steps 2–3 actually resolved; omit rows wit
 | Swift tools / deployment targets | Swift only: the Swift tools version from `Package.swift` and the platform deployment targets it declares          |
 | Node engine | npm-based projects only: the `engines.node` range from `package.json`, if one is declared                                     |
 | TypeScript | TypeScript projects only: the `typescript` version pinned in `package.json`/`package-lock.json`                               |
-| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo, Next.js, NestJS, Spring Boot from the catalog/parent POM, Quarkus `quarkus.platform.version`, Laravel from `composer.lock`, FastAPI / Django (+ DRF or Django Ninja) from `uv.lock`), or the host compatibility (WordPress `Requires at least` – `Tested up to`; PrestaShop `ps_versions_compliancy` range) |
+| Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo SDK or React Native — with the toolchain, `expo` or `metro` —, Kotlin Multiplatform + Compose Multiplatform from `libs.versions.toml`, Next.js, NestJS, Spring Boot from the catalog/parent POM, Quarkus `quarkus.platform.version`, Laravel from `composer.lock`, FastAPI / Django (+ DRF or Django Ninja) from `uv.lock`), or the host compatibility (WordPress `Requires at least` – `Tested up to`; PrestaShop `ps_versions_compliancy` range) |
 | License | The license identified in Step 2, if any                                                                                       |
 | CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds"); omitted when Step 0 resolved `ci: no` |
 | Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Kover, Checkstyle, SpotBugs, PMD, detekt, ktlint, ESLint, oxlint, Prettier, PHPStan/Larastan, Pint, PHPCS/WPCS, PHP-CS-Fixer, Pest/PHPUnit, Ruff, mypy, pytest + coverage.py, pip-audit, SwiftLint, etc.) |
@@ -335,8 +342,9 @@ and skip the published API-docs links below.
   - **Storybook** (React/Angular component libraries): a `build-storybook` (or `storybook build`) step publishing
     the static build, normally landing at `https://<owner>.github.io/<repo>/storybook` or
     `https://<owner>.github.io/<repo>/api/storybook`, depending on where the workflow places it.
-  - **Dokka** (Android/Kotlin): a `dokkaHtml`/`dokkaGenerate` Gradle task feeding a Pages publish step, normally
-    landing at `https://<owner>.github.io/<repo>/api`. Kotlin Spring Boot / Quarkus services run
+  - **Dokka** (Android/Kotlin/Kotlin Multiplatform): a `dokkaHtml`/`dokkaGenerate` Gradle task feeding a Pages
+    publish step, normally landing at `https://<owner>.github.io/<repo>/api` (for a KMP app, the `shared`
+    module's multiplatform API). Kotlin Spring Boot / Quarkus services run
     `dokkaGeneratePublicationHtml` (Gradle) or `dokka-maven-plugin` (`mvn dokka:dokka`) and merge the result into
     the Antora output — the Spring Boot workflows put it under `/api/kdoc/` (root-aggregated, or one
     `/api/kdoc/<module-path>/` per module when the root doesn't aggregate); read the workflow's copy step.
@@ -510,9 +518,12 @@ never copy a value from `.env`/`.env.example` that looks like a secret — list 
   existing store metadata in the repository), replace the dependency snippet with store links the user fills in
   — `<App Store URL>`, `<TestFlight URL>`, `<Google Play URL>` — as placeholders, never invented real URLs.
   Otherwise (no store distribution config found, or the app isn't a library at all), show how to run it locally
-  instead, matched to the detected stack: `npm start` / `npx expo start` (Expo/React Native), `ionic serve`
-  (Ionic), `./gradlew installDebug` (Android), `xcodebuild -scheme <Scheme> -destination …` or "open in Xcode and
-  run" (Apple platforms) — pick the one command that actually matches the project's own scripts/Gradle
+  instead, matched to the detected stack: `npm start` / `npx expo start` (Expo), `npx react-native start` plus
+  `npm run android` / `npm run ios` after `bundle install && bundle exec pod install` in `ios/` (React Native
+  Metro/bare CLI), `ionic serve` (Ionic), `./gradlew installDebug` (Android), `./gradlew :androidApp:installDebug`
+  plus `xcodegen generate` (when `iosApp/project.yml` exists) and "open `iosApp/iosApp.xcodeproj` in Xcode and run"
+  (Kotlin Multiplatform), `xcodebuild -scheme <Scheme> -destination …` or "open in Xcode and run" (Apple
+  platforms) — pick the one command that actually matches the project's own scripts/Gradle
   tasks/scheme rather than a generic default.
 - **Python library** (`python-library`) development, after the Installation snippet: `uv sync`, `uv run pytest`,
   `uv run ruff check .`, `uv run mypy .`, `uv build` (sdist + wheel in `dist/`) — only the tools actually

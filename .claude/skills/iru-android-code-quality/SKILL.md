@@ -12,6 +12,8 @@ configuration unless asked to as a follow-up.
 
 ## Step 0 — Resolve inputs
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-code-quality` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 `<scope>` (optional) is a file path or class/file simple name used to filter the report in Step 3 — not a Gradle
 selector, since none of these tools accept a per-file CLI argument in this project shape. No `<scope>` → report
 everything project-wide. If the calling skill/prompt passes explicit `key: value` lines (e.g. `module: app`, a

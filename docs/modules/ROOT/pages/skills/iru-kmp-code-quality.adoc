@@ -1,0 +1,155 @@
+= KMP Code Quality
+:description: Runs a Kotlin Multiplatform project's wired detekt, ktlint, Android Lint and SwiftLint checks across all source sets and reports issue counts per rule.
+:keywords: iru-kmp-code-quality, claude code skill, kotlin multiplatform, kmp, detekt, ktlint, android lint, swiftlint, static analysis, code quality
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run whichever static-analysis tools a Kotlin Multiplatform (Android + iOS) project actually has wired -- detekt,
+ktlint, Android Lint and SwiftLint -- over the shared module's every source set, the Android app module and
+optionally the Swift host app, and report every issue they find. This is a report-only skill: it never runs
+formatters or baseline generators, never fixes issues and never changes or installs tool configuration.
+
+== Purpose
+
+`iru-kmp-code-quality` first verifies which tools are really wired, because KMP breaks the usual assumptions: a plain
+detekt 1.x `detekt` task analyzes nothing on a KMP module unless `source` is configured (reported as "wired but not
+covering KMP source sets", never as clean), detekt 2.x uses per-source-set tasks, ktlint checks one task per source
+set, the AGP KMP library plugin registers no Lint task unless `com.android.lint` is applied, and SwiftLint needs both
+`iosApp/.swiftlint.yml` and an installed binary. It then runs every wired task in one Gradle invocation with
+`--continue`, locates and parses the Checkstyle XML, ktlint plain reports, Android Lint XML and SwiftLint JSON into
+one per-tool, per-rule-id summary, and, when the prompt supplies a baseline, reports only what is new (matched on
+tool + rule id + file). It is the KMP equivalent of xref:skills/iru-android-code-quality.adoc[],
+xref:skills/iru-kotlin-code-quality.adoc[] and xref:skills/iru-swift-code-quality.adoc[].
+
+== Purpose group
+
+xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-kmp-code-quality
+/iru-kmp-code-quality <scope>
+/iru-kmp-code-quality <scope>
+module: <gradle path>
+tools: detekt,ktlint,lint,swiftlint
+baseline: <prior per-tool / per-rule-id counts or itemized list>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<scope>`
+|No
+|A file path, class/file simple name, module (`:shared`, `androidApp`) or source-set name (`commonMain`, `iosMain`,
+`androidMain`). It narrows which tasks run when it maps to a module or source set and filters the parsed report,
+since none of the tools take a per-file selector.
+|None -- the whole project.
+
+|`module`
+|No
+|Restrict the run to one Gradle module.
+|All modules
+
+|`tools`
+|No
+|Comma-separated subset of `detekt`, `ktlint`, `lint`, `swiftlint`.
+|Every wired tool
+
+|`baseline`
+|No
+|A prior per-tool, per-rule-id count or itemized list from an earlier run; everything after `baseline:` is treated
+as that prior result and only new issues are reported.
+|None -- report plain counts.
+|===
+
+Tool wiring checks (Step 1):
+
+[cols="1,3", options="header"]
+|===
+|Tool |How it is detected and run
+
+|detekt
+|Generation from the plugin id (`io.gitlab.arturbosch.detekt` is 1.x, `dev.detekt` is 2.x). 1.x: per-compilation
+tasks (`detektMetadataCommonMain`, `detektAndroidMain`, ...) or the plain `detekt` task only when `source` is
+configured; 2.x: `detekt<Set>SourceSet` tasks.
+
+|ktlint
+|`ktlintCheck` (one check per source set plus `ktlintKotlinScriptCheck`), or Spotless `kotlin { ktlint() }`.
+
+|Android Lint
+|`lintDebug` on the Android app module; on the KMP module `lint` only when `com.android.lint` is applied (or
+`lintDebug` with `androidTarget()`).
+
+|SwiftLint
+|Only when `iosApp/.swiftlint.yml` exists and the `swiftlint` binary is installed (installation offered, never done
+without asking); not applicable off macOS.
+|===
+
+== Outputs
+
+* A plain-text report in the conversation -- never a written file.
+* An overall issue total, then per tool: ran / not wired / wired but not covering KMP source sets / not installed,
+  the governing config, baseline or `.editorconfig`, the issue count, severity breakdown and one line per rule
+  bucket (detekt rule, ktlint `ruleset:rule-id`, Lint issue id, SwiftLint `rule_id`), grouped by source set.
+* The `file:line` list when the scope is smaller than the whole project.
+* With a baseline: only the new-vs-baseline regressions, with a note when a tool was newly wired or the detekt
+  generation changed.
+* A "No Kotlin/Swift static analysis configured" message when nothing is wired.
+* Nothing is fixed, formatted or reconfigured.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-kmp-code-quality\n(scope, tools, baseline)"] --> B["Step 0: resolve scope, module,\ntools, baseline;\ncheck JDK / Android SDK / gradlew"]
+    B --> C["Step 1: verify which tools are wired\n(detekt generation, ktlint, Lint,\nSwiftLint) from tasks --all"]
+    C --> D{"Any tool wired?"}
+    D -- no --> Z["Stop: 'No Kotlin/Swift static\nanalysis configured'"]
+    D -- yes --> E["Step 2: run all wired Gradle tasks\nwith --continue (exit codes are information)"]
+    E --> F{"SwiftLint wired?"}
+    F -- yes --> G["Run swiftlint lint\n--reporter json"]
+    F -- no --> H["Step 3: locate reports by listing\nbuild/reports"]
+    G --> H
+    H --> I{"Tool failed with a compile or\nresolution error?"}
+    I -- yes --> J["Report tool failure,\ndo not read stale reports"]
+    I -- no --> K["Parse detekt / ktlint / Lint /\nSwiftLint reports, de-duplicate"]
+    J --> L
+    K --> L["Step 4: bucket by tool, rule id\nand source set"]
+    L --> M{"Baseline supplied?"}
+    M -- yes --> N["Report only new issues\n(tool + rule id + file)"]
+    M -- no --> O["Report totals and\nper-rule counts"]
+    N --> P["Done: no fixes, no config changes"]
+    O --> P
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-kmp-code-quality` is a leaf skill; it only runs Gradle tasks, `swiftlint` and inline `python3` parsing,
+and it does not call any other skill in this catalog. Its prerequisite checks and module detection follow
+xref:skills/iru-kmp-test.adoc[] by reference only.
+
+=== Invoked by
+
+* xref:skills/iru-kmp-code-one-task-group.adoc[] -- Step 1 (captures the bucket's pre-change quality baseline) and
+  Step 3.6 (diffs the post-change result against that baseline), through the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-code.adoc[] -- Step 3 (project-wide quality baseline per language key) and Step 7 (final
+  comparison against that baseline), resolving the `kmp` key to this skill and running it through the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- both callers always run this skill from inside an
+  `iru-gate-runner` sub-agent, so only the compact per-rule summary reaches their context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-kmp-code-quality/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

@@ -46,7 +46,9 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   to the matching `iru-<key>-code-one-task-group` skill. Installed keys: `java`, `java-springboot`,
   `kotlin-springboot`, `quarkus` (Java or Kotlin, detected inside), `dotnet`, `typescript`, `nestjs`, `nextjs`,
   `php` (Laravel / WordPress plugin or theme / PrestaShop module, detected inside), `fastapi`, `django`, `android`,
-  `swift`, `database`
+  `swift`, `kmp` (Kotlin Multiplatform Android + iOS apps — shared `commonMain`/`androidMain`/`iosMain` code, Compose
+  Multiplatform or native UI, and the `iosApp/` Swift host), `react-native` (Expo or bare React Native CLI/Metro
+  toolchain, detected inside — the `expo` dependency decides), `database`
   — each key `<key>` has an `iru-<key>-code-one-task-group` + `iru-<key>-code-one-task` pair (keys are discovered
   from the installed directories, never hardcoded). The group skill captures one quality baseline for the whole
   group, runs `iru-<key>-code-one-task` once per task — in parallel when the group allows it (`database` is always
@@ -54,17 +56,21 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   baseline), instead of once per task. Coding skills detect build tool (Maven / Gradle KTS / Gradle Groovy,
   npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
   container-backed or server-starting stage (Spring Testcontainers, Quarkus Dev Services, NestJS e2e, Next.js
-  Playwright, WordPress `wp-env`, Python testcontainers `integration`-marked pytest tests) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
+  Playwright, WordPress `wp-env`, Python testcontainers `integration`-marked pytest tests, React Native Maestro/Detox
+  e2e with Metro on port 8081, KMP iOS simulator test runs) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
   `.integration-test.lock` (owner file, stale after 60 min, released on every exit path, gitignored); Docker
   unavailable makes that stage "unverified", never silently skipped, and the coverage gate counts only tests
-  that need no containers.
+  that need no containers. The same rule covers devices: no booted simulator/emulator (or no macOS host for an iOS
+  stage) makes a mobile e2e/iOS stage "unverified", and KMP coverage is measured on JVM/Android host tests only
+  (Kotlin/Native iOS code is reported "not measurable").
 - **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
   `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to five
   `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple), every
   round ending in a "Something in the next group" escape hatch (the last in "None of these"); an option bundling
   several types (Web app → React/Next.js/Angular, WordPress → plugin/block theme, Android, Apple, cross-platform
-  mobile) gets one bounded follow-up, while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
-  `layout`/`frontend`, NestJS `orm`, Next.js `output`, Python `database`/`orm`/`api`/`python-version`) are left to the orchestrator, asks the shared inputs once, and delegates to the
+  mobile → React Native/Kotlin Multiplatform/Ionic) gets one bounded follow-up (React Native's `toolchain:
+  expo|metro` is then asked by the front door because it changes the macOS CI cost picture), while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
+  `layout`/`frontend`, NestJS `orm`, Next.js `output`, Python `database`/`orm`/`api`/`python-version`, KMP `ui`) are left to the orchestrator, asks the shared inputs once, and delegates to the
   matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
   so every sub-skill takes its update path instead of assuming a brand-new repo. The front door and every
   orchestrator first announce the **setup mode** — "from scratch" or "updating an existing repository" plus an
@@ -74,14 +80,19 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   **Keep as is** (report mismatches with this run's choices) / **Replace** (regenerate, customizations lost), with
   a **Stop** option where it makes sense; `mode: existing` alone never means "update silently" — only an explicit
   `on-existing` does. Final reports repeat the mode and the per-component action (created / updated / replaced /
-  kept as is / skipped (ci: no)). The seven `*-repository`
+  kept as is / skipped (ci: no)). The eight `*-repository`
   stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`,
   `iru-setup-typescript-repository`, `iru-setup-php-repository`, `iru-setup-python-repository`,
-  `iru-setup-android-repository`, `iru-setup-swift-repository` — each also run standalone, and each chains the
+  `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository` — each also run standalone, and each chains the
   same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
   `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`
   (Quarkus reuses `iru-setup-java-gitignore`). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
-  `react`, `angular`, `react-native`, `ionic`, `nestjs` (`iru-setup-nestjs-app`), or `nextjs` (`iru-setup-nextjs-web`);
+  `react`, `angular`, `react-native`, `ionic`, `nestjs` (`iru-setup-nestjs-app`), or `nextjs` (`iru-setup-nextjs-web`),
+  and its `react-native` flavor takes `toolchain: expo|metro` (forwarded to `iru-setup-react-native-app` and
+  `iru-setup-typescript-github-workflows`: Expo framework with EAS/CNG and `native-builds: eas|local`, or a bare React
+  Native CLI project with committed `android/`/`ios/`, CocoaPods, Gradle/Xcode CI jobs and store release);
+  `iru-setup-kmp-repository` (via `iru-setup-kmp-app`, `iru-setup-kmp-gitignore`, `iru-setup-kmp-github-workflows`)
+  scaffolds a Kotlin Multiplatform app — `shared/` + `androidApp/` + XcodeGen `iosApp/` — with `ui: compose|native`;
   `iru-setup-php-repository`'s picks `laravel`, `wordpress-plugin`, `wordpress-theme` (block theme), or
   `prestashop-module` (`iru-setup-php-laravel` / `-wordpress` / `-prestashop`); `iru-setup-python-repository`'s picks
   `fastapi` (`iru-setup-python-fastapi`) or `django` (`iru-setup-python-django`), sharing
@@ -121,7 +132,9 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `iru-explore` before filing.
 - **Release**: `iru-release` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
   it discovers the installed `iru-<key>-bump-version` skills (`find .claude/skills -maxdepth 1 -type d -name
-  "iru-*-bump-version"`, currently `java` (Java or Kotlin, Maven or Gradle), `typescript`, `android`, `swift`,
+  "iru-*-bump-version"`, currently `java` (Java or Kotlin, Maven or Gradle), `typescript`, `react-native`
+  (`package.json` + Expo `expo.version` or Metro `versionName`/`MARKETING_VERSION`, store values only on a release),
+  `android`, `kmp` (`gradle.properties` `VERSION_NAME`/`VERSION_CODE` + `iosApp` `MARKETING_VERSION`), `swift`,
   `php` (Laravel `config/app.php`, WordPress plugin/theme headers, PrestaShop module class; `x.y.z-dev`
   convention), `python` (`pyproject.toml` `[project].version` + `__version__` literals; PEP 440 `x.y.z.dev0`
   convention; VCS-derived versions left to the git tag)) and delegates the actual version-file edit to whichever key matches the detected project, keeping
@@ -138,6 +151,10 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `reference/README.md` Sources as "irurueta docs: <page path>"); WordPress and PrestaShop aren't covered there,
   so those references/scaffolds follow the official docs (developer.wordpress.org handbooks + WordPress Coding
   Standards, devdocs.prestashop-project.org). Keep new guidance for these stacks consistent with those sources.
+  Kotlin Multiplatform (`kmp`) and React Native (`react-native`, both toolchains) follow the official docs
+  (kotlinlang.org multiplatform docs + JetBrains KMP/Compose Multiplatform docs; reactnative.dev, docs.expo.dev,
+  reactnavigation.org, React Native Testing Library), cited the same way in their `reference/README.md` Sources;
+  the KMP Android side stays consistent with the Android reference repository's conventions above.
 - **Template verification**: every scaffold/workflows/gate skill's embedded templates are meant to be exercised
   against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)
   before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can't be
@@ -153,9 +170,11 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
   headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
   reports back only a compact summary. Gate skills it runs: `iru-<lang>-test`/`-coverage`/`-code-quality` for
   `java` (Maven or Gradle, Java or Kotlin sources; coverage from JaCoCo, `quarkus-jacoco`, or Kover), `dotnet`,
-  `typescript` (incl. NestJS/Next.js, `e2e` selector), `php` (Pest/PHPUnit, Clover, PHPStan/Psalm/PHPCS),
+  `typescript` (incl. NestJS/Next.js/React Native — both the Expo and Metro toolchains —, `e2e` selector incl.
+  Maestro/Detox), `php` (Pest/PHPUnit, Clover, PHPStan/Psalm/PHPCS),
   `python` (pytest incl. pytest-django, `integration` selector; coverage.py Cobertura; Ruff/mypy/Bandit — shared by
-  the `fastapi` and `django` keys), `android`, `swift`; `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`,
+  the `fastapi` and `django` keys), `android`, `swift`, `kmp` (Kover coverage; detekt/ktlint/Android Lint/SwiftLint);
+  `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`, `iru-kmp-dokka`,
   `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (Ruff `D` + Sphinx build), `iru-android-dokka`, `iru-swift-docc`; plus
   `iru-check-license`/`iru-check-security`. Used throughout `iru-code`, `iru-code-one-task-group`, and every
   `iru-<key>-code-one-task-group` that validates (all but `database`), and recommended by `iru-plan` for the scoped

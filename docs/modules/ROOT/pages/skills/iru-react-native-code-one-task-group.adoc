@@ -1,0 +1,141 @@
+= React Native Code One Task Group
+:description: Implements a bucket of React Native tasks for Expo or Metro apps, then validates once: Jest, coverage, tsc, native builds, Expo prebuild, and e2e.
+:keywords: iru-react-native-code-one-task-group, claude code skill, react native, expo, metro, jest, e2e, maestro, detox, coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of React Native tasks from a plan's task group end to end: capture a single pre-change quality
+baseline, run `iru-react-native-code-one-task` once per task (in parallel when allowed), then validate the entire
+bucket once — headers, TSDoc, Jest, an 80% unit-only coverage gate, type-check, native stages, and a lock-guarded
+device e2e run.
+
+== Purpose
+
+`iru-react-native-code-one-task-group` is built on the same TypeScript gate skills as
+`iru-typescript-code-one-task-group`, each run through an `iru-gate-runner` agent so no raw report lands in its
+context, and adds four React Native-specific concerns. Native code has its own gates and the toolchain decides who
+owns it: for **metro** apps `android/` and `ios/` are committed source, so Step 3.7-3.8 build the side the bucket
+touched; for **expo** apps they are generated, so an edit there is a defect and Step 3.9 validates config-plugin
+changes by running `expo prebuild` in a throwaway copy. The coverage gate counts Jest unit tests only, since e2e
+flows and native tests produce no coverage of the measured TypeScript. `tsc --noEmit` is its own gate, because Jest
+presets strip types without checking them. The e2e stage needs a device, a build, and Metro, so it runs last and
+only while holding the repository-wide `.integration-test.lock` (acquired in Step 3.10a, released in 3.10b on every
+exit path; stale after 60 minutes, wait timeout around 45 minutes).
+
+Step 1 detects the profile once and captures a baseline (plus an Android Lint baseline when metro tasks touch
+`android/`). Step 2 implements tasks, but tasks that edit the same navigator/layout file or native registration point
+run sequentially even in a parallelizable group. Step 3 runs license headers, TSDoc, scoped tests, coverage, the
+full suite, quality diffed against baseline, the Android, iOS, and Expo native stages as applicable, then e2e. Steps
+4-5 finalize the plan notes and report; any unverified stage is named with its reason rather than read as a pass.
+
+== Purpose group
+
+xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-react-native-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every `react-native`-tagged task/sub-task in the bucket with its own text and checkbox lines, plus the group's
+`Parallelizable` verdict and relevant "Current code state" context.
+|None — invoked with a specific bucket's text by `iru-code-one-task-group` or `iru-typescript-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source, native, and config files plus tests per task, via `iru-react-native-code-one-task`.
+* License headers and TSDoc kept current for every file the bucket touched, checked once for the whole bucket.
+* Unit-only coverage of at least 80% line and branch for changed/new TS/TSX files, with any device-only file recorded
+  as an accepted exception.
+* A type-check (`tsc --noEmit`), lint and format result compared to the single pre-change baseline.
+* Android, iOS, and Expo native-config stage results where applicable, each passed, failed-and-fixed, skipped as not
+  applicable, or unverified with a reason.
+* An e2e (Maestro/Detox, optionally XCTest) result run under the shared lock, or unverified with the cause.
+* `implementation_plan.md` with each task's checkbox finalized with unit-only coverage, native stages, and e2e
+  results reported separately; blocked tasks stay unchecked with their blocker note.
+* A report to the caller covering profile, per-task details, coverage exceptions, type-check results, native stages,
+  e2e result, lock behavior, and which tasks need a new native build or are not OTA-compatible.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-react-native-code-one-task-group] --> B["Step 1: detect profile once;\ncapture pre-change quality baseline\n(iru-typescript-code-quality, via iru-gate-runner)"]
+    B --> C{Parallelizable and no shared\nnavigator or registration file?}
+    C -- yes --> D["Step 2: run react-native-code-one-task\nfor every task concurrently"]
+    C -- no --> E["Step 2: run tasks one at a time\n(or sequentially for conflicting ones)"]
+    D --> F["Confirm/backfill each task's box;\nnotify user"]
+    E --> F
+    F --> G{expo toolchain and\nandroid/ios in diff?}
+    G -- yes --> H["Defect: move change into\napp config, plugin or Expo module"]
+    H --> I
+    G -- no --> I["Step 3.1-3.6: license headers, TSDoc,\nscoped tests, 80% unit coverage,\nfull suite, lint + tsc + Prettier vs baseline"]
+    I -- failure traced to a task --> J["Fix owning task;\nre-run affected checks"]
+    J --> I
+    I -- clean --> K{Native stages needed?}
+    K -- metro android/ --> L["Step 3.7: gradlew lint, JVM tests,\nassembleDebug from android/"]
+    K -- metro ios/ --> M["Step 3.8: pod install +\nxcodebuild build (macOS/Xcode only)"]
+    K -- expo config/plugins --> N["Step 3.9: expo config introspect +\nprebuild in throwaway copy"]
+    K -- none --> O
+    L --> O
+    M --> O
+    N --> O{e2e wired and device available?}
+    O -- no --> P["Report e2e unverified or not wired"]
+    O -- yes --> Q["Step 3.10a: acquire\n.integration-test.lock (wait, stale break, timeout)"]
+    Q --> R["Step 3.10: ensure app current, run\nMaestro/Detox via iru-typescript-test e2e"]
+    R --> S["Step 3.10b: release lock\non every exit path"]
+    S --> T["Step 4: finalize each task's note\nwith unit, native and e2e outcomes"]
+    P --> T
+    T --> U["Step 5: report the bucket's\noutcome to the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-react-native-code-one-task.adoc[] — Step 2, once per task in the bucket (concurrently or
+  sequentially per the `Parallelizable` verdict, with conflicting registration-point tasks forced sequential), via
+  the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than
+directly:
+
+* xref:skills/iru-typescript-code-quality.adoc[] — Step 1 (pre-change baseline) and Step 3.6 (ESLint, `tsc --noEmit`,
+  Prettier diffed against it).
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
+* xref:skills/iru-typescript-tsdoc.adoc[] — Step 3.2, TSDoc for exported TS/TSX symbols.
+* xref:skills/iru-typescript-test.adoc[] — Step 3.3 (scoped Jest tests), Step 3.5 (full unit suite), and Step 3.10
+  (`e2e` selector with `lock: held`).
+* xref:skills/iru-typescript-coverage.adoc[] — Step 3.4, unit-only coverage gate.
+* xref:skills/iru-android-code-quality.adoc[] and xref:skills/iru-android-test.adoc[] — Steps 1 and 3.7, for a metro
+  app's `android/` side, only when they can target the `android/` Gradle root; otherwise plain `./gradlew` commands
+  run through the same agent.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key react-native.
+* xref:skills/iru-typescript-code-one-task-group.adoc[] — Step 1, hands the whole bucket over when the detected
+  flavor is React Native and this skill is installed, and relays its report.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per task (Step 2),
+  many at once when parallelizable.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for the baseline (Step 1) and every validation,
+  native-build, Expo-check, and e2e stage (Step 3), keeping reports out of this skill's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-react-native-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

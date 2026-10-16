@@ -1,6 +1,6 @@
 = Setup Readme
 :description: Creates or refreshes a repository README.md with badges, a status table, doc links and install or run steps for libraries, services, apps and plugins.
-:keywords: iru-setup-readme, claude code skill, readme, badges, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, installation instructions
+:keywords: iru-setup-readme, claude code skill, readme, badges, react native, kotlin multiplatform, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, installation instructions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -149,8 +149,7 @@ flowchart TD
     C --> D["Step 2: Gather project identity\n(repo/host, description, license,\nmulti-stack detection, versions)"]
     D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, registry badges, PHP/WP/\nPrestaShop/Python requirements, PyPI, GHCR image)"]
     E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/PHP/Swift/\nNode/TS/Python/framework/Distribution rows)"]
-    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, phpDoc, DocC, Sphinx,
-OpenAPI schema;\nno github.io links under pages: no)"]
+    F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, phpDoc, DocC, Sphinx,\nOpenAPI schema;\nno github.io links under pages: no)"]
     G --> H["Step 6: Compose Installation or\nGetting Started (dependency snippets,\nservice/plugin run commands,\nGHCR pull, store links)"]
     H --> I["Step 7: Write how-it-works\nsection with a real example\n(curl for services; via Explore agent)"]
     I --> J["Step 8: Compose remaining structural\nsections; preserve hand-written extras"]
@@ -186,6 +185,8 @@ OpenAPI schema;\nno github.io links under pages: no)"]
 * xref:skills/iru-setup-java-springboot.adoc[] — Step 9, README.md.
 * xref:skills/iru-setup-php-repository.adoc[] — Step 10, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-quarkus-repository.adoc[] — Step 8, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-kmp-repository.adoc[] — Step 9, last in its chain, runs `iru-setup-readme` via
+  `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 
 === Related agents
 

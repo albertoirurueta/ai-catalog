@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-generate-all-tests
-description: For a TypeScript/npm project only, explore the whole codebase to find every source file that has no corresponding unit test, or whose measured line coverage falls below 80%, using the `iru-typescript-coverage` skill to get the exact percentage per file — then generate new tests (or extend existing ones) until each reaches that bar, using the project's own framework's testing library and following its existing test-file convention and style. Invoke as `/iru-typescript-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a TypeScript/npm project (no `package.json` found, or no TypeScript toolchain). Use whenever the user wants comprehensive unit test coverage brought up across an entire TypeScript codebase (library, React, Angular, React Native, Ionic, or Hilla frontend) in one pass, instead of writing tests for one file or task at a time.
+description: For a TypeScript/npm project only, explore the whole codebase to find every source file that has no corresponding unit test, or whose measured line coverage falls below 80%, using the `iru-typescript-coverage` skill to get the exact percentage per file — then generate new tests (or extend existing ones) until each reaches that bar, using the project's own framework's testing library and following its existing test-file convention and style. Invoke as `/iru-typescript-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a TypeScript/npm project (no `package.json` found, or no TypeScript toolchain). Use whenever the user wants comprehensive unit test coverage brought up across an entire TypeScript codebase (library, React, Angular, React Native — `expo` with `jest-expo` or bare CLI/`metro` with `@react-native/jest-preset`, React Native Testing Library 14's async `render`/`fireEvent` honored and native modules mocked at their JS boundary — Ionic, or Hilla frontend) in one pass, instead of writing tests for one file or task at a time.
 model: sonnet
 allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -31,9 +31,16 @@ Detect the project's **flavor** the same way as the rest of this plan's TypeScri
 `package.json`: `@vaadin/hilla`/`hilla-spring-boot-starter` in `pom.xml` or a `src/main/frontend/` dir →
 `hilla-frontend`; `expo` or `react-native` → `react-native`; `@ionic/angular` or `@ionic/react` +
 `@capacitor/core` → `ionic`; `@angular/core` → `angular`; `react` + `vite` → `react`; otherwise `library`. This
-drives which testing library Step 5 uses. Also detect the **test runner** (`vitest` in devDependencies →
-Vitest; `jest`/`jest-expo` → Jest; `@angular/build` with the `unit-test` builder → `ng test`, Vitest runner
-underneath) and the **package manager** (`packageManager` field or lockfile: `package-lock.json` → npm,
+drives which testing library Step 5 uses. For `react-native`, also resolve the **toolchain** with the catalog-wide
+rule — `expo` in `dependencies` → **expo** (even when `android/`/`ios/` exist as prebuild output); `react-native`
+without `expo` → **metro** (bare React Native CLI app) — plus the Jest **preset** (`jest-expo` for expo;
+`@react-native/jest-preset`, or the legacy `react-native` preset, for metro) and the installed
+`@testing-library/react-native` major (read `version` from
+`node_modules/@testing-library/react-native/package.json` — reading the file rather than `require`-ing it, since
+some React Native packages' `exports` maps reject `require('<pkg>/package.json')` with
+`ERR_PACKAGE_PATH_NOT_EXPORTED`, verified on `@react-native/eslint-config` 0.87.1). Also detect the **test runner**
+(`vitest` in devDependencies → Vitest; `jest`/`jest-expo` → Jest — always Jest for React Native; `@angular/build`
+with the `unit-test` builder → `ng test`, Vitest runner underneath) and the **package manager** (`packageManager` field or lockfile: `package-lock.json` → npm,
 `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn) — both needed later to invoke `iru-typescript-coverage`/
 `iru-typescript-test` consistently, though those skills re-detect them independently too.
 
@@ -52,11 +59,18 @@ by one, and this step needs a structural map, not a design review.
     `tailwind.config.ts`, `playwright.config.ts`, `jest.config.js`, `capacitor.config.ts`, `angular.json`,
     `typedoc.json`, etc.).
   - Bootstrap/entry files with no branching logic of their own (`main.ts`, `main.tsx`, `index.html`'s script
-    entry, Angular's `main.ts`/`bootstrapApplication` call, Expo's `App.tsx` when it only mounts a navigator).
+    entry, Angular's `main.ts`/`bootstrapApplication` call, Expo's `App.tsx` when it only mounts a navigator, an
+    Expo Router `_layout.tsx` that only declares `<Stack />`/`<Tabs />`, and React Native's root `index.js`/`index.ts`
+    — the `AppRegistry.registerComponent`/`registerRootComponent` entry).
+  - React Native native and tooling trees: `android/`, `ios/` (committed native projects for **metro**, prebuild
+    output for **expo**), `.expo/`, `metro.config.js`, `babel.config.js`, `react-native.config.js`, `app.config.*`,
+    and Codegen spec files (`Native*.ts` declaring a `TurboModule` interface — type-only bindings to native code,
+    nothing for Jest to execute) — the same exclusions `iru-typescript-coverage` applies, so the two skills agree on
+    the candidate set.
   - Generated directories, notably `src/main/frontend/generated/` (Hilla's generated endpoint clients — never
     hand-written, never tested directly) and any other `*/generated/` tree.
   - Storybook files (`*.stories.ts`/`*.stories.tsx`).
-  - End-to-end specs (`e2e/**`, `*.e2e.ts`, Playwright/Maestro/Cypress specs) and existing unit test files
+  - End-to-end specs (`e2e/**`, `*.e2e.ts`, Playwright/Maestro/Detox/Cypress specs, `.maestro/` flows) and existing unit test files
     themselves (`*.test.ts(x)`, `*.spec.ts(x)`, `test/**`, `__tests__/**`).
   - Pure type-only modules (files that export only `interface`/`type` declarations with no runtime code) and
     pure constant/config data modules with no logic. Use judgment the same way as the Java skill: note these as
@@ -70,6 +84,8 @@ by one, and this step needs a structural map, not a design review.
     typically generated by `ng generate`).
   - **Mirrored `test/` directory**: a separate `test/` tree whose structure mirrors `src/` (common for
     library-flavor npm packages, e.g. `src/utils/format.ts` → `test/utils/format.test.ts`).
+  - **`__tests__/` directories**: Jest's own convention — a root `__tests__/` (the React Native CLI template ships
+    `__tests__/App.test.tsx`) or a `__tests__/` folder beside the source (`src/hooks/__tests__/useFoo.test.ts`).
   - If more than one convention is present, follow whichever the majority of existing tests use; if genuinely
     mixed with no majority, ask (`AskUserQuestion`).
   - If **no test files exist at all** and no test runner is configured (`vitest`/`jest`/`@angular/build`
@@ -133,7 +149,8 @@ Agent({
     TypeScript/Node logic → Vitest or Jest (whichever this repository already uses) with `vi.fn`/`jest.fn` for
     mocks and `vi.mock`/`jest.mock` for module mocking; React components → `@testing-library/react` +
     `@testing-library/user-event`, jsdom environment, query by role/label/text (not test-id first); React
-    Native components → `@testing-library/react-native` under the `jest-expo` preset; Angular
+    Native components and hooks → `@testing-library/react-native` (RNTL) under the project's own preset — <React
+    Native rules from Step 5's list below, filled in for this project's toolchain, preset, and RNTL major>; Angular
     components/services → `TestBed`, `HttpTestingController` + `provideHttpClientTesting` for anything calling
     `HttpClient`, run through `ng test --include=<path>` for this file alone; Ionic components → the same
     library as the underlying framework (Angular TestBed or React Testing Library, per Step 1's `framework`
@@ -153,6 +170,39 @@ Agent({
   run_in_background: false
 })
 ```
+
+**React Native rules** (substituted into the prompt above for a `react-native` project — both toolchains unless
+marked):
+
+- **RNTL major matters.** `@testing-library/react-native` **14** made `render`, `fireEvent.*`, `renderHook`, and
+  `rerender` return promises — write `await render(<Screen />)`, `await fireEvent.press(button)`; a bare
+  `render(...)` fails the next `screen.*` query with `` `render` function has not been called `` (verified locally on
+  14.1.0 under `jest-expo` 57). On 13.x keep the synchronous forms the existing tests use. Prefer
+  `userEvent.setup()` + `await user.press(...)` for interactions, and `screen.getByRole`/`getByLabelText`/
+  `getByText` queries over `getByTestId`.
+- **No RNTL installed** (the React Native CLI template only ships `react-test-renderer` and a smoke test calling
+  `ReactTestRenderer.create(<App />)` inside `act`): don't silently add a dependency — ask (`AskUserQuestion`)
+  whether to add `@testing-library/react-native` as a devDependency; if declined, follow the existing
+  `react-test-renderer` style and say in the report that `react-test-renderer` is deprecated for React 19.
+- **expo** (`jest-expo` preset): Expo SDK modules (`expo-constants`, `expo-font`, `expo-linking`, …) are already
+  mocked by the preset — don't re-mock them; for Expo Router screens use `renderRouter` from
+  `expo-router/testing-library` with an in-memory route map instead of mounting the real `app/` tree, and assert with
+  its `toHavePathname`/`toHaveSegments` matchers.
+- **metro** (`@react-native/jest-preset`): nothing beyond React Native core is mocked. A third-party native module
+  (AsyncStorage, MMKV, `react-native-safe-area-context`, Reanimated, …) needs its library-provided Jest mock
+  registered via `jest.mock('<pkg>', () => require('<pkg>/jest/<mock>'))` in the test or the project's
+  `setupFiles`; a React Navigation screen renders inside a `NavigationContainer` (or receives mocked
+  `navigation`/`route` props for a pure unit test).
+- **Never exercise native code from Jest**: a Turbo Module/Expo Module spec is mocked at the `TurboModuleRegistry`
+  /`requireNativeModule` boundary (`jest.mock('./specs/NativeFoo', () => ({ __esModule: true, default: { … } }))`) and
+  the test covers the TypeScript wrapper's behaviour around it — the Kotlin/Swift/Obj-C side belongs to the
+  Android/iOS test suites, not here.
+- Animations and timers: `jest.useFakeTimers()` + `act(() => jest.runAllTimers())` (awaited on RNTL 14) instead of
+  real waits; platform branches (`Platform.OS`, `*.ios.tsx`/`*.android.tsx`) are covered by setting `Platform.OS`
+  in the test or importing the platform file directly, and named as such if one branch stays uncovered.
+- If a new test fails with `Jest encountered an unexpected token` from `node_modules/<pkg>`, the package needs to
+  join the preset's `transformIgnorePatterns` allow-list — that's a Jest-config change, not test code: report it and
+  ask before editing the config.
 
 Collect every sub-agent's report before moving on.
 

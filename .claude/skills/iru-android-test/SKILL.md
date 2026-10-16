@@ -12,6 +12,8 @@ tests and reports results — it does not fix failures or modify source/test cod
 
 ## Step 0 — Resolve inputs
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-test` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 This skill takes a single positional `[selector]` argument (the same shape as `iru-java-test`'s selector), not
 `key: value` args, unless the calling skill/prompt explicitly passes `key: value` lines (e.g. `module: app`) — in
 that case honor them and skip the matching inference in Step 1/2.

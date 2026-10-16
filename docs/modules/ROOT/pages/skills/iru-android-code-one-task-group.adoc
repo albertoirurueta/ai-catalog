@@ -28,6 +28,8 @@ information only and never counted toward it), a full `./gradlew test` run, and 
 against its one baseline. A failure traced to a specific task sends that task back for a fix and a re-run of the
 affected checks, rather than re-validating the whole bucket.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-code-one-task-group.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -77,6 +79,7 @@ verdict and any relevant "Current code state" context.
 ....
 flowchart TD
     A[Start /iru-android-code-one-task-group] --> B["Step 1: detect touched module(s)\n(lib/app); capture one pre-change\nquality baseline (android-code-quality,\nvia iru-gate-runner)"]
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-code-one-task-group"]
     B --> C{Bucket Parallelizable?}
     C -- yes --> D["Step 2: invoke android-code-one-task\nfor every task concurrently\n(via iru-isolated-skill-executor)"]
     C -- no --> E["Step 2: invoke android-code-one-task\nfor each task, one at a time"]
@@ -112,6 +115,8 @@ directly, so verbose report output stays out of this skill's own context:
   per touched module.
 * Step 3.5 runs the plan's literal `./gradlew test` (or `testDebugUnitTest` as a lighter-weight substitute)
   directly for full-suite regression coverage — not a catalog skill.
+
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-code-one-task-group.adoc[] (a hand-off, not an invocation).
 
 === Invoked by
 

@@ -21,6 +21,8 @@ Android unit tests doesn't require hand-composing Gradle `--tests` syntax each t
 gating the (slower, environment-dependent) instrumented-test path behind an explicit ask and an attached
 device/emulator, so it's never run by accident.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-test.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -115,6 +117,7 @@ when it skips them.
 ....
 flowchart TD
     A["Start /iru-android-test\n(optional selector)"] --> B{"Selector given?"}
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-test"]
     B -- no --> C["Module = :lib, no --tests filter"]
     B -- yes --> D["Resolve module\n(path prefix, or search\nsrc/test for bare class name)"]
     D --> E["Map selector to\n--tests pattern"]
@@ -142,6 +145,8 @@ flowchart TD
 None — `iru-android-test` is a leaf skill; it only runs Gradle/`adb` commands and parses the resulting JUnit XML,
 it does not call any other skill in this catalog.
 
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-test.adoc[] (a hand-off, not an invocation).
+
 === Invoked by
 
 * xref:skills/iru-android-code-one-task-group.adoc[] — Step 3.3, via the
@@ -149,6 +154,7 @@ it does not call any other skill in this catalog.
   task-group bucket affected, per Gradle module.
 * xref:skills/iru-android-generate-all-tests.adoc[] — Step 7, to run the newly-generated tests it wrote and
   confirm they pass.
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 3, only when the app's `android/` directory can be targeted as the Gradle root (otherwise it runs `testDebugUnitTest` directly), to run the JVM unit tests of the React Native app's Android side.
 
 === Related agents
 

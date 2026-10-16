@@ -26,6 +26,11 @@ test files, coverage, the full suite, and a quality-regression check against its
 a specific task sends that task back for a fix and a re-run of the affected checks, rather than re-validating the
 whole bucket.
 
+React Native is its own key: when Step 1 classifies the project as `react-native` (Expo or bare CLI/Metro) and
+`iru-react-native-code-one-task-group` is installed, the whole bucket is handed to that skill and this one stops,
+because it owns the native builds, Expo prebuild check, and device e2e stage this skill does not run. Without
+it, this skill continues and states in its Step 5 report that those stages were not run.
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
@@ -63,6 +68,8 @@ verdict and any relevant "Current code state" context.
   outcome once bucket-wide validation passes.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group validation
   completes.
+* For a React Native bucket with `iru-react-native-code-one-task-group` installed: that skill's Step 5 report
+  relayed as this skill's own, noting the hand-off.
 * A summary handed back to the caller (`iru-code-one-task-group`): per task, files touched, tests added/updated,
   coverage achieved, code-quality outcome, and any task that stopped on a blocker.
 
@@ -72,7 +79,9 @@ verdict and any relevant "Current code state" context.
 ....
 flowchart TD
     A[Start /iru-typescript-code-one-task-group] --> B["Step 1: detect flavor, test runner\nand package manager once;\ncapture pre-change quality baseline\n(iru-typescript-code-quality, via iru-gate-runner)"]
-    B --> C{Bucket Parallelizable?}
+    B --> RN{"react-native flavor and\niru-react-native-code-one-task-group\ninstalled?"}
+    RN -- yes --> RN2["Hand whole bucket to it;\nrelay its Step 5 report; stop"]
+    RN -- no --> C{Bucket Parallelizable?}
     C -- yes --> D["Step 2: invoke typescript-code-one-task\nfor every task concurrently"]
     C -- no --> E["Step 2: invoke typescript-code-one-task\nfor each task, one at a time"]
     D --> F["Confirm/backfill each task's box\n(set by typescript-code-one-task itself); notify user"]
@@ -93,6 +102,9 @@ flowchart TD
   xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent — that skill implements exactly
   what the task specifies, writes/updates its tests, and checks off its own checkbox in `implementation_plan.md`
   with a "group validation pending" note before reporting back.
+
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 1, hands the entire bucket over for
+  `react-native` projects when that skill is installed; this skill then stops.
 
 Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than
 directly, so verbose report output stays out of this skill's own context:

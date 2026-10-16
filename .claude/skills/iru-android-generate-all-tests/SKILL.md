@@ -20,6 +20,8 @@ member helpers, `@RunWith(RobolectricTestRunner::class)` only where Android fram
 [irurueta-android-glutils](https://github.com/albertoirurueta/irurueta-android-glutils) (genericized in the
 examples below — no real package/class names from that project).
 
+**Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-generate-all-tests` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
+
 ## Step 1 — Confirm this is a Kotlin/Android Gradle project
 
 ```bash

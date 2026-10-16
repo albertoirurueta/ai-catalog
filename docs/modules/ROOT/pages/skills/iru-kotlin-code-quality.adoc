@@ -15,7 +15,7 @@ single lint pass on Maven or Gradle (Kotlin DSL or Groovy, wrapper preferred, mu
 tool is genuinely wired before trusting a "zero issues" result, runs the wired tasks, then parses the generated
 reports (detekt Checkstyle-format XML or SARIF, ktlint checkstyle or plain reporter output, Spotless console
 output) instead of eyeballing console text. A tool that is not wired is reported as "not wired", never as a clean
-pass. Android modules belong to `iru-android-code-quality`, and Java sources in a mixed Java+Kotlin module belong
+pass. Android modules belong to `iru-android-code-quality`, Kotlin Multiplatform modules to xref:skills/iru-kmp-code-quality.adoc[], and Java sources in a mixed Java+Kotlin module belong
 to `iru-java-code-quality`.
 
 == Purpose group
@@ -69,7 +69,7 @@ reported.
 ....
 flowchart TD
     A["Start /iru-kotlin-code-quality\n(optional scope)"] --> B["Step 0: Detect build tool\n(Gradle or Maven) and map scope to module"]
-    B --> C["Skip Android modules;\nnote Java sources for iru-java-code-quality"]
+    B --> C["Skip Android and Kotlin Multiplatform\nmodules (use iru-kmp-code-quality);\nnote Java sources for iru-java-code-quality"]
     C --> D["Step 1: Verify detekt, ktlint,\nSpotless wiring in build files"]
     D --> E{"Any tool wired?"}
     E -- no --> F["Report 'not wired' and stop\n(no configuration added)"]
@@ -89,7 +89,7 @@ flowchart TD
 === Invokes
 
 None — `iru-kotlin-code-quality` is a leaf skill; it only runs detekt, ktlint and Spotless through the project's
-build tool and reads their reports. It mentions `iru-android-code-quality` and `iru-java-code-quality` only as
+build tool and reads their reports. It mentions `iru-android-code-quality`, `iru-kmp-code-quality` and `iru-java-code-quality` only as
 pointers for out-of-scope modules and sources.
 
 === Invoked by

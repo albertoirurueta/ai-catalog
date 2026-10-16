@@ -8,7 +8,11 @@ description: Run the project's TypeScript/JavaScript test runner (Vitest, Jest, 
   the bar. Also recognizes NestJS (`@nestjs/core` — the `test:cov` setup, i.e. Vitest + `@vitest/coverage-v8` on ESM,
   Jest `--coverage` on CommonJS — measured from the `*.spec.ts` unit suite only, with `*.module.ts`/`main.ts`
   wiring files excluded so they don't drag the number down) and Next.js (`next` — Vitest v8 coverage or Jest via
-  `next/jest`; Playwright end-to-end tests are never run for coverage and never counted). Invoke as
+  `next/jest`; Playwright end-to-end tests are never run for coverage and never counted) and React Native for both
+  toolchains (`expo` with the `jest-expo` preset, `metro` with `@react-native/jest-preset` or the legacy
+  `react-native` preset — Jest's built-in coverage, with the native `android/`/`ios/` projects, `.expo/`, the
+  `index.js`/`index.ts` registration entry, Metro/Babel/Jest/ESLint/Prettier config files, and test files excluded,
+  and Maestro/Detox device e2e never run or counted). Invoke as
   `/iru-typescript-coverage [scope]`, where `[scope]` is a file path, a directory, or a name
   pattern — the same selector syntax as the `iru-typescript-test` skill's — or with no argument to run the whole
   suite and report whole-project coverage. Detects the test runner (Vitest, Jest, or Angular's
@@ -42,9 +46,11 @@ TypeScript conventions):
     a bare `vitest` invocation. (An older Angular project pinned to the legacy `@angular-devkit/build-angular:
     karma` builder uses Karma + Istanbul instead — its coverage output layout was not exercised locally; see
     "Unverified" below.)
-- **Framework** — `@nestjs/core` in `dependencies` → **nestjs**; `next` in `dependencies` → **nextjs** (same
-  detection rule as `iru-typescript-test`). Neither changes the runner detection above — they change which suite is
-  measured and which files are excluded (Step 3).
+- **Framework** — `@nestjs/core` in `dependencies` → **nestjs**; `next` in `dependencies` → **nextjs**;
+  `react-native` or `expo` in `dependencies` → **react-native**, with its toolchain (`expo` in `dependencies` →
+  **expo**, otherwise **metro**) and Jest preset read exactly as `iru-typescript-test`'s Step 1 does (same detection
+  rule). None of them changes the runner detection above — they change which suite is measured and which files are
+  excluded (Step 3).
 - **Package manager** — `packageManager` field in `package.json`, else lockfile: `package-lock.json` → npm,
   `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn. Prefix commands with the matching runner (`npm run`/`npx`, `pnpm`,
   `yarn`) — the commands below are written with `npx`/direct binary names; substitute accordingly.
@@ -128,6 +134,45 @@ Vitest 4.1 + `@vitest/coverage-v8` 4.1 (`$TMPDIR/iru-verify/typescript/nest-next
 while the untested `src/app/layout.tsx`/`page.tsx` appeared at 0%. (Installing the latest Vitest 5 into that
 scaffold failed with an npm `ERESOLVE` peer conflict on its pinned `@types/node@20` — a setup problem to report,
 not a coverage result.)
+
+**React Native** (both toolchains) — always Jest, coverage built in, no extra package. Neither template sets
+`collectCoverageFrom`, so an unscoped run reports only the files tests import, and a force-included project-root
+glob drags in everything that isn't app code. Verified locally: on a fresh React Native CLI 0.87.1 app (metro),
+`--collectCoverageFrom='**/*.{ts,tsx,js,jsx}' --collectCoverageFrom='!**/node_modules/**'` alone listed
+`.eslintrc.js`, `.prettierrc.js`, `babel.config.js`, `index.js`, `jest.config.js`, and `metro.config.js` at 0% next
+to the tested `App.tsx` and pulled the total from 60% to 23.07%; on an Expo SDK 57 app the same glob added
+`eslint.config.js` and `index.ts` at 0% (44.44% instead of 80%). Always add these exclusions after the include glob
+(scoped or project-wide), unless the project's own `collectCoverageFrom` already covers them:
+
+```bash
+--collectCoverageFrom='!**/node_modules/**' \
+--collectCoverageFrom='!{android,ios,.expo,coverage,e2e}/**' \
+--collectCoverageFrom='!**/*.d.ts' \
+--collectCoverageFrom='!*.config.{js,ts,mjs,cjs}' \
+--collectCoverageFrom='!.*rc.{js,cjs}' \
+--collectCoverageFrom='!index.{js,ts}' \
+--collectCoverageFrom='!**/__tests__/**' \
+--collectCoverageFrom='!**/*.{test,spec}.{ts,tsx,js,jsx}'
+```
+
+- `android/` and `ios/` are native projects (committed for **metro**, `npx expo prebuild`/Continuous Native
+  Generation output for **expo**) — any `.js` inside them (Gradle/CocoaPods helper scripts, `ios/Pods`) is never app
+  code; `.expo/` is Expo's local cache; `e2e/` holds Detox specs (Maestro's `.maestro/` is YAML and never matched).
+- `*.config.*` covers `metro.config.js`, `babel.config.js`, `jest.config.js`, `eslint.config.js`, and a dynamic
+  `app.config.ts`/`app.config.js`; `.*rc.*` covers `.eslintrc.js`/`.prettierrc.js`; `index.{js,ts}` is the root
+  `AppRegistry.registerComponent`/`registerRootComponent` entry — root-level only, so `src/**/index.ts` barrels with
+  logic stay measured. Say in the report that these were excluded.
+- Codegen spec files (`specs/Native*.ts`, `src/**/Native*.ts` declaring a `TurboModule` interface) are type-only
+  bindings with no runtime branches — exclude them too when present (`!**/Native*.ts`), and say so.
+- With the exclusions above both scaffolds reported only app code: metro `App.tsx` at 60% (template test renders it
+  once), Expo `App.tsx` 100% and an added `src/math.ts` 66.66% — total 80%.
+- Coverage comes from the Jest unit suite only: **Maestro/Detox e2e flows are never run by this skill and never
+  counted**, even when `.maestro/`/`.detoxrc.js` exist — they drive a native build on a device and produce no
+  Istanbul data for the TypeScript sources. A screen only reachable through a device flow (native navigation
+  container, a deep-link handler that needs the OS) is reported as "only reachable through device e2e", not as a
+  plain unit-test gap.
+- `jest-expo/universal` runs every test under several platform projects; coverage is merged across them into the one
+  `coverage/` directory (**unverified locally** — only the default `jest-expo` preset was run).
 
 Run the coverage command for the detected runner, scoped to the selector from Step 1 when one is scriptable, and
 passing the include flag from Step 2 for the scope's directory/pattern so untested files aren't dropped:
@@ -259,9 +304,10 @@ user (or another skill, e.g. `iru-code`, `iru-typescript-generate-all-tests`) dr
 - **Jest via `next/jest`** — NestJS coverage was exercised on both the ESM/Vitest and the CommonJS/Jest Nest 12
   scaffolds (including the `*.module.ts`/`main.ts` exclusions), and Next.js only with Vitest; Jest via
   `next/jest` was not.
-- **React, React Native, Ionic, and Hilla-frontend scaffolds' own coverage config** — this skill's mechanics
+- **React, Ionic, and Hilla-frontend scaffolds' own coverage config** — this skill's mechanics
   (Vitest/Jest + `coverage-summary.json`/`lcov.info`) were verified against a bare Vitest project, a bare Jest
-  project, and a freshly-scaffolded Angular CLI app only; a framework-specific `vitest.config.ts`/`jest.config.js`
-  (e.g. React Native's `jest-expo` preset, or a Hilla Vitest browser-mode config) may set its own `coverage.exclude`
+  project, a freshly-scaffolded Angular CLI app, and the two React Native scaffolds above (metro and Expo, whose
+  `coverage/coverage-summary.json` + `coverage/lcov.info` paths are the plain Jest ones); a framework-specific
+  `vitest.config.ts`/`jest.config.js` (e.g. a Hilla Vitest browser-mode config) may set its own `coverage.exclude`
   defaults (test setup files, generated Hilla endpoint clients) that change what shows up unscoped — scope
   explicitly with Step 1's selector when in doubt rather than trusting an unscoped project-wide run.

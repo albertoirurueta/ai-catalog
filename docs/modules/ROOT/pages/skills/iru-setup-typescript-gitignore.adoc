@@ -17,7 +17,9 @@ framework, and documentation tooling are actually present in the target reposito
 Angular, React/Vite (and Storybook), NestJS (logs, runtime and diagnostic files, test reports), Next.js (`.next/`,
 `next-env.d.ts`, `.vercel`, matching `create-next-app`), a Prisma client generated inside the source tree (the path is
 read from `schema.prisma`; migrations are never ignored), the repository-wide `.integration-test.lock/` used by the
-NestJS/Next.js coding skills, React Native/Expo, Ionic/Capacitor, Playwright, Turborepo, Istanbul/nyc,
+NestJS/Next.js/React Native coding and e2e skills, React Native (Expo, or a bare Metro/React Native CLI app — Gradle, Xcode, CocoaPods and Bundler outputs, signing
+material, and keeping the template's committed `debug.keystore`; paths are prefixed with the app subdirectory when the
+app does not live at the root), Ionic/Capacitor, Playwright, Turborepo, Istanbul/nyc,
 Antora docs build output, TypeDoc/Compodoc API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a
 Maven project. It never invents entries for things that aren't actually present. If `.gitignore` already exists,
 it is treated as sensitive: the skill announces it is updating rather than creating from scratch, reads it, composes
@@ -59,7 +61,7 @@ the Update / Keep / Replace question.
 |===
 
 Everything else is derived by exploring the target repository directly (`package.json`'s `packageManager` field and
-lockfile, `angular.json`, `vite.config.*`, `.storybook/`, `nest-cli.json`, `next.config.*`, `prisma/schema.prisma`, `app.json` with an `"expo"` key, `capacitor.config.*`,
+lockfile, `angular.json`, `vite.config.*`, `.storybook/`, `nest-cli.json`, `next.config.*`, `prisma/schema.prisma`, `app.json` with an `"expo"` key, `metro.config.js`, `capacitor.config.*`,
 `playwright.config.*`, `turbo.json`, `.nycrc`, `docs/antora.yml` / `docs/antora-playbook.yml`, `typedoc.json`, and a
 `pom.xml` depending on `hilla-spring-boot-starter` / `com.vaadin:hilla` or a `src/main/frontend/` directory).
 
@@ -74,7 +76,7 @@ lockfile, `angular.json`, `vite.config.*`, `.storybook/`, `nest-cli.json`, `next
   listed) — or `on-existing` answers it. If the merged draft is identical to the current file, the question is
   skipped and the outcome is "kept as is".
 * A closing report naming which conditional sections (package manager, Angular, React/Vite, NestJS, Next.js, Prisma client,
-  integration-test lock, React Native/Expo,
+  integration-test lock, React Native (Expo or Metro),
   Ionic/Capacitor, Playwright, Turborepo, nyc, Antora, TypeDoc/Compodoc, Hilla) were included versus skipped and
   why, the action taken (created / updated / replaced / kept as is, and whether it came from the user or `on-existing`), which hand-added lines were preserved or dropped, plus warnings that detection is heuristic and that already-tracked files under a newly-ignored directory
   need a manual `git rm -r --cached`.
@@ -94,7 +96,7 @@ flowchart TD
     D1 -- no --> C
     C --> E{"Tracked files already\nunder dist/build/out?"}
     E -- yes --> F["Ask user: keep ignoring\nor drop from template"]
-    E -- no --> G["Detect project-specific additions:\npackage manager, Angular, React/Vite,\nNestJS, Next.js, Prisma client, test lock,\nReact Native/Expo, Ionic/Capacitor,\nPlaywright, Turborepo, nyc,\nAntora, TypeDoc/Compodoc, Hilla"]
+    E -- no --> G["Detect project-specific additions:\npackage manager, Angular, React/Vite,\nNestJS, Next.js, Prisma client, test lock,\nReact Native (Expo or Metro),\nIonic/Capacitor, Playwright, Turborepo, nyc,\nAntora, TypeDoc/Compodoc, Hilla"]
     F --> G
     G --> H["Compose merged draft and\ntemplate-only draft"]
     H --> I{"Did .gitignore\nalready exist?"}

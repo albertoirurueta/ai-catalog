@@ -124,6 +124,7 @@ sub-agent it delegates to.
 * xref:skills/iru-setup-quarkus-repository.adoc[] — Step 7, root CHANGELOG.md from tag history, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-android-repository.adoc[] — Step 8: bootstraps or updates the root `CHANGELOG.md`, invoked with no `args` (only `on-existing`, when supplied) since it works from the repository's own git tag/GitHub Release history.
 * xref:skills/iru-setup-swift-repository.adoc[] — Step 9: bootstraps the root `CHANGELOG.md`, invoked with no `args` (only `on-existing` when supplied) since it works from the repository's own git tag/GitHub Release history; position relative to Steps 5–8 doesn't matter functionally.
+* xref:skills/iru-setup-kmp-repository.adoc[] — Step 8: bootstraps or updates the root `CHANGELOG.md` via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, invoked with no `args` (only `on-existing` when supplied) since it works from the repository's own git tag/GitHub Release history.
 
 === Related agents
 

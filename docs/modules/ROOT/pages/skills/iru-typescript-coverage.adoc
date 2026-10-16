@@ -1,6 +1,6 @@
 = TypeScript Coverage
-:description: Runs Vitest, Jest or Angular ng test with coverage (NestJS and Next.js aware) and reads coverage-summary.json or lcov.info for exact percentages.
-:keywords: iru-typescript-coverage, claude code skill, vitest, jest, angular, nestjs, nextjs, lcov, coverage-summary.json, code coverage
+:description: Runs Vitest, Jest or Angular ng test with coverage (NestJS, Next.js, React Native) and reads coverage-summary.json or lcov.info for exact percentages.
+:keywords: iru-typescript-coverage, claude code skill, vitest, jest, angular, nestjs, nextjs, react native, expo, lcov, coverage-summary.json, code coverage
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -8,7 +8,7 @@ Run the project's TypeScript/JavaScript test runner — Vitest, Jest, or Angular
 enabled, then read the exact percentages from the generated `coverage/coverage-summary.json` (falling back to
 `coverage/lcov.info` when the summary is missing or a specific file isn't in it). This is a read-only reporting
 skill: it measures and reports coverage, it does not add tests or modify source/test code unless asked to as an
-explicit follow-up. It also recognizes NestJS and Next.js projects, adjusting which suite is measured and which
+explicit follow-up. It also recognizes NestJS, Next.js and React Native projects, adjusting which suite is measured and which
 files are excluded.
 
 == Purpose
@@ -28,6 +28,12 @@ Framework awareness (detected from `package.json`, on top of the runner detectio
 * *Next.js* (`next`) — measures Vitest (v8 provider) or Jest (via `next/jest`) coverage only; Playwright end-to-end
   tests are never run or counted. Include globs target the app's own source, and a Server Component that cannot be
   rendered in a unit test is reported as "only reachable through e2e" rather than as an untested file.
+* *React Native* (`react-native` or `expo`; toolchain `expo` when `expo` is a dependency, otherwise `metro`) — always
+  Jest's built-in coverage (`jest-expo`, `@react-native/jest-preset` or the legacy `react-native` preset). Because
+  neither scaffold sets `collectCoverageFrom`, every run adds exclusions after the include glob: `android/`, `ios/`,
+  `.expo/`, `coverage/`, `e2e/`, `*.d.ts`, `*.config.*`, `.*rc.*`, the root `index.{js,ts}` registration entry, test
+  files and Codegen `Native*.ts` specs, and says so in the report. Maestro/Detox device e2e is never run or counted;
+  a screen reachable only through a device flow is reported as "only reachable through device e2e".
 
 == Purpose group
 
@@ -65,8 +71,8 @@ coverage, so a broader selector (a directory, or the full suite) is preferred wh
   it.
 * For files under the bar: uncovered line ranges collapsed from `lcov.info`'s `DA:` records (e.g.
   `src/math.ts: lines 66.66% — uncovered: 11, 17`).
-* For NestJS and Next.js, a note of which wiring files or generated code were excluded and which suites were
-  deliberately not measured (e2e, Playwright).
+* For NestJS, Next.js and React Native, a note of which wiring files, native trees, config files or generated code
+  were excluded and which suites were deliberately not measured (e2e, Playwright, Maestro/Detox).
 * "Coverage not wired" (naming the missing package/config, e.g. `@vitest/coverage-v8`) instead of a false
   0%/100% when the coverage provider isn't installed.
 * A file that has zero tests is forced into the report at 0% (via the runner's include flag), not silently
@@ -79,7 +85,7 @@ coverage, so a broader selector (a directory, or the full suite) is preferred wh
 ....
 flowchart TD
     A["Start /iru-typescript-coverage\n(optional scope)"] --> B["Detect runner (Vitest, Jest,\nAngular ng test) and package manager,\nsame as iru-typescript-test"]
-    B --> B2["Detect framework: NestJS or Next.js\n(unit suite only, exclude wiring files)"]
+    B --> B2["Detect framework: NestJS, Next.js or React Native\n(unit suite only, exclude wiring/native/config files)"]
     B2 --> C{Scope given?}
     C -- yes --> D["Scope tests using\ntypescript-test's selector syntax"]
     C -- no --> E["Run whole suite,\nwhole-project coverage"]
@@ -117,6 +123,7 @@ coverage reports, it does not call any other skill in this catalog.
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`], to measure coverage before and after generating tests.
 * xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.5, 80% unit-only coverage gate, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.4, unit-only 80% coverage gate, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 3.4, 80% gate measured from Jest unit tests alone, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

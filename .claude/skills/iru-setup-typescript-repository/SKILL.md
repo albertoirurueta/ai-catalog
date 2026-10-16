@@ -5,7 +5,8 @@ description: >-
   (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-native`/`ionic`, asked via `AskUserQuestion` in two short
   rounds when absent, or pre-selected from an `iru-explore` `Project type:` line), the project's identity
   (name/slug/scope/app-id, description, license, developer name/email/organization URL), the flavor-specific
-  choices that shape later steps (NestJS `orm`/`database`, Next.js `output`/`e2e`), and the shared pipeline
+  choices that shape later steps (React Native `toolchain` `expo`/`metro`, NestJS `orm`/`database`, Next.js
+  `output`/`e2e`), and the shared pipeline
   parameters (`open-source`, `publish` for libraries, `distribution` for apps and services, `sonar` plus its detail
   keys, `visibility`, `ci`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`, `node-version`,
   `package-manager`) once, then orchestrates the flavor's scaffold skill (`iru-setup-typescript-library` /
@@ -15,8 +16,11 @@ description: >-
   `iru-isolated-skill-executor`, so nothing is asked twice (the workflows step is skipped entirely when `ci` is
   `no`). Invoke as `/iru-setup-typescript-repository`, optionally with `args` (`key`/`value` lines) to pre-resolve
   `flavor`, `mode` (`new`/`existing`), `open-source`, `publish`, `distribution`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `native-builds` (react-native), `framework` (ionic's own Angular/React
-  choice), `module-system`/`orm`/`database`/`http` (nestjs), `router`/`output`/`cache-components`/`styling`/`e2e`
+  `sonar-project-key`/`sonar-host-url`), `toolchain` (react-native: `expo` — the Expo framework — or `metro` — a
+  bare React Native Community CLI app with committed `android/`/`ios/` projects; taken from `args`, else detected
+  on an existing repository, else asked with Expo recommended, then forwarded to `iru-setup-react-native-app` and
+  `iru-setup-typescript-github-workflows`), `native-builds` (react-native with `toolchain` `expo` only),
+  `framework` (ionic's own Angular/React choice), `module-system`/`orm`/`database`/`http` (nestjs), `router`/`output`/`cache-components`/`styling`/`e2e`
   (nextjs), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default
   `24`), `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when
   absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/
@@ -77,8 +81,8 @@ Recognized keys: `flavor` (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-
 (`new`/`existing`), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — library only), `distribution`
 (`none`/`internal`/`store` for react-native/ionic; `none`/`internal` for nestjs/nextjs), `sonar`
 (`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`,
-`native-builds` (`eas`/`local` — react-native only), `framework` (`angular`/`react` — ionic's own UI framework
-only), the nestjs-only keys `module-system` (`esm`/`cjs`), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/`drizzle`),
+`toolchain` (`expo`/`metro` — react-native only), `native-builds` (`eas`/`local` — react-native with
+`toolchain: expo` only), `framework` (`angular`/`react` — ionic's own UI framework only), the nestjs-only keys `module-system` (`esm`/`cjs`), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/`drizzle`),
 `database` (`postgresql`/`mysql`/`mongodb`), `http` (`express`/`fastify`), the nextjs-only keys `router`
 (`app`/`pages`), `output` (`server`/`static`), `cache-components` (`yes`/`no`), `styling`
 (`tailwind`/`css-modules`), `e2e` (`playwright`/`none`), `integration-branch`, `stable-branch`, `node-version`,
@@ -104,7 +108,7 @@ Without such a report, don't run `iru-explore` just for this — ask the rounds.
 | `nextjs` | `nextjs` |
 | `angular-web` | `angular` |
 | `nestjs` | `nestjs` |
-| `react-native-app` | `react-native` |
+| `react-native-app (expo)` / `react-native-app (metro)` | `react-native` (and `toolchain` from the parenthesis) |
 | `ionic-app (angular)` / `ionic-app (react)` | `ionic` (and `framework` from the parenthesis) |
 
 Otherwise resolve it in **two short rounds** (`AskUserQuestion` allows at most four options per question, and
@@ -115,11 +119,26 @@ seven flavors don't fit in one):
   the only backend flavor, so no second round.
 - **Round 2a** (only if "Web app" was picked): *React (Vite single-page app)* / *Next.js (React framework — server
   rendering or static export)* / *Angular (Angular CLI)*. Sets `flavor` to `react`, `nextjs`, or `angular`.
-- **Round 2b** (only if "Mobile app" was picked): *React Native (Expo-managed, over-the-air/EAS)* / *Ionic
-  (Capacitor hybrid app, Angular or React UI)*. Sets `flavor` to `react-native` or `ionic` accordingly.
+- **Round 2b** (only if "Mobile app" was picked): *React Native (Expo framework, or a bare React Native CLI app
+  on Metro)* / *Ionic (Capacitor hybrid app, Angular or React UI)*. Sets `flavor` to `react-native` or `ionic`
+  accordingly; React Native's own `toolchain` is resolved once in Step 3.
 - **If `ionic` was picked**, ask one further bounded question — Ionic's own UI framework, a separate concern from
   this orchestrator's `flavor` and recorded as the `framework` key: **Angular** or **React**. `iru-setup-ionic-app`
   and (later) `iru-setup-typescript-github-workflows` both need this value.
+- **If `react-native` was picked**, resolve its **`toolchain`** here, once, before the setup-mode announcement
+  (it decides which components exist): use `args`' `toolchain` if supplied, else the `iru-explore` parenthesis
+  (`react-native-app (expo)`/`(metro)`), else detect it on an existing repository with the catalog-wide rule —
+  `expo` in `package.json` `dependencies` → `expo` (even when `android/`/`ios/` exist: they're `expo prebuild`
+  output); a `react-native` dependency without `expo`, plus `metro.config.js`, committed `android/` + `ios/`, or
+  `@react-native-community/cli` in `devDependencies` → `metro` — and tell the user what was detected and why.
+  Only when none of those resolve it (a new repository), ask with `AskUserQuestion` (header `Toolchain`):
+  - **Expo (Recommended)** — "The Expo framework: `create-expo-app`, Expo Router, native projects generated on
+    demand (`expo prebuild`), cloud or local builds via EAS. Least native tooling to maintain."
+  - **Metro (bare React Native CLI)** — "`@react-native-community/cli init`: committed `android/` and `ios/`
+    projects you own and edit (Gradle, CocoaPods/Xcode), React Navigation, Metro run directly. Full native
+    control; CI builds Android on Linux and iOS on macOS."
+  Mention that Expo also bundles with Metro under the hood — the choice is about which toolchain owns the native
+  projects, not the bundler. Never re-ask it later: Steps 3, 5 and 8 reuse this value.
 
 Map the resolved `flavor` to its scaffold skill for the rest of this run:
 
@@ -144,6 +163,9 @@ still makes this run an **update for that component**, even under `mode: new` �
 
 Right after resolving `mode`, before asking anything else, print a short **Setup mode** statement:
 
+For `react-native`, prefix the statement with the resolved toolchain (e.g. "React Native app, **metro**
+toolchain (detected: committed `android/`/`ios/`, no `expo` dependency)").
+
 - `mode: new` with no owned artifact present → "Setting up this repository **from scratch** — no prior setup
   found."
 - Otherwise → "**Updating an existing repository** — prior setup found:" followed by an inventory table of
@@ -151,7 +173,8 @@ Right after resolving `mode`, before asking anything else, print a short **Setup
 
   | Component | Evidence checked |
   |---|---|
-  | Build manifest / toolchain | `package.json`, lockfile, `tsconfig.json`, flavor config (`angular.json`, `vite.config.*`, `next.config.*`, `nest-cli.json`, `app.json`, `capacitor.config.*`) |
+  | Build manifest / toolchain | `package.json`, lockfile, `tsconfig.json`, flavor config (`angular.json`, `vite.config.*`, `next.config.*`, `nest-cli.json`, `app.json`, `capacitor.config.*`; react-native metro: `metro.config.js`, `Gemfile` + `Gemfile.lock`) |
+  | Native projects | react-native with `toolchain: metro` only: `android/` (`android/app/build.gradle`, Gradle wrapper) and `ios/` (`ios/Podfile` + `Podfile.lock`, `ios/<AppName>.xcodeproj`, `ios/<AppName>.xcworkspace`) — committed source on metro; on `expo` they're prebuild output and not inventoried |
   | Source layout | `src/` (or the flavor's app directory; `app/`/`pages/` for Next.js without `src/`) |
   | E2E test config | nextjs: `playwright.config.*` (+ `e2e/`); nestjs: `vitest.config.e2e.ts` or `test/jest-e2e.json` (+ `test/*.e2e-spec.ts`) — row only for these two flavors |
   | Container image | `Dockerfile`, `.dockerignore` — row only for nestjs, and nextjs with `output: server` |
@@ -189,7 +212,11 @@ directly (plain conversation — these are free-text project-identity fields, no
   (react, nextjs, nestjs, react-native, ionic), or `name` (angular).
 - **scope** — **library only**: the npm scope without the leading `@` (optional — ask whether the package should be
   scoped at all before asking for the scope itself).
-- **app-id** — **ionic only**: the reverse-DNS application id, e.g. `com.example.myapp`.
+- **app-id** — **ionic and react-native**: the reverse-DNS application id / bundle id, e.g. `com.example.myapp`.
+  Required for react-native with `toolchain: metro` (the CLI bakes it into `applicationId` and
+  `PRODUCT_BUNDLE_IDENTIFIER` at init, so changing it later is a package rename, and the metro `release.yml` uploads
+  under it); for `toolchain: expo` ask it too but accept "not yet" (the scaffold then leaves
+  `expo.ios.bundleIdentifier`/`expo.android.package` unset). Resolve it once here and reuse it.
 - **app-slug** — **react-native only**: kebab-case; default to a slugified `name` rather than asking open-endedly,
   confirming with the user only if they want something different.
 - **description** — one line. **Only asked for `library`/`react`/`nextjs`/`nestjs`/`ionic`** — `iru-setup-angular-web` and
@@ -218,10 +245,13 @@ Step 2). For any field Step 0 already resolved from `args`, use that value direc
   deliberately left unasked here** — it doesn't affect anything downstream of `iru-setup-react-web`, so that skill
   asks it directly when invoked without the key, instead of this orchestrator collecting it redundantly.
 - **`react-native`**: **app-directory** — where to scaffold (if the repository root is otherwise empty, offer `.`;
-  otherwise default to the resolved `app-slug` and confirm). **native-builds** (`AskUserQuestion`, default
+  otherwise default to the resolved `app-slug` and confirm). `toolchain` was already resolved in Step 1. **Only
+  for `toolchain: expo`: native-builds** (`AskUserQuestion`, default
   **`eas`** — cloud builds via Expo, noting the free tier's 15-builds/platform/month cap; **`local`** the
   alternative, needing a full native toolchain). This is collected here, not left to the scaffold skill alone,
   because `iru-setup-typescript-github-workflows` also needs it (Step 8) to pick the right `release.yml` variant.
+  Never ask or forward `native-builds` for `toolchain: metro` — its committed native projects are always built
+  locally (Gradle on Linux, `xcodebuild` on macOS).
 - **`ionic`**: `framework` was already resolved in Step 1. **`add-android`/`add-ios` are deliberately left unasked
   here** — they don't affect anything outside `iru-setup-ionic-app` itself, so that skill asks them directly.
 - **`nestjs`**: **orm** (`AskUserQuestion`, default **None**; options *None* / *TypeORM* / *Prisma* / *Other
@@ -273,9 +303,11 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
   standard GitHub-hosted runners are free for public repositories. Private/internal: still offer **Yes** first,
   but state, per GitHub's current pricing (tell the user to double-check their plan), that private
   repositories consume the account's included minutes — 2,000/month on GitHub Free, 3,000 on Pro and Team,
-  50,000 on Enterprise Cloud — then are billed per minute; for `react-native` (with `native-builds: local`) and
-  `ionic`, add that the iOS release job runs on macOS, whose minutes cost roughly 10× Linux, so a few dozen iOS
-  builds a month can exhaust 2,000 minutes on their own. Offer **No** as "no workflows — build, test, and
+  50,000 on Enterprise Cloud — then are billed per minute; for `react-native` (`toolchain: expo` with
+  `native-builds: local`, or `toolchain: metro`) and `ionic`, add that the iOS release job runs on macOS, whose
+  minutes cost roughly 10× Linux, so a few dozen iOS builds a month can exhaust 2,000 minutes on their own — and
+  for `toolchain: metro` that `build.yml` also has a macOS iOS simulator-build job, which the workflows skill
+  limits to stable-branch pushes and manual runs on a private repository unless `ci-tests` is `full`. Offer **No** as "no workflows — build, test, and
   release locally (re-run `iru-setup-typescript-github-workflows` later to add them)". With `ci: no`, Step 8 is
   skipped entirely (no `.github/workflows/*`, no `security.yml`, no `.github/dependabot.yml`, no sync script),
   `ci-tests` and `pages` are not asked, and the report states that the shared security block (Dependabot,
@@ -309,14 +341,18 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
 Then, **only when `ci: yes`**:
 
 - **ci-tests** — "Which tests should CI run?" Only asked for `react`/`angular`/`ionic`, the flavors whose
-  `build.yml` has a Playwright e2e step, plus `nextjs` with `e2e: playwright` and `nestjs`: **Unit tests only**
+  `build.yml` has a Playwright e2e step, plus `nextjs` with `e2e: playwright`, `nestjs`, and `react-native` with
+  `toolchain: metro` (Maestro flows on an Android emulator; on a private repository `full` also runs the macOS
+  iOS simulator build on every pull request): **Unit tests only**
   ("lint, typecheck, unit tests with coverage — cheaper: fewer minutes, faster feedback; e2e stays local",
   recommended for private/internal) / **Unit + e2e** (`full` — "also runs the e2e suite on every build; complete
   verification, considerably more minutes", recommended for public). Phrase the e2e part per flavor: Playwright
   browsers install + run (react/angular/ionic, and nextjs against a production `next build`); for `nestjs`, the
   `test:e2e` suite (supertest against the bootstrapped app) — and when `orm` ≠ `none`, a real `database` started by
-  Testcontainers (GitHub-hosted Linux runners have Docker; it adds image pulls and minutes). For
-  `library`/`react-native`, and `nextjs` with `e2e: none`, there's no e2e step in this pipeline, so don't ask —
+  Testcontainers (GitHub-hosted Linux runners have Docker; it adds image pulls and minutes); for `react-native`
+  metro, a release APK installed on a `reactivecircus/android-emulator-runner` emulator and the `.maestro/` flows
+  run against it (roughly 10–20 extra Linux minutes per run). For
+  `library`/`react-native` with `toolchain: expo`, and `nextjs` with `e2e: none`, there's no e2e step in this pipeline, so don't ask —
   leave `ci-tests` unset (unless `args` supplied it) and let the workflows skill default it.
 - **pages** — the Antora docs site (Step 6) is always built, and for `react`/`angular` — and `nextjs` with
   `output: static` — `release.yml` also deploys the web app itself to GitHub Pages (for `nestjs` and server-output
@@ -392,8 +428,10 @@ The other six flavors follow the same shape, with only the `args` keys and skill
   `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
   supplied). No `description` key exists for this skill — never send one.
 - **`react-native`**: `iru-setup-react-native-app` — `app-name`, `app-slug`, `app-directory`, `license`,
-  `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ detail keys), `native-builds`,
-  `distribution`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied). No `description` key exists for this
+  `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ detail keys), `toolchain`,
+  `app-id` (always for `metro`, where it is required; for `expo` only when the user gave one),
+  `native-builds` (**`toolchain: expo` only** — never sent for metro), `distribution`, `visibility`, `ci`, `mode`
+  (+ `on-existing` if supplied). No `description` key exists for this
   skill — never send one.
 - **`ionic`**: `iru-setup-ionic-app` — `framework`, `app-name`, `app-id`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `distribution`, `sonar` (+ detail keys),
@@ -465,7 +503,8 @@ Agent({
     package-manager: <package-manager>\\nopen-source: <open-source>\\npublish: <publish, library only>\\n
     distribution: <distribution, react-native/ionic/nestjs/nextjs only>\\nsonar: <sonar>\\n
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
-    native-builds: <native-builds, react-native only>\\nframework: <framework, ionic only>\\n
+    toolchain: <toolchain, react-native only>\\nnative-builds: <native-builds, react-native expo only>\\n
+    framework: <framework, ionic only>\\n
     orm: <orm, nestjs only>\\noutput: <output, nextjs only>\\ne2e: <e2e, nextjs only>\\n
     docs-tool: <docs-tool>\\nvisibility: <visibility>\\nci-tests: <ci-tests, if resolved>\\npages: <pages>\\n
     mode: <mode>\\non-existing: <on-existing, only if supplied via args>\"}). Report back: whether it ran from
@@ -476,10 +515,11 @@ Agent({
 })
 ```
 
-Omit `publish`/`distribution`/`native-builds`/`framework`/`orm`/`output`/`e2e` entirely when they don't apply to
+Omit `publish`/`distribution`/`toolchain`/`native-builds`/`framework`/`orm`/`output`/`e2e` entirely when they don't apply to
 the resolved `flavor` (never send a key the flavor doesn't use — `distribution` is sent for
-react-native/ionic/nestjs/nextjs), and omit `ci-tests` when Step 4 left it unset (`library`/`react-native`/`nextjs`
-with `e2e: none`). `database` and the scaffold-only keys `module-system`, `http`, `router`, `cache-components`, and
+react-native/ionic/nestjs/nextjs, `toolchain` for every react-native run, `native-builds` only for react-native
+with `toolchain: expo`), and omit `ci-tests` when Step 4 left it unset (`library`/`react-native` with
+`toolchain: expo`/`nextjs` with `e2e: none`). `database` and the scaffold-only keys `module-system`, `http`, `router`, `cache-components`, and
 `styling` are never sent to the workflows skill — it accepts none of them and reads what it needs (lockfile,
 `package.json` scripts, `next.config.*`, the ORM's config) from disk. `ci` itself is never forwarded — invoking the workflows skill means CI is wanted. `mode` is
 always passed but is informational there: for every workflow file already present,
@@ -523,7 +563,8 @@ CI/Sonar/changelog-derived sections will still be sparse or absent (no commits/t
 Summarize the outcome of all six delegated skills together: repeat the **Setup mode** statement from Step 1
 (from scratch vs updating an existing repository), the resolved `flavor` and `mode`, the project identity and
 license, and the pipeline parameters used. Then give a per-component table — the scaffold's own files
-(`package.json` and toolchain config, source skeleton), the Antora docs site, the `.gitignore`, each workflow file
+(`package.json` and toolchain config, source skeleton, and for react-native `metro` the committed `android/`/`ios/`
+native projects), the Antora docs site, the `.gitignore`, each workflow file
 (`build.yml`/`release.yml`/`sync.yml` where applicable/`security.yml`), `.github/dependabot.yml`,
 `sonar-project.properties`, `CHANGELOG.md`, and `README.md` — with the action actually taken, as each sub-skill
 reported it: **created / updated / replaced / kept as is / skipped (ci: no)** (or "stopped" per a stop choice in
@@ -544,7 +585,10 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
 - **`pages`** (when `ci: yes`): yes (defaulted for a public repository, or chosen) / no (docs — and the
   `react`/`angular`/static-`nextjs` release bundle — uploaded as workflow artifacts only; for those flavors the app
   isn't hosted anywhere by this pipeline, so hosting it is a follow-up for the user).
-- **Flavor-specific choices**: nestjs `orm`/`database` (+ the `module-system`/`http` the scaffold resolved),
+- **Flavor-specific choices**: react-native `toolchain` (and whether it came from `args`, the `iru-explore`
+  report, detection — naming the signal — or the question) plus `native-builds` for `expo`; for `metro`, the
+  native projects' action as the scaffold reported it and the `build.yml` jobs the workflows skill generated
+  (`android`, `ios` with its cost gate, `e2e-android` when `ci-tests: full`); nestjs `orm`/`database` (+ the `module-system`/`http` the scaffold resolved),
   nextjs `output`/`e2e` (+ the `router`/`cache-components`/`styling` the scaffold resolved).
 - **`publish`** (library) / **`distribution`** (react-native, ionic, nestjs, server-output nextjs — `internal` =
   container image pushed to GHCR; static nextjs is always `none`): whether the corresponding scaffold config and

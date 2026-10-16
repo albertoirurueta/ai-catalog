@@ -19,6 +19,13 @@ does not add license headers, TSDoc, or run a code-quality pass, and it only tou
 a file is genuinely untestable as written (e.g. no seam to substitute a hard dependency), which it reports
 explicitly rather than silently redesigning the module.
 
+For React Native it also resolves the toolchain (`expo` in `dependencies` is `expo`, otherwise `metro`), the Jest preset
+(`jest-expo`, `@react-native/jest-preset` or the legacy `react-native` preset) and the installed
+`@testing-library/react-native` major, excludes the same native/config/entry files as `iru-typescript-coverage` so both
+agree on the candidate set, and hands each test-writing agent a set of React Native rules: awaited `render`/`fireEvent`
+on RNTL 14, Expo Router's `renderRouter` for Expo screens, library Jest mocks for metro's third-party native modules,
+native code mocked at its JS boundary, fake timers for animations, and a stop-and-ask on `transformIgnorePatterns` failures.
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
@@ -39,11 +46,15 @@ with no obvious single target, asks which workspace to scope the run to before c
 
 * New or extended test files for every source file found with no matching test file, or with line coverage
   below 80% — following this project's detected flavor's testing library (Vitest/Jest, `@testing-library/react`,
-  `@testing-library/react-native`, Angular `TestBed`, or Hilla Vitest browser mode) and its existing test-file
+  `@testing-library/react-native` (under `jest-expo` or `@react-native/jest-preset`), Angular `TestBed`, or Hilla Vitest browser mode) and its existing test-file
   convention (sibling `.test`/`.spec`, or a mirrored `test/` tree).
 * Occasionally, a minimal testability change to a module under test (e.g. accepting a dependency as a parameter,
   extracting a hook/service) — only when a file is genuinely untestable as written, and always called out
   explicitly rather than folded silently into "tests added."
+* For React Native, no silent dependency changes: when `@testing-library/react-native` isn't installed (the CLI
+  template only ships `react-test-renderer`) it asks via `AskUserQuestion` whether to add it, and otherwise follows the
+  existing `react-test-renderer` style, noting that it is deprecated for React 19; a `transformIgnorePatterns` change
+  is reported and asked about, never edited.
 * A report: total candidate files found (and any excluded as having no testable logic), the detected flavor/test
   runner/package manager/test-file convention, how many already met the bar, before/after coverage per file
   touched, any file still below 80% after two extension attempts (with its exact remaining uncovered lines), and
@@ -63,12 +74,12 @@ flowchart TD
     C -- yes --> D{"Multiple package.json,\nno obvious target?"}
     D -- yes --> D1[AskUserQuestion: which\nworkspace to scope to]
     D1 --> E
-    D -- no --> E["Explore agent: inventory source\nfiles, detect flavor, test runner,\npackage manager, test convention"]
+    D -- no --> E["Explore agent: inventory source\nfiles, detect flavor (React Native: toolchain,\npreset, RNTL major), test runner,\npackage manager, test convention;\nexclude native/config/entry files"]
     E --> F{"No tests exist and no\ntest runner configured?"}
     F -- yes --> F1[Stop: ask user; this skill\nextends tests, doesn't scaffold one]
     F -- no --> G["gate-runner: single\ntypescript-coverage run over every\ncandidate file (batched if large)"]
     G --> H["Classify: missing tests /\nbelow 80% / already sufficient"]
-    H --> I["One agent per file (parallel\nbatches): write new or extend\nexisting tests"]
+    H --> I["One agent per file (parallel\nbatches): write new or extend\nexisting tests\n(React Native rules for RN projects)"]
     I --> J["Re-measure via\ntypescript-coverage, scoped to\ntouched files"]
     J --> K{"Still below 80%?"}
     K -- yes, attempts left --> I

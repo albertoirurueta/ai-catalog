@@ -21,6 +21,8 @@ genuinely untestable as written (e.g. no seam to substitute a hard dependency), 
 rather than silently redesigning the class. It follows this catalog's JUnit 4 + MockK + Robolectric conventions,
 grounded in the real Android reference repository, when a project has nothing of its own to learn from.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-generate-all-tests.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -67,6 +69,7 @@ plugin)
 ....
 flowchart TD
     A[Start /iru-android-generate-all-tests] --> B{"Kotlin/Android Gradle\nproject found?"}
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-generate-all-tests"]
     B -- no --> B1[Stop: Kotlin/Android\nGradle only]
     B -- yes --> C{"Multiple Android modules\n&amp;amp; no scope given?"}
     C -- yes, no lib module --> C1["AskUserQuestion:\nwhich module?"]
@@ -96,6 +99,8 @@ flowchart TD
   this conversation, and so the whole suite runs once per batch rather than once per class.
 * xref:skills/iru-android-test.adoc[] — Step 7, once, to confirm the full JVM unit-test suite still passes after
   every class's tests have been written or extended; also delegated through `iru-gate-runner`.
+
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-generate-all-tests.adoc[] (a hand-off, not an invocation).
 
 === Invoked by
 

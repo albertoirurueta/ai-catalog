@@ -1,8 +1,8 @@
 ---
 name: iru-typescript-code-one-task
-description: Implement a single task from a TypeScript `implementation_plan.md`-style task list — just the implementation and its tests. Detects the project's framework from `package.json` (npm/TypeScript library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend) and loads only the matching guidance from this skill's own `reference/` directory (this catalog's general TypeScript code agreements: strict typing with no `any`, `readonly` and discriminated unions, named exports, ESM, error handling, async conventions, TSDoc on every exported symbol, and the framework's own component/state/testing conventions), re-checks the current code state, implements exactly what the task specifies, writes/updates tests, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update TSDoc, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-typescript-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-typescript-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for npm/TypeScript projects.
+description: Implement a single task from a TypeScript `implementation_plan.md`-style task list — just the implementation and its tests. Detects the project's framework from `package.json` (npm/TypeScript library, React, Angular, Ionic, or a Vaadin Hilla frontend — a React Native app, expo or bare CLI/metro, is handed to `iru-react-native-code-one-task`, the `react-native` key, when that skill is installed, with only a minimal built-in fallback otherwise) and loads only the matching guidance from this skill's own `reference/` directory (this catalog's general TypeScript code agreements: strict typing with no `any`, `readonly` and discriminated unions, named exports, ESM, error handling, async conventions, TSDoc on every exported symbol, and the framework's own component/state/testing conventions), re-checks the current code state, implements exactly what the task specifies, writes/updates tests, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update TSDoc, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-typescript-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-typescript-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for npm/TypeScript projects.
 model: sonnet
-allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
+allowed-tools: Read Edit Write Skill Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
 ---
 
 # Implement one plan task
@@ -26,7 +26,13 @@ file to read):
 2. Classify, in this order — first match wins:
    - `@vaadin/hilla` or `hilla-spring-boot-starter` in `pom.xml`, or a `src/main/frontend/` directory present →
      **hilla-frontend**.
-   - `expo` or `react-native` in `package.json` dependencies → **react-native**.
+   - `expo` or `react-native` in `package.json` dependencies → **react-native**. React Native has its own key now:
+     if `iru-react-native-code-one-task` is installed (`.claude/skills/iru-react-native-code-one-task/SKILL.md` at
+     the repository root, or listed among the available skills), invoke `Skill({skill:
+     "iru-react-native-code-one-task", args: "<this task's full text, unchanged>"})`, relay its report as this
+     skill's Step 7 report (noting the hand-off and that the plan should tag such tasks `react-native`), and stop —
+     don't continue with the steps below. Only when it isn't installed, continue with
+     `reference/react-native.md`'s minimal fallback.
    - `@ionic/angular` or `@ionic/react` together with `@capacitor/core` → **ionic**.
    - `@angular/core` in dependencies → **angular**.
    - `react` together with `vite` in dependencies/devDependencies → **react**.
@@ -47,7 +53,7 @@ at for this task and the detected framework. The routing, restated:
 | `reference/testing.md` | The task writes or updates tests — nearly every task, since Step 4 is part of implementing it. |
 | `reference/react.md` | Detected framework is **react**. |
 | `reference/angular.md` | Detected framework is **angular**. |
-| `reference/react-native.md` | Detected framework is **react-native**. |
+| `reference/react-native.md` | Detected framework is **react-native** *and* `iru-react-native-code-one-task` isn't installed (otherwise the task was already handed over above) — a minimal fallback. |
 | `reference/ionic.md` | Detected framework is **ionic**. |
 | `reference/hilla-frontend.md` | Detected framework is **hilla-frontend**. |
 
@@ -146,7 +152,8 @@ If this task stopped on a blocker instead, leave its checkbox untouched — ther
 Hand control back to the caller with a short summary:
 
 - **The framework Step 1 detected** (library/react/angular/react-native/ionic/hilla-frontend) and the reference
-  file(s) actually read.
+  file(s) actually read — for react-native, whether the task was handed to `iru-react-native-code-one-task` or the
+  minimal fallback was used.
 - **The file(s) touched** and **the tests added/updated** (not run — see Step 4).
 - **Whether this task stopped on a blocker** per Step 5, with enough detail for the caller to surface it.
 - **Any deliberate deviation from `reference/`** — e.g. matching a file that still uses `any`, keeping a default

@@ -78,6 +78,8 @@ else wins — the divergence is reported (Step 8) rather than silently converted
 entirely, the skill falls back to the repository's own `CLAUDE.md` conventions and the surrounding code's style,
 and says so in its report.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-code-one-task.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -133,6 +135,7 @@ code's style, and says so in its report.
 ....
 flowchart TD
     A["Start /iru-android-code-one-task\n(task description)"] --> B["Step 1: detect module (lib/app)\nfrom task's paths/description"]
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-code-one-task"]
     B --> C["Read reference/README.md,\nthen only the files this task needs"]
     C -- "reference/ missing" --> C2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
     C2 --> D
@@ -159,6 +162,8 @@ None — `iru-android-code-one-task` is a leaf skill; it does not call any other
 own `reference/` directory and edits the code and test files the task names, plus runs the Gradle wrapper to
 compile-check the touched module. License headers, KDoc audits, the full test suite, coverage, Dokka, and quality
 checks all belong to `iru-android-code-one-task-group`.
+
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-code-one-task.adoc[] (a hand-off, not an invocation).
 
 === Invoked by
 

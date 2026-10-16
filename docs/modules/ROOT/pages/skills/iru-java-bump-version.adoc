@@ -25,6 +25,8 @@ The Gradle path covers Kotlin Spring Boot and Quarkus services and plain JVM lib
 modules disagree until the user confirms. Android Gradle projects are out of scope and are redirected to
 `iru-android-bump-version`.
 
+When the Kotlin Multiplatform plugin is applied anywhere in the build, the skill stops and points to xref:skills/iru-kmp-bump-version.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-java[Java Development Tooling]
@@ -86,6 +88,7 @@ file touched, and the Step 6 sanity-check result.
 ....
 flowchart TD
     A["Start /iru-java-bump-version &amp;lt;new-version&amp;gt;\n+ args: sync-files, next-version, dry-run"] --> B{"new-version given?"}
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-bump-version"]
     B -- no --> B1["Ask user for it"]
     B1 --> C
     B -- yes --> C["Step 1: validate shape\nX.Y.Z or X.Y.Z-SNAPSHOT"]
@@ -138,6 +141,8 @@ flowchart TD
 None — `iru-java-bump-version` is a leaf skill; it only runs Maven (`mvn versions:set`, `mvn help:evaluate`), Gradle
 (`./gradlew properties`) and Python/regex file rewrites, and reports on the outcome. It does not call any other
 skill in this catalog (it only points the user at `iru-android-bump-version` for Android projects).
+
+It also points Kotlin Multiplatform projects at xref:skills/iru-kmp-bump-version.adoc[] but does not invoke it.
 
 === Invoked by
 

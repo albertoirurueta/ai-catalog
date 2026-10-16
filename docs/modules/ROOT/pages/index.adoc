@@ -1,6 +1,6 @@
 = AI Catalog
-:description: 144 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, Python, .NET, TypeScript, Next.js, Android and Swift work.
-:keywords: claude code skills, claude code agents, ai catalog, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android development, swift development, skill catalog
+:description: 159 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, Python, .NET, TypeScript, React Native, Android, KMP and Swift.
+:keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -348,6 +348,46 @@ features, and where the underlying models genuinely differ.
 |Extension point: gather organization-specific context for a Jira ticket, called by `iru-create-jira-ticket`.
 |xref:skills/iru-jira-custom-context.adoc[]
 
+|`iru-kmp-bump-version`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Sets a Kotlin Multiplatform app's version in gradle.properties and, for releases, the iOS Config.xcconfig.
+|xref:skills/iru-kmp-bump-version.adoc[]
+
+|`iru-kmp-code-one-task`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Implements a single Kotlin Multiplatform task across shared, Android and iOS source sets, with its tests.
+|xref:skills/iru-kmp-code-one-task.adoc[]
+
+|`iru-kmp-code-one-task-group`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Implements one Kotlin Multiplatform task bucket, then validates it once: license, KDoc, tests, Kover coverage, quality, iOS.
+|xref:skills/iru-kmp-code-one-task-group.adoc[]
+
+|`iru-kmp-code-quality`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Runs detekt, ktlint, Android Lint and SwiftLint across a Kotlin Multiplatform project and reports issues by rule id.
+|xref:skills/iru-kmp-code-quality.adoc[]
+
+|`iru-kmp-coverage`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Reports Kover line/branch coverage for a Kotlin Multiplatform project's JVM/Android targets; iOS is not measurable.
+|xref:skills/iru-kmp-coverage.adoc[]
+
+|`iru-kmp-dokka`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Audits KDoc coverage across every Kotlin Multiplatform source set (expect/actual aware) and builds the Dokka site.
+|xref:skills/iru-kmp-dokka.adoc[]
+
+|`iru-kmp-generate-all-tests`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Finds untested or under-80%-covered classes in a Kotlin Multiplatform module and generates tests until covered.
+|xref:skills/iru-kmp-generate-all-tests.adoc[]
+
+|`iru-kmp-test`
+|xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
+|Runs a Kotlin Multiplatform project's tests per target: Android host/JVM, Kotlin/Native iOS, and the iOS app's XCTest.
+|xref:skills/iru-kmp-test.adoc[]
+
 |`iru-knowledge-briefing`
 |xref:index.adoc#group-knowledge[Knowledge Base Management]
 |Summarize the most relevant agreements/pending tasks about a subject, scoped by person/meeting if given.
@@ -508,6 +548,21 @@ features, and where the underlying models genuinely differ.
 |Implements one Quarkus task bucket, then validates it once with unit-stage coverage and a lock-serialized container stage.
 |xref:skills/iru-quarkus-code-one-task-group.adoc[]
 
+|`iru-react-native-bump-version`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Sets a React Native app's version for the expo or metro toolchain, including native build numbers where owned.
+|xref:skills/iru-react-native-bump-version.adoc[]
+
+|`iru-react-native-code-one-task`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements a single React Native task for the expo or metro toolchain, with its Jest tests.
+|xref:skills/iru-react-native-code-one-task.adoc[]
+
+|`iru-react-native-code-one-task-group`
+|xref:index.adoc#group-typescript[TypeScript Development Tooling]
+|Implements one React Native task bucket, then validates it once, including native Android/iOS builds and e2e flows.
+|xref:skills/iru-react-native-code-one-task-group.adoc[]
+
 |`iru-release`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Cuts a release_x.y.z branch from develop, delegates the version bump, drafts release notes and opens the release PR.
@@ -622,6 +677,26 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 |Writes compose.yaml, an API mock and a Testcontainers IT harness for a Spring Boot service (Java/Kotlin, Maven/Gradle).
 |xref:skills/iru-setup-java-springboot-testcontainers.adoc[]
+
+|`iru-setup-kmp-app`
+|xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+|Scaffolds a Kotlin Multiplatform Android + iOS app: shared module, androidApp, XcodeGen iosApp, Kover and quality tools.
+|xref:skills/iru-setup-kmp-app.adoc[]
+
+|`iru-setup-kmp-github-workflows`
+|xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+|Creates build, release, sync and security GitHub Actions workflows for a Kotlin Multiplatform app, with gated macOS jobs.
+|xref:skills/iru-setup-kmp-github-workflows.adoc[]
+
+|`iru-setup-kmp-gitignore`
+|xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+|Creates or updates root and per-module .gitignore files for a Kotlin Multiplatform Android + iOS app.
+|xref:skills/iru-setup-kmp-gitignore.adoc[]
+
+|`iru-setup-kmp-repository`
+|xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
+|Orchestrates a Kotlin Multiplatform app repository: scaffold, Antora, gitignore, workflows, changelog, and README.
+|xref:skills/iru-setup-kmp-repository.adoc[]
 
 |`iru-setup-nestjs-app`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
@@ -869,7 +944,7 @@ file of their own and are instead described together in xref:agents/overview.ado
 |xref:agents/iru-change-summarizer.adoc[]
 
 |`iru-gate-runner`
-|Run a single verification/quality-gate skill (tests, coverage, lint, license, docs, security, build) for any supported stack — Java/Kotlin on Maven or Gradle, PHP, Python (FastAPI/Django), .NET, TypeScript incl. NestJS/Next.js, Android, Swift — and report back only a compact summary, optionally vs. a baseline.
+|Run a single verification/quality-gate skill (tests, coverage, lint, license, docs, security, build) for any supported stack — Java/Kotlin on Maven or Gradle, PHP, Python (FastAPI/Django), .NET, TypeScript incl. NestJS/Next.js/React Native, Android, Kotlin Multiplatform, Swift — and report back only a compact summary, optionally vs. a baseline.
 |xref:agents/iru-gate-runner.adoc[]
 
 |`iru-isolated-skill-executor`
@@ -902,7 +977,8 @@ orchestrator — `iru-setup-java-library-repository`, xref:index.adoc#group-serv
 xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
 xref:index.adoc#group-php-bootstrap[`iru-setup-php-repository`],
 xref:index.adoc#group-python-bootstrap[`iru-setup-python-repository`],
-xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`], or
+xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`],
+xref:index.adoc#group-kmp-bootstrap[`iru-setup-kmp-repository`], or
 xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. Every
 run announces whether it is setting the repository up **from scratch** or **updating an existing one** (with an
 inventory of what already exists), and each component skill warns about every pre-existing artifact and asks
@@ -914,7 +990,7 @@ already has a `pom.xml`).
 ====
 
 * xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] — catalog-wide front door: detects/asks a
-  repository's project type and delegates to one of eight stack orchestrators.
+  repository's project type and delegates to one of nine stack orchestrators.
 * xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
   or updates a Java library repository end to end in one pass.
 * xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
@@ -1024,8 +1100,10 @@ xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It chains the same six-
 `iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`. It accepts the
 shared `args` vocabulary the front door and the orchestrators use — `open-source: yes|no`, `publish: yes|no`,
 `sonar: cloud|self-hosted|none`, and `mode: new|existing` — so a value collected once upstream never needs
-re-asking. Each flavor skill and each of the shared skills also runs standalone against an existing
-repository to fill a single gap.
+re-asking. For React Native it resolves the `toolchain` once — `expo` (Expo framework, Continuous Native
+Generation, EAS or local native builds) or `metro` (bare React Native Community CLI app with committed
+`android/`/`ios/`) — and forwards it to the scaffold, gitignore, and workflows skills. Each flavor skill and each
+of the shared skills also runs standalone against an existing repository to fill a single gap.
 ====
 
 * xref:skills/iru-setup-typescript-repository.adoc[`iru-setup-typescript-repository`] — orchestrator: bootstraps
@@ -1041,8 +1119,8 @@ repository to fill a single gap.
   Nest CLI, adding validated config, health checks, an optional ORM with Testcontainers, a Dockerfile, and Sonar.
 * xref:skills/iru-setup-angular-web.adoc[`iru-setup-angular-web`] — scaffolds an Angular app via `ng new`, then
   adds Vitest coverage, ESLint, Prettier, Stylelint, Playwright, Compodoc, and Sonar.
-* xref:skills/iru-setup-react-native-app.adoc[`iru-setup-react-native-app`] — scaffolds a new Expo-managed React
-  Native app with Jest, ESLint/Prettier, EAS profiles, Maestro, and Sonar.
+* xref:skills/iru-setup-react-native-app.adoc[`iru-setup-react-native-app`] — scaffolds a React Native app for the
+  `expo` or `metro` toolchain with Jest, ESLint/Prettier, native build profiles, Maestro, and Sonar.
 * xref:skills/iru-setup-ionic-app.adoc[`iru-setup-ionic-app`] — scaffolds a new Ionic Angular/React app via the
   Ionic CLI, then adds Vitest, ESLint/Prettier, Playwright, Maestro, and Sonar.
 * xref:skills/iru-setup-typescript-github-workflows.adoc[`iru-setup-typescript-github-workflows`] —
@@ -1138,6 +1216,33 @@ existing repository to fill a single gap.
 * xref:skills/iru-setup-android-gitignore.adoc[`iru-setup-android-gitignore`] — creates or updates root and
   per-module `.gitignore` files.
 
+[[group-kmp-bootstrap]]
+=== Kotlin Multiplatform Bootstrap
+
+Scaffolding (or updating) a Kotlin Multiplatform mobile app repository end to end — one shared Kotlin module
+targeting Android and iOS, with either Compose Multiplatform shared UI (`ui: compose`) or native UIs (Jetpack
+Compose on Android, SwiftUI on iOS) over shared logic (`ui: native`).
+
+[TIP]
+====
+`iru-setup-kmp-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`] (project type `kmp-app`). It collects `ui`, `branching`,
+the app identity, and the shared pipeline inputs once — including `ios-ci`, which decides when the ~10×-cost macOS
+job runs — then chains the same six-step shape as the other `*-repository` orchestrators: `iru-setup-kmp-app` →
+`iru-setup-antora` → `iru-setup-kmp-gitignore` → `iru-setup-kmp-github-workflows` → `iru-setup-changelog` →
+`iru-setup-readme`, each via `iru-isolated-skill-executor`. Each member also runs standalone. Work inside the
+resulting app is then implemented through the xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling].
+====
+
+* xref:skills/iru-setup-kmp-repository.adoc[`iru-setup-kmp-repository`] — orchestrator: bootstraps a Kotlin
+  Multiplatform app repository end to end in one pass.
+* xref:skills/iru-setup-kmp-app.adoc[`iru-setup-kmp-app`] — scaffolds the Gradle build, `shared/` KMP module,
+  `androidApp/`, XcodeGen `iosApp/`, Kover, detekt/ktlint, Dokka, and a tested sample.
+* xref:skills/iru-setup-kmp-gitignore.adoc[`iru-setup-kmp-gitignore`] — creates or updates the root and per-module
+  `.gitignore` files covering Gradle, Android, Xcode, and signing material.
+* xref:skills/iru-setup-kmp-github-workflows.adoc[`iru-setup-kmp-github-workflows`] — build, release, sync,
+  security, and Dependabot workflows with a Linux Android job and a gated macOS iOS job.
+
 [[group-swift-bootstrap]]
 === Swift/Apple Bootstrap
 
@@ -1211,8 +1316,8 @@ implement anything directly — it dispatches each of `iru-plan`'s dependency-aw
 xref:index.adoc#group-java[Java], xref:index.adoc#group-springboot[Spring Boot] (Java or Kotlin),
 xref:index.adoc#group-quarkus[Quarkus], xref:index.adoc#group-php[PHP], xref:index.adoc#group-python[Python]
 (FastAPI and Django), xref:index.adoc#group-dotnet[.NET],
-xref:index.adoc#group-typescript[TypeScript] (incl. NestJS and Next.js), xref:index.adoc#group-android[Android],
-xref:index.adoc#group-swift[Swift], or xref:index.adoc#group-database[Database] Development Tooling group skill
+xref:index.adoc#group-typescript[TypeScript] (incl. NestJS, Next.js, and React Native), xref:index.adoc#group-android[Android],
+xref:index.adoc#group-kmp[Kotlin Multiplatform], xref:index.adoc#group-swift[Swift], or xref:index.adoc#group-database[Database] Development Tooling group skill
 matches, and brackets the whole run
 with quality and security baselines (xref:index.adoc#group-maintenance[Repository Maintenance]).
 ====
@@ -1240,7 +1345,9 @@ with quality and security baselines (xref:index.adoc#group-maintenance[Repositor
   xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`],
   xref:skills/iru-fastapi-code-one-task-group.adoc[`iru-fastapi-code-one-task-group`],
   xref:skills/iru-django-code-one-task-group.adoc[`iru-django-code-one-task-group`],
+  xref:skills/iru-react-native-code-one-task-group.adoc[`iru-react-native-code-one-task-group`],
   xref:skills/iru-android-code-one-task-group.adoc[`iru-android-code-one-task-group`],
+  xref:skills/iru-kmp-code-one-task-group.adoc[`iru-kmp-code-one-task-group`],
   xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`],
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`]) — or a best-effort direct
   implementation if none matches.
@@ -1324,7 +1431,9 @@ tagged `typescript` to `iru-typescript-code-one-task-group`, which captures one 
 bucket, runs `iru-typescript-code-one-task` once per task (in parallel when the group allows it), then
 validates the whole bucket once via the test/coverage/quality/doc skills below. Buckets tagged `nestjs` or
 `nextjs` go to their own framework-specific pairs instead, which reuse the same TypeScript gate skills but add a
-`nest build`/`next build` stage and a lock-serialized e2e stage (`.integration-test.lock`). Reach for the gate
+`nest build`/`next build` stage and a lock-serialized e2e stage (`.integration-test.lock`); buckets tagged
+`react-native` go to the React Native pair, which adds native Android/iOS build stages and Maestro/Detox e2e for
+either the `expo` or `metro` toolchain. Reach for the gate
 skills directly any time while iterating day to day; `iru-code` rarely needs them invoked directly during the
 xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 ====
@@ -1343,6 +1452,12 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
   and validates it once, including a `next build` route-table comparison and lock-serialized Playwright e2e.
 * xref:skills/iru-nextjs-code-one-task.adoc[`iru-nextjs-code-one-task`] — implements a single Next.js task for the
   detected version/router/caching profile; called once per task by `iru-nextjs-code-one-task-group`.
+* xref:skills/iru-react-native-code-one-task-group.adoc[`iru-react-native-code-one-task-group`] — implements a
+  React Native bucket and validates it once: Jest gates plus native Android/iOS builds, Expo prebuild checks, and
+  lock-serialized e2e.
+* xref:skills/iru-react-native-code-one-task.adoc[`iru-react-native-code-one-task`] — implements a single React
+  Native task for the detected `expo` or `metro` toolchain; called once per task by
+  `iru-react-native-code-one-task-group`.
 * xref:skills/iru-typescript-test.adoc[`iru-typescript-test`] — runs the unit test suite via Vitest, Jest, or
   `ng test`, scoped by file, directory, or name pattern.
 * xref:skills/iru-typescript-coverage.adoc[`iru-typescript-coverage`] — runs Vitest/Jest/Angular coverage and
@@ -1357,6 +1472,9 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 * xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`] — sets an npm/TypeScript project's
   version to an exact value across `package.json` and its lockfile; called by `iru-release` when the detected
   ecosystem is TypeScript/npm.
+* xref:skills/iru-react-native-bump-version.adoc[`iru-react-native-bump-version`] — sets a React Native app's
+  version for the `expo` or `metro` toolchain, including native build numbers where the repository owns them;
+  called by `iru-release` for React Native apps.
 
 [[group-android]]
 === Android Development Tooling
@@ -1395,6 +1513,41 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
 * xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`] — sets an Android/Gradle project's
   version across lib/app `build.gradle.kts` and optionally README/Antora mentions; called by `iru-release` when
   the detected ecosystem is Android/Gradle.
+
+[[group-kmp]]
+=== Kotlin Multiplatform Development Tooling
+
+The Kotlin Multiplatform (Android + iOS) counterpart to xref:index.adoc#group-android[Android Development
+Tooling] — implementing a single plan task across the shared module's `commonMain`/`androidMain`/`iosMain` source
+sets, the Android app, and the iOS host app, plus the per-target checks (tests, Kover coverage, detekt/ktlint/
+Android Lint/SwiftLint, KDoc/Dokka) and a version-bump skill that keeps Android and iOS versions in step.
+
+[TIP]
+====
+Same shape as the Android group: `iru-code-one-task-group` dispatches every task-group bucket tagged `kmp` to
+`iru-kmp-code-one-task-group`, which captures one quality baseline, runs `iru-kmp-code-one-task` once per task (in
+parallel when the group allows it), then validates the whole bucket once — Android/JVM host tests and Kover
+coverage on any host, and the Kotlin/Native iOS tests plus the iOS app's XCTest only on macOS with Xcode (reported
+"unverified" otherwise, never silently skipped). The Android and Java gate skills redirect a project with the KMP
+plugin applied to the matching `iru-kmp-*` skill instead.
+====
+
+* xref:skills/iru-kmp-code-one-task-group.adoc[`iru-kmp-code-one-task-group`] — implements a bucket of KMP tasks
+  and validates it once: license headers, KDoc, Android/JVM tests, Kover coverage, quality, and the iOS stage.
+* xref:skills/iru-kmp-code-one-task.adoc[`iru-kmp-code-one-task`] — implements a single task's code and tests
+  across the detected source sets; called once per task by `iru-kmp-code-one-task-group`.
+* xref:skills/iru-kmp-test.adoc[`iru-kmp-test`] — runs tests per target: Android host/JVM, Kotlin/Native iOS
+  simulator, and the iOS app's XCTest bundle.
+* xref:skills/iru-kmp-coverage.adoc[`iru-kmp-coverage`] — reports Kover line/branch coverage for the JVM/Android
+  targets (iOS coverage is reported as not measurable).
+* xref:skills/iru-kmp-code-quality.adoc[`iru-kmp-code-quality`] — runs detekt, ktlint, Android Lint, and SwiftLint
+  across every KMP module and reports issues by rule id.
+* xref:skills/iru-kmp-dokka.adoc[`iru-kmp-dokka`] — audits KDoc across every source set (an `expect` carries the
+  KDoc its `actual`s inherit) and verifies the Dokka multiplatform build.
+* xref:skills/iru-kmp-generate-all-tests.adoc[`iru-kmp-generate-all-tests`] — finds every class with no tests or
+  under 80% coverage (via `iru-kmp-coverage`) and generates/extends tests until it clears the bar.
+* xref:skills/iru-kmp-bump-version.adoc[`iru-kmp-bump-version`] — sets `VERSION_NAME`/`VERSION_CODE` in
+  `gradle.properties` and, for releases, the iOS `Config.xcconfig` versions; called by `iru-release`.
 
 [[group-swift]]
 === Swift Development Tooling
@@ -1752,7 +1905,7 @@ how agents differ from skills in how they're triggered.
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — runs a single verification/quality-gate skill and reports back
   only a compact summary, optionally diffed against a baseline. Used throughout `iru-code`, `iru-code-one-task-group`,
   and every `<key>-code-one-task-group` skill (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, FastAPI, Django,
-  .NET, TypeScript, NestJS, Next.js, Android, Swift), plus the `generate-all-tests` skills for every language and several bootstrap
+  .NET, TypeScript, NestJS, Next.js, React Native, Android, Kotlin Multiplatform, Swift), plus the `generate-all-tests` skills for every language and several bootstrap
   skills (verifying a scaffold or generated workflow actually builds).
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs one named skill end to end in a
   fresh context so the caller can keep running afterward. Used by xref:skills/iru-issue.adoc[`iru-issue`] to delegate the
@@ -1767,6 +1920,7 @@ how agents differ from skills in how they're triggered.
   xref:skills/iru-setup-php-repository.adoc[`iru-setup-php-repository`],
   xref:skills/iru-setup-python-repository.adoc[`iru-setup-python-repository`],
   xref:skills/iru-setup-android-repository.adoc[`iru-setup-android-repository`],
+  xref:skills/iru-setup-kmp-repository.adoc[`iru-setup-kmp-repository`],
   xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`]) to delegate each of the bootstrap
   skills it orchestrates.
 * xref:agents/iru-change-summarizer.adoc[`iru-change-summarizer`] — fans out over a git commit/tag range and returns
@@ -1851,6 +2005,13 @@ flowchart LR
         SETUP_ANDROID_REPOSITORY["iru-setup-android-repository"]
     end
 
+    subgraph GROUP_KMP_BOOTSTRAP["Kotlin Multiplatform Bootstrap"]
+        SETUP_KMP_APP["iru-setup-kmp-app"]
+        SETUP_KMP_GITHUB_WORKFLOWS["iru-setup-kmp-github-workflows"]
+        SETUP_KMP_GITIGNORE["iru-setup-kmp-gitignore"]
+        SETUP_KMP_REPOSITORY["iru-setup-kmp-repository"]
+    end
+
     subgraph GROUP_SWIFT_BOOTSTRAP["Swift/Apple Bootstrap"]
         SETUP_APPLE_APP["iru-setup-apple-app"]
         SETUP_SWIFT_GITHUB_WORKFLOWS["iru-setup-swift-github-workflows"]
@@ -1895,6 +2056,9 @@ flowchart LR
         NEXTJS_CODE_ONE_TASK["iru-nextjs-code-one-task"]
         NEXTJS_CODE_ONE_TASK_GROUP["iru-nextjs-code-one-task-group"]
         TYPESCRIPT_BUMP_VERSION["iru-typescript-bump-version"]
+        REACT_NATIVE_BUMP_VERSION["iru-react-native-bump-version"]
+        REACT_NATIVE_CODE_ONE_TASK["iru-react-native-code-one-task"]
+        REACT_NATIVE_CODE_ONE_TASK_GROUP["iru-react-native-code-one-task-group"]
         TYPESCRIPT_CODE_ONE_TASK["iru-typescript-code-one-task"]
         TYPESCRIPT_CODE_ONE_TASK_GROUP["iru-typescript-code-one-task-group"]
         TYPESCRIPT_CODE_QUALITY["iru-typescript-code-quality"]
@@ -1913,6 +2077,17 @@ flowchart LR
         ANDROID_DOKKA["iru-android-dokka"]
         ANDROID_GENERATE_ALL_TESTS["iru-android-generate-all-tests"]
         ANDROID_TEST["iru-android-test"]
+    end
+
+    subgraph GROUP_KMP["Kotlin Multiplatform Development Tooling"]
+        KMP_BUMP_VERSION["iru-kmp-bump-version"]
+        KMP_CODE_ONE_TASK["iru-kmp-code-one-task"]
+        KMP_CODE_ONE_TASK_GROUP["iru-kmp-code-one-task-group"]
+        KMP_CODE_QUALITY["iru-kmp-code-quality"]
+        KMP_COVERAGE["iru-kmp-coverage"]
+        KMP_DOKKA["iru-kmp-dokka"]
+        KMP_GENERATE_ALL_TESTS["iru-kmp-generate-all-tests"]
+        KMP_TEST["iru-kmp-test"]
     end
 
     subgraph GROUP_SWIFT["Swift Development Tooling"]
@@ -2313,6 +2488,47 @@ flowchart LR
     TYPESCRIPT_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
     UPDATE_DOCS -.spawns.-> AGT_GP
     UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.spawns.-> AGT_GP
+    CODE_ONE_TASK_GROUP --> KMP_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> REACT_NATIVE_CODE_ONE_TASK_GROUP
+    CODE -.-> KMP_CODE_QUALITY
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_CODE_ONE_TASK
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_CODE_QUALITY
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_COVERAGE
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_DOKKA
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_TEST
+    KMP_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    KMP_GENERATE_ALL_TESTS -.-> KMP_COVERAGE
+    KMP_GENERATE_ALL_TESTS -.-> KMP_TEST
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> REACT_NATIVE_CODE_ONE_TASK
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_QUALITY
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> ANDROID_TEST
+    TYPESCRIPT_CODE_ONE_TASK_GROUP --> REACT_NATIVE_CODE_ONE_TASK_GROUP
+    TYPESCRIPT_CODE_ONE_TASK --> REACT_NATIVE_CODE_ONE_TASK
+    TYPESCRIPT_BUMP_VERSION --> REACT_NATIVE_BUMP_VERSION
+    RELEASE --> KMP_BUMP_VERSION
+    RELEASE --> REACT_NATIVE_BUMP_VERSION
+    SETUP_REPOSITORY -.-> SETUP_KMP_REPOSITORY
+    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_APP
+    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_GITIGNORE
+    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_GITHUB_WORKFLOWS
+    SETUP_KMP_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_KMP_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_KMP_REPOSITORY -.-> SETUP_README
+    KMP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    KMP_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    SETUP_KMP_APP -.spawns.-> AGT_GATE
+    SETUP_KMP_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    KMP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    SETUP_KMP_REPOSITORY -.spawns.-> AGT_ISE
+    KMP_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
+    KMP_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
 ....
 
 == Common workflows
@@ -2361,11 +2577,13 @@ flowchart TD
     FD --> PH["iru-setup-php-repository"]
     FD --> PY["iru-setup-python-repository"]
     FD --> A["iru-setup-android-repository"]
+    FD --> K["iru-setup-kmp-repository"]
     FD --> SW["iru-setup-swift-repository"]
     Q --> Q1["iru-setup-quarkus-service → iru-setup-antora →\niru-setup-java-gitignore → iru-setup-quarkus-github-workflows →\niru-setup-changelog → iru-setup-readme"]
-    T --> T1["library / react / nextjs / angular / nestjs /\nreact-native / ionic scaffold → iru-setup-antora →\niru-setup-typescript-gitignore → iru-setup-typescript-github-workflows →\niru-setup-changelog → iru-setup-readme"]
+    T --> T1["library / react / nextjs / angular / nestjs /\nreact-native (expo or metro) / ionic scaffold → iru-setup-antora →\niru-setup-typescript-gitignore → iru-setup-typescript-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     PH --> P1["iru-setup-php-laravel / -wordpress / -prestashop →\niru-setup-antora → iru-setup-php-gitignore →\niru-setup-php-github-workflows → iru-setup-changelog → iru-setup-readme"]
     PY --> PY1["iru-setup-python-fastapi / -django →\niru-setup-antora → iru-setup-python-gitignore →\niru-setup-python-github-workflows → iru-setup-changelog → iru-setup-readme"]
+    K --> K1["iru-setup-kmp-app (compose or native UI) →\niru-setup-antora → iru-setup-kmp-gitignore →\niru-setup-kmp-github-workflows → iru-setup-changelog → iru-setup-readme"]
 ....
 
 `iru-setup-repository` is the usual way in: it detects a non-empty repository's type via `iru-explore` (or asks
@@ -2475,9 +2693,12 @@ tickets, and any attached prior implementation plans for extra context.
 === Generating a release
 
 `iru-release` must be run from `develop`, is ecosystem-agnostic (Java/Kotlin on Maven or Gradle, TypeScript/npm,
-Android/Gradle, Swift/Apple, PHP/Composer, or Python/FastAPI/Django), and delegates the actual version-file edit to that ecosystem's own installed
+React Native (Expo or Metro), Android/Gradle, Kotlin Multiplatform, Swift/Apple, PHP/Composer, or
+Python/FastAPI/Django), and delegates the actual version-file edit to that ecosystem's own installed
 xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`]/xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`]/
-xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]/
+xref:skills/iru-react-native-bump-version.adoc[`iru-react-native-bump-version`]/
+xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-kmp-bump-version.adoc[`iru-kmp-bump-version`]/
+xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]/
 xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`]/xref:skills/iru-python-bump-version.adoc[`iru-python-bump-version`]
 skill (called with `sync-files: yes`, which folds in refreshing `README.md`/`docs/antora.yml`/Antora dependency
 snippets), keeping only the release notes and PR description as its own work. See

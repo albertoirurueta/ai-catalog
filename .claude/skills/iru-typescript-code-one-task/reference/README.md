@@ -1,7 +1,9 @@
 # TypeScript development reference
 
 General TypeScript code agreements for implementing a task in any npm/TypeScript project this catalog scaffolds
-— library, React, Angular, React Native, Ionic, or a Vaadin Hilla frontend — plus one file per framework for the
+— library, React, Angular, Ionic, or a Vaadin Hilla frontend (React Native apps have their own `react-native` key,
+`iru-react-native-code-one-task`; `react-native.md` here is only a pointer plus a minimal fallback for repositories
+that haven't installed it) — plus one file per framework for the
 conventions that only apply there. These files exist so `iru-typescript-code-one-task` can load **only** what the
 task in front of it actually needs, instead of carrying every rule in context on every task.
 
@@ -21,7 +23,7 @@ Detect the framework first (`iru-typescript-code-one-task` Step 1 — inspect `p
 | `library` | None of the signals below match — a plain npm/TypeScript package. | *(none — `code-style.md`/`tsdoc.md`/`testing.md` are the whole list)* |
 | `react` | `react` + `vite` in `package.json` dependencies/devDependencies. | `react.md` |
 | `angular` | `@angular/core` in `package.json` dependencies. | `angular.md` |
-| `react-native` | `expo` or `react-native` in `package.json` dependencies. | `react-native.md` |
+| `react-native` | `expo` or `react-native` in `package.json` dependencies. | *(handed to `iru-react-native-code-one-task` when installed — `SKILL.md` Step 1; otherwise `react-native.md`'s minimal fallback)* |
 | `ionic` | `@ionic/angular` or `@ionic/react` together with `@capacitor/core`. | `ionic.md` |
 | `hilla-frontend` | `@vaadin/hilla`/`hilla-spring-boot-starter` in `pom.xml`, or a `src/main/frontend/` directory. | `hilla-frontend.md` |
 
@@ -54,6 +56,7 @@ published style guides leave to project taste).
 - Testing Library guiding principles and query priority: <https://testing-library.com/docs/queries/about/#priority>
 - React docs, "Thinking in React" and rules of hooks: <https://react.dev/learn/thinking-in-react>, <https://react.dev/reference/rules/rules-of-hooks>
 - Angular style guide and signals guide: <https://angular.dev/style-guide>, <https://angular.dev/guide/signals>
-- Expo Router docs: <https://docs.expo.dev/router/introduction/>
+- Expo Router docs: <https://docs.expo.dev/router/introduction/> (the full React Native guidance and its sources live in
+  `iru-react-native-code-one-task/reference/README.md`)
 - Ionic Framework component docs: <https://ionicframework.com/docs/components>, Capacitor docs: <https://capacitorjs.com/docs>
 - Vaadin Hilla docs (frontend views, generated endpoints, React components): <https://vaadin.com/docs/latest/hilla>

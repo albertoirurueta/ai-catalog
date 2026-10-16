@@ -24,6 +24,8 @@ From the repository root (or the module directory the user pointed at):
   ask the user once.
 - An Android Gradle plugin (`com.android.application`/`com.android.library`) applied → this is an Android project:
   use `iru-android-test` instead.
+- The Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`) applied → this
+  is a Kotlin Multiplatform project: use `iru-kmp-test` instead.
 
 For a **multi-module** build, scope the run to the affected module(s) when the user (or calling skill) named them —
 Maven `-pl <module> -am`, Gradle `:<module>:test` — rather than running every module's tests.

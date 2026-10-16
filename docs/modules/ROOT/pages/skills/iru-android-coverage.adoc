@@ -17,6 +17,8 @@ percentage instead of eyeballing Gradle console output. Because Android/Kotlin m
 three different ways (or none at all), it detects which one is actually configured before running anything, and
 reports "coverage not wired" — naming exactly what's missing — rather than a false 0%/100% when none is.
 
+Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-coverage.adoc[] instead.
+
 == Purpose group
 
 xref:index.adoc#group-android[Android Development Tooling]
@@ -66,6 +68,7 @@ A path in `scope` (or an explicit `module:` line from a calling skill) also infe
 ....
 flowchart TD
     A["Start /android-coverage\n(optional scope)"] --> B["Resolve module (:lib default or :app)\nand check JDK 17+ / ANDROID_HOME / gradlew"]
+    A -. "KMP plugin applied" .-> KMP["Stop: hand off to iru-kmp-coverage"]
     B --> C{"Which coverage path is wired?\n(check in priority order)"}
     C -- "1. Kover plugin applied" --> D["Run gradlew koverXmlReportDebug"]
     C -- "2. AGP enableUnitTestCoverage set" --> E["Run gradlew createDebugUnitTestCoverageReport\nglob build/reports/coverage/test/debug for XML"]
@@ -88,6 +91,8 @@ flowchart TD
 
 None — `iru-android-coverage` is a leaf skill; it only runs Gradle tasks (or the vendored JaCoCo CLI) and parses
 the generated XML report, it does not call any other skill in this catalog.
+
+It stops and redirects Kotlin Multiplatform projects to xref:skills/iru-kmp-coverage.adoc[] (a hand-off, not an invocation).
 
 === Invoked by
 

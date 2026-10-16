@@ -16,7 +16,7 @@ follow-up.
 
 Detect the build tool exactly as `iru-java-test`'s Step 0 does (`pom.xml` → Maven; `settings.gradle(.kts)`/
 `build.gradle(.kts)` → Gradle, `./gradlew` preferred over `gradle`; Android Gradle plugin → use
-`iru-android-coverage` instead). Then pick the coverage engine:
+`iru-android-coverage` instead; Kotlin Multiplatform plugin → use `iru-kmp-coverage` instead). Then pick the coverage engine:
 
 - **Maven** → JaCoCo through `jacoco-maven-plugin` (Step 3a).
 - **Gradle with Kover** — `org.jetbrains.kotlinx.kover` (or `id("org.jetbrains.kotlinx.kover")`/a `kover` alias in
