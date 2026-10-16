@@ -24,6 +24,13 @@ last the integration stage behind the atomic `mkdir`-based `.integration-test.lo
 ~45-minute wait, released on every exit path). An integration stage that cannot run is reported unverified, never
 silently skipped, and never affects the coverage verdict.
 
+When the bucket touched UI (Blade/Livewire views and components, blocks, patterns, template parts, `.tpl`/`.twig`
+templates or their CSS/JS assets), Step 3.9 adds a browser UI stage: `iru-php-test` with the `ui` selector (Playwright
+plus `@axe-core/playwright`, or `wp-scripts test-playwright` for WordPress) behind the same lock, then a check that
+`.ui-screenshots/` holds every added/changed screen and component's states × `.ui-quality.yml` directions × themes and
+the accessibility level is applied (`enforce` fails the bucket, `report` lists violations). No browser, Docker, wp-env
+or shop makes it unverified, never skipped; see xref:guides/building-user-interfaces.adoc[Building user interfaces].
+
 == Purpose group
 
 xref:index.adoc#group-php[PHP Development Tooling]
@@ -56,6 +63,8 @@ xref:index.adoc#group-php[PHP Development Tooling]
   without the integration suite.
 * No new PHPStan/Psalm/Pint/PHP-CS-Fixer/PHPCS issues versus the one baseline; security-relevant findings
   (`WordPress.Security.*`, `WordPress.DB.*`, Psalm `Tainted*`) fixed or explicitly accepted.
+* For UI buckets: the browser UI test result, screenshot counts per kind, any missing or malformed captures, and
+  accessibility violations (count and rule ids) at the `.ui-quality.yml` level — or unverified / "no UI test setup".
 * `implementation_plan.md` with each task's checkbox checked and its note replaced by the final outcome (fast-test
   coverage, quality, integration result).
 * A bucket report to the caller: detected flavor/environment/runner and the fast/integration selectors, per-task results,
@@ -92,8 +101,11 @@ flowchart TD
     I -- timed out --> H1
     I -- acquired --> J["3.8: confirm environment is up,\nrun integration suite once"]
     J --> K["3.8b: release lock"]
-    K --> L["Step 4: replace each task note\nwith final outcome; notify user"]
-    H1 --> L
+    K --> UI{"Bucket touched UI?"}
+    H1 --> UI
+    UI -- yes --> U1["3.9: browser UI tests via iru-php-test ui,\nscreenshot matrix and accessibility check,\nlock held through 3.8 and 3.9"]
+    U1 --> L["Step 4: replace each task note\nwith final outcome; notify user"]
+    UI -- no --> L
     L --> M["Step 5: report the bucket's outcome\nto the caller"]
 ....
 
@@ -111,7 +123,7 @@ this skill's context:
 * xref:skills/iru-php-code-quality.adoc[] — Step 1 (baseline) and Step 3.7 (regression check against it).
 * xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
 * xref:skills/iru-php-phpdoc.adoc[] — Step 3.2, PHPDoc for the production files.
-* xref:skills/iru-php-test.adoc[] — Steps 3.4, 3.6 and 3.8, scoped fast tests, the full fast suite and the integration run.
+* xref:skills/iru-php-test.adoc[] — Steps 3.4, 3.6, 3.8 and 3.9, scoped fast tests, the full fast suite, the integration run and the `ui` selector browser run.
 * xref:skills/iru-php-coverage.adoc[] — Step 3.5, fast-test line coverage for the bucket's targets.
 
 === Invoked by

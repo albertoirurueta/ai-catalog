@@ -1,6 +1,6 @@
 = Setup Python Django
-:description: Scaffolds a Django 6.1 project with uv or updates an existing one, adding split settings, custom user, tested sample app, DRF or Ninja, Docker and Sonar.
-:keywords: iru-setup-python-django, claude code skill, django, uv, django rest framework, django ninja, pytest-django, factory boy, gunicorn, whitenoise, python bootstrap
+:description: Scaffolds or updates a Django 6.1 project with uv: split settings, custom user, tested sample app, DRF or Ninja, Docker, Sonar and a Playwright UI test tier.
+:keywords: iru-setup-python-django, claude code skill, django, uv, django rest framework, django ninja, pytest-django, factory boy, gunicorn, whitenoise, playwright, ui tests, accessibility, python bootstrap
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -16,6 +16,7 @@ Scaffolds a Django 6.1 project with uv and `startproject`, or brings an existing
 * The API as Django REST Framework with drf-spectacular (default), Django Ninja, or none.
 * Fast tests on in-memory SQLite and, for PostgreSQL, an `integration` tier on a testcontainers PostgreSQL.
 * WhiteNoise, Gunicorn (`gthread` on WSGI, or `uvicorn_worker.UvicornWorker` on ASGI for Ninja), Sphinx API docs under `docs/api/`, a multi-stage non-root `Dockerfile`, `.dockerignore`, `compose.yaml` (`postgres:18`, one-shot `migrate`, `app`), `.env.example`, and `sonar-project.properties` when Sonar is enabled.
+* A browser UI tier for the server-rendered pages it ships (the Django admin), per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, pytest-playwright and axe-playwright-python, `LocaleMiddleware` (so right-to-left renders for real), the shared `tests/ui/ui_screenshots.py` helper and an `AdminLoginScreen` test that captures `.ui-screenshots/` across left-to-right/right-to-left x light/dark with an axe check. It is selected with `-m ui` and kept out of the fast tier and its 80% coverage floor; the template lives in `reference/ui-tests.md`.
 
 The generated code is the first exemplar of the `iru-django-code-one-task` conventions, and every verification command is the one the CI workflows and the `iru-python-*` gate skills run. The skill announces whether it is scaffolding from scratch or updating an existing project and, per owned artifact that already exists, asks **Update** / **Keep as is** / **Replace** (or **Stop**) unless `on-existing` pre-answers. Replace is not offered for `manage.py`, settings, `config/urls.py` or apps.
 
@@ -73,6 +74,11 @@ When called from `iru-setup-python-repository`, the resolved answers arrive as `
 |`cloud`, `self-hosted` or `none`; writes `sonar-project.properties` unless `none`.
 |Asked; `none` recommended for private repositories
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`. Asked only in a stand-alone run.
+|`enforce`; an existing `.ui-quality.yml` pre-selects its value
+
 |`mode`
 |No
 |`new` or `existing`. Informational: never means "update silently".
@@ -92,9 +98,10 @@ Other keys (`ci-tests`, `pages`, `publish`, `orm`, and so on) are ignored. A Pyt
 * `manage.py`, `config/` (settings package, `env.py`, `urls.py`, `asgi.py`, `wsgi.py`, and `api.py` for Ninja), `gunicorn.conf.py`.
 * `apps/core/`, `apps/accounts/` and, for new projects or on request, `apps/catalog/` with its API files and generated first migrations.
 * `tests/` (`conftest.py`, `factories.py`, fast tier, and `integration/` with PostgreSQL).
+* `.ui-quality.yml` and the UI tier: `tests/ui/ui_screenshots.py`, `tests/ui/conftest.py`, `tests/ui/test_admin_login.py` (captures land in `.ui-screenshots/screen/AdminLoginScreen/<state>--<direction>--<theme>.png`, plus an `a11y-report.jsonl`); the `ui` pytest marker, the Playwright dev dependencies and `LocaleMiddleware` in the settings.
 * `docs/api/conf.py` and the API reference pages.
 * `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env.example`, and `sonar-project.properties` when Sonar is enabled.
-* A report: mode, per-component action (created / updated / replaced / kept as is / removed), resolved choices and server type, versions from `uv.lock`, each verification command and result (unverified items such as Docker-dependent steps called out), and warnings (review identity and Sonar keys, never commit `.env` or `db.sqlite3`, production environment variables, migrations once per release, integration tests need Docker).
+* A report: mode, per-component action (created / updated / replaced / kept as is / removed), resolved choices and server type, versions from `uv.lock`, `.ui-quality.yml` action and accessibility level, each verification command and result (including the `-m ui` tier: captures written, axe violations by rule id; unverified items such as Docker-dependent steps called out), and warnings (review identity and Sonar keys, never commit `.env` or `db.sqlite3`, production environment variables, migrations once per release, integration tests need Docker; the UI tier needs `uv run playwright install chromium` and is unverified without a browser).
 
 No `.gitignore`, workflows, `CHANGELOG.md`, `README.md` or Antora files are written; the orchestrator runs the dedicated skills for those next.
 

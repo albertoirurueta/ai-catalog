@@ -126,6 +126,9 @@ def test_low_stock_enqueues_notification(
   Celery: mock `.delay_on_commit` in the caller's test, and test the task body by calling `.run(...)` directly.
 - **Migrations you hand-wrote** (data migrations): only when the task asks — `MigrationExecutor` tests are slow and
   belong to the integration tier.
+- **A screen, component or list the task added or changed**: browser UI tests on top of the template-rendering
+  tests — every visual state, minimal/typical/many-items data, the LTR/RTL × light/dark screenshot matrix and the
+  accessibility check (`ui-implementation.md` §5–§7).
 - Not trivia: Django's own behavior (that `CharField(max_length=200)` rejects 201 chars), generated admin, a
   `__str__`. Coverage is an 80% gate at group level, not a goal.
 
@@ -150,7 +153,8 @@ Fast tests need nothing but the interpreter (SQLite in memory via the test setti
 tier — marked with the project's marker (`pytestmark = [pytest.mark.integration, pytest.mark.django_db(transaction=True)]`)
 or tag (`@tag("integration")`) and placed where the project keeps those tests — when it needs PostgreSQL-specific
 behavior (row locks, `contrib.postgres` fields and lookups, full-text search, real constraint races, `AddIndexConcurrently`),
-Redis, a Celery worker, a live server, or a browser (Playwright usually has its own `browser` marker). Follow the
+Redis, a Celery worker, a live server, or a browser (browser UI tests carry the `ui` marker instead and live in `tests/ui/` —
+`ui-implementation.md` §5; an older project may use its own `browser` marker — follow it). Follow the
 project's existing integration fixture (often a `conftest.py` that starts a testcontainers PostgreSQL); don't build a
 new one — that's a plan-level change. If the project's pattern is to swap the default database inside
 `django_db_modify_db_settings`, the dict must be mutated in place and the cached `connections["default"]` dropped
@@ -167,4 +171,5 @@ Only the fast test files this task created or changed:
   `path::test_name` to re-run one test).
 - Built-in runner: `<run> python manage.py test <dotted.labels> --settings=<test settings> --exclude-tag=integration --noinput`.
 
-Never the integration marker/tag, never coverage, never `-n auto`/`--parallel`, never the whole suite.
+Never the integration marker/tag, never the `ui` (browser) marker, never coverage, never `-n auto`/`--parallel`,
+never the whole suite. Browser UI tests are written here and run by the group behind `.integration-test.lock`.

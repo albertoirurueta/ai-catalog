@@ -22,12 +22,14 @@ Detect the UI stack, the architecture and the project first (`iru-windows-code-o
 | `wpf.md` | `ui: wpf`: XAML, `{Binding}`/`DataContext`, resources/styles, Fluent `ThemeMode`, `Dispatcher`, XAML Behaviors, `app.manifest`. |
 | `winui.md` | `ui: winui`: XAML with `x:Bind`, `NavigationView`/`Frame`, `AppWindow`, Mica, packaged vs unpackaged, `Package.appxmanifest`. |
 | `winforms.md` | `ui: winforms`: designer files, layout (`Anchor`/`Dock`/`TableLayoutPanel`), `BindingSource`, command binding, high DPI, dark mode, `InvokeAsync`. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI. `ui-contract.md` is the catalog-wide contract (repeated verbatim in every UI coding skill): decomposition, composition over inheritance, inputs/events/states, virtualized collections, UI tests, `.ui-screenshots/` captures, accessibility levels in `.ui-quality.yml`. `ui-implementation.md` maps it onto WPF/WinUI/WinForms: `UserControl` components, dependency-property inputs and command outputs, recycling lists over keyed `ObservableCollection` state, WinForms virtual mode, `FlowDirection`/`RightToLeftLayout`, theme switching, FlaUI captures and the Axe.Windows scan. |
 | `packaging.md` | MSIX manifests (`Package.appxmanifest`, `packaging/AppxManifest.xml`), capabilities, versions, publish properties/profiles, RIDs, the AOT/trimming support matrix. |
 | `security.md` | Secrets/credentials, settings files, file system/registry, loading XAML or other external input, process launch, elevation, MSIX capabilities, update channels. |
 
 A task that only changes logic inside one existing Core service, with no signature change and no UI, needs the two
 always-read files plus `testing.md`, and nothing else. Don't read the rest speculatively. Read at most one UI file
-(the detected stack) and at most one of `mvvm-toolkit.md`/`mvc-winforms.md` (the detected architecture).
+(the detected stack) and at most one of `mvvm-toolkit.md`/`mvc-winforms.md` (the detected architecture); a task that
+touches a screen, component or list adds `ui-contract.md` + `ui-implementation.md` (only its stack's sections).
 
 ## The three rules that override everything else
 
@@ -103,6 +105,10 @@ https://github.com/albertoirurueta/docs/issues/191 (the planned "Windows Apps" s
 - Unit testing with MSTest (incl. WinUI): <https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-mstest-intro>,
   <https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-mstest-winui>, MSTest analyzers
   <https://learn.microsoft.com/en-us/dotnet/core/testing/mstest-analyzers/overview>
+- UI contract mapping (`ui-implementation.md`): WPF virtualization (`VirtualizingPanel`), data templating and
+  bidirectional layout; WinUI `ListView`/`GridView`/`ItemsView`, theme resources and RTL layout; Windows Forms
+  virtual mode and `RightToLeft`; Axe.Windows automation <https://github.com/microsoft/axe-windows> — its own
+  "Sources" list has the URLs
 - UI automation (third-party / unmaintained, prose only): FlaUI <https://github.com/FlaUI/FlaUI>, WinAppDriver
   <https://github.com/microsoft/WinAppDriver>, Appium Windows Driver <https://github.com/appium/appium-windows-driver>
 - DPAPI `ProtectedData`: <https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.protecteddata>;

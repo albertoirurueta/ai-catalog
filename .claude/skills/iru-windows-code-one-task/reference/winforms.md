@@ -28,6 +28,9 @@ internal static class Program
   `ApplicationDefaultFont`) — change those properties, not the call.
 - Dark mode: `Application.SetColorMode(SystemColorMode.System|Dark|Classic)` — stable in .NET 10 (no experimental
   diagnostic, verified). Custom-drawn controls must use `SystemColors`, not hard-coded colors, to follow it.
+- Right-to-left: `RightToLeft = RightToLeft.Yes` + `RightToLeftLayout = true` on the form mirrors it; the UI tests
+  drive both (and the color mode) through the `--ui-direction`/`--ui-theme` launch arguments
+  (`ui-implementation.md`).
 
 ## The designer contract
 
@@ -38,7 +41,14 @@ internal static class Program
   constructor.
 - Name controls meaningfully (`greetButton`, `nameTextBox`); set `AccessibleName` and, for UI tests, `Name` (FlaUI
   finds WinForms controls by `AutomationId`, which WinForms maps from `Control.Name`).
-- A `UserControl` for a reusable panel; a form never reaches into another form's controls.
+- A `UserControl` for a reusable panel — inputs are properties marked `[Browsable(false)]` +
+  `[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]` (without it the WinForms analyzer fails
+  the build with `WFO1000` — verified), events are `EventHandler<TEventArgs>` named after the intent
+  (`OpenRequested`); the controller/presenter or view model owns the state. A form never reaches into another form's
+  controls.
+- Data-driven lists: `ListView`/`DataGridView` with `VirtualMode = true` and `RetrieveVirtualItem`/`CellValueNeeded`
+  building only the visible rows — never a `FlowLayoutPanel` filled with one `UserControl` per item for unbounded
+  data (`ui-implementation.md`).
 
 ## Layout and DPI
 

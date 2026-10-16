@@ -16,6 +16,7 @@ modules, app layout, API style, test runner, fast/integration split), then read:
 | `testing.md` | **Always** — writing the tests is part of the task. pytest-django vs. `manage.py test`, `django_db`, factory_boy/model_bakery, query-count assertions, `on_commit` capture, the fast/integration split, what to run. |
 | `models-and-orm.md` | The task adds/changes a model, field, relation, constraint, index, manager/QuerySet, migration, query, transaction, signal, or service function. |
 | `views-urls-templates.md` | The task adds/changes a view (FBV, CBV, async), URL pattern, template, template tag/filter, middleware, or htmx fragment. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI. The catalog-wide contract (decompose first, composition, inputs/events, paginated collections, UI tests, the `.ui-screenshots/` matrix, accessibility via `.ui-quality.yml`), then its Django mapping: page templates, inclusion tags and 6.0 partials, HTMX fragments, one item partial per row, pytest-playwright + `live_server` UI tests, the `tests/ui/ui_screenshots.py` helper, axe-playwright-python. |
 | `forms-and-validation.md` | The task adds/changes a `Form`, `ModelForm`, formset, validator, or model `clean()`. |
 | `drf.md` | API style is Django REST Framework and the task touches a serializer, view/viewset, router, permission, throttle, pagination, filter, or the OpenAPI schema. |
 | `ninja.md` | API style is Django Ninja and the task touches an API, router, operation, or schema. |
@@ -80,6 +81,8 @@ PostgreSQL integration test, `manage.py check`, `makemigrations --check --dry-ru
   `exceptions.adoc`, `functions.adoc`, `standard-library-tour.adoc`, `lexical-structure-and-style.adoc`,
   `debugging-and-tooling.adoc`
 - Django documentation: <https://docs.djangoproject.com/en/6.1/>
+- UI tests: pytest-playwright <https://playwright.dev/python/docs/test-runners>, axe-playwright-python
+  <https://github.com/pamelafox/axe-playwright-python> (`ui-implementation.md` lists the versions it was verified with)
 - Django REST Framework: <https://www.django-rest-framework.org/>; drf-spectacular: <https://drf-spectacular.readthedocs.io/>
 - Django Ninja: <https://django-ninja.dev/>
 - pytest-django: <https://pytest-django.readthedocs.io/>; factory_boy: <https://factoryboy.readthedocs.io/>

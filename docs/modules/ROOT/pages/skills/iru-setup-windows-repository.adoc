@@ -114,6 +114,11 @@ whether to open a WinGet pull request on each release.
 |`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
 |Asked
 
+|`accessibility`
+|No
+|`enforce`/`report`/`off`: the automated Axe.Windows accessibility level of the FlaUI UI tests, written by the scaffold to `.ui-quality.yml`. Always forwarded to `iru-setup-windows-app`, and asked (Enforce recommended) unless supplied or already set by an existing `.ui-quality.yml`; it applies whether or not CI runs the UI tests.
+|Asked; `enforce` recommended
+
 |`msix`, `ui-tests`, `rids`
 |No
 |Scaffold toggles passed through untouched if supplied; `msix: no` is sent for an unsigned WPF/WinForms `internal` release.
@@ -127,7 +132,7 @@ whether to open a WinGet pull request on each release.
 
 == Outputs
 
-* The .NET 10 solution scaffold -- Core project, WPF/WinUI/WinForms app project, tests, quality config, DocFX and
+* The .NET 10 solution scaffold -- Core project, WPF/WinUI/WinForms app project, tests, `.ui-quality.yml`, quality config, DocFX and
   optional MSIX packaging (via `iru-setup-windows-app`), created or updated per file group according to the user's
   answers.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
@@ -138,7 +143,7 @@ whether to open a WinGet pull request on each release.
 * A final report: setup mode, resolved `ui`/`architecture`/`branching`/`mode`, identity, license and pipeline
   parameters, a per-component table with the action taken (created / updated / replaced / kept as is / skipped
   (`ci: no`)), the consolidated required-secrets table (omitted when no workflows were generated), decisions made on
-  the user's behalf, and an explicit warning block (Windows-only verification, MSIX publisher matching the signing
+  the user's behalf (including the `accessibility` level and that UI tests capture `.ui-screenshots/`, uploaded by the CI UI job when `ci-tests: full`), and an explicit warning block (Windows-only verification, MSIX publisher matching the signing
   subject, accounts and secrets that must exist).
 
 == Execution flow
@@ -149,7 +154,7 @@ flowchart TD
     A[Start /iru-setup-windows-repository] --> B["Step 0: Parse args\n(ui, architecture, branching, mode, visibility,\nci, ci-tests, pages, distribution, signing, identity)"]
     B --> C["Step 1: Resolve ui, architecture, branching, mode\nand print Setup mode\n(from scratch, or inventory of prior setup)"]
     C --> D["Step 2: Collect app identity\n(skipped when a solution exists)"]
-    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, sonar, ci-tests,\npages, distribution, signing, winget)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, sonar, ci-tests,\npages, distribution, signing, winget,\naccessibility)"]
     E --> G["Step 4: Run iru-setup-windows-app\n(via sub-agent)\nasks Update / Keep / Replace / Stop"]
     G -- user chose stop --> STOP[Stop entire pipeline; report]
     G -- ok --> H["Step 5: Run iru-setup-antora"]
@@ -174,7 +179,7 @@ template listings stay out of this orchestrator's context. Every sub-agent is la
 `run_in_background: false` since each step depends on the previous one's files being on disk:
 
 * xref:skills/iru-setup-windows-app.adoc[] -- Step 4: writes or updates the solution, Core, app and test projects,
-  quality config, DocFX and packaging, passing Steps 1-3's answers as `args`. Always invoked, even in `mode: existing`.
+  `.ui-quality.yml`, quality config, DocFX and packaging, passing Steps 1-3's answers as `args`. Always invoked, even in `mode: existing`.
   The first restore downloads every NuGet package (and the Windows App SDK for WinUI).
 * xref:skills/iru-setup-antora.adoc[] -- Step 5: scaffolds or updates the Antora site, with no `args` (only
   `on-existing` when supplied).

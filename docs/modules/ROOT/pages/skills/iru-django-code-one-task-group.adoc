@@ -1,6 +1,6 @@
 = Django Code One Task Group
-:description: Implements every Django task in one plan bucket, then validates once with Django checks, 80% fast-test coverage and a lock-serialized integration stage.
-:keywords: iru-django-code-one-task-group, claude code skill, django, drf, pytest-django, migrations, coverage, ruff, mypy, integration lock
+:description: Implements every Django task in one plan bucket, then validates once: Django checks, 80% fast-test coverage, and lock-serialized integration and UI stages.
+:keywords: iru-django-code-one-task-group, claude code skill, django, drf, pytest-django, migrations, coverage, ruff, mypy, integration lock, playwright, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -11,6 +11,8 @@ Implement one bucket of Django tasks from a plan's task group end to end, in any
 `iru-django-code-one-task-group` is the Django counterpart to `iru-php-code-one-task-group` and `iru-nestjs-code-one-task-group`, built on the four Python gate skills. Step 1 detects once the runner prefix, `manage.py` location and Django version, test and production settings modules, app layout, API style (DRF with or without drf-spectacular, Ninja, plain views), test runner, and — decided by what a test needs, not by its name — the fast and integration selections. It captures one pre-change `iru-python-code-quality` baseline, then implements each task through `iru-django-code-one-task`, in parallel agents when the group is parallelizable. Tasks that change models in the same app, share a `urls.py`, settings module, `admin.py` or `models.py`, or depend on another task's new code always run sequentially so migrations and edits cannot collide.
 
 Step 3 validates the bucket once, cheapest first, every check delegated to an `iru-gate-runner` agent: license headers, docstrings, the Django framework checks (`manage.py check`, `makemigrations --check --dry-run` with migration-conflict detection, `spectacular --validate` when drf-spectacular is installed, and `check --deploy` as information), scoped fast tests, an 80% line-coverage gate measured from container-free tests alone, the full fast suite, Ruff/mypy (plus Bandit, djLint, django-upgrade when configured) diffed against the baseline, and last the integration tier behind the atomic `mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded ~45-minute wait, released on every exit path). An integration stage that cannot run is reported unverified, never silently skipped, and never affects the coverage verdict.
+
+For a bucket that touched templates, static assets, template tags or HTML-rendering views, Step 3.10 adds a browser UI stage under the same lock (`iru-python-test ui`: pytest-playwright with `live_server`). It checks that every changed screen and component has a capture in `.ui-screenshots/` for each state × `.ui-quality.yml` direction × theme, and applies the axe accessibility level — `enforce` violations fail the bucket and are fixed in the owning task, `report` ones are listed, `off` is noted. A missing Playwright browser or missing UI test wiring (pytest-playwright, axe-playwright-python, a `ui` marker, `tests/ui/ui_screenshots.py`, `.ui-quality.yml`, detected in Step 1) is reported unverified, never passed. The UI contract is described in xref:guides/building-user-interfaces.adoc[Building user interfaces].
 
 == Purpose group
 
@@ -43,8 +45,9 @@ xref:index.adoc#group-python[Python Development Tooling]
 * Clean Django framework checks: `check`, `makemigrations --check` and, when applicable, the drf-spectacular schema validation.
 * Fast tests reaching at least 80% line coverage for the changed/new production files, measured without the integration tier.
 * No new Ruff, mypy/pyright or other configured-tool issues versus the one baseline; security-relevant findings (Ruff `S`, `DJ001`/`DJ006`/`DJ007`) fixed or explicitly accepted.
-* `implementation_plan.md` with each task's checkbox checked and its note replaced by the final outcome (fast-test coverage, quality, integration result).
-* A bucket report to the caller: detected shape and the fast/integration selectors, per-task results, framework check results including informational deploy warnings, security findings, accepted coverage exceptions, the integration outcome (passed, fixed, unverified with reason, or no integration tests) and lock behavior, and any blocked task.
+* For UI work: the browser UI stage outcome — screenshot counts per kind under `.ui-screenshots/`, matrix gaps or malformed names fixed, the accessibility level applied and its violations by rule id, or unverified with the reason.
+* `implementation_plan.md` with each task's checkbox checked and its note replaced by the final outcome (fast-test coverage, quality, integration and UI results).
+* A bucket report to the caller: detected shape and the fast/integration selectors, per-task results, framework check results including informational deploy warnings, security findings, accepted coverage exceptions, the integration outcome (passed, fixed, unverified with reason, or no integration tests) and lock behavior, the UI stage outcome and the per-task `Screen › Region › Component` trees, and any blocked task.
 
 == Execution flow
 
@@ -75,7 +78,10 @@ flowchart TD
     H -- yes --> I["3.9a: acquire mkdir lock\n(wait, break stale, or time out)"]
     I -- timed out --> H1
     I -- acquired --> J["3.9: run integration tests once"]
-    J --> K["3.9b: release lock"]
+    J --> J2{"UI touched?"}
+    J2 -- yes --> J3["3.10: browser UI tests under the lock\n(playwright, screenshot matrix, axe level);\nunverified if no browser or wiring"]
+    J2 -- no --> K["3.9b: release lock"]
+    J3 --> K
     K --> L["Step 4: replace each task note\nwith final outcome; notify user"]
     H1 --> L
     L --> M["Step 5: report the bucket's outcome\nto the caller"]
@@ -95,7 +101,7 @@ this skill's context:
 * xref:skills/iru-python-code-quality.adoc[] — Step 1 (baseline) and Step 3.8 (regression check against it).
 * xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
 * xref:skills/iru-python-docstrings.adoc[] — Step 3.2, docstrings for the production files.
-* xref:skills/iru-python-test.adoc[] — Steps 3.4, 3.6 and 3.9, scoped fast tests, the full fast suite and the integration run.
+* xref:skills/iru-python-test.adoc[] — Steps 3.4, 3.6, 3.9 and 3.10, scoped fast tests, the full fast suite, the integration run and, for UI work, the `ui` run (under the lock the skill already holds).
 * xref:skills/iru-python-coverage.adoc[] — Step 3.5, fast-test line coverage for the bucket's targets.
 
 === Invoked by

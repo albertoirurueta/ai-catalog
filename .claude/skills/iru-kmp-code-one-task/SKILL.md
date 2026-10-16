@@ -16,7 +16,13 @@ description: >-
   coroutines/`Dispatchers.IO`, Ktor with platform engines, kotlinx.serialization, kotlinx-datetime,
   SQLDelight/Room/DataStore, Koin or manual DI, multiplatform ViewModel — Compose Multiplatform with the `Res` class,
   navigation, previews and `MainViewController`, native UI over shared state, iOS interop as Swift sees it through the
-  Objective-C header with SKIE/KMP-NativeCoroutines when present, KDoc/Dokka, and security), re-checks the current
+  Objective-C header with SKIE/KMP-NativeCoroutines when present, KDoc/Dokka, security, and — for a task that adds or
+  changes a screen, component or list — the catalog's UI contract mapped onto KMP: `Screen › Region › Component`
+  decomposition reported back, stateless components over the shared view model's immutable state, `Lazy*` with
+  `key`/`contentType` and SwiftUI `List`/lazy stacks for every collection, `runComposeUiTest` UI tests on the
+  Android host (Robolectric) and the iOS simulator or Robolectric/`ImageRenderer` tests for native UI, capturing
+  `.ui-screenshots/` across left-to-right/right-to-left × light/dark with an `--android`/`--ios` variant, and the
+  accessibility check at the `.ui-quality.yml` level), re-checks the current
   code state, implements exactly what the task specifies, writes/updates tests in the right source set, compile-checks
   every target the touched source sets compile for with the Gradle wrapper (task names discovered via `./gradlew
   :<module>:tasks --all`; iOS targets only on macOS — never booting a simulator), regenerating the Xcode project with
@@ -102,10 +108,12 @@ you to the rest — then read only what it points at. The routing, restated:
 | `reference/shared-logic.md` | Coroutines/Flow, Ktor, serialization, dates, persistence, DI, shared ViewModel, non-UI resources. |
 | `reference/compose-multiplatform.md` | A `@Composable` in the shared module (`ui: compose`), `Res` resources, navigation, previews, `MainViewController`, UIKit/SwiftUI interop. |
 | `reference/native-ui.md` | `androidApp` Jetpack Compose or `iosApp` SwiftUI over shared state (`ui: native`). |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI (either `ui` mode) — decomposition, inputs/events, the lazy-collection rule, UI tests, the screenshot matrix and accessibility checks. |
 | `reference/ios-interop.md` | A declaration Swift calls changes (public API of the exported module), or Swift is written in `iosApp`. |
 | `reference/security.md` | Credentials/tokens, sensitive storage, networking/TLS, logging of user data, R8 rules, `Info.plist`/ATS, external input. |
 
-Read at most one of `compose-multiplatform.md`/`native-ui.md` for a given screen. If `reference/` is missing (the
+Read at most one of `compose-multiplatform.md`/`native-ui.md` for a given screen; any task that touches UI also
+reads `ui-contract.md` and `ui-implementation.md`. If `reference/` is missing (the
 skill directory was copied without it), proceed using the repository's own `CLAUDE.md` conventions and the
 surrounding code's style, and say so in Step 8 — don't guess at what the reference would have said.
 
@@ -135,6 +143,11 @@ Non-negotiable, because a later gate or the other platform enforces them:
   never edit the generated framework/header or the generated `iosApp.xcodeproj` — edit `iosApp/project.yml` instead
   and regenerate (Step 5).
 
+- **UI tasks — decompose first** (`reference/ui-contract.md` §2): before writing UI code, write the
+  `Screen › Region › Component` tree (inputs, events, visual states, what it reuses) and keep it for Step 8's
+  report. Build leaves first; state and intents live in the shared view model; every collection goes through a
+  lazy container with stable keys (`reference/ui-implementation.md`); navigation stays in the one graph.
+
 Don't add anything the task didn't ask for — no speculative `expect`/`actual`, no unrelated cleanup, no restyling.
 
 ## Step 4 — Write or update the tests
@@ -144,6 +157,14 @@ every target), the Android host-test set for `androidMain`, `iosTest` for `iosMa
 `androidApp`, `iosApp/iosAppTests` (XCTest) for Swift. `kotlin.test` + `runTest` + Turbine where present + fakes
 (MockK never in `commonTest`). Cover the edge cases implied by the KDoc `@throws`/error-result contracts. Do not run
 the tests — `iru-kmp-code-one-task-group` runs them once per bucket and per target.
+
+For a UI task, also write the UI tests `reference/ui-implementation.md` describes: component/screen tests for every
+visual state that applies (behaviour once, left-to-right + light), a capture of each state across the
+`.ui-quality.yml` directions × themes through the module's screenshot helper (`uitest/UiScreenshots.kt` in
+`commonTest` for `ui: compose`, `androidApp/src/test/…/uitest/UiScreenshots.kt` and
+`iosApp/iosAppTests/UIScreenshots.swift` for `ui: native` — create it from `ui-implementation.md` only if the
+module's test wiring already supports it, otherwise report the missing wiring), and the accessibility check. Never
+add Robolectric, a test dependency or a test target to make a UI test fit — that is a blocker to report (Step 6).
 
 ## Step 5 — Compile-check every target the touched source sets feed
 
@@ -234,6 +255,8 @@ Hand back a short summary:
   with the reference files actually read.
 - **The files touched** (including Swift files and `project.yml`) and **the tests added/updated per source set** (not
   run).
+- **For a UI task**: the `Screen › Region › Component` decomposition, and the UI tests and screenshot captures
+  (kind/Id/states, which platforms) added — none of them run yet.
 - **The compile-check result per target** (Android / iOS / androidApp / iosApp build-for-testing): passed, failed on
   this task's code and fixed, failed outside this task's scope, or unavailable (and why — e.g. not macOS).
 - **Public API changes visible to Swift**, and whether Swift callers were updated.

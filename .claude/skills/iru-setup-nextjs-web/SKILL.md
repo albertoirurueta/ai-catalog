@@ -13,14 +13,20 @@ description: >-
   non-root multi-stage `Dockerfile` with a health-check route when the image is distributed), a tested sample
   feature that follows the `iru-nextjs-code-one-task` references (async Server Component page with a
   `server-only` data layer, Client Component leaf, Server Action with Zod validation and an auth stub, Route
-  Handlers, metadata, `loading`/`error`/`not-found`, all adapted to static export or the Pages Router), and
+  Handlers, metadata, `loading`/`error`/`not-found`, all adapted to static export or the Pages Router), per the
+  catalog's UI contract a `.ui-quality.yml` at the repository root and — with `e2e: playwright` — a Playwright
+  component-testing project against a standalone Vite component gallery (Playwright's built-in `mount()` fixture,
+  `next/link`/`next/navigation`/`next/image` stand-ins), `@axe-core/playwright`, the shared
+  `e2e/support/ui-screenshots.ts` helper, and specs capturing `.ui-screenshots/component/LikeButton/` and
+  `.ui-screenshots/screen/Home/` across left-to-right/right-to-left × light/dark with an accessibility check, and
   `sonar-project.properties` when Sonar is enabled. Invoke as `/iru-setup-nextjs-web`. Accepts pre-resolved inputs
   via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
   `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`),
   `router` (`app`/`pages`), `output` (`server`/`static`), `cache-components` (`yes`/`no`), `styling`
   (`tailwind`/`css-modules`), `e2e` (`playwright`/`none`), `distribution` (`none`/`internal`), `docs-tool`
   (`typedoc`/`none`), `agents-md` (`yes`/`no`), `package-manager` (`npm`/`pnpm`/`yarn`), `node-version`,
-  `visibility`, `ci`, `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`) — and asks
+  `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`, default `enforce`), `mode` (`new`/`existing`),
+  `on-existing` (`ask`/`keep`/`update`/`replace`) — and asks
   whatever `args` didn't resolve. Announces whether it is scaffolding from scratch or updating an existing app and,
   for every artifact it owns that already exists, asks Update / Keep as is / Replace (or Stop). Use whenever a
   repository needs a Next.js app bootstrapped with its full test/lint/e2e/deploy toolchain from this house
@@ -74,6 +80,7 @@ package-manager: npm
 node-version: 24
 visibility: public
 ci: yes
+accessibility: enforce
 mode: new
 ```
 
@@ -99,6 +106,7 @@ Recognized keys:
 | `node-version` | Node major | `24` (current LTS) — the `Dockerfile`'s `NODE_VERSION` |
 | `visibility` | `public`/`private`/`internal` | resolved only if the Sonar question is asked |
 | `ci` | `yes`/`no` | `yes` (only consulted for the Sonar recommendation) |
+| `accessibility` | `enforce`/`report`/`off` | asked with `e2e: playwright`, else `enforce` — the UI tests' automated accessibility level written to `.ui-quality.yml` |
 | `mode` | `new`/`existing` | derived in Step 1 |
 | `on-existing` | `ask`/`keep`/`update`/`replace` | `ask` |
 
@@ -126,8 +134,9 @@ unless `on-existing` says otherwise.
 - Survey every artifact this skill owns: `package.json` (the Next.js app itself — `src/app` or `src/pages`),
   `next.config.*`, `vitest.config.*`/`vitest.setup.ts` (or a `jest.config.*` — another runner),
   `eslint.config.*` (or `biome.json`), `.prettierrc*`/`.prettierignore`, `playwright.config.*` + `e2e/`,
-  `typedoc.json`, `sonar-project.properties`, `Dockerfile`/`.dockerignore`, and the sample feature (`src/lib/books.ts`
-  and its routes).
+  `typedoc.json`, `sonar-project.properties`, `Dockerfile`/`.dockerignore`, the UI-contract files
+  (`.ui-quality.yml` at the repository root, `e2e/support/ui-screenshots.ts`, `playwright/`, `e2e/components/`), and
+  the sample feature (`src/lib/books.ts` and its routes).
 - For an existing app, detect what it already is instead of asking: router (`src/app`/`app` ⇒ `app`,
   `src/pages`/`pages` only ⇒ `pages`), `output` (`'export'` ⇒ `static`, else `server`), `cacheComponents: true` ⇒
   `cache-components: yes`, styling (`tailwindcss` dependency ⇒ `tailwind`), `src/` or root layout, import alias
@@ -214,6 +223,10 @@ confirm it in one line instead of asking.
   'standalone'`, a `Dockerfile`, a `.dockerignore`, and a health-check route). There is no `store` value.
 - **docs-tool**: **TypeDoc** (Recommended — `npm run docs` writes `docs/api`, which the workflows skill merges
   under the Antora site; also lets `iru-typescript-tsdoc` verify instead of running audit-only) or **None**.
+
+- **accessibility** (only with `e2e: playwright`; `AskUserQuestion`): "Automated accessibility checks in UI
+  tests?" — **Enforce (Recommended)** (axe violations fail the UI tests) / **Report only** (listed, never failing) /
+  **Off** (not run; the coding defaults still apply).
 
 Do not ask `router`, `styling`, `e2e`, `agents-md`, or `package-manager` unless the user brings them up — their
 defaults (`app`, `tailwind`, `playwright`, `yes`, detected/`npm`) are the house template.
@@ -424,8 +437,37 @@ undoing than writing the file.
 
 Scripts: `"test:e2e": "playwright test"`; for `output: static` also `"start": "serve out"`.
 
+### UI contract
+
+The catalog's UI contract (repeated in `iru-nextjs-code-one-task/reference/ui-contract.md`) makes every component
+and screen test capture its states into `<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png`
+and run axe at the level `.ui-quality.yml` sets. Write `.ui-quality.yml` at the repository root on every run
+(also with `e2e: none` — the coding skills read it); an existing one follows Step 1's decision (**Update** sets only
+`accessibility` when `args` supplied it and adds missing keys). With `e2e: playwright`, also write everything under
+"UI contract" in `reference/config-templates.md`:
+
+- dev dependencies `@axe-core/playwright` (fallback `4.14.0`), `vite` (the major Vitest already uses), and
+  `@tailwindcss/vite` for `styling: tailwind` (`@vitejs/plugin-react` is already there from Step 5);
+- `e2e/support/ui-screenshots.ts` from this skill's `reference/ui-screenshots.ts`;
+- the component gallery (`playwright/vite.config.ts`, `playwright/gallery/{index.html,main.tsx,next-stubs.tsx,
+  next-image.tsx}`) — Playwright's component testing is a plain project whose `baseURL` is a gallery page driven by
+  the built-in `mount()` fixture (`@playwright/test` ≥ 1.62; `@playwright/experimental-ct-react` is frozen), and
+  Next.js has no Vite server to host it, so it gets its own on port 3200; only Client Components (and synchronous,
+  `server-only`-free presentational components) can be storied;
+- the `components` project + gallery `webServer` entry in `playwright.config.ts`;
+- `src/components/like-button.story.tsx`, `e2e/components/like-button.spec.ts`, and `e2e/home.spec.ts` (a screen
+  capture of `/`, deterministic unlike the book list the Server Action spec mutates).
+
+`playwright/` is excluded from ESLint/Prettier (`reference/config-templates.md`'s lint templates) and type-checked
+by `tsc --noEmit` through the default `**/*.tsx` include (the gallery's `/// <reference types="vite/client" />`
+covers `import.meta.glob`). The sample book list stays a small server-rendered list: it is bounded seed data, so the
+contract's server pagination isn't needed there. Verified: `CI=1 npm run test:e2e` writes
+`component/LikeButton/default--{ltr,rtl}--{light,dark}.png` and `screen/Home/default--…` with axe clean in both
+themes.
+
 Append Playwright's output to `.gitignore` if missing (`/test-results/`, `/playwright-report/`, `/blob-report/`,
-`/playwright/.cache/`), plus `/docs/api/` (TypeDoc) and `.integration-test.lock/` (the lock
+`/playwright/.cache/`), `.ui-screenshots/` (with the comment `# UI test screenshots, regenerated on every UI test
+run`), plus `/docs/api/` (TypeDoc) and `.integration-test.lock/` (the lock
 `iru-nextjs-code-one-task-group` takes before `next build`/Playwright). `iru-setup-typescript-gitignore` maintains
 the full file when the orchestrator runs it.
 
@@ -501,7 +543,9 @@ source), and every contradiction Step 0 resolved (e.g. "`cache-components: yes` 
 
 Report each verification command and its result: lint, format check, typecheck, unit tests (count), coverage
 (lines/branches, `coverage/lcov.info`), build with the route table, Playwright (count, or why it couldn't run —
-e.g. a missing browser build), TypeDoc, Docker build/health/non-root (or "unverified: no Docker daemon").
+e.g. a missing browser build) with the screenshot count under `.ui-screenshots/` and any accessibility violation
+rule ids, TypeDoc, Docker build/health/non-root (or "unverified: no Docker daemon"). Also report `.ui-quality.yml`
+with its action (**created / updated / replaced / kept as is**) and the `accessibility` level written.
 
 Finish with **Warn explicitly**:
 

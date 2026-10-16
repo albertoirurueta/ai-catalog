@@ -1,6 +1,6 @@
 = Python Test
-:description: Runs a Python project's pytest suite through uv, Poetry, PDM, Pipenv or venv, splits fast from integration tests, and reports a compact JUnit summary.
-:keywords: iru-python-test, claude code skill, python, pytest, pytest-django, fastapi, django, junit, testcontainers, run tests
+:description: Runs a Python project's pytest suite via uv, Poetry, PDM, Pipenv or venv, splits fast, integration and Django ui tests, and reports a compact JUnit summary.
+:keywords: iru-python-test, claude code skill, python, pytest, pytest-django, fastapi, django, junit, testcontainers, playwright, ui screenshots
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -9,6 +9,8 @@ Run a Python project's pytest suite through whichever environment runner it actu
 == Purpose
 
 Python projects differ in how they are run: `uv run --frozen`, `poetry run`, `pdm run`, `pipenv run`, a project `.venv`, or a bare interpreter. `iru-python-test` detects the runner, confirms pytest is really installed, reads the pytest configuration (markers, `addopts`, async mode, `DJANGO_SETTINGS_MODULE`) and detects plugins (pytest-django, anyio, pytest-asyncio, xdist, testcontainers). It then separates fast, container-free tests from integration tests that need Docker or a real database, runs exactly the requested selection, and reports counts and failures. A selector that matched nothing, a bad invocation, an unwired runner and an unavailable Docker daemon are each reported plainly, never as a clean run or as "0 tests".
+
+For a Django project with pytest-django and pytest-playwright it also supports a `ui` selection (tests marked `ui`): it probes for an installed browser, runs the live-server UI tests behind the same lock, then collects and validates the `.ui-screenshots/` captures (states × left-to-right/right-to-left × light/dark) and summarizes accessibility (axe) results at the level set in `.ui-quality.yml`. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 
 == Purpose group
 
@@ -30,7 +32,7 @@ xref:index.adoc#group-python[Python Development Tooling]
 
 |`selector`
 |No
-|Any combination of a path, a node id (`tests/test_x.py::TestClass::test_name`), `-k "<expression>"`, and one leading keyword: `fast`, `integration`, or `all` (`unit` is a synonym of `fast`).
+|Any combination of a path, a node id (`tests/test_x.py::TestClass::test_name`), `-k "<expression>"`, and one leading keyword: `fast`, `integration`, `all`, or `ui` (`unit` is a synonym of `fast`). `ui` is valid only for a Django project with pytest-django and pytest-playwright and a declared `ui` marker, is never part of `all`, and a path, node id or `-k` makes it a scoped UI run.
 |`fast` — the container-free selection of the whole suite.
 
 |`lock: held`
@@ -69,6 +71,7 @@ Fast versus integration is decided from an `integration` marker declared in the 
 == Outputs
 
 * A plain-text summary in the conversation: the runner and selection used, total/passed/failed/error/skipped counts parsed from a JUnit XML log (`build/test-results/pytest.xml`, or `pytest-integration.xml` for the integration selection), and for each failure the `classname::name` with the first line of its message. Errors (fixtures, collection failures) are counted separately from assertion failures.
+* For `ui`: the full-vs-scoped run, the screenshot count per kind in `.ui-screenshots/` (with malformed names and captures moved in from pytest-playwright's output directory), failure screenshots left in place, and the accessibility level applied with violation count and rule ids (never raw axe JSON); the JUnit log is `build/test-results/pytest-ui.xml`. A missing Playwright browser is reported as unverified (never installed by this skill), and `ui` on FastAPI or a plain package is reported as "no `ui` selection in this project".
 * For `all`, the fast and integration halves are reported separately, together with whether the lock was acquired, waited for, or held by the caller.
 * An integration stage that could not run is reported as unverified (Docker unavailable, blocked by a concurrent run, database unreachable), never as passed or as failed tests.
 * Exit code 5 (no tests collected) is reported as "selector matched nothing" and exit code 4 as a bad invocation. Wiring problems (pytest not installed, pytest-django missing, no async plugin) are named as such.
@@ -85,12 +88,13 @@ flowchart TD
     D -- no --> E["Stop: report no test\nrunner wired"]
     D -- yes --> F["Step 2: read pytest config\nand detect plugins"]
     F --> G["Step 3: classify fast vs\nintegration and build command"]
-    G --> H{"Container-backed\nselection?"}
+    G --> H{"Container-backed or ui\nselection?"}
     H -- no --> J["Step 5: run pytest with\n--junitxml and read exit code"]
-    H -- yes --> I["Step 4: check Docker and\nacquire .integration-test.lock"]
+    H -- yes --> I["Step 4: check Docker (ui: probe browser)\nand acquire .integration-test.lock"]
     I --> K{"Docker up and\nlock acquired?"}
     K -- no --> L["Report integration as\nunverified"]
     K -- yes --> J
+    J -.-> UIS["Step 5b, ui only: clear or count shots,\ncollect and validate screenshots,\nsummarize axe results"]
     J --> M["Parse JUnit XML:\ntotals and failures"]
     M --> N["Release the lock"]
     N --> O["Step 6: report counts,\nnothing-matched, failures,\nenvironment problems"]
@@ -106,7 +110,7 @@ None — `iru-python-test` is a leaf skill; it only runs pytest commands and rep
 === Invoked by
 
 * xref:skills/iru-fastapi-code-one-task-group.adoc[] — fast tests per bucket, the full fast suite, and the container-backed integration run (with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
-* xref:skills/iru-django-code-one-task-group.adoc[] — fast tests per bucket, the full fast suite, and the container-backed integration run (with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-django-code-one-task-group.adoc[] — fast tests per bucket, the full fast suite, the container-backed integration run and, for UI buckets, the `ui` selection (with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 Its selector syntax, runner detection and fast/integration split are also reused by xref:skills/iru-python-coverage.adoc[] and xref:skills/iru-python-code-quality.adoc[].
 

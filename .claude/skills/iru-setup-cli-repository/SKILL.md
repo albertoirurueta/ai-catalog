@@ -8,7 +8,8 @@ description: >-
   `--format text|json|jsonl` with a JSON error envelope, TTY/`NO_COLOR`-aware colour, no prompts without a terminal
   (`--no-input`/`--yes`), `--dry-run` for mutations, `completion`/`schema` commands and a CLI reference generated
   from the command tree. Collects `language` (`rust`/`go`/`swift`/`dotnet`), `ui` (`none`/`tui`; not offered for
-  Swift), `branching` (`gitflow`/`main-only`), the tool's identity (`bin-name`, `description`, license, developer
+  Swift), `accessibility` (`enforce`/`report`/`off` — only with `ui: tui`: the level of the terminal UI's asserted
+  accessibility checks, written by the scaffold to `.ui-quality.yml`), `branching` (`gitflow`/`main-only`), the tool's identity (`bin-name`, `description`, license, developer
   name/email/organization URL, `owner`) and the shared pipeline parameters (integration branch `develop`, stable
   branch `main`, `open-source`, repository `visibility` (detected via `gh repo view` or asked), `ci`, `cross-os-ci`
   (when the ~10×-cost macOS and ~1.7×-cost Windows test legs run: `all`/`stable`), `ci-tests`, `pages`,
@@ -22,7 +23,7 @@ description: >-
   `flavor: cli`, or `iru-setup-dotnet-gitignore`) → `iru-setup-cli-github-workflows` → `iru-setup-changelog` →
   `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is asked twice — skipping the
   workflows step entirely (security block included) when `ci: no`. Invoke as `/iru-setup-cli-repository`,
-  optionally with `args` (`key: value` lines) to pre-resolve `language`, `ui`, `branching`, `mode`
+  optionally with `args` (`key: value` lines) to pre-resolve `language`, `ui`, `accessibility`, `branching`, `mode`
   (`new`/`existing`), `open-source`, `visibility`, `ci`, `cross-os-ci`, `ci-tests`, `pages`, `distribution`,
   `channels`, `homebrew-tap`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only when supplied),
   `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `integration-branch`, `stable-branch`, and
@@ -96,7 +97,8 @@ bin-name: logsift
 
 Recognized keys:
 
-- **Shape and mode**: `language` (`rust`/`go`/`swift`/`dotnet`), `ui` (`none`/`tui`), `branching`
+- **Shape and mode**: `language` (`rust`/`go`/`swift`/`dotnet`), `ui` (`none`/`tui`), `accessibility`
+  (`enforce`/`report`/`off` — meaningful only with `ui: tui`; ignored and named in the report otherwise), `branching`
   (`gitflow`/`main-only`), `mode` (`new`/`existing`).
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci`
   (`yes`/`no`), `cross-os-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing`
@@ -151,6 +153,13 @@ Unless `ui` was supplied via `args`, resolve it:
     (Ratatui / Bubble Tea / .NET). It only starts on a TTY; every function it offers stays available as a
     non-interactive command with `--json`."
 
+With `ui: tui`, unless `accessibility` was supplied via `args` (or an existing `.ui-quality.yml` already sets it —
+confirm that value instead), ask it once with `AskUserQuestion`: "Automated accessibility checks in UI tests?" —
+**Enforce (Recommended)** ("violations fail the UI tests") / **Report only** ("listed in the test report, never
+failing") / **Off** ("not run; the coding defaults still apply"). Say that for a terminal UI these are the asserted
+checks the UI tests run — the selection visible without colour, the key help on screen, every action on a key — since
+no automated accessibility audit exists for terminals. With `ui: none` it is never asked or forwarded.
+
 Unless `branching` was supplied via `args`, resolve it with `AskUserQuestion` (two options):
 
 - **gitflow** (recommended, this catalog's house pattern) — an integration branch (`develop`) plus a stable branch
@@ -176,6 +185,7 @@ Right after resolving `mode`, print a short **Setup mode** statement:
   | Build manifest | Rust `Cargo.toml` + `Cargo.lock` (+ `rust-toolchain.toml`); Go `go.mod` + `go.sum`; Swift `Package.swift` + `Package.resolved`; .NET `*.slnx`/`*.sln`, `Directory.Build.props`, `Directory.Packages.props`, `global.json` |
   | Command tree + library unit | Rust `src/main.rs` + `src/lib.rs` (+ `src/cli.rs`, `src/commands/`); Go `cmd/<bin>/main.go` + `internal/cli/`; Swift `Sources/<Bin>/` + `Sources/<Bin>Kit/`; .NET `src/<Tool>/` + `src/<Tool>.Core/` |
   | Terminal UI | Rust `src/tui/`; Go `internal/tui/`; .NET the `browse` command |
+  | UI quality config (`ui: tui`) | root `.ui-quality.yml` (accessibility level, capture directions/themes) |
   | Tests | Rust `tests/`; Go `*_test.go` + `testdata/script/`; Swift `Tests/`; .NET `tests/<Tool>.Core.Tests`, `tests/<Tool>.Cli.Tests` |
   | Docs generator | Rust `xtask/`; Go `tools/gendocs/` (or `internal/tools/gendocs/`); Swift the `generate-manual` plugin; .NET the `schema`→AsciiDoc step |
   | Quality config | `rustfmt.toml`, `clippy.toml`, `deny.toml`, `[lints]`; `.golangci.yml`; `.swiftlint.yml`, `.swift-format`; `.editorconfig`, `stylecop.json` |
@@ -307,6 +317,7 @@ Format Steps 1–3's answers as `key: value` lines using **only** the keys the c
 |---|---|---|---|---|
 | `bin-name`, `description`, `owner`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `sonar` (+ the three detail keys when set), `distribution`, `mode`, `on-existing` (only if supplied via `args`) | ✓ | ✓ | ✓ | ✓ |
 | `ui` | ✓ | ✓ | — (never sent) | ✓ |
+| `accessibility` (only with `ui: tui`) | ✓ | ✓ | — (never sent) | ✓ |
 | `branching` (decides `0.1.0-dev` vs `0.1.0` as the starting version) | ✓ | — send `version: 0.1.0` for `main-only` instead | — | ✓ |
 | `channels` (only with `distribution: store`) | — | ✓ (+ `homebrew-tap`, `scoop-bucket` when set) | — | ✓ |
 | language-specific names (only if supplied) | `crate-name`, `msrv`, `repository-url` | `module-path`, `go-version` | `package-name`, `swift-version`, `platforms` | `tool-name`, `package-id` |
@@ -388,7 +399,7 @@ Agent({
   description: "Run iru-setup-cli-github-workflows",
   subagent_type: "iru-isolated-skill-executor",
   prompt: "Invoke Skill({skill: \"iru-setup-cli-github-workflows\", args: \"language: <language>\\n
-    bin-name: <bin-name>\\nbranching: <branching>\\nintegration-branch: <integration-branch, gitflow only>\\n
+    bin-name: <bin-name>\\nui: <ui>\\nbranching: <branching>\\nintegration-branch: <integration-branch, gitflow only>\\n
     stable-branch: <stable-branch>\\ncross-os-ci: <cross-os-ci>\\nci-tests: <ci-tests>\\n
     open-source: <open-source>\\nvisibility: <visibility>\\npages: <pages>\\ndistribution: <distribution>\\n
     channels: <channels, only with store>\\nhomebrew-tap: <homebrew-tap, only with the homebrew channel>\\n
@@ -398,7 +409,8 @@ Agent({
     sync.yml + sync_versions.py, security.yml, .github/dependabot.yml) the action taken (created / updated /
     replaced / kept as is, with any mismatch listed for a kept file, or Stop); the release targets and channels it
     wired; when the cross-OS legs run; whether docs go to GitHub Pages or a workflow artifact; any open gap it
-    flagged; and the full required-secrets/settings table it produced.",
+    flagged; whether the `.ui-screenshots/` upload was wired (`ui: tui`); and the full required-secrets/settings
+    table it produced.",
   run_in_background: false
 })
 ```
@@ -430,7 +442,7 @@ its usage section shows a human example, a `--json` example piped to `jq`, and t
 
 Summarize all six delegated skills together: repeat the **Setup mode**, the resolved `language`, `ui`, `branching`
 and `mode`, the tool identity and license, and the pipeline parameters actually applied. Then a per-component table —
-build manifest, command tree + library unit, terminal UI, tests, docs generator, quality config, release config,
+build manifest, command tree + library unit, terminal UI, `.ui-quality.yml` (`ui: tui` only), tests, docs generator, quality config, release config,
 Sonar config, the Antora site (and whether the generated CLI reference page is in its nav), `.gitignore`, each
 workflow file + `sync_versions.py`, `.github/dependabot.yml`, `CHANGELOG.md`, `README.md` — with the action taken for
 each: **created / updated / replaced / kept as is / skipped (ci: no)** (or not reached, after a Stop), and for
@@ -438,7 +450,10 @@ anything kept as is, the mismatches its sub-skill listed.
 
 State explicitly what was wired or deliberately omitted, and why:
 
-- **`language`** and **`ui`** — and, for Swift, that no terminal UI was offered and why.
+- **`language`** and **`ui`** — and, for Swift, that no terminal UI was offered and why. With `ui: tui`, the
+  **`accessibility`** level written to `.ui-quality.yml`, that the TUI's UI tests leave text captures in
+  `.ui-screenshots/` (gitignored; uploaded by CI as a 7-day artifact), and that the accessibility checks are asserted
+  terminal checks, not an automated audit.
 - **`open-source`** / **`visibility`** (and whether visibility came from `args`, `gh repo view`, or a question).
 - **`ci`**: with `no`, no workflows/`security.yml`/Dependabot were generated.
 - **`cross-os-ci`** / **`ci-tests`**: when the macOS/Windows legs run, restating the runner multipliers on private

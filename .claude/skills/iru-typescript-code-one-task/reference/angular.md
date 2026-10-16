@@ -25,7 +25,14 @@ Conventions specific to an Angular (standalone, `iru-setup-angular-web`) project
   ```
 
 - One component/directive/pipe per file, file named `<name>.component.ts` / `.directive.ts` / `.pipe.ts`,
-  matching Angular's own generator convention.
+  matching Angular's own generator convention (Angular 20+ generators drop the suffix — `order-summary.ts` with
+  class `OrderSummary`; follow whichever the project uses).
+- **Presentational vs. screen** (UI contract §3–§4): presentational components take their UI state through
+  `input()`s and emit intent-named `output()`s (`open`, `retry`) with typed payloads; routed screens inject services
+  and pass signals down. Compose with `<ng-content>` slots, never by extending another component. Long or
+  data-driven lists use the CDK virtual scroll viewport (`*cdkVirtualFor` + `trackBy`); `@for (…; track item.id)`
+  only for short, bounded lists. See `ui-implementation.md` (Angular section) for the list, stories, the component
+  gallery and the screenshot/accessibility tests.
 
 ## Signals over `@Input`/`@Output` decorators and manual subscriptions
 
@@ -112,6 +119,9 @@ Conventions specific to an Angular (standalone, `iru-setup-angular-web`) project
   assume Jasmine/Karma matchers unless the project's own tests already use them.
 - Prefer testing a component through its template/DOM (`fixture.nativeElement.querySelector(...)`,
   `fixture.debugElement.query(By.css(...))`) over reaching into its class internals directly.
+- `TestBed` tests run in a DOM emulator: they prove behaviour, never produce screenshots. The visual states,
+  right-to-left × light/dark captures and axe checks are Playwright component tests against the gallery
+  (`ui-implementation.md`).
 
 ## RxJS, where the project still uses it
 

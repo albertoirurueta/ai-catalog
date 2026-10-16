@@ -107,6 +107,11 @@ public repositories without asking; for private/internal, `no` is recommended be
 the site would be public.
 |`yes` if public, else asked
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` -- UI flavors only (`react`, `nextjs`, `angular`, `react-native`, `ionic`; ignored with a note for `library`/`nestjs`): the automated accessibility level of the UI tests, written by the scaffold to `.ui-quality.yml`. Asked once in Step 4 (regardless of `ci`) with Enforce recommended and forwarded to the UI scaffolds. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
+|Asked for UI flavors
+
 |`publish`
 |No
 |Library only: publish to the public npm registry.
@@ -163,7 +168,7 @@ Also accepted: `distribution`'s and `sonar`'s detail keys as listed above, and `
 
 == Outputs
 
-* A "Setup mode" announcement (from scratch vs updating an existing repository) with a per-component inventory.
+* A "Setup mode" announcement (from scratch vs updating an existing repository) with a per-component inventory (for UI flavors including `.ui-quality.yml`).
 * The flavor's own scaffold output — `package.json` and toolchain files (via `iru-setup-typescript-library`,
   `iru-setup-react-web`, `iru-setup-nextjs-web`, `iru-setup-angular-web`, `iru-setup-nestjs-app`,
   `iru-setup-react-native-app`, or `iru-setup-ionic-app`). When files
@@ -195,7 +200,7 @@ flowchart TD
     C -- flavor set --> C2["Announce setup mode:\nfrom scratch, or updating with\ncomponent inventory"]
     C2 --> D["Step 2: Collect project identity\n(skipped when mode existing and\npackage.json present)"]
     D --> E["Step 3: Collect flavor-specific inputs\n(directory, storybook, app-slug,\napp-id, native-builds for expo, nestjs orm, nextjs output/e2e)"]
-    E --> F["Step 4: Collect shared pipeline params\n(open-source, visibility, ci, publish/distribution,\nsonar, ci-tests, pages, branches, node, package manager)"]
+    E --> F["Step 4: Collect shared pipeline params\n(open-source, visibility, ci, publish/distribution,\nsonar, ci-tests, pages, accessibility for UI flavors,\nbranches, node, package manager)"]
     F --> I["Step 5: Run flavor's scaffold skill\n(via sub-agent; it asks\nUpdate / Keep / Replace per file)"]
     I -- user chose stop --> J[Stop entire pipeline; report]
     I -- ok or kept --> K["Step 6: Run setup-antora\n(via sub-agent)"]

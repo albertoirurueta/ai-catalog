@@ -67,6 +67,11 @@ public sealed class MainController : IDisposable
 }
 ```
 
+Reusable pieces inside a form are `UserControl`s with plain inputs (`Items`, `State`) and intent-named
+`EventHandler<TEventArgs>` events; the form forwards those events to its view-interface events and the controller
+pushes state back through the interface into the control (`ui-implementation.md`) — the controller owns the state,
+the control renders it.
+
 ## Rules
 
 - The controller never news up a form or shows a dialog: opening another screen or asking a question goes through a

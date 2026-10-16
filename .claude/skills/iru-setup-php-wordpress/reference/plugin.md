@@ -18,6 +18,7 @@ The sample is deliberately small but real — each class demonstrates one WordPr
 | `src/Admin/SettingsPage.php` | settings screen + `admin-post.php` handler: nonce **and** capability, `wp_unslash()` + sanitize, `wp_safe_redirect()` + `exit` |
 | `src/Rest/StatusController.php` | `register_rest_route()` on `rest_api_init` with an explicit `permission_callback` |
 | `uninstall.php` | data removal only on uninstall, guarded by `WP_UNINSTALL_PLUGIN` |
+| `tests/e2e/specs/ContentNotice.spec.ts` | a browser UI test per the catalog's UI contract: states × directions × themes captured, axe check |
 
 Rename `ContentNotice`/`SettingsPage`/`StatusController` freely once real features replace them — they exist so
 every gate has something concrete to pass against on day one.
@@ -1006,6 +1007,99 @@ The bootstrap requires the Composer autoloader first (that loads `yoast/phpunit-
 test bootstrap insists on), then loads the plugin on `muplugins_loaded`. It is excluded from PHPStan (it reads
 `WP_TESTS_DIR` at runtime); the tests themselves are analysed against `php-stubs/wordpress-tests-stubs`.
 
+## Browser UI test (`tests/e2e/specs/`, Playwright against the wp-env tests instance)
+
+`.ui-quality.yml`, `playwright.config.ts`, the helper `tests/e2e/support/ui-screenshots.ts` and the RTL mu-plugin
+come from `tooling.md` "Browser UI tests". The sample component is `ContentNotice` (Id = its class name): the notice
+`src/Frontend/ContentNotice.php` appends below single posts. The plugin has no collection to virtualize; when one is
+added, render it server-side paginated (`posts_per_page` from a setting or 10–20, `paginate_links()`, or a REST
+"load more"), never `posts_per_page => -1`.
+
+### `tests/e2e/specs/ContentNotice.spec.ts`
+
+```ts
+/**
+ * Component UI test of ContentNotice (src/Frontend/ContentNotice.php): the settings notice appended below a
+ * single post. Behaviour is asserted once; every state is captured across `.ui-quality.yml` directions × themes.
+ */
+import { expect, test } from '@wordpress/e2e-test-utils-playwright';
+import {
+	applyDirectionAndTheme,
+	captureUiState,
+	checkAccessibility,
+	expectDirection,
+	uiQuality,
+} from '../support/ui-screenshots';
+
+/** Visual states and their fixture notice text (long-content mixes Arabic and Latin script). */
+const STATES: Record< string, string > = {
+	default: 'Return books within 14 days.',
+	'long-content':
+		'يرجى إعادة الكتب خلال أربعة عشر يومًا — please return every borrowed book within fourteen days; a late fee applies to each additional day.',
+};
+
+test.describe( 'ContentNotice', () => {
+	let postUrl: string;
+
+	test.beforeAll( async ( { requestUtils } ) => {
+		const post = await requestUtils.createPost( {
+			title: 'UI test post',
+			content: '<!-- wp:paragraph --><p>Body</p><!-- /wp:paragraph -->',
+			status: 'publish',
+			date_gmt: '2026-01-15T10:00:00',
+		} );
+		postUrl = post.link;
+	} );
+
+	test.afterAll( async ( { requestUtils } ) => {
+		await requestUtils.deleteAllPosts();
+	} );
+
+	for ( const [ state, notice ] of Object.entries( STATES ) ) {
+		test( `renders the ${ state } state`, async ( { admin, page }, testInfo ) => {
+			await admin.visitAdminPage( 'options-general.php', 'page=<slug>' );
+			await page.getByLabel( 'Notice shown below single posts' ).fill( notice );
+			await page.getByRole( 'button', { name: 'Save Changes' } ).click();
+			await expect( page.getByLabel( 'Notice shown below single posts' ) ).toHaveValue( notice );
+
+			const { directions, themes } = uiQuality();
+			for ( const direction of directions ) {
+				for ( const theme of themes ) {
+					await applyDirectionAndTheme( page, direction, theme );
+					await page.goto( postUrl );
+					const component = page.locator( '.<slug>-notice' );
+					await expect( component ).toHaveText( notice );
+					await expectDirection( page, direction );
+					await captureUiState( page, {
+						kind: 'component',
+						id: 'ContentNotice',
+						state,
+						direction,
+						theme,
+						locator: component,
+					} );
+					if ( direction === directions[ 0 ] && theme === themes[ 0 ] ) {
+						await checkAccessibility( page, testInfo, { include: '.<slug>-notice' } );
+					}
+				}
+			}
+		} );
+	}
+} );
+```
+
+- The notice is set through the real settings screen (`admin` fixture, logged in by wp-scripts' global setup) and the
+  post is created over the REST API (`requestUtils.createPost`, fixed `date_gmt` for deterministic output);
+  `requestUtils.deleteAllPosts()` only ever runs against the tests instance.
+- It writes `.ui-screenshots/component/ContentNotice/{default,long-content}--{ltr,rtl}--{light,dark}.png` (8 files
+  with the default `.ui-quality.yml`); the element screenshot keeps the admin bar and the active theme's chrome out
+  of the component image, and the axe check is scoped to the component for the same reason.
+- Dark captures follow the **active theme**: wp-env's default theme has no `prefers-color-scheme: dark` styles, so
+  the plugin's dark images equal the light ones until the plugin or the site's theme adds dark styles — give the
+  plugin's own CSS a `@media (prefers-color-scheme: dark)` block when it styles front-end output.
+- Run: `npm run test:env:start` (or let the config start it), `npx playwright install chromium` once, then
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e`.
+
 ## Distribution files
 
 ### `readme.txt`
@@ -1079,6 +1173,11 @@ Initial release.
 /node_modules
 /tests
 /bin
+/artifacts
+/test-results
+/playwright-report
+/blob-report
+/.ui-screenshots
 .distignore
 .editorconfig
 .gitattributes
@@ -1088,10 +1187,12 @@ Initial release.
 .wp-env.override.json
 .wp-env.test.override.json
 .phpunit.result.cache
+.ui-quality.yml
 composer.json
 composer.lock
 package.json
 package-lock.json
+playwright.config.ts
 phpcs.xml.dist
 phpstan.neon.dist
 phpunit.xml.dist
@@ -1104,7 +1205,9 @@ README.md
 
 `.distignore` is read by `wp dist-archive` and by `rsync --exclude-from` in deploy actions (verified with
 `rsync -a --exclude-from=.distignore`: the copy kept the main file, `uninstall.php`, `src/`, `vendor/`, `languages/`,
-`readme.txt`, `build/` block assets, and dropped `build/logs/`, tests, and every config file). Only `/build/logs` is
+`readme.txt`, `build/` block assets, and dropped `build/logs/`, tests, and every config file). The browser UI tests add nothing to
+the zip: `tests/e2e/` (specs, helper, mu-plugin) is under `/tests`, and their config, output (`artifacts/`,
+`test-results/`, `.ui-screenshots/`) and `.ui-quality.yml` are listed explicitly. Only `/build/logs` is
 excluded, not `/build`, because `@wordpress/scripts` writes the shipped block assets to `build/`.
 
 ## Blocks (`blocks: yes` only)
@@ -1114,7 +1217,8 @@ When the plugin builds blocks (or other JS/CSS assets), add `@wordpress/scripts`
 `build/<block-name>/` with a `build/blocks-manifest.php`. Verified end to end: `npm run build`, `npm run lint:js`,
 `npm run lint:css`, the PHP gates, and an integration test asserting the block is registered.
 
-1. Add to `package.json` — scripts **before** the wp-env ones, the build tool to `devDependencies`, and the editor
+1. Add to `package.json` — scripts **before** the wp-env ones (`@wordpress/scripts` is already a `devDependency` for
+   the browser UI tests), and the editor
    packages the generated block imports to `dependencies` (they are WordPress-provided externals at runtime, but
    `wp-scripts lint-js` fails `import/no-unresolved`/`import/no-extraneous-dependencies` without them):
 
@@ -1125,7 +1229,6 @@ When the plugin builds blocks (or other JS/CSS assets), add `@wordpress/scripts`
    "lint:css": "wp-scripts lint-style \"blocks/**/*.scss\"",
    ```
 
-   `npm install --save-dev @wordpress/scripts@^<scripts-version>` and
    `npm install --save @wordpress/i18n @wordpress/block-editor @wordpress/blocks`.
 2. Generate the first block (the only interactive-free form; `--textdomain` keeps it on the plugin's text domain):
 
@@ -1215,5 +1318,56 @@ defined( 'ABSPATH' ) || exit;
 	}
    ```
 
-5. `blocks/` stays in the release zip (WordPress.org requires the human-readable source of built assets) and in
+5. Browser UI test — add `tests/e2e/specs/<BlockName>.spec.ts`, where `<BlockName>` (the component Id) is the
+   `block.json` `name`'s block part in PascalCase (`<slug>/loan-card` → `LoanCard`); the block is rendered on a
+   front-end post created over the REST API, so run `npm run build` before `npm run test:e2e`:
+
+   ```ts
+   import { expect, test } from '@wordpress/e2e-test-utils-playwright';
+   import {
+   	applyDirectionAndTheme,
+   	captureUiState,
+   	checkAccessibility,
+   	expectDirection,
+   	uiQuality,
+   } from '../support/ui-screenshots';
+
+   test.describe( '<BlockName>', () => {
+   	let postUrl: string;
+
+   	test.beforeAll( async ( { requestUtils } ) => {
+   		const post = await requestUtils.createPost( {
+   			title: 'Block UI test',
+   			content: '<!-- wp:<slug>/<block-name> /-->',
+   			status: 'publish',
+   			date_gmt: '2026-01-15T10:00:00',
+   		} );
+   		postUrl = post.link;
+   	} );
+
+   	test.afterAll( async ( { requestUtils } ) => {
+   		await requestUtils.deleteAllPosts();
+   	} );
+
+   	test( 'renders the default state', async ( { page }, testInfo ) => {
+   		const { directions, themes } = uiQuality();
+   		for ( const direction of directions ) {
+   			for ( const theme of themes ) {
+   				await applyDirectionAndTheme( page, direction, theme );
+   				await page.goto( postUrl );
+   				const block = page.locator( '.wp-block-<slug>-<block-name>' );
+   				await expect( block ).toBeVisible();
+   				await expectDirection( page, direction );
+   				await captureUiState( page, { kind: 'component', id: '<BlockName>', state: 'default', direction, theme, locator: block } );
+   				if ( direction === directions[ 0 ] && theme === themes[ 0 ] ) {
+   					await checkAccessibility( page, testInfo, { include: '.wp-block-<slug>-<block-name>' } );
+   				}
+   			}
+   		}
+   	} );
+   } );
+   ```
+
+   Add a state (`long-content`, `empty`, …) per attribute combination the block renders differently.
+6. `blocks/` stays in the release zip (WordPress.org requires the human-readable source of built assets) and in
    PHPCS; it's excluded from PHPStan (`tooling.md`). CI must run `npm ci && npm run build` before packaging.

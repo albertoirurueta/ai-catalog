@@ -29,7 +29,9 @@ XcodeGen's `Core` package scheme ignored): a selector under `Targets/<Platform>/
 `Packages/Core`-only selector runs the first platform scheme (iOS, macOS, watchOS, visionOS order), and the whole
 suite runs every platform scheme, reported per scheme. Simulator destinations are resolved to the newest installed
 runtime the selected Xcode supports and **always pinned with `OS=`**, because device names repeat across runtimes and
-`xcodebuild` otherwise silently picks one. A platform with no installed runtime — typically visionOS — is
+`xcodebuild` otherwise silently picks one.
+
+A leading `ui` word in the selector asks for a **UI run** under the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): the component-capture and XCUITest screen/flow tests, their screenshots under `.ui-screenshots/` and their accessibility audits, reading the level from `.ui-quality.yml`. A platform with no installed runtime — typically visionOS — is
 compile-checked against `generic/platform=visionOS Simulator` and reported "unverified (no visionOS simulator runtime
 installed)", never as passed and never downloaded (verified on Xcode 27.1 for the iOS, UIKit iOS, watchOS and
 visionOS scaffold schemes).
@@ -82,6 +84,15 @@ runtime, always with `OS=`; `platform=macOS` when the target platform can't be d
 |No
 |`key: value` — path to a `.xcworkspace`/`.xcodeproj` to disambiguate when more than one exists (app path only).
 |None — `xcodebuild -list` auto-resolves the sole project/workspace when only one exists.
+|`ui` (selector prefix)
+|No
+|A leading `ui` word (`ui`, `ui OrderRowTests`, `ui MyAppUITests-iOS/OrdersScreenUITests`) selects a UI run; whatever follows is an ordinary selector. A bare `ui` is a full run that clears `.ui-screenshots/` first; a scoped one keeps it.
+|Not a UI run
+
+|`lock`
+|No
+|`key: value` — `held` when the caller (`iru-swift-code-one-task-group`) already holds `.simulator-test.lock`, so a `ui` run doesn't take it.
+|The skill takes the lock itself for an app UI run
 |===
 
 These `key: value` overrides are only honored when the calling skill/prompt passes them explicitly; otherwise
@@ -165,6 +176,7 @@ this skill infers everything itself in Steps 1–3.
   path, also the `.xcresult` bundle path for full detail instead of dumping it.
 * **"Selector matched no tests"** reported explicitly and distinctly from a clean pass, for the zero-match case
   both runners otherwise hide behind exit code 0.
+* UI run: `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>[--<variant>].png` (via `UI_SCREENSHOTS_DIR`, with captures recovered from the `.xcresult` through `xcresulttool export attachments` when the test process couldn't write them), and a summary with the screenshot count per `component`/`screen`/`flow`, malformed names, accessibility issues (count and rule ids, and whether they failed the run) at the `.ui-quality.yml` level, whether the directory was cleared or kept, and every scheme reported unverified (no simulator runtime, no desktop session or permission) with its reason.
 * No source or test code is ever modified.
 
 == Execution flow
@@ -195,6 +207,8 @@ flowchart TD
     R -- yes --> S
     Q -- no --> T["Step 6: report all passed, briefly"]
     R -- no --> T
+    A -. "ui selector" .-> U["UI run: clear or keep .ui-screenshots/,\nsimulator lock, run, recover captures from .xcresult,\nvalidate names, collect accessibility issues"]
+    U --> T
 ....
 
 == Dependencies
@@ -206,10 +220,10 @@ their output, it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-swift-code-one-task-group.adoc[] — Step 3.4, once per group validation pass, via the
+* xref:skills/iru-swift-code-one-task-group.adoc[] — Step 3.4 (and the `ui` run of Step 3.7, with `lock: held`), once per group validation pass, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, alongside `iru-check-license` (3.1), `iru-swift-docc`
   (3.2), and `iru-swift-coverage` (3.5).
-* xref:skills/iru-swift-generate-all-tests.adoc[] — Step 7, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`]
+* xref:skills/iru-swift-generate-all-tests.adoc[] — Step 5b (full `ui` run) and Step 7, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`]
   agent, to run the newly generated tests after `iru-swift-coverage` measures the baseline.
 
 === Related agents

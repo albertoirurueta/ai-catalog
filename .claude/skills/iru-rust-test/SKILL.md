@@ -1,9 +1,9 @@
 ---
 name: iru-rust-test
 description: >-
-  Run a Rust project's tests — a single crate or a Cargo workspace (a command-line tool with `src/lib.rs` + a thin `src/main.rs`, an `xtask` member, a library) — with cargo-nextest when it is installed (JUnit XML through an injected `iru-rust-test` nextest profile, or the project's own profile when it already configures `junit`) and `cargo test` otherwise (libtest console output parsed), always `--locked`, plus doctests through `cargo test --doc` (nextest can't run them; bin-only crates have none). Parses the result into a compact pass/fail/skip summary with one line per failure (the assertion line and its `file:line`), reports a filter that matched nothing as such (nextest exit `4`, or `cargo test`'s all-zero counts) rather than "0 passed", and tells build failures apart from test failures. `#[ignore = "…"]` tests — this catalog's marker for container/network-backed tests — are excluded by default and run only with `ignored: include|only`, serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path; `lock: held` when the caller already holds it); Docker unavailable makes that selection "unverified", never failed tests. Invoke as `/iru-rust-test` for the whole workspace, or `/iru-rust-test <filter> [<filter> ...]` (test-name substrings, or a nextest filterset when prefixed `expr:`, e.g. `expr:test(/greet/) & package(democli)`), with optional `key: value` lines — `package: <name>`, `target: lib|bins|tests|doc|<integration-test-file-stem>`, `features: all|<comma list>`, `ignored: exclude|include|only`, `lock: held`. Report-only: never fixes a failing test or modifies source/test code. Use whenever the user (or `iru-rust-code-one-task-group` via `iru-gate-runner`) wants to run, re-run, or narrow down Rust tests instead of reading raw `cargo test` output.
+  Run a Rust project's tests — a single crate or a Cargo workspace (a command-line tool with `src/lib.rs` + a thin `src/main.rs`, an `xtask` member, a library) — with cargo-nextest when it is installed (JUnit XML through an injected `iru-rust-test` nextest profile, or the project's own profile when it already configures `junit`) and `cargo test` otherwise (libtest console output parsed), always `--locked`, plus doctests through `cargo test --doc` (nextest can't run them; bin-only crates have none). Parses the result into a compact pass/fail/skip summary with one line per failure (the assertion line and its `file:line`), reports a filter that matched nothing as such (nextest exit `4`, or `cargo test`'s all-zero counts) rather than "0 passed", and tells build failures apart from test failures. `#[ignore = "…"]` tests — this catalog's marker for container/network-backed tests — are excluded by default and run only with `ignored: include|only`, serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path; `lock: held` when the caller already holds it); Docker unavailable makes that selection "unverified", never failed tests. Invoke as `/iru-rust-test` for the whole workspace, or `/iru-rust-test <filter> [<filter> ...]` (test-name substrings, or a nextest filterset when prefixed `expr:`, e.g. `expr:test(/greet/) & package(democli)`), with optional `key: value` lines — `package: <name>`, `target: lib|bins|tests|doc|<integration-test-file-stem>`, `features: all|<comma list>`, `ignored: exclude|include|only`, `lock: held`, `ui: auto|yes|no`. When the workspace has a Ratatui terminal UI (or `ui: yes`), a run also handles the UI contract's text captures: `UI_SCREENSHOTS_DIR` set for the tests (default `<repo root>/.ui-screenshots`), the directory cleared at the start of a full (unfiltered) run only, every capture name validated against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].txt|png`, and a report of captures per kind, malformed names, accessibility violations by rule id and the `.ui-quality.yml` level applied. Report-only: never fixes a failing test or modifies source/test code. Use whenever the user (or `iru-rust-code-one-task-group` via `iru-gate-runner`) wants to run, re-run, or narrow down Rust tests instead of reading raw `cargo test` output.
 model: haiku
-allowed-tools: Read Write Bash(cargo *) Bash(CARGO_TERM_COLOR=* *) Bash(python3 *) Bash(rustup *) Bash(docker info *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(date *) Bash(mkdir -p *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(rm -f target/nextest/*) Bash(rm -f target/iru-rust-test/*)
+allowed-tools: Read Write Bash(cargo *) Bash(CARGO_TERM_COLOR=* *) Bash(UI_SCREENSHOTS_DIR=* *) Bash(python3 *) Bash(rustup *) Bash(docker info *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(date *) Bash(mkdir -p *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(rm -f target/nextest/*) Bash(rm -f target/iru-rust-test/*)
 ---
 
 # Rust Test
@@ -32,6 +32,8 @@ The argument string is zero or more positional filters plus optional `key: value
   container/network-backed tests (testcontainers-rs, a real database); any selection that runs them goes through
   Step 3.
 - **`lock: held`** — the caller already holds `.integration-test.lock`; don't acquire or release it here.
+- **`ui: auto|yes|no`** — default `auto`: Step 2a applies when any workspace member depends on `ratatui` (`cargo
+  metadata` without `--no-deps`, or `grep -n '^ratatui' */Cargo.toml Cargo.toml`); `yes` forces it, `no` skips it.
 
 ## Step 1 — Survey the workspace and pick the runner
 
@@ -97,6 +99,68 @@ Filters go **after** `--` (libtest accepts several, OR-ed — verified). Without
 test` also runs the doctests in the same invocation; with them, it doesn't (Step 4 then runs them separately unless
 `target:` excluded them). libtest's JSON output (`-Z unstable-options --format json`) is nightly-only — it fails on
 stable with `the option Z is only accepted on the nightly compiler` (verified), so the console output is parsed.
+
+## Step 2a — Terminal-UI captures (UI contract)
+
+Applies per Step 0's `ui:`. A Ratatui project's UI tests are ordinary unit tests that write the rendered buffer as
+`.txt` through the crate's `src/tui/ui_screenshots.rs` helper (the coding skill's `reference/ui-implementation.md`);
+this gate only prepares the directory, runs them with the rest, and checks what they left. No lock — they need no
+terminal, container or device.
+
+1. **Directory**: `UI_SCREENSHOTS_DIR` from the environment when already set (an absolute path), else
+   `<repository root>/.ui-screenshots` (`git rev-parse --show-toplevel`). Prefix the Step 2/Step 4 commands with
+   `UI_SCREENSHOTS_DIR="<that absolute path>"` so every test binary resolves the same place.
+2. **Clear it only for a full run** — no positional filters, no `expr:`, no `package:`/`target:` narrowing:
+   `mkdir -p "<dir>" && find "<dir>" -mindepth 1 -delete`, so the directory holds exactly this run. A scoped run never
+   clears it (it adds to or overwrites the captures it re-renders).
+3. **Level**: read `accessibility:` from `.ui-quality.yml` at the repository root (`grep -E '^accessibility:'`);
+   missing file or key → `enforce`. Under `enforce` a violation fails its test (it shows up as a normal failure whose
+   message names the rule ids); under `report` the tests append `<target>\t<rule-id>: <message>` lines to
+   `<dir>/a11y-report.txt`; under `off` nothing is checked.
+4. **After the run**, validate and count with stdlib Python (script kept outside the repository, e.g.
+   `$TMPDIR/iru-rust-test/uicheck.py`, run as `python3 -I <script> "<dir>"`):
+
+   ```python
+   import collections
+   import os
+   import re
+   import sys
+
+   root = sys.argv[1]
+   name = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*--(?:ltr|rtl)--(?:light|dark|high-contrast|no-color)"
+                     r"(?:--[a-z0-9]+(?:-[a-z0-9]+)*)*\.(?:txt|png)$")
+   type_id = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
+   flow_id = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+   counts, bad = collections.Counter(), []
+   for dirpath, _, files in os.walk(root):
+       for f in files:
+           rel = os.path.relpath(os.path.join(dirpath, f), root)
+           parts = rel.split(os.sep)
+           if parts == ["a11y-report.txt"]:
+               continue
+           ok = (len(parts) == 3 and parts[0] in ("component", "screen", "flow")
+                 and (flow_id if parts[0] == "flow" else type_id).match(parts[1]) and name.match(parts[2]))
+           if ok:
+               counts[parts[0]] += 1
+           else:
+               bad.append(rel)
+   rules = collections.Counter()
+   report = os.path.join(root, "a11y-report.txt")
+   if os.path.exists(report):
+       with open(report, encoding="utf-8") as fh:
+           for line in fh:
+               rest = line.partition("\t")[2]
+               if rest.strip():
+                   rules[rest.split(":", 1)[0].strip()] += 1
+   print("captures " + " ".join(f"{k}={counts[k]}" for k in ("component", "screen", "flow")))
+   print(f"malformed={len(bad)} " + " ".join(bad[:20]))
+   print("a11y-report " + (" ".join(f"{k}={v}" for k, v in sorted(rules.items())) or "none"))
+   ```
+
+   Malformed names are reported (they break the documentation skills' copy step), never renamed here. A `.png` next
+   to a `.txt` is optional (VHS/`freeze` renders, never required); a missing PNG is not a finding. Terminal UIs have no
+   automated accessibility tool — say the checks are the asserted TUI checks (`tui-color-only`, `tui-help-line`,
+   `tui-keyboard`, `tui-no-color`), not an audit.
 
 ## Step 3 — Serialize container-backed selections behind the repository lock
 
@@ -248,6 +312,10 @@ JUnit file).
 - On failures, list each failing test (`<binary> <test path>`) with its first cause line — nothing more per failure.
 - For `ignored: include|only`: whether the lock was acquired, waited for, or held by the caller; an ignored selection
   that couldn't run is **unverified (<reason>)**.
+- **UI captures** (Step 2a, when it applied): the directory, whether it was cleared (full run) or kept (scoped run),
+  captures per kind (`component=… screen=… flow=…`), malformed names (count + the first few paths), accessibility
+  violations as counts per rule id (from failing tests under `enforce`, from `a11y-report.txt` under `report`) — never
+  the raw text — and the `.ui-quality.yml` level applied (`enforce` by default when the file is missing).
 - Do not fix failing tests, modify source/test code, update `Cargo.lock`, install nextest, or start containers unless
   the user asks for that as a next step.
 
@@ -276,6 +344,10 @@ docker"]` test, one doctest) plus an `xtask` member.
 - testcontainers-rs (`GenericImage` redis, blocking runner, `#[ignore]`): passed in ~2 s with Docker; with
   `DOCKER_HOST=unix:///nonexistent/docker.sock` it panicked with `Client(Init(SocketNotFoundError(...)))`; the lock's
   `mkdir` protocol is the one verified for `iru-python-test`.
+- Step 2a (UI captures, added for the UI contract): the validation script was run with Python 3 against a sample
+  tree (valid screen/flow captures counted, an upper-case state and a stray file reported as malformed, report-mode
+  rule ids counted); the cargo side — `UI_SCREENSHOTS_DIR` reaching the test binaries, the helper's captures — was not
+  run (no Rust toolchain on the authoring machine) and is unverified.
 - Not verified: Windows paths/`.exe` test binaries, nextest archive/partitioned runs, `cargo test` with
   `harness = false` targets (custom output isn't parseable — report their exit code only), and a project whose own
   `ci` profile sets `junit.store-success-output`.

@@ -1,9 +1,9 @@
 ---
 name: iru-go-test
 description: >-
-  Run a Go module's (or Go workspace's) tests — any Go project: a Cobra/Bubble Tea command-line tool, a library, or a service — with `go test -json` (race detector on by default when it can run, `-count=1` so cached results are never reported as a fresh run), aware of modules vs. `go.work` workspaces (`./...` doesn't cross module boundaries), vendored dependencies (`-mod=vendor` is automatic; inconsistent vendoring is reported, never papered over with `-mod=mod`), in-process testscript (`github.com/rogpeppe/go-internal/testscript`) end-to-end tests whose failures are reported by their `FAIL: <script>.txtar:<line>` line, and the fast-vs-integration split (container-backed tests behind the `integration` build tag, e.g. testcontainers-go). Parses the `go test -json` event stream with an embedded stdlib Python parser into a compact pass/fail/skip summary with one line per failing test (leaf subtests only), plus build failures (`[build failed]`/`[setup failed]`), package-level failures outside any test (timeouts, `TestMain`), and packages with no test files. Optionally writes a JUnit XML log through gotestsum (`--junitfile`) when it is installed. Invoke as `/iru-go-test` for `./...`, or `/iru-go-test <package patterns>` (e.g. `./internal/cli/... ./internal/greet`), with optional `key: value` lines — `run: <regex>`, `skip: <regex>`, `tags: <comma list>` (`integration` selects the container-backed tests), `race: yes|no` (default yes when cgo is available or on macOS), `junit: yes|no` (default no), and `lock: held` when the caller already holds the repository-wide `.integration-test.lock`. Container-backed runs are serialized behind that shared atomic-`mkdir` lock (owner file, stale after 60 minutes, released on every exit path); Docker unavailable makes them "unverified", never silently skipped or reported as failed tests. Reports "no test files" / "`-run` matched nothing" plainly instead of a misleading "0 tests". Report-only: never fixes a failing test or modifies source/test code. Use whenever the user (or `iru-go-code-one-task-group` via `iru-gate-runner`) wants to run, re-run, or narrow down Go tests instead of reading raw `go test` output.
+  Run a Go module's (or Go workspace's) tests — any Go project: a Cobra/Bubble Tea command-line tool, a library, or a service — with `go test -json` (race detector on by default when it can run, `-count=1` so cached results are never reported as a fresh run), aware of modules vs. `go.work` workspaces (`./...` doesn't cross module boundaries), vendored dependencies (`-mod=vendor` is automatic; inconsistent vendoring is reported, never papered over with `-mod=mod`), in-process testscript (`github.com/rogpeppe/go-internal/testscript`) end-to-end tests whose failures are reported by their `FAIL: <script>.txtar:<line>` line, and the fast-vs-integration split (container-backed tests behind the `integration` build tag, e.g. testcontainers-go). Parses the `go test -json` event stream with an embedded stdlib Python parser into a compact pass/fail/skip summary with one line per failing test (leaf subtests only), plus build failures (`[build failed]`/`[setup failed]`), package-level failures outside any test (timeouts, `TestMain`), and packages with no test files. Optionally writes a JUnit XML log through gotestsum (`--junitfile`) when it is installed. Invoke as `/iru-go-test` for `./...`, or `/iru-go-test <package patterns>` (e.g. `./internal/cli/... ./internal/greet`), with optional `key: value` lines — `run: <regex>`, `skip: <regex>`, `tags: <comma list>` (`integration` selects the container-backed tests), `race: yes|no` (default yes when cgo is available or on macOS), `junit: yes|no` (default no), `lock: held` when the caller already holds the repository-wide `.integration-test.lock`, and `ui: auto|yes|no`. When the module has a Bubble Tea terminal UI (or `ui: yes`), a run also handles the UI contract's text captures: `UI_SCREENSHOTS_DIR` set for the tests (default `<repo root>/.ui-screenshots`), the directory cleared at the start of a full (`./...`, unfiltered) run only, every capture name validated against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].txt|png`, and a report of captures per kind, malformed names, accessibility violations by rule id and the `.ui-quality.yml` level applied. Container-backed runs are serialized behind that shared atomic-`mkdir` lock (owner file, stale after 60 minutes, released on every exit path); Docker unavailable makes them "unverified", never silently skipped or reported as failed tests. Reports "no test files" / "`-run` matched nothing" plainly instead of a misleading "0 tests". Report-only: never fixes a failing test or modifies source/test code. Use whenever the user (or `iru-go-code-one-task-group` via `iru-gate-runner`) wants to run, re-run, or narrow down Go tests instead of reading raw `go test` output.
 model: haiku
-allowed-tools: Read Write Bash(go *) Bash(CGO_ENABLED=* go *) Bash(GOFLAGS=* go *) Bash(gotestsum *) Bash(python3 *) Bash(docker info *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(date *) Bash(mkdir -p build*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(rm -f build/test-results/*)
+allowed-tools: Read Write Bash(go *) Bash(CGO_ENABLED=* go *) Bash(GOFLAGS=* go *) Bash(UI_SCREENSHOTS_DIR=* go *) Bash(gotestsum *) Bash(UI_SCREENSHOTS_DIR=* gotestsum *) Bash(mkdir -p *) Bash(python3 *) Bash(docker info *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(date *) Bash(mkdir -p build*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(rm -f build/test-results/*)
 ---
 
 # Go Test
@@ -27,6 +27,8 @@ skill:
 - **`junit: yes|no`** — default `no`; `yes` writes `build/test-results/go-test.xml` through gotestsum (Step 4).
 - **`lock: held`** — the caller (e.g. `iru-go-code-one-task-group`) already holds `.integration-test.lock`; don't
   acquire or release it here (Step 5).
+- **`ui: auto|yes|no`** — default `auto`: Step 4a applies when `go.mod` requires `charm.land/bubbletea/v2` (or the v1
+  `github.com/charmbracelet/bubbletea`); `yes` forces it, `no` skips it.
 
 Everything combines: `./internal/store/...` + `tags: integration` + `run: TestUpsert` runs only matching integration
 tests in that tree.
@@ -99,6 +101,69 @@ go test -json -count=1 [-race] [-tags <tags>] [-run '<regex>'] [-skip '<regex>']
   The JSON file has the same events as `go test -json` (verified, gotestsum 1.13.0), so Step 6 is unchanged; its
   JUnit counts parent tests (`TestScripts`) as well as their subtests, so the totals differ slightly from Step 6's
   leaf count. gotestsum missing → say "JUnit not written: gotestsum not installed" (never `go install` it here).
+
+## Step 4a — Terminal-UI captures (UI contract)
+
+Applies per Step 0's `ui:`. A Bubble Tea project's UI tests are ordinary in-process tests that write the stripped view
+as `.txt` through the package's `ui_screenshots_test.go` helper (the coding skill's `reference/ui-implementation.md`);
+this gate only prepares the directory, runs them with the rest, and checks what they left. No lock — they need no
+terminal, container or device.
+
+1. **Directory**: `UI_SCREENSHOTS_DIR` from the environment when already set (an absolute path), else
+   `<repository root>/.ui-screenshots`. Prefix the Step 4 command (`go test` or `gotestsum`) with
+   `UI_SCREENSHOTS_DIR="<that absolute path>"` — every test binary runs in its own package directory, so the variable
+   is what makes them agree.
+2. **Clear it only for a full run** — the default `./...` (or every workspace module) with no `run:`/`skip:`:
+   `mkdir -p "<dir>" && find "<dir>" -mindepth 1 -delete`, so the directory holds exactly this run. A scoped run never
+   clears it.
+3. **Level**: read `accessibility:` from `.ui-quality.yml` at the repository root (`grep -E '^accessibility:'`);
+   missing file or key → `enforce`. Under `enforce` a violation fails its test (`t.Errorf` naming the rule ids);
+   under `report` the tests append `<target>\t<rule-id>: <message>` lines to `<dir>/a11y-report.txt`; under `off`
+   nothing is checked.
+4. **After the run**, validate and count with stdlib Python (script kept outside the repository, e.g.
+   `$TMPDIR/iru-go-test/uicheck.py`, run as `python3 -I <script> "<dir>"`):
+
+   ```python
+   import collections
+   import os
+   import re
+   import sys
+
+   root = sys.argv[1]
+   name = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*--(?:ltr|rtl)--(?:light|dark|high-contrast|no-color)"
+                     r"(?:--[a-z0-9]+(?:-[a-z0-9]+)*)*\.(?:txt|png)$")
+   type_id = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
+   flow_id = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+   counts, bad = collections.Counter(), []
+   for dirpath, _, files in os.walk(root):
+       for f in files:
+           rel = os.path.relpath(os.path.join(dirpath, f), root)
+           parts = rel.split(os.sep)
+           if parts == ["a11y-report.txt"]:
+               continue
+           ok = (len(parts) == 3 and parts[0] in ("component", "screen", "flow")
+                 and (flow_id if parts[0] == "flow" else type_id).match(parts[1]) and name.match(parts[2]))
+           if ok:
+               counts[parts[0]] += 1
+           else:
+               bad.append(rel)
+   rules = collections.Counter()
+   report = os.path.join(root, "a11y-report.txt")
+   if os.path.exists(report):
+       with open(report, encoding="utf-8") as fh:
+           for line in fh:
+               rest = line.partition("\t")[2]
+               if rest.strip():
+                   rules[rest.split(":", 1)[0].strip()] += 1
+   print("captures " + " ".join(f"{k}={counts[k]}" for k in ("component", "screen", "flow")))
+   print(f"malformed={len(bad)} " + " ".join(bad[:20]))
+   print("a11y-report " + (" ".join(f"{k}={v}" for k, v in sorted(rules.items())) or "none"))
+   ```
+
+   Malformed names are reported (they break the documentation skills' copy step), never renamed here. A `.png` next
+   to a `.txt` is optional (VHS/`freeze` renders, never required); a missing PNG is not a finding. Terminal UIs have no
+   automated accessibility tool — say the checks are the asserted TUI checks (`tui-color-only`, `tui-help-line`,
+   `tui-keyboard`), not an audit.
 
 ## Step 5 — Serialize container-backed runs behind the repository lock
 
@@ -248,6 +313,10 @@ otherwise delete the files after parsing (`rm -f build/test-results/go-test*`).
 - On failures, list each failing leaf test (`<package>.<Test/sub>`) with the first line of its message — nothing more
   per failure — then build failures and package-level failures separately; name wiring problems (inconsistent
   vendoring, missing `go.sum` entry, toolchain too old) as such.
+- **UI captures** (Step 4a, when it applied): the directory, whether it was cleared (full run) or kept (scoped run),
+  captures per kind (`component=… screen=… flow=…`), malformed names (count + the first few paths), accessibility
+  violations as counts per rule id (from failing tests under `enforce`, from `a11y-report.txt` under `report`) — never
+  the raw text — and the `.ui-quality.yml` level applied (`enforce` by default when the file is missing).
 - Do not fix failing tests, modify source/test code, edit `go.mod`/`go.sum`, run `go mod tidy`/`go mod vendor`, or
   start containers unless the user asks for that as a next step.
 
@@ -277,7 +346,11 @@ one passing, one failing and one skipped test):
   exited `1`, but testcontainers-go still reached the default socket — hence the `docker info` gate. The lock commands
   are the same as `iru-python-test`'s (verified there).
 - gotestsum `--jsonfile … --junitfile … -- -count=1 ./...` wrote both files from one run; the parser gave the same
-  counts from its JSON file. Still unverified: Windows hosts, a real "Docker unavailable" testcontainers-go error
+  counts from its JSON file.
+- Step 4a (UI captures, added for the UI contract): the validation script was run with Python 3 against a sample tree
+  (valid screen/flow captures counted, an upper-case state and a stray file reported as malformed, report-mode rule
+  ids counted); the Go side — `UI_SCREENSHOTS_DIR` reaching each test binary, the helper's captures — was not run (no
+  Go toolchain on the authoring machine) and is unverified. Still unverified: Windows hosts, a real "Docker unavailable" testcontainers-go error
   string (the classification strings above come from testcontainers-go's sources), and `-race` on Linux CI runners.
 
 ## Sources

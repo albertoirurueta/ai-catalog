@@ -9,7 +9,9 @@ description: >-
   `.idea/`), test and coverage output (`TestResults/`, `*.trx`, `coverage*.xml`, `*.coverage`, `coveragereport/`),
   analyzer SARIF logs, NuGet packages (`*.nupkg`, `*.snupkg`), signing material (`*.pfx`, `*.p12`, `*.key`; `*.snk`
   deliberately NOT ignored), DocFX output (the `docfx.json` metadata `dest` and site `output`, only when a
-  `docfx.json` exists), the Antora docs build output, OS files, and the repository-wide `.integration-test.lock/`.
+  `docfx.json` exists), the Antora docs build output, OS files, the repository-wide `.integration-test.lock/`, and —
+  for a command-line tool with a Terminal.Gui terminal UI (`ui: tui`) — the UI tests' capture directory
+  `.ui-screenshots/` (never `.ui-quality.yml`, which is committed).
   Never ignores the generated-but-committed `docs/modules/ROOT/pages/cli-reference.adoc`. Invoke as
   `/iru-setup-dotnet-gitignore`, optionally with `args`: `mode: new|existing` (default: detected from whether a root
   `.gitignore` already exists) and `on-existing: ask|keep|update|replace` (default `ask`). Announces whether it is
@@ -171,6 +173,14 @@ snippet copied with Markdown indentation silently matches nothing):
   wholesale, check `git ls-files <dest>/` — if hand-written files live there (e.g. an `index.md` landing page in an
   older DocFX layout), ignore only `<dest>/*.yml` and `<dest>/.manifest` instead, and say so. The hand-written
   `docfx/index.md`, `docfx/toc.yml` and any `docfx/articles/` stay tracked.
+- **Terminal UI captures** (a `*.csproj` references `Terminal.Gui`, or a root `.ui-quality.yml` exists):
+  ```gitignore
+  # UI-test captures (terminal UI text snapshots per state × direction), regenerated on every full UI run
+  .ui-screenshots/
+  ```
+  The UI tests write `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt` (and `a11y-report.txt` under
+  `accessibility: report`); the documentation skills copy what they use into Antora's `images/ui/`. Never ignore
+  `.ui-quality.yml` — it is configuration.
 - Don't invent entries beyond what was detected.
 
 ## Step 4 — Compose the proposed content
@@ -244,3 +254,5 @@ exercised; no other tooling was needed for this skill.
 | `build/docfx/index.html`, `docfx/api/Greetly.Core.ExitCodes.yml`, `docfx/api/toc.yml`, `docs/build/site/index.html` | ignored | ignored |
 | `docfx/index.md`, `docfx/toc.yml`, `docs/modules/ROOT/pages/cli-reference.adoc` | **tracked** | **not ignored** |
 | `Directory.Build.props`, `Directory.Packages.props`, `global.json`, `Greetly.slnx`, `stylecop.json`, `.editorconfig`, `docfx.json`, `tests/coverlet.runsettings`, `src/Greetly/Greetly.csproj`, `keys/Greetly.snk` | **tracked** | **not ignored** |
+| `.ui-screenshots/screen/BrowseView/default--rtl--no-color.txt` (with the terminal-UI section, `ui: tui`) | ignored | ignored (2026-10-16) |
+| `.ui-quality.yml` | **tracked** | **not ignored** |

@@ -1,6 +1,6 @@
 ---
 name: iru-android-code-one-task
-description: Implement a single task from an Android/Kotlin `implementation_plan.md`-style task list — just the implementation and its tests. Detects which Gradle module the task belongs to (`lib`, the library module, or `app`, the Compose/Views sample or application module — from the task's own file paths/description, defaulting to `lib` when neither is named) and loads only the matching guidance from this skill's own `reference/` directory (this catalog's general Kotlin/Android code agreements: Kotlin official style, `val` over `var`, null-safety with no `!!`, `internal` visibility by default in a library module, data/sealed classes, coroutines/Flow basics, plus KDoc, JUnit 4 + MockK + Robolectric testing, Jetpack Compose, custom `View`/ViewBinding, and library binary-compatibility conventions), re-checks the current code state, implements exactly what the task specifies, writes/updates unit tests, compile-checks the touched module with the Gradle wrapper, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (module detected, files touched, tests added/updated, compile-check result, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update KDoc, run the full test suite/coverage/lint/detekt checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-android-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it, through the `iru-isolated-skill-executor` agent) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-android-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task`/`iru-typescript-code-one-task` for Gradle/Kotlin Android projects.
+description: Implement a single task from an Android/Kotlin `implementation_plan.md`-style task list — just the implementation and its tests. Detects which Gradle module the task belongs to (`lib`, the library module, or `app`, the Compose/Views sample or application module — from the task's own file paths/description, defaulting to `lib` when neither is named) and loads only the matching guidance from this skill's own `reference/` directory (this catalog's general Kotlin/Android code agreements: Kotlin official style, `val` over `var`, null-safety with no `!!`, `internal` visibility by default in a library module, data/sealed classes, coroutines/Flow basics, plus KDoc, JUnit 4 + MockK + Robolectric testing, Jetpack Compose, custom `View`/ViewBinding, library binary-compatibility conventions, and — for a task touching UI — the catalog's UI contract with its Android mapping: `Screen › Region › Component` decomposition reported back, stateless components with typed events, `RecyclerView` + `ListAdapter` + `DiffUtil` / `Lazy*` with `key` for every collection, Robolectric + Roborazzi UI tests capturing `.ui-screenshots/` across left-to-right/right-to-left × light/dark, and Accessibility Test Framework checks at the `.ui-quality.yml` level), re-checks the current code state, implements exactly what the task specifies, writes/updates unit tests, compile-checks the touched module with the Gradle wrapper, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (module detected, files touched, tests added/updated, compile-check result, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update KDoc, run the full test suite/coverage/lint/detekt checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-android-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it, through the `iru-isolated-skill-executor` agent) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-android-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task`/`iru-typescript-code-one-task` for Gradle/Kotlin Android projects.
 model: sonnet
 allowed-tools: Read Edit Write Bash(./gradlew *) Bash(gradle *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
 ---
@@ -47,10 +47,12 @@ points at for this task. The routing, restated:
 | `reference/compose.md` | The task adds or changes a `@Composable` function or other Jetpack Compose UI. |
 | `reference/views.md` | The task adds or changes a custom `View` subclass, ViewBinding usage, or XML-layout-backed UI. |
 | `reference/library-api.md` | The task changes a public or `internal` declaration in the `lib` module — binary compatibility, `@Jvm*` annotations, consumer ProGuard rules. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI (Compose or Views) — decomposition, inputs/events, the recycling-collection rule (`RecyclerView` + `ListAdapter` + `DiffUtil` / `Lazy*` with `key`), UI tests, the screenshot matrix and accessibility checks. |
 
 Read only the framework file(s) that actually apply — a task inside `app`'s Compose screens reads `compose.md`
 and not `views.md` or `library-api.md`; a task changing `lib`'s public surface reads `library-api.md` in addition
-to whichever of `compose.md`/`views.md` its UI (if any) uses. Don't read the optional files speculatively — for a
+to whichever of `compose.md`/`views.md` its UI (if any) uses. Any task that touches UI also reads `ui-contract.md`
+and `ui-implementation.md`. Don't read the optional files speculatively — for a
 change confined to the body of one existing non-UI function with no signature change, `code-style.md` plus
 `testing.md` is the whole list.
 
@@ -93,6 +95,11 @@ Non-negotiable, because a later gate enforces them:
 - **No new runtime dependency** unless the task explicitly calls for it. If one seems unavoidable, that's a
   blocker to report (Step 6), not a decision to make quietly.
 
+- **UI tasks: decompose first.** Before writing a screen or component, write its `Screen › Region › Component`
+  tree (`reference/ui-contract.md` §2 — inputs, events, visual states, what it reuses) and keep it for Step 8's
+  report; build leaves first, collections through the recycling container (`ui-implementation.md`), navigation
+  only in the graph.
+
 Don't add anything the task didn't ask for — no speculative abstractions, no unrelated cleanup, no restyling of
 code the task doesn't touch.
 
@@ -100,9 +107,16 @@ code the task doesn't touch.
 
 Follow `reference/testing.md` and the existing test style in the same package (JUnit 4, MockK, Robolectric for
 anything touching the Android framework). Cover the new/changed behavior, including the edge cases implied by
-the KDoc `@throws` contracts (e.g. invalid-argument or null-handling cases). Do not run the test suite yourself —
-`iru-android-code-one-task-group` runs it once for the whole bucket in its own consolidated validation pass; this
-skill only compile-checks (Step 5).
+the KDoc `@throws` contracts (e.g. invalid-argument or null-handling cases).
+
+For a UI task, also write the UI tests `reference/ui-implementation.md` describes: component/screen tests on
+Robolectric for every visual state, with minimal/typical/many-items and right-to-left fixture data, capturing each
+state across the `.ui-quality.yml` directions × themes through the module's `testing/UiScreenshots.kt` helper
+(create it from `ui-implementation.md` when the module has none) and running the accessibility check at the
+configured level; a flow test in `src/androidTest` only when the task adds or changes a flow.
+
+Do not run the test suite yourself — `iru-android-code-one-task-group` runs it once for the whole bucket in its
+own consolidated validation pass; this skill only compile-checks (Step 5).
 
 ## Step 5 — Compile-check the touched module
 
@@ -173,6 +187,8 @@ Hand control back to the caller with a short summary:
 
 - **The module Step 1 detected** (`lib`/`app`) and the reference file(s) actually read.
 - **The file(s) touched** and **the tests added/updated** (not run — see Step 4).
+- **For a UI task**: the `Screen › Region › Component` decomposition, and the UI tests and screenshot ids
+  (`<kind>/<Id>/<state>`) they capture.
 - **The compile-check result** from Step 5 (passed / failed on this task's own code and was fixed / failed for a
   reason outside this task's scope / unavailable on this machine).
 - **Whether this task stopped on a blocker** per Step 6, with enough detail for the caller to surface it.

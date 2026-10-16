@@ -23,6 +23,7 @@ good it looks.
 | `pages-router.md` | The code the task touches lives under `pages/` (Pages Router). Replaces `server-and-client-components.md` for those files. |
 | `testing.md` | The task writes or updates tests — nearly every task. |
 | `security.md` | The task touches a Server Action, Route Handler, proxy, session/auth, environment variables, props passed to a Client Component from server data, headers/CSP, or anything user-supplied. In practice: most tasks that are not pure UI. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a page, layout, component, list or other UI. The contract is the catalog-wide rule set (verbatim in every UI coding skill); `ui-implementation.md` maps it onto Server/Client Components, server pagination vs. a client virtualizer, the component gallery and Playwright screenshot/accessibility tests. `ui-screenshots.ts` is the helper to copy when the project has none. |
 
 A one-line change inside an existing Client Component is `code-style.md` + `server-and-client-components.md` +
 `testing.md`. Don't read the rest speculatively.
@@ -71,3 +72,5 @@ against a `create-next-app` 16.4.0 scaffold in both caching models:
   <https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config>,
   <https://nextjs.org/docs/app/guides/upgrading/version-15>, <https://nextjs.org/docs/app/guides/upgrading/version-16>,
   <https://nextjs.org/docs/app/guides/data-security>, <https://nextjs.org/docs/app/guides/testing>.
+- UI contract sources (Playwright component testing and accessibility testing, TanStack Virtual, axe-core): listed in
+  `ui-implementation.md`.

@@ -13,8 +13,10 @@ Detect the shape first (`iru-dotnet-code-one-task` Step 0), then read:
 |---|---|
 | `cli.md` | **CLI-shaped project only** — an `<OutputType>Exe</OutputType>` project referencing `System.CommandLine` (or `Spectre.Console.Cli`, or with `PackAsTool`/`PublishAot`), e.g. the `iru-setup-dotnet-cli` layout. System.CommandLine 2.0 patterns, where code goes (Core vs the thin CLI project), output/errors/colour/prompts/signals with Spectre.Console, Native AOT and trimming rules, testing commands in-process, regenerating the CLI reference. |
 | `cli-contract.md` | **CLI-shaped project only**, whenever the task adds or changes a command, flag, output, error or exit path. The language-agnostic behaviour every command keeps: streams, exit codes, TTY/colour/prompts, JSON output and the error envelope, safety, configuration, self-description. |
+| `ui-contract.md` + `ui-implementation.md` | **CLI-shaped project with a terminal UI only**, when the task adds or changes a screen, component, list or other UI in it (Terminal.Gui views, `src/<Tool>/Tui/`, a `browse`-style command). `ui-contract.md` is the catalog-wide UI contract (repeated verbatim in every UI coding skill); `ui-implementation.md` maps it onto Terminal.Gui v2: composed `View` screens over Core state, `ListView`/`TableView` data sources, view tests on the ANSI driver with `.txt` captures under `.ui-screenshots/`. |
 
-A library, service or plain console app that isn't CLI-shaped reads **neither** file. A CLI task that only changes
+A library, service or plain console app that isn't CLI-shaped reads **none** of these files; a CLI task that doesn't
+touch the terminal UI never reads the two `ui-*` files. A CLI task that only changes
 logic inside one existing Core type, with no new command, flag, output or error, needs `cli.md`'s "Where code goes"
 and "Native AOT and trimming" sections at most.
 
@@ -50,6 +52,7 @@ and "Native AOT and trimming" sections at most.
 - `PosixSignalRegistration`: <https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.posixsignalregistration>
 - RID-specific and Native AOT .NET tools, `dnx`: <https://learn.microsoft.com/en-us/dotnet/core/tools/rid-specific-tools>
 - Spectre.Console: <https://spectreconsole.net/>; Terminal.Gui v2: <https://tui-cs.github.io/Terminal.Gui/>
+  (`ui-implementation.md` lists the Terminal.Gui testing APIs it relies on)
 - Command Line Interface Guidelines (clig.dev); NO_COLOR (no-color.org)
 - Verified against a scaffold rendered by `iru-setup-dotnet-cli` on 2026-10-16 (.NET SDK 10.0.402,
   System.CommandLine 2.0.13, Spectre.Console 0.57.2, Terminal.Gui 2.5.0, MSTest 4.5.1) — see that skill's

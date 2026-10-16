@@ -30,7 +30,11 @@ ai/cli-for-agents/tuis-vs-clis.adoc, `cli-contract.md` §3). Verified with ratat
 
 ## Structure: state, update, render, loop
 
-Keep the state and its transitions pure; only the loop touches the terminal:
+Keep the state and its transitions pure; only the loop touches the terminal. When the task adds or changes a screen,
+component or list, also read `ui-contract.md` and `ui-implementation.md` — screens/components as `Widget`s, key
+handling that returns a typed `Action`, collections that render only the visible window, the UI-test matrix, the
+`.ui-screenshots/` text captures and the accessibility checks. A one-screen picker like the one below is the minimal
+shape:
 
 ```rust
 /// The browser's state. Rendering reads it; [`App::handle_key`] is the only mutator.
@@ -62,16 +66,21 @@ impl App {
     pub fn render(&self, frame: &mut Frame<'_>) {
         let [list_area, help_area] =
             Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).areas(frame.area());
+        // Only the rows that fit become items (ui-implementation.md §3) — never the whole data set.
+        let rows = usize::from(list_area.height.saturating_sub(2)); // inside the border
+        let start = self.selected.saturating_sub(rows.saturating_sub(1)); // keep the selection visible
         let items: Vec<ListItem<'_>> = self
             .items
             .iter()
+            .skip(start)
+            .take(rows)
             .map(|i| ListItem::new(i.as_str()))
             .collect();
         let list = List::new(items)
             .block(Block::bordered().title("Greetings"))
             .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
             .highlight_symbol("> ");
-        let mut state = ListState::default().with_selected(Some(self.selected));
+        let mut state = ListState::default().with_selected(Some(self.selected - start));
         frame.render_stateful_widget(list, list_area, &mut state);
         frame.render_widget(Paragraph::new(Line::from("j/k move, q quit")), help_area);
     }
@@ -113,13 +122,16 @@ and the command starts it with `ratatui::run(|terminal| run_loop(terminal, &mut 
   loop drains; the UI never blocks on I/O.
 - **Layout** from `Layout::vertical/horizontal([...]).areas(area)` with `Constraint::{Length, Min, Percentage,
   Fill}`; widgets are built per frame from state (immediate mode) — don't cache widgets in the state.
-- Colours: use `Style`/`Color` from ratatui; respect `NO_COLOR` by building styles from the same colour policy
-  (`output-and-terminal.md`) when the crate does so — modifiers like `REVERSED`/`BOLD` keep the UI usable without
-  colour.
+- Colours: use `Style`/`Color` from ratatui through one `Theme` value; respect `NO_COLOR` by choosing
+  `Theme::no_color()` from the same colour policy (`output-and-terminal.md`). Modifiers like `REVERSED`/`BOLD` help,
+  but the selection and every state also need a marker or word — no information by colour alone
+  (`ui-implementation.md` §6).
 
 ## Testing with `TestBackend`
 
-`handle_key` is tested with plain `KeyEvent`s; `render` with a `Terminal<TestBackend>`:
+`handle_key` is tested with plain `KeyEvent`s; `render` with a `Terminal<TestBackend>`. These are the behaviour
+assertions; the contract's state × direction × theme matrix, the `.ui-screenshots/` `.txt` captures (through
+`src/tui/ui_screenshots.rs`) and the accessibility checks are in `ui-implementation.md` §4–§6:
 
 ```rust
 #[test]

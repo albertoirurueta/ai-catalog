@@ -8,7 +8,8 @@ description: >-
   warnings-as-errors build — WPF/WinForms compile on Linux through `EnableWindowsTargeting`, WinUI only Core —,
   `dotnet format --verify-no-changes`, Core tests with Cobertura/OpenCover coverage and an 80% line bar), a
   `windows-latest` job (solution build, non-UI tests, and with `ci-tests: full` the FlaUI desktop UI tests — a WinUI
-  app is first packaged with a throwaway certificate and installed so FlaUI can start it by AUMID), an optional
+  app is first packaged with a throwaway certificate and installed so FlaUI can start it by AUMID — the UI tests'
+  `.ui-screenshots/` captures uploaded from the same job as a 7-day `ui-screenshots` artifact), an optional
   SonarScanner for .NET job (Linux for WPF/WinForms, Windows for WinUI), and an Antora + DocFX (`api/`) docs job
   deployed to GitHub Pages (`pages: yes`) or uploaded as an artifact (`pages: no`); `release.yml` per `distribution`
   (`internal`: per-RID self-contained single-file zips + MSIX signed with Azure Artifact Signing (OIDC) or a `.pfx`
@@ -240,7 +241,11 @@ Notes that matter when adapting them:
   `src/<AppName>/bin/Release/net10.0-windows/<AppName>.exe`; WinUI first builds an MSIX with MSBuild signed by a
   throwaway self-signed certificate whose subject is the manifest's `Publisher`, trusts it (`LocalMachine\TrustedPeople`),
   installs it with `Add-AppxPackage` and exports `APP_AUMID=<PackageFamilyName>!App` — a packaged WinUI exe cannot start
-  without package identity. Runners are fresh VMs, so the local `.integration-test.lock` isn't needed in CI.
+  without package identity. Runners are fresh VMs, so the local `.integration-test.lock` isn't needed in CI. The UI
+  step sets `UI_SCREENSHOTS_DIR` to the workspace's `.ui-screenshots/`, and a following `actions/upload-artifact` step
+  (`if: always()`, `retention-days: 7`, `if-no-files-found: ignore`) uploads the captures (and the
+  `a11y-report.txt` of `accessibility: report`) as the `ui-screenshots` artifact — no extra job or runner (rendered
+  for `ui: wpf` and `ui: winui` and checked with actionlint on 2026-10-16).
 - **`sonar` job** — `begin` → `dotnet build` → Core tests (OpenCover + TRX) → `end`, with
   `sonar.coverage.exclusions=src/<AppName>/**,tests/**` so the UI project is not counted as uncovered. SonarScanner's
   MSBuild targets force `TreatWarningsAsErrors=false` during the analysis build (verified in 12.0.0's

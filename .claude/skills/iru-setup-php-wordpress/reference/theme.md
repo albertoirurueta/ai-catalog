@@ -36,6 +36,16 @@ Tags: block-patterns, full-site-editing, wide-blocks
 */
 
 /* Design tokens and global styles live in theme.json; keep this file for rules theme.json cannot express. */
+
+/* Dark colour scheme: theme.json has no media queries, so the palette is re-pointed here (contrast ≥ 4.5:1). */
+@media (prefers-color-scheme: dark) {
+	html:root {
+		color-scheme: dark;
+		--wp--preset--color--base: #1e1e1e;
+		--wp--preset--color--contrast: #f0f0f0;
+		--wp--preset--color--accent: #8ea2ff;
+	}
+}
 ```
 
 - `Version:` is the theme version `iru-php-bump-version` rewrites (`x.y.z-dev` during development).
@@ -43,6 +53,10 @@ Tags: block-patterns, full-site-editing, wide-blocks
   WordPress.org); GPL-3.0-or-later: `GNU General Public License v3 or later` /
   `https://www.gnu.org/licenses/gpl-3.0.html`.
 - `Tags:` must come from the WordPress.org theme tag list when `distribution: store`.
+- The dark block follows the visitor's `prefers-color-scheme` (the UI contract's dark theme, captured by the
+  browser UI test through `emulateMedia`). `html:root` outranks the `:root` rule of WordPress's global-styles inline
+  CSS whatever the load order; text/base 14.6:1, accent/base 7.0:1 (light: 16.7:1 and 5.6:1). Drop it only if the
+  design is deliberately light-only, and then narrow `.ui-quality.yml`'s `themes` to `[light]`.
 - A `screenshot.png` (1200×900) is required by the theme directory and shown in Appearance → Themes — this skill
   doesn't generate one; Step 9 reminds the user.
 
@@ -500,6 +514,94 @@ The bootstrap is the `wp scaffold theme-tests` approach: register the parent dir
 `template`/`stylesheet` to this theme via `pre_option_*` filters on `muplugins_loaded`, so the test install runs
 with the theme active without touching the database first.
 
+## Browser UI test (`tests/e2e/specs/`, Playwright against the wp-env tests instance)
+
+`.ui-quality.yml`, `playwright.config.ts`, the helper `tests/e2e/support/ui-screenshots.ts` and the RTL mu-plugin
+come from `tooling.md` "Browser UI tests". The sample screen is the front page rendered by `templates/index.html`;
+its screen Id is the template slug in PascalCase, `Index` (a block theme has no class per screen — name further
+screens the same way: `templates/single.html` → `Single`, `parts/header.html` as a component → `Header`). Its post
+list is already a paginated collection (`wp:query` with `perPage: 10` + `wp:query-pagination`), which is the
+server-rendered form of the contract's virtualized list — keep every new query loop paginated.
+
+### `tests/e2e/specs/Index.spec.ts`
+
+```ts
+/**
+ * Screen UI test of the front page (`templates/index.html`, screen Id `Index`): the latest-posts query loop with its
+ * pagination and the no-results pattern. Behaviour is asserted once; every state is captured across
+ * `.ui-quality.yml` directions × themes, as a logged-out visitor (no admin bar).
+ */
+import { expect, test } from '@wordpress/e2e-test-utils-playwright';
+import {
+	applyDirectionAndTheme,
+	captureUiState,
+	checkAccessibility,
+	expectDirection,
+	uiQuality,
+} from '../support/ui-screenshots';
+
+/** Visual states and the post titles each one publishes (typical-data mixes Latin and Arabic script). */
+const STATES: Record< string, string[] > = {
+	empty: [],
+	'typical-data': [ 'Opening hours', 'New arrivals this week', 'مواعيد العمل في المكتبة' ],
+};
+
+test.describe( 'Index', () => {
+	test.use( { storageState: { cookies: [], origins: [] } } );
+
+	test.beforeAll( async ( { requestUtils } ) => {
+		await requestUtils.activateTheme( '<slug>' );
+	} );
+
+	test.afterAll( async ( { requestUtils } ) => {
+		await requestUtils.deleteAllPosts();
+	} );
+
+	for ( const [ state, titles ] of Object.entries( STATES ) ) {
+		test( `renders the ${ state } state`, async ( { page, requestUtils }, testInfo ) => {
+			await requestUtils.deleteAllPosts();
+			for ( const [ index, title ] of titles.entries() ) {
+				await requestUtils.createPost( {
+					title,
+					content: '<!-- wp:paragraph --><p>Excerpt text.</p><!-- /wp:paragraph -->',
+					status: 'publish',
+					date_gmt: `2026-01-1${ index + 1 }T10:00:00`,
+				} );
+			}
+
+			const { directions, themes } = uiQuality();
+			for ( const direction of directions ) {
+				for ( const theme of themes ) {
+					await applyDirectionAndTheme( page, direction, theme );
+					await page.goto( '/' );
+					const main = page.getByRole( 'main' );
+					if ( titles.length === 0 ) {
+						await expect( main.getByText( 'Nothing was found. Try a search instead.' ) ).toBeVisible();
+					} else {
+						await expect( main.getByRole( 'heading', { level: 2 } ) ).toHaveCount( titles.length );
+					}
+					await expectDirection( page, direction );
+					await captureUiState( page, { kind: 'screen', id: 'Index', state, direction, theme } );
+					if ( direction === directions[ 0 ] && theme === themes[ 0 ] ) {
+						await checkAccessibility( page, testInfo );
+					}
+				}
+			}
+		} );
+	}
+} );
+```
+
+- `requestUtils.activateTheme( '<slug>' )` activates the theme wp-env mounted (its directory name — SKILL.md Step 1
+  warns when it differs from the slug). Posts are created and deleted over the REST API of the **tests** instance
+  only, with fixed dates so captures are deterministic.
+- `test.use( { storageState: … } )` renders as a logged-out visitor (no admin bar in the screen captures); the REST
+  helpers keep their own admin session.
+- It writes `.ui-screenshots/screen/Index/{empty,typical-data}--{ltr,rtl}--{light,dark}.png` (8 full-page files with
+  the default `.ui-quality.yml`) and runs axe-core on the whole page once per state.
+- Run: `npm run test:env:start` (or let the config start it), `npx playwright install chromium` once, then
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e`.
+
 ## Distribution files
 
 ### `readme.txt`
@@ -555,6 +657,11 @@ images) with their licenses, which the theme review team checks.
 /node_modules
 /tests
 /bin
+/artifacts
+/test-results
+/playwright-report
+/blob-report
+/.ui-screenshots
 .distignore
 .editorconfig
 .gitattributes
@@ -564,10 +671,12 @@ images) with their licenses, which the theme review team checks.
 .wp-env.override.json
 .wp-env.test.override.json
 .phpunit.result.cache
+.ui-quality.yml
 composer.json
 composer.lock
 package.json
 package-lock.json
+playwright.config.ts
 phpcs.xml.dist
 phpstan.neon.dist
 phpunit.xml.dist

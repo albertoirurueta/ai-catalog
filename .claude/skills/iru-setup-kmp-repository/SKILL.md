@@ -9,14 +9,15 @@ description: >-
   iOS deployment target, `open-source`, the repository `visibility` (detected via `gh repo view` or asked), `ci`,
   `ios-ci` (when the ~10×-cost macOS job runs: `all`/`stable`/`none`), `ci-tests` (`unit`, or `full` = also the
   iOS app's XCTest bundle on a simulator), `pages` (GitHub Pages vs. a workflow artifact for the Antora + Dokka
-  docs), `distribution` (`none`/`internal`/`store` — Google Play/Firebase + TestFlight), `sonar` plus its detail keys
-  — each question stating the Actions-minutes / macOS-multiplier / SonarCloud / Pages cost facts for that
+  docs), `distribution` (`none`/`internal`/`store` — Google Play/Firebase + TestFlight), `accessibility`
+  (`enforce`/`report`/`off` — the UI tests' automated accessibility level, written by the scaffold to
+  `.ui-quality.yml`), `sonar` plus its detail keys — each question stating the Actions-minutes / macOS-multiplier / SonarCloud / Pages cost facts for that
   visibility) once, prints a setup-mode statement (from scratch, or an inventory of the prior setup it found), then
   orchestrates `iru-setup-kmp-app` → `iru-setup-antora` → `iru-setup-kmp-gitignore` → `iru-setup-kmp-github-workflows`
   → `iru-setup-changelog` → `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is
   asked twice — skipping the workflows step entirely (security block included) when `ci: no`. Invoke as
   `/iru-setup-kmp-repository`, optionally with `args` (`key: value` lines) to pre-resolve `ui`, `branching`, `mode`
-  (`new`/`existing`), `open-source`, `visibility`, `ci`, `ios-ci`, `ci-tests`, `pages`, `on-existing`
+  (`new`/`existing`), `open-source`, `visibility`, `ci`, `ios-ci`, `ci-tests`, `pages`, `accessibility`, `on-existing`
   (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), `distribution`, `sonar` (+ `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`), `integration-branch`, `stable-branch`, `java-version`, `min-sdk`,
   `compile-sdk`, `ios-deployment-target`, `runner`, `xcode-version`, `team-id`, and every identity field, skipping
@@ -67,6 +68,7 @@ ios-ci: all
 ci-tests: full
 pages: yes
 distribution: store
+accessibility: enforce
 sonar: cloud
 sonar-organization: example-org-github
 sonar-project-key: example-org_my-kmp-app
@@ -84,7 +86,8 @@ Recognized keys:
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci`
   (`yes`/`no`), `ios-ci` (`all`/`stable`/`none`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing`
   (`ask`/`keep`/`update`/`replace` — never asked; forwarded to the component sub-skills only when it arrived here
-  via `args`), `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when
+  via `args`), `distribution` (`none`/`internal`/`store`), `accessibility` (`enforce`/`report`/`off` — both `ui`
+  values render UI, so it always applies), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when
   set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`,
   `java-version`, `runner` (macOS runner label), `xcode-version`.
 - **Identity fields** named in Step 2: `app-name`, `application-id`, `bundle-id`, `namespace`, `project-name`,
@@ -146,6 +149,7 @@ Right after resolving `mode`, print a short **Setup mode** statement:
   | Android app | `androidApp/build.gradle.kts` + `androidApp/src/` |
   | iOS app | `iosApp/project.yml`, `iosApp/Configuration/Config.xcconfig`, `iosApp/iosApp/`, `iosApp/iosAppTests/`, any committed `iosApp/*.xcodeproj` |
   | Quality config | `detekt.yml`, `.editorconfig`, `iosApp/.swiftlint.yml` |
+  | UI quality config | `.ui-quality.yml` (`accessibility`/`directions`/`themes`) |
   | Sonar config | a `sonar {` block in the root `build.gradle.kts` |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | `.gitignore` | root `.gitignore`, `shared/.gitignore`, `androidApp/.gitignore` |
@@ -241,6 +245,11 @@ current pricing" (verified October 2026 against docs.github.com) and tell the us
   **`internal`** recommended. `internal` = Firebase App Distribution for Android + TestFlight (internal testers)
   for iOS; `store` = Google Play + TestFlight/App Store Connect; `none` = local installs only.
 
+- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** ("violations fail the
+  UI tests") / **Report only** ("listed in test reports, never failing") / **Off** ("not run; the coding defaults
+  still apply"). Written by `iru-setup-kmp-app` to `.ui-quality.yml`; asked once here alongside the other shared
+  inputs, never again by the scaffold.
+
 These values pass through unchanged to Step 4 (`iru-setup-kmp-app`) and Step 7 (`iru-setup-kmp-github-workflows`),
 so neither re-asks them — and the workflows never run a `sonar` step against a build with no `sonar {}` block.
 
@@ -263,7 +272,7 @@ Agent({
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     visibility: <visibility>\\nci: <ci>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\n
     sonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\ndistribution: <distribution>\\n
-    mode: <mode>\\non-existing: <..., only if supplied via args>\"}). Report back: whether it scaffolded from scratch
+    accessibility: <accessibility>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}). Report back: whether it scaffolded from scratch
     or updated an existing project, the action taken per file group (created / updated / replaced / kept as is, or
     that the user chose Stop), which toolchain versions came from a live lookup versus the recorded fallback, the
     compile-sdk and iOS deployment target it resolved, and the pass/fail/unverified result of each verification
@@ -363,7 +372,8 @@ section.
 
 Summarize all six delegated skills together: repeat the **Setup mode**, the resolved `ui`, `branching` and `mode`,
 the app identity and license, and the pipeline parameters actually applied. Then a per-component table — Gradle
-build files, `shared/`, `androidApp/`, `iosApp/`, quality config, the Antora site, each `.gitignore`, each workflow
+build files, `shared/`, `androidApp/`, `iosApp/`, quality config, `.ui-quality.yml` (with the `accessibility` level it
+holds), the Antora site, each `.gitignore`, each workflow
 file + `sync_versions.py`, `.github/dependabot.yml`, `CHANGELOG.md`, `README.md` — with the action taken for each:
 **created / updated / replaced / kept as is / skipped (ci: no)** (or not reached, after a Stop), and for anything
 kept as is, the mismatches its sub-skill listed.
@@ -379,6 +389,8 @@ State explicitly what was wired or deliberately omitted, and why:
 - **`ci-tests`**: `unit`/`full` — whether CI runs the iOS app's XCTest bundle.
 - **`pages`**: `yes` (Antora + Dokka deployed to GitHub Pages) or `no` (uploaded as a workflow artifact).
 - **`distribution`**: which release jobs and signing secrets exist (Play/Firebase, TestFlight).
+- **`accessibility`**: the level written to `.ui-quality.yml` (`enforce`/`report`/`off`) and that the UI tests
+  capture `.ui-screenshots/` (gitignored; CI uploads it as a 7-day artifact).
 - **`sonar`**: whether the root `sonar {}` block and the CI Sonar step were included; if `none`, whether that's the
   expected default or a user choice; if configured with `ci: no`, that no CI step sends reports.
 - **Toolchain versions**: which came from a live lookup versus a recorded fallback (scaffold and workflows).

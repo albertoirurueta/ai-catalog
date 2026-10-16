@@ -8,7 +8,8 @@ description: >-
   `target/lcov.info`, nextest JUnit reports), coverage files written outside it (`lcov.info`, `*.profraw`,
   `*.profdata`), rustfmt backups (`**/*.rs.bk`), pending snapshot files (`*.pending-snap`, `*.snap.new`), cargo-fuzz
   output (only when `fuzz/Cargo.toml` exists), env files (keeping `.env.example`), editor/OS files, the Antora docs
-  build output (`docs/build/`, `docs/node_modules/`), and the repository-wide `.integration-test.lock/`. Never ignores
+  build output (`docs/build/`, `docs/node_modules/`), the repository-wide `.integration-test.lock/`, and — for a
+  Ratatui terminal UI — the UI tests' capture directory `.ui-screenshots/` (never `.ui-quality.yml`). Never ignores
   `Cargo.lock` for a package with a binary target (the tool's reproducible build); for a library-only crate it asks
   (`cargo-lock: commit|ignore`, Cargo's own default being commit). Never ignores `rust-toolchain.toml`,
   `.cargo/config.toml`, `deny.toml`, golden files or the generated-but-committed
@@ -161,6 +162,13 @@ Only add a section when Step 1 found what it targets:
   ```
   Keep a hand-curated seed corpus tracked by moving it out of `fuzz/corpus/` (e.g. `fuzz/seeds/`) — say so if
   `git ls-files fuzz/corpus` lists files.
+- **Terminal UI** (`ratatui` in any member's `Cargo.toml`, or a root `.ui-quality.yml`/`.ui-screenshots/`):
+  ```gitignore
+  # UI test captures (UI contract: .ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt), regenerated every run
+  .ui-screenshots/
+  ```
+  `.ui-quality.yml` (the accessibility level and capture matrix) stays **tracked**; the documentation skills copy the
+  captures they use into the Antora `images/ui/` tree, which is committed.
 - Don't invent entries beyond what was detected.
 
 ## Step 4 — Compose the proposed content
@@ -176,8 +184,9 @@ run with the draft as the active `.gitignore` (simplest: copy the draft over `.g
 `git -c core.excludesFile=<draft> check-ignore --no-index`): `Cargo.toml`, `Cargo.lock` (binary case),
 `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml`, `clippy.toml`, `.cargo/config.toml`, `src/main.rs`,
 `src/lib.rs`, `tests/cli.rs`, `tests/golden/*.json`, `xtask/Cargo.toml`, `xtask/src/main.rs`,
-`docs/modules/ROOT/pages/cli-reference.adoc`, `docs/antora.yml`, `.env.example`, `.secrets.baseline`. Refuse any
-line that matches one of them.
+`docs/modules/ROOT/pages/cli-reference.adoc`, `docs/antora.yml`, `.env.example`, `.secrets.baseline`,
+`.ui-quality.yml`, `src/tui/ui_screenshots.rs`, `docs/modules/ROOT/images/ui/**`. Refuse any line that matches one of
+them.
 
 ## Step 5 — If a `.gitignore` already existed, warn and ask Update / Keep as is / Replace
 
@@ -208,7 +217,8 @@ Write the composed content to `.gitignore` (on Update or Replace, or when none e
   it still lacks; when replaced, the hand-added lines dropped.
 - The `Cargo.lock` decision: binary target found (committed, not asked) or library-only (from `args`, asked, or
   defaulted to commit), with the reasoning restated.
-- Which Step 3 sections were included vs. skipped and why (e.g. "no cargo-fuzz section — no `fuzz/Cargo.toml`").
+- Which Step 3 sections were included vs. skipped and why (e.g. "no cargo-fuzz section — no `fuzz/Cargo.toml`",
+  "terminal-UI section — `ratatui` is a dependency").
 - The result of Step 4's safety check (every listed file still tracked).
 - Any already-tracked file under a newly ignored path (Step 1), with the `git rm -r --cached <path>` it needs.
 
@@ -237,6 +247,7 @@ remaining pattern, and checked with `git check-ignore -v` and `git status --porc
 | `docs/build/site/index.html`, `docs/node_modules/x`, `.integration-test.lock/owner`, `.DS_Store`, `.idea/x` | ignored | ignored |
 | `fuzz/target/x`, `fuzz/corpus/x`, `fuzz/artifacts/x` | ignored | ignored |
 | `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml`, `.cargo/config.toml`, `src/**`, `tests/cli.rs`, `tests/golden/greet-ada.json`, `tests/golden/schema.json`, `xtask/**`, `docs/modules/ROOT/pages/cli-reference.adoc`, `src/target/mod.rs`, `fuzz/Cargo.toml` | **tracked** | **not ignored** — `git add -A` staged only these, nothing under `target/` |
+| Terminal-UI section (added for the UI contract; checked with git 2.x in a scratch repository): `.ui-screenshots/screen/App/default--ltr--no-color.txt` | ignored | ignored; `.ui-quality.yml`, `src/tui/ui_screenshots.rs`, `docs/modules/ROOT/images/ui/screen/App/default--ltr--no-color.txt` not ignored |
 | Library variant with `/Cargo.lock` | `Cargo.lock` ignored, `xtask/Cargo.lock`-style nested files untouched | as expected (anchored) |
 
 ## Sources

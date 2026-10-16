@@ -14,7 +14,10 @@ description: >-
   dependencies — and testing — unit tests with injected writers, `assert_cmd` end-to-end tests with a cleared
   environment that still forwards `LLVM_PROFILE_FILE`, golden JSON, exit-code tables, no-TTY and `NO_COLOR` tests;
   as needed: error handling with `thiserror` and one failure→exit-code mapping, rustdoc, the shared CLI contract,
-  clap, output/colour/prompts/signals/broken pipe, Ratatui with `TestBackend`, security — argv-only processes, path
+  clap, output/colour/prompts/signals/broken pipe, Ratatui with `TestBackend`, the catalog's UI contract on Ratatui
+  when a task touches the terminal UI — `Widget` components, `Action` events, lists rendering only the visible window,
+  state × direction × theme UI tests captured as `.txt` into `.ui-screenshots/`, asserted accessibility checks at the
+  `.ui-quality.yml` level —, security — argv-only processes, path
   canonicalization, redacted secrets, `unsafe_code = "forbid"` — and async/tokio only when the project already uses
   it). Re-checks the current code state, implements exactly what the task specifies, writes/updates its tests,
   formats only its own files with rustfmt, compile-checks with `cargo check --all-targets --locked` (plus
@@ -104,6 +107,7 @@ routes you to the rest — then read only what it points at. The routing, restat
 | `reference/clap.md` | A subcommand, argument, flag, value enum, env-backed flag, help text, completions/man pages, or config precedence. |
 | `reference/output-and-terminal.md` | Writing to stdout/stderr, JSON/JSONL/the envelope, colour, prompts, progress, SIGINT/SIGTERM, broken pipe. |
 | `reference/ratatui.md` | `ratatui` is a dependency and the task touches the terminal UI. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | `ratatui` is a dependency and the task adds or changes a screen, component, list or other UI. |
 | `reference/security.md` | Spawning a process, paths from arguments/config, untrusted input, tokens/secrets, writing files, or anything tempting `unsafe`/`env::set_var`. |
 | `reference/async.md` | `tokio` is already a dependency and the task touches async code, cancellation, timeouts, or async tests. |
 
@@ -144,6 +148,11 @@ Non-negotiable, because a gate, the contract, or another platform enforces them:
 - **Never hand-edit generated output** — completions, man pages, a generated `cli-reference.adoc`/partial, `insta`
   snapshots you haven't reviewed, anything under `target/`.
 
+- **Terminal UI work decomposes first** (`reference/ui-contract.md` §2): write the `Screen › Region › Component` tree
+  (inputs, `Action` events, visual states, what is reused) before coding, build leaves first, keep raw `KeyEvent`s
+  inside key handling, render collections through the visible-window pattern (`reference/ui-implementation.md`), and
+  include the tree in the Step 8 report.
+
 Don't add anything the task didn't ask for — no speculative abstractions, no unrelated cleanup, no restyling.
 
 ## Step 4 — Write or update the tests
@@ -154,7 +163,11 @@ injected TTY facts); for every new or changed command, error path or flag in a c
 `tests/cli.rs` (or the crate's equivalent) through the clean-environment helper — exit code from a table, exact
 stdout (golden file for `--json`), `stderr("")` on success, one envelope on stderr and empty stdout for a JSON
 failure, a closed-stdin "never prompts" case, `NO_COLOR`/no-TTY output without escape bytes; `TestBackend` tests for
-TUI rendering and plain `KeyEvent` tests for its state. Tests never depend on the real terminal, the network, the
+TUI rendering and plain `KeyEvent` tests for its state — and, for a screen/component the task added or changed, the
+UI tests of `reference/ui-implementation.md` §4–§6: every visual state with minimal/typical/many-items/long-content
+and right-to-left fixtures, each captured through `src/tui/ui_screenshots.rs` as
+`.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt` for every `.ui-quality.yml` direction × theme the
+TUI has (plus `no-color`), and the asserted accessibility checks at the file's level. Tests never depend on the real terminal, the network, the
 user's config, or process-global state (no `env::set_var`; temp dirs for `HOME`/`XDG_CONFIG_HOME`). A test that
 needs Docker or the network is marked `#[ignore = "requires docker (testcontainers)"]`. Cover the edge cases implied
 by the doc comments' `# Errors`/`# Panics`. Update golden files deliberately and name each one in Step 8. Do not run
@@ -235,6 +248,8 @@ Hand back a short summary:
 - **The compile-check result per package** (and `--all-features`/other-target checks): passed, failed on this task's
   code and fixed, failed outside this task's scope, or unavailable (and why); any file rustfmt reformatted beyond the
   task's own.
+- **For terminal UI work**: the `Screen › Region › Component` decomposition, and the UI tests and captures added
+  (component/screen/flow, states × directions × themes, accessibility rule ids checked; not run).
 - **Generated artifacts that need regenerating** (completions, man pages, CLI reference via `cargo xtask …`) because
   the command tree changed.
 - **Whether this task stopped on a blocker**, with enough detail for the caller to surface it.
@@ -274,6 +289,10 @@ assert_cmd 2.2.2, predicates 3.1.4, tempfile 3.27.0):
   `assert!(!s.is_empty())`; `allow-unwrap-in-tests` doesn't cover helper fns in `tests/*.rs`; clap's `StyledStr`
   `Display` is plain text; `#[tokio::test(start_paused = true)]` needs `test-util`; rustfmt formats child modules of a
   file it's given.
+- `reference/ui-contract.md` (verbatim catalog copy) and `reference/ui-implementation.md` were added later for the UI
+  contract without a Rust toolchain on the authoring machine: the Ratatui APIs they use (`Buffer::content`/`area`,
+  `Cell::symbol`, `Span::width`, `ListState::offset_mut`, `TestBackend::buffer`) were checked against docs.rs, the
+  code sketches were not compiled.
 - **Unverified locally**: running the binaries on Windows/Linux (only cross-`check`ed), the TUI on a Windows console,
   real `dialoguer` prompts (they need a TTY; the policy and fake-confirm paths are tested), and container-backed
   (`testcontainers`) tests.

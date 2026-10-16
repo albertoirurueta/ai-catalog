@@ -19,8 +19,10 @@ description: >-
   included) when `ci: no`. Invoke as `/iru-setup-windows-repository`, optionally with `args` (`key: value` lines) to
   pre-resolve `ui`, `architecture`, `branching`, `mode` (`new`/`existing`), `open-source`, `visibility`, `ci`,
   `ci-tests`, `pages`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), `distribution`,
-  `signing`, `winget`, `msix`, `ui-tests`, `rids`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `integration-branch`, `stable-branch`, and every identity field, skipping the matching question.
+  `signing`, `winget`, `msix`, `ui-tests`, `rids`, `accessibility` (`enforce`/`report`/`off` — the automated
+  Axe.Windows level of the UI tests, written by the scaffold to `.ui-quality.yml`), `sonar` (+ `sonar-organization`/
+  `sonar-project-key`/`sonar-host-url`), `integration-branch`, `stable-branch`, and every identity field, skipping
+  the matching question.
   On an existing repository every component sub-skill warns about the prior setup it owns and asks Update / Keep as
   is / Replace per file (unless `on-existing` decides), and the final report states the action taken per component.
   Use whenever bootstrapping (or catching up) a WPF, WinUI 3 or Windows Forms desktop app repository's full
@@ -87,7 +89,9 @@ Recognized keys:
   (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/`replace` —
   never asked; forwarded to the component sub-skills only when it arrived here via `args`), `distribution`
   (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`.
+  `sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`, `accessibility`
+  (`enforce`/`report`/`off` — the catalog's UI-contract key: the automated accessibility level the UI tests apply,
+  written to `.ui-quality.yml`; every Windows app has a UI, so it is always forwarded to `iru-setup-windows-app`).
 - **Windows release keys**: `signing` (`artifact-signing`/`certificate`/`none`), `winget` (`yes`/`no`).
 - **Identity fields** named in Step 2: `app-name`, `display-name`, `root-namespace`, `publisher`,
   `publisher-display-name`, `package-name`, `version`, `license`, `developer-name`, `developer-email`,
@@ -159,6 +163,7 @@ Right after resolving `mode`, print a short **Setup mode** statement:
   | Core project | `src/<AppName>.Core/*.csproj` + `Models/`, `Services/`, `ViewModels/` or `Controllers/` |
   | App project | `src/<AppName>/*.csproj` (`UseWPF`/`UseWinUI`/`UseWindowsForms`), `App.xaml`/`Program.cs`, `app.manifest` |
   | Tests | `tests/<AppName>.Core.Tests/`, `tests/<AppName>.UITests/`, `tests/coverlet.runsettings` |
+  | UI quality config | root `.ui-quality.yml` (accessibility level, screenshot directions/themes) |
   | Packaging | `src/<AppName>/Package.appxmanifest` (WinUI) or `packaging/AppxManifest.xml` + `packaging/build-msix.ps1` |
   | Quality config | `.editorconfig`, `stylecop.json` |
   | API docs | `docfx.json` |
@@ -266,6 +271,11 @@ current pricing" (verified October 2026 against docs.github.com) and tell the us
   first manual submission is merged)** — explain that the very first WinGet submission is manual and that the job
   needs a `WINGET_TOKEN` (a classic PAT with `public_repo`).
 
+- **accessibility** — unless `args` supplied it (or an existing `.ui-quality.yml` already sets it — confirm that value
+  instead): "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** ("Axe.Windows violations fail
+  the UI tests") / **Report only** ("listed in the UI-test report, never failing") / **Off** ("not run; the coding
+  defaults still apply"). It applies whether or not CI runs the UI tests (`ci-tests`), since they also run locally.
+
 These values pass through unchanged to Step 4 (`iru-setup-windows-app`) and Step 7
 (`iru-setup-windows-github-workflows`), so neither re-asks them.
 
@@ -283,14 +293,15 @@ Agent({
     app-name: <app-name>\\ndisplay-name: <display-name>\\nroot-namespace: <..., only if supplied>\\n
     publisher: <..., if resolved>\\npublisher-display-name: <..., if resolved>\\npackage-name: <..., if resolved>\\n
     branching: <branching>\\nversion: <..., only if supplied>\\nrids: <..., only if supplied>\\nmsix: <..., only if supplied>\\n
-    ui-tests: <..., only if supplied>\\nlicense: <license display name, or 'none'>\\n
+    ui-tests: <..., only if supplied>\\naccessibility: <accessibility>\\nlicense: <license display name, or 'none'>\\n
     developer-name: <developer-name>\\ndeveloper-email: <developer-email>\\norganization-url: <organization-url>\\n
     open-source: <open-source>\\nvisibility: <visibility>\\nci: <ci>\\nsonar: <sonar>\\n
     sonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\n
     distribution: <distribution>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}). Report back:
     whether it scaffolded from scratch or updated an existing solution, the action taken per file group (created /
     updated / replaced / kept as is, or that the user chose Stop), which versions came from a live lookup versus the
-    recorded fallback, whether MSIX packaging and UI tests were written, and the pass/fail/unverified result of each
+    recorded fallback, whether MSIX packaging and UI tests were written, the action on .ui-quality.yml and the
+    accessibility level it holds, and the pass/fail/unverified result of each
     verification command it ran (restore, build, Core tests + coverage, analyzers, DocFX; Windows-only stages).",
   run_in_background: false
 })
@@ -386,7 +397,7 @@ Releases / install the MSIX / `winget install` / Microsoft Store" section plus "
 
 Summarize all six delegated skills together: repeat the **Setup mode**, the resolved `ui`, `architecture`,
 `branching` and `mode`, the app identity and license, and the pipeline parameters actually applied. Then a
-per-component table — solution/build props, Core project, app project, tests, packaging, quality config, DocFX, the
+per-component table — solution/build props, Core project, app project, tests, `.ui-quality.yml`, packaging, quality config, DocFX, the
 Antora site, `.gitignore`, each workflow file + `sync_versions.py`, `.github/dependabot.yml`, `CHANGELOG.md`,
 `README.md` — with the action taken for each: **created / updated / replaced / kept as is / skipped (ci: no)** (or
 not reached, after a Stop), and for anything kept as is, the mismatches its sub-skill listed.
@@ -400,6 +411,9 @@ State explicitly what was wired or deliberately omitted, and why:
 - **`ci-tests`**: `unit`/`full` — whether CI runs the FlaUI UI tests on a Windows runner (restating the ~1.7× Windows
   cost on private repositories).
 - **`pages`**: `yes` (Antora + DocFX deployed to GitHub Pages) or `no` (uploaded as a workflow artifact).
+- **`accessibility`**: the level written to `.ui-quality.yml` (Axe.Windows in the FlaUI UI tests), and that the UI
+  tests capture `.ui-screenshots/` (gitignored; uploaded by the CI UI job as a 7-day `ui-screenshots` artifact when
+  `ci-tests: full`).
 - **`distribution`** / **`signing`** / **`winget`**: which release artifacts and signing secrets exist.
 - **`sonar`**: whether the CI Sonar step was included; if `none`, whether that's the expected default or a user
   choice; if configured with `ci: no`, that no CI step sends reports.

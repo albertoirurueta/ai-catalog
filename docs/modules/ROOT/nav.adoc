@@ -2,6 +2,7 @@
 * Guides
 ** xref:guides/claude-md.adoc[]
 ** xref:guides/common-workflows.adoc[]
+** xref:guides/building-user-interfaces.adoc[]
 ** xref:guides/creating-skills-and-agents.adoc[]
 ** xref:guides/creating-tickets.adoc[]
 ** xref:guides/extending-the-catalog.adoc[]

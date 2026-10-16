@@ -26,6 +26,8 @@ outcome all happen once per task group in `iru-typescript-code-one-task-group` i
 back only a short summary; it never captures a quality baseline or runs any test/coverage/quality check itself.
 Equivalent to `iru-java-code-one-task` for npm/TypeScript projects.
 
+For a task that adds or changes UI (any framework except a plain library) it also applies the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it writes the `Screen > Region > Component` decomposition first, builds leaves first with presentational components taking props/inputs and emitting typed events, uses the framework's virtualizing container for collections and logical CSS properties for right-to-left, and writes the UI tests (stories per visual state, Playwright component, screen and flow specs that capture every direction x theme and run the accessibility check) without running them.
+
 === The bundled reference library
 
 This skill ships a `reference/` directory alongside its `SKILL.md`, holding this catalog's **general TypeScript
@@ -56,6 +58,10 @@ the `@throws` list being what the tests in Step 4 are written against.
 with `vi.mock`/`jest.mock` only where already used) and covering the new/changed behavior, including the edge
 cases implied by the TSDoc `@throws` contracts.
 
+|`ui-contract.md` + `ui-implementation.md`
+|The task adds or changes a screen, component, list or other UI (any framework except library); read in addition to the framework file
+|The catalog-wide UI rules (decomposition, composition, inputs/events, virtualized collections, UI tests, screenshots, accessibility) mapped onto React, Angular, Ionic and Hilla, Storybook stories and Playwright. `ui-screenshots.ts` is the shared screenshot/accessibility helper copied into the project as `e2e/support/ui-screenshots.ts` when it has none.
+
 |`react.md`
 |Detected framework is **react** (`react` + `vite` in `package.json`)
 |Component/state/testing conventions for a Vite+React project.
@@ -84,7 +90,7 @@ installed, the task was already handed over and this file is not read.
 `iru-react-native-code-one-task/reference/`.
 
 Exactly one framework file is read — the one matching the detected framework — never more than one, and none at
-all when the classification is **library**. The skill also notes the test runner (Vitest, Jest, or `ng test`) and
+all when the classification is **library**; the UI pair is read in addition for UI tasks. The skill also notes the test runner (Vitest, Jest, or `ng test`) and
 package manager (npm, pnpm, or yarn) while detecting the framework, since `reference/testing.md` and the task's
 own shell commands depend on both. If `reference/` is missing entirely, the skill falls back to the repository's
 own `CLAUDE.md` conventions and the surrounding code's existing style, and says so in its report rather than
@@ -121,8 +127,8 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 
 |`reference/`
 |No
-|The skill's own bundled reference directory (`README.md`, `code-style.md`, `tsdoc.md`, `testing.md`, and one file
-per framework). If it is missing (the skill directory was copied without it), the skill falls back to the
+|The skill's own bundled reference directory (`README.md`, `code-style.md`, `tsdoc.md`, `testing.md`, one file
+per framework, and the UI pair `ui-contract.md`/`ui-implementation.md` with `ui-screenshots.ts`). If it is missing (the skill directory was copied without it), the skill falls back to the
 repository's `CLAUDE.md` conventions and the surrounding code's style, and says so in its report rather than
 guessing at what the reference would have said.
 |Bundled with the skill
@@ -137,13 +143,14 @@ guessing at what the reference would have said.
   differs.
 * Tests added/updated (Vitest or Jest, matching the detected runner) covering the new/changed behavior, including
   a case per documented `@throws` — not run by this skill; the caller runs them once for the whole bucket.
+* For UI work: a story per visual state next to each added/changed component (minimal, typical, many-items/long-content and right-to-left fixtures), a Playwright component spec (behaviour once, then `captureUiMatrix` per state with the accessibility check), a screen spec and, for a new flow, a flow spec, using `e2e/support/ui-screenshots.ts` (created from `reference/ui-screenshots.ts` with `@axe-core/playwright` as a dev dependency when missing). With no Playwright setup at all it writes behaviour tests only and reports the gap as a deviation. Captures go under `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png` when the group's UI stage runs them.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
   pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
   the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
 * For a React Native task with `iru-react-native-code-one-task` installed: that skill's report, relayed as this
   skill's Step 7 report with a note about the hand-off (and that the plan should tag such tasks `react-native`).
 * A short summary handed back to the caller: the detected framework and which `reference/` file(s) were actually
-  read (for react-native, whether the task was handed over or the minimal fallback was used), the file(s) touched, tests added/updated, whether the run stopped on a blocker, and any deliberate
+  read (for react-native, whether the task was handed over or the minimal fallback was used), the file(s) touched, tests added/updated, for UI work the decomposition tree, the stories and UI specs added and the screenshot states they will capture, whether the run stopped on a blocker, and any deliberate
   deviation from `reference/` (a file that still uses `any`, a default export kept because the framework requires
   one, a file whose existing member order or style already diverges) so it reads as a decision rather than an
   oversight.
@@ -172,8 +179,8 @@ flowchart TD
     C -- "reference/ missing" --> C2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
     C2 --> D
     C --> D["Step 2: re-check current code state;\nnote what the file already does"]
-    D --> E["Step 3: implement exactly what the task\nspecifies (typing, readonly, exports, TSDoc)"]
-    E --> F["Step 4: write/update tests\n(not run here)"]
+    D --> E["Step 3: implement exactly what the task\nspecifies (typing, readonly, exports, TSDoc;\nUI task: write the decomposition first)"]
+    E --> F["Step 4: write/update tests (UI task: stories,\nPlaywright component/screen/flow specs;\nnot run here)"]
     F --> G{"Ambiguous, infeasible against\nreal code, or framework detection\ngenuinely ambiguous?"}
     G -- yes --> H["Step 5: stop; leave checkbox\nunchecked; report blocker to caller"]
     G -- no --> I["Step 6: check off this task's\ncheckbox + 'validation pending' note"]

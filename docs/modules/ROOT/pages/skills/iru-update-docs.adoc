@@ -1,6 +1,6 @@
 = Update Docs
-:description: Updates an Antora module's AsciiDoc pages to reflect actual code changes from a git diff, editing only the affected pages and never source code.
-:keywords: iru-update-docs, claude code skill, antora, asciidoc, documentation, git diff, confluence, mermaid diagrams, code-to-docs sync
+:description: Updates Antora AsciiDoc pages from a git diff, incl. a UI section with UI-test screenshots, editing only affected pages and never source code.
+:keywords: iru-update-docs, claude code skill, antora, asciidoc, documentation, git diff, confluence, mermaid diagrams, code-to-docs sync, ui documentation, screenshots
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -21,6 +21,14 @@ showing the user the exact proposed change for approval before anything is writt
 against that connector, it checks what its own tools actually expose: if the connector is read-only (search/read
 only, no create-page/update-page tool), it warns the user by name and skips the external-docs enrichment
 entirely instead of drafting an update it could never send.
+
+For repositories with a user interface it also maintains a **User interface** section (Step 4b, defined by `reference/ui-docs.md`): a
+`ui/index.adoc` overview, a `ui/navigation.adoc` navigation-flows page, one page per screen/page/activity and one per
+component/fragment/view/control, illustrated with the screenshots the UI tests captured under `.ui-screenshots/` (states x
+left-to-right/right-to-left x light/dark; see xref:guides/building-user-interfaces.adoc[Building user interfaces]). On a first run
+it documents the whole UI, afterwards only changed screens and components; a final synchronisation copies only the
+referenced screenshots into `images/ui/`, replaces the images of changed components, deletes unreferenced ones and then
+removes `.ui-screenshots/`. A repository with no UI skips it, and a missing `reference/ui-docs.md` means plain pages without screenshots.
 
 == Purpose group
 
@@ -56,6 +64,10 @@ branch (`git diff <base-branch>...HEAD` plus `git diff`).
 * Mermaid diagrams (`[mermaid]`) or MathJax equations added only where the Antora playbook already has the
   matching extension wired in, and only where they genuinely clarify a decision process, data flow, or formal
   definition better than prose.
+* For a repository with a UI: the `ui/` pages (`index.adoc`, `navigation.adoc`, `screens/<Id>.adoc`, `components/<Id>.adoc`)
+  with a **User interface** section in `nav.adoc`, and the screenshots they use copied under `images/ui/<kind>/<Id>/`
+  (changed ones replaced, unreferenced ones and the pages of removed components deleted); `.ui-screenshots/` is deleted
+  afterwards.
 * If no `antora.yml` existed anywhere in the repository and the user agreed to bootstrap one: a newly scaffolded
   Antora module (via `iru-setup-antora`), then the rest of the run proceeds against it.
 * If a documentation MCP (e.g. Confluence, Notion) is connected and exposes a write (create/update-page) tool: a
@@ -64,7 +76,7 @@ branch (`git diff <base-branch>...HEAD` plus `git diff`).
 * If a documentation MCP is connected but only exposes read tools: an explicit warning naming the connector, and
   the external-docs enrichment skipped entirely for this run — never a drafted change that couldn't be sent.
 * A report naming, per page: what changed in the source that drove the edit and what was updated in the docs —
-  plus pages deliberately left unchanged, any doc gap noticed but left out of scope, and what was sent (or
+  plus, for a UI repository, the screenshot synchronisation result (images added, replaced, unchanged, deleted, pages added/removed, states left "screenshot pending"), pages deliberately left unchanged, any doc gap noticed but left out of scope, and what was sent (or
   proposed-but-declined) to a connected documentation MCP.
 * No source code is ever modified.
 
@@ -88,7 +100,10 @@ flowchart TD
     G -- yes --> J["Read antora.yml + nav.adoc to build a live\npage map; check playbook for Mermaid/MathJax extensions"]
     J --> K["Understand changes in code terms: new/removed\nAPIs, behavior changes, new variants"]
     K --> L["Map changes to affected pages only;\nedit them, verifying every named symbol against real source"]
-    L --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
+    L --> L2{"Repository has a UI?"}
+    L2 -- yes --> L3["Step 4b: build or refresh ui/ pages per reference/ui-docs.md;\nsync screenshots into images/ui/ once; delete .ui-screenshots/"]
+    L2 -- no --> M
+    L3 --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- no --> M1[Skip external doc update]
     M -- yes --> M1B{Connector exposes\na write tool?}
     M1B -- read-only only --> M1C["Warn user by name;\nskip external-docs enrichment"]

@@ -2,7 +2,8 @@
 
 Read this when the task adds or changes a server-rendered view, URL pattern, template, template tag/filter,
 middleware, or htmx fragment. JSON APIs go through DRF or Ninja (`drf.md`, `ninja.md`), not template views or
-hand-built `JsonResponse`s.
+hand-built `JsonResponse`s. When the task adds or changes a screen, component or list, also read `ui-contract.md` and
+`ui-implementation.md` — how to decompose a page into components, build lists, and write the browser UI tests.
 
 ## Choosing a view
 
@@ -42,7 +43,8 @@ class ReviewUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView[Revie
   `context = super().get_context_data(**kwargs)`.
 - Per-request state in `setup()`/locals, never mutable class attributes; `as_view(**kwargs)` is evaluated once at
   import. `http_method_names` as an allow-list where it matters. `DeleteView` logic goes in `form_valid()`.
-- `paginate_by` needs an ordered queryset with a total key (`order_by("-published", "-pk")`).
+- `paginate_by` needs an ordered queryset with a total key (`order_by("-published", "-pk")`). Every list page is
+  paginated (or cursor-paged) — never an unbounded loop over a whole queryset (`ui-implementation.md` §4).
 - Decorate a CBV with `@method_decorator([...], name="dispatch")` or wrap `as_view()` in the URLconf.
 
 ## Function-based views
@@ -107,8 +109,11 @@ urlpatterns = [
 ## Templates
 
 - App templates in `<app>/templates/<app>/…` (namespaced); project-wide ones in the root `templates/`.
-  `{% extends %}` first, `{% block %}` for layout, `{% include %}` or 6.0 `{% partialdef %}` for fragments;
-  `{% load %}` in every template that needs it (not inherited).
+  `{% extends %}` first, `{% block %}` for layout, `{% include "…" with x=y only %}`, an inclusion tag, or 6.0
+  `{% partialdef %}` for fragments — components with explicit inputs, composed rather than copied
+  (`ui-implementation.md` §2); `{% load %}` in every template that needs it (not inherited).
+- The base layout writes `<html lang="{{ LANGUAGE_CODE }}" dir="{{ LANGUAGE_BIDI|yesno:'rtl,ltr' }}">` and CSS uses
+  logical properties (`margin-inline-start`, `text-align: start`), so right-to-left languages render correctly.
 - **"Stupid" templates**: no queries in loops (`book.reviews.count` per row is N+1 — annotate in the view), no
   sorting/aggregation (`|length` on a QuerySet evaluates it), no business rules (expose a model property or a view
   boolean). Set `alters_data = True` on model methods that mutate.
@@ -158,4 +163,5 @@ and formula-injection-safe cells (prefix `=`, `+`, `-`, `@` values). Slow export
 Test client for routing/middleware/templates (`assertTemplateUsed`, `assertContains`, `assertRedirects(...,
 fetch_redirect_response=False)`), `RequestFactory` for view logic in isolation (set `request.user` yourself),
 `assertNumQueries` around `client.get()` for every list page, `Client(enforce_csrf_checks=True)` to prove a
-token-less POST is 403, `HX-Request: true` header tests for fragments (body is the fragment, `Vary` is set).
+token-less POST is 403, `HX-Request: true` header tests for fragments (body is the fragment, `Vary` is set). These stay browser-free and
+take no screenshots; screens and components additionally get browser UI tests (`ui-implementation.md` §5).

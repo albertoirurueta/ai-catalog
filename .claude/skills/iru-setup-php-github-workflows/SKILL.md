@@ -11,7 +11,9 @@ description: >-
   newest supported release, and with `ci-tests: full` an integration job per flavor: Laravel against a MySQL or
   PostgreSQL service container, WordPress inside the dedicated `@wordpress/env` test environment across a WordPress
   matrix (the `Requires at least:` floor and the latest release), PrestaShop inside the Docker shop of
-  `tests/Integration/docker-compose.yml` for 8.x and/or 9.x; an optional SonarCloud/SonarQube job
+  `tests/Integration/docker-compose.yml` for 8.x and/or 9.x — each integration job also runs the scaffold's Playwright
+  browser UI tests against the environment it already starts (`npm run test:e2e`, guarded on a `playwright.config.*`)
+  and uploads `.ui-screenshots/` as a 7-day artifact; an optional SonarCloud/SonarQube job
   (`sonarqube-scan-action`, skipped on fork pull requests); and a docs job — Antora plus phpDocumentor API docs only
   when `phpdoc.dist.xml` exists — deployed to GitHub Pages from the stable branch with `pages: yes` or uploaded as an
   artifact with `pages: no`); `release.yml` per `distribution` (WordPress: an installable zip built from `.distignore`
@@ -464,6 +466,32 @@ the `testing` database; CI supplies host, port and credentials):
           php artisan key:generate --ansi
       - name: Integration tests
         run: composer test:integration
+      # Browser UI tests (Playwright + axe-core, `.ui-quality.yml` level) — only when the scaffold wrote
+      # playwright.config.ts. Its webServer runs `php artisan serve` on the .env above (SQLite), so the database is
+      # created and migrated first; assets are built so the pages render as in production.
+      - name: Set up Node for the browser UI tests
+        if: ${{ hashFiles('playwright.config.*') != '' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Browser UI tests
+        if: ${{ hashFiles('playwright.config.*') != '' }}
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+          touch database/database.sqlite
+          php artisan migrate --force --no-interaction
+          npm run test:e2e
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-integration
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 ```
 
 `wordpress-plugin` / `wordpress-theme` — the scaffold's `WP_UnitTestCase` suite inside its dedicated wp-env test
@@ -523,10 +551,35 @@ is `<slug>` — on a runner the checkout directory is the *repository* name, so 
           npm run test:env:start
       - name: Integration tests
         run: composer test:integration
+      # Browser UI tests (`wp-scripts test-playwright`, `.ui-quality.yml` level) against the test environment the
+      # step above started (`.wp-env.test.json`, http://localhost:8889 — the instance the scaffold's
+      # playwright.config.ts targets through WP_BASE_URL) — only when the scaffold wrote playwright.config.ts, and
+      # only on the latest-WordPress entry. Chromium is installed explicitly, so wp-scripts must not download again.
+      - name: Browser UI tests
+        if: ${{ matrix.wp == 'latest' && hashFiles('<slug>/playwright.config.*') != '' }}
+        env:
+          WP_BASE_URL: http://localhost:8889
+        run: |
+          npx playwright install --with-deps chromium
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e
+      - name: Upload UI screenshots
+        if: ${{ always() && matrix.wp == 'latest' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-integration-wp-${{ matrix.wp }}
+          path: <slug>/.ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 ```
 
+`hashFiles()` and `upload-artifact`'s `path` resolve from the workspace root, not from `defaults.run.working-directory`
+— hence the `<slug>/` prefix there. The browser tests reuse the environment this job already starts: no extra job,
+runner, or WordPress matrix entry.
+
 `prestashop-module` — the scaffold's Docker shop (`tests/Integration/docker-compose.yml`, `PS_VERSION=8|9`): the
-`Integration` suite plus PHPStan against the real shop (`lint:shop`, which the stub-based `lint` can't cover):
+`Integration` suite plus PHPStan against the real shop (`lint:shop`, which the stub-based `lint` can't cover), and —
+because this job already has a running shop (`PS_DOMAIN` `localhost:${PS_PORT:-8080}`) — the scaffold's Playwright
+browser UI tests against it through `PS_BASE_URL` (they skip without a shop):
 
 ```yaml
   integration:
@@ -561,6 +614,30 @@ is `<slug>` — on a runner the checkout directory is the *repository* name, so 
         run: composer test:integration
       - name: Static analysis against the shop
         run: composer lint:shop
+      # Browser UI tests (Playwright + axe-core, `.ui-quality.yml` level) against the running shop — only when the
+      # scaffold wrote playwright.config.ts.
+      - name: Set up Node for the browser UI tests
+        if: ${{ hashFiles('playwright.config.*') != '' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Browser UI tests
+        if: ${{ hashFiles('playwright.config.*') != '' }}
+        env:
+          PS_BASE_URL: http://localhost:8080
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-integration-ps-${{ matrix.ps }}
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Stop the shop
         if: ${{ always() }}
         run: composer shop:down
@@ -572,7 +649,9 @@ Gating summary for `build.yml`: drop "Prepare the Laravel environment" for WordP
 `phpdoc.dist.xml` exists; keep exactly one of "Upload Pages artifact"/"Upload documentation" and drop `deploy-docs`
 with `pages: no`; drop the whole `docs`/`deploy-docs` pair when there is no Antora site and no phpDocumentor (report
 it); with `ci-tests: full` append the flavor's `integration` job (Laravel: keep the service/port/user/extension
-alternative for the scaffold's database).
+alternative for the scaffold's database), keeping its browser-UI-test steps (self-guarded on `playwright.config.*`;
+drop them only when the project has no `test:e2e` npm script). With `ci-tests: unit` no job runs the browser UI tests
+— they stay local (`npm run test:e2e`, behind `.integration-test.lock`); say so in Step 7.
 
 ### `release.yml` (not written with `distribution: none`)
 
@@ -1471,7 +1550,10 @@ Also:
   `composer validate --strict`, `composer audit --locked`, `composer lint`, `composer format:check`, `composer
   test:coverage`, and `python3 .github/scripts/php_version.py --list` (every location must agree and match the
   `-dev` convention). With `ci-tests: full` and Docker available, also the flavor's integration commands; Docker
-  unavailable → the integration job is **unverified**, not failed. A workflow whose commands were never run is a guess.
+  unavailable → the integration job is **unverified**, not failed. The browser UI test steps likewise: run
+  `npm run test:e2e` locally behind `.integration-test.lock` when Node, a browser and the flavor's server (Laravel's
+  `php artisan serve`, wp-env) are available, else **unverified**. A workflow whose commands were never run is a
+  guess.
 - Never trigger `release.yml` or `sync.yml` for real as a test. Recommend a throwaway pre-release on a fork, or
   review of the first real release run.
 
@@ -1508,7 +1590,8 @@ Required secrets (Settings → Secrets and variables → Actions) — list only 
 Then summarize: scratch vs update and, per unit, **created / updated / replaced / kept as is** (with mismatches) or
 stopped; flavor, `<slug>`, PHP floor and matrix (and where they came from); `visibility` (and its source) with the
 minutes note for private repositories; `ci-tests` (and for `full`, which integration job — database, WordPress
-matrix, PrestaShop majors and why a major was left out); `pages`; `sonar` (+ keys) or why omitted; `distribution`
+matrix, PrestaShop majors and why a major was left out — and whether it runs the browser UI tests and uploads
+`.ui-screenshots/`, or why not); `pages`; `sonar` (+ keys) or why omitted; `distribution`
 (or why `release.yml` wasn't written); which security jobs were included, that CodeQL can't analyse PHP and Psalm
 taint analysis substitutes for it (with its limits above); and every open gap (missing composer scripts, no Antora
 setup, README wording `sync_versions.py` won't match, patch releases the minor-bump default doesn't handle, a

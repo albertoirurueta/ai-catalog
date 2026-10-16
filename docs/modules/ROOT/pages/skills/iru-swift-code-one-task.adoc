@@ -22,6 +22,8 @@ code-quality checks all happen once per bucket in `iru-swift-code-one-task-group
 model on purpose: the plan already carries the hard reasoning, so this skill only executes one task's
 implementation against code agreements that live in `reference/` rather than being re-derived per task.
 
+For a task that adds or changes a screen, component or list in an app it also applies the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it writes the `Screen > Region > Component` decomposition first, builds leaves first with value-type state plus closures and virtualized collections over keyed view-model state, and writes the UI tests that capture every `.ui-quality.yml` direction x theme combination and run the accessibility audit. A command-line tool has no UI, so none of this applies there.
+
 === Package-vs-app shape and target detection
 
 Before reading anything, Step 1 works out which of two shapes the repository is:
@@ -137,6 +139,14 @@ typed throws with `enum: Error` error types, naming per the Swift API Design Gui
 |With `cli.md`, whenever a CLI task changes what a caller observes: stdout/stderr, exit codes, `--format`/JSON, colour, prompts, `--dry-run`/`--yes`, `schema`/help
 |The catalog's shared, language-agnostic CLI contract (streams, exit codes, TTY/colour, machine output, safety and idempotency, configuration, self-description, startup).
 
+|`ui-contract.md`
+|The task adds or changes a screen, component, list or other UI (any UI framework)
+|The catalog-wide UI rules: decomposition, composition, inputs/events, virtualized collections, UI tests, screenshots and accessibility.
+
+|`ui-implementation.md`
+|With `ui-contract.md`, always for UI tasks; never for a command-line tool
+|The contract mapped onto SwiftUI/UIKit/AppKit, XCUITest and the shared `UIScreenshots.swift` helper.
+
 |`package-api.md`
 |The task changes a `public` declaration in a library package's target
 |Semver-stable package API conventions, availability, `Package.swift` hygiene.
@@ -183,7 +193,7 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 |No
 |The skill's own bundled reference directory (`README.md`, `code-style.md`, `docc.md`, `testing.md`,
 `swiftui.md`, `package-api.md`, `app-structure.md`, `architecture.md`, `macos.md`, `appkit.md`, `ios.md`,
-`uikit.md`, `visionos.md`, `cli.md`, `cli-contract.md`). If missing, the skill falls back to `CLAUDE.md` and the
+`uikit.md`, `visionos.md`, `cli.md`, `cli-contract.md`, `ui-contract.md`, `ui-implementation.md`). If missing, the skill falls back to `CLAUDE.md` and the
 surrounding code's style, and says so in its report rather than guessing at what the reference would have said.
 |Bundled with the skill
 |===
@@ -196,6 +206,7 @@ surrounding code's style, and says so in its report rather than guessing at what
   they are more specific, and the surrounding file's existing style wherever it consistently differs.
 * Swift Testing (or XCTest where warranted) tests added/updated covering the new/changed behavior, including a
   case per documented `- Throws:` — not run by this skill; the caller runs the suite once for the whole bucket.
+* For a UI task: component tests per visual state capturing each `.ui-quality.yml` direction x theme (`UIScreenshots.render`/`capture`), screen/flow XCUITests with `--fixture` data and captures, and the screen's `performAccessibilityAudit()` test honouring the configured level; the shared `UIScreenshots.swift` helper is added to the test target when missing. Captures land under `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png` when the group's UI stage runs them.
 * A compile-check of the touched target (`swift build --build-tests` — also for a command-line tool, or `xcodebuild build-for-testing` against
   `platform=macOS` or a generic `generic/platform=<P> Simulator` destination for iOS/visionOS/watchOS, after regenerating the project if the manifest changed) — passed, fixed, found unrelated to this task, or reported
   unavailable.
@@ -204,7 +215,7 @@ surrounding code's style, and says so in its report rather than guessing at what
   untouched if the task stopped on a blocker.
 * A short summary handed back to the caller: project shape and target detected (plus, for an app, the layout, the target's platform — macOS / iOS-iPadOS /
   visionOS —, its UI framework and the architecture), reference file(s) read, file(s)
-  touched, tests added/updated, compile-check result, whether the run stopped on a blocker, and any deliberate
+  touched, tests added/updated, compile-check result, for a UI task the decomposition (one line per component: inputs, events, new or reused) and the UI tests and screenshot paths added, whether the run stopped on a blocker, and any deliberate
   deviation from `reference/`.
 
 == Execution flow
@@ -216,8 +227,8 @@ flowchart TD
     B -- "reference/ missing" --> B2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
     B2 --> C
     B --> C["Step 2: re-check current code state;\nnote existing concurrency/access/ordering style"]
-    C --> D["Step 3: implement exactly what the task\nspecifies (concurrency, access control, DocC, order)"]
-    D --> E["Step 4: write/update Swift Testing/XCTest\ntests (not run here)"]
+    C --> D["Step 3: implement exactly what the task\nspecifies (concurrency, access control, DocC, order;\nUI task: write the decomposition first)"]
+    D --> E["Step 4: write/update Swift Testing/XCTest\ntests (UI task: capture and accessibility\ntests too; not run here)"]
     E --> F["Step 5: compile-check the touched target\n(swift build / xcodebuild build-for-testing)"]
     F -- "fails on this task's own code" --> F2["Fix it"]
     F2 --> G

@@ -12,7 +12,7 @@ file, cargo-llvm-cov), and runs clippy over them. Tests are code: the crate's li
 | Behaviour a caller sees through the public API of a library crate | integration test | `tests/<concern>.rs` (shared helpers in `tests/common/mod.rs`, never `tests/common.rs`) |
 | A CLI command's observable contract: stdout, stderr, exit code, no-TTY behaviour, env vars | end-to-end test running the real binary | `tests/cli.rs` (or the file the crate already uses) |
 | A `pub` item's documented example | doctest | the `# Examples` block (`rustdoc.md`) |
-| A TUI's state/rendering | unit test with `TestBackend` | the TUI module (`ratatui.md`) |
+| A TUI's state/rendering | component/screen/flow UI tests with `TestBackend`, each rendered state captured as `.txt` into `.ui-screenshots/` across directions × themes, plus the accessibility checks | the TUI module (`ratatui.md`, `ui-implementation.md` §4–§6) |
 
 Put most tests at the cheapest level that can see the behaviour: a command's logic tested with in-memory writers runs
 in microseconds; end-to-end tests pin the contract (one per exit code, golden JSON, no-TTY, colour) and catch wiring
@@ -273,6 +273,9 @@ a bool flag with `env` rejects `1` unless it uses `BoolishValueParser` (`clap.md
 - **trycmd / snapbox** (only if already used): `tests/cmd/*.trycmd` or `.toml` cases with `$ democli …`, expected
   output, and `? <code>`; `[..]`/`...` elide variable parts. `TRYCMD=overwrite` rewrites expectations — review the
   diff like a golden file.
+- **TUI captures** (`.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt`) are evidence, not
+  assertions: they are written through `src/tui/ui_screenshots.rs` on every run, gitignored and cleared by
+  `iru-rust-test` at the start of a full run — never committed and never compared (`ui-implementation.md` §5).
 - **`--help` snapshots** (if the crate keeps them, e.g. `tests/help/*.txt` or insta): regenerate with `NO_COLOR=1`
   and a fixed width (`#[command(max_term_width = 100)]` or `COLUMNS`), and review the diff — a lost flag shows up
   there.

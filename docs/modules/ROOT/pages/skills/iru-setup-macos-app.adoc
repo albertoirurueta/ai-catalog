@@ -16,7 +16,10 @@ XCUITest target and the package's `CoreTests`; `MARKETING_VERSION`/`CURRENT_PROJ
 strict concurrency, hardened runtime), an entitlements file with the App Sandbox, `Packages/Core` (models and services,
 plus `ViewModels/` for MVVM or `Controllers/` for MVC) tested to 100% lines, the `App/` layer per `ui` (SwiftUI scenes
 with Settings and Commands, or programmatic AppKit with `NSWindowController`/`NSViewController`), a `--uitesting` launch
-argument with accessibility identifiers, `ExportOptions-*.plist` per `distribution`, `scripts/make-dmg.sh`,
+argument with accessibility identifiers, a root `.ui-quality.yml`, the shared `App/Tests/Support/UIScreenshots.swift`
+capture helper and UI tests that capture the main window across left-to-right/right-to-left × light/dark into
+`.ui-screenshots/` plus a `performAccessibilityAudit()` test at the configured level (the catalog's UI contract; see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]), `ExportOptions-*.plist` per `distribution`, `scripts/make-dmg.sh`,
 `.swiftlint.yml`, `.swift-format` and `sonar-project.properties`. The generated `.xcodeproj` is never committed and
 Fastlane is not used.
 
@@ -89,6 +92,12 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 |Sonar recommendation inputs; `branching` is informational (identical files either way).
 |Asked
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the UI tests' automated accessibility level, written to `.ui-quality.yml`. Asked in
+Step 2 unless resolved.
+|`enforce`
+
 |`mode`, `on-existing`
 |No
 |`new`/`existing`; `ask`/`keep`/`update`/`replace` for existing file groups.
@@ -98,14 +107,18 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 == Outputs
 
 * `project.yml`, the entitlements file, the asset catalog, the matching `ExportOptions-*.plist`, `scripts/make-dmg.sh`,
-  `.swiftlint.yml`, `.swift-format` and `sonar-project.properties` (omitted when `sonar: none`).
+  `.swiftlint.yml`, `.swift-format`, `.ui-quality.yml` and `sonar-project.properties` (omitted when `sonar: none`).
 * `Packages/Core` (Package.swift, DocC catalog, models, services and view models or controllers) with its Swift Testing
   suite.
-* `App/Sources`, `App/Tests` and `App/UITests` for the chosen `ui` and `architecture`.
+* `App/Sources`, `App/Tests` (including `Support/UIScreenshots.swift`, compiled into both test targets) and
+  `App/UITests` (behaviour, window captures and the accessibility audit) for the chosen `ui` and `architecture`.
+  The captures land under `.ui-screenshots/screen/<ScreenType>/`, recovered from the `.xcresult` by
+  `iru-swift-test`'s `ui` run because the sandboxed host cannot write the repository.
 * A verification pass (Core tests and coverage, `xcodegen generate`, `xcodebuild build-for-testing` and tests, SwiftLint
   and swift-format, DocC, archive/export/DMG), all through `iru-gate-runner`; everything needing macOS or Xcode is
-  reported "unverified" elsewhere.
-* A report with the action per file group, the resolved options, toolchain versions (live versus fallback) and the
+  reported "unverified" elsewhere. The UI contract additions (captures, audit) are only partly verified; without the
+  Automation permission or a logged-in desktop the UI tests are unverified, not passed.
+* A report with the action per file group (including `.ui-quality.yml` and its `accessibility` level), the resolved options, toolchain versions (live versus fallback) and the
   scaffold contract table.
 
 == Execution flow
@@ -116,12 +129,12 @@ flowchart TD
     A[Start /iru-setup-macos-app] --> B["Step 0: Parse args\n(ui, architecture, app-name, bundle-id,\nsandbox, distribution, mode)"]
     B --> C["Step 1: Survey the repository\nfrom scratch, or update with\nUpdate / Keep / Replace / Stop per file group"]
     C -- user chose stop --> STOP[Stop and report]
-    C --> D["Step 2: Collect required inputs"]
+    C --> D["Step 2: Collect required inputs\n(incl. accessibility)"]
     D --> E["Step 3: Infer repository information"]
     E --> F["Step 4: Look up toolchain versions\n(fallback table)"]
     F --> G["Step 5: Select reference templates\nfor ui, architecture, sandbox, distribution"]
     G --> H["Step 6: Scaffold project.yml, Core package,\nApp layer, tests, packaging helpers"]
-    H --> I["Step 7: Verify via iru-gate-runner\nCore tests + coverage, xcodegen, xcodebuild tests,\nlint, DocC, archive/export/DMG"]
+    H --> I["Step 7: Verify via iru-gate-runner\nCore tests + coverage, xcodegen, xcodebuild tests,\nlint, DocC, archive/export/DMG,\nUI captures from the xcresult"]
     I --> J["Step 8: Report actions, versions,\nscaffold contract, quirks"]
 ....
 

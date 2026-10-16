@@ -1,6 +1,6 @@
 = .NET Test
-:description: Runs a .NET project or solution tests via dotnet test by selector, Windows-desktop aware, with a lock-serialized ui selector for FlaUI UI tests.
-:keywords: iru-dotnet-test, claude code skill, dotnet, csharp, unit testing, xunit, nunit, mstest, run unit tests, windows desktop, flaui ui tests
+:description: Runs .NET tests via dotnet test by selector, Windows-desktop aware, with a ui selector for FlaUI and Terminal.Gui UI tests, screenshots and accessibility.
+:keywords: iru-dotnet-test, claude code skill, dotnet, csharp, unit testing, xunit, mstest, windows desktop, flaui ui tests, ui screenshots, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -33,6 +33,14 @@ it takes the repository-wide `.integration-test.lock` (atomic `mkdir`, owner fil
 every exit path), builds the app the tests launch, runs them, and otherwise reports **unverified**. Skipped or not-run UI
 tests are never reported as passed.
 
+A `ui` run follows the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+Beyond FlaUI desktop tests it also runs a .NET command-line tool's Terminal.Gui view tests (`[TestCategory("UI")]` in a
+portable test project, rendered through the ANSI driver), which run on any host with no lock and no app build. It sets
+`UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears it only on a full UI run, validates every capture
+name against the `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>...]` layout (`.png`, or `.txt` for terminal
+captures), and reports screenshot counts per kind, malformed names, accessibility violations (Axe.Windows for desktop,
+the asserted `tui-*` checks for terminal UIs; count + rule ids) and the `.ui-quality.yml` level applied.
+
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -59,7 +67,7 @@ expression, or a specific project/solution path. Mapped to the correct `--filter
 
 |`ui` (selector)
 |No
-|Windows-desktop only: run the FlaUI desktop UI tests (`TestCategory=UI`) behind the shared `.integration-test.lock`. Not run on a non-Windows host or without an interactive desktop session — reported unverified.
+|Run the UI tests (`TestCategory=UI`). Desktop FlaUI tests are Windows-only, behind the shared `.integration-test.lock`; off Windows or without an interactive desktop session they are reported unverified. Terminal.Gui view tests of a command-line tool run on any host, without the lock. Captures and accessibility results are collected per the UI contract.
 |Not applicable.
 
 |`lock: held`
@@ -125,6 +133,10 @@ The selector maps to `dotnet test` parameters as follows:
 |Windows desktop: UI tests (`ui`)
 |`--filter "TestCategory=UI"` on the UI-test project (Windows only, lock)
 |`dotnet test tests/App.UITests --filter "TestCategory=UI"`
+
+|Terminal UI tests (`ui`)
+|`--filter "TestCategory=UI"` on the portable test project referencing `Terminal.Gui` (any host, no lock)
+|`dotnet test tests/Tool.Cli.Tests --filter "TestCategory=UI"`
 |===
 
 Which trait/category property name applies depends on the test framework in use (MSTest: `TestCategory`/
@@ -141,6 +153,10 @@ Surefire does — called out explicitly in the report rather than treated as a p
 * If there are failures: the failing test names and the relevant assertion/exception output (falling back to the
   `.trx` log under `TestResults/` if console output was truncated) — without unrelated passing-test noise.
 * For a Windows-desktop repository: which test projects ran, which were **unverified (needs Windows)** and why, whether the default UI exclusion applied, and — for `ui` — how the lock behaved.
+* For `ui` runs (desktop and terminal): the screenshot directory and whether it was cleared (full run) or kept (scoped
+  run); screenshot count per kind and per `<kind>/<Id>`; malformed capture names; the `.ui-quality.yml` accessibility level
+  applied (or "missing -- defaults"); accessibility violations as count + rule ids per context; and "captures unverified
+  (needs Windows)" whenever the desktop stage could not run.
 * No source or test code is ever modified.
 
 == Execution flow
@@ -151,6 +167,7 @@ flowchart TD
     A["Start /dotnet-test\n(optional selector)"] --> A2["Step 0: parse arguments; detect host,\nWindows-desktop projects, UI tests, runner"]
     A2 --> A3{ui selector?}
     A3 -- "yes, Windows + desktop session" --> U["Take .integration-test.lock; build app;\nrun TestCategory=UI; release lock"]
+    A3 -- "yes, terminal UI tests" --> U3["Run TestCategory=UI on the portable\nTerminal.Gui test project (any host, no lock)"]
     A3 -- "yes, otherwise" --> U2["Run nothing: report unverified"]
     A3 -- no --> B{Selector given?}
     B -- no --> C["Run dotnet test\n(full suite)"]
@@ -162,7 +179,9 @@ flowchart TD
     G --> H{Failures?}
     H -- yes --> I["Show failing test names +\nassertion/exception output\n(.trx log if truncated)"]
     H -- no --> J["Report: all passed, briefly"]
-    U --> G
+    U --> U4["Resolve UI_SCREENSHOTS_DIR, read .ui-quality.yml;\nvalidate capture names; count accessibility violations"]
+    U3 --> U4
+    U4 --> G
 ....
 
 == Dependencies
@@ -179,7 +198,7 @@ other skill in this catalog.
   (falling back to `dotnet test --filter "FullyQualifiedName~<TestClass>"` directly if this skill is
   unavailable), plus a full-suite run (this skill with no selector, so UI tests are excluded and non-runnable projects skipped).
 * xref:skills/iru-windows-code-one-task-group.adoc[] — the scoped and full runs for Windows desktop app buckets, plus the `ui` selector on Windows (with `lock: held` when it already owns the lock), via `iru-gate-runner`.
-* xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 7, once, to confirm the full suite still passes after every class's tests have been written or extended; also delegated through `iru-gate-runner`.
+* xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 7, once, to confirm the full suite still passes after every class's tests have been written or extended; and Step 7b, with the `ui` selector, to run the newly generated UI tests; also delegated through `iru-gate-runner`.
 
 === Related agents
 

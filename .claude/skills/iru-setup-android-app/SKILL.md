@@ -8,7 +8,11 @@ description: Scaffold a new single-module Android application (Gradle Kotlin DSL
   environment and leaves the release build type unsigned (never failing configuration) when any is absent, a
   Compose-by-default UI (`ui: compose`, or `ui: views` for an AppCompat + ViewBinding variant), Robolectric + MockK
   + JUnit 4 unit-test tooling, an instrumented-test skeleton, and an inline `sonar { properties {…} } }` block
-  (omitted when `sonar: none`). No Maven Central publishing block is ever generated — this skill is for
+  (omitted when `sonar: none`), plus UI tests per the catalog's UI contract — a `.ui-quality.yml` at the repository
+  root (`accessibility` from the `accessibility` arg, `directions: [ltr, rtl]`, `themes: [light, dark]`), Roborazzi +
+  the Accessibility Test Framework on Robolectric, the shared `app/src/test/java/<package>/testing/UiScreenshots.kt`
+  helper, and a sample screen test capturing `.ui-screenshots/` across left-to-right/right-to-left × light/dark with
+  the accessibility check. No Maven Central publishing block is ever generated — this skill is for
   distributable *applications*, not libraries (use `iru-setup-android-library` for the latter). Invoke as
   `/iru-setup-android-app`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `application-id`,
   `namespace`, `app-name`, `min-sdk` (default `26`), `compile-sdk`/`target-sdk` (default the current stable API
@@ -16,7 +20,7 @@ description: Scaffold a new single-module Android application (Gradle Kotlin DSL
   `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `ui` (`compose`/`views`), `distribution` (`none`/`internal`/`store`), `built-in-kotlin`
   (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool` (`jacoco`/`kover`), `static-analysis`
-  (`lint`/`lint+detekt+ktlint`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
+  (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
   a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `sonar: none` is recommended since no CI
   would send reports), `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`, default
   `ask`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks
@@ -89,6 +93,7 @@ built-in-kotlin: no
 junit: 4
 coverage-tool: jacoco
 static-analysis: lint
+accessibility: enforce
 visibility: public
 ci: yes
 mode: new
@@ -105,7 +110,8 @@ Recognized keys: `application-id`, `namespace` (defaults to `application-id` if 
 `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is
 `cloud` or `self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `ui` (`compose`/`views`),
 `distribution` (`none`/`internal`/`store`), `built-in-kotlin` (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool`
-(`jacoco`/`kover`), `static-analysis` (`lint`/`lint+detekt+ktlint`), `visibility` (`public`/`private`/`internal` —
+(`jacoco`/`kover`), `static-analysis` (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`,
+default `enforce` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`), `visibility` (`public`/`private`/`internal` —
 GitHub repository visibility, only used to pick the `sonar` recommendation in Step 2), `ci` (`yes`/`no` — whether
 CI workflows will exist to send Sonar reports; only used by Step 2's `sonar` question), `mode` (`new`/`existing`),
 and `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`).
@@ -121,7 +127,7 @@ orchestrator passes it only if its own `args` received it.
 
 Check which of Step 5's files already exist at the repository root — above all `settings.gradle.kts` and
 `app/build.gradle.kts`, but also root `build.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, the
-Gradle wrapper files, `detekt.yml`, and the `app/` skeleton files (manifest, `proguard-rules.pro`, `res/` files,
+Gradle wrapper files, `detekt.yml`, `.ui-quality.yml`, and the `app/` skeleton files (manifest, `proguard-rules.pro`, `res/` files,
 `MainActivity.kt`/theme, test sources, `app/.gitignore`). Then tell the user which of the two this run is doing:
 
 - **Scaffolding from scratch** — none exist: skip straight to Step 2. There is nothing to preserve.
@@ -134,7 +140,9 @@ Gradle wrapper files, `detekt.yml`, and the `app/` skeleton files (manifest, `pr
   Group the existing files into these artifacts (only those with at least one file present):
   **`settings.gradle.kts`**, **root `build.gradle.kts`**, **`gradle/libs.versions.toml`**, **`gradle.properties`**,
   **the Gradle wrapper**, **`app/build.gradle.kts`**, **the `app/` skeleton** (manifest, `proguard-rules.pro`,
-  `res/` files, `MainActivity.kt`/theme or layout, test sources, `app/.gitignore`), and **`detekt.yml`** (only once
+  `res/` files, `MainActivity.kt`/theme or layout, test sources including `testing/UiScreenshots.kt`,
+  `app/.gitignore`), **`.ui-quality.yml`** (a conflict to name: its `accessibility` differs from this run's), and
+  **`detekt.yml`** (only once
   Step 2 resolves `static-analysis: lint+detekt+ktlint` — ask about it after Step 2 in that case). Unless
   `on-existing` decides (Step 0), ask with `AskUserQuestion`, one question per artifact (batch up to 4 per call;
   further calls for the rest), naming any concrete conflict with this run's choices (e.g. "`app/build.gradle.kts`
@@ -146,7 +154,7 @@ Gradle wrapper files, `detekt.yml`, and the `app/` skeleton files (manifest, `pr
     bumped to Step 4's lookup; keep every dependency, product flavor, build type and option this skill doesn't
     own. You review a diff; your customizations survive, but a customized part this skill owns may be
     rewritten." For the `app/` skeleton, Update only creates its missing files.
-  - **Keep as is (Recommended for the `app/` skeleton)** — "Leave the file(s) untouched. Nothing you customized
+  - **Keep as is (Recommended for the `app/` skeleton and `.ui-quality.yml`)** — "Leave the file(s) untouched. Nothing you customized
     changes, but they may stay out of date or disagree with this run's choices — the report will list each
     mismatch."
   - **Replace** — "Regenerate from this skill's template. Result matches this house pattern exactly, but every
@@ -199,8 +207,8 @@ If a license is chosen (anything but "No license"), remind the user in Step 8 to
 file at the repository root if one doesn't exist yet — `iru-check-license` can verify/backfill source headers
 against it once it's there.
 
-Then, unless Step 0 already resolved them, ask about **ui**, **built-in-kotlin**, **junit**, **coverage-tool**, and
-**static-analysis** as bounded choices (`AskUserQuestion`, max four options each):
+Then, unless Step 0 already resolved them, ask about **ui**, **built-in-kotlin**, **junit**, **coverage-tool**,
+**static-analysis**, and **accessibility** as bounded choices (`AskUserQuestion`, max four options each):
 
 - **ui** — `compose` (recommended default; Jetpack Compose Material 3, matches this catalog's other app-flavor
   skills like `iru-setup-react-native-app`) or `views` (classic `AppCompatActivity` + XML layout + ViewBinding, no
@@ -218,6 +226,9 @@ Then, unless Step 0 already resolved them, ask about **ui**, **built-in-kotlin**
   instead).
 - **static-analysis** — `lint` (default; Android Lint only, already built into AGP) or `lint+detekt+ktlint` (adds
   Detekt for Kotlin static analysis and Spotless-driven ktlint formatting — see Step 5's opt-ins).
+- **accessibility** — "Automated accessibility checks in UI tests?": `enforce` (Recommended — Accessibility Test
+  Framework violations fail the UI tests), `report` (listed, never failing), or `off` (not run; the coding
+  defaults still apply). Written to `.ui-quality.yml` (Step 5).
 
 Then resolve `open-source`, `sonar`, and `distribution` — skip any of the three Step 0 already resolved from
 `args`. When invoked stand-alone with none of them pre-resolved, ask `open-source` *first* (`AskUserQuestion`:
@@ -300,6 +311,9 @@ actually observed in September 2026) only when the lookup fails, and say so expl
 | `kotlin-reflect` | same as the Kotlin row above (kept in lockstep) | `2.3.10` |
 | `com.irurueta:irurueta-android-test-utils` | `https://search.maven.org/solrsearch/select?q=g:com.irurueta+AND+a:irurueta-android-test-utils&rows=1&wt=json` | `1.3.2` |
 | Current stable Android API level (`compile-sdk`/`target-sdk` default) | `sdkmanager --list` on the local SDK, or https://apilevels.com | `36` (Android 16) |
+| Roborazzi (`roborazzi`, `roborazzi-compose` for `ui: compose`, `roborazzi-accessibility-check`; test scope only) | `https://repo1.maven.org/maven2/io/github/takahirom/roborazzi/roborazzi/maven-metadata.xml` (`<release>`) | `1.76.0` |
+| Compose UI test (`ui-test-junit4`, `ui-test-manifest`, `ui-test-junit4-accessibility`; only `ui: compose`) | versioned by the Compose BOM above — no own row; `ui-test-junit4-accessibility` needs Compose 1.8+ (BOM 2025.04+) | — |
+| Espresso accessibility (`espresso-accessibility`; only `ui: views`) | same version as `espresso-core` above (same `androidx.test.espresso` group-index) | `3.7.0` |
 | Detekt (opt-in) | `https://plugins.gradle.org/m2/io/gitlab/arturbosch/detekt/io.gitlab.arturbosch.detekt.gradle.plugin/maven-metadata.xml` | `1.23.8` — **unverified locally**, confirm at run time |
 | Spotless (opt-in) | `https://plugins.gradle.org/m2/com/diffplug/spotless/com.diffplug.spotless.gradle.plugin/maven-metadata.xml` | `7.2.1` — **unverified locally**, confirm at run time |
 | Kover (opt-in, `coverage-tool: kover`) | `https://plugins.gradle.org/m2/org/jetbrains/kotlinx/kover/org.jetbrains.kotlinx.kover.gradle.plugin/maven-metadata.xml` | `0.9.2` — **unverified locally**, confirm at run time |
@@ -339,6 +353,8 @@ says an opt-in changes it.
 | `<agp-version>` / `<kotlin-version>` / `<dokka-version>` / `<sonarqube-plugin-version>` / … | Step 4 |
 | `<sonar-organization>` / `<sonar-project-key>` / `<sonar-host-url>` | Step 2 |
 | `<owner>` / `<repo>` | Step 3 |
+| `<accessibility>` | Step 2 (`enforce` by default) — only in `.ui-quality.yml` |
+| `<roborazzi-version>` | Step 4 |
 
 ### Gradle wrapper — `gradle/wrapper/gradle-wrapper.properties`
 
@@ -486,6 +502,7 @@ testCoreKtx = "<test-core-ktx-version>"
 robolectric = "<robolectric-version>"
 kotlinReflect = "<kotlin-version>"
 iruruetaTestUtils = "<irurueta-test-utils-version>"
+roborazzi = "<roborazzi-version>"
 # Only when `ui: compose` (Step 2):
 composeBom = "<compose-bom-version>"
 activityCompose = "<activity-compose-version>"
@@ -503,7 +520,15 @@ mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "moc
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlinReflect" }
 irurueta-test-utils = { group = "com.irurueta", name = "irurueta-android-test-utils", version.ref = "iruruetaTestUtils" }
+roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
+roborazzi-accessibility-check = { group = "io.github.takahirom.roborazzi", name = "roborazzi-accessibility-check", version.ref = "roborazzi" }
+# Only when `ui: views`:
+androidx-espresso-accessibility = { group = "androidx.test.espresso", name = "espresso-accessibility", version.ref = "espressoCore" }
 # Only when `ui: compose`:
+roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-ui-test-junit4-accessibility = { group = "androidx.compose.ui", name = "ui-test-junit4-accessibility" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -629,6 +654,12 @@ android {
         // Only when `ui: views`:
         viewBinding = true
     }
+    testOptions {
+        unitTests {
+            // Robolectric UI tests need the merged resources (strings, themes) and render with them.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 kotlin {
     compilerOptions {
@@ -688,6 +719,16 @@ dependencies {
     testImplementation(libs.androidx.test.core.ktx)
     testImplementation(libs.kotlin.reflect)
     testImplementation(libs.irurueta.test.utils)
+    // UI tests (catalog UI contract): Roborazzi captures + Accessibility Test Framework checks on Robolectric.
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.accessibility.check)
+    // Only when `ui: compose`:
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.roborazzi.compose)
+    debugImplementation(libs.androidx.ui.test.manifest)
+    // Only when `ui: views`:
+    testImplementation(libs.androidx.espresso.core)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -696,6 +737,10 @@ dependencies {
     androidTestImplementation(libs.mockk.android)
     // Only when `ui: compose`:
     androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.ui.test.junit4.accessibility)
+    // Only when `ui: views`:
+    androidTestImplementation(libs.androidx.espresso.accessibility)
 }
 ```
 
@@ -863,6 +908,7 @@ exactly `Theme.App` so the two always match; rename both together if the user wa
 ```xml
 <resources>
     <string name="app_name"><app-name></string>
+    <string name="greeting">Hello, %1$s!</string>
 </resources>
 ```
 
@@ -987,6 +1033,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import <namespace>.ui.theme.AppTheme
 
@@ -996,16 +1043,22 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    Greeting("<app-name>")
+                    Greeting(stringResource(R.string.app_name))
                 }
             }
         }
     }
 }
 
+/**
+ * Greets [name] — the sample component of the UI contract (state: `name`; events: none; visual states: `default`).
+ *
+ * @param name the name shown inside the localized greeting.
+ * @param modifier modifier applied to the text.
+ */
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(text = "Hello, $name!", modifier = modifier)
+    Text(text = stringResource(R.string.greeting, name), modifier = modifier)
 }
 
 @Preview(showBackground = true)
@@ -1036,8 +1089,8 @@ fun GreetingPreview() {
         android:layout_height="wrap_content"
         android:text="@string/app_name"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -1063,7 +1116,8 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-`viewBinding = true` (already in the `buildFeatures {}` block above) generates `ActivityMainBinding` from
+The constraints use `Start`/`End`, never `Left`/`Right`, so the layout mirrors in right-to-left locales (UI
+contract §4). `viewBinding = true` (already in the `buildFeatures {}` block above) generates `ActivityMainBinding` from
 `activity_main.xml`'s filename — no manual binding class to write. This variant needs
 `androidx.appcompat:appcompat` and `androidx.constraintlayout:constraintlayout`, both pulled in transitively by
 `com.google.android.material:material`'s own dependency graph, confirmed working with just the `material` alias
@@ -1107,27 +1161,347 @@ A genuine first test exercises `MainActivity`'s `onCreate` via `Robolectric.buil
 
 ### `app/src/androidTest/java/<package-path>/MainActivityInstrumentedTest.kt` — instrumented test skeleton
 
+**`ui: compose`**:
+
 ```kotlin
 package <namespace>
 
+import android.os.Build
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.apps.common.testing.accessibility.framework.integrations.espresso.AccessibilityValidator
 import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityInstrumentedTest {
+    @get:Rule
+    val composeRule = createAndroidComposeRule<MainActivity>()
+
+    @Before
+    fun enableAccessibilityChecks() {
+        // Level from the `uiAccessibility` runner argument iru-android-test passes (.ui-quality.yml); API 34+ only.
+        val level = InstrumentationRegistry.getArguments().getString("uiAccessibility", "enforce")
+        if (level != "off" && Build.VERSION.SDK_INT >= 34) {
+            composeRule.enableAccessibilityChecks(
+                AccessibilityValidator().setRunChecksFromRootView(true).apply {
+                    if (level == "report") setThrowExceptionFor(null)
+                },
+            )
+        }
+    }
+
     @Test
     fun useAppContext() {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertEquals("<application-id>", appContext.packageName)
     }
+
+    @Test
+    fun greeting_isShown_andAccessible() {
+        val appName = composeRule.activity.getString(R.string.app_name)
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.greeting, appName))
+            .tryPerformAccessibilityChecks()
+    }
+}
+```
+
+**`ui: views`** — the same `useAppContext` test plus Espresso's Accessibility Test Framework integration:
+
+```kotlin
+package <namespace>
+
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.accessibility.AccessibilityChecks
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
+import androidx.test.ext.junit.rules.ActivityScenarioRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class MainActivityInstrumentedTest {
+    @get:Rule
+    val scenarioRule = ActivityScenarioRule(MainActivity::class.java)
+
+    @Test
+    fun useAppContext() {
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals("<application-id>", appContext.packageName)
+    }
+
+    @Test
+    fun mainActivity_isAccessible() {
+        // Level from the `uiAccessibility` runner argument iru-android-test passes (.ui-quality.yml).
+        val level = InstrumentationRegistry.getArguments().getString("uiAccessibility", "enforce")
+        if (level == "off") return
+        AccessibilityChecks.enable().setRunChecksFromRootView(true).apply {
+            if (level == "report") setThrowExceptionFor(null)
+        }
+        onView(isRoot()).check(AccessibilityChecks.accessibilityAssertion())
+    }
 }
 ```
 
 Runs only via `./gradlew :app:connectedAndroidTest` against a running emulator/device — Step 7 doesn't run this
-(no emulator available in this skill's own verification environment).
+(no emulator available in this skill's own verification environment); it was compile-checked
+(`:app:compileDebugAndroidTestKotlin`) for both `ui` variants.
+
+### `.ui-quality.yml` — UI test settings at the repository root
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
+`<accessibility>` is Step 2's answer (default `enforce`). Exactly this shape — the catalog's UI contract §8 — read
+by `UiScreenshots.kt` below, `iru-android-test`'s `ui` run, and the coding skills.
+
+### `app/src/test/java/<package-path>/testing/UiScreenshots.kt` — shared UI-test helper
+
+Resolves `UI_SCREENSHOTS_DIR` (else `<repository root>/.ui-screenshots`), reads `.ui-quality.yml`, builds the
+capture matrix and the contract's file names, forces Roborazzi to record (its captures are no-ops otherwise), and
+maps the accessibility level onto Roborazzi's ATF options. Identical for both `ui` variants:
+
+```kotlin
+package <namespace>.testing
+
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.RoborazziATFAccessibilityCheckOptions
+import com.github.takahirom.roborazzi.RoborazziATFAccessibilityChecker
+import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.RoborazziTaskType
+import java.io.File
+
+/**
+ * Shared UI-test helper: screenshot paths, the `.ui-quality.yml` settings and the capture matrix.
+ *
+ * Screenshots go to `UI_SCREENSHOTS_DIR` when set, otherwise to `<repository root>/.ui-screenshots`, as
+ * `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`.
+ */
+object UiScreenshots {
+    /** What a capture shows. */
+    enum class Kind { COMPONENT, SCREEN, FLOW }
+
+    /** Layout direction of a capture. */
+    enum class Direction { LTR, RTL }
+
+    /** Theme of a capture. */
+    enum class Theme { LIGHT, DARK, HIGH_CONTRAST }
+
+    /** Level of the automated accessibility checks. */
+    enum class Accessibility { ENFORCE, REPORT, OFF }
+
+    /** One cell of the capture matrix. */
+    data class Variant(val direction: Direction, val theme: Theme) {
+        /** Whether this cell renders right-to-left. */
+        val isRtl: Boolean get() = direction == Direction.RTL
+
+        /** Whether this cell renders the dark theme. */
+        val isDark: Boolean get() = theme == Theme.DARK
+    }
+
+    private val segment = Regex("[a-z0-9]+(-[a-z0-9]+)*")
+    private val setting = Regex("""^\s*(accessibility|directions|themes)\s*:\s*([^#]*)""")
+
+    /** Repository root: the nearest ancestor holding `.git`, else `settings.gradle(.kts)`, else the working dir. */
+    val repositoryRoot: File by lazy {
+        val start = File(System.getProperty("user.dir") ?: ".").absoluteFile
+        generateSequence(start) { it.parentFile }.firstOrNull { File(it, ".git").exists() }
+            ?: generateSequence(start) { it.parentFile }.firstOrNull {
+                File(it, "settings.gradle.kts").exists() || File(it, "settings.gradle").exists()
+            }
+            ?: start
+    }
+
+    /** Directory every capture is written under. */
+    val rootDir: File by lazy {
+        System.getenv("UI_SCREENSHOTS_DIR")?.takeIf { it.isNotBlank() }?.let(::File)
+            ?: File(repositoryRoot, ".ui-screenshots")
+    }
+
+    private val settings: Map<String, String> by lazy {
+        val file = File(repositoryRoot, ".ui-quality.yml")
+        if (!file.isFile) emptyMap()
+        else file.readLines().mapNotNull { setting.find(it) }.associate { it.groupValues[1] to it.groupValues[2].trim() }
+    }
+
+    private fun list(key: String): List<String>? =
+        settings[key]?.trim('[', ']', ' ')?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+
+    /** Accessibility level from `.ui-quality.yml` (default `enforce`). */
+    val accessibility: Accessibility by lazy {
+        settings["accessibility"]?.let { Accessibility.valueOf(it.uppercase()) } ?: Accessibility.ENFORCE
+    }
+
+    /** Directions × themes to capture, from `.ui-quality.yml` (default `[ltr, rtl]` × `[light, dark]`). */
+    val matrix: List<Variant> by lazy {
+        val directions = list("directions")?.map { Direction.valueOf(it.uppercase()) } ?: Direction.entries
+        val themes = list("themes")?.map { Theme.valueOf(it.uppercase().replace('-', '_')) }
+            ?: listOf(Theme.LIGHT, Theme.DARK)
+        directions.flatMap { d -> themes.map { t -> Variant(d, t) } }
+    }
+
+    /**
+     * Returns (and creates the parent of) the PNG file for one capture.
+     *
+     * @param kind component, screen or flow.
+     * @param id type name exactly as in code (`OrderRow`), or a kebab-case flow name.
+     * @param state kebab-case visual state (`default`, `loading`, `01-cart`, …).
+     * @param variant direction and theme of the capture.
+     * @param extra optional further variants (`phone`, `large-text`, …).
+     * @return the file to write.
+     * @throws IllegalArgumentException if a segment is not kebab-case.
+     */
+    fun file(kind: Kind, id: String, state: String, variant: Variant, vararg extra: String): File {
+        require(id.isNotBlank() && !id.contains('/')) { "Invalid id '$id'" }
+        (listOf(state) + extra).forEach { require(segment.matches(it)) { "'$it' is not kebab-case" } }
+        val name = (listOf(state, variant.direction.slug(), variant.theme.slug()) + extra).joinToString("--")
+        return File(rootDir, "${kind.slug()}/$id/$name.png").also { it.parentFile?.mkdirs() }
+    }
+
+    /** Roborazzi options that always write the capture, whatever the `roborazzi.test.*` properties say. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    val recordOptions: RoborazziOptions = RoborazziOptions(taskType = RoborazziTaskType.Record)
+
+    /** Roborazzi ATF options for the configured level, or `null` when the checks are `off`. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    val accessibilityOptions: RoborazziATFAccessibilityCheckOptions? by lazy {
+        when (accessibility) {
+            Accessibility.ENFORCE -> RoborazziATFAccessibilityCheckOptions(
+                failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.Error,
+            )
+            Accessibility.REPORT -> RoborazziATFAccessibilityCheckOptions(
+                failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.LogOnly,
+            )
+            Accessibility.OFF -> null
+        }
+    }
+
+    private fun Enum<*>.slug(): String = name.lowercase().replace('_', '-')
+}
+```
+
+### `app/src/test/java/<package-path>/GreetingTest.kt` (`ui: compose`) — sample UI test
+
+```kotlin
+package <namespace>
+
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.LayoutDirection
+import <namespace>.testing.UiScreenshots
+import <namespace>.ui.theme.AppTheme
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.checkRoboAccessibility
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w360dp-h640dp-xxhdpi")
+class GreetingTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun greeting_showsLocalizedName() {
+        composeRule.setContent { AppTheme { Greeting("Ada") } }
+
+        composeRule.onNodeWithText("Hello, Ada!").assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun greeting_capturesEveryDirectionAndTheme() {
+        var cell by mutableStateOf(UiScreenshots.matrix.first())
+        composeRule.setContent {
+            val direction = if (cell.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+            CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                AppTheme(darkTheme = cell.isDark) {
+                    Surface { Greeting(if (cell.isRtl) "عائشة" else "Ada") }
+                }
+            }
+        }
+        for (variant in UiScreenshots.matrix) {
+            cell = variant
+            composeRule.waitForIdle()
+            val file = UiScreenshots.file(UiScreenshots.Kind.COMPONENT, "Greeting", "default", variant)
+            composeRule.onRoot().captureRoboImage(file.path, roborazziOptions = UiScreenshots.recordOptions)
+            UiScreenshots.accessibilityOptions?.let { composeRule.onRoot().checkRoboAccessibility(it) }
+        }
+    }
+}
+```
+
+With a Compose BOM whose UI test artifacts are 1.11 or newer, `createComposeRule` is deprecated in favour of
+`androidx.compose.ui.test.junit4.v2.createComposeRule` (same use) — switch the import then; the fallback BOM in
+Step 4 predates it.
+
+### `app/src/test/java/<package-path>/MainActivityScreenTest.kt` (`ui: views`) — sample UI test
+
+```kotlin
+package <namespace>
+
+import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
+import <namespace>.testing.UiScreenshots
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.checkRoboAccessibility
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w360dp-h640dp-xxhdpi")
+class MainActivityScreenTest {
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun mainActivity_capturesEveryDirectionAndTheme() {
+        for (variant in UiScreenshots.matrix) {
+            val direction = if (variant.isRtl) "ldrtl" else "ldltr"
+            val night = if (variant.isDark) "night" else "notnight"
+            RuntimeEnvironment.setQualifiers("+$direction-$night")
+            ActivityScenario.launch(MainActivity::class.java).use {
+                val file = UiScreenshots.file(UiScreenshots.Kind.SCREEN, "MainActivity", "default", variant)
+                onView(isRoot()).captureRoboImage(file.path, roborazziOptions = UiScreenshots.recordOptions)
+                UiScreenshots.accessibilityOptions?.let { onView(isRoot()).checkRoboAccessibility(it) }
+            }
+        }
+    }
+}
+```
 
 ### `app/.gitignore`
 
@@ -1232,9 +1606,10 @@ limits. Files that didn't exist are always written.
    `app/build.gradle.kts`, `app/proguard-rules.pro`, `app/src/main/AndroidManifest.xml`, the `res/` theme/color/
    string/icon files, `MainActivity.kt` (+ `ui/theme/Theme.kt` for `ui: compose`, or `res/layout/activity_main.xml`
    for `ui: views`), `app/src/test/resources/<package-path>/robolectric.properties`,
-   `app/src/test/java/<package-path>/MainActivityTest.kt`,
-   `app/src/androidTest/java/<package-path>/MainActivityInstrumentedTest.kt`, and `app/.gitignore` — all from
-   Step 5.
+   `app/src/test/java/<package-path>/MainActivityTest.kt`, `app/src/test/java/<package-path>/testing/UiScreenshots.kt`,
+   the sample UI test (`GreetingTest.kt` for `ui: compose`, `MainActivityScreenTest.kt` for `ui: views`),
+   `app/src/androidTest/java/<package-path>/MainActivityInstrumentedTest.kt`, `app/.gitignore`, and
+   `.ui-quality.yml` at the repository root (with Step 2's `accessibility`) — all from Step 5.
 4. Apply whichever opt-in blocks Step 2 selected (Detekt/Spotless, Kover, JUnit 5, Firebase App Distribution,
    Gradle Play Publisher) to the files just written, per Step 5's "Opt-ins"/distribution subsections.
 5. If `distribution: internal` was chosen, remind the user now (also repeated in Step 8) that
@@ -1252,6 +1627,10 @@ Run through the `iru-gate-runner` agent (never inline in this skill's own contex
    downloads the `<compile-sdk>` platform, matching build-tools, and every Gradle/AGP/Kotlin/AndroidX artifact
    above if they aren't already cached — this can take several minutes and needs `ANDROID_HOME`/`local.properties`
    pointing at a real SDK install with licenses accepted.**
+
+3. `./gradlew :app:testDebugUnitTest` — runs the placeholder and the sample UI test; then confirm
+   `.ui-screenshots/component/Greeting/` (`ui: compose`) or `.ui-screenshots/screen/MainActivity/` (`ui: views`)
+   holds one `default--<ltr|rtl>--<light|dark>.png` per `.ui-quality.yml` cell (four by default).
 
 Report pass/fail and any error output verbatim for a failure; don't dump a successful build's full log.
 
@@ -1279,6 +1658,9 @@ State explicitly what was included versus omitted, and why:
     `SIGNING_*` env vars are supplied later.
 - **`built-in-kotlin`**/**`junit`**/**`coverage-tool`**/**`static-analysis`**: as resolved, and which opt-in
   Gradle plugins/files that triggered.
+- **`accessibility`** and the UI-contract files: `.ui-quality.yml` with its action (**created / updated / replaced /
+  kept as is**) and level, the `testing/UiScreenshots.kt` helper, the sample UI test, and how many captures Step 7
+  found under `.ui-screenshots/` (gitignored by `iru-setup-android-gitignore`).
 - Which Step 4 versions came from a live lookup versus this skill's recorded fallback — call out explicitly any
   row marked "unverified locally" above that was used as-is without confirming it resolves.
 
@@ -1376,6 +1758,20 @@ anything they need to re-add.
   style tasks in general (irrelevant here, since this skill never generates a publishing task) — if a future opt-in
   ever adds one that warns about configuration cache, pass `--no-configuration-cache` for that specific task the
   same way the reference project's `publish.yml` does for its library module.
+
+- **UI-contract additions, verified** in `$TMPDIR/iru-verify/android/app-ui/{compose,views}` (outside this
+  repository): both `ui` variants were generated straight from Step 5's templates with the fallback versions
+  (AGP `9.0.1`, Kotlin `2.3.10`, Compose BOM `2026.02.01`, Robolectric `4.16.1`, Robolectric `sdk=35`) plus Roborazzi
+  `1.76.0`, on Gradle `9.8.1` and JDK 21: `./gradlew :app:assembleDebug :app:testDebugUnitTest
+  :app:compileDebugAndroidTestKotlin` (plus `:app:lintDebug` for `views`) passed, and the sample UI test wrote
+  exactly four captures — `.ui-screenshots/component/Greeting/default--{ltr,rtl}--{light,dark}.png` (`compose`) and
+  `.ui-screenshots/screen/MainActivity/default--…png` (`views`) — with the ATF check passing at `enforce`. The same
+  helper and tests also passed on AGP `9.4.1`/Kotlin `2.4.21`/BOM `2026.09.00`/Robolectric `4.17` (which needs
+  `compileSdk = 37` for that BOM, and prints a deprecation for the v1 `createComposeRule`). Robolectric `sdk=36` on
+  JDK 21 fails Robolectric's `FileDescriptor` interceptor (`IllegalAccessException … jdk.internal.access`) — keep
+  `robolectric.properties` one level behind, or add `all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }`
+  inside `testOptions.unitTests`. **The instrumented tests were compile-checked only** (no emulator); Compose's
+  `enableAccessibilityChecks()` needs an API 34+ device and is a no-op guard below that.
 
 Finish with an explicit **Warn explicitly** block:
 

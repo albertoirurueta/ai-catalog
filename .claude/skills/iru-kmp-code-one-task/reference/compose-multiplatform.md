@@ -24,7 +24,11 @@ Same conventions as Jetpack Compose (the APIs are the same `androidx.compose.*` 
 - `remember`/`rememberSaveable` for local state; `derivedStateOf` for values derived from other state;
   `LaunchedEffect`/`DisposableEffect` for side effects — never launch coroutines in the composable body.
 - Read colors/typography/shapes from `MaterialTheme`; wrap the root (`App()`) and every preview in the project's
-  theme composable.
+  theme composable, which takes `darkTheme: Boolean = isSystemInDarkTheme()` so tests can force either theme.
+- Screen/component structure, inputs and events, and lists follow `ui-contract.md` as mapped in
+  `ui-implementation.md`: decompose first, components never see the view model, and every data-driven list, grid,
+  pager or tab set is a `Lazy*`/`HorizontalPager` with `key` and `contentType` — never `forEach` in a scrolling
+  `Column`.
 
 ## Platform differences inside shared UI
 
@@ -124,13 +128,18 @@ Use what the module already uses:
 - Touch targets ≥ 48dp; text scales with the user's font size (use `sp` from the theme typography, don't fix heights
   that clip scaled text).
 - `Modifier.testTag("…")` is for tests only; it's not an accessibility label.
+- UI tests run `checkUiAccessibility()` at the `.ui-quality.yml` level (`ui-implementation.md`).
 
 ## Testing Compose Multiplatform UI
 
-- Common UI tests use `runComposeUiTest { setContent { … }; onNodeWithText(…).performClick(); … }` from
+- Common UI tests use `runComposeUiTest { setContent { … }; onNodeWithText(…).performClick(); … }`
+  (`androidx.compose.ui.test.v2.runComposeUiTest` — the non-`v2` one is deprecated in Compose Multiplatform 1.12) from
   `org.jetbrains.compose.ui:ui-test` in `commonTest`, with `@OptIn(ExperimentalTestApi::class)`. Query by
   semantics (`onNodeWithText`, `onNodeWithContentDescription`), `onNodeWithTag` as a last resort. **Read `testing.md` before
   placing one**: verified locally, a `commonTest` Compose UI test passes on the iOS simulator but fails on the
-  Android host-test target of a module without Robolectric — so by default such tests go in `iosTest`.
+  Android host-test target unless the module runs its host tests under Robolectric through the `UiTest` base class
+  (`ui-implementation.md`) — without that wiring such tests go in `iosTest`.
+- Every UI test also captures its states across the `.ui-quality.yml` matrix into `.ui-screenshots/` with the
+  helper and runs the accessibility check — `ui-implementation.md`.
 - Test the stateless screen with fake state and recorded callbacks; test the `ViewModel` separately with plain
   `runTest` + Turbine — that's where most logic lives and it's faster.

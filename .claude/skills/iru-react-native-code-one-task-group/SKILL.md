@@ -25,7 +25,12 @@ description: >-
   simulator/emulator, an installed app build, and Metro on port 8081, so it always runs serialized repository-wide
   behind the same atomic `mkdir`-based `.integration-test.lock` as the other group skills (owner file, stale after 60
   minutes, bounded ~45-minute wait, released on every exit path); no device means "unverified", never silently
-  skipped, and e2e never counts toward the coverage gate. `iru-react-native-code-one-task` checks off each task's box
+  skipped, and e2e never counts toward the coverage gate. When the bucket touched UI, that same device run is the UI
+  run (the gallery capture flows under `.maestro/ui/` and flow captures, written by the gate into `.ui-screenshots/`),
+  followed by a UI evidence check: every added/changed screen and component must have a capture for each of its
+  states × `.ui-quality.yml` directions × themes (per platform run), and `eslint-plugin-react-native-a11y` findings
+  are applied at the `.ui-quality.yml` accessibility level (enforce fails the group, report lists them); no device
+  makes the captures "unverified". `iru-react-native-code-one-task` checks off each task's box
   itself with a "group validation pending" note; this skill backfills any that didn't land and replaces each note
   with the final outcome, notifying the user as each phase completes. Invoke as
   `/iru-react-native-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text,
@@ -177,11 +182,14 @@ without blocking the rest of the bucket.
 Derive the validation scope first: the union of the files each agent reported, cross-checked against a fresh
 `git status`, `git diff --name-only`, and `git diff --name-only --cached`. Split it into **JS/TS** (everything Jest,
 ESLint, `tsc`, and Prettier see), **Android** (`android/**`), **iOS** (`ios/**`), and **Expo native config**
-(`app.json`/`app.config.*`, `plugins/**`, `modules/**`, `package.json` `codegenConfig`). **Expo guard**: if the
+(`app.json`/`app.config.*`, `plugins/**`, `modules/**`, `package.json` `codegenConfig`). Also note the bucket's **UI
+scope**: every screen and component (`.tsx` under `app/`, `src/**/screens/`, `src/**/components/`, or anything the
+agents' reported `Screen › Region › Component` trees name) added or changed, with the visual states its
+`*.fixtures.ts` / gallery registry entry declares — Step 3.11 checks captures for exactly these. **Expo guard**: if the
 toolchain is expo and anything under `android/` or `ios/` appears in the diff, that is a defect — revert it via the
 task that made it (moving the change into app config / a config plugin / a local Expo module) before going on.
 
-Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 runs only once they pass**:
+Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 runs only once they pass, and 3.11 checks the UI evidence 3.10 produced**:
 
 1. **License headers**, via `iru-gate-runner`: `Agent({description: "Add license headers for task group",
    subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-check-license\", args:
@@ -244,7 +252,11 @@ Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 ru
    generated code (.expo/, android/app/build/, ios/build/, ios/Pods/). Compare against this pre-change baseline:
    <baseline from Step 1>. Report back only newly appearing issues, each with tool, rule id, file, and line."})`. Any
    new issue is a defect this bucket introduced — trace it to its task, fix it, re-run 3.3 and 3.5, and re-check.
-   Treat **every `tsc` error as blocking**, including those in tests and platform files: Jest never reported them. On
+   Treat **every `tsc` error as blocking**, including those in tests and platform files: Jest never reported them.
+   `react-native-a11y/*` rule ids are the automated accessibility check: read `accessibility` from `.ui-quality.yml`
+   at the repository root (missing file = `enforce`) — with `enforce` a new one is a defect like any other; with
+   `report` list them for Step 5 and don't fix-loop on them; with `off` the project's ESLint config has the rules
+   off (`iru-setup-react-native-app`'s config reads the same file). On
    an expo app with typed routes, a `tsc` error about missing `.expo/types` on a clean checkout is a missing type
    generation (`npx expo customize tsconfig.json` / a first `expo start`), not a code defect — report it as an
    environment note rather than casting it away. Leave an issue in place only if fixing it would contradict what its
@@ -330,7 +342,8 @@ Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 ru
 
    - **No e2e framework is wired and no native XCTest target is in scope** (Step 1): say so in Step 5 rather than
      reporting a stage that never existed. If this bucket's tasks *wrote* flows but the project has no e2e setup,
-     that's a finding to report.
+     that's a finding to report — and if the bucket touched UI, Step 3.11 reports **UI captures not wired** (no
+     `.maestro/ui/` gallery flows / Detox `e2e/support/ui-screenshots.ts`).
    - **No usable device** — Maestro: no booted iOS simulator (`xcrun simctl list devices booted` lists none, or not
      macOS) *and* no Android device/emulator (`adb devices` shows no `device` line); Detox: the simulator/AVD its
      chosen configuration names doesn't exist (Detox boots it itself). Report the stage as **e2e unverified (no
@@ -382,7 +395,10 @@ Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 ru
      prompt: "Invoke Skill({skill: \"iru-typescript-test\", args: \"e2e\\nlock: held\"}) — plus a
        \\nconfiguration: <name> line for Detox — in the React Native app at <app root> (<expo|metro>,
        <Maestro|Detox>, platform <ios|android>,
-       device <name/udid>) to run the whole e2e suite. The caller already holds the repository-wide
+       device <name/udid>) to run the whole e2e suite — it is also the UI run when this bucket touched UI: the skill
+       resolves UI_SCREENSHOTS_DIR (default <repo root>/.ui-screenshots), clears it because this is a full run,
+       passes it to the gallery capture flows (.maestro/ui/) and flow captures, re-runs `ui-flow`-tagged flows per
+       .ui-quality.yml theme, and reports screenshot counts per kind, malformed names and accessibility findings. The caller already holds the repository-wide
        .integration-test.lock — do not acquire or release it. The skill starts Metro on port 8081 if a debug build
        needs it and stops only a Metro it started. If the skill isn't installed, use the project's own e2e script
        (<e2e:ios / test:e2e / ...>) if one exists, else `maestro test .maestro/` (Maestro) or `npx detox build -c
@@ -394,8 +410,9 @@ Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 ru
        sequentially and wait for completion. Report back only: whether all flows/tests passed; for each failure the
        flow/test name, the failing step/assertion, and the message; and separately whether any failure was an
        environment problem (app not installed, Metro port 8081 busy with another bundler, device offline, Maestro
-       driver timeout, Detox build failure) rather than an assertion failure. Do not dump runner output or
-       screenshots.",
+       driver timeout, Detox build failure) rather than an assertion failure; plus the UI summary (screenshot count
+       per kind, malformed file names, the .ui-quality.yml level applied, accessibility findings by rule id). Do not
+       dump runner output or screenshots.",
      run_in_background: false
    })
    ```
@@ -418,6 +435,29 @@ Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 ru
    Release it on **every** exit path — pass, failure, environment failure, a blocked task, a user interrupt, or a hard
    stop. If you took the lock, you own releasing it before this skill returns.
 
+11. **UI evidence check — only when the bucket's UI scope (Step 3 above) is non-empty.** No lock needed (it only
+   reads files). Read `.ui-quality.yml` at the repository root (missing file → `accessibility: enforce`,
+   `directions: [ltr, rtl]`, `themes: [light, dark]`), then for every screen/component in the UI scope list what
+   `.ui-screenshots/<component|screen>/<Id>/` holds (`$UI_SCREENSHOTS_DIR` when set) and compare against
+   `<state>--<direction>--<theme>--<platform>.png` for each declared state × direction × theme on the platform 3.10
+   ran (`ios` or `android`), plus `flow/<flow-name>/` captures for any flow a task added:
+   - **Complete** — every expected file exists: record the count.
+   - **Missing captures** — a declared state/direction/theme has no file, or a component has no gallery entry /
+     capture flow at all: a defect for the owning task (add the registry entry or the `runFlow` lines), then re-run
+     3.10a–3.10b for the affected `.maestro/ui/<Id>.yaml` flows only (a scoped run doesn't clear the directory) and
+     re-check.
+   - **Malformed names** reported by the gate (wrong segment order, PascalCase state, a missing platform variant):
+     a defect in the flow that wrote them — fix the `runFlow` env values.
+   - **3.10 unverified** (no device, no Maestro, blocked lock) → **UI captures unverified (<same reason>)** — never
+     "passed", never silently skipped. Only the platform that ran is checked; the other platform is "not captured
+     this run".
+   - **Accessibility**: apply 3.6's `react-native-a11y/*` result at the level read here — `enforce`: any remaining
+     violation in the bucket's files fails the group (fix via the owning task); `report`: list count and rule ids
+     in Step 5; `off`: say the automated check is off. Also state that native accessibility audits (contrast, touch
+     target size) are not automated on React Native.
+   `.ui-screenshots/` is gitignored evidence — never commit it and never copy it anywhere here (the documentation
+   skills do that).
+
 ## Step 4 — Finalize progress notes and notify the user
 
 Confirm the lock is released (3.10b); if a failure path skipped the release, release it now — this skill must never
@@ -428,7 +468,8 @@ the **unit-only** coverage figure, the native stages, and the e2e result separat
 
 ```
 - [x] Task 2. **Add `OrderRow` component** — OrderRow.tsx; Jest tests (94% lines, unit-only); no new
-  ESLint/tsc/Prettier issues; Android build/lint OK; iOS build unverified (no Xcode); e2e smoke.yaml passed (iOS).
+  ESLint/tsc/Prettier issues; Android build/lint OK; iOS build unverified (no Xcode); e2e smoke.yaml passed (iOS);
+  UI: 12/12 captures (component OrderRow, iOS), a11y enforce — 0 violations.
 ```
 
 Name every unverified stage with its reason — `e2e unverified (no booted simulator/emulator)`, `iOS native stage
@@ -449,6 +490,10 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
   the guard caught and how it was moved into config/a plugin.
 - **The e2e result** (3.10): passed (platform, device), failed-and-fixed, **unverified** with the reason, or not
   wired. Never let "unverified" read as "passed". Name any e2e failure that unit tests missed, even once fixed.
+- **The UI result** (3.11), when the bucket touched UI: per screen/component the captures found vs expected
+  (states × directions × themes, platform), malformed names, missing capture infrastructure, the `.ui-quality.yml`
+  accessibility level and the violations (count + rule ids) — or **UI captures unverified** with the reason — and
+  the `Screen › Region › Component` decomposition the task agents reported.
 - **How the lock behaved** whenever it wasn't an immediate uncontended acquire: wait time, a broken stale lock (and
   its owner text), a timeout, and confirmation it was released.
 - Whether a new quality issue was left in place as unavoidable, whether license-header generation was skipped,
@@ -491,5 +536,9 @@ Exercised in a throwaway directory outside the repository (`$TMPDIR/iru-verify/r
   `ios.bundleIdentifier`/`android.package` it fell back to `com.anonymous.<slug>` non-interactively.
 - **Not verified locally**: the e2e stage (no simulator/emulator booted, Maestro not installed), Detox, `xcodebuild
   test`, the native compile of a local Expo module inside the prebuild copy, Android Lint baseline diffing through
-  `iru-android-code-quality` (it assumes `./gradlew` at the repository root), and lock contention across two real
-  concurrent groups.
+  `iru-android-code-quality` (it assumes `./gradlew` at the repository root), lock contention across two real
+  concurrent groups, and the UI stage's device half (Maestro gallery captures and the 3.11 capture check against real
+  `.ui-screenshots/` output). Its JS half was verified in `$TMPDIR/iru-verify/react-native/setup-react-native-app/`
+  (October 2026, Expo SDK 58 and React Native CLI 20.2 / RN 0.88): the UI gallery's Jest test, the
+  `eslint-plugin-react-native-a11y` rules at each `.ui-quality.yml` level (error / warning / off), and the gallery's
+  absence from production bundles.

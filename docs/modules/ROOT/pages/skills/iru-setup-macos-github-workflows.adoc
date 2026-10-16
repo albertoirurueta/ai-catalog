@@ -13,7 +13,9 @@ cost about 10x Linux minutes on a private repository.
 `iru-setup-macos-github-workflows` is the CI/CD step of the macOS chain run by `iru-setup-macos-repository`, and it also
 works standalone. It writes `build.yml` (a Linux `lint` job running SwiftLint and swift-format in a `swift` container;
 a cost-gated macOS job, `macos-ci: all|stable`, with `needs: lint`, running the Core tests with an 80% line-coverage
-bar, `xcodegen generate`, `xcodebuild test` with ad-hoc signing, optionally the XCUITest UI tests, and DocC; an
+bar, `xcodegen generate`, `xcodebuild test` with ad-hoc signing, optionally the XCUITest UI tests, and DocC — the app-test step passes `TEST_RUNNER_UI_SCREENSHOTS_DIR`, the next step
+rebuilds `.ui-screenshots/` from the captures attached to the `.xcresult` (`xcrun xcresulttool export attachments`),
+and the same job uploads it as a 7-day `ui-screenshots` artifact, with no extra job or runner; an
 optional Linux SonarQube job; and an Antora docs job merged with the DocC archive), `release.yml` per `distribution`
 (`internal`: Developer ID archive and export, notarized and stapled app and DMG, Gatekeeper check, attached to the
 GitHub Release; `store`: archive and upload to App Store Connect), `sync.yml` plus `sync_versions.py` for gitflow (next
@@ -102,7 +104,7 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
 == Outputs
 
-* `.github/workflows/build.yml`, `release.yml` (when `distribution` is not `none`), `sync.yml` and
+* `.github/workflows/build.yml` (including the `.ui-screenshots/` recovery step and artifact upload), `release.yml` (when `distribution` is not `none`), `sync.yml` and
   `.github/scripts/sync_versions.py` (gitflow), `security.yml`, `.github/dependabot.yml`, and
   `.github/scripts/lcov_to_sonar_generic.py` when Sonar is configured.
 * A verification pass: `actionlint` (or a YAML parse), `py_compile` of the scripts and, on macOS with the scaffold, a

@@ -8,7 +8,8 @@ description: >-
   `next-env.d.ts`, `.vercel`, matching `create-next-app`'s own template), a Prisma client generated inside the
   source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js/React Native coding and e2e skills, React
   Native (Expo, or a bare React Native CLI/Metro app — Gradle/Xcode/CocoaPods/Bundler outputs, keeping the
-  template's committed `debug.keystore`), Ionic/Capacitor native projects, Playwright, Antora docs, TypeDoc/Compodoc
+  template's committed `debug.keystore`), Ionic/Capacitor native projects, Playwright, the UI tests' screenshot
+  directory `.ui-screenshots/` for every UI project (React, Angular, Ionic, Next.js, React Native, Hilla), Antora docs, TypeDoc/Compodoc
   API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as
   `/iru-setup-typescript-gitignore`, optionally with an `args` line setting `on-existing` to
   `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs.
@@ -350,6 +351,17 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
   exists (`npx cap add ios` names the Xcode project after the app), and adjust the line if the project used a
   different name.
 
+- **UI screenshots** (a UI project — React, Angular, Ionic, Next.js, React Native (either toolchain), or a Hilla
+  frontend — detected, a `.ui-quality.yml` at the root, or a `.ui-screenshots/` directory already exists; never for a
+  plain library or NestJS service): add
+  ```gitignore
+  # UI test screenshots (UI contract) — regenerated on every full UI run; docs copy what they use into Antora images/ui/
+  .ui-screenshots/
+  ```
+  The catalog's UI tests (Playwright helpers, Maestro capture flows, Detox helpers) write one PNG per state ×
+  direction × theme there and `iru-typescript-test` clears it at the start of every full UI run; the only committed
+  copies are the ones the documentation skills place under `docs/modules/ROOT/images/ui/`.
+
 - **Playwright** (`playwright.config.ts`/`playwright.config.js` at the root, or `@playwright/test` in
   `package.json` devDependencies): add
   ```gitignore
@@ -418,7 +430,7 @@ the same manifest signals `iru-explore` and the sibling TypeScript setup skills 
 
 Concatenate Step 2's base template with whichever Step 3 sections actually matched, each under its own comment
 header for readability (e.g. `# Angular`, `# NestJS`, `# Next.js`, `# React Native (Metro)`,
-`# Prisma generated client`, `# Playwright`, `# Vaadin Hilla frontend`). If Step 1 found an existing `.gitignore`,
+`# Prisma generated client`, `# Playwright`, `# UI test screenshots …`, `# Vaadin Hilla frontend`). If Step 1 found an existing `.gitignore`,
 compose two drafts:
 
 - **Merged** (the Update draft): keep any of the existing file's lines that aren't already covered by the

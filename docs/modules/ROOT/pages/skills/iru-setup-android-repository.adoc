@@ -21,7 +21,9 @@ whether it is creating from scratch or updating, warns about the prior setup it 
 Replace per file (or applies `on-existing` when that arrived via `args`) — the orchestrator never asks those
 questions itself, so nothing is asked twice. Pipeline questions are cost-aware: the repository `visibility` drives
 recommendations about GitHub Actions minutes, SonarCloud pricing and GitHub Pages availability, and `ci: no` skips
-the workflows step entirely (security block included).
+the workflows step entirely (security block included). It also asks the `accessibility` level once
+(`enforce`/`report`/`off`, for both flavors) and forwards it to the scaffold skill, which writes it to
+`.ui-quality.yml` (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
 
 == Purpose group
 
@@ -137,6 +139,12 @@ nothing would send reports automatically.
 the locally installed SDK platforms.
 |Resolved by the scaffold skill
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the UI tests (the library's `app/` sample has one
+too), asked once with the other shared inputs and forwarded to the scaffold skill, which writes it to `.ui-quality.yml`.
+|`enforce` recommended
+
 |Scaffold toolchain toggles (`built-in-kotlin`, `junit`, `coverage-tool`, `static-analysis`, `ui` for `app`)
 |No
 |Never asked by this orchestrator; passed through untouched only if supplied via `args`, otherwise the scaffold
@@ -150,6 +158,8 @@ skill asks them itself.
   application module — the Gradle wrapper and root build files (via `iru-setup-android-library` or
   `iru-setup-android-app`), created from scratch or updated per file group according to the user's Update / Keep as
   is / Replace answers.
+* A root `.ui-quality.yml` carrying the chosen `accessibility` level (owned by the scaffold skill), and the sample UI
+  test's `.ui-screenshots/` captures; CI uploads `.ui-screenshots/` as a 7-day `ui-screenshots` artifact.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * Root and per-module `.gitignore` files (via `iru-setup-android-gitignore`).
 * CI/CD workflows — `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only), plus

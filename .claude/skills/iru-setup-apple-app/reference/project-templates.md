@@ -1,7 +1,8 @@
 # Project-level templates
 
 The generator manifest (XcodeGen `project.yml`, or Tuist `Project.swift` + `Tuist.swift`), the lint/format configs,
-`fastlane/Fastfile` and `sonar-project.properties` — everything outside `Targets/<Platform>/…` and `Packages/Core`.
+`.ui-quality.yml`, `fastlane/Fastfile` and `sonar-project.properties` — everything outside `Targets/<Platform>/…` and
+`Packages/Core`.
 
 Placeholders and `# >>> <condition>` / `# <<< <condition>` markers work as described in SKILL.md's "Reference files"
 section. Per-target blocks are repeated once per selected platform, with `<Platform>` one of `iOS` (for `ios` and/or
@@ -143,6 +144,8 @@ targets:
     deploymentTarget: "<platform-deployment-target>"
     sources:
       - path: Targets/<Platform>/UITests
+      # The UI contract's screenshot helper lives in the unit-test target and is compiled here too (one file).
+      - path: Targets/<Platform>/Tests/Support/UIScreenshots.swift
     dependencies:
       - target: <AppName>-<Platform>
     settings:
@@ -271,7 +274,7 @@ let iosUITestTarget = Target.target(
     product: .uiTests,
     bundleId: "<bundle-id>.uitests",
     deploymentTargets: .iOS("<ios-deployment-target>"),
-    sources: ["Targets/iOS/UITests/**"],
+    sources: ["Targets/iOS/UITests/**", "Targets/iOS/Tests/Support/UIScreenshots.swift"],
     dependencies: [.target(name: "<AppName>-iOS")]
 )
 
@@ -379,6 +382,19 @@ Run as `swiftlint lint --strict` from the repository root (0 violations for ever
 Run as `swift format lint --strict --recursive Targets Packages/Core/Sources Packages/Core/Tests` (clean for every
 verified variant). Without this file the formatter defaults to 2-space indentation and fails every template.
 `OrderedImports` wants every unconditional import — `@testable import` included — above any `#if … import` block.
+
+### `.ui-quality.yml`
+
+The UI contract's quality settings (`iru-swift-code-one-task`'s `reference/ui-contract.md` §8), read by the
+`UIScreenshots.swift` helper in the UI tests and by `iru-swift-test`/`iru-swift-code-one-task-group`. Committed —
+only `.ui-screenshots/` is gitignored. `<accessibility>` is Step 0/2's `accessibility` (default `enforce`).
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
 
 ### `fastlane/Fastfile`
 

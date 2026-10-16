@@ -19,7 +19,12 @@ workspace) and then fills in everything that scaffold does not include out of th
 does not bundle); `ng add angular-eslint` plus `eslint-config-prettier`; a `.prettierignore` next to the CLI's own
 `.prettierrc`; Stylelint 17 for SCSS (`stylelint-config-standard-scss`, with `no-empty-source` disabled to tolerate
 the CLI's 0-byte root stylesheet); Playwright via `ng add playwright-ng-schematics` (fixing the schematic's own
-hardcoded `/MyApp/` title assertion); Compodoc; optional Storybook; and, when `sonar` is not `none`,
+hardcoded `/MyApp/` title assertion); the catalog's UI-contract test scaffolding (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]) — a Playwright component-testing project using the
+built-in `mount()` fixture against a component gallery served by a `gallery` configuration in `angular.json`,
+`@axe-core/playwright`, a shared `e2e/support/ui-screenshots.ts` helper, a sample screen spec capturing
+`.ui-screenshots/` across left-to-right/right-to-left × light/dark with an accessibility check, and a `.ui-quality.yml`
+at the repository root; Compodoc; optional Storybook; and, when `sonar` is not `none`,
 `sonar-project.properties` pointing at the real `coverage/<project>/lcov.info` path. It is the Angular leaf of the
 TypeScript/Node bootstrap pipeline, parallel to `iru-setup-react-web`, `iru-setup-react-native-app`, and
 `iru-setup-ionic-app`.
@@ -96,6 +101,12 @@ license is chosen.
 |`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
 |`yes` implied
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the UI tests (axe violations fail them, are listed,
+or are not run), written to `.ui-quality.yml`. Asked in Step 2 when unresolved.
+|`enforce`
+
 |`on-existing`
 |No
 |`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing artifact. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
@@ -116,6 +127,11 @@ license is chosen.
   Stylelint (`.stylelintrc.json`) for SCSS, and reformatted CLI-generated files (`npx prettier --write .`).
 * Playwright e2e (`playwright.config.ts`, `e2e/example.spec.ts` with its title assertion corrected to the real
   project name).
+* UI contract scaffolding (Step 10b): `.ui-quality.yml` at the repository root, `e2e/support/ui-screenshots.ts` (from
+  the skill's `reference/ui-screenshots.ts`), the gallery under `playwright/gallery/` with `tsconfig.gallery.json` and
+  `gallery` configurations in `angular.json`, a sample `src/app/app.story.ts`, and component/screen specs under
+  `e2e/` that write `.ui-screenshots/` captures and run axe at the configured level; `@axe-core/playwright` and
+  `@types/node` installed.
 * Compodoc wired via a `docs` npm script producing `docs/api/`.
 * Optionally, a Storybook scaffold (`storybook: yes`).
 * `sonar-project.properties` at the repository root, only when `sonar` is `cloud` or `self-hosted`.
@@ -140,7 +156,7 @@ flowchart TD
     J -- Stop --> K[Report untouched; end]
     J -- other --> L
     I --> L
-    F --> L["Step 2: Collect name, directory, developer info,\nlicense, open-source, visibility, sonar, storybook"]
+    F --> L["Step 2: Collect name, directory, developer info,\nlicense, open-source, visibility, sonar, storybook,\naccessibility"]
     L --> M["Step 3: Look up tool versions\n(npm view, with Sept 2026 fallbacks)"]
     M --> N["Step 4: ng new scaffold\n(standalone, scss, routing, ssr=false;\nskipped when a workspace exists)"]
     N --> O["Step 5-6: Configure test target\n+ install @vitest/coverage-v8\nmatching vitest major"]
@@ -148,7 +164,8 @@ flowchart TD
     P --> Q["Step 8: Confirm Prettier,\nadd .prettierignore, npx prettier --write ."]
     Q --> R["Step 9: Add Stylelint for SCSS"]
     R --> S["Step 10: ng add playwright-ng-schematics,\nfix hardcoded title assertion"]
-    S --> T["Step 11: Add Compodoc"]
+    S --> S2["Step 10b: UI contract: .ui-quality.yml, gallery,\nui-screenshots helper, sample specs with axe"]
+    S2 --> T["Step 11: Add Compodoc"]
     T --> U{"Step 12: storybook: yes?"}
     U -- yes --> V["npx storybook@latest init\n(unverified end-to-end)"]
     U -- no --> W{"Step 13: sonar != none?"}

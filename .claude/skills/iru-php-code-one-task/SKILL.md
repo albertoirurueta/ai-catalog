@@ -15,7 +15,11 @@ description: >-
   controllers/Form Requests/policies/actions/Eloquent/queues; WordPress prefixing, hooks, nonces plus
   capabilities, sanitize/escape, `$wpdb->prepare`, REST `permission_callback`, i18n, enqueueing, block themes and
   `theme.json`; PrestaShop module class, hooks, `Configuration`, `pSQL`/`DbQuery`, upgrade scripts, Symfony
-  controllers, translations). Re-checks the current code state, implements exactly what the task specifies,
+  controllers, translations), plus — when the task adds or changes a screen, component, list or other UI — the
+  catalog's UI contract and its server-rendered mapping (screen › region › component decomposition, Blade/Livewire
+  components, blocks, Smarty/Twig partials, paginated collections with one item component, Playwright UI tests
+  with a left-to-right/right-to-left × light/dark screenshot matrix and axe checks, written but never run here).
+  Re-checks the current code state, implements exactly what the task specifies,
   writes or updates tests, runs only the fast tests it touched (never coverage, the full suite, or anything that
   needs Docker, a database server, wp-env, or a PrestaShop shop), then checks off this task's own checkbox in
   `implementation_plan.md` with a "group validation pending" note and hands back a short summary. Does not
@@ -81,8 +85,9 @@ The routing, restated:
 | `reference/laravel.md` | Flavor is **laravel**. |
 | `reference/wordpress.md` | Flavor is **wordpress-plugin** or **wordpress-theme**. |
 | `reference/prestashop.md` | Flavor is **prestashop-module**. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI — Blade/Livewire views, blocks, patterns, template parts, `.tpl`/`.twig` templates, or their CSS/JS assets. |
 
-Read exactly one flavor file — none for **library**. If `reference/` is missing (e.g. the skill directory was
+Read exactly one flavor file — none for **library** (and no UI files for a library either). If `reference/` is missing (e.g. the skill directory was
 copied without it), proceed using this repository's own `CLAUDE.md` conventions and the surrounding code's style,
 and say so in Step 8's report — don't guess at what the reference would have said.
 
@@ -126,6 +131,12 @@ If a new class lives under a new PSR-4 namespace root, that's a `composer.json` 
 a class under an existing root, `composer dump-autoload` is only needed if the project uses a classmap — PSR-4
 resolves new files on its own.
 
+For UI work (`ui-contract.md` + `ui-implementation.md`): **decompose first** — write the `Screen › Region ›
+Component` tree (inputs, events, visual states, what each reuses) before touching a template, search for an
+existing component before creating one, build leaves first, keep queries and permission logic out of templates,
+and render every collection through a bounded paginated query plus one item component. The tree goes in Step 8's
+report.
+
 Don't add anything the task didn't ask for — no speculative abstraction, no unrelated cleanup, no restyling of code
 the task doesn't touch.
 
@@ -158,6 +169,14 @@ runner (Pest or PHPUnit), base class, naming, attribute vs. annotation metadata,
 boundaries. Put each test in the suite that matches what it needs: a test that boots WordPress or a shop, or needs
 a real MySQL, goes into the project's integration suite, never the fast one.
 
+For UI work, also write the browser UI specs `ui-implementation.md` describes (`tests/e2e/specs/<Name>.spec.ts`,
+through the shared `tests/e2e/support/ui-screenshots.ts` helper): each visual state with the contract's data sets,
+behaviour asserted once (left-to-right, light), a screenshot per state × `.ui-quality.yml` directions × themes
+under `.ui-screenshots/<kind>/<Id>/`, and the axe check at the configured level. Follow Dusk/Pest browser tests
+instead where the repository already uses them. **Write them, never run them** — they need a browser plus a
+server, wp-env or shop; the group runs them behind its integration lock. If the project has no Playwright setup and
+the task doesn't ask for one, write none and say so in Step 8.
+
 If the project has no test setup at all for this flavor (common for small WordPress plugins and PrestaShop
 modules), don't scaffold one — that's a plan-level decision. Write nothing, and say so in Step 8 so the group's
 coverage gate failure has an explanation.
@@ -177,7 +196,8 @@ Use the environment prefix Step 1 found (`./vendor/bin/sail test …`, `ddev exe
 containers are **already running** (`./vendor/bin/sail ps`) — never start them from here. If no usable PHP or no
 `vendor/` exists, skip the run and say so in Step 8; the group runs the tests anyway.
 
-**Never run, by any means:** a `WP_UnitTestCase` suite, `npx wp-env …`, `bin/install-wp-tests.sh`, any test
+**Never run, by any means:** a `WP_UnitTestCase` suite, `npx wp-env …`, `bin/install-wp-tests.sh`, a browser UI
+test (`npx playwright test`, `npm run test:e2e`, `wp-scripts test-playwright`, Dusk, Pest browser tests), any test
 whose suite needs MySQL/PostgreSQL/Redis or a PrestaShop installation, coverage (`--coverage*`, `XDEBUG_MODE=
 coverage`, `pcov.enabled=1`), `--parallel`, `--mutate`, the whole suite (a bare `vendor/bin/pest` /
 `php artisan test` with no path), or any static-analysis/formatter tool. Several of these agents run concurrently;
@@ -215,6 +235,8 @@ Hand control back to the caller with a short summary:
   floor, the runner, and the reference file(s) actually read.
 - **The file(s) touched** and **the tests added/updated**, split into fast tests (with Step 6's result, or why
   they weren't run) and integration tests (written, not run — the group runs them).
+- **For UI work**: the `Screen › Region › Component` tree from Step 3, and the UI specs added (screens/components
+  and states covered — written, not run), or why none were written.
 - **Whether this task stopped on a blocker** per Step 4, with enough detail for the caller to surface it.
 - **Any deliberate deviation from `reference/`** — e.g. no `strict_types` to match the directory, WPCS layout,
   `$fillable` on Laravel 12, PHPUnit 9 annotations, a non-`final` class because Mockery doubles it — and any

@@ -1,13 +1,13 @@
 = Go Code One Task Group
-:description: Implements a bucket of Go tasks, then validates it once for licenses, godoc, tests, 80% coverage, race detector and quality, with container tests locked.
-:keywords: iru-go-code-one-task-group, claude code skill, go, golang, cobra, bubble tea, testscript, golangci-lint, validate task group, code coverage
+:description: Implements a bucket of Go tasks, then validates once: licenses, godoc, tests, 80% coverage, race detector, quality, terminal-UI captures, container tests.
+:keywords: iru-go-code-one-task-group, claude code skill, go, golang, cobra, bubble tea, testscript, golangci-lint, ui screenshots, code coverage
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Implement one bucket of Go tasks from a plan's task group end to end: capture a single pre-change quality baseline,
 run `iru-go-code-one-task` once per task (in parallel when the group allows it), then validate the entire bucket once
 -- license headers, doc comments, scoped tests, an 80% statement-coverage gate per changed file, a full-suite run
-with the race detector, a code-quality regression check, and, only when the repository has `integration`-tagged tests,
+with the race detector, a code-quality regression check, for a bucket that added or changed Bubble Tea screens/components a terminal-UI stage (captures and accessibility), and, only when the repository has `integration`-tagged tests,
 a container-backed stage serialized behind a repository-wide lock.
 
 == Purpose
@@ -29,7 +29,9 @@ agent so no raw report reaches this context. Coverage is measured per changed fi
 `-coverpkg=./...`, so in-process Cobra tests and testscript re-executions both count; branch coverage is reported as
 not available in Go. The full suite runs with `-race` when cgo is available. Only container-backed tests take the
 shared `.integration-test.lock`; plain CLI end-to-end tests need no lock, and Docker being unavailable makes that
-stage "unverified", never silently skipped. A failure traced to a task sends that task back for a fix and a re-run of
+stage "unverified", never silently skipped. When the bucket touched the terminal UI, Step 1 also records the TUI package, the capture helper and the `.ui-quality.yml` settings (a missing file means `accessibility: enforce`, `directions: [ltr, rtl]`, `themes: [light, dark]`), the full-suite run is asked for the UI-capture summary (`ui: yes`), and Step 3.5a checks that every added/changed screen and component has `.txt` captures in `.ui-screenshots/` for each of its states × directions × themes, with the accessibility level applied (`enforce` violations fail the bucket, `report` lists them, `off` is stated). Terminal UIs have no automated accessibility audit, so the asserted TUI checks are reported as such, and this stage is never "unverified" for environment reasons. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
+
+A failure traced to a task sends that task back for a fix and a re-run of
 the affected checks. A medium model is used on purpose: the plan carries the hard reasoning.
 
 == Purpose group
@@ -61,16 +63,17 @@ any relevant "Current code state" context.
 * Source, test, `.txtar` script and golden files created/modified per task, via `iru-go-code-one-task`.
 * License headers and doc comments kept current across every file/package the bucket touched, checked once for the
   whole bucket rather than once per task.
+* For a bucket that touched the terminal UI: `.txt` captures under `.ui-screenshots/` for every added/changed screen and component (states × `.ui-quality.yml` directions × themes, plus `no-color`), produced by the full-suite run; gaps are fixed through the owning task.
 * Tests achieving at least 80% statement coverage for each changed/added production file (container-free tests only).
 * A transient `.integration-test.lock/` directory (with an `owner` file) held only while the container-backed stage
   runs, added to the repository's root `.gitignore` if missing, and always released before this skill finishes.
 * `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note -- first an
   "implemented, group validation pending" note written by `iru-go-code-one-task`, then replaced with the final
-  coverage, race, quality and integration outcome.
+  coverage, race, quality, UI and integration outcome.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group validation
   completes.
 * A summary handed back to the caller (`iru-code-one-task-group`): the shape detected, per task the files, tests,
-  per-file coverage and quality outcome, interface changes (commands, flags, exit codes, JSON fields), `go.mod`
+  per-file coverage and quality outcome, the UI stage result (captures per state/direction/theme, malformed names, accessibility level and rule-id counts, or "no UI changes"), interface changes (commands, flags, exit codes, JSON fields), `go.mod`
   changes, test and race results, the container-backed result (passed, unverified with reason, or none), accepted
   coverage exceptions, refreshed golden files, lock behavior, and any blocked task.
 
@@ -93,7 +96,11 @@ flowchart TD
     K --> L["Step 3.6: code quality regression\ncheck vs. baseline (via iru-gate-runner)"]
     L -- failure or new issue traced to a task --> M["Fix that task's implementation;\nre-run the affected check(s)"]
     M --> I
-    L -- clean --> N{"integration-tagged tests exist,\nbucket touches them, Docker up?"}
+    L -- clean --> L2{"Bucket touched the\nterminal UI?"}
+    L2 -- yes --> L3["Step 3.5a: capture matrix per screen/component\n(.txt, states x directions x themes);\naccessibility at the .ui-quality.yml level"]
+    L3 -- gap or violation --> M
+    L3 --> N
+    L2 -- no --> N{"integration-tagged tests exist,\nbucket touches them, Docker up?"}
     N -- no --> R["Report stage as none / unverified\n(Docker unavailable)"]
     N -- yes --> O["Step 3.7a: acquire .integration-test.lock\n(HELD: poll ~30s; stale after 60min broken;\ntimeout ~45min: unverified)"]
     O --> P["Step 3.7: iru-go-test with\ntags: integration and lock: held\n(via iru-gate-runner)"]
@@ -121,7 +128,7 @@ directly, so verbose report output stays out of this skill's own context:
   regression check against that baseline).
 * xref:skills/iru-check-license.adoc[] -- Step 3.1, license headers for every `.go` file the bucket touched.
 * xref:skills/iru-go-godoc.adoc[] -- Step 3.2, doc comments for every package the bucket touched.
-* xref:skills/iru-go-test.adoc[] -- Step 3.3 (scoped tests), Step 3.5 (full suite with `-race`), and Step 3.7
+* xref:skills/iru-go-test.adoc[] -- Step 3.3 (scoped tests), Step 3.5 (full suite with `-race`, and `ui: yes` when the bucket touched the terminal UI so the run clears and refills `.ui-screenshots/`), and Step 3.7
   (container-backed stage with `tags: integration` and `lock: held`).
 * xref:skills/iru-go-coverage.adoc[] -- Step 3.4, statement coverage with `-coverpkg=./...` for every changed/added
   production file.

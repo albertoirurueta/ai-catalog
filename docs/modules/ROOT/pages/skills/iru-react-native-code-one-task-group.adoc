@@ -28,6 +28,8 @@ run sequentially even in a parallelizable group. Step 3 runs license headers, TS
 full suite, quality diffed against baseline, the Android, iOS, and Expo native stages as applicable, then e2e. Steps
 4-5 finalize the plan notes and report; any unverified stage is named with its reason rather than read as a pass.
 
+When the bucket touched UI, the device run of Step 3.10 doubles as the UI run (Maestro gallery capture flows under `.maestro/ui/` and flow captures, or Detox, written into `.ui-screenshots/`), and a new Step 3.11 checks the evidence: every added/changed screen and component must have a capture for each declared state × `.ui-quality.yml` direction × theme on the platform that ran, and `eslint-plugin-react-native-a11y` findings from the lint gate are applied at the configured accessibility level (`enforce` fails the group, `report` lists them). No device makes the captures unverified, never passed. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
@@ -62,6 +64,7 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 * Android, iOS, and Expo native-config stage results where applicable, each passed, failed-and-fixed, skipped as not
   applicable, or unverified with a reason.
 * An e2e (Maestro/Detox, optionally XCTest) result run under the shared lock, or unverified with the cause.
+* For UI buckets (Step 3.11): captures found vs expected per screen/component, malformed names, missing capture infrastructure (UI gallery, `.maestro/ui/` flows), and `react-native-a11y/*` violations (count and rule ids) at the `.ui-quality.yml` level, or "UI captures unverified" with the reason.
 * `implementation_plan.md` with each task's checkbox finalized with unit-only coverage, native stages, and e2e
   results reported separately; blocked tasks stay unchecked with their blocker note.
 * A report to the caller covering profile, per-task details, coverage exceptions, type-check results, native stages,
@@ -96,8 +99,11 @@ flowchart TD
     O -- yes --> Q["Step 3.10a: acquire\n.integration-test.lock (wait, stale break, timeout)"]
     Q --> R["Step 3.10: ensure app current, run\nMaestro/Detox via iru-typescript-test e2e"]
     R --> S["Step 3.10b: release lock\non every exit path"]
-    S --> T["Step 4: finalize each task's note\nwith unit, native and e2e outcomes"]
-    P --> T
+    S --> UE{"Bucket touched UI?"}
+    P --> UE
+    UE -- yes --> UV["Step 3.11: check .ui-screenshots/ against\nstates x directions x themes;\napply a11y level"]
+    UV --> T["Step 4: finalize each task's note\nwith unit, native and e2e outcomes"]
+    UE -- no --> T
     T --> U["Step 5: report the bucket's\noutcome to the caller"]
 ....
 

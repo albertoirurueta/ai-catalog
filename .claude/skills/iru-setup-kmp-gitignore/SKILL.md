@@ -9,7 +9,8 @@ description: >-
   `*.cer`), `google-services.json`/`GoogleService-Info.plist`, Xcode output (`DerivedData/`, `*.xcresult`,
   `xcuserdata/`, `*.xcuserstate`), the XcodeGen-generated `iosApp/iosApp.xcodeproj/` (only when `iosApp/project.yml`
   exists — a hand-maintained `.xcodeproj` stays tracked), CocoaPods `Pods/` (only when a `Podfile` exists), Fastlane
-  output (only when a `fastlane/` directory exists), and the Antora docs build output. Invoke as
+  output (only when a `fastlane/` directory exists), the Antora docs build output, and the UI tests' screenshot
+  directory `.ui-screenshots/` (never `.ui-quality.yml`, which is committed). Invoke as
   `/iru-setup-kmp-gitignore`, optionally with `args`: `mode: new|existing` (default: detected from whether a root
   `.gitignore` already exists), `modules: <comma/space-separated list>` (default: every `include(":…")` entry in
   `settings.gradle.kts`, falling back to whichever of `shared`/`androidApp`/`composeApp` exist), and
@@ -142,6 +143,9 @@ docs/node_modules/
 
 # Repository-wide lock serializing simulator/emulator test stages (iru-kmp-test, iru-kmp-code-one-task-group)
 .integration-test.lock/
+
+# UI tests' screenshot captures (regenerated on every UI test run; the docs commit only the ones they use)
+.ui-screenshots/
 ```
 
 Notes on specific lines:
@@ -163,6 +167,10 @@ Notes on specific lines:
 - `.integration-test.lock/` is the atomic-`mkdir` lock directory (with its owner file) that `iru-kmp-test` /
   `iru-kmp-code-one-task-group` create around every stage that boots an iOS simulator or Android emulator — always
   transient, never committed.
+- `.ui-screenshots/` holds the UI tests' captures (`<kind>/<Id>/<state>--<dir>--<theme>--<android|ios>.png`) that
+  `iru-kmp-test` clears and rewrites on every full UI run — evidence for review, never committed (the documentation
+  skills copy the ones they use into the Antora module's `images/ui/`). `.ui-quality.yml` is **not** ignored: it is
+  committed configuration.
 - `.swiftpm/` is deliberately absent — `iru-setup-kmp-app`'s iOS app has no SwiftPM package of its own. If the
   project later adds a local Swift package, add `.swiftpm/xcode/` (never the whole `.swiftpm/`, for the reason
   `iru-setup-swift-gitignore` documents).
@@ -278,6 +286,8 @@ into a `git init`-ed directory seeded with one file per pattern, then ran `git c
 | `androidApp/google-services.json`, `iosApp/iosApp/GoogleService-Info.plist` | ignored | ignored |
 | `docs/build/site/index.html` | ignored | ignored — `.gitignore:docs/build/` |
 | `.integration-test.lock/owner` | ignored | ignored — `.gitignore:.integration-test.lock/` |
+| `.ui-screenshots/screen/X/default--ltr--light--ios.png` (re-checked 2026-10-16) | ignored | ignored — `.gitignore:.ui-screenshots/` |
+| `.ui-quality.yml` (re-checked 2026-10-16) | **tracked** | **not ignored** |
 | `gradle/wrapper/gradle-wrapper.jar` | **tracked** | **not ignored** |
 | `iosApp/project.yml`, `iosApp/Configuration/Config.xcconfig`, `iosApp/iosApp/Info.plist`, `iosApp/.swiftlint.yml` | **tracked** | **not ignored** |
 | `shared/src/commonMain/kotlin/x/Greeting.kt`, `docs/antora.yml`, `detekt.yml`, `gradle/libs.versions.toml` | **tracked** | **not ignored** |

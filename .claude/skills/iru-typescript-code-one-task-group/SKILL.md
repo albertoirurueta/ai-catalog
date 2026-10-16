@@ -1,8 +1,8 @@
 ---
 name: iru-typescript-code-one-task-group
-description: Implement one bucket of TypeScript tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-typescript-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, TSDoc, scoped tests, an 80% coverage check, a full-suite run, and a code-quality regression check against that one baseline. `iru-typescript-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when several tasks finish at nearly the same moment — and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-typescript-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. React Native buckets (expo or bare CLI/metro) are handed whole to `iru-react-native-code-one-task-group` when it is installed, since that skill owns the native-build, Expo prebuild, and device e2e stages this one doesn't run. Equivalent to `iru-java-code-one-task-group` for npm/TypeScript projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its TypeScript-tagged tasks.
+description: Implement one bucket of TypeScript tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-typescript-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, TSDoc, scoped tests, an 80% coverage check, a full-suite run, a code-quality regression check against that one baseline, and — when the bucket touched UI (React, Angular, Ionic, or a Hilla frontend) — a UI stage per the catalog's UI contract: the Playwright component/screen/flow tests via `iru-typescript-test`'s `ui` selector (serialized repository-wide behind the shared `.integration-test.lock`, since their web servers bind ports and the run rewrites `.ui-screenshots/`), a check that every added/changed screen and component has captures for each visual state × `.ui-quality.yml` direction × theme, and the axe results applied at the configured `enforce`/`report`/`off` level — a missing browser, a web server that can't start, or no Playwright setup is reported unverified, never passed. `iru-typescript-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when several tasks finish at nearly the same moment — and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-typescript-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. React Native buckets (expo or bare CLI/metro) are handed whole to `iru-react-native-code-one-task-group` when it is installed, since that skill owns the native-build, Expo prebuild, and device e2e stages this one doesn't run. Equivalent to `iru-java-code-one-task-group` for npm/TypeScript projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its TypeScript-tagged tasks.
 model: sonnet
-allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent
+allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(lsof *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---
 
 # Implement one task-group bucket (TypeScript)
@@ -141,6 +141,44 @@ run the following once for the entire bucket — not once per task:
    until none remain. Leave a new issue in place only if fixing it is genuinely unavoidable (e.g. it would
    contradict what its task explicitly specifies) — record that, and why, for Step 4. Skip this item if
    `iru-typescript-code-quality` is unavailable in this repository.
+7. **UI stage** — only when the bucket added or changed UI (a component, screen, story, style sheet or UI spec — the
+   task reports' `Screen › Region › Component` trees say which) in a `react`/`angular`/`ionic`/`hilla-frontend`
+   project. Otherwise record "UI stage: not applicable" and skip. Per the UI contract (`reference/ui-contract.md`
+   §6–§8 of `iru-typescript-code-one-task`):
+   - **No Playwright setup** (`@playwright/test` + `playwright.config.*` absent; for Hilla, in the web module) →
+     **unverified (no Playwright UI-test setup)**, naming the components/screens left without captures; Cypress-only
+     → "Cypress present, not run". Never scaffold Playwright here.
+   - **Acquire the repository-wide lock** first — the same atomic `mkdir .integration-test.lock` protocol the other
+     catalog group skills use (`ACQUIRED` → write `.integration-test.lock/owner` with this bucket's tasks, the stage
+     `Playwright UI tests` and `date -u +'%Y-%m-%dT%H:%M:%SZ'`; `HELD` → tell the user, re-try about every 30
+     seconds; older than 60 minutes (`find .integration-test.lock -maxdepth 0 -mmin +60`) → break it and note it;
+     still held after about 45 minutes → **unverified — blocked by a concurrent run**). Before running, check every
+     `webServer` port of `playwright.config.*` with `lsof -nP -iTCP:<port> -sTCP:LISTEN`; something already
+     listening → **unverified (port <port> in use by <process>)** — don't kill it.
+   - **Run the UI tests** for the bucket's specs: `Agent({description: "Run UI tests for task group",
+     subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-typescript-test\", args: \"ui
+     <spec files covering this bucket's components, screens and flows>\"}) with CI=1 and lock: held (fall back to
+     `CI=1 npx playwright test <specs> --reporter=list,json` with UI_SCREENSHOTS_DIR=<repo root>/.ui-screenshots
+     if the skill isn't installed). Report back only: pass/fail per spec with the first error line of each failure;
+     tests that passed only on retry; environment failures (browser executable missing, web server not starting,
+     port in use, a Hilla web module whose prepare-frontend never ran) separately from assertion failures; the
+     screenshot count per kind; malformed screenshot names; accessibility violations as a count plus rule ids; the
+     .ui-quality.yml level applied.", run_in_background: false})`. Scoped specs keep the earlier captures of other
+     components (the gate clears `.ui-screenshots/` only for a full UI run).
+   - **Check the matrix**: for every component/screen the bucket added or changed, and every visual state its task
+     report or stories name, `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>*.png` must exist for each
+     direction × theme in `.ui-quality.yml` (defaults `[ltr, rtl]` × `[light, dark]`) — `find .ui-screenshots -path
+     '*/<Id>/*' -name '*.png'`. A missing cell is a gap: add the story/spec through the task that owns the
+     component and re-run this stage.
+   - **Apply the accessibility level**: `enforce` → every violation is a failure to fix (markup, label, contrast
+     token) and re-run; `report` → list the rule ids and counts in Step 4/5 without failing; `off` → say the
+     automated check is off.
+   - **Assertion failure** → trace to the task, fix, re-run (and Steps 3.3–3.5 again if production code changed).
+     **Environment failure** → **unverified** with the reason (for a missing browser, name the exact
+     `npx playwright install chromium` the user can run — never install browsers yourself).
+   - **Release the lock** (`rm -f .integration-test.lock/owner && rmdir .integration-test.lock`) as soon as this stage
+     and any fix-and-re-run cycle is done — on every exit path, including failures, unverified outcomes and
+     interruptions.
 
 ## Step 4 — Finalize progress notes and notify the user
 
@@ -148,8 +186,10 @@ Once Step 3 passes clean for the bucket (or leaves only explicitly-accepted unav
 task's note in `implementation_plan.md` — replacing the "group validation pending" placeholder from Step 2 — with
 the final outcome: coverage achieved and code-quality result for that task's own file(s), e.g. `- [x] Task 2.
 **Implement `useOrderTotal`** — tests in useOrderTotal.test.ts (94% line coverage), no new ESLint/tsc/Prettier
-issues.` Save the file, then notify the user that group validation completed and summarize the bucket-wide result
-(tests, coverage, quality, doc/license outcome).
+issues.` For a task that touched UI, append the UI outcome, e.g. `UI: OrderList 4 states × 2 dirs × 2 themes
+captured, axe clean (enforce)` — or `UI unverified (Playwright browser missing)`; silence would read as a pass.
+Save the file, then notify the user that group validation completed and summarize the bucket-wide result
+(tests, coverage, quality, doc/license outcome, UI stage).
 
 If any task was recorded as blocked in Step 2, leave its checkbox unchecked and its blocker note in place — do
 not run Step 3's validation against a task that never finished implementing.
@@ -157,7 +197,9 @@ not run Step 3's validation against a task that never finished implementing.
 ## Step 5 — Report the bucket's outcome
 
 Hand control back to the caller (`iru-code-one-task-group`) with a summary covering the whole bucket: per task, the
-files touched, tests added/updated, coverage achieved, and code-quality outcome — including whether a new issue
+files touched, tests added/updated, coverage achieved, code-quality outcome, and for UI tasks the decomposition
+tree, the screenshot matrix result (captured / missing cells) and the accessibility result at the `.ui-quality.yml`
+level, or the UI stage's **unverified** reason and how the lock behaved when it wasn't an immediate acquire — including whether a new issue
 was left in place as unavoidable and why, whether license-header generation was skipped by the user, and which
 task(s), if any, stopped on a blocker (with enough detail for the caller to surface it further up).
 `implementation_plan.md`'s checkboxes are already checked (by `iru-typescript-code-one-task` itself, backfilled

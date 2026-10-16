@@ -1,6 +1,6 @@
 = Go Test
-:description: Runs a Go module's tests with go test -json, race detector and testscript support, splits fast from integration tests, and reports a compact summary.
-:keywords: iru-go-test, claude code skill, go, go test, testscript, testcontainers, gotestsum, race detector, run tests, junit
+:description: Runs Go tests with go test -json, race detector and testscript, splits fast from integration tests, checks terminal-UI captures, reports a summary.
+:keywords: iru-go-test, claude code skill, go, go test, testscript, testcontainers, gotestsum, race detector, ui screenshots, bubble tea
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -10,6 +10,7 @@ Run a Go module's or workspace's tests, scoped to whatever the caller asked for,
 
 Go projects differ in layout and in how their tests are split. `iru-go-test` detects the toolchain, tells modules from `go.work` workspaces (where `./...` does not cross module boundaries), respects vendored dependencies (`-mod=vendor` is automatic, and inconsistent vendoring is reported rather than bypassed with `-mod=mod`), and decides whether the race detector can run. It separates fast, container-free tests from container-backed ones behind the `integration` build tag, runs exactly the requested selection with `-count=1` so cached results are never reported as a fresh run, and parses the event stream with an embedded stdlib Python parser. Only leaf subtests are counted and listed, in-process testscript failures are reported by their `FAIL: <script>.txtar:<line>` line, and build failures, package-level failures (timeouts, `TestMain`) and packages with no test files are reported separately and plainly, never as "0 tests".
 
+For a Bubble Tea project it also applies the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): the project's UI tests are ordinary in-process tests that write the stripped view as `.txt` into `.ui-screenshots/`, so Step 4a only prepares the directory (`UI_SCREENSHOTS_DIR`, default `<repo root>/.ui-screenshots`, prefixed onto the `go test`/`gotestsum` command), clears it only on a full unscoped run, reads the `accessibility` level from `.ui-quality.yml`, and afterwards validates capture names and counts captures and accessibility rule ids with an embedded stdlib Python script. No lock is needed.
 == Purpose group
 
 xref:index.adoc#group-go[Go Development Tooling]
@@ -60,6 +61,11 @@ Optional `key: value` lines may follow the package patterns.
 |Write `build/test-results/go-test.xml` through gotestsum when it is installed.
 |`no`
 
+|`ui: auto\|yes\|no`
+|No
+|Whether to apply Step 4a (terminal-UI captures, `.ui-quality.yml` level, capture-name validation). `yes` forces it, `no` skips it.
+|`auto` -- applied when `go.mod` requires Bubble Tea (v2 `charm.land/bubbletea/v2` or v1).
+
 |`lock: held`
 |No
 |A line passed by a calling skill that already holds `.integration-test.lock`, so this skill neither acquires nor releases it.
@@ -73,6 +79,7 @@ Optional `key: value` lines may follow the package patterns.
 * A run that matched nothing is reported as "no test files" or "`run:` matched no test", and a missing race detector or gotestsum is said plainly.
 * An integration run that could not happen is reported as unverified (Docker unavailable, blocked by a concurrent run), never as passed or as failed tests; environment failures such as an unreachable Docker daemon are classified as such.
 * Wiring problems (inconsistent vendoring, missing `go.sum` entry, toolchain too old) are named as such, never papered over.
+* For a terminal-UI project (Step 4a): the capture directory and whether it was cleared (full run) or kept (scoped run), captures per kind (`component`/`screen`/`flow`), malformed names (count + first few paths), accessibility violations as counts per rule id (from failing tests under `enforce`, from `a11y-report.txt` under `report`) and the `.ui-quality.yml` level applied. Terminal UIs have no automated accessibility audit; the checks are the asserted `tui-color-only`, `tui-help-line` and `tui-keyboard` ones, and the report says so.
 * `build/test-results/go-test.json` (and `go-test.xml` with `junit: yes`), kept when `build/` is gitignored.
 * No source or test code is ever modified.
 
@@ -87,7 +94,8 @@ flowchart TD
     D -- no --> E["Stop: report toolchain missing\nor no test files"]
     D -- yes --> F["Step 2: decide on\nthe race detector"]
     F --> G["Step 3: classify fast vs\nintegration"]
-    G --> H["Step 4: build the go test -json\ncommand, optional gotestsum JUnit"]
+    G --> G2["Step 4a: terminal UI project?\nresolve UI_SCREENSHOTS_DIR, clear on full run,\nread .ui-quality.yml level"]
+    G2 --> H["Step 4: build the go test -json\ncommand, optional gotestsum JUnit"]
     H --> I{"Container-backed\nrun?"}
     I -- no --> K["Run go test once,\nwrite the JSON event stream"]
     I -- yes --> J["Step 5: check Docker and\nacquire .integration-test.lock"]
@@ -96,8 +104,9 @@ flowchart TD
     L -- yes --> K
     K --> N["Release the lock\non every exit path"]
     N --> O["Step 6: read exit code and\nparse the event stream"]
-    O --> P["Step 7: report counts, failing\nleaf tests, build and package failures"]
-    M --> P
+    O --> O2["Step 4a: validate capture names,\ncount captures and a11y rule ids"]
+    O2 --> P["Step 7: report counts, failing\nleaf tests, build and package failures"]
+    M --> O2
 ....
 
 == Dependencies
@@ -108,7 +117,7 @@ None — `iru-go-test` is a leaf skill; it only runs `go`, optional `gotestsum`,
 
 === Invoked by
 
-* xref:skills/iru-go-code-one-task-group.adoc[] — scoped tests per bucket, the full fast suite with the race detector, and the container-backed run (`tags: integration` with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-go-code-one-task-group.adoc[] — scoped tests per bucket, the full fast suite with the race detector (with `ui: yes` for a terminal-UI project, as the full UI run that clears and refills `.ui-screenshots/`), and the container-backed run (`tags: integration` with `lock: held`), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 Its flag handling, toolchain detection and Step 6 event parsing are also reused by xref:skills/iru-go-coverage.adoc[], and its module and workspace layout rules by xref:skills/iru-go-code-quality.adoc[].
 

@@ -1,13 +1,14 @@
 = Android Test
-:description: Runs an Android/Kotlin project's JUnit 4 unit tests via AGP's testDebugUnitTest, scoped by class/method/pattern/path, reports pass/fail from JUnit XML.
-:keywords: iru-android-test, claude code skill, android, kotlin, gradle, agp, junit, robolectric, run unit tests, test selector
+:description: Runs Android JUnit 4 unit tests via testDebugUnitTest by class/method/pattern/path, plus a ui selector for Roborazzi screenshot and accessibility runs.
+:keywords: iru-android-test, claude code skill, android, kotlin, gradle, agp, junit, robolectric, run unit tests, test selector, ui tests, roborazzi, screenshots, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Run an Android/Kotlin project's JUnit 4 unit test suite through the Android Gradle Plugin's `testDebugUnitTest`
 task, scoped to whatever the caller asked for — the whole `lib` module, a single class, a class+method, a
 wildcard/package pattern, or a `lib`/`app` module path — and, only when explicitly asked and a device or emulator
-is actually attached, `connectedAndroidTest` instrumented tests too. This is a read-only reporting skill: it runs
+is actually attached, `connectedAndroidTest` instrumented tests too. A `ui` selector instead runs the UI tests of the
+catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]). This is a read-only reporting skill: it runs
 tests and parses the generated JUnit XML into a compact summary, it does not fix failures or modify source/test
 code unless asked to as an explicit follow-up.
 
@@ -20,6 +21,22 @@ Android unit tests doesn't require hand-composing Gradle `--tests` syntax each t
 (or a human) gets back a short pass/fail report parsed from JUnit XML instead of a raw Gradle log — while also
 gating the (slower, environment-dependent) instrumented-test path behind an explicit ask and an attached
 device/emulator, so it's never run by accident.
+
+=== UI runs (`ui` selector)
+
+`ui: jvm|device|all`, or a selector starting with the word `ui` (`ui`, `ui OrderRowTest`; bare `ui` means `all`), runs the
+UI tests (Step 4b) instead of the plain unit run:
+
+* **JVM stage** — Robolectric + Roborazzi component/screen tests through `testDebugUnitTest`, no emulator needed; they
+  capture through the module's `testing/UiScreenshots.kt` helper.
+* **Device stage** — instrumented Espresso/Compose flow tests through `connectedDebugAndroidTest` with the
+  `uiAccessibility` runner argument, only when `adb devices` lists an attached device; otherwise the stage is reported
+  **unverified** (never passed). Captures are collected from AGP's additional test output (or `adb pull`) into the same layout.
+* `UI_SCREENSHOTS_DIR` is exported (default `<repo root>/.ui-screenshots`) and cleared only at the start of a full,
+  unscoped UI run; a scoped run adds to it.
+* The accessibility level (`enforce`/`report`/`off`) comes from `.ui-quality.yml`; a bundled parser validates every
+  capture name against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`, counts captures per kind and
+  Accessibility Test Framework results by check id.
 
 Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-test.adoc[] instead.
 
@@ -109,6 +126,10 @@ when it skips them.
 * If there are failures/errors: each failing test's `classname#name`, its assertion/exception message, and the
   first stack-trace line, pointing to the JUnit XML file for the full trace instead of pasting it.
 * If instrumented tests were requested but skipped (no device attached): an explicit note, not a silent omission.
+* For a UI run: the JVM and device stages reported separately (pass/fail counts, or unverified with the reason),
+  screenshot counts per kind (`component`/`screen`/`flow`) under `.ui-screenshots/`, malformed capture names,
+  accessibility results per check id and the tests they failed, the `.ui-quality.yml` level applied, and whether the
+  directory was cleared or added to — never the screenshots, logcat or accessibility dumps.
 * No source or test code is ever modified.
 
 == Execution flow
@@ -123,13 +144,16 @@ flowchart TD
     D --> E["Map selector to\n--tests pattern"]
     E --> F["Check prerequisites:\nJAVA_HOME 17+, ANDROID_HOME/\nlocal.properties, ./gradlew present"]
     C --> F
-    F --> G["Run ./gradlew :&amp;lt;module&amp;gt;:testDebugUnitTest\n[--tests '&amp;lt;pattern&amp;gt;'] [--offline]"]
+    F --> U{"ui selector?"}
+    U -- yes --> U1["Step 4b: set UI_SCREENSHOTS_DIR, read\n.ui-quality.yml; JVM stage (Roborazzi);\ndevice stage only if adb device attached\n(else unverified); validate names +\ncount accessibility results"]
+    U -- no --> G["Run ./gradlew :&amp;lt;module&amp;gt;:testDebugUnitTest\n[--tests '&amp;lt;pattern&amp;gt;'] [--offline]"]
     G --> H{"Instrumented tests\nexplicitly requested?"}
     H -- yes --> I{"Device/emulator\nattached (adb devices)?"}
     I -- yes --> J["Run ./gradlew :&amp;lt;module&amp;gt;:connectedDebugAndroidTest"]
     I -- no --> K["Skip instrumented run,\nnote it explicitly"]
     H -- no --> L["Parse JUnit XML results\n(test-results/testDebugUnitTest/*.xml)"]
     J --> L
+    U1 --> L
     K --> L
     L --> M{"Build failed before\nproducing XML?"}
     M -- yes --> N["Report the build failure\n(compile error or unmatched --tests)"]

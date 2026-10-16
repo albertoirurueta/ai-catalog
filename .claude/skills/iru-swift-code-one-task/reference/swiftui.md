@@ -26,6 +26,11 @@ struct OrientationBadge: View {
 }
 ```
 
+This is the UI contract's component shape (`ui-contract.md`, mapped in `ui-implementation.md`): a component takes
+one value-type state (or a few `let`s) plus `on<Intent>` closures, never a whole view model; `Binding` only for
+form-field controls; content is passed in with `@ViewBuilder`, not by wrapping another screen. Decompose a design into
+`Screen › Region › Component` before writing the first view.
+
 A view struct that only reads its own stored properties and has no identity of its own needs no explicit `init`
 — the memberwise initializer SwiftUI synthesizes is enough; write one explicitly only to give a parameter a
 default value or to validate/transform an input.
@@ -66,6 +71,13 @@ default value or to validate/transform an input.
 - **A view model that touches UI state is `@MainActor`** — see `code-style.md`'s strict-concurrency section;
   `@Observable` doesn't imply main-actor isolation on its own, so an `@Observable` type meant to back a view
   still needs the `@MainActor` attribute explicitly.
+
+## Lists and grids
+
+Any data-driven or potentially long collection is a `List`, or a `LazyVStack`/`LazyHStack`/`LazyVGrid` inside a
+`ScrollView`, with `ForEach` over `Identifiable` item states from the view model — never `ForEach` inside a plain
+`VStack`/`HStack` or a `ScrollView` without a lazy stack. Paging, selection and the item component are in
+`ui-implementation.md`'s "Collections".
 
 ## `NavigationStack`
 
@@ -121,3 +133,8 @@ See `testing.md`'s Swift Testing section for a `@MainActor`-marked `@Suite`/`@Te
 directly (the common, fast case — assert on the model's published state after calling its methods, without
 touching SwiftUI's rendering at all). Reach for XCUITest (also in `testing.md`) only for an actual UI-automation
 scenario — tapping through a real running app — not as the default way to test a view's logic.
+
+On top of those, a new or changed component or screen gets the UI tests of `ui-implementation.md`: an
+`ImageRenderer` capture per visual state × `.ui-quality.yml` direction × theme (SwiftUI-native content only — `List`,
+`TextField`, `Toggle` render as placeholders and are captured by XCUITest instead), and the screen's XCUITest
+captures plus `performAccessibilityAudit()`. Each `#Preview` state is a good list of the states to capture.

@@ -15,13 +15,16 @@ pre-existing file it warns, shows a diff and asks the user to Update, Keep as is
 
 The skill produces a house-standard Android `.gitignore`: an unconditional root base (Gradle build output,
 `local.properties`, IDE files, keystores, `google-services.json`, profiling output, the Kotlin 2.x compiler's
-root-level `.kotlin/` cache, plus the catalog's own Antora `docs/build/`/`docs/node_modules/` additions), a
+root-level `.kotlin/` cache, the UI tests' `.ui-screenshots/` capture directory, plus the catalog's own Antora `docs/build/`/`docs/node_modules/` additions), a
 one-line anchored `/build` `.gitignore` for each Gradle module, and a conditionally-detected root section for
 Fastlane output. It deliberately never ignores a vendored `jacoco-<ver>/` JaCoCo CLI directory if the repository
 vendors one (as the reference repository does, for `iru-setup-android-github-workflows`' opt-in
 coverage-conversion fallback), since CI would depend on that directory staying tracked to convert coverage
 without a network dependency. It mirrors `iru-setup-java-gitignore`'s warn-and-ask contract (Update / Keep as is /
-Replace per pre-existing file), adapted to the Android/Gradle ecosystem.
+Replace per pre-existing file), adapted to the Android/Gradle ecosystem. `.ui-screenshots/` is the repository-wide
+capture directory of the catalog's UI contract (cleared by every full UI test run, with the few images the docs use
+copied into the Antora module's `images/ui/`), so it is ignored unconditionally; the committed `.ui-quality.yml` next
+to it is never ignored.
 
 == Purpose group
 

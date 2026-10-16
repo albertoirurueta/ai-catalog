@@ -108,9 +108,12 @@ Core, testable without a view.
 
 ## Collections and threading
 
-- `ObservableCollection<T>` for lists the view shows; replace contents with `Clear()` + `Add` (or swap the whole
-  collection through an observable property) — never mutate it from a background thread: WPF throws unless the app
-  enabled `BindingOperations.EnableCollectionSynchronization`, WinUI always throws.
+- `ObservableCollection<T>` of immutable item records with a stable `Id` for lists the view shows; apply a new
+  snapshot with a **keyed diff** (the `SyncById` helper in `ui-implementation.md`: remove, move, insert, replace only
+  what changed) — not `Clear()` + `Add`, which resets scroll position, selection and every recycled container. Keep
+  selection as an id property (`SelectedId`), never as a reference to an item view. Never mutate it from a background
+  thread: WPF throws unless the app enabled `BindingOperations.EnableCollectionSynchronization`, WinUI always
+  throws.
 - The view model never touches `Dispatcher`/`DispatcherQueue`. Commands run on the UI thread; `await` returns there
   as long as the view model's own awaits don't use `ConfigureAwait(false)` (`code-style.md`). If a service raises an
   event on a background thread, marshal in the app project (a UI service), not in Core.

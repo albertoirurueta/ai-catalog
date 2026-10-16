@@ -1,6 +1,6 @@
 = .NET Code One Task Group
-:description: Implements one bucket of .NET tasks via iru-dotnet-code-one-task, then validates once: licenses, docs, tests, coverage, plus Native AOT for CLI tools.
-:keywords: iru-dotnet-code-one-task-group, claude code skill, dotnet, csharp, code coverage, license headers, xml doc comments, quality baseline, full test suite, native aot, system.commandline, cli tool
+:description: Implements one bucket of .NET tasks via iru-dotnet-code-one-task, then validates once: licenses, docs, tests, coverage, Native AOT and terminal UI for CLIs
+:keywords: iru-dotnet-code-one-task-group, claude code skill, dotnet, csharp, code coverage, license headers, xml doc comments, quality baseline, full test suite, native aot, system.commandline, cli tool, terminal ui, ui screenshots
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -42,7 +42,13 @@ applicable. 3.7 is a Native AOT `dotnet publish -r <host-rid> -c Release`, run v
 xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent when the bucket touched the CLI project, Core or the build
 files; it must finish with zero IL trim/AOT warnings and the published-binary tests must pass, and a missing native
 toolchain makes it "unverified", never "passed". 3.8 regenerates the CLI reference when a command, argument or option
-changed and checks that the generated page is current.
+changed and checks that the generated page is current. 3.9 is a terminal UI stage, run only when the bucket touched the
+optional Terminal.Gui UI (`src/<Tool>/Tui/`, a view, the hosting command, or Core state a view renders): the full suite
+excludes `[TestCategory("UI")]` tests, so it runs `iru-dotnet-test` with the `ui` selector (any host, no lock), checks
+that every changed screen and component has a `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt` capture for each visual
+state × `.ui-quality.yml` direction, and applies the asserted terminal accessibility checks (`tui-color-only`,
+`tui-help-line`, `tui-keyboard`) at the configured `enforce`/`report`/`off` level. A changed view with no UI tests is
+reported "terminal UI untested", never passed. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 
 == Purpose group
 
@@ -74,7 +80,9 @@ verdict and any relevant "Current code state" context.
 * License headers and XML doc comments kept current across every file/type the bucket touched, checked once for
   the whole bucket rather than once per task.
 * For CLI-shaped projects: a Native AOT publish result (zero IL trim/AOT warnings, published-binary test counts, or
-  "unverified" when no native toolchain is available) and a current generated CLI reference page.
+  "unverified" when no native toolchain is available) and a current generated CLI reference page; when the terminal
+  UI was touched, the UI stage result (UI test counts, captures per view and any missing state × direction, malformed
+  names, the accessibility level applied and its violations).
 * Tests achieving at least 80% line coverage for the bucket's changed/new classes, verified against the real
   coverage report.
 * `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note — first an
@@ -99,7 +107,7 @@ flowchart TD
     C -- no --> E["Step 2: invoke dotnet-code-one-task\nfor each task, one at a time"]
     D --> F["Confirm/backfill each task's box\n(set by dotnet-code-one-task itself); notify user"]
     E --> F
-    F --> G["Step 3: validate the whole bucket once —\nlicense headers, XML doc comments,\nscoped tests, coverage, full suite,\nquality vs. baseline;\nCLI tools: Core-only coverage,\n3.7 Native AOT publish, 3.8 CLI reference"]
+    F --> G["Step 3: validate the whole bucket once —\nlicense headers, XML doc comments,\nscoped tests, coverage, full suite,\nquality vs. baseline;\nCLI tools: Core-only coverage,\n3.7 Native AOT publish, 3.8 CLI reference,\n3.9 terminal UI stage if Tui touched"]
     G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
     H --> G
     G -- clean --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
@@ -124,7 +132,7 @@ so verbose report output stays out of this skill's own context:
 * xref:skills/iru-check-license.adoc[] — Step 3, license headers for every file the bucket touched.
 * xref:skills/iru-dotnet-docfx.adoc[] — Step 3, XML doc comments for every type the bucket touched.
 * xref:skills/iru-dotnet-test.adoc[] — Step 3, scoped tests for every type the bucket affected, plus a full-suite
-  run.
+  run; for a terminal-UI bucket, also the `ui` selector run (Step 3.9).
 * xref:skills/iru-dotnet-coverage.adoc[] — Step 3, coverage for every changed/new class in the bucket (CLI tools:
   Core classes only).
 

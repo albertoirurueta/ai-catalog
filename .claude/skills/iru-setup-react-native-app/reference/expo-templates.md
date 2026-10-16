@@ -35,10 +35,22 @@ wholesale:
     "eslint-config-expo": "<eslint-config-expo-version>",
     "jest": "<jest-version>",
     "jest-expo": "<jest-expo-version>",
+    "eslint-plugin-react-native-a11y": "<eslint-plugin-react-native-a11y-version>",
     "prettier": "<prettier-version>"
+  },
+  "overrides": {
+    "eslint-plugin-react-native-a11y": {
+      "eslint": "$eslint"
+    }
   }
 }
 ```
+
+**The `overrides` entry is required** for the accessibility lint plugin (UI contract §8):
+`eslint-plugin-react-native-a11y` 3.5.1 (its latest release, November 2024) still declares `eslint` `^3 … ^8` as its
+peer range, so `npm install` fails with `ERESOLVE` next to ESLint 9 — confirmed. `"$eslint"` tells npm to satisfy
+that peer with the project's own `eslint` devDependency; its rules were confirmed to run unchanged under ESLint 9.39
+flat config (and 10.13). Never use `--legacy-peer-deps` instead — it would hide every other peer conflict too.
 
 **Do not add `react-test-renderer` as a dependency.** Confirmed while verifying this skill:
 `@testing-library/react-native@14` no longer declares it as a dependency or peer dependency (it renders through
@@ -130,6 +142,51 @@ module.exports = defineConfig([
 ]);
 ```
 
+Then extend it with the accessibility lint block — the final file (verified: `npx expo lint` passes on the
+scaffold, reports `react-native-a11y/has-valid-accessibility-role` as an error on a bad `accessibilityRole` with
+`accessibility: enforce`, as a warning with `report`, and nothing with `off`):
+
+```js
+// https://docs.expo.dev/guides/using-eslint/
+const fs = require("node:fs");
+const path = require("node:path");
+const { defineConfig } = require("eslint/config");
+const expoConfig = require("eslint-config-expo/flat");
+const reactNativeA11y = require("eslint-plugin-react-native-a11y");
+
+// UI contract §8: the accessibility level lives in .ui-quality.yml at the repository root (missing file → enforce).
+function accessibilitySeverity() {
+  for (let dir = __dirname; ; dir = path.dirname(dir)) {
+    const file = path.join(dir, ".ui-quality.yml");
+    if (fs.existsSync(file)) {
+      const level = /^accessibility:\s*(enforce|report|off)\b/m.exec(
+        fs.readFileSync(file, "utf8"),
+      )?.[1];
+      return { report: "warn", off: "off" }[level] ?? "error";
+    }
+    if (fs.existsSync(path.join(dir, ".git")) || path.dirname(dir) === dir) return "error";
+  }
+}
+const a11ySeverity = accessibilitySeverity();
+
+module.exports = defineConfig([
+  expoConfig,
+  {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    plugins: { "react-native-a11y": reactNativeA11y },
+    // The plugin's `all` preset minus has-accessibility-hint, which demands a hint on every labelled element.
+    rules: Object.fromEntries(
+      Object.keys(reactNativeA11y.configs.all.rules)
+        .filter((rule) => rule !== "react-native-a11y/has-accessibility-hint")
+        .map((rule) => [rule, a11ySeverity]),
+    ),
+  },
+  {
+    ignores: ["dist/*", "coverage/*"],
+  },
+]);
+```
+
 After `npx expo lint` generates the file with only `"dist/*"` in `ignores`, add `"coverage/*"` to that array
 (Jest's coverage HTML report under `coverage/lcov-report/*.html` would otherwise be linted as JS/HTML and fail).
 `eslint-config-expo/flat`'s own rule set was confirmed to carry no stylistic/formatting rules (no `quotes`,
@@ -157,7 +214,11 @@ web-build/
 .expo/
 android/
 ios/
+.ui-quality.yml
 ```
+
+(`.ui-quality.yml` only matters when `<app-directory>` is `.` — Prettier would otherwise re-align the contract's
+comment column.)
 
 **Required, not optional** — without it, `prettier --check .` recurses into `coverage/lcov-report/` (generated
 HTML) and the auto-generated `eslint.config.js`/`index.ts` and reports false-positive formatting mismatches
@@ -220,6 +281,34 @@ so `iru-release`/`iru-react-native-bump-version` don't have to guess:
   so the "next development" bump stays in `package.json` alone and `expo.version` keeps the last released value
   until the next release. When a project opts out of `appVersionSource: "remote"`, that skill bumps
   `ios.buildNumber`/`android.versionCode` in the app config on a release value instead.
+
+### UI contract wiring — `index.ts`, the deep-link scheme, and the shared UI templates
+
+Write the shared files from `ui-templates.md` (`.ui-quality.yml` at the repository root, `src/dev/ui-gallery/**`,
+`.maestro/config.yaml`, `.maestro/subflows/ui-capture.yaml`, `.maestro/ui/App.yaml`), then:
+
+- **`index.ts`** — replace the scaffold's one-liner registration (new scaffolds only; on an existing app this is
+  application source — print the change instead of making it):
+
+  ```ts
+  import { registerRootComponent } from "expo";
+
+  import App from "./App";
+
+  // registerRootComponent calls AppRegistry.registerComponent('main', () => App).
+  // In development builds the root is wrapped with the UI gallery (a `<scheme>://ui-gallery?…` deep link renders one
+  // component/screen state for the Maestro screenshot flows); `__DEV__` is false in production, so the `require` is
+  // folded away and the gallery never ships.
+  registerRootComponent(__DEV__ ? require("./src/dev/ui-gallery").withUiGallery(App) : App);
+  ```
+
+  Confirmed: `npx expo export --platform web` (a production build) contains no gallery code; `--dev` does.
+- **`app.json`** — add `"scheme": "<app-slug>"` under `expo` (the `<app-scheme>` the capture subflow opens; a
+  development build registers it on both platforms). An app that already has a `scheme` keeps it, and the subflow
+  uses that value.
+- An app using **Expo Router** (not this scaffold's blank template) has no `App` to wrap: add the gallery as a
+  dev-only route instead (`app/ui-gallery.tsx` exporting `__DEV__ ? require(...).UiGalleryRoute : NotFound`), per the
+  coding skill's `ui-implementation.md` — report it as a follow-up rather than restructuring routes here.
 
 ### `.maestro/smoke.yaml`
 

@@ -19,7 +19,7 @@ Angular, React/Vite (and Storybook), NestJS (logs, runtime and diagnostic files,
 read from `schema.prisma`; migrations are never ignored), the repository-wide `.integration-test.lock/` used by the
 NestJS/Next.js/React Native coding and e2e skills, React Native (Expo, or a bare Metro/React Native CLI app — Gradle, Xcode, CocoaPods and Bundler outputs, signing
 material, and keeping the template's committed `debug.keystore`; paths are prefixed with the app subdirectory when the
-app does not live at the root), Ionic/Capacitor, Playwright, Turborepo, Istanbul/nyc,
+app does not live at the root), Ionic/Capacitor, Playwright, the UI tests' `.ui-screenshots/` capture directory (every UI project — React, Angular, Ionic, Next.js, React Native, Hilla; the catalog's xref:guides/building-user-interfaces.adoc[UI contract]), Turborepo, Istanbul/nyc,
 Antora docs build output, TypeDoc/Compodoc API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a
 Maven project. It never invents entries for things that aren't actually present. If `.gitignore` already exists,
 it is treated as sensitive: the skill announces it is updating rather than creating from scratch, reads it, composes

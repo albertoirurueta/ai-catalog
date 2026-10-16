@@ -19,6 +19,7 @@ dropped before the YAML is parsed, so it never ends a continuation).
 | `cross-os-ci: stable` | `cross-os-ci: stable` — the macOS/Windows legs (and Swift's macOS CodeQL) run only on stable-branch pushes, `workflow_dispatch` (and CodeQL's weekly schedule) |
 | `ci-tests: full` | `ci-tests: full` — adds the release-mode build + contract smoke test on every CI leg |
 | `container-tests` | `ci-tests: full` **and** the repository has container-backed tests (Rust: an `#[ignore = "…"]` test under `tests/` or `src/`; Go: a `//go:build integration` file). The Swift and .NET scaffolds have none — never written for them |
+| `ui: tui` | the tool has a terminal UI — `ui: tui` from `args`, else from disk: Rust `ratatui` in a `Cargo.toml`, Go `charm.land/bubbletea/v2` (or `github.com/charmbracelet/bubbletea`) in `go.mod`, .NET a `Terminal.Gui` `PackageReference`. Never for Swift (no TUI library offered). Adds the `.ui-screenshots/` upload after the Linux test job's tests (the TUI tests are ordinary unit tests there — no new job, runner or minutes) |
 | `pages: yes` / `pages: no` | `pages` |
 | `sonar` / `sonar: cloud` | `sonar` ≠ `none` / `sonar: cloud` (`self-hosted` has no organization) |
 | `cli-docs` | Step 1 found the CLI-reference generator (`<cli-docs-command>`) |

@@ -10,6 +10,30 @@ Conditional markers and `__TOKEN__` placeholders work as described in SKILL.md's
 on 2026-10-16 with Bubble Tea v2.1.0, Lip Gloss v2.0.6 and teatest v2 (pseudo-version
 `v2.0.0-20261012121918-43427fdbad12`) — see SKILL.md "Verification notes".
 
+The list follows the catalog's UI contract (`iru-go-code-one-task` `reference/ui-contract.md`): it renders only the
+names that fit the window (`Model.window`, sized from `tea.WindowSizeMsg`), and the tests render every state
+(`default`, `empty`, `many-items`, `long-content`) in each `.ui-quality.yml` direction (`rtl` = Arabic/Hebrew names in
+the normal layout), write the styles-free view through `internal/tui/ui_screenshots_test.go` to
+`.ui-screenshots/screen/Model/<state>--<direction>--no-color.txt`, and run the asserted accessibility checks at the
+file's level. The list has one palette that doesn't adapt to the terminal background, so `no-color` is its only
+theme. The helper strips styles with `github.com/charmbracelet/x/ansi` (already required through Lip Gloss; `go mod
+tidy` makes it a direct requirement).
+
+**UI additions unverified**: the `.ui-quality.yml`, the window, `ui_screenshots_test.go` and the matrix test were
+added after the 2026-10-16 verification without a Go toolchain on the authoring machine; the first scaffold run's
+Step 7 is their first compile — fix anything it finds here.
+
+### `.ui-quality.yml` (ui: tui)
+
+`__ACCESSIBILITY__` = the `accessibility` input (`enforce` by default). Exactly the contract's shape:
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: __ACCESSIBILITY__      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
 ### `internal/tui/model.go` (ui: tui)
 
 ```go
@@ -34,10 +58,23 @@ var (
 	helpStyle     = lipgloss.NewStyle().Faint(true)
 )
 
-// Model is the state of the browse list.
+const (
+	// helpText is the key help on the last line of the view.
+	helpText = "up/down or k/j to move, enter to greet, q to quit"
+	// chromeRows counts the view lines that aren't names: the title, two blank lines and the help.
+	chromeRows = 4
+	// defaultRows is how many names show before the first tea.WindowSizeMsg arrives.
+	defaultRows = 10
+)
+
+// Model is the state of the browse list (screen Model; states: default, empty,
+// many-items, long-content). The cursor is marked with "> " as well as color,
+// so it stays visible without color.
 type Model struct {
 	names       []string
 	cursor      int
+	offset      int
+	height      int
 	chosen      string
 	interrupted bool
 }
@@ -56,47 +93,65 @@ func DemoNames() []string {
 func (m Model) Init() tea.Cmd { return nil }
 
 // Update moves the cursor (up/down, k/j), chooses the name under it (enter),
-// quits without choosing (q, esc) or interrupts (ctrl+c).
+// quits without choosing (q, esc) or interrupts (ctrl+c), and records the
+// window height so only the names that fit are rendered.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	key, ok := msg.(tea.KeyPressMsg)
-	if !ok {
-		return m, nil
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+	case tea.KeyPressMsg:
+		switch msg.String() {
+		case "ctrl+c":
+			m.interrupted = true
+			return m, tea.Interrupt
+		case "q", "esc":
+			return m, tea.Quit
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down", "j":
+			if m.cursor < len(m.names)-1 {
+				m.cursor++
+			}
+		case "enter":
+			if len(m.names) > 0 {
+				m.chosen = m.names[m.cursor]
+			}
+			return m, tea.Quit
+		}
 	}
-	switch key.String() {
-	case "ctrl+c":
-		m.interrupted = true
-		return m, tea.Interrupt
-	case "q", "esc":
-		return m, tea.Quit
-	case "up", "k":
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case "down", "j":
-		if m.cursor < len(m.names)-1 {
-			m.cursor++
-		}
-	case "enter":
-		if len(m.names) > 0 {
-			m.chosen = m.names[m.cursor]
-		}
-		return m, tea.Quit
-	}
+	m.offset, _ = m.window()
 	return m, nil
 }
 
-// View renders the list in the alternate screen.
+// window returns the range [start, end) of names that fit, scrolled so the
+// cursor stays visible.
+func (m Model) window() (int, int) {
+	rows := defaultRows
+	if m.height > 0 {
+		rows = max(1, m.height-chromeRows)
+	}
+	start := min(m.offset, m.cursor)
+	if m.cursor >= start+rows {
+		start = m.cursor - rows + 1
+	}
+	return start, min(len(m.names), start+rows)
+}
+
+// View renders the visible part of the list in the alternate screen.
 func (m Model) View() tea.View {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Who should we greet?") + "\n\n")
-	for i, name := range m.names {
-		if i == m.cursor {
+	start, end := m.window()
+	for i, name := range m.names[start:end] {
+		if start+i == m.cursor {
 			b.WriteString(selectedStyle.Render("> "+name) + "\n")
 			continue
 		}
 		b.WriteString("  " + name + "\n")
 	}
-	b.WriteString("\n" + helpStyle.Render("up/down or k/j to move, enter to greet, q to quit") + "\n")
+	b.WriteString("\n" + helpStyle.Render(helpText) + "\n")
 	v := tea.NewView(b.String())
 	v.AltScreen = true
 	return v
@@ -129,12 +184,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/exp/teatest/v2"
 )
 
@@ -215,6 +272,72 @@ func TestViewMarksTheCursor(t *testing.T) {
 	}
 }
 
+func TestViewShowsOnlyTheVisibleWindow(t *testing.T) {
+	names := make([]string, 20)
+	for i := range names {
+		names[i] = fmt.Sprintf("Name %02d", i)
+	}
+	next, _ := New(names).Update(tea.WindowSizeMsg{Width: 40, Height: chromeRows + 3})
+	m, _ := press(next, down, down, down, down, down)
+	if start, end := m.window(); start != 3 || end != 6 {
+		t.Fatalf("window = [%d, %d), want [3, 6)", start, end)
+	}
+	view := ansi.Strip(m.View().Content)
+	if strings.Contains(view, "Name 02") || !strings.Contains(view, "> Name 05") {
+		t.Fatalf("unexpected window:\n%s", view)
+	}
+	m, _ = press(m, up, up, up, up)
+	if start, _ := m.window(); start != 1 {
+		t.Fatalf("start = %d after moving up, want 1", start)
+	}
+	if start, end := New(names).window(); start != 0 || end != defaultRows {
+		t.Fatalf("window before any size = [%d, %d), want [0, %d)", start, end, defaultRows)
+	}
+}
+
+// fixtureNames returns the names for one state of the UI contract's matrix;
+// rtl uses right-to-left scripts.
+func fixtureNames(state, direction string) []string {
+	base := []string{"Ada", "Grace", "Linus", "Margaret"}
+	if direction == "rtl" {
+		base = []string{"عائشة", "מרים", "ليلى", "דוד"}
+	}
+	switch state {
+	case "empty":
+		return nil
+	case "many-items":
+		names := make([]string, 500)
+		for i := range names {
+			names[i] = fmt.Sprintf("%s %d", base[i%len(base)], i+1)
+		}
+		return names
+	case "long-content":
+		return []string{strings.Repeat(base[0], 20), base[1]}
+	}
+	return base
+}
+
+func TestViewCapturesEveryStateInEachDirection(t *testing.T) {
+	quality := loadUIQuality(t)
+	for _, direction := range quality.Directions {
+		for _, state := range []string{"default", "empty", "many-items", "long-content"} {
+			names := fixtureNames(state, direction)
+			next, _ := New(names).Update(tea.WindowSizeMsg{Width: 60, Height: 12})
+			// One palette that doesn't adapt to the background: no-color is the only theme captured.
+			text := captureView(t, "screen", "Model", state, direction, "no-color", next.(Model).View().Content)
+			selection := ""
+			if len(names) > 0 {
+				selection = "> "
+			}
+			target := "screen/Model/" + state + "--" + direction + "--no-color"
+			checkAccessibility(t, target, tuiViolations(text, selection, helpText))
+			if state == "many-items" && strings.Contains(text, " 500") {
+				t.Errorf("%s rendered names outside the window", target)
+			}
+		}
+	}
+}
+
 func TestProgramWithTeatest(t *testing.T) {
 	tm := teatest.NewTestModel(t, New(DemoNames()), teatest.WithInitialTermSize(80, 24))
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool { return bytes.Contains(b, []byte("Ada")) },
@@ -242,6 +365,232 @@ func TestRunStopsWhenTheContextIsCanceled(t *testing.T) {
 	defer func() { _ = writer.Close() }()
 	if _, err := Run(ctx, reader, io.Discard, DemoNames()); !errors.Is(err, tea.ErrProgramKilled) {
 		t.Fatalf("Run() error = %v, want ErrProgramKilled", err)
+	}
+}
+```
+
+### `internal/tui/ui_screenshots_test.go` (ui: tui)
+
+The one capture helper every UI test in the package uses.
+
+```go
+package tui
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+)
+
+// uiQuality is the .ui-quality.yml at the repository root (the UI contract);
+// a missing file or key means the defaults.
+type uiQuality struct {
+	Accessibility string
+	Directions    []string
+	Themes        []string
+}
+
+// errorReporter is the part of *testing.T that applyLevel needs, so the
+// enforce path can be tested.
+type errorReporter interface {
+	Helper()
+	Errorf(format string, args ...any)
+	Fatalf(format string, args ...any)
+}
+
+// repoRoot walks up from the package directory to the nearest directory
+// holding .git, else the nearest go.mod directory.
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("working directory: %v", err)
+	}
+	module := ""
+	for d := dir; ; d = filepath.Dir(d) {
+		if _, err := os.Stat(filepath.Join(d, ".git")); err == nil {
+			return d
+		}
+		if _, err := os.Stat(filepath.Join(d, "go.mod")); err == nil && module == "" {
+			module = d
+		}
+		if filepath.Dir(d) == d {
+			if module == "" {
+				return dir
+			}
+			return module
+		}
+	}
+}
+
+// screenshotsDir is UI_SCREENSHOTS_DIR, else <repository root>/.ui-screenshots.
+func screenshotsDir(t *testing.T) string {
+	t.Helper()
+	if dir := os.Getenv("UI_SCREENSHOTS_DIR"); dir != "" {
+		return dir
+	}
+	return filepath.Join(repoRoot(t), ".ui-screenshots")
+}
+
+// loadUIQuality reads .ui-quality.yml at the repository root.
+func loadUIQuality(t *testing.T) uiQuality {
+	t.Helper()
+	// A missing or unreadable file means the defaults.
+	data, _ := os.ReadFile(filepath.Clean(filepath.Join(repoRoot(t), ".ui-quality.yml")))
+	return parseUIQuality(string(data))
+}
+
+// parseUIQuality reads the three keys of .ui-quality.yml without a YAML module.
+func parseUIQuality(text string) uiQuality {
+	q := uiQuality{Accessibility: "enforce", Directions: []string{"ltr", "rtl"}, Themes: []string{"light", "dark"}}
+	for _, line := range strings.Split(text, "\n") {
+		line, _, _ = strings.Cut(line, "#")
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		switch strings.TrimSpace(key) {
+		case "accessibility":
+			q.Accessibility = value
+		case "directions":
+			q.Directions = yamlList(value)
+		case "themes":
+			q.Themes = yamlList(value)
+		}
+	}
+	return q
+}
+
+// yamlList splits a flow-style list such as [ltr, rtl].
+func yamlList(value string) []string {
+	var items []string
+	for _, item := range strings.Split(strings.Trim(value, "[]"), ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+// captureView writes the styles-free view to
+// <dir>/<kind>/<id>/<state>--<direction>--<theme>.txt and returns that text.
+func captureView(t *testing.T, kind, id, state, direction, theme, view string) string {
+	t.Helper()
+	text := ansi.Strip(view)
+	dir := filepath.Join(screenshotsDir(t), kind, id)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatalf("create screenshot directory: %v", err)
+	}
+	name := filepath.Join(dir, state+"--"+direction+"--"+theme+".txt")
+	if err := os.WriteFile(name, []byte(text), 0o600); err != nil {
+		t.Fatalf("write screenshot: %v", err)
+	}
+	return text
+}
+
+// tuiViolations runs the asserted terminal-UI accessibility checks on a
+// styles-free capture and returns "rule-id: message" for each failure.
+func tuiViolations(text, selection, help string) []string {
+	var violations []string
+	if selection != "" && !strings.Contains(text, selection) {
+		violations = append(violations, "tui-color-only: the selection has no marker visible without color")
+	}
+	if !strings.Contains(text, help) {
+		violations = append(violations, "tui-help-line: the key help is not on screen")
+	}
+	return violations
+}
+
+// checkAccessibility applies the .ui-quality.yml level to the violations
+// found for target (<kind>/<Id>/<file stem>).
+func checkAccessibility(t *testing.T, target string, violations []string) {
+	t.Helper()
+	applyLevel(t, loadUIQuality(t).Accessibility, target, violations, screenshotsDir(t))
+}
+
+// applyLevel fails the test (enforce), appends to <dir>/a11y-report.txt
+// (report) or does nothing (off).
+func applyLevel(r errorReporter, level, target string, violations []string, dir string) {
+	r.Helper()
+	if len(violations) == 0 || level == "off" {
+		return
+	}
+	if level != "report" {
+		r.Errorf("accessibility violations in %s: %s", target, strings.Join(violations, "; "))
+		return
+	}
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		r.Fatalf("create screenshot directory: %v", err)
+		return
+	}
+	report := filepath.Clean(filepath.Join(dir, "a11y-report.txt"))
+	f, err := os.OpenFile(report, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		r.Fatalf("open accessibility report: %v", err)
+		return
+	}
+	defer func() { _ = f.Close() }()
+	for _, v := range violations {
+		if _, err := fmt.Fprintf(f, "%s\t%s\n", target, v); err != nil {
+			r.Fatalf("write accessibility report: %v", err)
+			return
+		}
+	}
+}
+
+// recorder collects what applyLevel reports instead of failing the test.
+type recorder struct {
+	*testing.T
+	messages []string
+}
+
+func (r *recorder) Errorf(format string, args ...any) {
+	r.messages = append(r.messages, fmt.Sprintf(format, args...))
+}
+
+func (r *recorder) Fatalf(format string, args ...any) { r.Errorf(format, args...) }
+
+func TestParseUIQuality(t *testing.T) {
+	q := parseUIQuality("accessibility: report  # note\ndirections: [ltr]\n")
+	if q.Accessibility != "report" || len(q.Directions) != 1 || q.Directions[0] != "ltr" || len(q.Themes) != 2 {
+		t.Fatalf("parseUIQuality = %+v", q)
+	}
+	if parseUIQuality("").Accessibility != "enforce" {
+		t.Fatal("missing file is not enforce")
+	}
+}
+
+func TestTUIViolations(t *testing.T) {
+	if got := tuiViolations("> Ada\nhelp", "> ", "help"); len(got) != 0 {
+		t.Fatalf("violations = %v, want none", got)
+	}
+	if got := tuiViolations("  Ada", "> ", "help"); len(got) != 2 {
+		t.Fatalf("violations = %v, want two", got)
+	}
+}
+
+func TestApplyLevel(t *testing.T) {
+	dir := t.TempDir()
+	violations := []string{"tui-help-line: missing"}
+	r := &recorder{T: t}
+	applyLevel(r, "off", "screen/Model/x", violations, dir)
+	applyLevel(r, "enforce", "screen/Model/x", nil, dir)
+	if len(r.messages) != 0 {
+		t.Fatalf("off/no violations reported %v", r.messages)
+	}
+	applyLevel(r, "enforce", "screen/Model/x", violations, dir)
+	if len(r.messages) != 1 {
+		t.Fatalf("enforce reported %v, want one failure", r.messages)
+	}
+	applyLevel(r, "report", "screen/Model/x", violations, dir)
+	data, err := os.ReadFile(filepath.Clean(filepath.Join(dir, "a11y-report.txt")))
+	if err != nil || string(data) != "screen/Model/x\ttui-help-line: missing\n" {
+		t.Fatalf("report = %q, %v", data, err)
 	}
 }
 ```

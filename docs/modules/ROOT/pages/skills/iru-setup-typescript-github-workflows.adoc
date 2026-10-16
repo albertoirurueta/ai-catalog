@@ -15,7 +15,7 @@ seven flavors: `library` (a published npm package), `react` (a Vite/React web ap
 web app), `react-native` (an Expo app, or a bare React Native Community CLI app on the Metro toolchain), `ionic` (an Ionic + Capacitor hybrid app), `nestjs` (a NestJS service),
 or `nextjs` (a Next.js web app with `output` `server` or `static`). `build.yml` runs install, lint, format check,
 typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan (skipped on fork pull requests), e2e
-per `ci-tests` (Playwright for the web flavors and Next.js; for NestJS the `test:e2e` suite with Testcontainers
+per `ci-tests` (Playwright for the web flavors and Next.js — each UI/e2e job also uploads the UI tests' `.ui-screenshots/` directory as a 7-day `ui-screenshots` artifact; for NestJS the `test:e2e` suite with Testcontainers
 on the runner's Docker, after `prisma generate` when `orm: prisma`), the production build (plus an unpushed
 container-image build check when a NestJS/Next.js server image is distributed), a docs build
 (TypeDoc/Compodoc/Storybook) merged with an Antora build, and a GitHub Pages deploy from the stable branch only
@@ -99,6 +99,11 @@ and the repository, asking the user for anything that can't be inferred. Unresol
 
 == Outputs
 
+* UI-contract capture upload (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): every Playwright
+  e2e job (and the metro Maestro `e2e-android` job) sets `UI_SCREENSHOTS_DIR` and uploads `.ui-screenshots/` as a 7-day
+  `ui-screenshots` artifact (`if: always()`, `if-no-files-found: ignore`). `ci-tests: unit` drops that upload with the
+  Playwright steps. The Maestro job excludes the dev-only `ui-gallery` flows (a release APK has no gallery), so React
+  Native component/screen gallery captures stay local (`iru-typescript-test`'s `e2e` selector).
 * `.github/workflows/build.yml` and `.github/workflows/release.yml` — created fresh, or, if either already
   existed, updated (merged), replaced, or kept as is per the user's per-file choice (or `on-existing`).
   `release.yml` is not written for `library` with `publish: no`, nor for `nestjs`/`nextjs` `server` with

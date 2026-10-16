@@ -178,6 +178,8 @@ none, and say so in the report.
   `accessibilityReduceMotion`, `accessibilityReduceTransparency`, `colorSchemeContrast`,
   `accessibilityDifferentiateWithoutColor`; semantic colors for Dark Mode.
 - `accessibilityIdentifier` is for UI tests only — never a substitute for a label (`testing.md`).
+- The UI tests check all of this automatically with `performAccessibilityAudit()` at the `.ui-quality.yml` level, and
+  capture the largest text size (`large-text` variant) where cheap (`ui-implementation.md`).
 
 ## Secrets: the Keychain
 
@@ -205,7 +207,9 @@ cancelled in `viewWillDisappear(_:)`. Errors reach the user (`.alert`, `UIAlertC
 UI tests (`testing.md`) query by identifier: give every control a test touches an `.accessibilityIdentifier(_:)`
 (SwiftUI) or `accessibilityIdentifier` (UIKit). The app honours a `--uitesting` launch argument
 (`ProcessInfo.processInfo.arguments.contains("--uitesting")`) to start from an in-memory store, skip onboarding and
-permission prompts, and disable animations — the branch lives in the composition root, never in Core logic.
+permission prompts, and disable animations — the branch lives in the composition root, never in Core logic. A
+`--fixture <data-set>` argument (`minimal-data`, `typical-data`, `many-items`, …) selects fake repositories there for
+the UI contract's screen tests and captures (`ui-implementation.md`).
 
 ## What must not be done
 

@@ -1,6 +1,6 @@
 ---
 name: iru-swift-test
-description: Run a Swift project's test suite — `swift test --filter '<regex>'` for a Swift Package Manager package (matches XCTest and Swift Testing tests alike, since SwiftPM runs both frameworks in one invocation), or `xcodebuild test -scheme <scheme> -destination <destination> -only-testing:<Target>/<Suite>/<test> -resultBundlePath <path>.xcresult` parsed via `xcrun xcresulttool get test-results summary --path <path>.xcresult` / `get test-results tests --path <path>.xcresult` (Xcode 16+) for an Xcode app/workspace project — optionally scoped to a positional `[selector]` (a bare test/method name, a suite/class name, or a `Suite.method`/`Suite/method` pair) plus optional `key: value` lines (`scheme:`, `destination:`, `kind: package|app`, `workspace:`, `project:`). Invoke as `/iru-swift-test` to run the whole suite, or `/iru-swift-test [selector]` to narrow it down. Detects package vs. app from the repository layout before choosing which runner to use: `Package.swift` alone (no `project.yml`/`Project.swift`/`*.xcodeproj`/`*.xcworkspace` nearby) means a package; any of those project files present means an app. Report-only: never fixes a failing test or modifies source/test code. Treats a selector that matches zero tests as a warning, not a pass — both `swift test --filter` and `xcodebuild -only-testing:` exit 0 and print a passing/succeeded summary when nothing matched, so this skill detects that "0 tests" case explicitly instead of reporting a clean run. Equivalent to `iru-java-test`/`iru-typescript-test`/`iru-android-test` for the Swift/Apple-platforms stack. Use whenever the user wants to run, re-run, or narrow down Swift unit tests (XCTest or Swift Testing, package or app) instead of invoking `swift test`/`xcodebuild test` by hand.
+description: Run a Swift project's test suite — `swift test --filter '<regex>'` for a Swift Package Manager package (matches XCTest and Swift Testing tests alike, since SwiftPM runs both frameworks in one invocation), or `xcodebuild test -scheme <scheme> -destination <destination> -only-testing:<Target>/<Suite>/<test> -resultBundlePath <path>.xcresult` parsed via `xcrun xcresulttool get test-results summary --path <path>.xcresult` / `get test-results tests --path <path>.xcresult` (Xcode 16+) for an Xcode app/workspace project — optionally scoped to a positional `[selector]` (a bare test/method name, a suite/class name, or a `Suite.method`/`Suite/method` pair) plus optional `key: value` lines (`scheme:`, `destination:`, `kind: package|app`, `workspace:`, `project:`). Invoke as `/iru-swift-test` to run the whole suite, or `/iru-swift-test [selector]` to narrow it down. Detects package vs. app from the repository layout before choosing which runner to use: `Package.swift` alone (no `project.yml`/`Project.swift`/`*.xcodeproj`/`*.xcworkspace` nearby) means a package; any of those project files present means an app. Report-only: never fixes a failing test or modifies source/test code. Treats a selector that matches zero tests as a warning, not a pass — both `swift test --filter` and `xcodebuild -only-testing:` exit 0 and print a passing/succeeded summary when nothing matched, so this skill detects that "0 tests" case explicitly instead of reporting a clean run. A leading `ui` selector (plus optional `lock: held`) runs the UI tests per the catalog's UI contract instead — `ImageRenderer`/native component captures and XCUITest screen/flow tests — setting `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`, passed to the simulator/test runner as `TEST_RUNNER_UI_SCREENSHOTS_DIR`), clearing it only on a full UI run, recovering captures from the `.xcresult` with `xcrun xcresulttool export attachments` into the contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` layout, validating the names, and reporting screenshot counts per kind, malformed names, `performAccessibilityAudit()` issues (count + rule ids) and the `.ui-quality.yml` level applied; app UI runs take the repository's `.simulator-test.lock` unless the caller holds it, and a missing simulator runtime, macOS desktop session or macOS host makes them unverified, never passed. Equivalent to `iru-java-test`/`iru-typescript-test`/`iru-android-test` for the Swift/Apple-platforms stack. Use whenever the user wants to run, re-run, or narrow down Swift unit tests (XCTest or Swift Testing, package or app) instead of invoking `swift test`/`xcodebuild test` by hand.
 model: haiku
 ---
 
@@ -23,6 +23,13 @@ Steps 1–2:
 - `destination: <xcodebuild destination string>` — e.g. `platform=macOS`, `platform=iOS
   Simulator,name=iPhone 18 Pro,OS=27.0` (app path only).
 - `workspace: <path>.xcworkspace` / `project: <path>.xcodeproj` — disambiguate when more than one exists.
+- `lock: held` — the caller (`iru-swift-code-one-task-group`) already holds the repository's `.simulator-test.lock`;
+  a `ui` run then doesn't take it (see "UI run").
+
+A leading **`ui`** word in the selector (`ui`, `ui OrderRowTests`, `ui MyAppUITests-iOS/OrdersScreenUITests`) asks
+for a **UI run** per the catalog's UI contract — the component-capture tests and XCUITest screen/flow tests, their
+screenshots and accessibility audits — handled by the "UI run" section after Step 5; whatever follows `ui` is an
+ordinary selector scoping it.
 
 `[selector]` shapes, mapped in Step 2/Step 4:
 
@@ -264,6 +271,76 @@ piped into a small recursive-descent script, or `jq '.. | objects | select(.node
   its `issues.testFailureSummaries`/`metrics` fields instead; treat this fallback path as unverified until
   exercised against an actual pre-16 toolchain.
 
+## UI run (`ui` selector)
+
+Follows the UI contract (`iru-swift-code-one-task`'s `reference/ui-contract.md` §6–§8 and `ui-implementation.md`):
+component tests render with `ImageRenderer`/native capture in the unit-test target (or a package's test target),
+screen and flow tests are XCUITests, and every capture goes through the shared `UIScreenshots.swift` helper, which
+writes `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` under `UI_SCREENSHOTS_DIR` **and** attaches it to
+the test as `<kind>~<Id>~<file>`.
+
+1. **Settings.** Read `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, `directions`,
+   `themes`; a missing file means `enforce`, `[ltr, rtl]`, `[light, dark]`) — the tests read it themselves; this skill
+   reports the level applied. Resolve `UI_SCREENSHOTS_DIR`: the environment's value if set (absolute), else
+   `<repository root>/.ui-screenshots`. On a **full** UI run (nothing after `ui`) clear it first — `rm -rf
+   "$UI_SCREENSHOTS_DIR" && mkdir -p "$UI_SCREENSHOTS_DIR"` — so it holds exactly this run; a scoped run never
+   clears it. Never commit it (`.ui-screenshots/` is in `.gitignore`; add it if missing).
+2. **Lock** (app path only): unless `lock: held`, take `.simulator-test.lock` exactly as
+   `iru-swift-code-one-task-group` Step 3.3 does (`mkdir .simulator-test.lock`, an `owner` file with this run and
+   `date -u`, poll every ~30 s while held, break a lock older than 60 minutes, give up after ~45 minutes as
+   **unverified — blocked by a concurrent simulator run**) and release it (`rm -f .simulator-test.lock/owner && rmdir
+   .simulator-test.lock`) on every exit path. A macOS app takes it too — XCUITest drives the real desktop. A package
+   needs no lock.
+3. **Run.**
+   - **Package** (a Swift package with SwiftUI components): `UI_SCREENSHOTS_DIR="$UI_SCREENSHOTS_DIR" swift test
+     [--filter '<selector>']` — runs on the macOS host; the helper writes the files directly.
+   - **App**: per in-scope scheme (Step 3), `TEST_RUNNER_UI_SCREENSHOTS_DIR="$UI_SCREENSHOTS_DIR" xcodebuild test
+     -scheme '<scheme>' -destination '<destination>' [-only-testing:<…>] -skip-testing:CoreTests -resultBundlePath
+     <path>.xcresult` (a full run: the scheme's `<AppName>Tests-<P>` and `<AppName>UITests-<P>` targets; `xcodebuild`
+     strips the `TEST_RUNNER_` prefix and hands `UI_SCREENSHOTS_DIR` to the unit-test host and the UI-test runner).
+     Then recover every capture the test process couldn't write itself (a sandboxed macOS host app, a device) from
+     the result bundle:
+
+     ```bash
+     EXPORT="$(mktemp -d)"
+     xcrun xcresulttool export attachments --path <path>.xcresult --output-path "$EXPORT"
+     python3 -I - "$EXPORT" "$UI_SCREENSHOTS_DIR" <<'PY'
+     import collections, json, os, re, shutil, sys
+     export, out = sys.argv[1], sys.argv[2]
+     valid = re.compile(r'^(component|screen|flow)/[^/]+/[a-z0-9]+(?:-[a-z0-9]+)*--(?:ltr|rtl)--'
+                        r'(?:light|dark|high-contrast)(?:--[a-z0-9]+(?:-[a-z0-9]+)*)*\.png$')
+     copied, malformed, a11y = 0, [], collections.Counter()
+     for test in json.load(open(os.path.join(export, 'manifest.json'))):
+         for a in test['attachments']:
+             name = re.sub(r'_\d+_[0-9A-Fa-f-]{36}(\.\w+)?$', '', a['suggestedHumanReadableName'])
+             name = re.sub(r'\.(png|txt)$', '', name)
+             if name.startswith('a11y~'):                 # a11y~<Screen>~<rule>
+                 a11y[name.split('~')[-1]] += 1
+                 continue
+             if not re.match(r'^(component|screen|flow)~', name):
+                 continue                                 # failure screenshots, logs
+             rel = name.replace('~', '/') + '.png'
+             if not valid.match(rel):
+                 malformed.append(rel); continue
+             os.makedirs(os.path.dirname(os.path.join(out, rel)), exist_ok=True)
+             shutil.copyfile(os.path.join(export, a['exportedFileName']), os.path.join(out, rel)); copied += 1
+     print(json.dumps({'collected': copied, 'malformed': malformed, 'a11y': dict(a11y)}))
+     PY
+     rm -rf "$EXPORT"
+     ```
+
+     `export attachments` (Xcode 16+) writes each attachment as `<UUID>.<ext>` plus a `manifest.json` whose
+     `suggestedHumanReadableName` is the attachment name with `_<n>_<UUID>` appended — verified with Xcode 27.1 on an
+     iOS 27 simulator run, where the copies were byte-identical to the files the helper wrote directly.
+   - **No simulator runtime** for a scheme (typically visionOS), **no macOS host / Command Line Tools only**, or a
+     macOS UI test that can't get the Automation/Accessibility permission or a logged-in desktop session → that
+     scheme's UI run is **unverified** with the reason — never skipped silently, never counted as passed.
+4. **Validate** every file under `$UI_SCREENSHOTS_DIR` against the same pattern (`find "$UI_SCREENSHOTS_DIR" -type f`):
+   anything outside `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` is reported as malformed.
+5. **Accessibility**: issues come from the `a11y~<Screen>~<rule>` attachments the audit tests add (rule = the
+   `XCUIAccessibilityAuditType`: `contrast`, `hit-region`, `dynamic-type`, `text-clipped`, …) and, at `enforce`, from
+   the failing audit tests in the summary. Report counts and rule ids — never the raw issue descriptions.
+
 ## Step 6 — Report
 
 - **All passed**: state the counts (package: totals from the last `Executed`/`Test run with` lines; app:
@@ -275,6 +352,10 @@ piped into a small recursive-descent script, or `jq '.. | objects | select(.node
   first line of its assertion/expectation message, and — for the app path — point to the `.xcresult` bundle path
   for the full detail instead of dumping it.
 - Do not attempt to fix failing tests or modify source/test code unless the user asks for that as a next step.
+- **UI run**: test pass/fail as above, then the screenshot count per kind (`component`/`screen`/`flow`), malformed
+  names, accessibility issues (count + rule ids, and whether they failed the run) with the `.ui-quality.yml` level
+  applied, whether `$UI_SCREENSHOTS_DIR` was cleared (full run) or kept (scoped), how many captures came from the
+  `.xcresult`, and every scheme reported unverified with its reason.
 - **Unverified schemes**: a per-platform scheme whose runtime is missing (typically visionOS) is listed as
   "unverified (no visionOS simulator runtime installed)" with its `build-for-testing` result — the other schemes'
   counts still stand.
@@ -339,6 +420,14 @@ All of the following were verified locally in `$TMPDIR/iru-verify/swift/test/` (
 - **`get test-results summary`/`get test-results tests` need Xcode 16+** (Apple introduced them as the successor
   to the deprecated `xcresulttool get --format json --path ...` object dump); only Xcode 27 was available on this
   machine, so the pre-16 legacy fallback noted in Step 5 is unverified.
+- **UI run (verified 2026-10-16, Xcode 27.1, Swift 6.4)**: in a throwaway SwiftPM package
+  (`$TMPDIR/iru-verify/swift/iru-swift-code-one-task/Probe`), the `UIScreenshots.swift` helper wrote the contract
+  files under `swift test` on macOS and under `xcodebuild test -scheme Probe -destination 'platform=iOS
+  Simulator,name=iPhone 17,OS=27.0'` with `TEST_RUNNER_UI_SCREENSHOTS_DIR` set (the simulator process writes host
+  paths); `xcrun xcresulttool export attachments --path R.xcresult --output-path <dir>` exported both the
+  `XCTAttachment` and the Swift Testing `Attachment.record` captures, and the script above rebuilt the same tree
+  byte-for-byte (`collected=5 malformed=0`). Not run here: an XCUITest target (no XcodeGen installed), a macOS UI
+  test, a device — their attachment path is the same `.xcresult` export, so it is unverified rather than assumed.
 - **`swiftlint`/`xcodegen`/`tuist`/`swiftformat` install checks are out of scope for this skill** (it doesn't
   invoke any of them), but the app-path project-generation step in Step 1 depends on `xcodegen`/`tuist` being
   installed when only `project.yml`/`Project.swift` exists without a generated `.xcodeproj`/`.xcworkspace` — this

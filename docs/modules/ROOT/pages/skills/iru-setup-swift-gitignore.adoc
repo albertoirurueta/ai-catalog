@@ -25,6 +25,9 @@ icon source, only its generated subfolders (`/build/dd*/`, `/build/docc/`, `/bui
 never matches `docs/build/`. The base now also ignores the transient `.simulator-test.lock/` directory that
 `iru-swift-code-one-task-group` creates around every app-kind `xcodebuild test` run (simulator or macOS desktop UI
 tests). The section was verified against a real `iru-setup-macos-app` scaffold run.
+For an app (`flavor: app`) or a package with UI (never `flavor: cli`) it also ignores the UI tests' unanchored
+`.ui-screenshots/` capture directory from the catalog's xref:guides/building-user-interfaces.adoc[UI contract], and never
+ignores `.ui-quality.yml`.
 It announces whether it is creating `.gitignore` from scratch or updating an existing one. It mirrors the diff-and-approve contract shared with the sibling
 xref:skills/iru-setup-java-gitignore.adoc[] / xref:skills/iru-setup-typescript-gitignore.adoc[] /
 xref:skills/iru-setup-android-gitignore.adoc[] skills, adapted for the Swift/Xcode ecosystem, and fits into the

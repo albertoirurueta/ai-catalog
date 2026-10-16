@@ -16,6 +16,7 @@ Detect the flavor first (`iru-php-code-one-task` Step 1 — the same markers as 
 | `testing.md` | The task writes or updates tests — nearly every task. Pest vs. PHPUnit, attributes, `assertSame`, fakes over mocks, data providers, suite split, Pest arch rules. |
 | `security.md` | The task touches request input, rendered output, SQL, files/uploads, outgoing HTTP, auth/sessions, or secrets — **always** for a controller, hook callback, form/AJAX/REST handler, or template. |
 | exactly one flavor file below | Matching the flavor Step 1 detected — never more than one, none for a plain library. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI (Blade/Livewire views, blocks, patterns, template parts, `.tpl`/`.twig` templates, their CSS/JS). The contract (verbatim, shared by every UI coding skill) sets the rules — decompose first, composition, inputs/events, paginated collections with one item component, UI tests, the `.ui-screenshots/` matrix, accessibility per `.ui-quality.yml`; `ui-implementation.md` maps them onto Blade/Livewire, blocks, Smarty/Twig, and Playwright + `@axe-core/playwright`. |
 
 | Flavor | Detected by (first match wins) | Flavor file |
 |---|---|---|
@@ -40,8 +41,8 @@ A task that changes logic inside one existing method of a plain library, with no
    never license adding an abstraction, a service layer, a new package, a migration, or a "while I'm here"
    refactor the plan didn't ask for.
 3. **This skill doesn't validate the group.** It runs only the fast tests it wrote or touched — never coverage,
-   code quality, license headers, a PHPDoc audit, the full suite, or anything needing Docker/a database/a
-   WordPress or PrestaShop install. The calling `iru-php-code-one-task-group` does all of that once for the whole
+   code quality, license headers, a PHPDoc audit, the full suite, browser UI tests, or anything needing Docker/a
+   database/a WordPress or PrestaShop install. The calling `iru-php-code-one-task-group` does all of that once for the whole
    task group. Write code that will pass those gates.
 
 ## Sources

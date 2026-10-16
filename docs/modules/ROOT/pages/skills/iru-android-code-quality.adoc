@@ -66,6 +66,9 @@ module from `scope`.
 == Outputs
 
 * A plain-text summary in the conversation — never a written file.
+* For Android Lint, an **Accessibility** line — the count and ids of `category="Accessibility"` issues (`ContentDescription`,
+  `ClickableViewAccessibility`, `LabelFor`, ...) or "0 accessibility issues" — even when zero, so a UI change's
+  accessibility lint result is always visible (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
 * Findings grouped by tool (Android Lint, Detekt, ktlint/Spotless), then by id/rule, with a severity breakdown
   per tool (Lint: Fatal/Error/Warning/Informational; Detekt/ktlint: error/warning; Spotless: a single
   `formatting` bucket).
@@ -85,7 +88,7 @@ flowchart TD
     C --> D["Run each wired tool via Gradle\n(lintDebug, detekt, spotlessCheck/ktlintCheck)"]
     D --> E{"Underlying compile step\nfailed outright?"}
     E -- yes --> F["Report failure for that tool, stop\n(report wasn't regenerated)"]
-    E -- no --> G["Parse lint-results-debug.xml"]
+    E -- no --> G["Parse lint-results-debug.xml\n(keep each issue's category;\nreport an Accessibility line)"]
     G --> H["Parse detekt.xml or detekt.sarif\n(if Detekt wired)"]
     H --> I["Parse Spotless console output or\nktlint text/XML report (if wired)"]
     I --> J{"Scope given?"}

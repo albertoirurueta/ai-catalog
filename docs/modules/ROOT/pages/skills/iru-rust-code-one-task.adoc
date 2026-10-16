@@ -21,6 +21,11 @@ before reporting back. Tests, clippy, coverage, `cargo deny`, `cargo doc` and li
 bucket in `iru-rust-code-one-task-group`, not here. It uses a medium model on purpose: the plan carries the hard
 reasoning, so this skill executes one task against code agreements that live in `reference/`.
 
+When a task touches the terminal UI, it also follows the catalog's UI contract on Ratatui (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]): the `Screen › Region › Component` tree is written
+before coding, components are `Widget`s emitting `Action` events, lists render only the visible window, and the UI
+tests capture each state × direction × theme as `.txt` files in `.ui-screenshots/`.
+
 Two things shape every Rust task:
 
 * **Logic lives in the library.** In a CLI, `src/main.rs` only gathers process facts and calls one library entry
@@ -86,6 +91,9 @@ This skill ships a `reference/` directory alongside its `SKILL.md`, read by prog
 |`ratatui.md`
 |`ratatui` is a dependency and the task touches the terminal UI (`TestBackend` testing).
 
+|`ui-contract.md` + `ui-implementation.md`
+|`ratatui` is a dependency and the task adds or changes a screen, component, list or other UI — the decomposition rules, then the Ratatui implementation (visible-window lists, capture helper `src/tui/ui_screenshots.rs`, asserted accessibility checks).
+
 |`security.md`
 |Spawning a process, paths from arguments/config, untrusted input, tokens/secrets, writing files, or anything tempting `unsafe`/`env::set_var`.
 
@@ -124,7 +132,7 @@ state" context. Normally supplied by `iru-rust-code-one-task-group` dispatching 
 |`reference/`
 |No
 |The skill's own bundled reference directory (`README.md`, `code-style.md`, `testing.md`, `error-handling.md`,
-`rustdoc.md`, `cli-contract.md`, `clap.md`, `output-and-terminal.md`, `ratatui.md`, `security.md`, `async.md`). If
+`rustdoc.md`, `cli-contract.md`, `clap.md`, `output-and-terminal.md`, `ratatui.md`, `ui-contract.md`, `ui-implementation.md`, `security.md`, `async.md`). If
 missing, the skill falls back to `CLAUDE.md` and the surrounding code's style and says so in its report.
 |Bundled with the skill
 |===
@@ -137,6 +145,9 @@ missing, the skill falls back to `CLAUDE.md` and the surrounding code's style an
   conventions where more specific.
 * Unit, end-to-end (`tests/cli.rs`), golden-file and TUI (`TestBackend`) tests added or updated, including a case per
   documented `# Errors`/`# Panics` — not run by this skill; the caller runs the suite once for the whole bucket.
+* For terminal-UI tasks: UI tests (component/screen/flow, with minimal/typical/many-items/long-content and
+  right-to-left fixtures) that write `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt` for every
+  `.ui-quality.yml` direction × theme (plus `no-color`), with asserted accessibility checks at the file's level.
 * A rustfmt pass over only the files this task touched, and a `cargo check --all-targets --locked -p <package>`
   compile-check of each touched package (plus `--all-features` when the package declares features, and another target
   when it is already installed) — passed, fixed, found unrelated to this task, or reported unavailable.
@@ -144,7 +155,8 @@ missing, the skill falls back to `CLAUDE.md` and the surrounding code's style an
   pending" note, written immediately once the task finishes cleanly. Left untouched if the task stopped on a blocker.
 * A short summary handed back to the caller: shape detected, packages touched, reference files read, files touched,
   tests added/updated, golden/snapshot changes (additive or needing a `schemaVersion` bump), compile-check result,
-  generated artifacts needing regeneration (completions, man pages, CLI reference), whether it stopped on a blocker,
+  generated artifacts needing regeneration (completions, man pages, CLI reference), the Screen › Region › Component
+  decomposition and the UI tests/captures added (terminal-UI work), whether it stopped on a blocker,
   and any deviation from `reference/`.
 
 == Execution flow

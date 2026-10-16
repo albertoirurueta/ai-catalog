@@ -160,6 +160,11 @@ meaningful when `ci: yes`. Defaulted to `yes` without asking for public reposito
 recommended (Pages on private repos needs a paid plan and the site is public).
 |`yes` public; asked for private
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` -- `app` flavor only (ignored for `library`): the level of the UI tests' automated accessibility checks (`performAccessibilityAudit()`), written by `iru-setup-apple-app` to `.ui-quality.yml`. Asked in Step 4 with Enforce recommended; forwarded to the scaffold skill. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
+|Asked for `app`
+
 |`on-existing`
 |No
 |`ask`/`keep`/`update`/`replace` -- how every sub-skill treats prior setup it finds. Never asked here; forwarded
@@ -179,6 +184,7 @@ when the key isn't supplied.
 * The flavor's own scaffold: `Package.swift` + `Sources/`/`Tests/` (via `iru-setup-swift-library`), or the
   generator manifest + `Packages/Core` + `Targets/` + `fastlane/Fastfile` (via `iru-setup-apple-app`) — always
   invoked; the scaffold skill decides per existing file whether to update, keep or replace it.
+* For the `app` flavor, `.ui-quality.yml` at the repository root (reported by the scaffold with the chosen `accessibility` level); the scaffold's UI tests capture the sample screen into the gitignored `.ui-screenshots/`, which CI uploads as a 7-day artifact.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * A root `.gitignore` covering `.build/`, `DerivedData/`, `*.xcresult`, generated `*.xcodeproj`/`*.xcworkspace`,
   signing material, and the Antora build output (via `iru-setup-swift-gitignore`).
@@ -211,7 +217,7 @@ flowchart TD
     E2 -- "yes, platforms\nasked here" --> E3["Offer to switch to\niru-setup-macos-repository"]
     E2 -- "no, or platforms\nfrom args" --> E4["app: ui swiftui/uikit (iOS/iPadOS only) and\narchitecture; detected + confirmed in\nmode existing, else asked (swiftui means\nmvvm, uikit asks mvc/mvvm)"]
     E3 -- "declined" --> E4
-    E4 --> F["Step 4: Collect shared pipeline parameters\n(branches, runner, open-source, visibility,\npublish/distribution, signing, ci, sonar,\nci-tests, pages)"]
+    E4 --> F["Step 4: Collect shared pipeline parameters\n(branches, runner, open-source, visibility,\npublish/distribution, signing, ci, sonar,\nci-tests, pages, accessibility for app)"]
     F --> I["Step 5: Run flavor's scaffold skill\n(iru-setup-swift-library or\niru-setup-apple-app, via sub-agent;\nasks Update / Keep / Replace per file)"]
     I -- "user chose stop,\nno manifest on disk" --> J[Stop entire pipeline; report]
     I -- "ok, or stop but\nmanifest exists" --> K["Step 6: Run setup-antora\n(documentation site, via sub-agent)"]

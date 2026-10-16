@@ -1,6 +1,6 @@
 = TypeScript Generate All Tests
-:description: Scans a TypeScript/npm codebase for files with no tests or below 80% line coverage, then writes or extends unit tests until each clears that bar.
-:keywords: iru-typescript-generate-all-tests, claude code skill, typescript, npm, vitest, jest, line coverage, generate unit tests, code coverage report
+:description: Scans a TypeScript/npm codebase for files with no tests or below 80% coverage, writes or extends unit tests, and adds Playwright UI tests for web UI gaps.
+:keywords: iru-typescript-generate-all-tests, claude code skill, typescript, npm, vitest, jest, line coverage, playwright, ui tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -25,6 +25,15 @@ For React Native it also resolves the toolchain (`expo` in `dependencies` is `ex
 agree on the candidate set, and hands each test-writing agent a set of React Native rules: awaited `render`/`fireEvent`
 on RNTL 14, Expo Router's `renderRouter` for Expo screens, library Jest mocks for metro's third-party native modules,
 native code mocked at its JS boundary, fake timers for animations, and a stop-and-ask on `transformIgnorePatterns` failures.
+
+For a web UI project with Playwright wired (React/Vite, Angular, Ionic, Next.js, Hilla) a further step (Step 6b)
+generates UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces])
+for every existing screen and component that has none: one story per visual state, Playwright component specs through the
+project's component gallery, and screen specs against the built app, each capturing the `.ui-quality.yml` directions
+(states x left-to-right/right-to-left x light/dark) into `.ui-screenshots/` with an accessibility check. It creates the
+shared `support/ui-screenshots.ts` helper when missing, asks before adding `@axe-core/playwright`, and never scaffolds
+Playwright itself (no Playwright means "UI tests not generated"); React Native UI tests are left to
+`iru-react-native-code-one-task`. Accessibility violations it finds are reported, not silently fixed.
 
 == Purpose group
 
@@ -59,6 +68,10 @@ with no obvious single target, asks which workspace to scope the run to before c
   runner/package manager/test-file convention, how many already met the bar, before/after coverage per file
   touched, any file still below 80% after two extension attempts (with its exact remaining uncovered lines), and
   the full-suite test result.
+* For web UI projects: story files and Playwright component/screen specs for every uncovered screen and component,
+  the `support/ui-screenshots.ts` helper when absent, and screenshots under `.ui-screenshots/<kind>/<Id>/`; the
+  report adds screens/components found and covered, states covered, screenshot count, accessibility violations (rule
+  ids) at the `.ui-quality.yml` level, and anything left without UI tests or "unverified".
 * No license headers, TSDoc, or code-quality fixes — those remain `iru-check-license`, `iru-typescript-tsdoc`,
   and `iru-typescript-code-quality`'s jobs.
 
@@ -85,7 +98,8 @@ flowchart TD
     K -- yes, attempts left --> I
     K -- yes, 2 attempts used --> L[Report as residual gap\nwith exact uncovered lines]
     K -- no --> M["gate-runner: run full\nsuite once (typescript-test)"]
-    L --> M
+    L --> L2["Web UI project with Playwright:\ngenerate stories and UI specs\nper gap, run via typescript-test ui"]
+    L2 --> M["gate-runner: run full\nsuite once (typescript-test)"]
     M --> N{"Any failures?"}
     N -- yes, caused by this run --> O[Fix regression;\nre-run full suite]
     O --> M
@@ -99,7 +113,7 @@ flowchart TD
 * xref:skills/iru-typescript-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation:
   delegated through the `iru-gate-runner` agent so its full `lcov.info`/coverage HTML report never lands
   directly in this conversation, and so the whole suite runs once per batch rather than once per file.
-* xref:skills/iru-typescript-test.adoc[] — Step 7, once, to confirm the full suite still passes after every
+* xref:skills/iru-typescript-test.adoc[] — Step 6b (the `ui` selector, to run the generated UI specs once) and Step 7, once, to confirm the full suite still passes after every
   file's tests have been written or extended; also delegated through `iru-gate-runner`.
 
 === Invoked by
@@ -112,10 +126,10 @@ per-task test-writing via `iru-typescript-code-one-task`).
 
 * xref:agents/overview.adoc[`Explore`] — Step 2, to build the source-file/test-file inventory and detect the
   project's flavor, test runner, package manager, and test convention without reading every file directly.
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-typescript-coverage`/
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, 6b, and 7, to run `iru-typescript-coverage`/
   `iru-typescript-test` and report back only a compact summary instead of a raw coverage/test log.
 * xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per file
-  needing new/extended tests, dispatched concurrently since each only touches its own test file.
+  needing new/extended tests, dispatched concurrently since each only touches its own test file (Step 6b dispatches one per component/screen for UI tests the same way).
 
 == Source
 

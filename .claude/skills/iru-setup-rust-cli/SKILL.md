@@ -17,14 +17,17 @@ description: >-
   quiet exit 0, a panic as exit 1 — and the commands `greet [NAME] [--ask]`, `completion <shell>`, `schema [COMMAND]`
   (clap's `Command` walked into JSON with per-command exit codes and safety metadata), `version` and `--version`;
   with `ui: tui` a Ratatui `browse` picker (TTY-gated → exit 2 with a pointer to `greet --json`, terminal restored on
-  panic and on SIGTERM, state and drawing unit-tested with `TestBackend`). Tests: in-process tests of `run` with
+  panic and on SIGTERM, state and drawing unit-tested with `TestBackend`, the list rendering only the rows that fit,
+  and — per the catalog's UI contract — a `.ui-quality.yml` at the repository root, a test-only
+  `src/tui/ui_screenshots.rs` helper and UI tests capturing every picker state in each direction as
+  `.ui-screenshots/screen/App/<state>--<direction>--no-color.txt` with the asserted accessibility checks). Tests: in-process tests of `run` with
   injected terminal facts and environment, assert_cmd + predicates + snapbox golden-file end-to-end tests of the
   real binary, ~98% line coverage measured with cargo-llvm-cov (80% bar). An `xtask` member generates man pages
   (clap_mangen), completions (clap_complete) and `docs/modules/ROOT/pages/cli-reference.adoc` (only when the Antora
   module exists; `--check` for CI). Invoke as `/iru-setup-rust-cli`. Accepts pre-resolved inputs via `args`
   (`key: value` lines) — `bin-name`, `crate-name`, `description`, `ui` (`none`/`tui`), `msrv`, `branching`
   (`gitflow`/`main-only`), `license`, `developer-name`, `developer-email`, `organization-url`, `owner`,
-  `repository-url`, `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
+  `repository-url`, `accessibility` (`enforce`/`report`/`off`, `ui: tui` only), `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `distribution` (`none`/`internal`/`store`), `mode` (`new`/`existing`) and `on-existing`
   (`ask`/`keep`/`update`/`replace`) — so `iru-setup-cli-repository` can drive it without re-prompting. Announces
   whether it is scaffolding from scratch or updating; for every file group it owns that already exists it warns and
@@ -66,7 +69,7 @@ safety, configuration, self-description, startup) — the same contract the Go, 
 | `reference/source-templates.md` | **Always.** `src/main.rs`, `src/lib.rs`, `src/cli.rs`, `src/exit.rs`, `src/error.rs`, `src/output.rs`, `src/term.rs`, `src/config.rs`, `src/signals.rs`, `src/commands/{mod,greet,completion,schema,version}.rs`. |
 | `reference/test-templates.md` | **Always.** `src/tests.rs` (in-process), `tests/cli.rs` (end-to-end), `tests/golden/greet-ada.json`. |
 | `reference/xtask-templates.md` | **Always.** `xtask/src/main.rs`. |
-| `reference/tui-templates.md` | `ui: tui` only. `src/commands/browse.rs`, `src/tui/{mod,app,ui}.rs`. |
+| `reference/tui-templates.md` | `ui: tui` only. `src/commands/browse.rs`, `src/tui/{mod,app,ui,ui_screenshots}.rs`, `.ui-quality.yml`. |
 | `reference/smoke-checks.md` | Step 7 — the pipe/exit-code script and the pseudo-terminal script (extracted outside the repository). |
 
 **Conditional-marker convention used in every reference file**: a line `// >>> <condition>` (Rust) or
@@ -115,7 +118,8 @@ Recognized keys:
   `no-license` condition: no `license` key, `publish = false`); `developer-name`, `developer-email` (→ `authors`);
   `organization-url`, `owner`, `repository-url` (→ `repository`; default `https://github.com/<owner>/<repo>` from
   Step 3).
-- **Shape (this skill)**: `ui` (`none`/`tui`, default `none`); `msrv` (the minimum supported Rust version written
+- **Shape (this skill)**: `ui` (`none`/`tui`, default `none`); `accessibility` (`enforce`/`report`/`off`, default
+  `enforce`; only used with `ui: tui` — the level written to `.ui-quality.yml`, which the TUI's UI tests read); `msrv` (the minimum supported Rust version written
   to `rust-version`; default computed in Step 4 — never lower than what Step 4 computes); `branching`
   (`gitflow` → version `0.1.0-dev`, `main-only` → `0.1.0`; default `gitflow`).
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci`
@@ -135,7 +139,7 @@ every pre-existing file group. Only `on-existing` skips that question (`keep` = 
 
 Check for every file Step 6 would write: `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`/`rust-toolchain`,
 `rustfmt.toml`/`.rustfmt.toml`, `clippy.toml`/`.clippy.toml`, `deny.toml`, `.cargo/config.toml`, `src/**`,
-`tests/**`, `xtask/**`. If `mode` wasn't supplied, derive it: a root `Cargo.toml` ⇒ `existing`, else `new`. Then
+`tests/**`, `xtask/**`, and (`ui: tui`) `.ui-quality.yml`. If `mode` wasn't supplied, derive it: a root `Cargo.toml` ⇒ `existing`, else `new`. Then
 tell the user which of the three this run is doing:
 
 - **Scaffolding from scratch** — none exist: "Scaffolding the Rust CLI **from scratch**." Go to Step 2. Other
@@ -147,7 +151,10 @@ tell the user which of the three this run is doing:
   whether `ratatui` is a dependency (→ `ui`), and offer them as Step 2's defaults. Groups (only those with a file
   present): **Cargo manifest** (`Cargo.toml`, `Cargo.lock`), **toolchain and quality config**
   (`rust-toolchain.toml`, `rustfmt.toml`, `deny.toml`, any `clippy.toml`), **`.cargo/config.toml`**, **the source
-  skeleton** (`src/**`), **tests** (`src/tests.rs`, `tests/**`), and **`xtask/`**. Unless `on-existing` decides, ask
+  skeleton** (`src/**`), **tests** (`src/tests.rs`, `tests/**`), **`xtask/`**, and — `ui: tui` only — **UI quality
+  config** (`.ui-quality.yml`; Update keeps its `directions`/`themes` and any `accessibility` value unless `args` set
+  one, adding missing keys; Keep as is reports a level that differs from this run's; Replace rewrites it from the
+  template). Unless `on-existing` decides, ask
   with `AskUserQuestion`, one question per group (batch up to 4 per call), naming each concrete conflict with this
   run's choices (e.g. "`Cargo.toml` has no `[workspace]` — `cargo xtask` needs the `xtask` member", "`[lints]` sets
   no `missing_docs`", "`rust-version` is 1.80 but ratatui 0.30 needs 1.88", "`edition = "2021"` — the templates use
@@ -191,6 +198,10 @@ Then, with `AskUserQuestion` (skip any resolved):
 - **ui** — **No terminal UI (Recommended)** (`none`: every command is a plain command; styled, TTY-aware output is
   still there) / **Ratatui terminal UI** (`tui`: adds `browse`, a full-screen picker for people; agents and scripts
   keep using `greet --json`; adds ratatui + crossterm and raises the MSRV to 1.88).
+- **accessibility** — only with `ui: tui` and stand-alone (an orchestrator resolves it): "Automated accessibility
+  checks in UI tests?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report only** (listed, never
+  failing) / **Off** (not run). For a terminal UI these are the asserted checks (selection visible without colour,
+  key help on screen), not an automated audit.
 - **license** — **MIT OR Apache-2.0 (Recommended)** "the Rust ecosystem's dual license" / **MIT** / **Apache-2.0** /
   **No license (proprietary)** (`publish = false`) / **Other** (ask the SPDX expression). If one is chosen, remind in
   Step 8 to add the `LICENSE` file(s) (`iru-check-license` can backfill headers).
@@ -263,6 +274,7 @@ Read the reference files this run needs (table above). Placeholders:
 | `__Version__` | `0.1.0-dev` (gitflow) / `0.1.0` (main-only) |
 | `__Msrv__` | Step 4 (e.g. `1.88`) — in `Cargo.toml` and `xtask/Cargo.toml` |
 | `__License__` | the SPDX expression (`license` condition) |
+| `__Accessibility__` | `accessibility` (`enforce` by default; `ui: tui` only) |
 | `__Authors__` | `Name <email>` (or `Name` without an email) |
 | `__RepositoryUrl__` | Step 3 (`repository` condition) |
 | `__ClapVersion__`, `__ClapCompleteVersion__`, `__ClapMangenVersion__`, `__AnstyleVersion__`, `__SerdeVersion__`, `__SerdeJsonVersion__`, `__ThiserrorVersion__`, `__TomlVersion__`, `__SignalHookVersion__`, `__RatatuiVersion__`, `__AssertCmdVersion__`, `__PredicatesVersion__`, `__SnapboxVersion__`, `__TempfileVersion__` | Step 4 |
@@ -274,7 +286,7 @@ Cargo.toml  Cargo.lock[gen]  rust-toolchain.toml  rustfmt.toml  deny.toml  .carg
 src/main.rs  src/lib.rs  src/cli.rs  src/exit.rs  src/error.rs  src/output.rs  src/term.rs  src/config.rs
 src/signals.rs  src/tests.rs
 src/commands/{mod,greet,completion,schema,version}.rs  src/commands/browse.rs[tui]
-src/tui/{mod,app,ui}.rs[tui]
+src/tui/{mod,app,ui,ui_screenshots}.rs[tui]  .ui-quality.yml[tui]
 tests/cli.rs  tests/golden/greet-ada.json  tests/golden/schema.json[gen]
 xtask/Cargo.toml  xtask/src/main.rs
 docs/modules/ROOT/pages/cli-reference.adoc[gen, only when docs/modules/ROOT exists]
@@ -330,6 +342,9 @@ bytes when piped or with `NO_COLOR`, closed-pipe exit 0, the golden file) and, o
 Expected on a fresh scaffold (verified): fmt clean, 0 Clippy warnings, 50 (`tui`) / 42 (`none`) in-process tests +
 13 / 12 end-to-end tests + 1 doctest passed, rustdoc 0 warnings, `advisories ok, bans ok, licenses ok, sources ok`
 (two `duplicate` warnings with `ui: tui`), line coverage 97.6% (`tui`) / 98.8% (`none`), every smoke check passing.
+The `ui: tui` counts predate the UI-contract additions (the window test, the matrix test and five helper tests add
+seven in-process tests) — a run also leaves 8 captures under `.ui-screenshots/screen/App/` (4 states × `ltr`/`rtl` ×
+`no-color`); add `.ui-screenshots/` to `.gitignore` (`iru-setup-rust-gitignore` does).
 
 ## Step 8 — Report
 
@@ -337,7 +352,8 @@ Summarize: the mode (**scaffolded from scratch** / **updated an existing tool** 
 `bin-name`, `crate-name`, `description`, `ui`, version, MSRV (computed vs given), license (or none), and, per Step 1
 group, the action taken — **created / updated / replaced / kept as is** — and whether it came from the user or
 `on-existing`, listing each mismatch of a kept group and, for a replaced one, what customizations could have been
-lost (check `git diff`). Then the crate versions used (live vs fallback, and any drift past the verified line),
+lost (check `git diff`) — including `.ui-quality.yml` (`ui: tui`: created / updated / replaced / kept as is, with
+the `accessibility` level written). Then the crate versions used (live vs fallback, and any drift past the verified line),
 each Step 7 command with its result (tests, coverage %, Clippy count, deny result, smoke checks), anything
 **unverified** and why, and the ignored `args` keys. Say what `sonar` and `distribution` mean here (recorded only)
 and list the Antora pages worth adding by hand: usage (getting started), exit codes and the error envelope, the
@@ -362,6 +378,7 @@ exit-code reactions), plus the nav entry `* xref:cli-reference.adoc[CLI referenc
 | Supply chain | `cargo deny check` (`deny.toml`) |
 | CLI docs | `cargo xtask docs` → `target/dist/man/<bin>.1` + `<bin>-<command>.1`, `target/dist/completions/{<bin>.bash,_<bin>,<bin>.fish,_<bin>.ps1,<bin>.elv}`, `docs/modules/ROOT/pages/cli-reference.adoc` (or `target/dist/cli-reference.adoc` without Antora); `cargo xtask docs --check` exits 1 when the committed page is stale |
 | Release binary | `cargo build --release --locked [--target <triple>]` → `target/[<triple>/]release/<bin>[.exe]` (fat LTO, `codegen-units = 1`, stripped, `panic = "unwind"`); `cargo check` passes for `x86_64-unknown-linux-musl` and `x86_64-pc-windows-msvc` |
+| UI contract (`ui: tui`) | `.ui-quality.yml` at the root; captures via `src/tui/ui_screenshots.rs` (`capture`, `check_accessibility`, `tui_violations`, `ui_quality`) into `$UI_SCREENSHOTS_DIR` or `.ui-screenshots/screen/App/<state>--<ltr\|rtl>--no-color.txt` |
 | Smoke contract | `<bin> --version`/`--help` exit 0 on stdout; unknown command 2; `greet --json` → `{"greeting":"Hello, NAME!","name":"NAME","schemaVersion":1}`; `greet ''` 3 + envelope; `schema nope` 4; `browse` without a TTY 2 |
 
 ### Warn explicitly
@@ -403,6 +420,11 @@ clippy 1.99's `assert_is_empty` and `doc_markdown` lints; the first frame of a R
 signal handlers are process-wide, so only one test installs them; hard-coded versions in tests would break every
 bump (`env!("CARGO_PKG_VERSION")` instead); clap_complete panics on a failed write (scripts are generated into
 memory first); `ratatui`'s default features add widgets and backends the picker doesn't use (only `crossterm` is enabled; 104 instead of 113 crates).
+
+**UI-contract additions unverified**: `.ui-quality.yml`, `src/tui/ui_screenshots.rs`, `App::visible_window`/
+`selected_index` (replacing `list_state`) and the matrix test in `tui/ui.rs` were added later without a Rust toolchain
+on the authoring machine — written against the ratatui 0.30 API (`Buffer::content`/`area`, `ListState::offset_mut`,
+`Span::width`) but never compiled here; the first `ui: tui` run's Step 7 is their verification.
 
 Not verified locally: running on Windows (signals there: Ctrl-C only; SIGTERM is never delivered) and Linux
 (compile-checked for musl, not run); the TUI on Windows terminals; publishing to crates.io for real; the GitHub

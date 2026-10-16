@@ -97,7 +97,10 @@ scope (`swiftui.md`). Size layouts from the window/proposed size, never the scre
 
 View models and Core logic are tested exactly as on other platforms (Swift Testing, `testing.md`). The visionOS
 simulator runs windows, volumes and immersive spaces and XCUITest; ARKit data and real hand input need a device —
-report those paths "not verified on simulator" rather than writing tests that can't run.
+report those paths "not verified on simulator" rather than writing tests that can't run. Windows and their
+components follow the UI contract like any SwiftUI target (`ui-implementation.md`: `ImageRenderer` component
+captures, XCUITest window captures with `XCUIDevice.shared.appearance`, `performAccessibilityAudit()`), with the
+`visionos` variant; immersive-space content (RealityKit entities) isn't captured by either — report it uncovered.
 
 ## What must not be done
 

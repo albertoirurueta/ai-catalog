@@ -90,6 +90,8 @@ kotlin = "<kotlin-version>"
 # >>> ui: compose
 composeMultiplatform = "<compose-multiplatform-version>"
 composeMaterial3 = "<compose-material3-version>"
+# The AndroidX Compose UI line Compose Multiplatform maps to (for ui-test-manifest in the Robolectric UI tests).
+androidx-composeUi = "<androidx-compose-ui-version>"
 # <<< ui: compose
 # >>> ui: native
 androidx-composeBom = "<compose-bom-version>"
@@ -122,12 +124,16 @@ compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", v
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3" }
+compose-uiTest = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "composeMultiplatform" }
+androidx-compose-uiTestManifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "androidx-composeUi" }
 # <<< ui: compose
 # >>> ui: native
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidx-composeBom" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-uiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-uiTooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-compose-uiTestJunit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-compose-uiTestManifest = { module = "androidx.compose.ui:ui-test-manifest" }
 # <<< ui: native
 
 [plugins]
@@ -295,4 +301,17 @@ indent_style = space
 [*.gradle.kts]
 # Version-catalog accessors (`libs.versions.android.compileSdk.get().toInt()`) are idiomatic in build scripts.
 ktlint_standard_chain-method-continuation = disabled
+```
+
+### `.ui-quality.yml`
+
+Read by the UI test helpers (`shared/src/commonTest/…/uitest/UiScreenshots.kt`, `androidApp/src/test/…/uitest/UiScreenshots.kt`,
+`iosApp/iosAppTests/UIScreenshots.swift`) and by the KMP coding/test skills. `<accessibility>` is Step 0's
+`accessibility` (default `enforce`).
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
 ```

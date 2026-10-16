@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-generate-all-tests
-description: For a TypeScript/npm project only, explore the whole codebase to find every source file that has no corresponding unit test, or whose measured line coverage falls below 80%, using the `iru-typescript-coverage` skill to get the exact percentage per file — then generate new tests (or extend existing ones) until each reaches that bar, using the project's own framework's testing library and following its existing test-file convention and style. Invoke as `/iru-typescript-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a TypeScript/npm project (no `package.json` found, or no TypeScript toolchain). Use whenever the user wants comprehensive unit test coverage brought up across an entire TypeScript codebase (library, React, Angular, React Native — `expo` with `jest-expo` or bare CLI/`metro` with `@react-native/jest-preset`, React Native Testing Library 14's async `render`/`fireEvent` honored and native modules mocked at their JS boundary — Ionic, or Hilla frontend) in one pass, instead of writing tests for one file or task at a time.
+description: For a TypeScript/npm project only, explore the whole codebase to find every source file that has no corresponding unit test, or whose measured line coverage falls below 80%, using the `iru-typescript-coverage` skill to get the exact percentage per file — then generate new tests (or extend existing ones) until each reaches that bar, using the project's own framework's testing library and following its existing test-file convention and style. Invoke as `/iru-typescript-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a TypeScript/npm project (no `package.json` found, or no TypeScript toolchain). Use whenever the user wants comprehensive unit test coverage brought up across an entire TypeScript codebase (library, React, Angular, React Native — `expo` with `jest-expo` or bare CLI/`metro` with `@react-native/jest-preset`, React Native Testing Library 14's async `render`/`fireEvent` honored and native modules mocked at their JS boundary — Ionic, or Hilla frontend) in one pass, instead of writing tests for one file or task at a time. For a web UI project with Playwright wired (React/Vite, Angular, Ionic, Next.js, Hilla) it also generates UI tests per the catalog's UI contract for every existing screen and component that has none — a story per visual state, Playwright component specs through the project's component gallery (`mount()`), screen specs against the built app, each capturing the `.ui-quality.yml` directions × themes into `.ui-screenshots/` through the shared `ui-screenshots.ts` helper with the axe check — and runs them once through `iru-typescript-test`'s `ui` selector (missing browser or web server → unverified, never passed).
 model: sonnet
 allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -222,6 +222,42 @@ legitimate reasons: defensive code paths that are difficult or unsafe to trigger
 framework glue code (e.g. an Angular `NgModule`-free bootstrap file, a Hilla generated-client wrapper) that
 carries no real logic to assert against. Name these explicitly if that's what remains uncovered.
 
+## Step 6b — UI tests for existing screens and components (web UI projects)
+
+Only for a `react`/`angular`/`ionic`/`nextjs`/`hilla-frontend` project whose Playwright setup exists
+(`@playwright/test` + `playwright.config.*`; for Hilla, in the web module). React Native UI tests belong to
+`iru-react-native-code-one-task`'s guidance — skip them here and say so. No Playwright at all → skip this step and
+report "UI tests not generated (no Playwright setup — run the scaffold skill or add it)"; never scaffold Playwright
+here.
+
+1. **Inventory** the screens (route components/pages/views) and components (exported presentational components)
+   and the UI tests that already cover them: a story file next to the component (`*.story.tsx`/`*.story.ts`, Hilla
+   under `src/main/frontend/stories/`), a spec that captures `<kind>/<Id>/…` through the helper, or existing
+   captures under `.ui-screenshots/<kind>/<Id>/`. Anything without one is a gap. Skip generated code
+   (`generated/`), barrels, providers and pure layout shells with no visual state of their own.
+2. **Helper and gallery**: if the project's Playwright test directory has no `support/ui-screenshots.ts`, create it
+   from the UI contract's shared helper — the copy in `iru-typescript-code-one-task/reference/ui-screenshots.ts`
+   (or `iru-nextjs-code-one-task/reference/ui-screenshots.ts`) when that skill is installed — and add
+   `@axe-core/playwright` as a devDependency only after asking (`AskUserQuestion`), like any new dependency. If
+   there is no `components` project/gallery, ask whether to add one following that skill's
+   `reference/ui-implementation.md`; if declined, cover components through the screens that render them.
+3. **Generate per gap**, one sub-agent per component/screen (batched like Step 5), each told to follow
+   `reference/ui-contract.md` §4–§8 and the framework's section of `reference/ui-implementation.md` from the coding
+   skill: decide the component's visual states from its props/inputs and code (`default`, `loading`, `empty`,
+   `error`, `disabled`, `selected`, `long-content`, `many-items`, … — only those that apply), write one story per
+   state with fixture data (minimal, typical, many-items/long-content, right-to-left Arabic or Hebrew text), then a
+   spec that asserts behaviour once (events fire with the right payload, disabled states don't) and calls
+   `captureUiMatrix` per state with `accessibility: { testInfo, include: '#root' }`; screens get a screen spec
+   against the built app with network faked. Never change the component to make a test pass — an accessibility
+   violation found here is reported, not silently fixed, unless it is a one-line label/alt fix the user approves.
+4. **Run them once** through `iru-gate-runner`: `Agent({description: "Run generated UI tests", subagent_type:
+   "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-typescript-test\", args: \"ui <the generated spec
+   files>\"}) with CI=1. Report back only pass/fail per spec with the first error line, environment failures
+   (browser missing, web server not starting, port in use) separately, the screenshot count per kind, malformed
+   names, accessibility violations as a count plus rule ids, and the .ui-quality.yml level applied.",
+   run_in_background: false})`. Fix generated-test mistakes and re-run (two attempts per spec, as in Step 6); an
+   environment failure makes the UI tests **unverified** with the reason — never passed.
+
 ## Step 7 — Run the full suite once to confirm no regressions
 
 Delegate to `iru-gate-runner`: `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt:
@@ -245,6 +281,9 @@ Summarize:
 - Any file still below 80% after Step 6's two attempts, with the exact lines still uncovered and, where
   apparent, why (e.g. an untestable defensive branch or generated-code wrapper).
 - The full-suite result from Step 7.
+- For a web UI project (Step 6b): screens and components found, those already covered, UI tests generated per
+  component/screen with the states covered, the screenshot count per kind, accessibility violations (rule ids) at
+  the `.ui-quality.yml` level applied, and anything left without UI tests — or why Step 6b was skipped/unverified.
 
 Do not run a code-quality, license-header, or TSDoc pass — those are `iru-typescript-code-quality`,
 `iru-check-license`, and `iru-typescript-tsdoc`'s jobs respectively, not this skill's.

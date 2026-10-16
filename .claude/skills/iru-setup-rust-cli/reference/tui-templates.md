@@ -5,6 +5,18 @@ the state (`tui/ui.rs`), and the event loop takes the terminal and the event sou
 so all of it is unit-tested with `TestBackend` and scripted events. Only `browse::run` (raw mode on the real
 terminal) is left to the PTY smoke check in SKILL.md Step 7.
 
+The picker follows the catalog's UI contract (`iru-rust-code-one-task` `reference/ui-contract.md`): the list builds
+items only for the rows that fit (`App::visible_window`), and `tui/ui.rs`'s tests render every state (`default`,
+`empty`, `many-items`, `long-content`) in each `.ui-quality.yml` direction (`rtl` = Arabic/Hebrew names in the normal
+layout), write each frame as a text capture through `src/tui/ui_screenshots.rs` to
+`.ui-screenshots/screen/App/<state>--<direction>--no-color.txt`, and run the asserted accessibility checks at the
+file's level. The picker has no colour palette (a `> ` marker and reverse video only), so `no-color` is its only
+theme — light/dark captures would be identical.
+
+**UI additions unverified**: the `.ui-quality.yml`, `ui_screenshots.rs`, `visible_window` and matrix-test parts were
+added after the 2026-10-16 verification without a Rust toolchain on the authoring machine; the first scaffold run's
+Step 7 is their first compile — fix anything it finds here.
+
 Conditional markers (`// >>> <condition>` … `// <<< <condition>` in Rust, `# >>> …` in TOML) and the `__Token__`
 placeholders work as described in SKILL.md's "Reference files" section; the marker lines themselves are never
 written. A heading suffixed `(condition)` is written only when the condition holds. Every file below was rendered
@@ -97,6 +109,17 @@ pub fn finish(outcome: Outcome, ctx: &mut Context<'_>, session: &Session) -> Res
 }
 ```
 
+### `.ui-quality.yml` (ui: tui)
+
+`__Accessibility__` = the `accessibility` input (`enforce` by default). Exactly the contract's shape:
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: __Accessibility__      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
 ### `src/tui/mod.rs` (ui: tui)
 
 ```rust
@@ -107,6 +130,8 @@ pub fn finish(outcome: Outcome, ctx: &mut Context<'_>, session: &Session) -> Res
 
 pub mod app;
 pub mod ui;
+#[cfg(test)]
+pub(crate) mod ui_screenshots;
 
 use std::io;
 
@@ -185,6 +210,8 @@ mod tests {
 ```rust
 //! Picker state and key handling — pure logic, no terminal.
 
+use std::ops::Range;
+
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::widgets::ListState;
 
@@ -232,9 +259,29 @@ impl App {
             .map(String::as_str)
     }
 
-    /// The list widget state (scroll offset and selection) for rendering.
-    pub fn list_state(&mut self) -> &mut ListState {
-        &mut self.state
+    /// The index of the highlighted name, if any.
+    #[must_use]
+    pub fn selected_index(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    /// The names that fit in `rows` visible rows, scrolled so the highlighted name stays visible — rendering builds
+    /// list items only for this range, never for every name.
+    pub fn visible_window(&mut self, rows: usize) -> Range<usize> {
+        if rows == 0 {
+            return 0..0;
+        }
+        let selected = self.state.selected().unwrap_or(0);
+        let offset = self.state.offset();
+        let offset = if selected < offset {
+            selected
+        } else if selected >= offset + rows {
+            selected + 1 - rows
+        } else {
+            offset
+        };
+        *self.state.offset_mut() = offset;
+        offset..(offset + rows).min(self.names.len())
     }
 
     /// Applies one key press; returns the outcome when the picker should close.
@@ -323,34 +370,58 @@ mod tests {
         assert_eq!(app.selected(), None);
         assert_eq!(app.handle_key(press(KeyCode::Enter)), None);
     }
+
+    #[test]
+    fn the_visible_window_follows_the_selection() {
+        let mut app = App::new((0..10).map(|i| format!("Name {i}")).collect());
+        assert_eq!(app.visible_window(3), 0..3);
+        for _ in 0..5 {
+            app.handle_key(press(KeyCode::Down));
+        }
+        assert_eq!(app.selected_index(), Some(5));
+        assert_eq!(app.visible_window(3), 3..6);
+        for _ in 0..4 {
+            app.handle_key(press(KeyCode::Up));
+        }
+        assert_eq!(app.visible_window(3), 1..4);
+        assert_eq!(app.visible_window(3), 1..4);
+        assert_eq!(app.visible_window(0), 0..0);
+        assert_eq!(App::new(Vec::new()).visible_window(3), 0..0);
+    }
 }
 ```
 
 ### `src/tui/ui.rs` (ui: tui)
 
 ```rust
-//! Drawing the picker: a bordered list and a one-line key help.
+//! Drawing the picker (screen `App`): a bordered list and a one-line key help.
+//!
+//! States: `default`, `empty`, `many-items`, `long-content`. The selection is marked with `> ` as well as reverse
+//! video, so it stays visible without colour.
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Modifier, Style};
-use ratatui::widgets::{Block, List, Paragraph};
+use ratatui::widgets::{Block, List, ListState, Paragraph};
 
 use super::App;
 
-/// Renders `app` into the whole frame.
+/// The key help shown on the last line.
+pub(crate) const HELP: &str = "Up/Down move  Enter select  q quit";
+
+/// Renders `app` into the whole frame, turning only the names that fit into list items.
 pub fn render(frame: &mut Frame, app: &mut App) {
     let [list_area, help_area] =
         Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).areas(frame.area());
-    let list = List::new(app.names().to_vec())
+    let window = app.visible_window(usize::from(list_area.height.saturating_sub(2)));
+    let selected = app.selected_index().map(|i| i.saturating_sub(window.start));
+    let list = List::new(app.names()[window].iter().map(String::as_str))
         .block(Block::bordered().title(" Pick a name "))
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol("> ");
-    frame.render_stateful_widget(list, list_area, app.list_state());
-    frame.render_widget(
-        Paragraph::new("Up/Down move  Enter select  q quit"),
-        help_area,
-    );
+    let mut state = ListState::default().with_selected(selected);
+    frame.render_stateful_widget(list, list_area, &mut state);
+    frame.render_widget(Paragraph::new(HELP), help_area);
 }
 
 #[cfg(test)]
@@ -358,8 +429,57 @@ mod tests {
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
-    use super::render;
+    use super::{HELP, render};
     use crate::tui::App;
+    use crate::tui::ui_screenshots::{capture, check_accessibility, tui_violations, ui_quality};
+
+    /// The names for one state of the UI contract's matrix; `rtl` uses right-to-left scripts.
+    fn names(state: &str, direction: &str) -> Vec<String> {
+        let base = if direction == "rtl" {
+            ["عائشة", "מרים", "ليلى", "דוד"]
+        } else {
+            ["Ada", "Grace", "Linus", "Margaret"]
+        };
+        match state {
+            "empty" => Vec::new(),
+            "many-items" => (1..=500_usize)
+                .map(|i| format!("{} {i}", base[i % base.len()]))
+                .collect(),
+            "long-content" => vec![base[0].repeat(20), base[1].to_owned()],
+            _ => Vec::from(base.map(str::to_owned)),
+        }
+    }
+
+    #[test]
+    fn captures_every_state_in_each_direction() {
+        let quality = ui_quality();
+        for direction in &quality.directions {
+            for state in ["default", "empty", "many-items", "long-content"] {
+                let mut app = App::new(names(state, direction));
+                let mut terminal = Terminal::new(TestBackend::new(40, 8)).expect("terminal");
+                terminal
+                    .draw(|frame| render(frame, &mut app))
+                    .expect("draw");
+                // No colour palette (a marker and reverse video only): `no-color` is the picker's one theme.
+                let text = capture(
+                    "screen",
+                    "App",
+                    state,
+                    direction,
+                    "no-color",
+                    terminal.backend().buffer(),
+                );
+                let selection = (state != "empty").then_some("> ");
+                check_accessibility(
+                    &format!("screen/App/{state}--{direction}--no-color"),
+                    &tui_violations(&text, selection, HELP),
+                );
+                if state == "many-items" {
+                    assert!(!text.contains(" 500"), "only the visible rows are rendered");
+                }
+            }
+        }
+    }
 
     #[test]
     fn draws_the_list_with_the_selection_marked() {
@@ -379,6 +499,201 @@ mod tests {
         assert!(text.contains("> Ada"));
         assert!(text.contains("  Grace"));
         assert!(text.contains("Enter select"));
+    }
+}
+```
+
+### `src/tui/ui_screenshots.rs` (ui: tui)
+
+The one capture helper every UI test uses (test-only: declared `#[cfg(test)]` in `src/tui/mod.rs`).
+
+```rust
+//! Test-only support for the UI contract: text captures of rendered buffers and the accessibility level.
+//!
+//! Captures go to `UI_SCREENSHOTS_DIR` (else `<repository root>/.ui-screenshots`) as
+//! `<kind>/<Id>/<state>--<direction>--<theme>.txt`; `.ui-quality.yml` at the repository root sets the
+//! accessibility level (`enforce`, `report`, `off`) and the directions and themes the tests render.
+
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
+
+use ratatui::buffer::Buffer;
+use ratatui::text::Span;
+
+/// The `.ui-quality.yml` settings; a missing file or key means the contract's defaults.
+pub(crate) struct UiQuality {
+    /// `enforce`, `report` or `off`.
+    pub(crate) accessibility: String,
+    /// The directions to capture (`ltr`, `rtl`).
+    pub(crate) directions: Vec<String>,
+    /// The themes to capture where the UI has a palette for them (`light`, `dark`).
+    pub(crate) themes: Vec<String>,
+}
+
+fn repo_root() -> PathBuf {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    manifest
+        .ancestors()
+        .find(|dir| dir.join(".git").exists())
+        .unwrap_or(manifest)
+        .to_path_buf()
+}
+
+/// `UI_SCREENSHOTS_DIR` when set, else `<repository root>/.ui-screenshots`.
+pub(crate) fn screenshots_dir() -> PathBuf {
+    env::var_os("UI_SCREENSHOTS_DIR")
+        .map_or_else(|| repo_root().join(".ui-screenshots"), PathBuf::from)
+}
+
+/// Reads `.ui-quality.yml` at the repository root.
+pub(crate) fn ui_quality() -> UiQuality {
+    parse_ui_quality(&fs::read_to_string(repo_root().join(".ui-quality.yml")).unwrap_or_default())
+}
+
+fn parse_ui_quality(text: &str) -> UiQuality {
+    let value = |key: &str| {
+        text.lines().find_map(|line| {
+            let line = line.split('#').next().unwrap_or_default();
+            let (name, value) = line.split_once(':')?;
+            (name.trim() == key).then(|| value.trim().to_owned())
+        })
+    };
+    let list = |key: &str, default: [&str; 2]| {
+        value(key).map_or_else(
+            || Vec::from(default.map(str::to_owned)),
+            |items| {
+                items
+                    .trim_matches(['[', ']'])
+                    .split(',')
+                    .map(|item| item.trim().to_owned())
+                    .filter(|item| !item.is_empty())
+                    .collect()
+            },
+        )
+    };
+    UiQuality {
+        accessibility: value("accessibility").unwrap_or_else(|| "enforce".to_owned()),
+        directions: list("directions", ["ltr", "rtl"]),
+        themes: list("themes", ["light", "dark"]),
+    }
+}
+
+/// The buffer's text without styles, one line per row (wide characters counted once).
+pub(crate) fn buffer_text(buffer: &Buffer) -> String {
+    let mut text = String::new();
+    for row in buffer.content.chunks(usize::from(buffer.area.width).max(1)) {
+        let mut skip = 0;
+        for cell in row {
+            if skip == 0 {
+                text.push_str(cell.symbol());
+            }
+            skip = skip.max(Span::raw(cell.symbol()).width()).saturating_sub(1);
+        }
+        text.push('\n');
+    }
+    text
+}
+
+/// Writes `<dir>/<kind>/<id>/<state>--<direction>--<theme>.txt` and returns the captured text.
+pub(crate) fn capture(
+    kind: &str,
+    id: &str,
+    state: &str,
+    direction: &str,
+    theme: &str,
+    buffer: &Buffer,
+) -> String {
+    let dir = screenshots_dir().join(kind).join(id);
+    fs::create_dir_all(&dir).expect("create the screenshot directory");
+    let text = buffer_text(buffer);
+    fs::write(dir.join(format!("{state}--{direction}--{theme}.txt")), &text)
+        .expect("write the screenshot");
+    text
+}
+
+/// The asserted terminal-UI accessibility checks on a styles-free capture, as `rule-id: message`.
+pub(crate) fn tui_violations(text: &str, selection: Option<&str>, help: &str) -> Vec<String> {
+    let mut violations = Vec::new();
+    if selection.is_some_and(|marker| !text.contains(marker)) {
+        violations.push("tui-color-only: the selection has no marker visible without colour".to_owned());
+    }
+    if !text.contains(help) {
+        violations.push("tui-help-line: the key help is not on screen".to_owned());
+    }
+    violations
+}
+
+/// Applies the `.ui-quality.yml` level to the violations found for `target` (`<kind>/<Id>/<file stem>`).
+pub(crate) fn check_accessibility(target: &str, violations: &[String]) {
+    apply_level(&ui_quality().accessibility, target, violations, &screenshots_dir());
+}
+
+fn apply_level(level: &str, target: &str, violations: &[String], dir: &Path) {
+    if violations.is_empty() || level == "off" {
+        return;
+    }
+    if level == "report" {
+        fs::create_dir_all(dir).expect("create the screenshot directory");
+        let mut report = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join("a11y-report.txt"))
+            .expect("open the accessibility report");
+        for violation in violations {
+            writeln!(report, "{target}\t{violation}").expect("write the accessibility report");
+        }
+        return;
+    }
+    panic!("accessibility violations in {target}: {violations:?}");
+}
+
+mod tests {
+    use std::fs;
+    use std::path::Path;
+
+    use ratatui::buffer::Buffer;
+
+    use super::{apply_level, buffer_text, parse_ui_quality, tui_violations};
+
+    #[test]
+    fn parses_the_quality_file_and_falls_back_to_the_defaults() {
+        let quality = parse_ui_quality("accessibility: report  # note\ndirections: [ltr]\n");
+        assert_eq!(quality.accessibility, "report");
+        assert_eq!(quality.directions, ["ltr"]);
+        assert_eq!(quality.themes, ["light", "dark"]);
+        assert_eq!(parse_ui_quality("").accessibility, "enforce");
+    }
+
+    #[test]
+    fn buffer_text_counts_wide_characters_once() {
+        let buffer = Buffer::with_lines(["日本", "ab"]);
+        assert_eq!(buffer_text(&buffer), "日本\nab  \n");
+    }
+
+    #[test]
+    fn finds_a_colour_only_selection_and_a_missing_help_line() {
+        assert!(tui_violations("> Ada\nhelp", Some("> "), "help").is_empty());
+        assert_eq!(tui_violations("  Ada", Some("> "), "help").len(), 2);
+        assert!(tui_violations("help", None, "help").is_empty());
+    }
+
+    #[test]
+    fn report_appends_and_off_ignores() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let violations = vec!["tui-help-line: missing".to_owned()];
+        apply_level("off", "screen/App/x", &violations, dir.path());
+        assert!(!dir.path().join("a11y-report.txt").exists());
+        apply_level("report", "screen/App/x", &violations, dir.path());
+        let report = fs::read_to_string(dir.path().join("a11y-report.txt")).expect("report");
+        assert_eq!(report, "screen/App/x\ttui-help-line: missing\n");
+        apply_level("enforce", "screen/App/x", &[], dir.path());
+    }
+
+    #[test]
+    #[should_panic(expected = "accessibility violations")]
+    fn enforce_fails_the_test() {
+        apply_level("enforce", "screen/App/x", &["tui-help-line: missing".to_owned()], Path::new("."));
     }
 }
 ```

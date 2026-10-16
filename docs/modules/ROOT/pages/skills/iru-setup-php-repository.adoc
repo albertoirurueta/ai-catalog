@@ -15,7 +15,7 @@ door. It resolves the `flavor` (from `args`, an `iru-explore` `Project type:` li
 asked), the project identity (name, slug, Composer vendor, namespace, description, per-flavor license, developer
 details), the PHP version floor (from php.net active support, the Laravel skeleton's floor, or PrestaShop's system
 requirements), and the shared pipeline parameters (`open-source`, `visibility`, `ci`, `ci-tests`, `pages`,
-`distribution` with its flavor-specific meaning, `sonar` and its detail keys, branches). It then runs, each through
+`distribution` with its flavor-specific meaning, `sonar` and its detail keys, `accessibility` — the level of the browser UI tests' automated accessibility checks that every flavor's scaffold writes to `.ui-quality.yml` — and branches). It then runs, each through
 the `iru-isolated-skill-executor` agent so only a short summary returns: the scaffold skill, `iru-setup-antora`,
 `iru-setup-php-gitignore`, `iru-setup-php-github-workflows` (skipped entirely when `ci` is `no`),
 `iru-setup-changelog`, and `iru-setup-readme`.
@@ -73,6 +73,11 @@ instructions).
 |`cloud`, `self-hosted` or `none`, plus its detail keys.
 |`cloud` recommended only for public open source, otherwise `none`.
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, forwarded to the Laravel, WordPress and PrestaShop scaffolds (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+|`enforce` recommended; pre-selected from an existing `.ui-quality.yml` in `existing` mode.
+
 |`php-version`
 |No
 |Minimum supported PHP, which becomes `require.php`, the platform and the CI matrix floor.
@@ -97,12 +102,12 @@ instructions).
 
 == Outputs
 
-* A scaffolded PHP project for the chosen flavor, with tests and quality configuration, via the scaffold skill.
+* A scaffolded PHP project for the chosen flavor, with tests, quality configuration and browser UI tests (`.ui-quality.yml`, Playwright + axe-core, `.ui-screenshots/` captures), via the scaffold skill.
 * An Antora docs site, a root `.gitignore`, `CHANGELOG.md` and `README.md`, via the delegated skills.
 * Unless `ci: no`, GitHub Actions workflows (`build`, `release`, `sync`, `security`) and Dependabot.
 * A final report: the setup mode, resolved flavor and mode, identity and license, PHP floor and its source, a
-per-component action table (created / updated / replaced / kept as is / skipped (ci: no) / not written), the
-verification results, what was wired or omitted and why, the required-secrets table, and explicit warnings.
+per-component action table (now including `.ui-quality.yml`; created / updated / replaced / kept as is / skipped (ci: no) / not written), the
+verification results (including browser UI tests), what was wired or omitted and why, the required-secrets table, and explicit warnings.
 
 == Execution flow
 

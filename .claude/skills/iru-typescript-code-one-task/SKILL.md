@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-code-one-task
-description: Implement a single task from a TypeScript `implementation_plan.md`-style task list — just the implementation and its tests. Detects the project's framework from `package.json` (npm/TypeScript library, React, Angular, Ionic, or a Vaadin Hilla frontend — a React Native app, expo or bare CLI/metro, is handed to `iru-react-native-code-one-task`, the `react-native` key, when that skill is installed, with only a minimal built-in fallback otherwise) and loads only the matching guidance from this skill's own `reference/` directory (this catalog's general TypeScript code agreements: strict typing with no `any`, `readonly` and discriminated unions, named exports, ESM, error handling, async conventions, TSDoc on every exported symbol, and the framework's own component/state/testing conventions), re-checks the current code state, implements exactly what the task specifies, writes/updates tests, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update TSDoc, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-typescript-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-typescript-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for npm/TypeScript projects.
+description: Implement a single task from a TypeScript `implementation_plan.md`-style task list — just the implementation and its tests. Detects the project's framework from `package.json` (npm/TypeScript library, React, Angular, Ionic, or a Vaadin Hilla frontend — a React Native app, expo or bare CLI/metro, is handed to `iru-react-native-code-one-task`, the `react-native` key, when that skill is installed, with only a minimal built-in fallback otherwise) and loads only the matching guidance from this skill's own `reference/` directory (this catalog's general TypeScript code agreements: strict typing with no `any`, `readonly` and discriminated unions, named exports, ESM, error handling, async conventions, TSDoc on every exported symbol, and the framework's own component/state/testing conventions, plus — for a task that adds or changes a screen, component, list or other UI — the catalog's UI contract and its mapping onto React/Angular/Ionic/Hilla: `Screen › Region › Component` decomposition, props/`input()` in and typed events out, virtualized collections (`@tanstack/react-virtual`, CDK virtual scroll, `ion-infinite-scroll`, Vaadin `VirtualList`/`Grid`), Playwright component tests through stories and a gallery page, the `.ui-screenshots/` matrix across left-to-right/right-to-left × light/dark, and axe checks at the `.ui-quality.yml` level), re-checks the current code state, implements exactly what the task specifies, writes/updates tests, then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, any deliberate deviation from `reference/`, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update TSDoc, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-typescript-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-typescript-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for npm/TypeScript projects.
 model: sonnet
 allowed-tools: Read Edit Write Skill Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
 ---
@@ -56,9 +56,10 @@ at for this task and the detected framework. The routing, restated:
 | `reference/react-native.md` | Detected framework is **react-native** *and* `iru-react-native-code-one-task` isn't installed (otherwise the task was already handed over above) — a minimal fallback. |
 | `reference/ionic.md` | Detected framework is **ionic**. |
 | `reference/hilla-frontend.md` | Detected framework is **hilla-frontend**. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI (any framework but **library**). `reference/ui-screenshots.ts` is the shared screenshot/accessibility helper to copy when the project has none. |
 
 Read exactly one framework file — the one matching Step 1's classification — never more than one, and none at
-all when the classification is **library**. Don't read the optional files speculatively: for a change inside one
+all when the classification is **library**. The UI pair is read in addition to it, not instead of it. Don't read the optional files speculatively: for a change inside one
 existing function in a plain library with no exported-symbol change, `code-style.md` plus `testing.md` is the
 whole list.
 
@@ -99,6 +100,15 @@ Non-negotiable, because a later gate enforces them:
 - **No new runtime dependency** unless the task explicitly calls for it. If one seems unavoidable, that's a
   blocker to report (Step 5), not a decision to make quietly.
 
+For a task that adds or changes UI, also:
+
+- **Decompose first** (`ui-contract.md` §2): before writing a component, write the `Screen › Region › Component`
+  tree for what the task touches — inputs, events, visual states, and which existing component each one reuses —
+  and keep it for Step 7's report. Build leaves first, then collections, then screens.
+- Presentational components take their UI state as props/`input()`s and emit typed events; screens own data and
+  navigation; collections go through the framework's virtualizing container (`ui-implementation.md`), never a plain
+  `map`/`@for` over unbounded data; CSS uses logical properties so right-to-left works.
+
 Don't add anything the task didn't ask for — no speculative abstractions, no unrelated cleanup, no restyling of
 code the task doesn't touch.
 
@@ -110,6 +120,15 @@ the existing test style in the same directory (Vitest or Jest, Testing Library q
 by the TSDoc `@throws` contracts (e.g. invalid-argument or rejected-promise cases). Do not run the test suite
 yourself — `iru-typescript-code-one-task-group` runs it once for the whole bucket in its own consolidated
 validation pass.
+
+For UI, also write UI tests per `ui-contract.md` §6–§8 and `ui-implementation.md`: a story per visual state next to
+each added/changed component (fixture sets for minimal, typical, many-items/long-content and right-to-left data), a
+Playwright component spec (behaviour once, then `captureUiMatrix` per state with the accessibility check), a screen
+spec for a changed screen, and a flow spec for a new user flow — all using the project's
+`e2e/support/ui-screenshots.ts` helper (created from `reference/ui-screenshots.ts` if missing, with
+`@axe-core/playwright` as a dev dependency — the one dependency this permits). If the project has no Playwright
+setup at all, write the behaviour tests only and report the missing UI-test setup as a deviation rather than
+scaffolding Playwright mid-task. Don't run them either.
 
 ## Step 5 — When to interrupt the user
 
@@ -155,6 +174,8 @@ Hand control back to the caller with a short summary:
   file(s) actually read — for react-native, whether the task was handed to `iru-react-native-code-one-task` or the
   minimal fallback was used.
 - **The file(s) touched** and **the tests added/updated** (not run — see Step 4).
+- **For UI work**: the `Screen › Region › Component` decomposition (Step 3), the stories and UI specs added, and the
+  screenshot states they will capture (`<kind>/<Id>/<state>`), so the group skill can check the matrix.
 - **Whether this task stopped on a blocker** per Step 5, with enough detail for the caller to surface it.
 - **Any deliberate deviation from `reference/`** — e.g. matching a file that still uses `any`, keeping a default
   export because the framework requires one, or adding a member to a file whose existing structure is already

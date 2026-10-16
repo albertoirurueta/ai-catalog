@@ -11,11 +11,16 @@ description: >-
   `lint`, `lint:report`, `format`, `format:check`), a sample action + Form Request + policy + resource with feature
   tests, and — each only when chosen — a DB-backed `Integration` suite (`phpunit.integration.xml`, MySQL or
   PostgreSQL), Laravel Sail, a production `Dockerfile` (FrankenPHP or PHP-FPM + Nginx) for `distribution: internal`,
-  `sonar-project.properties`, and Laravel Boost as a dev-only dependency. Invoke as `/iru-setup-php-laravel`.
+  `sonar-project.properties`, and Laravel Boost as a dev-only dependency — plus browser UI tests per the catalog's
+  UI contract: `.ui-quality.yml`, Playwright (`playwright.config.ts` serving `php artisan serve`) with
+  `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper, and a `WelcomePage` spec capturing
+  `.ui-screenshots/screen/WelcomePage/` across left-to-right/right-to-left × light/dark with an accessibility check.
+  Invoke as `/iru-setup-php-laravel`.
   Accepts pre-resolved inputs via `args` (`key: value` lines) — `name`, `slug`, `vendor`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `php-version`, `open-source`, `visibility`, `ci`,
   `ci-tests` (`unit`/`full`), `distribution` (`none`/`internal`), `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `test-framework` (`pest`/`phpunit`), `integration-tests`
+  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`), `test-framework`
+  (`pest`/`phpunit`), `integration-tests`
   (`none`/`mysql`/`pgsql`), `sail`, `boost` (`yes`/`no`), `runtime` (`frankenphp`/`fpm`), `mode`
   (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`) — so `iru-setup-php-repository` can drive it
   without re-prompting; stand-alone it asks whatever `args` didn't resolve. Announces whether it is scaffolding from
@@ -65,6 +70,7 @@ sonar: cloud
 sonar-organization: acme-github
 sonar-project-key: acme_acme-loans
 sonar-host-url: https://sonarcloud.io
+accessibility: enforce
 test-framework: pest
 integration-tests: mysql
 sail: no
@@ -87,8 +93,9 @@ Recognized keys:
   `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full` — only used as the
   default for `integration-tests`), `distribution` (`none`/`internal`; `store` is not valid for an application —
   treat it as invalid and ask), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `cloud`/`self-hosted`,
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `mode` (`new`/`existing`), `on-existing`
-  (`ask`/`keep`/`update`/`replace`, default `ask`, for scripted runs).
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility` (`enforce`/`report`/`off`, default
+  `enforce` — the level the browser UI tests apply, written to `.ui-quality.yml`), `mode` (`new`/`existing`),
+  `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`, for scripted runs).
 - **This skill only**: `test-framework` (`pest`/`phpunit`), `integration-tests` (`none`/`mysql`/`pgsql`), `sail`
   (`yes`/`no`), `boost` (`yes`/`no`), `runtime` (`frankenphp`/`fpm`, only consulted with `distribution: internal`).
 
@@ -110,7 +117,9 @@ otherwise.
   scripts (`test:coverage`, `test:integration`, `lint`, `lint:report`, `format`, `format:check`), the sample slice
   (`app/Actions/RenameUser.php` and its siblings from `reference/sample-code.md`), `compose.yaml` /
   `docker-compose.yml` referencing `laravel/sail`, `Dockerfile` + `.dockerignore` (+ `docker/nginx/default.conf`),
-  `sonar-project.properties`, and Boost's files (`boost.json`, `.mcp.json` with a `laravel-boost` server).
+  `sonar-project.properties`, Boost's files (`boost.json`, `.mcp.json` with a `laravel-boost` server), and the
+  browser UI test setup (`.ui-quality.yml`, `playwright.config.ts`, `tests/e2e/support/ui-screenshots.ts`,
+  `tests/e2e/specs/WelcomePage.spec.ts`, the `test:e2e` npm script).
 - **Announce the mode** before asking anything else:
   - **Nothing owned exists**: "Scaffolding the Laravel application **from scratch**."
   - **Anything owned exists** (or `mode: existing`): "**Updating an existing setup** — found: <list with paths>
@@ -122,7 +131,8 @@ otherwise.
     - **Otherwise**: ask with `AskUserQuestion`, up to 4 artifacts per call (one question each), naming concrete
       contradictions with this run's choices in the question (e.g. "`phpstan.neon` has no Larastan include",
       "`phpunit.xml` points the Feature suite at MySQL, so it isn't a fast suite", "a `sonar-project.properties`
-      exists but you chose `sonar: none`"):
+      exists but you chose `sonar: none`", "`.ui-quality.yml` says `accessibility: report` but you chose
+      `enforce`"):
       - **Update (Recommended)** — merge: add what's missing and correct what this skill owns (missing scripts and
         dev dependencies, the Larastan include, the `<source>` element, the sqlite `:memory:` env lines), keeping
         everything else. The user reviews a diff; customizations survive, but a customized part this skill owns may
@@ -193,6 +203,9 @@ Otherwise ask (plain conversation for free text, `AskUserQuestion` for bounded c
 9. **boost** — "Install Laravel Boost (dev-only MCP server + guidelines + agent skills for Claude Code)?"
    **Yes (Recommended)** / **No**. Say it belongs in `require-dev` only, runs with the developer's database
    credentials, and adds its own skills next to this catalog's in `.claude/skills/`.
+10. **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** "axe-core violations
+    fail the browser UI tests" / **Report only** "listed in the test output, never failing" / **Off** "not run (the
+    accessibility coding defaults still apply)". Existing app with a `.ui-quality.yml`: pre-select its value.
 
 ## Step 3 — Pick the PHP toolchain
 
@@ -444,6 +457,50 @@ success, 422 validation, 403 authorization, 401 guest, home page; unit: the Form
 skeleton's `User` model and factory, so no migration is added. They exist to show the conventions and to give the
 80% coverage gate real code to measure (verified 100% of `app/`); the user can delete them once real features land.
 
+### Browser UI tests (Playwright)
+
+The PHP tests above never render a page in a browser. Per the catalog's UI contract every screen also gets browser
+UI tests that capture screenshots and run an automated accessibility check, so add (new app, or an existing app on
+Update/Replace of the browser-UI-test artifacts — Keep leaves them alone) exactly what
+`reference/sample-code.md` § *Browser UI tests* lists:
+
+- **`.ui-quality.yml`** at the repository root, the contract's exact shape with `accessibility: <accessibility>`,
+  `directions: [ltr, rtl]`, `themes: [light, dark]`. An existing file on Update keeps its `directions`/`themes` and
+  only takes this run's `accessibility`.
+- **`package.json`**: devDependencies `@playwright/test` `^1.64.0` and `@axe-core/playwright` `^4.14.0`, script
+  `"test:e2e": "playwright test"` (`npm pkg set scripts.test:e2e="playwright test"`, then
+  `npm install -D @playwright/test@^1.64.0 @axe-core/playwright@^4.14.0` — Node required; without Node on the host,
+  `docker run --rm -v "$PWD":/w -w /w node:24-alpine npm install -D …`). Keep the resulting `package-lock.json`.
+  The skeleton's `.npmrc` (`ignore-scripts=true`) is fine: browsers come from an explicit
+  `npx playwright install chromium`, never from an install script.
+- **`playwright.config.ts`** at the root (`testDir: './tests/e2e/specs'`, Chromium, `webServer`
+  `php artisan serve --host=127.0.0.1 --port=8000` waiting on `/up`, `reuseExistingServer: !process.env.CI`,
+  `reducedMotion: 'reduce'`, fixed 1280×800 viewport, `en-US` locale, `UTC` timezone).
+- **`tests/e2e/support/ui-screenshots.ts`** — the one shared helper (`uiQuality()`, `screenshotsDir()`,
+  `applyDirectionAndTheme()`, `expectDirection()`, `captureUiState()`, `checkAccessibility()` — the same API
+  `iru-php-code-one-task`'s UI guidance documents).
+- **`tests/e2e/specs/WelcomePage.spec.ts`** — the skeleton's welcome page as the sample **screen** (`WelcomePage`):
+  behaviour asserted once (left-to-right, light), then the `default` state captured for every `.ui-quality.yml`
+  direction × theme with the axe check, plus one `high-contrast` capture, into
+  `.ui-screenshots/screen/WelcomePage/default--<ltr|rtl>--<light|dark>.png`.
+- **`resources/views/welcome.blade.php`** — two small edits: the `<html>` tag gets
+  `dir="{{ in_array(app()->getLocale(), ['ar', 'he', 'fa', 'ur'], true) ? 'rtl' : 'ltr' }}"`, so the server renders
+  right-to-left for a right-to-left locale; and the three underlined text links' `text-[#f53003]` become
+  `text-[#1b1b18]` (keeping `dark:text-[#FF4433]`). **Verified**: the stock page fails axe `color-contrast` on exactly
+  those three links in the light theme (#f53003 on white is 3.95:1, below 4.5:1) — so the sample would fail under
+  `accessibility: enforce` — and passes with the fix, in both themes. Skip both edits when the app no longer has the
+  skeleton's welcome page; point the spec at the app's real home screen instead.
+
+**Direction limitation**: the skeleton has no locale-selection mechanism (no route prefix, session locale or
+`Accept-Language` middleware), so `applyDirectionAndTheme()` sends `Accept-Language: ar` and — only when the
+server-rendered `<html>` still lacks `dir="rtl"` — sets `dir` client-side (marked `data-ui-dir-fallback`). Say so in
+Step 16; once the app selects the locale for real, the server-rendered direction takes over with no test change (or
+switch the helper to the app's mechanism — route prefix, session/cookie).
+
+`tests/e2e/` holds TypeScript only, so nothing else needs excluding: `phpunit.xml`'s suites point at `tests/Unit` and
+`tests/Feature`, Pint and PHPStan only read PHP (and PHPStan's `paths` don't include `tests/`) — verified, the
+skeleton's own `php artisan test` and `pint --test` are unchanged with `tests/e2e/` present.
+
 ## Step 10 — Optional integration suite and Sail
 
 **Integration suite** (`integration-tests: mysql|pgsql`). Write `phpunit.integration.xml` — a separate config so
@@ -564,7 +621,10 @@ skeleton's bootstrap `CLAUDE.md`/`AGENTS.md` were already left out in Step 4).
 ## Step 14 — `.gitignore` entry for reports
 
 Reports and the PHPStan cache go to `build/`, which the skeleton's `.gitignore` doesn't ignore: append `/build/` if
-no existing line covers it. `iru-setup-php-gitignore` (run next by the orchestrator) owns the rest of the file.
+no existing line covers it. Do the same for the browser UI tests' output — `.ui-screenshots/` (with the comment
+`# UI test screenshots (regenerated on every UI test run; docs copy what they use)`), `/test-results/`,
+`/playwright-report/`, `/blob-report/`, `/playwright/.cache/`. `iru-setup-php-gitignore` (run next by the orchestrator)
+owns the rest of the file.
 
 ## Step 15 — Verify with the gate skills' commands
 
@@ -595,8 +655,18 @@ on a new app: all fast tests green (10 with Pest — 4 arch + 1 unit + 5 feature
 - **Container image**: with Docker running, the smoke test in `reference/container-image.md`; otherwise
   **unverified**.
 - **Boost**: `php artisan boost:mcp --help` exits 0.
+- **Browser UI tests** (the `ui` stage of `iru-php-test`): it starts `php artisan serve` and a browser, so take the
+  repository-wide `.integration-test.lock` exactly like the integration stage (atomic `mkdir`, owner file, stale after
+  60 min, released on every exit path). With a usable `.env` (SQLite, migrated — the skeleton's default
+  `SESSION_DRIVER=database` needs the `sessions` table) run `npx playwright install chromium` then `npm run test:e2e`;
+  expect 6 passed and the five PNGs under `.ui-screenshots/screen/WelcomePage/` (`default--ltr--light`,
+  `default--ltr--dark`, `default--rtl--light`, `default--rtl--dark`, `default--ltr--high-contrast`). Docker-toolchain
+  runs: start `php artisan serve --host=0.0.0.0 --port=8000` in the toolchain image with `-p 8000:8000` first —
+  `reuseExistingServer` picks it up. No Node, no browser, or no PHP able to serve → **unverified**, never skipped
+  silently.
 
-Remove `build/iru-php-*` files afterwards (the `build/logs/` reports may stay — ignored).
+Remove `build/iru-php-*` files afterwards (the `build/logs/` reports may stay — ignored; so may `.ui-screenshots/`,
+`test-results/`).
 
 ## Step 16 — Report
 
@@ -608,8 +678,11 @@ skipped** — and for every kept artifact each mismatch with this run's choices.
 
 State explicitly what was included versus omitted, and why: PHP floor (and the platform pin), test framework,
 PHPStan level and baseline size, integration suite (engine or none), Sail, `sonar` (and the `visibility` it was
-keyed on), `distribution`/`runtime`, Boost. Then each Step 15 command and its result (tests passed, coverage %,
-PHPStan errors, Pint), plus anything **unverified** and why.
+keyed on), `distribution`/`runtime`, Boost, and `.ui-quality.yml` (**created / updated / replaced / kept as is**,
+with its `accessibility` level) plus the browser UI test files. Then each Step 15 command and its result (tests
+passed, coverage %, PHPStan errors, Pint, browser UI tests with their screenshot count and accessibility violations),
+plus anything **unverified** and why — including the client-side direction fallback while the app has no
+locale-selection mechanism.
 
 Finish with a **Warn explicitly** block:
 
@@ -624,6 +697,9 @@ Finish with a **Warn explicitly** block:
 - **Boost** reads logs and queries the database with the developer's credentials — development machines only.
 - **`sonar: cloud`/`self-hosted`**: a `SONAR_TOKEN` secret and a matching project must exist before CI analysis
   succeeds.
+- **Browser UI tests** need Node, `npx playwright install chromium` once per machine, and a migrated `.env`
+  database; they serialize behind `.integration-test.lock` and run in CI only where
+  `iru-setup-php-github-workflows` wired them (its `ci-tests: full` integration job).
 - If no `README.md`/`LICENSE` exists, suggest `/iru-setup-readme` and `iru-check-license`.
 
 ## Sources
@@ -636,3 +712,5 @@ Finish with a **Warn explicitly** block:
 - https://pestphp.com/docs/installation, https://pestphp.com/docs/arch-testing
 - https://github.com/larastan/larastan, https://phpstan.org/user-guide/baseline
 - https://frankenphp.dev/docs/docker/, https://www.php.net/supported-versions.php
+- https://playwright.dev/docs/test-configuration, https://playwright.dev/docs/test-webserver,
+  https://playwright.dev/docs/accessibility-testing, https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright

@@ -5,11 +5,14 @@ description: >-
   (`auth.json`), PHPUnit/Pest caches (`.phpunit.cache/`, `.phpunit.result.cache`), report output (`build/` holding
   `build/logs/clover.xml`/`junit.xml` and coverage HTML), quality-tool caches (PHP-CS-Fixer, PHPCS, a PHPStan
   `tmpDir` inside the project), env files (keeping `.env.example`), OS and editor noise, the repository-wide
-  `.integration-test.lock/` directory — and, when detected, flavor-specific paths for a Laravel application
+  `.integration-test.lock/` directory, the UI tests' screenshot directory `.ui-screenshots/` (every flavor renders
+  UI) — and, when detected, flavor-specific paths for a Laravel application
   (following the Laravel skeleton's own `.gitignore`: `public/build`, `public/hot`, `public/storage`,
   `storage/*.key`, IDE-helper files), a WordPress plugin or block theme (`node_modules/`, `@wordpress/scripts`
-  `build/` output, release `*.zip`, `.wp-env.override.json`), a PrestaShop module (`config_*.xml` caches,
-  release `*.zip`, while `config.xml` stays tracked), and an Antora docs build. Never ignores `composer.lock`
+  `build/` output, release `*.zip`, `.wp-env.override.json`), Playwright browser UI test output (`test-results/`,
+  `playwright-report/`, `blob-report/`, `/playwright/.cache/`, plus `@wordpress/scripts`' `artifacts/` for
+  WordPress), a PrestaShop module (`config_*.xml` caches, release `*.zip`, while `config.xml` stays tracked), and an
+  Antora docs build. Never ignores `composer.lock`
   (committed for apps, plugins, themes, and modules alike). Invoke as `/iru-setup-php-gitignore`, optionally with an
   `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs. Announces
   whether it is creating `.gitignore` from scratch or updating an existing one; if one already exists it never
@@ -81,6 +84,9 @@ composer.phar
 
 # Repository-wide lock the coding skills use to serialize container-backed test runs
 .integration-test.lock/
+
+# UI test screenshots (regenerated on every UI test run; the docs copy the ones they use into images/ui/)
+.ui-screenshots/
 
 # OS noise
 .DS_Store
@@ -215,6 +221,23 @@ Module` (or `PaymentModule`/`CarrierModule`) / `config.xml`, `package.json`, `ph
   .eslintcache
   ```
 
+- **Playwright browser UI tests** (`@playwright/test` or `@wordpress/scripts` in `package.json` devDependencies, or a
+  `playwright.config.*` at the root — what `iru-setup-php-laravel`, `iru-setup-php-wordpress` and
+  `iru-setup-php-prestashop` scaffold): add
+  ```gitignore
+  # Playwright (browser UI tests) — run output, HTML/blob reports, local browser cache
+  /test-results/
+  /playwright-report/
+  /blob-report/
+  /playwright/.cache/
+  ```
+  and, for a WordPress plugin/theme whose tests run through `wp-scripts test-playwright` (its config writes
+  traces/screenshots to `artifacts/`):
+  ```gitignore
+  /artifacts/
+  ```
+  Screenshots the UI contract asks for go to `.ui-screenshots/` (base template), not to these directories.
+
 - **PHPCS cache** (`phpcs.xml.dist`/`.phpcs.xml.dist`/`phpcs.xml` sets `<arg name="cache" .../>`): ignore the exact
   path its `value` names (e.g. `.phpcs-cache`); if the `cache` arg has no value, PHPCS uses the system temp directory
   and nothing is added.
@@ -238,9 +261,9 @@ Module` (or `PaymentModule`/`CarrierModule`) / `config.xml`, `package.json`, `ph
 ## Step 4 — Compose the proposed content
 
 Concatenate Step 2's base template with whichever Step 3 sections matched, each under its own comment header for
-readability (e.g. `# Laravel`, `# WordPress`, `# PrestaShop`, `# Node`, `# Antora`). Drop any line that duplicates
-one already present (including path-equivalent forms such as `/vendor` vs `/vendor/`, and `/node_modules` vs
-`node_modules/`). If Step 1 found an existing `.gitignore`, compose two drafts:
+readability (e.g. `# Laravel`, `# WordPress`, `# PrestaShop`, `# Node`, `# Playwright`, `# Antora`). Drop any line
+that duplicates one already present (including path-equivalent forms such as `/vendor` vs `/vendor/`, and
+`/node_modules` vs `node_modules/`). If Step 1 found an existing `.gitignore`, compose two drafts:
 
 - **Merged** (the Update draft): keep every existing line that isn't already covered by the composed template
   (hand-added project-specific ignores must survive), add only the missing template lines, and **remove** a
@@ -274,9 +297,9 @@ Write the chosen draft to `.gitignore` at the repository root — or nothing, if
 whether this run was from scratch or an update, the action taken (**created / updated / replaced / kept as is**, and
 whether that came from the user's answer or from `on-existing`), the detected flavor, which conditional sections from
 Step 3 were included versus skipped and why (e.g. "no Node section — no `package.json`", "no PHPCS cache entry —
-`phpcs.xml.dist` sets no cache path"), any Laravel nested `.gitignore` files found missing, whether a
-`composer.lock` ignore line was removed, and — if `.gitignore` already existed — which hand-added lines were
-preserved (Update) or dropped (Replace).
+`phpcs.xml.dist` sets no cache path", "no Playwright section — no `playwright.config.*` or Playwright dependency"),
+any Laravel nested `.gitignore` files found missing, whether a `composer.lock` ignore line was removed, and — if
+`.gitignore` already existed — which hand-added lines were preserved (Update) or dropped (Replace).
 
 **Warn explicitly**:
 

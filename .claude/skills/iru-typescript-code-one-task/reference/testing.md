@@ -95,6 +95,11 @@ source file (or a mirrored `test/`/`__tests__/` directory if the project already
   what's present in the initial render. Don't wrap a `getBy*` in `waitFor` when a `findBy*` already does that.
 - Query framework-specific files (`.angular.md`, `.react.md`, `.react-native.md`, `.ionic.md`) for the rest of
   their testing conventions (`TestBed`, `HttpTestingController`, RNTL specifics, platform mocking).
+- **Behaviour tests are not UI tests.** A jsdom/happy-dom test proves behaviour; it never produces the contract's
+  screenshots. Every added/changed component and screen also gets Playwright UI tests — stories per visual state,
+  the right-to-left × light/dark matrix captured into `.ui-screenshots/`, axe at the `.ui-quality.yml` level — per
+  `ui-contract.md` §6–§8 and `ui-implementation.md`. Name the stories and states after the contract's state
+  vocabulary (`default`, `loading`, `empty`, `error`, `disabled`, `selected`, `long-content`, `many-items`).
 
 ## What this skill does not do
 

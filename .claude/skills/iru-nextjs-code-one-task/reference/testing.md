@@ -171,6 +171,10 @@ installed module's exports. Available from 15.1.
   announcer with that role). Wait with `waitForURL` after navigation. API checks without a browser:
   `async ({ request }) => { expect((await request.get("/api/todos/1")).status()).toBe(401); }`.
 - One e2e per user-visible flow the task adds (form submit → result, redirect, auth gate), not one per unit case.
+- **UI contract**: Client Components also get Playwright component tests through stories and a standalone Vite
+  gallery, and pages get screen tests against the production build — both capturing the `.ui-screenshots/` matrix
+  (left-to-right/right-to-left × light/dark) with an axe check at the `.ui-quality.yml` level through the shared
+  `support/ui-screenshots.ts` helper. jsdom tests stay behaviour-only. See `ui-implementation.md`.
 - MSW in the test process cannot intercept the Next server's own fetches — make upstream URLs configurable via env
   and point `webServer.env` at a fake server.
 - `16-cc` with `partialPrefetching`: `instant()` from `@next/playwright` asserts what is in the shell — only if the

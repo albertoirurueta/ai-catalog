@@ -4,7 +4,9 @@ Conventions specific to Jetpack Compose UI in the `app` module (this catalog's C
 `com.android.application` project's own screens). Everything in `code-style.md`, `kdoc.md`, and `testing.md`
 still applies; this file adds what's specific to composables and Compose state. Read this file instead of
 `views.md` for a task that touches a `@Composable` function — a screen/component is Compose or classic Views, not
-both.
+both. For anything that is a screen, component or list, also read `ui-contract.md` and `ui-implementation.md` —
+decomposition, the screen/content split, lazy collections, UI tests, screenshots and accessibility checks live
+there.
 
 ## Stateless composables and state hoisting
 
@@ -27,13 +29,25 @@ fun OrientationBadge(
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier) {
-        Text("$orientationDegrees°")
+        Text(stringResource(R.string.orientation_degrees, orientationDegrees))
         IconButton(onClick = onRecalculate) {
-            Icon(Icons.Default.Refresh, contentDescription = "Recalculate orientation")
+            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.recalculate_orientation))
         }
     }
 }
 ```
+
+User-visible text and content descriptions always come from string resources (`stringResource`) — never literals —
+so the right-to-left and other locale captures in `ui-implementation.md` render real translations.
+
+## Lists, grids and pagers are lazy
+
+Any data-driven or potentially long collection is a `LazyColumn`/`LazyRow`/`LazyVerticalGrid`/
+`LazyVerticalStaggeredGrid`/`HorizontalPager` whose `items(...)` pass a stable `key` (the item id, never the
+index) and a `contentType`, rendering one stateless item composable — never `Column { list.forEach { … } }` inside
+`Modifier.verticalScroll`. Paged data uses Paging 3's `collectAsLazyPagingItems()`; the whole list state,
+selection and scroll position belong to the view model or `rememberSaveable`, keyed by id. See
+`ui-implementation.md`'s "Collections" section for the full pattern.
 
 ## `Modifier` as the first optional parameter
 
@@ -102,11 +116,15 @@ has non-trivial color/contrast logic worth checking in dark mode too.
 
 ## Testing with `createComposeRule`
 
-See `testing.md`'s "`androidTest`" section for when an instrumented Compose test is warranted at all. When it is:
+Component and screen tests run on the JVM with Robolectric (`@RunWith(RobolectricTestRunner::class)` +
+`@GraphicsMode(GraphicsMode.Mode.NATIVE)` in `src/test`), using the same `createComposeRule()` API — and capture
+every visual state across the `.ui-quality.yml` matrix with Roborazzi plus an accessibility check, as
+`ui-implementation.md` shows. Instrumented Compose tests (`src/androidTest`) are for flows on a device; see
+`testing.md`'s "`androidTest`" section. The rule API is the same in both places:
 
 ```kotlin
 @get:Rule
-val composeTestRule = createComposeRule()
+val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
 @Test
 fun orientationBadge_click_invokesOnRecalculate() {
@@ -117,13 +135,17 @@ fun orientationBadge_click_invokesOnRecalculate() {
         }
     }
 
-    composeTestRule.onNodeWithContentDescription("Recalculate orientation").performClick()
+    composeTestRule.onNodeWithContentDescription(
+        composeTestRule.activity.getString(R.string.recalculate_orientation),
+    ).performClick()
 
     assertTrue(recalculated)
 }
 ```
 
-- **`createComposeRule()`** for a composable tested in isolation; **`createAndroidComposeRule<MainActivity>()`**
+- **`createComposeRule()`** for a composable tested in isolation (`createAndroidComposeRule<ComponentActivity>()`
+  when the test needs the activity, e.g. for `getString`); with Compose UI test 1.11+ import both from
+  `androidx.compose.ui.test.junit4.v2`; **`createAndroidComposeRule<MainActivity>()`**
   when the test needs a real hosting `Activity` (navigation, `savedInstanceState`, system-service access).
 - Query by semantics the same way Espresso queries by accessible attributes: `onNodeWithText`,
   `onNodeWithContentDescription`, `onNodeWithTag` (paired with `Modifier.testTag(...)` set deliberately in the

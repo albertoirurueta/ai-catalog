@@ -16,11 +16,15 @@ real reference repository's Gradle toolchain.
 an env-var-driven `signingConfigs { release {…} }` block that never fails configuration when signing secrets are
 absent, a Compose-by-default UI (or a classic AppCompat + ViewBinding `views` variant), Robolectric + MockK +
 JUnit 4 unit-test tooling, an instrumented-test skeleton, and an optional inline `sonar { properties {…} } }`
-block. It never writes a Maven Central publishing block — `iru-setup-android-library` is the companion skill for
+block. It also scaffolds UI tests per the catalog's UI contract (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]): a `.ui-quality.yml` at the repository root,
+Roborazzi plus the Accessibility Test Framework on Robolectric, a shared `testing/UiScreenshots.kt` helper, and a
+sample screen test that captures `.ui-screenshots/` across left-to-right/right-to-left × light/dark with the
+accessibility check; the sample layouts use `Start`/`End` constraints and localized string resources. It never writes a Maven Central publishing block — `iru-setup-android-library` is the companion skill for
 a library module. Every Gradle/Kotlin/plugin version is looked up at run time against the real package registries,
 falling back to a recorded, CI-verified combination when a lookup fails. It announces whether it is scaffolding from
 scratch or updating an existing Gradle project; for each file group it owns that already exists (each build file,
-the wrapper, the `app/` skeleton, `detekt.yml`) it warns and asks Update / Keep as is / Replace (and Stop on the
+the wrapper, the `app/` skeleton, `.ui-quality.yml`, `detekt.yml`) it warns and asks Update / Keep as is / Replace (and Stop on the
 first question), even under `mode: existing`, unless `on-existing` decides. It never overwrites hand-edited
 application source.
 
@@ -142,6 +146,12 @@ Publisher plugin).
 |`lint` (Android Lint only) or `lint+detekt+ktlint` (adds Detekt + Spotless/ktlint).
 |`lint`
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`.
+Asked as a bounded choice when unresolved.
+|`enforce`
+
 |`mode`
 |No
 |`new` or `existing` (the catalog's shared front-door signal). `existing` no longer means "gap-fill silently":
@@ -163,7 +173,13 @@ itself.
   `gradle/libs.versions.toml` at the repository root.
 * An `app/` module: `build.gradle.kts`, `proguard-rules.pro`, `AndroidManifest.xml`, theme/color/string/launcher-icon
   resources, `MainActivity.kt` (+ Compose theme wrapper, or a ViewBinding layout for `ui: views`),
-  `robolectric.properties`, a placeholder unit test, an instrumented-test skeleton, and `app/.gitignore`.
+  `robolectric.properties`, a placeholder unit test, an instrumented-test skeleton, and `app/.gitignore`. Resources
+  use `Start`/`End` constraints and localized strings (`greeting`).
+* `.ui-quality.yml` at the repository root (`accessibility`, `directions: [ltr, rtl]`, `themes: [light, dark]`), the
+  shared `app/src/test/java/<package>/testing/UiScreenshots.kt` helper, a sample screen test (`GreetingTest.kt` for
+  `ui: compose`, `MainActivityScreenTest.kt` for `ui: views`) capturing `.ui-screenshots/`, and the accessibility
+  checks in the instrumented test; Roborazzi, Compose UI test or Espresso accessibility dependencies in the version
+  catalog and `app/build.gradle.kts` (`unitTests.isIncludeAndroidResources = true`).
 * Any opt-in Gradle plugin blocks selected (Detekt/Spotless, Kover, JUnit 5, Firebase App Distribution, Gradle
   Play Publisher) applied on top of the base templates.
 * A report of resolved inputs, which toolchain versions came from a live lookup versus a recorded fallback, whether

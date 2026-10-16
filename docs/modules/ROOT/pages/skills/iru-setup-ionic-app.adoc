@@ -13,7 +13,11 @@ Scaffold a new Ionic (Angular or React) hybrid mobile app at the repository root
 Ionic CLI's own scaffold instead of a hand-rolled reimplementation of it, then wires in Vitest with v8 coverage
 (the Angular flavor's `@angular/build:unit-test` runner, or Vite's own runner for React), the starter's existing
 ESLint flat config plus Prettier, a Playwright web-build smoke test, a Maestro on-device flow skeleton, and
-`sonar-project.properties` when opted in. Every command and quirk documented in its `SKILL.md` was confirmed by
+`sonar-project.properties` when opted in. Following the catalog's UI contract (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]), the Playwright setup also gets a screen spec that
+captures `HomePage` across left-to-right/right-to-left × light/dark into `.ui-screenshots/` with an
+`@axe-core/playwright` check at the level of a root `.ui-quality.yml`, and the stock starter is patched so it passes
+its own accessibility check. Every command and quirk documented in its `SKILL.md` was confirmed by
 actually running the exact sequence against both flavors (`@ionic/cli` 7.2.1, `@ionic/angular`/`@ionic/react`
 9.0.4, Capacitor 8.5.2) rather than assumed from the tools' documentation alone.
 
@@ -110,6 +114,11 @@ via a `cap init` re-run.
 |`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
 |`yes` implied
 
+|`accessibility`
+|No
+|`enforce`/`report`/`off` — the UI tests' automated accessibility level, written to `.ui-quality.yml` in Step 8: `enforce` fails the tests on axe violations, `report` lists them without failing, `off` does not run the check.
+|`enforce` (asked when unset)
+
 |`on-existing`
 |No
 |`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing artifact. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
@@ -132,6 +141,12 @@ via a `cap init` re-run.
   and `format`/`format:fix` scripts added.
 * `playwright.config.ts` and `e2e/smoke.spec.ts` (optionally replacing the React starter's Cypress setup), plus
   an `e2e` script.
+* UI contract files: `.ui-quality.yml` at the repository root (`accessibility`, `directions`, `themes`),
+  `e2e/support/ui-screenshots.ts` (copied from the skill's `reference/ui-screenshots.ts`, with `@axe-core/playwright`
+  installed), and a `HomePage` matrix test in `e2e/smoke.spec.ts` that writes
+  `.ui-screenshots/screen/HomePage/default--<ltr|rtl>--<light|dark>.png`. The starter's `index.html` viewport, link
+  underline, paragraph colour contrast and right-to-left `inset-inline` are fixed so it passes at `enforce`.
+  `.ui-screenshots/` must be gitignored (xref:skills/iru-setup-typescript-gitignore.adoc[] adds it).
 * `.maestro/smoke.yaml`, an unverified on-device smoke-flow skeleton.
 * `sonar-project.properties` at the repository root, only when `sonar` is `cloud` or `self-hosted`.
 * `android/` and/or `ios/` native platform folders, for whichever of `add-android`/`add-ios` was Yes.
@@ -156,7 +171,7 @@ flowchart TD
     J -- Stop --> K[Report nothing changed; end]
     J -- other --> L
     I --> L
-    F --> L["Step 2: Collect inputs (framework, app-name/id,\ndescription, developer info, license, open-source,\ndistribution, visibility, sonar, add-android/ios)"]
+    F --> L["Step 2: Collect inputs (framework, app-name/id,\ndescription, developer info, license, open-source,\ndistribution, visibility, sonar, accessibility, add-android/ios)"]
     L --> M["Step 3: Look up dependency versions\n(npm view, Capacitor/Vitest\nversion-matching caveats)"]
     M --> N["Step 4: Scaffold via ionic start\n(temp-dir workaround if root non-empty);\ncap init with real app-id;\nupdate package.json"]
     N --> O{"Step 5: add-android /\nadd-ios resolved Yes?"}
@@ -169,7 +184,7 @@ flowchart TD
     S --> T["Step 7: Extend ESLint ignores;\ninstall Prettier + config"]
     T --> U{"Step 8: React + Cypress present?"}
     U -- yes --> V["AskUserQuestion:\nreplace Cypress with Playwright\nor keep both"]
-    U -- no --> W[Install Playwright + http-server;\nwrite config + smoke test]
+    U -- no --> W[Install Playwright + http-server;\nwrite config, smoke test,\nUI contract: .ui-quality.yml, capture helper,\nHomePage matrix test, starter a11y fixes]
     V --> W
     W --> X["Step 9: Write .maestro/smoke.yaml\nskeleton"]
     X --> Y{"Step 10: sonar resolved\ncloud or self-hosted?"}

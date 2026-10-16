@@ -1,6 +1,6 @@
 = Setup React Native App
-:description: Scaffolds a React Native app on the Expo or bare Metro toolchain with Jest, linting, Maestro smoke tests, build profiles and optional SonarCloud setup.
-:keywords: iru-setup-react-native-app, claude code skill, expo, metro, react native, typescript, jest, maestro, eas, sonarcloud
+:description: Scaffolds a React Native app on Expo or bare Metro with Jest, a11y linting, a dev UI gallery, Maestro smoke and screenshot flows, build profiles and Sonar.
+:keywords: iru-setup-react-native-app, claude code skill, expo, metro, react native, typescript, jest, maestro, ui gallery, accessibility, eas
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -26,12 +26,14 @@ example templates kept in the skill's `reference/` directory.
   The skill then builds both native projects (`./gradlew assembleDebug`, and on macOS `bundle exec pod install` plus a
   simulator `xcodebuild`), marking whatever cannot run locally as unverified.
 
-Both toolchains also get a Maestro smoke flow (`.maestro/smoke.yaml`) and, when opted in,
+Both toolchains also get a Maestro smoke flow (`.maestro/smoke.yaml`), the catalog's UI contract wiring (see xref:guides/building-user-interfaces.adoc[Building user interfaces]; templates in `reference/ui-templates.md`) and, when opted in,
 `sonar-project.properties` (TypeScript only; native sources are excluded). Expo is also bundled with Metro under the
 hood — the argument names the two toolchains a user actually chooses between. Only the reference file for the
-resolved toolchain is loaded. A project whose detected toolchain disagrees with the `toolchain` argument is warned
+resolved toolchain is loaded, plus `reference/ui-templates.md` for both. A project whose detected toolchain disagrees with the `toolchain` argument is warned
 about and asked; the skill never converts an app between toolchains. For a Capacitor-based hybrid app,
 xref:skills/iru-setup-ionic-app.adoc[] is used instead.
+
+The UI contract wiring is: `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, directions, themes); `eslint-plugin-react-native-a11y` in the ESLint config at that level (React Native has no automated native contrast or touch-target audit, so the check is that lint plus the tests' role/label queries); a dev-only UI gallery (`src/dev/ui-gallery/`, reached by a `<app-slug>://ui-gallery` deep link and stripped from production bundles by `__DEV__`) with its Jest test; and the Maestro screenshot helper `.maestro/subflows/ui-capture.yaml` plus a capture flow for the root screen that writes `.ui-screenshots/screen/App/default--<ltr|rtl>--<light|dark>--<platform>.png`. On a new scaffold the entry file (`index.ts` or `index.js`) wraps the app with the gallery and the deep-link scheme is registered; on an existing app those edits are printed for the user instead.
 
 == Purpose group
 
@@ -111,6 +113,11 @@ as newline-separated `key: value` lines. Every field found here is resolved in S
 |`none`, `internal`, or `store`. Expo: gates `eas.json`'s `submit` block and the store-credential secrets named in the report. Metro (no EAS): names the Android upload keystore, Google Play and App Store Connect secrets the release workflow will need.
 |`none`/`internal`/`store` per this catalog's shared convention
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the UI contract's automated accessibility level, written to `.ui-quality.yml` and applied to `eslint-plugin-react-native-a11y` (errors, warnings or off). Asked in stand-alone runs when `args` did not supply it.
+|`enforce`; an existing `.ui-quality.yml` pre-selects its value
+
 |`visibility`
 |No
 |`public`, `private`, or `internal` — the GitHub repository's visibility, used only to key the `sonar` recommendation. `internal` counts as private. If `open-source: yes` but visibility is private/internal, the skill warns and asks which is right.
@@ -148,10 +155,11 @@ as newline-separated `key: value` lines. Every field found here is resolved in S
   `jest.setup.js`, a replacement `__tests__/App.test.tsx`, `.eslintrc.js` ignore patterns, `.prettierignore`, and a
   root `LICENSE` only when `app-directory` is `.`.
 * `.maestro/smoke.yaml` smoke-test skeleton (both toolchains).
+* UI contract files (both toolchains): `.ui-quality.yml`, `src/dev/ui-gallery/**` (gallery host, registry and test), `.maestro/config.yaml`, `.maestro/subflows/ui-capture.yaml` and `.maestro/ui/App.yaml`; `eslint-plugin-react-native-a11y` added as a devDependency; for a new scaffold the gallery-wrapping entry file and the deep-link scheme (`expo.scheme` for Expo; Android `intent-filter` and iOS `CFBundleURLTypes` for Metro). Screenshots land in `.ui-screenshots/` when the Maestro capture flow runs.
 * `sonar-project.properties` (only when `sonar` is not `none`).
 * Metro only: the outcome of each native verification — `./gradlew assembleDebug`, `bundle install`,
   `bundle exec pod install` and the simulator `xcodebuild` — each passed, failed or unverified locally.
-* A report that opens by repeating the resolved toolchain and the announced mode (from scratch or updating an existing setup), lists per tooling file the action taken (created / updated / replaced / kept as is / removed) and each mismatch a kept artifact leaves with this run's choices, the `visibility` used for Sonar and where it came from, unresolved `<placeholder>` values still needing manual
+* A report that opens by repeating the resolved toolchain and the announced mode (from scratch or updating an existing setup), the `accessibility` level and `.ui-quality.yml` action, whether the UI gallery is wired into the entry, the Maestro capture flow's status (unverified without a simulator, emulator or debug build), lists per tooling file the action taken (created / updated / replaced / kept as is / removed) and each mismatch a kept artifact leaves with this run's choices, the `visibility` used for Sonar and where it came from, unresolved `<placeholder>` values still needing manual
   fill-in (e.g. `app.json`'s bundle identifiers, the Maestro `<app-id>`), and required warnings before building,
   committing, or submitting to a store.
 
@@ -179,7 +187,7 @@ flowchart TD
     M -- Stop --> K
     M -- other --> N
     L --> N
-    G --> N["Step 2: Ask toolchain (if unresolved), then app-name,\napp-slug, app-id, license, developer info, open-source,\nvisibility, sonar, native-builds (expo only), distribution"]
+    G --> N["Step 2: Ask toolchain (if unresolved), then app-name,\napp-slug, app-id, license, developer info, open-source,\nvisibility, sonar, native-builds (expo only), distribution,\naccessibility (stand-alone)"]
     N --> O["Step 3: Infer owner/repo/host\nfrom git remote"]
     O --> P["Step 4: Resolve devDependency versions\n(npm view, or the fallback table)"]
     P --> P2{"toolchain?"}
@@ -193,7 +201,7 @@ flowchart TD
     R1 --> S["Step 6: Merge package.json/tsconfig fragments;\nwrite per-toolchain tooling files\nper the per-file decision"]
     R2 --> S
     S --> U{"toolchain?"}
-    U -- expo --> V1["Step 7: npm install; add devDependencies;\nnpx expo lint; expo install web deps;\ntest, lint, typecheck, web export"]
+    U -- expo --> V1["Step 7: npm install; add devDependencies\n(incl. a11y lint plugin); npx expo lint; expo install web deps;\ntest, lint, typecheck, web export"]
     U -- metro --> V2["Step 7: npm install; JS checks;\ngradlew assembleDebug; on macOS bundle install,\npod install, simulator xcodebuild\n(unverified if tooling missing)"]
     V1 --> W["Step 8: Report toolchain, per-file actions,\nmismatches, version fallbacks, native verification, warnings"]
     V2 --> W

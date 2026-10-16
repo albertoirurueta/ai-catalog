@@ -28,7 +28,10 @@ Validation runs once, cheapest first, every check through an `iru-gate-runner` a
 regenerating committed CLI docs through the crate's `xtask` when the command tree changed), scoped tests, an 80%
 per-file line-coverage gate (cargo-llvm-cov, container-free tests only, end-to-end runs of the binary included — the
 test helper must forward `LLVM_PROFILE_FILE` after `env_clear()` or `main.rs` reads 0%), the full suite with doctests,
-and clippy/rustfmt/cargo-deny diffed against the baseline. Last, and only when the repository has them, `#[ignore]`d
+and clippy/rustfmt/cargo-deny diffed against the baseline. When the bucket added or changed terminal-UI screens or
+components (Ratatui), a UI stage (3.5a) also checks that each has `.txt` captures in `.ui-screenshots/` for every state
+× `.ui-quality.yml` direction × theme, and applies the accessibility level (`enforce` fails the bucket, `report` lists
+the rule ids); see xref:guides/building-user-interfaces.adoc[Building user interfaces]. Last, and only when the repository has them, `#[ignore]`d
 container-backed tests (testcontainers) run behind the shared atomic-`mkdir` `.integration-test.lock`; Docker being
 unavailable makes that stage "unverified", never silently skipped. Plain CLI end-to-end tests need no lock.
 
@@ -63,6 +66,8 @@ any relevant "Current code state" context.
   committed generated CLI docs regenerated through `xtask` when the command tree changed.
 * Tests reaching at least 80% line coverage on every changed or added production source file (accepted exceptions —
   `xtask`/`build.rs`, a truly thin `main.rs`, terminal-bound lines — are named, never silent).
+* For terminal-UI work: captures under `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt`, malformed names
+  fixed, and the accessibility result at the `.ui-quality.yml` level (the asserted TUI checks, not an automated audit).
 * A transient `.integration-test.lock/` directory (with an `owner` file) held only while the container-backed stage
   runs, added to the root `.gitignore` if missing, and always released before the skill finishes.
 * `implementation_plan.md` with each task's checkbox checked and its "group validation pending" note replaced by the
@@ -87,7 +92,9 @@ flowchart TD
     G --> H["Step 3.3-3.5: scoped tests,\n80% per-file coverage, full suite with doctests"]
     H -- failure or low coverage traced to a task --> L["Fix that task;\nre-run the affected check(s)"]
     L --> H
-    H -- clean --> I["Step 3.6: clippy, rustfmt, cargo-deny\ndiffed against baseline"]
+    H -- clean --> U["Step 3.5a: terminal-UI captures matrix\nand accessibility level (only if TUI changed)"]
+    U -- gap or violation --> L
+    U --> I["Step 3.6: clippy, rustfmt, cargo-deny\ndiffed against baseline"]
     I -- new issue --> L
     I -- clean --> J{"Container-backed #[ignore] tests,\nbucket touches them, Docker available?"}
     J -- no --> P["Step 4: finalize each task's note;\nnotify user"]
@@ -117,7 +124,8 @@ directly, so verbose report output stays out of this skill's own context:
 * xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every `.rs` file the bucket touched.
 * xref:skills/iru-rust-rustdoc.adoc[] — Step 3.2, rustdoc for every item the bucket touched, with `cargo doc` and
   doctests passing.
-* xref:skills/iru-rust-test.adoc[] — Step 3.3 (scoped tests), Step 3.5 (full suite with doctests) and Step 3.7
+* xref:skills/iru-rust-test.adoc[] — Step 3.3 (scoped tests), Step 3.5 (full suite with doctests, plus `ui: yes` and the
+  UI-capture summary when the project has a terminal UI) and Step 3.7
   (`ignored: only` container-backed tests with `lock: held`).
 * xref:skills/iru-rust-coverage.adoc[] — Step 3.4, per-file line coverage (cargo-llvm-cov) for every changed or added
   production source file.

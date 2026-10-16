@@ -135,6 +135,19 @@ jobs:
           mkdir -p target/coverage
           cargo llvm-cov report --lcov --output-path target/coverage/lcov.info --ignore-filename-regex '(^|/)xtask/'
           cargo llvm-cov report --summary-only --ignore-filename-regex '(^|/)xtask/' --fail-under-lines 80
+      # >>> ui: tui
+
+      # The terminal-UI tests leave their text captures (the catalog's UI contract) in .ui-screenshots/ — review
+      # evidence, kept 7 days; nothing is uploaded when the run produced none.
+      - name: Upload UI captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+      # <<< ui: tui
       # >>> sonar
 
       - name: Upload the coverage report

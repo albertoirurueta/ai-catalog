@@ -25,6 +25,10 @@ The App Router only. Pages Router components are all client-hydrated — see `pa
   browser and drops its server-only capabilities.
 - Client Components cannot be `async`. To consume server data in one, pass it as props, or pass a **promise**
   created (not awaited) in the Server Component and read it with `use(promise)` under `<Suspense>`.
+- **UI contract mapping** (`ui-implementation.md`): the page is the screen and owns data; interactive components are
+  Client Components whose props are serializable UI state plus callbacks wired *inside the client tree* (or Server
+  Actions); presentational markup with no interactivity stays a Server Component. Long lists are paginated on the
+  server (`searchParams`/cursor) or virtualized in one Client Component — never every row rendered.
 - Server Components cannot use hooks, context, or event handlers.
 
 ## Crossing the boundary

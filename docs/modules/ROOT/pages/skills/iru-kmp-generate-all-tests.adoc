@@ -1,6 +1,6 @@
 = KMP Generate All Tests
-:description: Brings a Kotlin Multiplatform module's JVM-measured test coverage to 80% per class, writing kotlin.test tests in the matching source set until it clears.
-:keywords: iru-kmp-generate-all-tests, claude code skill, kotlin multiplatform, kmp, kotlin.test, turbine, kover, commontest, generate unit tests, coverage
+:description: Brings a Kotlin Multiplatform module's JVM-measured coverage to 80% per class with kotlin.test tests, and adds UI tests for screens that have none.
+:keywords: iru-kmp-generate-all-tests, claude code skill, kotlin multiplatform, kmp, kotlin.test, kover, commontest, ui tests, ui screenshots, coverage
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -26,6 +26,8 @@ are "not measurable", get behavior tests only when invoked with `ios: yes`, and 
 only test code; production code is touched only when a class is genuinely untestable as written, and that is
 reported explicitly. It stops immediately if the repository is not a Kotlin Multiplatform Gradle project, or has no
 JVM test target to measure.
+
+When the module renders UI and its tests are already wired for it (a `commonTest` `uitest/UiScreenshots.kt` helper with the Robolectric `UiTest` base for `ui: compose`, or `androidApp/src/test/.../uitest/UiScreenshots.kt` and `iosApp/iosAppTests/UIScreenshots.swift` for `ui: native`), the new Step 5a also generates UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]) for every existing screen and component that has none. One agent per missing screen/component writes a test that asserts each event once and captures every visual state (minimal, typical, many-items/long-content and right-to-left fixtures) across the `.ui-quality.yml` directions × themes into `.ui-screenshots/` with the `--android`/`--ios` platform segment, plus the accessibility check. The tests then run through `iru-kmp-test`'s `ui` selector (iOS parts unverified without macOS or a simulator). Without the wiring the uncovered UI is listed as "needs the UI test wiring" -- the skill never adds Robolectric, a dependency or a test target.
 
 == Purpose group
 
@@ -68,8 +70,9 @@ behavior-only tests, and the final suite run includes the iOS stage.
   how many were already at or above 80% and how many iOS-only classes were not measurable, before/after line
   coverage per class touched, any class still below 80% after two extension attempts (with uncovered lines and
   likely reason), and the full-suite result per target including any unverified iOS stage.
+* For UI modules wired for it (Step 5a): UI test classes for every screen and component that lacked one, the `.ui-screenshots/` captures they write, and a report of captures per kind and platform, accessibility violations (count + rule ids) with the `.ui-quality.yml` level, unverified parts, and UI left uncovered because the wiring is missing.
 * No license headers, KDoc, code-quality fixes, on-device Android tests, or `iosApp` XCTest tests unless explicitly
-  requested.
+  requested (the `ImageRenderer` UI tests of `ui: native` modules wired for them are the exception, via Step 5a).
 
 == Execution flow
 
@@ -86,7 +89,8 @@ flowchart TD
     E --> F["Step 3: gate-runner runs kmp-coverage once\nover every candidate (batched if large)"]
     F --> G["Step 4: classify - missing tests / below 80% /\nsufficient / not measurable (iOS)"]
     G --> H["Step 5: one agent per class (parallel batches)\nwrites or extends tests in the matching source set;\ncompile-check touched test source sets"]
-    H --> I["Step 6: re-measure via kmp-coverage"]
+    H --> H2["Step 5a: UI module with test wiring? agent per\nscreen/component without UI tests; run via kmp-test ui"]
+    H2 --> I["Step 6: re-measure via kmp-coverage"]
     I --> J{"Still below 80%?"}
     J -- yes, attempts left --> H
     J -- yes, 2 attempts used --> K[Report as residual gap]
@@ -107,7 +111,8 @@ flowchart TD
   suite runs once per batch rather than once per class.
 * xref:skills/iru-kmp-test.adoc[] — Step 7, once, to confirm the full suite still passes (Android, and iOS when
   `ios: yes` or a `commonTest` file changed on a macOS host with Xcode); delegated through `iru-gate-runner`, which
-  lets the skill take `.integration-test.lock` itself for any iOS stage.
+  lets the skill take `.integration-test.lock` itself for any iOS stage. Step 5a also invokes it with the `ui`
+  selector to run the newly generated UI tests.
 
 === Invoked by
 
@@ -120,10 +125,11 @@ it detects a Kotlin Multiplatform project, and `iru-kmp-coverage` mentions it as
 
 * xref:agents/overview.adoc[`Explore`] — Step 2, to build the class/test-file inventory across the module without
   reading every source file directly.
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-kmp-coverage`/`iru-kmp-test`
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 5a, 6, and 7, to run `iru-kmp-coverage`/`iru-kmp-test`
   and report back only a compact summary instead of a raw coverage/test log.
 * xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per class needing
-  new or extended tests, dispatched concurrently since each only touches its own test file.
+  new or extended tests, dispatched concurrently since each only touches its own test file; Step 5a also uses it for one
+  agent per screen/component needing UI tests.
 
 == Source
 

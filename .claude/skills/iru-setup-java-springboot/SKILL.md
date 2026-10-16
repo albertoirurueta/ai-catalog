@@ -145,7 +145,8 @@ on-existing: ask
 Recognized keys: `mode` (`new`/`existing`), `language` (`java`/`kotlin`), `build-tool` (`maven`/`gradle`),
 `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`), and
 — only when `sonar` is `cloud` or `self-hosted` — `sonar-organization`, `sonar-project-key`, `sonar-host-url`, plus
-`frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
+`frontend` (`none`/`hilla`), `accessibility` (`enforce`/`report`/`off`, only meaningful with `frontend: hilla`),
+`visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
 (`unit`/`full`, only meaningful when `ci: yes`), `pages` (`yes`/`no`, only meaningful when `ci: yes`), and
 `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key found here is resolved — skip the matching
 question in Step 3 or 3b. If `args` is absent or doesn't look like this format, treat everything as unset and ask
@@ -428,6 +429,13 @@ facts below are per GitHub's current pricing — say so and tell the user to dou
   `iru-setup-java-springboot-github-workflows` adds the `npm`/Node ecosystem to `.github/dependabot.yml` plus the
   `actions/setup-node` and `vitest` steps in `build.yml`. Never silently treat `hilla` as `none` — record what the
   user actually asked for and say so in Step 11's report.
+- **Accessibility** (`accessibility`, only when `frontend: hilla`) — "Run automated accessibility checks in the
+  frontend's UI tests?" **Enforce (Recommended)** — violations fail the UI tests; **Report only** — listed, never
+  failing; **Off** — no automated checks (accessible coding defaults still apply). The Hilla frontend follows the
+  catalog's UI contract (composed components with explicit inputs/events, virtualized lists, Playwright UI tests
+  across states, left-to-right/right-to-left and light/dark, screenshots reused by the Antora UI pages, axe-core
+  checks); `iru-setup-java-springboot-hilla` writes the choice to `.ui-quality.yml`. With `frontend: none` it is
+  neither asked nor recorded.
 
 ## Step 4 — Choose the technologies
 
@@ -776,6 +784,7 @@ sonar:                           # from Step 3b — mode is the source of truth 
   projectKey: example_orders-service   # unset when mode: none
   hostUrl: https://sonarcloud.io # unset when mode: none; the self-hosted server URL when mode: self-hosted
 frontend: none                   # none | hilla — hilla scaffolds a Hilla React frontend via iru-setup-java-springboot-hilla, see Step 3b
+accessibility: enforce           # enforce | report | off — only with frontend: hilla; written to .ui-quality.yml by iru-setup-java-springboot-hilla
 visibility: public               # public | private | internal — from Step 3b (detected via gh when possible)
 ci:                              # from Step 3b — read by iru-setup-java-springboot-github-workflows (args may override)
   enabled: true                  # false ⇒ no workflows at all: no build/deploy/undeploy/security.yml, no dependabot.yml
@@ -1088,7 +1097,7 @@ Summarize:
 - Whether the project is open source, the Sonar mode wired (`cloud`/`self-hosted`/`none`, plus organization/project
   key/host URL when not `none`), and the frontend choice (`none`/`hilla` — when `hilla`, what
   `iru-setup-java-springboot-hilla` reported back: the resolved Vaadin version, whether the frontend gates passed,
-  and the resolved lcov path).
+  the resolved lcov path, the `accessibility` level and the `.ui-quality.yml` action).
 - Every technology selected, with the starter it resolved to and the migration tool per database.
 - The full module tree created (with Gradle project paths on Gradle), and the `apis/` spec directories.
 - Which sub-skills completed, which stopped and why.

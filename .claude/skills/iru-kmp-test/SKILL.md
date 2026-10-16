@@ -20,7 +20,16 @@ description: >-
   `.xcresult` bundle into a compact per-target pass/fail/skip summary, detects the "selector matched nothing" cases
   (Gradle fails the JVM task with "No tests found for given includes", but a Kotlin/Native simulator task exits 0
   and writes no XML), and never dumps raw Gradle/xcodebuild output. Report-only: never fixes a failing test or
-  modifies source/test code. Equivalent to `iru-android-test`/`iru-swift-test` for KMP apps. Use whenever the user
+  modifies source/test code. A `ui` selector (`/iru-kmp-test ui [<scope>]`, or a `ui: yes` line) runs the UI tests
+  per the catalog's UI contract — Compose Multiplatform `runComposeUiTest` tests on the Android host (Robolectric)
+  and the iOS simulator, `ui: native` Robolectric Compose tests in `androidApp`, `iosApp` `ImageRenderer`/XCUITest
+  captures, device flow tests only when an emulator is attached — with `UI_SCREENSHOTS_DIR` set (default
+  `<repo root>/.ui-screenshots`, forwarded to the simulator as `SIMCTL_CHILD_`/`TEST_RUNNER_` variables), cleared only
+  at the start of a full (unscoped) UI run, every Gradle test task forced to re-run (`--rerun`, since captures are
+  side effects Gradle's up-to-date checks and build cache don't track), `.xcresult` attachments and device outputs
+  collected into the contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` layout, names validated,
+  and screenshot counts per kind and platform, malformed names, accessibility violations (count + rule ids) and the
+  `.ui-quality.yml` level reported. Equivalent to `iru-android-test`/`iru-swift-test` for KMP apps. Use whenever the user
   (or `iru-kmp-code-one-task-group` via `iru-gate-runner`) wants to run, re-run, or narrow down KMP tests instead of
   invoking `./gradlew allTests`/`xcodebuild test` by hand.
 model: haiku
@@ -45,6 +54,8 @@ A single positional `<scope>` plus optional `key: value` lines; explicit keys wi
 - `destination: <xcodebuild destination>` — override the simulator chosen in Step 5.
 - `lock: held` — the caller (e.g. `iru-kmp-code-one-task-group`) already holds `.integration-test.lock`; don't
   acquire or release it here (Step 4).
+- `ui: yes` (or a leading `ui` word in `<scope>`, e.g. `ui GreetingScreenTest`) — a **UI run** (Step 5a). The rest
+  of the scope and the `target:` key keep their meaning; `ui` with no further scope is a **full UI run**.
 
 `<scope>` shapes:
 
@@ -217,6 +228,67 @@ Runs when the iOS stages are in scope, an iOS test target exists (`iosApp/iosApp
   `totalTestCount == 0` (`result: "unknown"`) for an unmatched `-only-testing:` — which `xcodebuild` reports as `**
   TEST SUCCEEDED **`, exit 0. A crash exit with a readable bundle is inconclusive, not a failure — read the bundle.
 
+## Step 5a — UI runs: screenshots and accessibility
+
+Only for `ui: yes`. KMP UI tests are ordinary test classes in the stages above — `commonTest` Compose
+Multiplatform tests run in the Android host task (under Robolectric) **and** in the iOS simulator task, `ui: native`
+Compose tests in `androidApp`'s `testDebugUnitTest`, SwiftUI `ImageRenderer` tests in the XCTest bundle — so a UI run
+is Steps 3–5 with these additions:
+
+1. **Resolve the capture directory once**: `UI_SCREENSHOTS_DIR` from the environment if set (absolute), else
+   `<repo root>/.ui-screenshots`. Export it for every command below; the scaffold's build scripts forward it to the
+   JVM tests (`UI_SCREENSHOTS_DIR`), to the simulator (`SIMCTL_CHILD_UI_SCREENSHOTS_DIR` — `simctl` passes only
+   `SIMCTL_CHILD_`-prefixed variables, verified), and `xcodebuild test` gets it as
+   `TEST_RUNNER_UI_SCREENSHOTS_DIR=<dir>` (verified). A module whose build script doesn't forward it writes to its
+   helper's default — say so if captures appear elsewhere.
+2. **Full UI run only** (no scope beyond `ui`): `rm -rf "$UI_SCREENSHOTS_DIR"` before the first stage, so the
+   directory holds exactly this run. A scoped run never clears.
+3. **Force the test tasks to execute**: put `--rerun` after **every** Gradle test task (like `--tests`, it binds to
+   the task before it — verified: `./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test --rerun`
+   re-ran only the iOS task and the Android captures were missing, restored from the build cache). Captures are
+   side effects Gradle doesn't track, so an `UP-TO-DATE`/`FROM-CACHE` task writes none.
+4. **Device flow tests** (`androidApp/src/androidTest`, a `connected*AndroidTest` task in `tasks --all`): run only
+   when `adb devices` lists a device in `device` state — `./gradlew :androidApp:connectedDebugAndroidTest`, then move
+   `androidApp/build/outputs/connected_android_test_additional_output/**/ui-screenshots/<kind>/<Id>/*.png` into the
+   directory. No device → **unverified (no emulator/device attached)**. An XCUITest target in `iosApp` runs in Step
+   5's `xcodebuild test` (same lock).
+5. **Collect `.xcresult` attachments** after the XCTest stage: `xcrun xcresulttool export attachments --path
+   "$TMPDIR/iru-kmp-test-ios.xcresult" --output-path "$TMPDIR/iru-kmp-test-attachments"` writes the files plus a
+   `manifest.json`; copy every attachment whose `suggestedHumanReadableName` (minus any numeric suffix Xcode adds) is
+   a contract path or file name ending in `--ios.png` into `<dir>/<kind>/<Id>/`.
+6. **Validate and count** with the embedded parser:
+
+   ```bash
+   python3 - "$UI_SCREENSHOTS_DIR" <<'PY'
+   import collections, os, re, sys
+   root = sys.argv[1]
+   seg = r"[a-z0-9]+(?:-[a-z0-9]+)*"
+   name = re.compile(rf"^(component|screen|flow)/([A-Za-z][A-Za-z0-9]*|{seg})/((?:\d\d-)?{seg})--(ltr|rtl)--(light|dark|high-contrast|no-color)((?:--{seg})*)\.(png|txt)$")
+   counts, platforms, bad = collections.Counter(), collections.Counter(), []
+   for dirpath, _, files in os.walk(root):
+       for f in files:
+           rel = os.path.relpath(os.path.join(dirpath, f), root).replace(os.sep, "/")
+           m = name.match(rel)
+           if not m:
+               bad.append(rel); continue
+           counts[m.group(1)] += 1
+           variants = m.group(6).split("--")[1:]
+           platforms[variants[0] if variants and variants[0] in ("android", "ios") else "(none)"] += 1
+   print("per kind:", dict(counts)); print("per platform:", dict(platforms))
+   print(f"malformed ({len(bad)}):", *bad[:20], sep="\n  ")
+   PY
+   ```
+
+   A KMP capture without an `android`/`ios` first variant is worth flagging: the same `<Id>` renders on both
+   platforms, so unsuffixed names collide.
+7. **Accessibility**: read `accessibility` from `<repo root>/.ui-quality.yml` (missing file or key → `enforce`) and
+   report the level applied. Count violations from the results, never by dumping them: the scaffold's
+   `checkUiAccessibility()` fails with `Accessibility violations {rule=count, …}` under `enforce` and prints
+   `UI accessibility (report): {rule=count, …}` under `report` (in the JUnit XML's `<failure message>` /
+   `<system-out>`); XCUITest `performAccessibilityAudit()` failures appear in the `.xcresult` `testFailures`
+   (summarize by audit type); device ATF (`AccessibilityViewCheckException`) in the device run's XML. Report the
+   total and the rule ids with counts; under `report` they are listed, never a failure.
+
 ## Step 6 — Parse the JUnit XML
 
 Each Gradle test task writes one `TEST-*.xml` per class to `<module>/build/test-results/<task>/`. Kotlin/Native
@@ -273,7 +345,10 @@ stack line, and the XML/`.xcresult` path for the full trace), **no matching test
 **not applicable** (the project has no such target/test bundle), or **unverified (<reason>)** — non-macOS host, no
 Xcode/simulator runtime, project not generated, or blocked by the lock. A test failing on one target only (e.g. iOS
 but not Android) is worth calling out explicitly — it usually means an `actual` implementation differs. Mention the
-lock only when it was anything other than an immediate acquire. Never paste raw Gradle/xcodebuild output, and never
+lock only when it was anything other than an immediate acquire. For a UI run add: the capture directory and whether
+it was cleared (full run) or not (scoped); screenshots per kind and per platform (`android`/`ios`); malformed names
+(path list); accessibility violations (total + rule ids with counts) and the `.ui-quality.yml` level applied
+(`enforce`/`report`/`off`); device flow tests run or **unverified (<reason>)**. Never paste raw Gradle/xcodebuild output, and never
 fix tests or source code — that's a follow-up the user (or `iru-kmp-code-one-task`) drives.
 
 ## Known quirks / verification notes
@@ -297,8 +372,16 @@ Verified in `$TMPDIR/iru-verify/kmp/iru-kmp-test/` (October 2026, macOS on Apple
 - `--tests` placed once after two tasks filtered only the second; repeating it after each task filtered both.
 - A Kotlin/Native test calling `UIDevice.currentDevice.systemName()` hung indefinitely under the task's
   `simctl spawn --standalone` run (0% CPU for 4+ minutes); the same tests without UIKit finished in seconds.
-- **Unverified locally**: the iosApp XCTest stage (no XcodeGen installed, so no `iosApp.xcodeproj` could be
-  generated here — the `xcodebuild test`/`xcresulttool` commands and their zero-match behaviour are
-  `iru-swift-test`'s, verified there on Xcode 27), the `androidTarget()` + `com.android.library` variant's
+- UI runs (October 2026, Compose Multiplatform 1.12.2, Robolectric 4.17 `sdk=35`, Xcode 27.0, iPhone 18 Pro
+  simulator): with `UI_SCREENSHOTS_DIR`/`UI_REPO_ROOT` set on `Test` tasks and `SIMCTL_CHILD_UI_SCREENSHOTS_DIR`/
+  `SIMCTL_CHILD_UI_REPO_ROOT` on `KotlinNativeSimulatorTest` tasks, one `commonTest` `runComposeUiTest` class wrote
+  `screen/GreetingScreen/<state>--<dir>--<theme>--android.png` from `testAndroidHostTest` and `…--ios.png` from
+  `iosSimulatorArm64Test` (12 + 12 files); `xcodebuild test` with `TEST_RUNNER_UI_SCREENSHOTS_DIR` delivered the
+  variable to an `ImageRenderer` XCTest, which wrote its PNGs there. Without per-task `--rerun`, a re-run after
+  deleting the directory restored the Android task from the build cache and wrote no Android captures.
+- **Unverified locally**: the `xcresulttool export attachments` collection (no XCUITest target in the sample),
+  device flow tests (no emulator attached), the iosApp XCTest stage's `xcresulttool` parsing and zero-match
+  behaviour (`xcodebuild test` itself ran in the UI verification above; the parsing commands are `iru-swift-test`'s,
+  verified there on Xcode 27), the `androidTarget()` + `com.android.library` variant's
   `testDebugUnitTest` naming (taken from AGP's documented variant tasks), the `iosX64Test` Intel path, and the
   stale-lock/wait branches of Step 4 (the protocol is the catalog's shared one, as in `iru-python-test`).

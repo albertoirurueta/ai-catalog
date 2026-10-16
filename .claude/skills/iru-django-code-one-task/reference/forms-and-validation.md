@@ -87,7 +87,9 @@ on one page; `edit_only=True` to forbid new rows.
 markup or drop `aria-describedby`/`aria-invalid`. Project-wide markup through `FORM_RENDERER = "…TemplatesSetting"`
 and overridden `django/forms/*.html` — only if the project already does it. Never build `help_text` from user data
 (the stock template marks it safe). Media through an inner `Media` class and `{{ form.media }}` once in the base
-template.
+template. Form fields are the only two-way-bound controls in a Django UI (`ui-contract.md` §4): a form page or partial
+is a component like any other — its `default`, `error` (bound with errors) and `disabled` states get browser UI tests
+and screenshots (`ui-implementation.md` §5).
 
 ## Async
 

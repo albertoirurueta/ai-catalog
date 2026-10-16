@@ -70,6 +70,16 @@ jobs:
             shared/build/test-results/testAndroidHostTest/*.xml
             androidApp/build/test-results/testDebugUnitTest/*.xml
 
+      # The UI tests' captures (.ui-screenshots/<kind>/<Id>/<state>--<dir>--<theme>--android.png) — review evidence.
+      - name: Upload UI screenshots (Android)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-android
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload Android Lint SARIF (androidApp)
         if: (!cancelled()) && hashFiles('androidApp/build/reports/lint-results-debug.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
@@ -205,6 +215,16 @@ jobs:
           path: iosApp/build/iosApp.xcresult
           retention-days: 14
       # <<< ci-tests: full
+
+      # Kotlin/Native Compose UI test captures (--ios.png), plus the iosApp XCTest ones with ci-tests: full.
+      - name: Upload UI screenshots (iOS)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-ios
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
   # <<< ios
 
   docs:

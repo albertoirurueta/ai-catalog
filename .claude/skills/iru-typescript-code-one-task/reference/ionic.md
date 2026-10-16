@@ -21,6 +21,10 @@ dependency in addition to this one).
 - Navigation: `IonRouterOutlet`/`useIonRouter()` (React) or Angular Router wrapped by `IonRouterOutlet` (Angular)
   — not a bare `react-router`/`@angular/router` navigation call that bypasses Ionic's page-transition/lifecycle
   handling.
+- **Long lists**: `ion-list` alone renders every item. A data-driven list is virtualized (CDK virtual scroll in the
+  Angular flavor, `@tanstack/react-virtual` in the React flavor — Ionic's own `ion-virtual-scroll` was removed in
+  v6) with `ion-infinite-scroll` for paging; see `ui-implementation.md` (Ionic section) for that, dark palette,
+  right-to-left and the component gallery set-up.
 
 ## Capacitor plugin usage
 
@@ -60,3 +64,5 @@ dependency in addition to this one).
   vi.fn() } }))` or the Jest/Angular-test equivalent), following `testing.md`'s "mock what you don't own" rule.
 - A platform-branch (`Capacitor.getPlatform()`) is tested by stubbing the platform check's return value for each
   branch under test, not by actually running on a different device.
+- Screens and components also get Playwright UI tests in the browser (web build, plugins mocked) capturing the
+  `.ui-screenshots/` matrix with axe checks — `ui-implementation.md`. Device-only behaviour stays out of them.

@@ -12,6 +12,13 @@ and `charm.land/lipgloss/v2` v2.0.6.
 
 ## The model
 
+A one-screen model is below. When the task adds or changes a screen, component or list, also read
+`ui-contract.md` and `ui-implementation.md` — sub-models with `Init`/`Update`/`View` composed by the parent, typed
+intent messages instead of raw keys, Bubbles `list`/`table`/`viewport` (or a windowed slice) for collections, the
+UI-test matrix, the `.ui-screenshots/` text captures and the accessibility checks. The loop below ranges over every
+name only because the picker is a handful of fixed names; a data-driven list renders just the visible window
+(`ui-implementation.md` §3).
+
 ```go
 // Model is a selectable list of names.
 type Model struct {
@@ -118,10 +125,13 @@ RunE: func(cmd *cobra.Command, _ []string) error {
 - A context cancelled by a signal makes `Run` return an error wrapping `tea.ErrProgramKilled`/the context error;
   `classify` turns the context cause into 130/143 (`errors.md`).
 - Styling inside the TUI uses Lip Gloss styles in `View`; Bubble Tea downsamples colours for the terminal it owns.
-  `NO_COLOR` is honoured by its colour-profile detection; don't add another colour switch inside the model.
+  `NO_COLOR` is honoured by its colour-profile detection; don't add another colour switch inside the model — but
+  never carry information by colour alone: the cursor/selection and every state also need a marker or word
+  (`ui-implementation.md` §6).
 
 ## Testing
 
-Pure `Update` tests first; one or two `teatest` v2 program tests (`testing.md` — `teatest.NewTestModel`,
+Pure `Update` tests first, plus the contract's state × direction × theme captures and accessibility checks
+(`ui-implementation.md` §4–§6, through `internal/tui/ui_screenshots_test.go`); one or two `teatest` v2 program tests (`testing.md` — `teatest.NewTestModel`,
 `WaitFor`, `Send`, `FinalModel`; it owns the `-update` flag). Coverage of `internal/tui` comes from these; the
 TTY-gated `RunE` branch that starts the program is covered only up to the gate (the "not a TTY" path).

@@ -14,11 +14,13 @@ diff and getting approval.
 
 `iru-setup-php-gitignore` bootstraps a `.gitignore` that matches what a PHP project really produces: `vendor/`,
 `auth.json`, PHPUnit/Pest caches, `build/` report output (Clover/JUnit/coverage HTML), code-style caches, env files
-(keeping `.env.example`), OS/editor noise and the repository-wide `.integration-test.lock/` directory. It adds a
+(keeping `.env.example`), OS/editor noise and the repository-wide `.integration-test.lock/` directory and the UI tests' `.ui-screenshots/` capture directory (every flavor renders UI).
+It adds a
 section only when the thing it targets is present — Laravel's skeleton entries (`public/build`, `public/hot`,
 `public/storage`, `storage/*.key`, IDE-helper files), WordPress release zips and `.wp-env.override.json`, PrestaShop
-`config_*.xml` caches (with `config.xml` kept tracked), Node, PHPCS/PHPStan cache paths read from their configs, and
-Antora build output. It never ignores `composer.lock` and proposes removing such a line from an existing file.
+`config_*.xml` caches (with `config.xml` kept tracked), Node, Playwright browser-UI-test output (`test-results/`, `playwright-report/`, `blob-report/`,
+`/playwright/.cache/`, plus `artifacts/` for `wp-scripts test-playwright`), PHPCS/PHPStan cache paths read from their
+configs, and Antora build output. It never ignores `composer.lock` and proposes removing such a line from an existing file.
 When `.gitignore` already exists it announces an update, shows the merged draft as a diff, and asks Update (merge,
 keep hand-added entries) / Keep as is / Replace (template only).
 

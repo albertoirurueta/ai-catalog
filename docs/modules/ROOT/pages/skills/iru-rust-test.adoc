@@ -10,6 +10,8 @@ Run a Rust project's tests, whether a single crate or a Cargo workspace (a comma
 
 `iru-rust-test` surveys the workspace with `cargo metadata`, always passes `--locked` when a `Cargo.lock` exists, and picks the runner: cargo-nextest when installed (JUnit XML through the project's own `junit` profile or an injected `iru-rust-test` profile) and `cargo test` otherwise (libtest console output parsed). Doctests run separately through `cargo test --doc`, because nextest cannot run them and bin-only crates have none. `#[ignore = "..."]` tests, this catalog's marker for container or network-backed tests, are excluded by default and run only on request, serialized repository-wide behind the shared `.integration-test.lock`. A filter that matched nothing, a build failure, a stale `Cargo.lock`, a bad `package:` name and an unavailable Docker daemon are each reported plainly, never as "0 passed".
 
+When the workspace has a Ratatui terminal UI (or `ui: yes`), Step 2a also handles the UI contract's text captures (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it sets `UI_SCREENSHOTS_DIR` for the tests (default `<repo root>/.ui-screenshots`), clears that directory at the start of a full (unfiltered) run only, validates every capture name against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>...].txt|png`, and reports captures per kind, malformed names and accessibility violations by rule id at the `.ui-quality.yml` level.
+
 == Purpose group
 
 xref:index.adoc#group-rust[Rust Development Tooling]
@@ -60,6 +62,10 @@ Optional `key: value` lines may follow the filters.
 |No
 |Passed by a calling skill that already holds `.integration-test.lock`, so this skill neither acquires nor releases it.
 |Not set; the skill takes the lock itself for ignored selections.
+|`ui: auto\|yes\|no`
+|No
+|Whether the terminal-UI capture step applies. `auto` applies it when any workspace member depends on `ratatui`; `yes` forces it, `no` skips it.
+|`auto`
 |===
 
 == Outputs
@@ -68,6 +74,7 @@ Optional `key: value` lines may follow the filters.
 * For each failure, the binary and test path with one cause line, usually the assertion text and its `file:line`. Flaky (retried) tests are reported apart from hard failures.
 * A filter that matched nothing (nextest exit `4`, or `cargo test` with all-zero counts), a build failure (first `error[E...]` line and file), a stale or missing `Cargo.lock`, and a bad `package:` are each stated plainly.
 * For `ignored: include` or `only`: whether the lock was acquired, waited for, or held by the caller. An ignored selection that could not run is reported as unverified (Docker unavailable, blocked by a concurrent run, test service unreachable), never as passed or failed.
+* For a terminal UI (Step 2a): the captures directory and whether it was cleared (full run) or kept (scoped run), captures per kind (`component`, `screen`, `flow`), malformed capture names (count plus the first few paths), accessibility violations as counts per rule id (`tui-color-only`, `tui-help-line`, `tui-keyboard`, `tui-no-color`), and the `.ui-quality.yml` level applied (`enforce` when the file is missing). These are asserted checks, not an automated audit.
 * Logs and the JUnit report are left under `target/iru-rust-test/` and `target/nextest/` (gitignored). No source or test code is ever modified.
 
 == Execution flow
@@ -80,7 +87,8 @@ flowchart TD
     C --> D{"Cargo.lock\nout of date?"}
     D -- yes --> E["Stop: report Cargo.lock\nout of date, ask before updating"]
     D -- no --> F["Pick runner:\nnextest if installed,\nelse cargo test"]
-    F --> G["Step 2: build command\n(project junit profile or\ninjected iru-rust-test profile)"]
+    F --> G0["Step 2a: terminal UI?\nset UI_SCREENSHOTS_DIR, clear on full run,\nread accessibility level"]
+    G0 --> G["Step 2: build command\n(project junit profile or\ninjected iru-rust-test profile)"]
     G --> H{"ignored: include\nor only?"}
     H -- no --> J["Run tests and write logs"]
     H -- yes --> I["Step 3: check Docker and\nacquire .integration-test.lock"]
@@ -89,7 +97,8 @@ flowchart TD
     K -- yes --> J
     J --> M["Step 4: run doctests with\ncargo test --doc\n(skip bin-only crates)"]
     M --> N["Step 5: interpret exit codes,\nparse JUnit or libtest output"]
-    N --> O["Release the lock if acquired"]
+    N --> N2["Step 2a: validate capture names,\ncount captures and a11y rule ids"]
+    N2 --> O["Release the lock if acquired"]
     O --> P["Step 6: report counts, doctests,\nnothing-matched, failures,\nenvironment problems"]
     L --> P
 ....

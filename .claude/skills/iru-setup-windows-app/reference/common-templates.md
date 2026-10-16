@@ -80,6 +80,7 @@ is written only when the condition holds. Every file below was rendered and buil
     <PackageVersion Include="coverlet.collector" Version="__CoverletVersion__" />
     <!-- >>> flaui -->
     <PackageVersion Include="FlaUI.UIA3" Version="__FlaUIVersion__" />
+    <PackageVersion Include="Axe.Windows" Version="__AxeWindowsVersion__" />
     <!-- <<< flaui -->
   </ItemGroup>
 </Project>
@@ -471,6 +472,42 @@ public sealed class MainController : IDisposable
     private void OnNameInputChanged(object? sender, EventArgs e) => _view.SetGreetEnabled(CanGreet());
 
     private void OnModelChanged(object? sender, EventArgs e) => _view.ShowMessage(_model.Message);
+}
+```
+
+### `.ui-quality.yml`
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: __Accessibility__      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
+The catalog's UI contract settings, read by the UI tests (`UiQuality.cs`) and the coding/test skills — exactly the
+contract's shape. Written for every `ui` (also with `ui-tests: none`, so UI tests added later pick it up);
+`__Accessibility__` is Step 0's `accessibility` (default `enforce`).
+
+### `src/__AppName__/UiTestOptions.cs`
+
+```csharp
+namespace __RootNamespace__;
+
+/// <summary>
+/// Launch arguments the UI tests pass to render the app in a fixed layout direction and theme
+/// (<c>--ui-direction=ltr|rtl</c>, <c>--ui-theme=light|dark</c>); without them the app follows the system.
+/// </summary>
+internal static class UiTestOptions
+{
+    /// <summary>Gets a value indicating whether <c>--ui-direction=rtl</c> was passed.</summary>
+    public static bool IsRightToLeft { get; } = Value("--ui-direction=") == "rtl";
+
+    /// <summary>Gets the <c>--ui-theme=</c> value (<c>light</c> or <c>dark</c>), or <see langword="null"/>.</summary>
+    public static string? Theme { get; } = Value("--ui-theme=");
+
+    private static string? Value(string prefix) =>
+        Environment.GetCommandLineArgs().Skip(1)
+            .FirstOrDefault(argument => argument.StartsWith(prefix, StringComparison.Ordinal))?[prefix.Length..];
 }
 ```
 

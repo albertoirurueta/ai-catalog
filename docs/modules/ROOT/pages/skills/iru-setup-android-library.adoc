@@ -16,13 +16,16 @@ wrapper (pinned to a run-time-resolved Gradle version and checksum), the root `b
 `settings.gradle.kts` / `gradle.properties` / `gradle/libs.versions.toml`, the `lib/` module (build script,
 ProGuard rules, manifests, Robolectric properties, `.gitignore`, one placeholder source + unit test +
 instrumented test), and an `app/` Jetpack Compose sample module that depends on `lib` and is genuinely a working
-Compose consumer, not just a declared-but-unused dependency. Every toolchain version (Gradle, AGP, Kotlin, Dokka,
+Compose consumer, not just a declared-but-unused dependency. The sample app also carries the catalog's UI-contract
+test scaffolding (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): a root `.ui-quality.yml`,
+Roborazzi plus Accessibility Test Framework dependencies, a shared `testing/UiScreenshots.kt` helper and a sample
+`GreetingTest.kt` capturing `.ui-screenshots/` across left-to-right/right-to-left × light/dark. Every toolchain version (Gradle, AGP, Kotlin, Dokka,
 Sonar/publish/Detekt/Spotless/Kover/JUnit-bridge plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK,
 Robolectric) is looked up at run time, falling back to the versions this skill recorded in September 2026 only if
 a live lookup fails. It gates several optional toggles (publish, Sonar, built-in Kotlin, JUnit major, coverage
 tool, static-analysis stack) that each add or remove specific blocks from the generated files. It announces whether
 it is scaffolding from scratch or updating an existing Gradle project; for each file group it owns that already
-exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `detekt.yml`) it warns and asks Update / Keep as
+exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `.ui-quality.yml`, `detekt.yml`) it warns and asks Update / Keep as
 is / Replace (and Stop on the first question), even under `mode: existing`, unless `on-existing` decides.
 
 == Purpose group
@@ -151,6 +154,12 @@ instead (unverified locally).
 `detekt.yml`) and Spotless (ktlint + license-header check). Unverified locally.
 |`lint`
 
+|`accessibility`
+|No
+|`enforce`/`report`/`off` — the automated accessibility level of the sample app's UI tests, written to
+`.ui-quality.yml`. Asked as a bounded choice when unresolved.
+|`enforce`
+
 |`mode`
 |No
 |`new`/`existing` — this catalog's shared front-door signal. `existing` no longer means "gap-fill silently": Step 1
@@ -177,7 +186,11 @@ orchestrator passes it only if it received it itself.
   repository root when `static-analysis: lint+detekt+ktlint`.
 * `app/` Jetpack Compose sample module: `build.gradle.kts`, `.gitignore`, `src/main/AndroidManifest.xml`, a real
   Compose `MainActivity.kt` (with a working `@Preview`), `values/strings.xml`, `values/colors.xml`,
-  `values/themes.xml`, `values-night/themes.xml`, and the adaptive launcher-icon drawables/mipmaps.
+  `values/themes.xml`, `values-night/themes.xml`, and the adaptive launcher-icon drawables/mipmaps; plus the UI-test
+  files under `src/test/`: `robolectric.properties`, `testing/UiScreenshots.kt` and the sample `GreetingTest.kt`
+  (Compose `Greeting(name)` is localized and documented as the contract's sample component).
+* `.ui-quality.yml` at the repository root (`accessibility`, `directions: [ltr, rtl]`, `themes: [light, dark]`), and
+  the `roborazzi*` and `androidx-ui-test-*` entries in `gradle/libs.versions.toml`.
 * A report of every resolved input, which optional blocks were included/omitted and why, which toolchain versions
   came from a live lookup versus the recorded fallback, whether the run scaffolded from scratch or updated an
   existing project, the action taken per file group (created / updated / replaced / kept as is, and whether the user

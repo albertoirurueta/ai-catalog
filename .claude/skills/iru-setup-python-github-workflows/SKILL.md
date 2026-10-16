@@ -14,7 +14,9 @@ description: >-
   single head / `downgrade base` round trip for FastAPI (`APP_DATABASE_URL`), `check --deploy --fail-level WARNING`
   with the production settings (`DJANGO_SECRET_KEY`/`DJANGO_ALLOWED_HOSTS`/`POSTGRES_*` or `DJANGO_SQLITE_PATH`)
   plus `migrate` / `migrate --check` for Django; with `ci-tests: full` **and** `database: postgresql` an integration
-  job running the testcontainers-backed `integration` marker; an unpushed container-image build check
+  job running the testcontainers-backed `integration` marker — for a Django project with the scaffold's browser UI
+  tier (`tests/ui/`, `ui` marker) the same job also installs Chromium, runs `pytest -m ui` and uploads
+  `.ui-screenshots/` as a 7-day artifact; an unpushed container-image build check
   when a `Dockerfile` ships; an optional SonarCloud/SonarQube job (`sonarqube-scan-action`, skipped on fork pull
   requests); and a docs job — Antora plus Sphinx API docs and the OpenAPI document under `api/` — deployed to GitHub
   Pages from the stable branch with `pages: yes` or uploaded as an artifact with `pages: no`); `release.yml` (not
@@ -220,7 +222,7 @@ With `distribution: none`, an existing `release.yml` is offered for removal (ask
 ## Step 3 — Templates
 
 Resolve every `<placeholder>` from Step 1. Comments marked `# fastapi`, `# django`, `# drf`, `# ninja`,
-`# ci-tests: full`, `# pages: yes|no`, `# sonar`, `# ruff-report`, `# sphinx`, `# openapi`, `# image`, `# postgresql`,
+`# ci-tests: full`, `# ui`, `# pages: yes|no`, `# sonar`, `# ruff-report`, `# sphinx`, `# openapi`, `# image`, `# postgresql`,
 `# database: sqlite`, `# matrix` are gates: keep what applies and **drop the rest together with these guidance comments** — a step that
 can never run is dead YAML.
 
@@ -574,7 +576,11 @@ shapes have no integration tests, and `pytest -m integration` would exit 5, "no 
 container-free tests only — the same rule the coding skills' group stage applies). Testcontainers finds the runner's
 Docker engine itself (ubuntu-latest ships it; Ryuk cleans up), so there is no `services:` block and no `DOCKER_HOST`
 tweak; the repository-wide `.integration-test.lock` the coding skills use is a local-machine concern and isn't needed
-on a fresh runner:
+on a fresh runner. The `# ui` steps (Django only, and only when the project has the scaffold's browser UI tier —
+`tests/ui/` plus the `ui` marker in `[tool.pytest.ini_options]`) reuse this job rather than adding one: the runner is
+already up and synced, so the UI tier costs only the Chromium download and a few browser minutes. Its conftest
+deselects `ui` tests from every other selection, so the `tests` job never needs a browser and the coverage gate keeps
+counting fast tests only:
 
 ```yaml
   integration:
@@ -595,13 +601,29 @@ on a fresh runner:
         run: uv sync --locked
       - name: Integration tests
         run: uv run pytest -m integration --junitxml=build/test-results/pytest-integration.xml
+      # ui — Django with the scaffold's browser UI tier (tests/ui/ + the `ui` marker) only.
+      - name: Install Chromium for the UI tests
+        run: uv run playwright install --with-deps chromium
+      # ui — screenshots go to .ui-screenshots/ (UI_SCREENSHOTS_DIR overrides); the accessibility level comes from
+      # .ui-quality.yml (enforce fails the step on any axe violation).
+      - name: UI tests
+        run: uv run pytest -m ui --junitxml=build/test-results/pytest-ui.xml
       - name: Upload the integration report
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: integration-report
-          path: build/test-results/pytest-integration.xml
+          path: build/test-results/pytest-integration.xml   # + build/test-results/pytest-ui.xml with the ui steps
           retention-days: 7
+      # ui
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-integration
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 ```
 
 Gating summary for `build.yml` — template selection per scaffold variant (`database` × `api`; the rows are what
@@ -612,12 +634,16 @@ Gating summary for `build.yml` — template selection per scaffold variant (`dat
 | FastAPI, `postgresql` | — | PostgreSQL service; `APP_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app`; the four Alembic steps | yes | Sphinx + `export_openapi.py` → `build/api-docs/openapi.json` |
 | FastAPI, `sqlite` | — | no `services:`; `APP_DATABASE_URL: sqlite+aiosqlite:///./build/ci.sqlite3`; "Create the SQLite directory" + the four Alembic steps (the scaffold's `env.py` already sets `render_as_batch` on SQLite) | **no** (exit 5) | same |
 | FastAPI, `none` | — | **no job** (no Alembic) | **no** (exit 5) | same |
-| Django, `postgresql`, `drf` | `manage.py check`, `makemigrations --check --dry-run`, `spectacular --validate --fail-on-warn` | PostgreSQL service; the `DJANGO_*` + `POSTGRES_*` lines; the four Django steps | yes | Sphinx + `spectacular … --file build/api-docs/openapi.yaml` |
-| Django, `postgresql`, `ninja` | `check`, `makemigrations --check`, Ninja `export_openapi_schema --api config.api.api` | same | yes | Sphinx + `export_openapi_schema … --output build/api-docs/openapi.json` |
+| Django, `postgresql`, `drf` | `manage.py check`, `makemigrations --check --dry-run`, `spectacular --validate --fail-on-warn` | PostgreSQL service; the `DJANGO_*` + `POSTGRES_*` lines; the four Django steps | yes, + the `# ui` steps when `tests/ui/` exists | Sphinx + `spectacular … --file build/api-docs/openapi.yaml` |
+| Django, `postgresql`, `ninja` | `check`, `makemigrations --check`, Ninja `export_openapi_schema --api config.api.api` | same | yes, + the `# ui` steps when `tests/ui/` exists | Sphinx + `export_openapi_schema … --output build/api-docs/openapi.json` |
 | Django, `sqlite`, any `api` | as the row for its `api` (`none` → only `check` + `makemigrations --check`) | no `services:`; replace the four `POSTGRES_*` lines with `DJANGO_SQLITE_PATH: build/ci.sqlite3`; "Create the SQLite directory" + the four Django steps | **no** (exit 5) | Sphinx (+ the `api`'s export; none for `api: none`) |
 
 Name the job honestly ("Migration checks (SQLite)" without the service). Then:
 
+- **UI tier** (`# ui`) — kept only for Django with `tests/ui/` and a registered `ui` marker, inside the `integration`
+  job; when kept, add `build/test-results/pytest-ui.xml` to the integration report's `path` (as a `|` list). FastAPI
+  and every variant without an `integration` job (SQLite, `ci-tests: unit`) get no UI steps and no new job — report
+  that the UI tier then runs only locally (`uv run pytest -m ui`).
 - **Flavor** — drop every `# django`/`# drf`/`# ninja` step and the `DJANGO_SETTINGS_MODULE` lines for FastAPI; drop
   the four Alembic steps and the `<db-url-env>` line for Django; "Create the SQLite directory" only for `sqlite`.
 - **`api`** (Django) — `drf` keeps "Validate the OpenAPI schema" + "Export the OpenAPI schema (drf-spectacular)";
@@ -1414,8 +1440,9 @@ Also:
   --list` (every location must agree and follow the `.dev0` convention). With Docker available, also the `migrations`
   job's commands, with exactly the job's `env:` values, against `docker run --rm -d -e POSTGRES_USER=postgres -e
   POSTGRES_PASSWORD=postgres -e POSTGRES_DB=app -p 5432:5432 postgres:18` (SQLite variants need no container) and,
-  with `ci-tests: full` + `database: postgresql`, `iru-python-test integration`; Docker unavailable → those jobs are
-  **unverified**, not failed. A workflow whose commands were never run is a guess.
+  with `ci-tests: full` + `database: postgresql`, `iru-python-test integration` (and, with the `# ui` steps,
+  `iru-python-test ui` after `uv run playwright install chromium`); Docker unavailable → those jobs are
+  **unverified**, not failed; no browser → the UI steps are **unverified**. A workflow whose commands were never run is a guess.
 - Never trigger `release.yml` or `sync.yml` for real as a test. Recommend a throwaway pre-release on a fork, or
   review of the first real release run.
 
@@ -1451,7 +1478,9 @@ Then summarize: scratch vs update and, per unit, **created / updated / replaced 
 stopped; flavor, `<image-name>`, primary Python and matrix (and where they came from); `visibility` (and its source)
 with the minutes note for private repositories; `ci-tests` (and for `full`, whether the matrix applies); the
 `migrations` job's shape (Alembic / Django, PostgreSQL / SQLite) or why it was omitted (FastAPI `database: none`);
-whether the `integration` job was added (`ci-tests: full` + `database: postgresql`) or why not; `pages`; `sonar` (+ keys) or
+whether the `integration` job was added (`ci-tests: full` + `database: postgresql`) or why not, and for Django
+whether it runs the browser UI tier and uploads `.ui-screenshots/` (the `ui-screenshots-integration` artifact) or why
+not (no `tests/ui/`, no integration job — then the UI tier is local-only); `pages`; `sonar` (+ keys) or
 why omitted; `distribution` (or why `release.yml` wasn't written); which security jobs were included; and every open
 gap (missing contract tooling, no Antora setup, no `Dockerfile`, README wording `sync_versions.py` won't match, patch
 releases the minor-bump default doesn't handle, a production-settings variable that needed a guessed dummy, the
@@ -1557,3 +1586,9 @@ Not verified locally: a run on GitHub itself (service containers, setup-uv cachi
 uploads, `gh release upload`, the sync PR), the Antora steps (identical to the other workflows skills, verified
 there), the container image build check (the `Dockerfile` belongs to the scaffold skills and is verified there),
 Dependabot's actual `uv`/`docker-compose` update runs, and SonarCloud ingestion of the Cobertura/JUnit/Ruff reports.
+
+The Django `# ui` steps (2026-10-16, `$TMPDIR/iru-verify/python/iru-setup-python-django/`): the rendered `integration`
+job with the Chromium install, `pytest -m ui`, the two-path report upload and the `ui-screenshots-integration` upload
+passed actionlint (Docker image) and a YAML parse; the commands themselves ran locally against the rendered Django
+scaffold (`pytest -m ui` 8 passed, 8 PNGs under `.ui-screenshots/screen/AdminLoginScreen/`). Not run on a GitHub
+runner — `playwright install --with-deps chromium` on `ubuntu-latest` is unverified here.

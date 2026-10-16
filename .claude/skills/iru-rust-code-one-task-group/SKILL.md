@@ -17,7 +17,10 @@ description: >-
   `iru-rust-coverage` (cargo-llvm-cov, container-free tests only, end-to-end runs of the binary included; `xtask`/
   `build.rs` and a truly thin `main.rs` reported "not measured" only when they aren't measurable), the full suite
   including doctests, and clippy + rustfmt + cargo-deny via `iru-rust-code-quality` diffed against that one baseline;
-  last, and only when the repository has them, the `#[ignore]`d container-backed tests (`iru-rust-test` with
+  for a bucket that added or changed terminal-UI screens/components, a UI stage checking that every one of them has
+  `.txt` captures in `.ui-screenshots/` for each of its states × `.ui-quality.yml` directions × themes and applying the
+  accessibility level (enforce → violations fail the bucket, report → listed); last, and only when the repository has
+  them, the `#[ignore]`d container-backed tests (`iru-rust-test` with
   `ignored: only`) serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file,
   stale after 60 minutes, bounded ~45-minute wait, released on every exit path, `lock: held` passed to the gate) —
   plain CLI end-to-end tests need no lock. Docker unavailable makes that stage "unverified", never silently skipped.
@@ -87,6 +90,10 @@ Detect once and reuse for every gate call below (the same facts `iru-rust-code-o
 - **Docs generation**: an `xtask` that writes committed generated docs (CLI reference `.adoc`/partial, man pages,
   completions) — look for its command in `.cargo/config.toml`, `xtask/src/main.rs`, the CI workflow, or a
   `README`/`CONTRIBUTING` note.
+- **Terminal UI**: `ratatui` in any member's dependencies, the TUI module (`src/tui/`), its capture helper
+  (`src/tui/ui_screenshots.rs`) and `.ui-quality.yml` at the repository root (missing = `accessibility: enforce`,
+  `directions: [ltr, rtl]`, `themes: [light, dark]`). Note whether the TUI has a `Theme` with light/dark palettes —
+  the themes 3.5a expects are the listed ones it defines plus `no-color` (only `no-color` without a palette).
 - **Docker**: `docker info` now (only matters when container-backed tests exist), recorded for 3.7.
 - **Bucket scope**, from each task's text (paths win; otherwise `iru-rust-code-one-task`'s Step 1 inference): the
   packages and files every task is expected to touch.
@@ -215,7 +222,27 @@ files, and manifests separately. Then run, in this order — **3.1–3.6 gate th
    ignored tests excluded. (Fallback: `cargo test --workspace --locked` then `cargo test --doc --workspace
    --locked`.) If everything passes, report back only that, with counts per target kind; otherwise only the failing
    test names, assertion lines and file:line, and whether any failure is a doctest."})`. Fix regressions and
-   re-invoke until green.
+   re-invoke until green. When Step 1 found a terminal UI, add `\nui: yes` to the args and ask for the UI-capture
+   summary too (directory cleared, captures per kind, malformed names, accessibility rule-id counts, level applied) —
+   this unfiltered run is the full UI run that clears and refills `.ui-screenshots/`.
+
+5a. **Terminal-UI captures and accessibility** — only when the bucket added or changed a TUI screen or component
+   (a file in the TUI module, a `Widget`/`StatefulWidget` impl, a screen's key handling); otherwise say "no UI
+   changes" in Step 5. Using 3.5's run (no extra test run):
+
+   - **Coverage of the matrix**: for every screen/component the bucket added or changed (the type names from the
+     tasks' `Screen › Region › Component` trees, cross-checked against the diff), list
+     `.ui-screenshots/<screen|component>/<Id>/` (`find … -name '*.txt'`). Every visual state its doc comment lists
+     must have a capture, and every captured `<state>` must exist for each `.ui-quality.yml` direction × each expected
+     theme (Step 1). A missing combination or an Id with no directory → add the capture through the task that owns
+     the component, re-run 3.3 and 3.5, re-check. Flows the bucket changed need their `flow/<name>/NN-<step>` steps.
+   - **Malformed names** reported by the gate → fix the test that wrote them (the documentation skills ignore them).
+   - **Accessibility at the `.ui-quality.yml` level**: `enforce` → a violation already failed a test in 3.5 — fix the
+     component (never weaken the check); `report` → record the rule-id counts from the gate's summary for Step 5;
+     `off` → say "accessibility checks off". These are the asserted TUI checks (`tui-color-only`, `tui-help-line`,
+     `tui-keyboard`, `tui-no-color`) — no automated audit exists for terminal UIs; say so.
+   - Nothing here needs a terminal, device or container, so this stage is never "unverified" for environment
+     reasons. A PNG next to a `.txt` is optional and never required.
 
 6. **Code quality — clippy, rustfmt, cargo-deny**, diffed against Step 1's baseline, via `iru-gate-runner`:
    `Agent({description: "Check for new quality issues in task group", subagent_type: "iru-gate-runner", prompt:
@@ -308,6 +335,8 @@ per-file coverage and the container-backed result separately:
 ```
 - [x] Task 3. **Add `list` command with `--limit`/`--cursor`** — src/commands/list.rs (94% lines), src/cli.rs (100%);
   9 e2e cases + golden list-default.json; no new clippy/rustfmt/cargo-deny issues; container tests: none in repo.
+- [x] Task 4. **Add order list screen** — src/tui/orders.rs (91% lines); UI: OrdersScreen + OrderRow captured
+  (5 states × ltr/rtl × no-color), accessibility enforce: 0 violations.
 ```
 
 If a stage was unverified, say so with the reason — `container tests unverified (Docker unavailable)` or
@@ -327,6 +356,10 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
 - **The results** of 3.3 and 3.5 (doctests included), the generated-docs regeneration (files changed, or "no
   command-tree change"), and **the container-backed result** (3.7): passed, failed-and-fixed, **unverified** with
   the reason, or "no container-backed tests" — never let "unverified" read as "passed".
+- **The UI stage** (3.5a): per added/changed screen/component the states × directions × themes captured (or the
+  gaps fixed), malformed names, the accessibility level applied and its result (violations fixed under `enforce`,
+  rule-id counts under `report`, "off"), and that the checks are asserted TUI checks rather than an automated audit
+  — or "no UI changes".
 - **How the lock behaved** whenever it wasn't an immediate uncontended acquire (wait time, a broken stale lock and its
   owner text, a timeout) and confirmation it was released.
 - Whether a new quality issue was left in place (with the `#[expect]` reason), any new `cargo-deny` finding from an
@@ -352,6 +385,9 @@ was verified, in `$TMPDIR/iru-verify/cli/rust-coding/` with Rust 1.99.1, cargo-n
 - Concurrent `cargo check` runs from parallel agents serialize on Cargo's build-directory lock ("Blocking waiting for
   file lock") rather than failing; concurrent edits to `Cargo.toml`/`Cargo.lock` are why dependency-changing tasks
   are forced sequential.
+- Stage 3.5a (UI captures and accessibility, added for the UI contract) was written without a Rust toolchain on the
+  authoring machine: the capture-name validation it relies on (in `iru-rust-test`) was exercised with Python, the
+  Rust side is unverified.
 - **Unverified locally**: the lock path with real testcontainers-rs tests (no container-backed tests in the
   verification crate), the `xtask` docs regeneration step (owned by the scaffold), cargo-deny findings in a diff, and
   Windows/Linux hosts (only cross-`cargo check`ed from macOS).

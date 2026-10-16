@@ -1,6 +1,6 @@
 = Android Code One Task Group
-:description: Implements one bucket of Android/Kotlin tasks per Gradle module, then validates the whole group once for license headers, KDoc, tests, coverage, quality.
-:keywords: iru-android-code-one-task-group, claude code skill, android, kotlin, gradle, jacoco, dokka, detekt, lint, code quality, implementation plan
+:description: Implements one bucket of Android/Kotlin tasks per Gradle module, then validates once for license, KDoc, tests, coverage, quality and the UI contract.
+:keywords: iru-android-code-one-task-group, claude code skill, android, kotlin, gradle, jacoco, dokka, detekt, lint, ui screenshots, accessibility, implementation plan
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -8,7 +8,7 @@ Implement one bucket of Android/Kotlin tasks from a plan's task group end to end
 (`lib`/`app`) the bucket touches, capture a single pre-change quality baseline, run `iru-android-code-one-task`
 once per task (in parallel when the group allows it), then validate the entire bucket once per touched module —
 license headers, KDoc, scoped unit tests, an 80% unit-test line-coverage bar, a full-suite run, and a code-quality
-regression check.
+regression check — plus, when the bucket touched UI, a UI stage (Robolectric/Roborazzi screenshots and accessibility checks).
 
 == Purpose
 
@@ -25,8 +25,12 @@ clobbered it, and notifies the user that implementation landed. Once every non-b
 validates the whole bucket in one pass, per touched module: license headers, KDoc (via `iru-android-dokka`), the
 affected unit-test classes, unit-test line coverage against an 80% bar (instrumented coverage is reported for
 information only and never counted toward it), a full `./gradlew test` run, and a quality-regression check
-against its one baseline. A failure traced to a specific task sends that task back for a fix and a re-run of the
-affected checks, rather than re-validating the whole bucket.
+against its one baseline. When the bucket added or changed a screen, component or list, a UI stage (Step 3.7) also reads `.ui-quality.yml`,
+runs the `ui` selector of `iru-android-test`, checks that `.ui-screenshots/` holds a capture for every state ×
+direction × theme, and applies the accessibility level (`enforce`/`report`/`off`); an on-device flow stage with no
+attached device or emulator is reported unverified. A failure traced to a specific task sends that task back for a fix
+and a re-run of the affected checks, rather than re-validating the whole bucket. The UI contract is described in
+xref:guides/building-user-interfaces.adoc[Building user interfaces].
 
 Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-code-one-task-group.adoc[] instead.
 
@@ -69,6 +73,9 @@ verdict and any relevant "Current code state" context.
   outcome once bucket-wide validation passes.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group validation
   completes.
+* For UI tasks, the UI stage outcome: screenshot counts per kind under `.ui-screenshots/`, missing captures,
+  accessibility violations and the level applied, with the result appended to the task's note in
+  `implementation_plan.md`.
 * A summary handed back to the caller (`iru-code-one-task-group`): per task, its module, files touched, tests
   added/updated, unit-test coverage achieved, code-quality outcome, which of `./gradlew test`/`testDebugUnitTest`
   actually ran, and any task that stopped on a blocker.
@@ -85,7 +92,7 @@ flowchart TD
     C -- no --> E["Step 2: invoke android-code-one-task\nfor each task, one at a time"]
     D --> F["Confirm/backfill each task's box\n(set by android-code-one-task itself); notify user"]
     E --> F
-    F --> G["Step 3: validate the whole bucket once,\nper touched module — license headers,\nKDoc, scoped unit tests, 80% unit-test\ncoverage, full suite, quality vs. baseline"]
+    F --> G["Step 3: validate the whole bucket once,\nper touched module — license headers,\nKDoc, scoped unit tests, 80% unit-test\ncoverage, full suite, quality vs. baseline,\nUI stage when UI was touched\n(ui tests, captures, accessibility)"]
     G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
     H --> G
     G -- clean --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
@@ -113,6 +120,8 @@ directly, so verbose report output stays out of this skill's own context:
   touched module.
 * xref:skills/iru-android-coverage.adoc[] — Step 3.4, unit-test line/branch coverage for every changed/new class,
   per touched module.
+* xref:skills/iru-android-test.adoc[] with its `ui` selector — Step 3.7 (only when the bucket touched UI), the
+  Robolectric/Roborazzi JVM UI tests and, when a device is attached, the on-device flow tests.
 * Step 3.5 runs the plan's literal `./gradlew test` (or `testDebugUnitTest` as a lighter-weight substitute)
   directly for full-suite regression coverage — not a catalog skill.
 

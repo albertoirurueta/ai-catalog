@@ -9,7 +9,9 @@ description: >-
   developer name/email/organization URL), the macOS-specific inputs (`min-macos`, `sandbox`, `category`), and the
   shared pipeline parameters (integration branch `develop`, stable branch `main`, `runner` `macos-26`,
   `open-source`, the repository `visibility` (detected via `gh repo view` or asked), `ci`, `macos-ci` (when the
-  ~10×-cost macOS jobs run: `all`/`stable`), `ci-tests` (`unit`, or `full` = also the XCUITest UI tests), `pages`
+  ~10×-cost macOS jobs run: `all`/`stable`), `ci-tests` (`unit`, or `full` = also the XCUITest UI tests),
+  `accessibility` (`enforce`/`report`/`off` — the UI tests' automated accessibility level, written by the scaffold to
+  `.ui-quality.yml`), `pages`
   (GitHub Pages vs. a workflow artifact for the Antora + DocC docs), `distribution` (`none`/`internal` = Developer
   ID signed, notarized and stapled DMG on GitHub Releases/`store` = Mac App Store via App Store Connect), `sonar` plus
   its detail keys — each question stating the Actions-minutes / macOS-multiplier / SonarCloud / Pages cost facts for
@@ -19,7 +21,8 @@ description: >-
   `iru-isolated-skill-executor`, so nothing is asked twice — skipping the workflows step entirely (security block
   included) when `ci: no`. Invoke as `/iru-setup-macos-repository`, optionally with `args` (`key: value` lines) to
   pre-resolve `ui`, `architecture`, `branching`, `mode` (`new`/`existing`), `open-source`, `visibility`, `ci`,
-  `macos-ci`, `ci-tests`, `pages`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only when supplied),
+  `macos-ci`, `ci-tests`, `pages`, `accessibility`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only
+  when supplied),
   `distribution`, `sandbox`, `min-macos`, `category`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `integration-branch`, `stable-branch`, `runner`, `xcode-version`, and every identity field,
   skipping the matching question. On an existing repository every component sub-skill warns about the prior setup
@@ -86,7 +89,8 @@ Recognized keys:
 - **Shape and mode**: `ui` (`swiftui`/`appkit`), `architecture` (`mvvm`/`mvc`), `branching` (`gitflow`/`main-only`),
   `mode` (`new`/`existing`).
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci`
-  (`yes`/`no`), `macos-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing`
+  (`yes`/`no`), `macos-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `accessibility`
+  (`enforce`/`report`/`off` — the UI tests' automated accessibility level, written to `.ui-quality.yml`), `on-existing`
   (`ask`/`keep`/`update`/`replace` — never asked; forwarded to the component sub-skills only when it arrived here via
   `args`), `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set,
   `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`, `runner`
@@ -159,7 +163,7 @@ Right after resolving `mode`, print a short **Setup mode** statement:
   | Core package | `Packages/Core/Package.swift` + `Sources/Core/{Models,Services,ViewModels or Controllers}` + `Tests/CoreTests` |
   | App target | `App/Sources/`, `App/Resources/` (entitlements, asset catalog, Info.plist), `App/Tests/`, `App/UITests/` |
   | Distribution files | `ExportOptions-*.plist`, `scripts/make-dmg.sh` |
-  | Quality config | `.swiftlint.yml`, `.swift-format` |
+  | Quality config | `.swiftlint.yml`, `.swift-format`, `.ui-quality.yml` |
   | Sonar config | `sonar-project.properties` |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | `.gitignore` | root `.gitignore` |
@@ -242,6 +246,11 @@ current pricing" (verified October 2026 against docs.github.com) and tell the us
     app target's unit tests; the XCUITest UI tests stay local."
   - **Unit + UI tests** (`full`, recommended for public) — "Also the XCUITest UI tests, which launch the app on the
     runner's desktop — complete verification, several more macOS minutes per run."
+- **accessibility** — "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (`enforce`: every
+  `performAccessibilityAudit()` issue fails the UI tests) / **Report only** (`report`: issues listed, never failing) /
+  **Off** (`off`: the audit isn't run; labels, contrast and keyboard access are still coded). The scaffold writes it to
+  `.ui-quality.yml`; the UI tests capture the main window in left-to-right/right-to-left × light/dark into the
+  gitignored `.ui-screenshots/`, uploaded by CI as a 7-day artifact.
 - **pages** (only with `ci: yes`) — public: **yes** without asking (say so in the report). Private/internal: ask —
   **No (Recommended)** ("CI still builds the Antora + DocC docs and uploads them as a workflow artifact; nothing is
   published") vs **Yes** ("requires GitHub Pro, Team, or Enterprise Cloud; the site is PUBLIC unless you're on
@@ -277,7 +286,7 @@ Agent({
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     visibility: <visibility>\\nci: <ci>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\n
     sonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\ndistribution: <distribution>\\n
-    mode: <mode>\\non-existing: <..., only if supplied via args>\"}). Report back: whether it scaffolded from scratch
+    accessibility: <accessibility>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}). Report back: whether it scaffolded from scratch
     or updated an existing project, the action taken per file group (created / updated / replaced / kept as is, or
     that the user chose Stop), which versions came from a live lookup versus the recorded fallback, the min-macos it
     resolved, and the pass/fail/unverified result of each verification command it ran (xcodegen, build-for-testing,
@@ -369,7 +378,8 @@ generate` + Xcode, or `xcodebuild -scheme <AppName>`).
 
 Summarize all six delegated skills together: repeat the **Setup mode**, the resolved `ui`, `architecture`,
 `branching` and `mode`, the app identity and license, and the pipeline parameters actually applied. Then a
-per-component table — `project.yml`, `Packages/Core`, the app target, distribution files, quality config, Sonar
+per-component table — `project.yml`, `Packages/Core`, the app target, distribution files, quality config (incl.
+`.ui-quality.yml`), Sonar
 config, the Antora site, `.gitignore`, each workflow file + `sync_versions.py`, `.github/dependabot.yml`,
 `CHANGELOG.md`, `README.md` — with the action taken for each: **created / updated / replaced / kept as is / skipped
 (ci: no)** (or not reached, after a Stop), and for anything kept as is, the mismatches its sub-skill listed.
@@ -382,6 +392,8 @@ State explicitly what was wired or deliberately omitted, and why:
 - **`ci`**: with `no`, no workflows/`security.yml`/Dependabot were generated.
 - **`macos-ci`** / **`ci-tests`**: when the macOS job runs and whether it runs the XCUITest UI tests, restating the
   ~10× macOS cost on private repositories.
+- **`accessibility`**: the level written to `.ui-quality.yml` (`enforce`/`report`/`off`) and whether it came from
+  `args` or the user.
 - **`pages`**: `yes` (Antora + DocC deployed to GitHub Pages) or `no` (uploaded as a workflow artifact).
 - **`distribution`**: which release job exists (Developer ID + notarized DMG, or App Store Connect upload) and the
   signing secrets it needs.

@@ -14,7 +14,11 @@ description: >-
   `next typegen` + `tsc --noEmit` via `iru-typescript-code-quality` diffed against the baseline, then one
   `next build` whose route table (static/SSG/dynamic/partial-prerender symbols) is parsed for the bucket's routes and
   compared against the baseline table and each task's declared intent, flagging any route whose rendering mode
-  changed unexpectedly, and last the Playwright end-to-end suite via `iru-typescript-test` with the `e2e` selector.
+  changed unexpectedly, and last the Playwright end-to-end suite via `iru-typescript-test` with the `e2e` selector —
+  which, when the bucket touched UI, is also the UI stage of the catalog's UI contract: the component-gallery and
+  screen/flow specs run, every added/changed page and Client Component must have captures in `.ui-screenshots/` for
+  each visual state × `.ui-quality.yml` direction × theme, and the axe results are applied at the configured
+  `enforce`/`report`/`off` level.
   Because `next build` refuses to run twice in one project and Playwright's web server builds and serves the same
   app, the build and e2e stages are serialized repository-wide behind the same atomic `mkdir`-based
   `.integration-test.lock` as `iru-java-springboot-code-one-task-group` (owner file, stale after 60 minutes, give up
@@ -315,7 +319,21 @@ run and an explicit "unverified" when it can't.**
    })
    ```
    Run it on its own, never alongside another build- or server-running agent; `run_in_background: false` is what
-   keeps the lock meaningful.
+   keeps the lock meaningful. Check **every** `webServer` port the config lists (the component gallery's Vite server,
+   e.g. 3100, as well as the production server) before running.
+
+   **UI stage** — when the bucket added or changed a page, layout, component, story, style or UI spec, this same run
+   is the UI contract's stage (`iru-nextjs-code-one-task`'s `reference/ui-contract.md` §6–§8); also ask the agent
+   above to report the screenshot count per kind, malformed screenshot names, accessibility violations (count + rule
+   ids) and the `.ui-quality.yml` level the gate applied. Then, still holding the lock:
+   - **Matrix check** — for every page and component the tasks' decomposition trees name as added/changed, and each
+     visual state their stories/specs cover, `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>*.png` must
+     exist for every direction × theme in `.ui-quality.yml` (defaults `[ltr, rtl]` × `[light, dark]`). A missing cell
+     is a gap: add the story/spec through the owning task and re-run.
+   - **Accessibility** — `enforce`: every violation is a failure to fix (markup, label, contrast token) and re-run;
+     `report`: listed in Steps 4–5, not failing; `off`: say so.
+   - No component project/gallery in the config (only page-level e2e) → component captures are **unverified (no
+     component gallery)**; no Playwright at all → the whole UI stage is **unverified (no Playwright)** — never passed.
 
    - **Environment failure** → **unverified** with the reason (for a missing browser, tell the user the exact
      `npx playwright install <browser>` they can run). Don't debug infrastructure on the bucket's time.
@@ -347,7 +365,8 @@ classification the build confirmed:
   e2e todos.spec.ts passed.
 ```
 
-If the build or e2e stage was unverified, say so with the reason (`e2e unverified (Playwright browser missing)`,
+For a task that touched UI, add the UI outcome to its note (`UI: OrderList 3 states × 2 dirs × 2 themes captured,
+axe clean (enforce)` or `UI unverified (no component gallery)`). If the build or e2e stage was unverified, say so with the reason (`e2e unverified (Playwright browser missing)`,
 `build unverified (DATABASE_URL not set)`, `lock held by another group`) — silence reads as a pass. Confirm the lock
 is released before writing these notes; if a failure path skipped the release, release it now. Then notify the user
 that group validation completed, summarizing the bucket-wide result. Leave blocked tasks unchecked with their
@@ -368,6 +387,9 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
   glob.
 - **The e2e result** (Step 3.8): passed, failed-and-fixed, flaky, not configured, or **unverified** with the reason.
   Never let "unverified" read as "passed".
+- **The UI stage** (Step 3.8), for UI tasks: each task's `Screen › Region › Component` tree, the screenshot count per
+  kind, matrix cells still missing (should be none), malformed names, and accessibility violations (rule ids) at the
+  `.ui-quality.yml` level applied — or **unverified** with the reason.
 - **How the lock behaved** whenever it wasn't an immediate uncontended acquire: wait time, a broken stale lock (and
   its owner text), a timeout — and confirmation it was released. Build+e2e is the pipeline's serial stage; several
   Next.js groups in a plan means wall-clock time the caller can't parallelize away.

@@ -97,12 +97,16 @@ for issue in root.findall("issue"):
     if scope and scope not in f:
         continue
     print(f"{f}:{loc.get('line') if loc is not None else '?'} [{issue.get('severity')}] "
-          f"{issue.get('id')}: {issue.get('message')}")
+          f"{issue.get('category')}/{issue.get('id')}: {issue.get('message')}")
 ```
 `severity` is one of Lint's own four levels: `Fatal`, `Error`, `Warning`, `Informational` — report counts broken
 down by this exact set, not collapsed into a generic error/warning pair. An `<issue>` can carry more than one
 `<location>` (a secondary location explaining the primary one); the first is the reportable file:line, read
-further ones only if the message references "also see"/similar.
+further ones only if the message references "also see"/similar. Each `<issue>` also carries a `category` attribute
+(`Correctness`, `Performance`, `Usability:Icons`, `Accessibility`, …) — keep it: the `Accessibility` issues
+(`ContentDescription`, `ClickableViewAccessibility`, `LabelFor`, `KeyboardInaccessibleWidget`, …) are what the catalog's UI contract asks to see called out (verified: an
+`ImageView` without `contentDescription` reported `id="ContentDescription" severity="Warning"
+category="Accessibility"`).
 
 **Detekt** (Checkstyle format) — `<module>/build/reports/detekt/detekt.xml`:
 
@@ -166,7 +170,9 @@ severity breakdown (Lint: Fatal/Error/Warning/Informational counts; Detekt/ktlin
 
 **Report**: state an overall total across all tools at the top, then per tool: whether it ran or was skipped as
 "not wired" (Step 1), a total issue count, the severity breakdown, and one line per id/rule bucket with its count
-and (for a scope smaller than the whole module) the file:line list.
+and (for a scope smaller than the whole module) the file:line list. For Android Lint, add one **Accessibility** line — the count of
+`category="Accessibility"` issues and their ids (or "0 accessibility issues") — even when it is zero, so a UI
+change's accessibility lint result is always visible.
 
 **Baseline diff** — when the prompt supplies a baseline (a prior run's per-tool/per-id counts or itemized list,
 the same contract `iru-java-code-one-task-group`/`iru-typescript-code-one-task-group` use for their language's

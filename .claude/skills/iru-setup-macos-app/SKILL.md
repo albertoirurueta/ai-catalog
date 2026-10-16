@@ -14,7 +14,10 @@ description: >-
   `appkit` (programmatic: `main.swift` + `AppDelegate`, the main menu built in code, `NSWindowController` +
   `NSViewController` with Auto Layout in `loadView()`; `mvc` Cocoa controller core or `mvvm` with AppKit
   Observation tracking in `viewWillLayout()`); a `--uitesting` launch argument and accessibility identifiers on
-  every control; an empty AppIcon/AccentColor asset catalog; `ExportOptions-*.plist` per `distribution`
+  every control; per the catalog's UI contract, a `.ui-quality.yml` at the root, the shared
+  `App/Tests/Support/UIScreenshots.swift` capture helper compiled into both test targets, and UI tests capturing the
+  main window in every left-to-right/right-to-left × light/dark cell into `.ui-screenshots/` plus a
+  `performAccessibilityAudit()` test at the configured level; an empty AppIcon/AccentColor asset catalog; `ExportOptions-*.plist` per `distribution`
   (`none` = copy-app export, `internal` = Developer ID, `store` = App Store Connect upload); `scripts/make-dmg.sh`
   (hdiutil UDZO + optional codesign); `.swiftlint.yml` (with `missing_docs`), `.swift-format`, and
   `sonar-project.properties` (omitted when `sonar: none`). The generated `.xcodeproj` is never committed. Invoke as
@@ -23,7 +26,8 @@ description: >-
   `generator` (`xcodegen` only), `sandbox` (`yes`/`no`), `version`, `build-number`, `category`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `sonar`
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
-  `branching`, `mode` (`new`/`existing`) and `on-existing` (`ask`/`keep`/`update`/`replace`) — so
+  `branching`, `accessibility` (`enforce`/`report`/`off`, default `enforce`), `mode` (`new`/`existing`) and
+  `on-existing` (`ask`/`keep`/`update`/`replace`) — so
   `iru-setup-macos-repository` can supply them without re-prompting; stand-alone it asks `open-source` first and
   derives the `sonar` default from it. Announces whether it is scaffolding from scratch or updating; for every file
   group it owns that already exists it warns and asks Update / Keep as is / Replace / Stop (unless `on-existing`
@@ -104,6 +108,7 @@ sonar-project-key: example-org_my-mac-app
 sonar-host-url: https://sonarcloud.io
 distribution: internal
 branching: gitflow
+accessibility: enforce
 mode: new
 on-existing: ask
 ```
@@ -126,6 +131,7 @@ Recognized keys (every key found is resolved — skip its question in Step 2):
 | `open-source`, `visibility`, `ci`, `sonar` (+ coordinates) | the `sonar` recommendation, as in `iru-setup-kmp-app` |
 | `distribution` | `none` (copy-app export, local/QA builds) / `internal` (Developer ID + notarized DMG on GitHub Releases) / `store` (Mac App Store via App Store Connect); default `internal` (a notarized DMG on GitHub Releases is the natural public download, open source or not; `store` only when asked) |
 | `branching` | `gitflow` / `main-only` — informational: the macOS app carries no pre-release marker in-tree (`iru-swift-bump-version` Step 5), so the files are identical either way |
+| `accessibility` | `enforce` (default) / `report` / `off` — the UI tests' automated accessibility level, written to `.ui-quality.yml` (UI contract §8) |
 | `mode`, `on-existing` | as in every catalog setup skill (default `ask`) |
 
 Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`,
@@ -138,20 +144,21 @@ Orchestrators forward `on-existing` only when their own `args` received it.
 Check for every file Step 6 would write: `project.yml`, `App/Sources/**`, `App/Resources/**`, `App/Info.plist`,
 `App/Tests/**`, `App/UITests/**`, `Packages/Core/Package.swift`, `Packages/Core/Sources/**`,
 `Packages/Core/Tests/**`, `ExportOptions-*.plist`, `scripts/make-dmg.sh`, `.swiftlint.yml`, `.swift-format`,
-`sonar-project.properties`, plus any committed `*.xcodeproj`/`*.xcworkspace`, `Project.swift`, root `Package.swift`
+`.ui-quality.yml`, `sonar-project.properties`, plus any committed `*.xcodeproj`/`*.xcworkspace`, `Project.swift`, root `Package.swift`
 and `fastlane/`. Then tell the user which of these this run is:
 
 - **Scaffolding from scratch** — none exist: go to Step 2.
 - **Updating an existing macOS app** — any exists: warn, listing every file found by path, that each existing file
   group is decided individually (missing files are still created). Groups (only those with a file present):
   **`project.yml`**, **`Packages/Core/Package.swift`**, **entitlements + asset catalog**, **export options +
-  `scripts/make-dmg.sh`**, **quality config** (`.swiftlint.yml`, `.swift-format`), **`sonar-project.properties`**,
+  `scripts/make-dmg.sh`**, **quality config** (`.swiftlint.yml`, `.swift-format`, `.ui-quality.yml`),
+  **`sonar-project.properties`**,
   and **the source skeleton** (`App/Sources`, `App/Tests`, `App/UITests`, `Packages/Core/Sources`/`Tests`). Unless
   `on-existing` decides, ask with `AskUserQuestion`, one question per group (batch up to 4 per call), naming each
   concrete conflict with this run's choices (e.g. "`project.yml` has no `ENABLE_APP_SANDBOX` but you chose
   `sandbox: yes`", "`Packages/Core/Sources/Core/Controllers/` exists but you chose `architecture: mvvm`",
   "`sonar-project.properties` exists but you chose `sonar: none`", "`MARKETING_VERSION` is `1.2.0-beta` — this
-  scaffold keeps it numeric"):
+  scaffold keeps it numeric", "`.ui-quality.yml` says `accessibility: off` but you chose `enforce`"):
   - **Update (Recommended for `project.yml`, `Package.swift`, configs)** — "Merge: add what's missing and correct
     outdated parts using this skill's template as reference (targets, scheme test targets incl.
     `package: Core/CoreTests`, `settings.base` keys, hardened runtime/sandbox, `INFOPLIST_KEY_*`, rules); keep every
@@ -161,7 +168,8 @@ and `fastlane/`. Then tell the user which of these this run is:
     changes, but they may stay out of date or disagree with this run's choices — the report lists each mismatch."
   - **Replace** — "Regenerate from the template. Matches the house pattern exactly, but every customization is
     lost (recoverable only from git history)." Never the default. Even on Replace, never overwrite a Swift source
-    file unless its content exactly matches this skill's original template.
+    file unless its content exactly matches this skill's original template (an untouched pre-UI-contract
+    `App/UITests/<AppName>UITests.swift`, without the capture and audit tests, counts — Update may upgrade it).
   - **Stop** (first question only) — "End this skill now without changing any file." Report and end.
 
   When updating, read the current app name, bundle id, team id, deployment target, versions and the `ui`/
@@ -212,6 +220,11 @@ Then **sandbox** (unless resolved): **Yes (Recommended)** — required for the M
 builds too (irurueta docs: apps/apple/macos.adoc, "The App Sandbox"); **No** — only for tools that need
 unrestricted file/process access. `sandbox: no` + `distribution: store` is contradictory: warn and ask again.
 
+Then **accessibility** (unless resolved), `AskUserQuestion` "Automated accessibility checks in UI tests?":
+**Enforce (Recommended)** (`enforce` — every `performAccessibilityAudit()` issue fails the UI tests) / **Report
+only** (`report` — issues attached and listed, never failing) / **Off** (`off` — the audit test skips; labels,
+contrast and keyboard access are still coded). Written to `.ui-quality.yml`.
+
 Then `open-source`, `sonar`, `distribution` (skip any resolved), exactly as `iru-setup-kmp-app` Step 2 does
 (SonarCloud recommended only for public + open source; `ci: no` → recommend `none`). `distribution` explains:
 `none` → `ExportOptions-copy.plist` (copy-app export, unsigned/ad-hoc, local QA — Gatekeeper blocks it when
@@ -256,6 +269,8 @@ Read the reference files (table above). Placeholders:
 | `<developer-name>` / `<year>` | Step 2 / current year (copyright line) |
 | `<xcode-version>` / `<swift-docc-plugin-version>` | Step 4 |
 | `<sonar-organization>` / `<sonar-project-key>` / `<sonar-host-url>` | Step 2 |
+| `<accessibility>` | Step 0/2 (`enforce` by default) — `.ui-quality.yml` |
+| `<ScreenType>` | the main window's content type, the UI contract `<Id>` of its captures: `ContentView` (`swiftui`), `MainViewController` (`appkit`) |
 
 Directory layout produced (the **contract** the Swift coding skill detects):
 
@@ -270,7 +285,8 @@ App/Resources/<AppName>.entitlements         App Sandbox (sandbox: yes) — CODE
 App/Resources/Assets.xcassets/               AppIcon (empty placeholder), AccentColor
 App/Info.plist                               only for observation-tracking-opt-in (NSObservationTrackingEnabled)
 App/Tests/                                   <AppName>Tests (Swift Testing, hosted by the app)
-App/UITests/<AppName>UITests.swift           XCUITest
+App/Tests/Support/UIScreenshots.swift        UI contract helper (also compiled into <AppName>UITests)
+App/UITests/<AppName>UITests.swift           XCUITest: behaviour + window captures (ltr/rtl × light/dark) + audit
 Packages/Core/Package.swift                  library Core, test target CoreTests, swift-docc-plugin
 Packages/Core/Sources/Core/Core.docc/Core.md DocC landing page
 Packages/Core/Sources/Core/Models/           Greeting
@@ -281,12 +297,13 @@ Packages/Core/Tests/CoreTests/               Swift Testing, 100% line coverage o
 ExportOptions-copy.plist | ExportOptions-developer-id.plist | ExportOptions-app-store.plist   per distribution
 scripts/make-dmg.sh                          UDZO disk image from an exported .app (+ optional codesign)
 .swiftlint.yml  .swift-format                quality configs
+.ui-quality.yml                              UI contract settings (accessibility level, directions, themes)
 sonar-project.properties                     sonar ≠ none
 ```
 
 `Packages/Core` never imports AppKit or SwiftUI; `GreetingView` is the protocol the AppKit `NSViewController`
-conforms to (`mvc`). `.xcodeproj`, `build/`, `DerivedData/`, `*.xcarchive`, `*.dmg` and `.build/` are
-`iru-setup-swift-gitignore`'s job.
+conforms to (`mvc`). `.xcodeproj`, `build/`, `DerivedData/`, `*.xcarchive`, `*.dmg`, `.build/` and `.ui-screenshots/`
+are `iru-setup-swift-gitignore`'s job.
 
 ## Step 6 — Scaffold the project
 
@@ -295,7 +312,8 @@ showing `git diff --no-index <current> <draft>`; Replace → overwrite within St
 didn't exist are always written.
 
 1. Write `project.yml`, the entitlements, the asset catalog, the matching `ExportOptions-*.plist`,
-   `scripts/make-dmg.sh` (`chmod +x`), `.swiftlint.yml`, `.swift-format`, `sonar-project.properties` (sonar ≠ none)
+   `scripts/make-dmg.sh` (`chmod +x`), `.swiftlint.yml`, `.swift-format`, `.ui-quality.yml`,
+   `sonar-project.properties` (sonar ≠ none)
    and, for `observation-tracking-opt-in`, `App/Info.plist`, from `reference/project-templates.md`.
 2. Write `Packages/Core` from `reference/core-templates.md` (only the `architecture`-matching files).
 3. Write `App/Sources` from `reference/swiftui-templates.md` or `reference/appkit-templates.md`, and
@@ -321,7 +339,10 @@ and never install them yourself. The first run resolves `swift-docc-plugin` from
 3. `xcodebuild test-without-building … -derivedDataPath build/dd -resultBundlePath build/test.xcresult` (CoreTests
    + `<AppName>Tests` + `<AppName>UITests`), serialized behind `.simulator-test.lock` like every app-kind run of
    the Swift gates; the UI tests take over the desktop session. Parse with `xcrun xcresulttool get test-results
-   summary`.
+   summary`. Then recover the UI contract captures with `iru-swift-test`'s `ui` run (or its `xcresulttool export
+   attachments` step on `build/test.xcresult`) — expect 4 files in `.ui-screenshots/screen/<ScreenType>/` and the
+   audit at the `.ui-quality.yml` level; without the Automation permission or a logged-in desktop session the UI
+   tests are **unverified**, not passed.
 4. `swiftlint lint --strict` and `swift format lint --strict --recursive App Packages/Core/Sources
    Packages/Core/Tests` from the root.
 5. DocC: `cd Packages/Core && swift package --allow-writing-to-directory ../../build/docc generate-documentation
@@ -345,7 +366,9 @@ Summarize: resolved `ui`, `architecture` (and why the other wasn't offered for S
 existing app, or stopped. Then, per Step 1 group, the action taken — **created / updated / replaced / kept as is**
 — with each mismatch of a kept group and what a replaced one may have lost. State what was included versus omitted
 and why (`sonar` coordinates or why `none`; `distribution` and its export plist; the release pipeline lives in
-`iru-setup-macos-github-workflows`), which Step 4 versions were live versus fallback, and any ignored `args` keys.
+`iru-setup-macos-github-workflows`), which Step 4 versions were live versus fallback, the `accessibility` level
+written to `.ui-quality.yml` (and its action — created / updated / replaced / kept as is), and any ignored `args`
+keys.
 
 ### Scaffold contract (confirmed by running it — downstream skills depend on these)
 
@@ -364,8 +387,17 @@ and why (`sonar` coordinates or why `none`; `distribution` and its export plist;
 | DMG | `scripts/make-dmg.sh build/export/<AppName>.app build/<AppName>.dmg ["<volume>"]` (`DMG_SIGN_IDENTITY="Developer ID Application: …"` signs it, identifier `<bundle-id>.dmg`); then `xcrun notarytool submit build/<AppName>.dmg --key … --key-id … --issuer … --wait` and `xcrun stapler staple build/<AppName>.dmg` |
 | Entitlements | `App/Resources/<AppName>.entitlements`: `com.apple.security.app-sandbox` (sandbox: yes) else empty; `ENABLE_HARDENED_RUNTIME: YES`, `ENABLE_APP_SANDBOX` mirrors the sandbox |
 | UI-test hooks | launch arguments `["-ApplePersistenceIgnoreState", "YES", "--uitesting"]` (`--uitesting` last); identifiers `nameField`, `greetButton`, `greetingLabel`, `errorLabel`, `greetsOnSubmitToggle` |
+| UI contract | `.ui-quality.yml` (root, committed); helper `App/Tests/Support/UIScreenshots.swift` in both test targets; captures `.ui-screenshots/screen/<ScreenType>/default--<ltr\|rtl>--<light\|dark>.png`, attached to the `.xcresult` as `screen~<ScreenType>~…` (the sandboxed host can't write the repository — `iru-swift-test`'s `ui` run exports them); RTL `-AppleLanguages (ar) -AppleTextDirection YES -NSForceRightToLeftWritingDirection YES`, dark `-AppleInterfaceStyle Dark`; audit issues attached as `a11y~<ScreenType>~<rule>` |
 
 ### Known quirks / verification notes
+
+- **UI contract additions (2026-10-16) are only partly verified**: `UIScreenshots.swift` and the new
+  `<AppName>UITests.swift` pass `swift format lint --strict` with this skill's `.swift-format` and type-check for
+  macOS 15 against the macOS 27 SDK; the helper ran under `swift test` on macOS in a throwaway package (ImageRenderer
+  and `NSView` captures, RTL verified to flip leading/trailing, `.ui-quality.yml` read). Not run: a regenerated
+  scaffold (no XcodeGen on that machine), so the manifest's extra UI-test source line, the macOS XCUITest matrix
+  (`-AppleInterfaceStyle Dark` and the RTL launch arguments on a live app), the audit on the main window and SwiftLint
+  on the helper are **unverified** — run Step 7 before trusting them.
 
 - **Verified for real on 2026-10-16** in `$TMPDIR/iru-verify/macos/iru-setup-macos-app/{swiftui-mvvm,appkit-mvc,
   appkit-mvvm,appkit-mvvm-macos15-nosandbox}` (outside this repository) with Xcode 27.1 (27A9275), Swift 6.4,

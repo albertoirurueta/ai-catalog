@@ -27,8 +27,12 @@ With `ui: native` the shared module holds logic and presentation state only; And
 - Android-only concerns (permissions UI, `Activity` results, notifications) live in `androidApp`, not in the shared
   module, unless shared logic needs the result — then it's an interface the app implements.
 - Tests: `androidApp/src/test/` JVM unit tests (JUnit 4 + MockK/Robolectric per the Android catalog conventions) for
-  any app-only logic; Compose UI tests (`createComposeRule()`) only when the task asks for them — they are
-  instrumented and need a device/emulator the task-level skill never starts.
+  any app-only logic. Compose UI tests for screens and components run on the JVM too — Robolectric +
+  `createComposeRule()` + `@GraphicsMode(NATIVE)` in `androidApp/src/test`, capturing screenshots and running the
+  accessibility check (`ui-implementation.md`); only flow tests (`androidApp/src/androidTest`) need a
+  device/emulator the task-level skill never starts.
+- Lists: `LazyColumn`/`LazyRow`/`LazyVerticalGrid` with `key`/`contentType` over the shared state's items
+  (`ui-implementation.md`).
 
 ## iOS — SwiftUI in `iosApp`
 
@@ -113,7 +117,10 @@ suggestion).
 ### SwiftUI conventions
 
 - Small views, `let` inputs, `@State` for view-local state, `@Binding` for child edits, computed `body` free of side
-  effects; `.task { }` for async work tied to the view's lifetime.
+  effects; `.task { }` for async work tied to the view's lifetime. Split each screen into a root view that owns the
+  model and a stateless view taking `state` + closures (`ui-implementation.md`), so tests can render every state.
+- Collections: `List(state.items, id: \.id)` or `LazyVStack`/`LazyVGrid` inside a `ScrollView` — never a plain
+  `VStack { ForEach }` over shared data.
 - User-facing strings via the String Catalog (`Localizable.xcstrings`) — `Text("profile.title")` with a key, not
   Kotlin-provided English.
 - Accessibility: `.accessibilityLabel`, `.accessibilityHint`, Dynamic Type-friendly fonts (`.font(.body)`), no fixed
@@ -125,4 +132,5 @@ suggestion).
   file must be added to the project's target — report that the file needs adding in Xcode if you can't do it safely.
 - Tests: XCTest in `iosApp/iosAppTests/` (`@testable import iosApp`, `import Shared`) for Swift-side logic such as the
   observable model's mapping; drive the Kotlin `ViewModel` with fake dependencies constructed from Swift (Swift can
-  implement exported Kotlin interfaces). See `testing.md`.
+  implement exported Kotlin interfaces). See `testing.md`. SwiftUI screens/components also get `ImageRenderer`
+  screenshot tests through `iosAppTests/UIScreenshots.swift` (`ui-implementation.md`).

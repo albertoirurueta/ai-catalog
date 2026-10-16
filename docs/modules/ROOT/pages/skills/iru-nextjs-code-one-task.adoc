@@ -25,6 +25,13 @@ touched so the group skill can check it against the real build. It never runs te
 license headers or `next build` — those happen once per group in `iru-nextjs-code-one-task-group`. It runs on a
 medium model on purpose: the plan carries the hard reasoning and the Next.js rules live in `reference/`.
 
+For a task that adds or changes a page, component or list, it also applies the catalog's UI contract mapped onto
+Next.js (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it first writes a
+`Screen › Region › Component` decomposition marking each component as Server or Client, feeds interactive Client
+Components serializable props from Server Components, paginates or virtualizes collections, and writes Playwright
+component (gallery), screen and flow specs that capture `.ui-screenshots/` across left-to-right/right-to-left ×
+light/dark with axe checks, without running them.
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
@@ -53,8 +60,8 @@ a time.
 |No
 |The skill's own bundled reference directory: `README.md` (routing), `code-style.md`,
 `server-and-client-components.md`, `data-fetching-and-caching.md` (organized by profile), `server-actions.md`,
-`route-handlers.md`, `routing-and-rendering.md`, `metadata-and-seo.md`, `pages-router.md`, `testing.md` and
-`security.md`. If missing, the skill falls back to the repository's `CLAUDE.md`/`AGENTS.md` and the surrounding code's
+`route-handlers.md`, `routing-and-rendering.md`, `metadata-and-seo.md`, `pages-router.md`, `testing.md`,
+`security.md`, `ui-contract.md` and `ui-implementation.md` (UI work), and the `ui-screenshots.ts` Playwright helper. If missing, the skill falls back to the repository's `CLAUDE.md`/`AGENTS.md` and the surrounding code's
 style and says so in its report.
 |Bundled with the skill
 |===
@@ -76,10 +83,15 @@ the proxy, new routes or segment config, metadata, Pages Router files, security-
 * Tests added/updated — React Testing Library for components, direct calls for leaf async Server Components, Server
   Actions and Route Handlers (always including anonymous, wrong-owner and invalid-input cases), and a Playwright spec
   only for a new user-visible flow in a project that already has Playwright. Not run by this skill.
+* For UI work: Playwright stories for each visual state of every added/changed Client Component, a screen spec and,
+  for a new flow, a flow spec, all capturing the `.ui-quality.yml` matrix via the project's `support/ui-screenshots.ts`
+  helper (copied from the bundled `reference/ui-screenshots.ts` if missing; `@axe-core/playwright` is the one
+  permitted new dev dependency). Not run by this skill.
 * `implementation_plan.md` with this task's own checkbox (and completed sub-tasks) checked and a "group validation
   pending" note, written before reporting. Untouched if the task stopped on a blocker.
 * A report to the caller: the detected profile and which reference files were read, files touched, tests written,
-  the expected `next build` classification of every touched route (and whether any changed mode), blocker status, and
+  the expected `next build` classification of every touched route (and whether any changed mode), for UI work the
+  decomposition tree and the stories/specs added, blocker status, and
   any deliberate deviation from `reference/`.
 
 == Execution flow
@@ -92,7 +104,7 @@ flowchart TD
     C -- "reference/ missing" --> C2["Fall back to CLAUDE.md and\nsurrounding style; report it"]
     C --> D
     C2 --> D["Step 2: re-check current code state;\nread layouts and data modules above each route"]
-    D --> E["Step 3: implement exactly what the task specifies\nfor the detected profile only"]
+    D --> E["Step 3: implement exactly what the task specifies\nfor the detected profile only;\nUI work: decompose into screens, regions, components first"]
     E --> F["Step 4: write/update tests\n(not run here)"]
     F --> G{"Ambiguous, infeasible for the profile,\nneeds new dependency or config, or profile unclear?"}
     G -- yes --> H["Step 5: stop and ask or report;\nleave checkbox unchecked"]

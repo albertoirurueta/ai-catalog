@@ -18,13 +18,15 @@ harness), then read:
 | `cobra.md` | The task adds or changes a Cobra command, flag, argument validator, completion, flag group, or the generated CLI reference/man pages. |
 | `output-and-terminal.md` | The task writes to stdout/stderr, adds a `--format`/JSON payload, styles output with Lip Gloss, prompts, detects a TTY, or handles signals/broken pipes. |
 | `bubbletea.md` | The task adds or changes the Bubble Tea model (`internal/tui/`) or the command that starts it. |
+| `ui-contract.md` | The module has a Bubble Tea TUI and the task adds or changes a screen, component, list or other UI. Verbatim copy of the catalog-wide UI contract (decomposition, composition, inputs/events, collections, UI tests, screenshots, accessibility). |
+| `ui-implementation.md` | Together with `ui-contract.md`: the contract on Bubble Tea v2 — sub-models composed by the parent, typed intent messages, Bubbles `list`/`table`/`viewport` or a windowed slice, component/screen/flow tests incl. teatest, the `internal/tui/ui_screenshots_test.go` text-capture helper, the asserted accessibility checks and `.ui-quality.yml`. |
 | `godoc.md` | The task adds or changes an exported identifier or a package. |
 | `security.md` | The task runs a child process, opens/writes a path that came from an argument/env/config, reads a secret/token, does network I/O, or a `gosec` finding is involved. |
 | `concurrency.md` | The task starts goroutines, uses channels/`sync`/`errgroup`, adds a timeout/cancellation, or touches signal handling. |
 
 A task that only changes logic inside one existing function, with no new exported identifier and no new output,
 needs `code-style.md` + `errors.md` + `testing.md` and nothing else. Don't read the rest speculatively. A non-CLI Go
-module (no `cmd/`, no Cobra) never needs `cli-contract.md`, `cobra.md`, `output-and-terminal.md` or `bubbletea.md`.
+module (no `cmd/`, no Cobra) never needs `cli-contract.md`, `cobra.md`, `output-and-terminal.md`, `bubbletea.md` or the two `ui-*.md` files.
 
 ## The three rules that override everything else
 

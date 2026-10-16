@@ -17,7 +17,10 @@ extended with what this catalog's scaffold, gates and release tooling write. It 
 `go.work`/`go.work.sum`, env files (keeping `.env.example`), editor/OS files and the repository-wide
 `.integration-test.lock/`. `/vendor/` is ignored only when dependencies are not vendored (detected, or asked);
 `go.work` is left alone when the repository tracks a deliberate workspace. Antora and root Node sections are added
-only when detected.
+only when detected. For a Bubble Tea terminal UI (`bubbletea` in `go.mod`, or a root `.ui-quality.yml` or
+`.ui-screenshots/`) a terminal-UI section ignores `.ui-screenshots/`, the directory the UI tests write their captures
+to (see xref:guides/building-user-interfaces.adoc[Building user interfaces]); `.ui-quality.yml`,
+`internal/tui/ui_screenshots_test.go` and the committed `docs/modules/ROOT/images/ui/` tree are never ignored.
 
 It never ignores `go.mod`, `go.sum`, `testdata/` or `.secrets.baseline`, and removes a `go.sum` ignore line from an
 existing file. The draft is checked with `git check-ignore` so it cannot hide `cmd/*/main.go`, `internal/`, testscript

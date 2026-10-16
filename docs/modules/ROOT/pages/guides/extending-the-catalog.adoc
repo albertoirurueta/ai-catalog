@@ -73,6 +73,14 @@ the calling context.
 Once both skills exist, `iru-plan` and `iru-code-one-task-group` pick the new key up automatically on their next run —
 nothing else in the pipeline needs to change.
 
+If the new stack builds a user interface, its `iru-<key>-code-one-task` also carries the shared UI contract —
+copy `reference/ui-contract.md` byte-for-byte from any existing UI coding skill and write a
+`reference/ui-implementation.md` mapping it onto the stack (composition idioms, inputs/events, the virtualized
+collection container, UI test runner, LTR/RTL and light/dark switches, the screenshot helper writing
+`.ui-screenshots/`, the automated accessibility check reading `.ui-quality.yml`); its group skill adds the UI
+validation stage, its test gate collects the screenshots, and its scaffold writes `.ui-quality.yml`. See
+xref:guides/building-user-interfaces.adoc[].
+
 == Repository bootstrap for other stacks
 
 `iru-setup-repository` (xref:skills/iru-setup-repository.adoc[]) is the front door for bootstrapping *any*

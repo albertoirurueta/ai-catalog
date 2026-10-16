@@ -71,6 +71,7 @@ sonar-organization: example-github
 sonar-project-key: example_orders-service
 sonar-host-url: https://sonarcloud.io
 frontend: none
+accessibility: enforce
 visibility: public
 ci: yes
 ci-tests: full
@@ -126,6 +127,14 @@ organization/project-key/host-URL keys apply only when `sonar` is `cloud` or `se
 |`none` or `hilla`. `hilla` adds xref:skills/iru-setup-java-springboot-hilla.adoc[] as an eighth sub-skill in Step
 8, scaffolding a Vaadin/Hilla React frontend into the `boot` module.
 |`none`
+
+|`args: accessibility`
+|No
+|`enforce`, `report`, or `off` — the automated accessibility level of the frontend's UI tests. Meaningful only with
+`frontend: hilla` (neither asked nor recorded otherwise); `iru-setup-java-springboot-hilla` writes it to
+`.ui-quality.yml`. The Hilla frontend follows the catalog's UI contract (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+|Asked via `AskUserQuestion` when `frontend: hilla` and not supplied (Enforce recommended)
 
 |`args: visibility`
 |No
@@ -285,7 +294,9 @@ typically less relevant and some actively conflict with the contract-first hexag
   specification and documentation generators for messaging (via `iru-setup-java-springboot-apis`).
 * When `frontend: hilla`: the Vaadin/Hilla React frontend in the `boot` module — the Vaadin BOM/starters, the
   `vaadin-maven-plugin` execution, `src/main/frontend/`, Vitest with lcov coverage, and ESLint/Prettier (via
-  `iru-setup-java-springboot-hilla`).
+  `iru-setup-java-springboot-hilla`), together with `.ui-quality.yml` and the Playwright UI tests that capture
+  `.ui-screenshots/` across states, left-to-right/right-to-left and light/dark with axe-core checks at the chosen
+  `accessibility` level.
 * `compose.yaml` and the Testcontainers integration-test harness (via
   `iru-setup-java-springboot-testcontainers`).
 * An `infra/` OpenTofu configuration for the chosen cloud (via `iru-setup-java-springboot-platform`).
@@ -297,7 +308,7 @@ typically less relevant and some actively conflict with the contract-first hexag
   existing one is kept), and optionally `LICENSE`. On Kotlin builds `detekt.yml` is expected from the pom sub-skill
   and reported as a gap if missing.
 * A final report with the setup mode and, per component, the action taken (created / updated / replaced / kept as is /
-  skipped (ci: no)), consolidating the open-source/visibility/CI/Sonar/frontend choices (and, when `frontend: hilla`, what
+  skipped (ci: no)), consolidating the open-source/visibility/CI/Sonar/frontend choices (and, when `frontend: hilla`, the `accessibility` level, the `.ui-quality.yml` action, and what
   `iru-setup-java-springboot-hilla` reported back), every secret and variable that must be supplied out-of-band
   (the Sonar token only when `sonar.mode` is not `none`, plus `GITLEAKS_LICENSE` if a Pro key is used), every open
   gap, and the result of the three verification builds (Maven or Gradle, as run).
@@ -313,7 +324,7 @@ flowchart TD
     C -- API unreachable --> STOP2["Stop — never fall back\nto hardcoded versions"]
     C --> D["Step 2: Collect project identity;\ninfer repository info from git"]
     D --> E["Step 3: Language (Java/Kotlin), build tool\n(Kotlin only), Kotlin version, platform\n(AWS/GCP) and concurrency model"]
-    E --> EB["Step 3b: Open source, visibility, CI\n(ci, ci-tests, pages), Sonar mode, frontend"]
+    E --> EB["Step 3b: Open source, visibility, CI\n(ci, ci-tests, pages), Sonar mode, frontend, accessibility"]
     EB --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
     F --> G["Step 5: Confirm the whole plan"]
     G -- corrections --> F

@@ -203,6 +203,14 @@ the skill warns, states where it contradicts this run's choices, and asks (unles
   One detail the merge step protects by accident and would break if simplified: Voyager's page loads
   `voyager.standalone.js` and `voyager.css` by relative path, so those files must travel with `index.html`. Copying
   whole directories preserves that; copying only `index.html` files would publish a blank graph.
+
+  When `frontend: hilla`, `ci.tests` is `full` and the web module has a `playwright.config.ts` (written by
+  xref:skills/iru-setup-java-springboot-hilla.adoc[]), the `build` job also gets a `Frontend UI tests` step (installs
+  Chromium and runs `npx playwright test` in the web module with `UI_SCREENSHOTS_DIR` pointing at the workspace's
+  `.ui-screenshots/`) and an `Upload UI screenshots` step (`if: always()`, 7-day `ui-screenshots` artifact,
+  `if-no-files-found: ignore`), per the catalog's UI contract (see
+  xref:guides/building-user-interfaces.adoc[Building user interfaces]). Both steps are dropped otherwise; with
+  `ci.tests: unit` the UI tests stay a local stage so no Chromium download is paid on every run.
 * `.github/workflows/deploy.yml` — with `id-token: write`, a concurrency group per environment that never cancels
   in progress, the GitHub Environment as the approval gate, buildpack image build and push, and `tofu apply` of the
   previously produced plan file.

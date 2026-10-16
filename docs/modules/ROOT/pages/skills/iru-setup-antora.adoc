@@ -20,7 +20,10 @@ entry, or nav entry already present is overwritten or reordered), **Keep as is**
 its template; existing pages and `nav.adoc` are kept unless the user separately confirms otherwise), or **Stop**.
 A scripted caller can pre-answer that question with `on-existing`. It also copies its own bundled `ui-bundle.zip` into
 `docs/`, so the generated `antora-playbook.yml` points `ui.bundle.url` at that local file instead of depending
-on the upstream GitLab CI artifact URL at build time.
+on the upstream GitLab CI artifact URL at build time. For a repository with a user interface it also creates a small
+**User interface** skeleton (Step 9b, following its bundled `reference/ui-docs.md`; see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]); the per-screen and per-component pages and every
+screenshot are left to xref:skills/iru-update-docs.adoc[].
 
 == Purpose group
 
@@ -70,6 +73,10 @@ and the current `docs/` layout).
   different name.
 * Antora, `@antora/lunr-extension`, `@sntke/antora-mermaid-extension`, and `@djencks/asciidoctor-mathjax`
   installed under `docs/` (as dev/regular dependencies in `docs/package.json`).
+* For a repository with a UI (Step 9b): `pages/ui/index.adoc` (screens and components tables from a quick inventory),
+  `pages/ui/navigation.adoc` (a Mermaid navigation graph, no screenshots yet), `images/ui/.gitkeep`, and a **User
+  interface** section in `nav.adoc`. Existing `ui/` pages are kept as is on **Update**; the user is told to run
+  `/iru-update-docs` once the UI tests have produced `.ui-screenshots/`.
 * A `docs/build/` entry added to the root `.gitignore` if missing.
 * A built static site at `docs/build/site` (from `npx antora antora-playbook.yml`), or a fixed build error if one
   occurred — this skill does not report success on a broken build.
@@ -101,7 +108,8 @@ flowchart TD
     H --> I["Step 7: Write index.adoc\n(repository overview, via Explore agent)"]
     I --> J["Step 8: Write installation.adoc\n(install guide)"]
     J --> K["Step 9: Write reference.adoc\n(links of interest)"]
-    K --> L["Step 10: Update nav.adoc\nwith new page entries"]
+    K --> K2["Step 9b: UI skeleton (ui/index, ui/navigation,\nimages/ui/.gitkeep) when the repository has a UI"]
+    K2 --> L["Step 10: Update nav.adoc\nwith new page entries"]
     L --> M["Step 11: Add docs/build/\nto .gitignore if missing"]
     M --> N["Step 12: Build site via\nnpx antora antora-playbook.yml"]
     N -- build fails --> O[Fix offending file before finishing]
@@ -143,7 +151,8 @@ None — `iru-setup-antora` is a leaf skill; it does not call any other skill in
 
 * `Explore` (see xref:agents/overview.adoc[]) — used in Step 7 to build a picture of the top-level source layout
   and main public entry points before writing `index.adoc`'s overview, rather than reading the whole source tree
-  directly — the same agent the `iru-explore` skill itself uses for this kind of broad structural search.
+  directly — the same agent the `iru-explore` skill itself uses for this kind of broad structural search. Step 9b
+  uses it again for the quick screens/components inventory of a UI repository.
 
 When xref:skills/iru-update-docs.adoc[] invokes `iru-setup-antora` conditionally, it does so through a sub-agent it
 manages, not one this skill spawns itself.

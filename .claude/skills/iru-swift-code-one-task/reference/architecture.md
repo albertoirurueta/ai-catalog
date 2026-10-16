@@ -139,6 +139,9 @@ something UI-ish gets a protocol in Core and an implementation in the app target
   bar (Sonar's `sonar.coverage.exclusions=Targets/**` matches). SwiftUI views, UIKit/AppKit views/view controllers and the composition root are the UI layer:
   reported "not measured", not 0%, and not padded with tests that only instantiate views.
 - XCUITest UI tests (`testing.md`) cover the real windows/menus end to end; they never count toward the coverage bar.
+  Neither do component screenshot tests (`ui-implementation.md`) — they live in the app's test target. Item and
+  component UI states (`OrderRowState`, `OrderListState`) are Core value types computed by the view model/controller,
+  so their derivation *is* unit-tested at the bar.
 - A task that adds logic to a view/view controller instead of Core is a design smell to fix in the task (move it to
   the view model/controller) — not a reason to lower the bar.
 

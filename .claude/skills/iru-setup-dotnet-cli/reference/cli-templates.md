@@ -680,6 +680,234 @@ public sealed class BrowseTests
 }
 ```
 
+### `tests/__ToolName__.Cli.Tests/AccessibilityCheck.cs` (ui: tui)
+
+```csharp
+namespace __ToolName__.Cli.Tests;
+
+/// <summary>
+/// Applies the <c>.ui-quality.yml</c> accessibility level to the asserted terminal-UI checks (no automated audit
+/// exists for terminals): <c>enforce</c> fails the test, <c>report</c> appends to
+/// <c>&lt;screenshots dir&gt;/a11y-report.txt</c>, <c>off</c> ignores them.
+/// </summary>
+internal static class AccessibilityCheck
+{
+    private static readonly Lock ReportLock = new();
+
+    /// <summary>Applies the configured level to <paramref name="violations"/>.</summary>
+    /// <param name="target">What was checked, e.g. <c>BrowseView default rtl</c>.</param>
+    /// <param name="violations">Each violation as <c>rule-id: message</c> (<c>tui-color-only</c>, <c>tui-help-line</c>, <c>tui-keyboard</c>).</param>
+    public static void Apply(string target, IReadOnlyList<string> violations)
+    {
+        var level = UiScreenshots.QualitySetting("accessibility") ?? "enforce";
+        if (violations.Count == 0 || level == "off")
+        {
+            return;
+        }
+
+        if (level == "enforce")
+        {
+            Assert.Fail($"[a11y] {target}: {string.Join("; ", violations)}");
+        }
+
+        Directory.CreateDirectory(UiScreenshots.RootDirectory);
+        lock (ReportLock)
+        {
+            File.AppendAllLines(
+                Path.Combine(UiScreenshots.RootDirectory, "a11y-report.txt"),
+                violations.Select(violation => $"{target}\t{violation}"));
+        }
+    }
+}
+```
+
+### `tests/__ToolName__.Cli.Tests/UiScreenshots.cs` (ui: tui)
+
+```csharp
+using System.Text.RegularExpressions;
+
+namespace __ToolName__.Cli.Tests;
+
+/// <summary>
+/// Writes terminal-UI captures (the rendered screen buffer as text) to
+/// <c>&lt;UI_SCREENSHOTS_DIR or repo root/.ui-screenshots&gt;/&lt;kind&gt;/&lt;Id&gt;/&lt;state&gt;--&lt;direction&gt;--no-color.txt</c>,
+/// and reads the directions to capture from the repository's <c>.ui-quality.yml</c> (default <c>[ltr, rtl]</c>).
+/// </summary>
+internal static partial class UiScreenshots
+{
+    private static readonly string[] Kinds = ["component", "screen", "flow"];
+
+    private static readonly Lazy<string> Root = new(FindRepositoryRoot);
+
+    /// <summary>Gets the capture root: <c>UI_SCREENSHOTS_DIR</c> when set, else <c>.ui-screenshots</c> at the repository root.</summary>
+    public static string RootDirectory =>
+        Environment.GetEnvironmentVariable("UI_SCREENSHOTS_DIR") is { Length: > 0 } configured
+            ? configured
+            : Path.Combine(Root.Value, ".ui-screenshots");
+
+    /// <summary>Gets the <c>directions</c> list of <c>.ui-quality.yml</c>, or <c>[ltr, rtl]</c>.</summary>
+    public static IReadOnlyList<string> Directions =>
+        QualitySetting("directions") is { } value
+            ? value.Trim('[', ']').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : ["ltr", "rtl"];
+
+    /// <summary>Reads one <c>key: value</c> line of the repository's <c>.ui-quality.yml</c>.</summary>
+    /// <param name="key">The key (<c>accessibility</c>, <c>directions</c>, <c>themes</c>).</param>
+    /// <returns>The trimmed value, or <see langword="null"/> when the file or key is missing.</returns>
+    public static string? QualitySetting(string key)
+    {
+        var file = Path.Combine(Root.Value, ".ui-quality.yml");
+        return File.Exists(file)
+            ? File.ReadLines(file)
+                .Select(line => line.Split('#')[0].Trim())
+                .Where(line => line.StartsWith(key + ":", StringComparison.Ordinal))
+                .Select(line => line[(key.Length + 1)..].Trim())
+                .FirstOrDefault()
+            : null;
+    }
+
+    /// <summary>Writes <paramref name="screen"/> as a text capture and returns its path.</summary>
+    /// <param name="screen">The rendered buffer (<c>IDriver.ToString()</c>).</param>
+    /// <param name="kind"><c>component</c>, <c>screen</c> or <c>flow</c>.</param>
+    /// <param name="id">The view type name as in code, or the kebab-case flow name.</param>
+    /// <param name="state">The kebab-case visual state.</param>
+    /// <param name="direction"><c>ltr</c> or <c>rtl</c> (right-to-left content in the normal terminal layout).</param>
+    /// <returns>The written file's path.</returns>
+    public static string SaveText(string screen, string kind, string id, string state, string direction)
+    {
+        if (!Kinds.Contains(kind) || !IdPattern().IsMatch(id) || !KebabPattern().IsMatch(state) || direction is not ("ltr" or "rtl"))
+        {
+            throw new ArgumentException($"Not a contract capture name: {kind}/{id}/{state}--{direction}--no-color.txt");
+        }
+
+        var directory = Path.Combine(RootDirectory, kind, id);
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"{state}--{direction}--no-color.txt");
+        File.WriteAllText(path, screen);
+        return path;
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, ".git"))
+                || File.Exists(Path.Combine(directory.FullName, ".git"))
+                || directory.EnumerateFiles("*.slnx").Any())
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new InvalidOperationException($"No repository root (.git or *.slnx) above {AppContext.BaseDirectory}.");
+    }
+
+    [GeneratedRegex("^[a-z0-9]+(-[a-z0-9]+)*$")]
+    private static partial Regex KebabPattern();
+
+    [GeneratedRegex("^([A-Z][A-Za-z0-9]*|[a-z0-9]+(-[a-z0-9]+)*)$")]
+    private static partial Regex IdPattern();
+}
+```
+
+### `tests/__ToolName__.Cli.Tests/Tui/BrowseViewTests.cs` (ui: tui)
+
+```csharp
+using __ToolName__.Core.Browse;
+using __ToolName__.Tui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drivers;
+using Terminal.Gui.Input;
+using Terminal.Gui.Testing;
+
+namespace __ToolName__.Cli.Tests.Tui;
+
+[TestClass]
+[TestCategory("UI")]
+[DoNotParallelize]
+public sealed class BrowseViewTests
+{
+    private const string ScreenId = "BrowseView";
+
+    private static readonly string[] States = ["default", "many-items", "long-content"];
+
+    public static IEnumerable<object[]> StatesAndDirections =>
+        from state in States
+        from direction in UiScreenshots.Directions
+        select new object[] { state, direction };
+
+    [TestMethod]
+    [DynamicData(nameof(StatesAndDirections))]
+    public void Browse_RendersTheState_AndCapturesIt(string state, string direction)
+    {
+        var browseState = new BrowseState(Fixture(state, direction));
+
+        var screen = Render(browseState);
+
+        // Long values are truncated by the layout, so assert on their visible start.
+        Assert.Contains(string.Concat(browseState.Names[0].Take(4)), screen);
+        Assert.Contains(string.Concat(browseState.SelectedGreeting.Take(10)), screen);
+        UiScreenshots.SaveText(screen, "screen", ScreenId, state, direction);
+        AccessibilityCheck.Apply($"{ScreenId} {state} {direction}", Violations(browseState, screen));
+    }
+
+    [TestMethod]
+    public void CursorDown_SelectsTheNextName_AndShowsItsGreeting()
+    {
+        var browseState = new BrowseState(BrowseState.SampleNames);
+
+        var screen = Render(browseState, app =>
+        {
+            app.InjectKey(Key.CursorDown);
+            app.InjectKey(Key.CursorDown);
+        });
+
+        Assert.AreEqual(1, browseState.SelectedIndex);
+        Assert.Contains(browseState.SelectedGreeting, screen);
+    }
+
+    private static List<string> Violations(BrowseState browseState, string screen)
+    {
+        var violations = new List<string>();
+        if (!screen.Contains(string.Concat(browseState.SelectedGreeting.Take(10)), StringComparison.Ordinal))
+        {
+            violations.Add("tui-color-only: the selection is not readable as text");
+        }
+
+        if (!screen.Contains("Esc", StringComparison.Ordinal))
+        {
+            violations.Add("tui-help-line: no key help on screen");
+        }
+
+        return violations;
+    }
+
+    private static string[] Fixture(string state, string direction) => (state, direction) switch
+    {
+        ("many-items", _) => [.. Enumerable.Range(1, 500).Select(index => $"Name {index}")],
+        ("long-content", "rtl") => ["عبد الرحمن بن محمد بن عبد الله الطويل الاسم جدا", "דוד"],
+        ("long-content", _) => ["Maximiliana Wolfeschlegelsteinhausenbergerdorff", "Ada"],
+        (_, "rtl") => ["سارة", "דוד", "مريم"],
+        _ => [.. BrowseState.SampleNames],
+    };
+
+    private static string Render(BrowseState browseState, Action<IApplication>? act = null)
+    {
+        using var app = Application.Create();
+        app.Init(DriverRegistry.Names.ANSI);
+        app.Driver!.SetScreenSize(60, 12);
+        using var window = BrowseView.Create(browseState, "__BinName__");
+        var token = app.Begin(window);
+        app.LayoutAndDraw(true);
+        act?.Invoke(app);
+        app.LayoutAndDraw(true);
+        var screen = app.Driver.ToString() ?? string.Empty;
+        app.End(token!);
+        return screen;
+    }
+}
+```
+
 ### `tests/__ToolName__.Cli.Tests/CliResult.cs`
 
 ```csharp
@@ -1112,9 +1340,8 @@ using System.CommandLine;
 using __ToolName__.Core;
 using __ToolName__.Core.Browse;
 using __ToolName__.Core.Schema;
+using __ToolName__.Tui;
 using Terminal.Gui.App;
-using Terminal.Gui.ViewBase;
-using Terminal.Gui.Views;
 
 namespace __ToolName__.Commands;
 
@@ -1172,17 +1399,49 @@ internal static class BrowseCommand
             app.RequestStop();
             return false;
         });
-        using var window = new Window { Title = $"{ToolInfo.BinName} browse (Esc to quit)" };
-        using var list = new ListView { X = 0, Y = 0, Width = Dim.Percent(40), Height = Dim.Fill() };
-        using var greeting = new Label { X = Pos.Right(list) + 2, Y = 1, Text = state.SelectedGreeting };
-        list.SetSource(new System.Collections.ObjectModel.ObservableCollection<string>(state.Names));
+        using var window = BrowseView.Create(state, ToolInfo.BinName);
+        app.Run(window);
+    }
+}
+```
+
+### `src/__ToolName__/Tui/BrowseView.cs` (ui: tui)
+
+```csharp
+using System.Collections.ObjectModel;
+using __ToolName__.Core.Browse;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
+
+namespace __ToolName__.Tui;
+
+/// <summary>
+/// The <c>browse</c> screen, composed from Terminal.Gui views: a <see cref="ListView"/> of names (it draws only the
+/// visible rows) and the selected name's greeting. It renders a <see cref="BrowseState"/> and forwards selection
+/// changes to it; all logic stays in the state. Visual states: <c>default</c>, <c>many-items</c>, <c>long-content</c>.
+/// </summary>
+internal static class BrowseView
+{
+    /// <summary>
+    /// Builds the screen's window.
+    /// </summary>
+    /// <param name="state">The state to render and update.</param>
+    /// <param name="toolName">The tool's command name, shown in the title with the key help.</param>
+    /// <returns>The window; disposing it disposes its subviews.</returns>
+    public static Window Create(BrowseState state, string toolName)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var window = new Window { Title = $"{toolName} browse (↑/↓ select, Esc quit)" };
+        var list = new ListView { X = 0, Y = 0, Width = Dim.Percent(40), Height = Dim.Fill() };
+        var greeting = new Label { X = Pos.Right(list) + 2, Y = 1, Text = state.SelectedGreeting };
+        list.SetSource(new ObservableCollection<string>(state.Names));
         list.ValueChanged += (_, args) =>
         {
             state.Select(args.NewValue ?? 0);
             greeting.Text = state.SelectedGreeting;
         };
         window.Add(list, greeting);
-        app.Run(window);
+        return window;
     }
 }
 ```

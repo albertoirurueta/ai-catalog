@@ -97,6 +97,12 @@ create or update one (including `/init`) without bloating context.
 a ticket, filing a ticket before work begins, and generating a release — each with a fuller diagram than the
 one on this page.
 
+|xref:guides/building-user-interfaces.adoc[]
+|The catalog-wide UI contract: decomposing a design into composed components, virtualized collections with
+reusable item components, UI tests over every state × left-to-right/right-to-left × light/dark with screenshots
+under `.ui-screenshots/`, accessibility checks at the `.ui-quality.yml` level, and turning those screenshots into
+Antora UI pages.
+
 |xref:guides/creating-skills-and-agents.adoc[]
 |Where skills and agents live, when to reach for one versus the other, and the fastest reliable way to draft
 a new one — asking Claude Code itself, grounded in existing examples.
@@ -140,12 +146,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-android-code-one-task`
 |xref:index.adoc#group-android[Android Development Tooling]
-|Implements a single Android/Kotlin task, detecting the lib/app module and applying the bundled Kotlin conventions.
+|Implements one Android/Kotlin task from an implementation plan, detecting lib/app, applying bundled conventions and the UI contract for UI tasks.
 |xref:skills/iru-android-code-one-task.adoc[]
 
 |`iru-android-code-one-task-group`
 |xref:index.adoc#group-android[Android Development Tooling]
-|Implements one Android/Kotlin task bucket, then validates it once per module for license, KDoc, tests, coverage, quality.
+|Implements one bucket of Android/Kotlin tasks per Gradle module, then validates once for license, KDoc, tests, coverage, quality and the UI contract.
 |xref:skills/iru-android-code-one-task-group.adoc[]
 
 |`iru-android-code-quality`
@@ -170,7 +176,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-android-test`
 |xref:index.adoc#group-android[Android Development Tooling]
-|Runs an Android project's JUnit 4 unit tests via AGP's `testDebugUnitTest`, scoped by class/method/pattern/module.
+|Runs Android JUnit 4 unit tests via testDebugUnitTest by class/method/pattern/path, plus a ui selector for Roborazzi screenshot and accessibility runs.
 |xref:skills/iru-android-test.adoc[]
 
 |`iru-build-docs`
@@ -260,12 +266,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-dotnet-generate-all-tests`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
-|Find every .NET class with no tests or under 80% coverage and generate/extend tests until it clears the bar.
+|Scans a .NET codebase for classes lacking tests or below 80% coverage, writes unit tests to clear the bar, and adds UI tests for screens that have none.
 |xref:skills/iru-dotnet-generate-all-tests.adoc[]
 
 |`iru-dotnet-test`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
-|Run the .NET test suite via `dotnet test`, scoped to a class/method/namespace/trait selector.
+|Runs .NET tests via dotnet test by selector, Windows-desktop aware, with a ui selector for FlaUI and Terminal.Gui UI tests, screenshots and accessibility.
 |xref:skills/iru-dotnet-test.adoc[]
 
 |`iru-explore`
@@ -295,12 +301,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-go-code-one-task`
 |xref:index.adoc#group-go[Go Development Tooling]
-|Implements one Go plan task (code + tests), compile-checks with go build/vet, and checks off its box.
+|Implements a Go task from a plan in any module or Cobra CLI, incl. Bubble Tea screens per the UI contract, writes tests, compile-checks, checks it off.
 |xref:skills/iru-go-code-one-task.adoc[]
 
 |`iru-go-code-one-task-group`
 |xref:index.adoc#group-go[Go Development Tooling]
-|Implements one Go task bucket, then validates it once: license, godoc, tests, 80% coverage, -race, quality diff.
+|Implements a bucket of Go tasks, then validates once: licenses, godoc, tests, 80% coverage, race detector, quality, terminal-UI captures, container tests.
 |xref:skills/iru-go-code-one-task-group.adoc[]
 
 |`iru-go-code-quality`
@@ -320,7 +326,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-go-test`
 |xref:index.adoc#group-go[Go Development Tooling]
-|Runs Go tests via `go test -json` (race, testscript, `integration` build tag) and reports a compact summary.
+|Runs Go tests with go test -json, race detector and testscript, splits fast from integration tests, checks terminal-UI captures, reports a summary.
 |xref:skills/iru-go-test.adoc[]
 
 |`iru-issue`
@@ -395,12 +401,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-kmp-code-one-task`
 |xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
-|Implements a single Kotlin Multiplatform task across shared, Android and iOS source sets, with its tests.
+|Implements one Kotlin Multiplatform task in the right source set, with tests, UI tests and screenshots for UI work, and compile checks for every target.
 |xref:skills/iru-kmp-code-one-task.adoc[]
 
 |`iru-kmp-code-one-task-group`
 |xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
-|Implements one Kotlin Multiplatform task bucket, then validates it once: license, KDoc, tests, Kover coverage, quality, iOS.
+|Implements a Kotlin Multiplatform task bucket, then validates once across Android/JVM and iOS: license, KDoc, tests, 80% coverage, quality, UI captures.
 |xref:skills/iru-kmp-code-one-task-group.adoc[]
 
 |`iru-kmp-code-quality`
@@ -420,12 +426,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-kmp-generate-all-tests`
 |xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
-|Finds untested or under-80%-covered classes in a Kotlin Multiplatform module and generates tests until covered.
+|Brings a Kotlin Multiplatform module's JVM-measured coverage to 80% per class with kotlin.test tests, and adds UI tests for screens that have none.
 |xref:skills/iru-kmp-generate-all-tests.adoc[]
 
 |`iru-kmp-test`
 |xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
-|Runs a Kotlin Multiplatform project's tests per target: Android host/JVM, Kotlin/Native iOS, and the iOS app's XCTest.
+|Runs Kotlin Multiplatform tests per target (Android host, JVM, iOS simulator, XCTest) plus a ui selector for screenshots and accessibility.
 |xref:skills/iru-kmp-test.adoc[]
 
 |`iru-knowledge-briefing`
@@ -540,7 +546,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Writes a dependency-grouped, checkbox-driven implementation_plan.md for a ticket or described task.
+|Writes a dependency-grouped, checkbox-driven implementation_plan.md for a ticket or described task, decomposing UI designs into component tasks with UI tests.
 |xref:skills/iru-plan.adoc[]
 
 |`iru-pr-description`
@@ -595,12 +601,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-react-native-code-one-task`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Implements a single React Native task for the expo or metro toolchain, with its Jest tests.
+|Implements a single React Native plan task for Expo or bare Metro apps, with tests and checkbox update, deferring every gate to the group skill.
 |xref:skills/iru-react-native-code-one-task.adoc[]
 
 |`iru-react-native-code-one-task-group`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Implements one React Native task bucket, then validates it once, including native Android/iOS builds and e2e flows.
+|Implements a bucket of React Native tasks for Expo or Metro apps, then validates once: Jest, coverage, tsc, native builds, Expo prebuild, and e2e.
 |xref:skills/iru-react-native-code-one-task-group.adoc[]
 
 |`iru-release`
@@ -675,7 +681,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-antora`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Scaffold a new Antora documentation site (`antora.yml`, playbook, starter pages) or fill gaps in an existing one.
+|Creates or updates a working Antora docs site (Node.js/Antora, antora.yml, starter pages), adding a User interface section for UI projects.
 |xref:skills/iru-setup-antora.adoc[]
 
 |`iru-setup-apple-app`
@@ -840,7 +846,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-php-laravel`
 |xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
-|Scaffolds or updates a Laravel app with Pest/PHPUnit, Pint, Larastan, composer scripts and a tested sample slice.
+|Scaffolds or updates a Laravel app with Pest, Pint, Larastan, composer scripts, a tested sample slice and Playwright browser UI tests with accessibility checks.
 |xref:skills/iru-setup-php-laravel.adoc[]
 
 |`iru-setup-php-prestashop`
@@ -900,12 +906,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-react-native-app`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
-|Scaffolds a new Expo-managed React Native app with Jest, ESLint/Prettier, EAS profiles, Maestro, and Sonar.
+|Scaffolds a React Native app on Expo or bare Metro with Jest, a11y linting, a dev UI gallery, Maestro smoke and screenshot flows, build profiles and Sonar.
 |xref:skills/iru-setup-react-native-app.adoc[]
 
 |`iru-setup-react-web`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
-|Scaffolds a React + Vite + TypeScript web app with Vitest, ESLint/Oxlint, Prettier, Stylelint, Playwright, and Storybook.
+|Scaffolds a React + Vite + TypeScript web app with Vitest, ESLint or Oxlint, Prettier, Stylelint, Playwright e2e, UI-contract screenshot and axe tests, and optional Storybook.
 |xref:skills/iru-setup-react-web.adoc[]
 
 |`iru-setup-readme`
@@ -1000,12 +1006,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-swift-code-one-task`
 |xref:index.adoc#group-swift[Swift Development Tooling]
-|Implements a single Swift task from an implementation plan, detecting package-vs-app shape, target, platform, UI framework and architecture.
+|Implements one Swift task from a plan in a package, Apple app or swift-argument-parser CLI, applying Swift 6 conventions, then checking it off.
 |xref:skills/iru-swift-code-one-task.adoc[]
 
 |`iru-swift-code-one-task-group`
 |xref:index.adoc#group-swift[Swift Development Tooling]
-|Implements one Swift task-group bucket end to end, validating license, DocC, tests, coverage, and quality once, with simulator-lock serialization.
+|Implements a bucket of Swift tasks, then validates it once for license headers, DocC, tests, coverage, and quality, serializing simulator runs.
 |xref:skills/iru-swift-code-one-task-group.adoc[]
 
 |`iru-swift-code-quality`
@@ -1030,7 +1036,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-swift-test`
 |xref:index.adoc#group-swift[Swift Development Tooling]
-|Runs a Swift project's tests via `swift test --filter` (package) or `xcodebuild -only-testing` (app), scoped to a selector.
+|Runs a Swift project's tests via swift test or xcodebuild -only-testing by selector, plus a ui selector for screenshot and accessibility runs.
 |xref:skills/iru-swift-test.adoc[]
 
 |`iru-typescript-bump-version`
@@ -1040,12 +1046,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-typescript-code-one-task`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Implements one TypeScript task, routing to the detected framework's reference file before checking off its box.
+|Implements one TypeScript task from a plan, loading only its framework's reference material, handing React Native apps to their own key, then checks it off.
 |xref:skills/iru-typescript-code-one-task.adoc[]
 
 |`iru-typescript-code-one-task-group`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Implements one TypeScript task-group bucket end to end, then validates it once (license, TSDoc, tests, coverage, quality).
+|Implements every TypeScript task in a plan bucket, then validates the whole group once for headers, TSDoc, tests, coverage, and quality.
 |xref:skills/iru-typescript-code-one-task-group.adoc[]
 
 |`iru-typescript-code-quality`
@@ -1060,12 +1066,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-typescript-generate-all-tests`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Brings a TypeScript codebase's unit test coverage to 80% by generating or extending tests file by file.
+|Scans a TypeScript/npm codebase for files with no tests or below 80% coverage, writes or extends unit tests, and adds Playwright UI tests for web UI gaps.
 |xref:skills/iru-typescript-generate-all-tests.adoc[]
 
 |`iru-typescript-test`
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
-|Runs TypeScript unit tests via Vitest, Jest or ng test; NestJS/Next.js e2e on request.
+|Runs TypeScript unit tests via Vitest, Jest or ng test, plus opt-in e2e and UI suites (Playwright, Maestro, Detox) with screenshots and accessibility.
 |xref:skills/iru-typescript-test.adoc[]
 
 |`iru-typescript-tsdoc`
@@ -1075,22 +1081,22 @@ features, and where the underlying models genuinely differ.
 
 |`iru-update-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
-|Bring the Antora documentation module up to date with changes already made to the code.
+|Updates Antora AsciiDoc pages from a git diff, incl. a UI section with UI-test screenshots, editing only affected pages and never source code.
 |xref:skills/iru-update-docs.adoc[]
 
 |`iru-update-java-springboot-documentation`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
-|Creates and refreshes a Java/Kotlin Spring Boot service's Antora docs from code, marking underivable facts TODO.
+|Creates and refreshes a Java or Kotlin Spring Boot service's Antora docs: architecture, use cases, database model, APIs, metrics, and a Hilla UI section.
 |xref:skills/iru-update-java-springboot-documentation.adoc[]
 
 |`iru-windows-code-one-task`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
-|Implements a single Windows desktop app task (WPF, WinUI 3, WinForms; MVVM or MVC) with its tests.
+|Implements one plan task in a Windows desktop app on .NET 10 (WPF, WinUI 3, WinForms): Core-first code, UI components, tests, compile-check, checkbox.
 |xref:skills/iru-windows-code-one-task.adoc[]
 
 |`iru-windows-code-one-task-group`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
-|Implements one Windows desktop task bucket, then validates it once: license, XML docs, tests, coverage, quality diff.
+|Implements one bucket of Windows desktop app tasks, then validates once: license, docs, Core tests, 80% coverage, quality diff, FlaUI UI tests, UI contract.
 |xref:skills/iru-windows-code-one-task-group.adoc[]
 
 |===
@@ -3016,7 +3022,9 @@ flowchart TD
 `iru-setup-repository` is the usual way in: it detects a non-empty repository's type via `iru-explore` (or asks
 over up to six rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple, Desktop & command line), collects the shared,
 cost-aware inputs once, and delegates to exactly one orchestrator via `iru-isolated-skill-executor`, forwarding
-`mode: existing` when the repository already has content.
+`mode: existing` when the repository already has content. For a project type with a user interface it also asks
+the shared `accessibility` input (`enforce`/`report`/`off`), which the UI scaffold records in `.ui-quality.yml`
+alongside a `.ui-screenshots/` capture helper — see <<workflow-ui,Building a user interface>>.
 
 === Setting up a command-line tool
 
@@ -3194,6 +3202,38 @@ flowchart TD
 `iru-setup-changelog` is deliberately **not** part of this flow: it only bootstraps a changelog that doesn't
 exist yet and stops immediately if `CHANGELOG.md` is already present (see xref:skills/iru-setup-changelog.adoc[]).
 Keeping an existing changelog current on each release is `iru-release`'s job, not a standalone update skill's.
+
+[[workflow-ui]]
+=== Building a user interface
+
+Every stack with a user interface (web, mobile, desktop and terminal UIs) follows one catalog-wide UI contract,
+described in xref:guides/building-user-interfaces.adoc[]. It runs through the ordinary development cycle above
+rather than a separate orchestrator:
+
+[mermaid]
+....
+flowchart LR
+    D["Design, mockup or\nfunctional description"] --> P["iru-plan\n(decompose: screens, regions,\ncomponents; one task per\ncomponent, grouped bottom-up)"]
+    P --> C["iru-code\n(iru-&amp;lt;key&amp;gt;-code-one-task per component,\nfollowing reference/ui-contract.md)"]
+    C --> T["UI tests per state ×\nLTR/RTL × light/dark\n(screenshots in .ui-screenshots/,\naccessibility per .ui-quality.yml)"]
+    T --> G["iru-gate-runner\n(test gates with a ui selector)"]
+    G --> U["iru-update-docs\n(User interface pages:\nnavigation flows, one page per\nscreen and component)"]
+....
+
+- **Bootstrap**: `iru-setup-repository` and the stack orchestrators ask the shared `accessibility` input
+  (`enforce`/`report`/`off`, UI project types only); the UI scaffold records it in `.ui-quality.yml`, wires a
+  screenshot helper writing to `.ui-screenshots/` (gitignored by the matching `-gitignore` skill), and
+  `iru-setup-antora` adds the User interface section described in its `reference/ui-docs.md`.
+- **Planning**: `iru-plan` decomposes the design top-down (screen › region › component, reusing existing
+  components; long collections become a virtualized container plus a reusable item component), emits one task per
+  component or screen with its own UI tests, groups leaves first and composites after, and ends with an
+  `/iru-update-docs` task.
+- **Coding**: each UI coding skill (`iru-<key>-code-one-task`) follows its `reference/ui-contract.md` and
+  `reference/ui-implementation.md`; its group skill runs the stack's test gate with the `ui` selector, and the
+  `*-generate-all-tests` skills back-fill UI tests for existing screens and components.
+- **Documentation**: `iru-update-docs` (and `iru-update-java-springboot-documentation` for Spring Boot/Hilla)
+  turns the captured screenshots into navigation-flow, screen and component pages under `images/ui/`, replacing
+  images of changed components and discarding unused ones.
 
 === Managing a knowledge base of meetings
 

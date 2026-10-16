@@ -1,6 +1,6 @@
 = Update Java Spring Boot Documentation
-:description: Creates and refreshes a Java or Kotlin Spring Boot service's Antora docs: architecture, use cases, database model, APIs, configuration, metrics.
-:keywords: iru-update-java-springboot-documentation, claude code skill, antora, kroki, mermaid, kotlin, gradle, service documentation, api documentation, metrics
+:description: Creates and refreshes a Java or Kotlin Spring Boot service's Antora docs: architecture, use cases, database model, APIs, metrics, and a Hilla UI section.
+:keywords: iru-update-java-springboot-documentation, claude code skill, antora, kroki, mermaid, kotlin, gradle, service documentation, api documentation, metrics, hilla, ui screenshots
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -42,6 +42,13 @@ Unlike xref:skills/iru-setup-antora.adoc[], which installs Mermaid only, this sk
 handles flows and sequences, while Kroki adds PlantUML, C4, and ERD, which is what the architecture and
 database-model pages need. It flags that with the public Kroki server every diagram's source text is sent to a
 third-party service at build time, and that a sensitive model warrants self-hosting.
+
+With a Hilla frontend (`frontend: hilla` in the manifest) the service also has a user interface, so the skill adds a
+**User interface** section (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `ui/index.adoc`,
+`ui/navigation.adoc` built from the file-based routes under `src/main/frontend/views/`, one `ui/screens/<View>.adoc` per
+routed view and one `ui/components/<Component>.adoc` per reusable component, exactly as `reference/ui-docs.md` describes,
+including its screenshot synchronisation against the `.ui-screenshots/` that the frontend's Playwright UI tests produce. With
+`frontend: none` there is no UI section.
 
 == Purpose group
 
@@ -149,11 +156,14 @@ hand-written prose, list contradictions), **Keep as is** (only create missing pa
   levers usable as a fast mitigation during a degradation, and a legend.
 * `metrics.adoc` — the metric table with type, every tag key and its possible values, cardinality risk flagged, and
   where to scrape and view them locally.
+* With `frontend: hilla`: the `ui/` pages above plus a **User interface** entry in `nav.adoc`, and the screenshots they use
+  copied into `images/ui/`, synchronised once after Step 11 and before the Step 12 build (changed images replaced,
+  unreferenced ones deleted, `.ui-screenshots/` removed).
 * For Kotlin services, a KDoc reference link on the overview and a short "Build, test and run" list using the
   Gradle or Maven commands of the detected variant.
 * `nav.adoc` entries for every page created.
 * A report stating whether the page set was created or updated, the Step 0 option chosen, and per page created /
-  updated / replaced / kept as is, plus which `api-docs-url` variant and which language/build-tool variant was used.
+  updated / replaced / kept as is (with Hilla: the `ui/` pages created/updated/removed and the screenshot synchronisation result, including states left "screenshot pending"), plus which `api-docs-url` variant and which language/build-tool variant was used.
 
 == Execution flow
 
@@ -172,6 +182,8 @@ flowchart TD
     F --> G["Steps 3-11: derive each page —\noverview, architecture, use cases, database model,\nREST/gRPC/GraphQL/messaging APIs, configuration, metrics"]
     G -- fact not derivable --> H["Write an explicit TODO: marker;\nnever invent prose"]
     H --> G
+    G -- frontend hilla --> G2["UI section: ui/ pages and screenshot sync\nper reference/ui-docs.md"]
+    G2 --> I
     G --> I["Step 12: Build the site;\nfix broken xrefs, tables, diagram syntax"]
     I --> J["Verify every Mermaid and Kroki diagram\nactually rendered — a bad Kroki block\nbuilds without warning"]
     J --> K["Step 13: Report pages, all TODOs by page,\nand every code/spec discrepancy found"]

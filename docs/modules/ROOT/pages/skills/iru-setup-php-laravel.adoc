@@ -1,6 +1,6 @@
 = Setup PHP Laravel
-:description: Scaffolds a Laravel application with composer create-project or updates an existing one, adding Pest, Pint, Larastan, composer scripts and a tested sample slice.
-:keywords: iru-setup-php-laravel, claude code skill, laravel, composer, pest, phpunit, larastan, pint, sail, laravel boost, php bootstrap
+:description: Scaffolds or updates a Laravel app with Pest, Pint, Larastan, composer scripts, a tested sample slice and Playwright browser UI tests with accessibility checks.
+:keywords: iru-setup-php-laravel, claude code skill, laravel, composer, pest, larastan, pint, playwright, ui tests, accessibility, php bootstrap
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -15,9 +15,10 @@ Scaffolds a Laravel application with `composer create-project laravel/laravel` (
 * Pint (`pint.json`) and Larastan (`phpstan.neon`) — level 9 for a new app, a lower level plus a generated baseline for an existing one.
 * Composer scripts the workflows and gates call by name: `test`, `test:coverage` (Clover and JUnit under `build/logs/`, 80% floor), `lint`, `lint:report`, `format`, `format:check`.
 * A sample action, Form Request, policy and resource with feature tests (never added to an existing app without asking).
+* Browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, Playwright (`playwright.config.ts` serving `php artisan serve`) with `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper and a `WelcomePage` spec that captures `.ui-screenshots/screen/WelcomePage/` across left-to-right/right-to-left x light/dark with an accessibility check. Two small edits to `welcome.blade.php` (a locale-driven `dir` attribute and an accessible link colour) make the sample pass under `accessibility: enforce`. Details live in `reference/sample-code.md`.
 * Only when chosen: a database-backed `Integration` suite (MySQL or PostgreSQL), Laravel Sail, a production `Dockerfile` (FrankenPHP or PHP-FPM + Nginx) for `distribution: internal`, `sonar-project.properties`, and Laravel Boost as a dev-only dependency.
 
-The skill announces whether it is scaffolding from scratch or updating an existing app. For every artifact it owns that already exists it warns and asks **Update** / **Keep as is** / **Replace** (or **Stop**), unless `on-existing` pre-answers. Replace is never offered for the application itself, since re-running `create-project` would overwrite live code. It ends by running the same commands the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates run, and reports what it could not verify rather than assuming it works.
+The skill announces whether it is scaffolding from scratch or updating an existing app. For every artifact it owns that already exists it warns and asks **Update** / **Keep as is** / **Replace** (or **Stop**), unless `on-existing` pre-answers. Replace is never offered for the application itself, since re-running `create-project` would overwrite live code. The browser UI tests serialize behind the shared `.integration-test.lock` and are reported unverified when Node, a browser or a servable PHP is missing. It ends by running the same commands the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates run, and reports what it could not verify rather than assuming it works.
 
 == Purpose group
 
@@ -88,6 +89,11 @@ When called from `iru-setup-php-repository`, the resolved answers arrive as `arg
 |`yes` or `no` for Laravel Sail and Laravel Boost.
 |Sail `yes` only with an integration suite; Boost `yes`
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the level the browser UI tests apply to axe-core accessibility checks, written to `.ui-quality.yml`.
+|`enforce`; an existing `.ui-quality.yml` pre-selects its value
+
 |`mode`
 |No
 |`new` or `existing`. Informational: never means "update silently".
@@ -106,8 +112,9 @@ Unknown keys are ignored. A `composer.json` that is not a Laravel app makes the 
 * A Laravel application at the repository root (or a `<slug>` subdirectory), with `composer.lock` and the identity, version key and platform pin applied.
 * `phpunit.xml` (fast suites), `tests/Pest.php` and `tests/Unit/ArchTest.php` (Pest), `pint.json`, `phpstan.neon` (+ baseline for an existing app), and the composer scripts.
 * The sample slice and its tests, optionally `phpunit.integration.xml`, Sail files, `Dockerfile`/`.dockerignore`, `sonar-project.properties`, Boost files and guidelines.
-* A `/build/` entry appended to `.gitignore` when no line covers it.
-* A report: mode, toolchain used (host or Docker image), resolved versions and their source, the action per owned artifact (created / updated / replaced / kept as is / removed / skipped), each gate command and result, anything unverified, and a warnings block (never commit `.env`, coverage needs PCOV or Xdebug, Boost runs with developer credentials, a `SONAR_TOKEN` is needed).
+* `.ui-quality.yml`, `playwright.config.ts`, `tests/e2e/support/ui-screenshots.ts`, `tests/e2e/specs/WelcomePage.spec.ts`, Playwright and axe-core devDependencies and a `test:e2e` npm script.
+* `/build/`, `.ui-screenshots/`, `/test-results/`, `/playwright-report/`, `/blob-report/` and `/playwright/.cache/` entries appended to `.gitignore` when no line covers them.
+* A report: mode, toolchain used (host or Docker image), resolved versions and their source, the action per owned artifact (created / updated / replaced / kept as is / removed / skipped), each gate command and result, the browser UI test result (screenshot count, accessibility violations, the client-side direction fallback while the app has no locale-selection mechanism), anything unverified, and a warnings block (never commit `.env`, coverage needs PCOV or Xdebug, Boost runs with developer credentials, a `SONAR_TOKEN` is needed).
 
 == Execution flow
 
@@ -144,7 +151,7 @@ flowchart TD
 
 === Invokes
 
-None. It runs `composer`, `php`, `vendor/bin/*` and optionally `docker` directly. Step 15 runs the same commands as the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates, but does not call those skills. The sample code follows `iru-php-code-one-task/reference/laravel.md`.
+None. It runs `composer`, `php`, `vendor/bin/*` and optionally `docker` directly. Step 15 runs the same commands as the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates, but does not call those skills. The sample code follows `iru-php-code-one-task/reference/laravel.md`, and the UI test helper mirrors the API documented in `iru-php-code-one-task`'s UI guidance.
 
 === Invoked by
 

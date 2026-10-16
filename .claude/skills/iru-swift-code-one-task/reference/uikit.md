@@ -99,7 +99,9 @@ final class GreetingViewController: UIViewController {
   colors, never hard-coded white/black — Dark Mode).
 - Composite screens use **child view controllers** (`addChild(_:)`, add the child's view, `didMove(toParent:)`) or a
   container (`UINavigationController`, `UITabBarController`, `UISplitViewController`), not one controller owning
-  everything.
+  everything. A child/region is a UI-contract component (`ui-contract.md`, `ui-implementation.md`): it renders a
+  value-type state through `render(_:)` and reports user intents through closures (`var onOpen: ((ID) -> Void)?`) or a
+  `@MainActor` delegate — never a `UIControl` event or a model mutation.
 
 ## Auto Layout in code
 
@@ -137,7 +139,7 @@ let layout = UICollectionViewCompositionalLayout.list(
   using: UICollectionLayoutListConfiguration(appearance: .insetGrouped))
 
 let registration = UICollectionView.CellRegistration<UICollectionViewListCell, Note.ID> { cell, _, id in
-  guard let note = store.notes.first(where: { $0.id == id }) else { return }
+  guard let note = notesByID[id] else { return }      // the list state, keyed by id
   var content = cell.defaultContentConfiguration()
   content.text = note.title
   cell.contentConfiguration = content
@@ -165,6 +167,9 @@ dataSource.apply(snapshot, animatingDifferences: true)
   `environment.container.effectiveContentSize` — not by device.
 - Selection goes to the controller/view model (`collectionView(_:didSelectItemAt:)` →
   `dataSource.itemIdentifier(for:)` → an intent call), not straight into model mutation.
+- The whole list's state (item states with stable ids + paging flags) comes from the view model/Core controller;
+  the collection component diffs it into a snapshot and pages from `collectionView(_:willDisplay:forItemAt:)` — the
+  full `render(_:)` pattern, and how to capture its states in UI tests, is in `ui-implementation.md`.
 
 ## Target-action and `UIAction`
 

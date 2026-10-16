@@ -1,5 +1,5 @@
 = TypeScript Code Quality
-:description: Runs ESLint, Oxlint, Biome, tsc --noEmit, Prettier and Stylelint as configured, incl. NestJS, Next.js and React Native, and reports issues by tool and rule id.
+:description: Runs ESLint, Oxlint, Biome, tsc --noEmit, Prettier and Stylelint as configured, reports issues by tool and rule id, with an accessibility subtotal for UI.
 :keywords: iru-typescript-code-quality, claude code skill, eslint, oxlint, biome, tsc, prettier, nestjs, nextjs, static analysis
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -36,6 +36,12 @@ Framework-specific behavior:
   files (`**/*.{js,jsx,ts,tsx}`) so the native `android/`/`ios/` projects are not flagged, and `tsc --noEmit` on
   Expo with TypeScript 6 may need `"types": ["jest"]`, reported as a single configuration finding. Rule ids from
   `react-native/*`, `@react-native/*`, `ft-flow/*`, `expo/*` and `import/*` are classified.
+
+For UI projects (React/Vite, Next.js, Ionic, Hilla, Angular) it also sums the accessibility lint rules already in the
+ESLint buckets (`jsx-a11y/*`, angular-eslint's template accessibility rules) into one `accessibility` subtotal so the
+accessibility level of the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces])
+can be read at a glance; when neither plugin is configured it says "accessibility lint not configured" instead, and
+never adds the plugin or edits the config.
 
 == Purpose group
 
@@ -74,6 +80,7 @@ graph and the reported diagnostic lines are filtered afterward to ones whose fil
   configured, skipped" rather than a misleading clean pass.
 * When the prompt supplies a baseline (a prior per-rule-id count, e.g. from `iru-typescript-code-one-task-group`),
   only the new-vs-baseline regressions per rule id — not the full current list.
+* For a UI project, an `accessibility` subtotal right below the overall total (or "accessibility lint not configured").
 * No source, ESLint, `tsc`, Prettier, or Stylelint configuration is ever modified.
 
 == Execution flow

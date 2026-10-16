@@ -16,18 +16,22 @@ description: >-
   config, PHPStan with `_PS_ROOT_DIR_` against a real shop) plus a stub-based PHPStan config that needs no shop,
   a fast PHPUnit unit suite with Clover/JUnit under `build/logs/`, an optional Integration suite and Docker
   `prestashop/prestashop` + MariaDB dev shop, `bin/package.sh` building the distributable zip for Back Office or
-  PrestaShop Addons upload, and `sonar-project.properties` when Sonar is on. Resolves dev-dependency versions live
-  through `composer require --dev` under the pinned platform, then runs the unit tests, coverage, PHPStan, and
+  PrestaShop Addons upload, `sonar-project.properties` when Sonar is on, and browser UI tests per the catalog's UI
+  contract — `.ui-quality.yml`, a test-only `package.json` with Playwright + `@axe-core/playwright`,
+  `playwright.config.ts` against a running shop at `PS_BASE_URL` (specs skip when it is unset), the shared
+  `tests/e2e/support/ui-screenshots.ts` helper, and a `FooterMessage` spec capturing the hook template across
+  left-to-right/right-to-left × light/dark with an accessibility check, all excluded from the module zip.
+  Resolves dev-dependency versions live through `composer require --dev` under the pinned platform, then runs the unit tests, coverage, PHPStan, and
   PHP-CS-Fixer to prove the scaffold. Invoke as `/iru-setup-php-prestashop`. Announces whether it is creating the
   module from scratch or updating an existing one; for every file it owns that already exists, warns and asks
   Update / Keep as is / Replace. Accepts pre-resolved inputs via `args` (`key: value` lines) — `name`, `slug`
   (the technical name), `vendor`, `namespace`, `description`, `license`, `developer-name`, `developer-email`,
   `organization-url`, `php-version`, `open-source`, `visibility`, `ci`, `distribution`, `sonar` (+
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `tab`, `mode`, `on-existing` — so
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `tab`, `accessibility`, `mode`, `on-existing` — so
   `iru-setup-php-repository` can supply them without re-prompting. Use whenever a PrestaShop module repository needs
   its module skeleton and build/test/lint/package toolchain bootstrapped from this house template.
 model: sonnet
-allowed-tools: Read Write Edit Glob Grep AskUserQuestion Bash(composer *) Bash(php *) Bash(vendor/bin/*) Bash(docker *) Bash(git *) Bash(gh *) Bash(bash bin/package.sh*) Bash(chmod +x bin/package.sh) Bash(mkdir *) Bash(ls *) Bash(cat *) Bash(find *) Bash(grep *) Bash(head *) Bash(test *) Bash(command -v *) Bash(date *) Bash(unzip -l *)
+allowed-tools: Read Write Edit Glob Grep AskUserQuestion Bash(composer *) Bash(php *) Bash(npm *) Bash(npx *) Bash(vendor/bin/*) Bash(docker *) Bash(git *) Bash(gh *) Bash(bash bin/package.sh*) Bash(chmod +x bin/package.sh) Bash(mkdir *) Bash(ls *) Bash(cat *) Bash(find *) Bash(grep *) Bash(head *) Bash(test *) Bash(command -v *) Bash(date *) Bash(unzip -l *)
 ---
 
 # Setup PrestaShop module
@@ -42,8 +46,9 @@ installed into real `prestashop/prestashop:8` and `:9` shops, and exercised end 
   (form, controller, services, route, Twig), hook template, `upgrade/README.md`, `index.php` guard, license headers,
   logo generator.
 - `reference/tooling-templates.md` — `composer.json` and scripts, `phpunit.xml.dist`, unit/integration tests,
-  PHPStan configs and stubs, `.php-cs-fixer.dist.php`, the Docker dev shop, `.distignore`, `bin/package.sh`,
-  `sonar-project.properties`.
+  PHPStan configs and stubs, `.php-cs-fixer.dist.php`, the Docker dev shop, the browser UI tests (`package.json`,
+  `playwright.config.ts`, `.ui-quality.yml`, the screenshot/accessibility helper, the `FooterMessage` spec),
+  `.distignore`, `bin/package.sh`, `sonar-project.properties`.
 
 Read both files in full before writing anything. Copy templates verbatim, substituting only `<placeholder>` values.
 The coding conventions they implement are the ones `iru-php-code-one-task` (`reference/prestashop.md`) enforces
@@ -75,6 +80,7 @@ sonar-organization: acme-github
 sonar-project-key: acme_acmegreeting
 sonar-host-url: https://sonarcloud.io
 tab: front_office_features
+accessibility: enforce
 mode: new
 on-existing: ask
 ```
@@ -85,7 +91,9 @@ Parse them now; every key found is resolved and not asked again in Step 2. Recog
 `major.minor`), `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`),
 `distribution` (`none`/`internal`/`store` — only changes Step 8's packaging notes; `bin/package.sh` is always
 written because it is also how a module is installed on any shop), `sonar` (`cloud`/`self-hosted`/`none`) plus
-`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `tab`, `mode` (`new`/`existing`), and `on-existing`
+`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `tab`, `accessibility` (`enforce`/`report`/`off` — the
+automated accessibility level of the browser UI tests, written to `.ui-quality.yml`; default `enforce`), `mode`
+(`new`/`existing`), and `on-existing`
 (`ask`/`keep`/`update`/`replace`, default `ask`). Ignore any other key (e.g. `ci-tests`, `pages` belong to the
 workflows skill — the Integration suite is always scaffolded; CI decides whether to run it). If `args` is absent or
 not in this format, treat everything as unset.
@@ -105,7 +113,8 @@ The files this skill owns: `<module>.php`, `config.xml`, `logo.png`, `composer.j
 `config/routes.yml`, the sample `src/` classes, the Twig/Smarty templates, `upgrade/README.md`, every `index.php`
 guard, `phpunit.xml.dist`, `tests/bootstrap.php`, the sample unit/integration tests,
 `tests/Integration/docker-compose.yml`, `phpstan.dist.neon`, `tests/phpstan/phpstan.neon`, `tests/phpstan/stubs/*`,
-`.php-cs-fixer.dist.php`, `.distignore`, `bin/package.sh`, `sonar-project.properties`.
+`.php-cs-fixer.dist.php`, `.distignore`, `bin/package.sh`, `sonar-project.properties`, `.ui-quality.yml`,
+`package.json`, `playwright.config.ts`, `tests/e2e/support/ui-screenshots.ts`, `tests/e2e/specs/FooterMessage.spec.ts`.
 
 Announce one of:
 
@@ -133,6 +142,13 @@ Announce one of:
     hook) unless the user asks — add only the tooling and any guards/headers that are missing.
   - Ask about `sonar-project.properties` only after Step 2 resolved `sonar`; with `sonar: none`, Update/Replace mean
     removing it.
+  - `.ui-quality.yml`: **Update** adds any missing key and sets `accessibility` to this run's value only when it came
+    from `args` or Step 2 (an existing level and narrowed `directions`/`themes` are otherwise kept); **Keep** leaves it
+    (Step 8 names a level that differs from this run's); **Replace** writes the contract defaults with this run's
+    level. `package.json` Update merges the `test:e2e` script and the two dev dependencies into an existing one. The
+    `FooterMessage` spec is part of the greeting sample: on an existing module write only the UI test tooling
+    (`.ui-quality.yml`, `package.json`, `playwright.config.ts`, the helper) and recommend **Keep as is** for an
+    existing `playwright.config.*` or `tests/e2e/`.
 
 ## Step 2 — Collect the required inputs
 
@@ -170,6 +186,11 @@ PrestaShop 8 support. It sets `<php-version>` (`require.php: >=<php-version>`, `
 <php-version>.0`) and `<ps-min>`: `8.0.0` when the floor is ≤ 8.1, otherwise `9.0.0` — say so when the user picks the
 higher floor.
 
+Then **accessibility** unless resolved (`AskUserQuestion`, header `Accessibility`, "Automated accessibility checks
+in UI tests?"): **Enforce (Recommended)** — "axe-core violations fail the browser UI tests" / **Report only** —
+"listed in the test output, never failing" / **Off** — "not run; the coding rules still apply". Written to
+`.ui-quality.yml`.
+
 Then `open-source` (Yes/No) and `sonar`, exactly like `iru-setup-typescript-library` Step 2: resolve `visibility`
 (from `args`, else `gh repo view --json visibility -q .visibility`, else ask; `internal` = private; open source +
 private is contradictory → ask which is right); recommend **SonarCloud** only for a public open-source repository,
@@ -206,6 +227,10 @@ Packagist is unreachable — the versions this skill resolved with a `8.1.0` pla
 | `friendsofphp/php-cs-fixer` | `^3.95` (3.95.27) |
 | `prestashop/php-dev-tools` | `^5.0` |
 
+npm (browser UI tests only — never shipped): `npm view <package> version` for `@playwright/test` (fallback 1.64.1,
+written `^1.64.0`), `@axe-core/playwright` (4.14.0, `^4.14.0`) and `@types/node` (`^24.0.0`, Node 24 LTS), written as
+`^<major>.<minor>.0`.
+
 Don't add `prestashop/autoindex` or `prestashop/header-stamp` (see `tooling-templates.md`). Add no production
 dependency: everything in `require` ships inside the module zip and loads next to the shop's own vendor.
 
@@ -218,6 +243,8 @@ All in `reference/`. Substitute placeholders only. Decisions that change a templ
   unless the user asks for the 9-only form (documented there, not shop-verified).
 - **`sonar: none`**: no `sonar-project.properties`.
 - **Existing module**: tooling only (Step 1); the sample files are written only on a from-scratch run.
+- **`accessibility`**: the one word on `.ui-quality.yml`'s `accessibility:` line.
+- **License** in `package.json`: the SPDX id, or `UNLICENSED` for no license.
 
 ## Step 6 — Write the files
 
@@ -234,6 +261,7 @@ views/index.php  views/templates/index.php  views/templates/admin/{configure.htm
 views/templates/hook/{footer.tpl,index.php}
 upgrade/{README.md,index.php}  translations/index.php
 phpunit.xml.dist  phpstan.dist.neon  .php-cs-fixer.dist.php  .distignore  bin/package.sh  [sonar-project.properties]
+.ui-quality.yml  package.json  playwright.config.ts  tests/e2e/support/ui-screenshots.ts  tests/e2e/specs/FooterMessage.spec.ts
 tests/bootstrap.php  tests/Unit/Settings/MessageSettingsTest.php  tests/Unit/Presenter/FooterMessagePresenterTest.php
 tests/Integration/{ModuleInstallTest.php,docker-compose.yml}
 tests/phpstan/phpstan.neon  tests/phpstan/stubs/{constants.php,prestashop.stub.php}
@@ -259,10 +287,17 @@ failure rather than editing templates to force a pass:
    exists.
 6. `composer format:check` — PHP-CS-Fixer finds 0 fixable files.
 7. `composer package` (needs `rsync`, `zip`, `composer`) — `unzip -l build/<module>-<version>.zip` lists
-   `<module>/<module>.php`, `<module>/vendor/autoload.php`, and no `tests/`.
-8. **Shop check — offer it** with `AskUserQuestion` (Recommended when Docker is running; it takes a few minutes and
+   `<module>/<module>.php`, `<module>/vendor/autoload.php`, and no `tests/`, `package.json`, `node_modules/` or
+   `playwright.config.ts`.
+8. **Browser UI test tooling** (needs Node 20+): `npm install`, `npx playwright install chromium`, then
+   `npx playwright test --list` lists `FooterMessage.spec.ts` and a plain `npm run test:e2e` reports it **skipped**
+   (no `PS_BASE_URL`) — that proves the config, helper and spec load. No Node → "UI tests unverified (no Node)".
+9. **Shop check — offer it** with `AskUserQuestion` (Recommended when Docker is running; it takes a few minutes and
    pulls `prestashop/prestashop` and `mariadb` images): `composer shop:up` (with a free `PS_PORT` if 8080 is taken;
-   `PS_VERSION=8` for 8.x), `composer shop:install`, `composer test:integration`, `composer lint:shop`, then
+   `PS_VERSION=8` for 8.x), `composer shop:install`, `composer test:integration`, `composer lint:shop`, the browser UI
+   tests `PS_BASE_URL=http://localhost:<PS_PORT> npm run test:e2e` (check `.ui-screenshots/component/FooterMessage/`
+   holds `default--<direction>--<theme>.png` for every `.ui-quality.yml` direction × theme; the right-to-left ones use
+   the client-side fallback unless an RTL language was installed and `PS_RTL_LANG` set), then
    `composer shop:down`. After it, run `git diff --stat config.xml` — PrestaShop rewrites `config.xml` in a mounted
    module directory on install; restore the template version (`git checkout config.xml` if it was committed, else
    rewrite it). Declined or Docker unavailable → "shop check not run" in Step 8.
@@ -274,7 +309,9 @@ namespace, `<vendor>/<module>`, version `0.1.0-dev`, tab, license, PHP floor and
 the floor came from), and the resolved dev-dependency versions (live or fallback). Per file: **created / updated /
 replaced / kept as is / removed**, with mismatches for kept files and what a Replace may have lost. Each Step 7
 check: pass/fail/unverified with the reason (coverage %, PHPStan error counts, fixable-file count, zip path, shop
-check result per PrestaShop major).
+check result per PrestaShop major, browser UI tests: screenshot count, axe violations as rule id × count, or
+"unverified (no shop)"). `.ui-quality.yml` (created / updated / replaced / kept as is) and the accessibility level it
+holds.
 
 State `open-source`, `visibility` (and its source), `sonar`, and `distribution`:
 
@@ -307,6 +344,10 @@ State `open-source`, `visibility` (and its source), `sonar`, and `distribution`:
   release zips must be ignored (and `config.xml` kept tracked) — `iru-setup-php-gitignore` does it.
 - With Sonar on, a `SONAR_TOKEN` secret and the Sonar project must exist; CI runs `composer test:coverage` and
   `composer lint:report` before the scanner.
+- Browser UI tests need a running shop with the module installed and `PS_BASE_URL`; without it they skip and are
+  reported unverified. For real right-to-left captures install an RTL language in the test shop and export
+  `PS_RTL_LANG=<iso>`. `node_modules/`, `.ui-screenshots/`, `test-results/` and `playwright-report/` belong in
+  `.gitignore` (`iru-setup-php-gitignore`); `.distignore` already keeps all of it out of the zip.
 
 ## Verification notes
 
@@ -332,6 +373,14 @@ Built in October 2026 by generating a module from these exact templates in `$TMP
   on 8.x); `$this->trans()` in a module controller fails on 8.x (inject the translator); console as root breaks
   `var/` permissions; `ps_module.version` truncates `-dev` versions; PrestaShop rewrites `config.xml` in a mounted
   working copy.
+- **Browser UI tests (issue 16, October 2026)** in `$TMPDIR/iru-verify/php/iru-setup-php-prestashop/`: `npm install`
+  resolved `@playwright/test` 1.64.1, `@axe-core/playwright` 4.14.0, `@types/node` 24.x; `tsc --noEmit` (strict)
+  clean on the config, helper and spec; `npm run test:e2e` without `PS_BASE_URL` → 1 skipped; with `PS_BASE_URL`
+  pointing at a static stand-in page carrying the hook's markup, the spec passed (4 captures
+  `component/FooterMessage/default--{ltr,rtl}--{light,dark}.png`, axe clean); `rsync --exclude-from=.distignore`
+  dropped `package.json`, `node_modules/`, `playwright.config.ts`, `tests/`, `.ui-quality.yml` and the Playwright
+  output. **Not verified:** the spec against a real 8.x/9.x shop (the Docker VM had no disk space left this run), an
+  installed RTL shop language (`PS_RTL_LANG`), and the classic theme's markup under axe.
 - Not verified: the 9-only controller variant (`PrestaShopAdminController` + attribute); `composer
   test:integration`/`lint:shop`/`shop:*` invoked through the composer scripts themselves (their exact `docker
   compose` commands were run by hand); submission to validator.prestashop.com or Addons; GitHub Actions runs (the

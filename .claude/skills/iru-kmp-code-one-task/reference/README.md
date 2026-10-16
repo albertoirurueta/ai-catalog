@@ -20,13 +20,15 @@ Detect the module and source set first (`iru-kmp-code-one-task` Steps 0–1), th
 | `shared-logic.md` | The task touches coroutines/`Flow`, networking (Ktor), serialization, dates, persistence (SQLDelight / Room / DataStore), DI (Koin or manual), a shared `ViewModel`, or non-UI resources. |
 | `compose-multiplatform.md` | The task adds or changes a `@Composable` in a KMP module (`ui: compose`): shared UI, `Res` resources, navigation, previews, `MainViewController`, UIKit/SwiftUI interop. |
 | `native-ui.md` | The task touches `androidApp` Jetpack Compose UI or `iosApp` SwiftUI over shared state (`ui: native`), or wires a shared `ViewModel`/state holder into either. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI — the catalog-wide UI contract (verbatim) and its KMP mapping: shared view model state, `Screen › Region › Component` decomposition, `Lazy*`/SwiftUI `List` collections, `runComposeUiTest` on the Android host (Robolectric) and the iOS simulator, `ImageRenderer`/XCUITest for native iOS, the screenshot helpers with the `--android`/`--ios` variant, the accessibility check. |
 | `ios-interop.md` | The task changes a declaration Swift calls (any `public` API of the framework module, especially `suspend`, `Flow`, sealed types, generics, exceptions), or writes Swift in `iosApp`. |
 | `security.md` | The task touches credentials/tokens, storage of sensitive data, networking/TLS, logging of user data, R8/ProGuard rules, `Info.plist`/ATS, or input from outside the app. |
 
 A task that only changes logic inside one existing `commonMain` function, with no signature change and no UI, needs
 the three always-read files plus `testing.md`, and nothing else. Don't read the rest speculatively. Read at most one
 of `compose-multiplatform.md`/`native-ui.md` for a given piece of UI — a screen is either shared Compose
-Multiplatform UI or a native screen per platform, never both.
+Multiplatform UI or a native screen per platform, never both. Any UI task also reads `ui-contract.md` and
+`ui-implementation.md`.
 
 ## The three rules that override everything else
 
@@ -78,6 +80,8 @@ skill's "Verification notes"), with this catalog's own stated preferences taking
 - SwiftUI / UIKit integration: <https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-swiftui-integration.html>,
   <https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-uikit-integration.html>
 - Testing Compose Multiplatform UI: <https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-test.html>
+- UI contract and its KMP mapping: `ui-contract.md` (catalog-wide, verbatim) and `ui-implementation.md`'s own
+  Sources list.
 - Compose Multiplatform accessibility: <https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-accessibility.html>
 - Kotlin coroutines (incl. `Dispatchers.IO` on Native) and kotlinx-coroutines-test:
   <https://kotlinlang.org/docs/coroutines-guide.html>, <https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-test/>

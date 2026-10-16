@@ -1,6 +1,6 @@
 = KMP Test
-:description: Runs a Kotlin Multiplatform project's tests per target (Android host, JVM, app unit tests, iOS simulator, XCTest) and reports a compact pass/fail summary.
-:keywords: iru-kmp-test, claude code skill, kotlin multiplatform, kmp, gradle, junit, xctest, ios simulator, run tests, test selector
+:description: Runs Kotlin Multiplatform tests per target (Android host, JVM, iOS simulator, XCTest) plus a ui selector for screenshots and accessibility.
+:keywords: iru-kmp-test, claude code skill, kotlin multiplatform, kmp, gradle, xctest, ios simulator, ui screenshots, accessibility, run tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -21,6 +21,8 @@ after 60 minutes, released on every exit path). It also detects the "selector ma
 the JVM task with "No tests found for given includes", whereas a Kotlin/Native simulator task exits 0 and writes no
 XML, and an unmatched `-only-testing:` yields zero tests. It is the KMP equivalent of
 xref:skills/iru-android-test.adoc[] and xref:skills/iru-swift-test.adoc[].
+
+A `ui` selector (`/iru-kmp-test ui [<scope>]`, or a `ui: yes` line) runs the UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): Compose Multiplatform `runComposeUiTest` tests on the Android host (Robolectric) and the iOS simulator, `ui: native` Robolectric Compose tests in `androidApp`, `iosApp` `ImageRenderer`/XCUITest captures, and device flow tests only when an emulator is attached. Step 5a resolves `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`, forwarded to the JVM tests and to the simulator through `SIMCTL_CHILD_`/`TEST_RUNNER_` variables), clears it only on a full (unscoped) UI run, forces every Gradle test task to re-run with `--rerun` (captures are side effects that Gradle's up-to-date checks and build cache do not track), collects `.xcresult` attachments and device outputs into the contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>...]` layout, validates the names with an embedded parser, and reports the `.ui-quality.yml` accessibility level with violation counts. KMP captures carry an `android`/`ios` platform variant so the same `<Id>` does not collide.
 
 == Purpose group
 
@@ -69,6 +71,11 @@ XCTest bundle); `all` runs both.
 |An `xcodebuild` destination overriding the simulator picked for the XCTest stage.
 |First available iPhone simulator
 
+|`ui`
+|No
+|`yes`, or a leading `ui` word in `<scope>` (for example `ui GreetingScreenTest`): a UI run (Step 5a). With no further scope it is a full UI run that clears the capture directory first.
+|Not set -- ordinary tests only.
+
 |`lock`
 |No
 |`held` when the caller already holds `.integration-test.lock`; the skill then neither acquires nor releases it.
@@ -102,6 +109,7 @@ Stage-to-task mapping (Step 2):
   **no matching tests for `<pattern>`**, **timed out**, **not applicable**, or **unverified (reason)**.
 * An explicit callout when a test fails on one target only, which usually means an `actual` implementation differs.
 * The lock is mentioned only when it was anything other than an immediate acquire.
+* For a UI run: the capture directory and whether it was cleared (full run) or kept (scoped run); screenshots per kind and per platform (`android`/`ios`); malformed names; accessibility violations (total + rule ids with counts) and the `.ui-quality.yml` level applied (`enforce`/`report`/`off`); device flow tests run or **unverified (reason)**.
 * No source or test code is ever modified; raw Gradle/`xcodebuild` output is never pasted.
 
 == Execution flow
@@ -121,8 +129,9 @@ flowchart TD
     I --> J["Run Kotlin/Native\niosSimulatorArm64Test"]
     J --> K["Step 5: xcodebuild test on iosApp\n(XcodeGen if needed)\nparse .xcresult"]
     K --> L["Release lock"]
+    L --> L2["Step 5a (ui runs): collect .xcresult attachments\nand device outputs; validate capture names;\ncount accessibility violations"]
     H --> M["Step 6: parse JUnit XML\nper task directory"]
-    L --> M
+    L2 --> M
     M --> N{"Build failed before\nproducing results?"}
     N -- yes --> O["Report the compile or\nconfiguration error"]
     N -- no --> P["Step 7: report per-target\npass / fail / no matching tests /\ntimed out / unverified"]
@@ -139,10 +148,10 @@ inline `python3` parsers, and it does not call any other skill in this catalog.
 === Invoked by
 
 * xref:skills/iru-kmp-code-one-task-group.adoc[] -- Step 3.3 (scoped Android/JVM tests, `target: android`), Step 3.5
-  (full Android/JVM suite) and Step 3.7 (iOS stage, `target: ios`, behind the shared lock), always through the
+  (full Android/JVM suite) and Step 3.7 (iOS stage, `target: ios`, behind the shared lock) and Step 3.8 (UI stage, with the `ui` selector), always through the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-kmp-generate-all-tests.adoc[] -- Step 7, to run the full suite once and confirm the generated tests
-  cause no regressions.
+  cause no regressions, and Step 5a, with the `ui` selector, to run the newly generated UI tests.
 
 === Related agents
 

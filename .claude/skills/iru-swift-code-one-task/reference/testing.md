@@ -147,7 +147,8 @@ All of the following were built and run against a real Swift 6.4 toolchain (`swi
   ```
 
   Never instantiate an `NSViewController`/SwiftUI view in a unit test just to raise coverage — the UI layer is
-  "not measured".
+  "not measured". Rendering a component to *capture its visual states* is different: that is a UI test
+  (`ui-implementation.md`), lives in the app's test target, and never counts toward the bar.
 - **XCUITest on macOS drives the real desktop session** (real keyboard focus, mouse, menu bar), not a simulator: a
   test launches the app with `XCUIApplication()`, `launchArguments.append("--uitesting")` (the app then starts from
   an empty/in-memory store — `macos.md`), `launch()`, and interacts with Mac idioms: `click()`/`rightClick()`/
@@ -182,10 +183,20 @@ All of the following were built and run against a real Swift 6.4 toolchain (`swi
 - System permission alerts belong to SpringBoard: the `--uitesting` path should avoid triggering them; where a test
   must, use `addUIInterruptionMonitor(withDescription:)` or query
   `XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]`.
-- Accessibility regressions: one `try app.performAccessibilityAudit(for: [.dynamicType, .contrast, .hitRegion,
-  .sufficientElementDescription, .textClipped])` test per main screen; ignore a known issue only inside the closure,
-  with a comment.
+- Accessibility regressions: one `try app.performAccessibilityAudit(for: .all) { issue in … }` test per screen at the
+  `.ui-quality.yml` level (`enforce` fails, `report` attaches the issue and passes, `off` skips —
+  `ui-implementation.md`); ignore a known issue only inside the closure, for that element and audit type, with a
+  comment. `.dynamicType`/`.textClipped`/`.trait` don't exist on macOS, `.action`/`.parentChild` only exist there.
 - UI tests need a booted simulator and are serialized by `iru-swift-code-one-task-group`; this skill only writes them.
+
+## UI tests, screenshots and accessibility (UI contract)
+
+A task that adds or changes a screen, component or list also writes the UI tests of `ui-contract.md` §6–§8 as
+`ui-implementation.md` maps them: component captures (Swift Testing + `ImageRenderer`/native view capture, one
+parameterized test per visual state over `UIQuality.directions` × `UIQuality.themes`), screen and flow XCUITests
+launched with `--fixture <data-set>` that assert behaviour once and capture every matrix cell
+(`XCUIScreen.main.screenshot()`), and the accessibility audit — every capture through the shared
+`Support/UIScreenshots.swift` helper, named `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`.
 
 ## What to cover
 

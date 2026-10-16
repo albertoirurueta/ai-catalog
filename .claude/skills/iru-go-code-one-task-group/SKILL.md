@@ -15,7 +15,10 @@ description: >-
   statement-coverage gate per changed file via `iru-go-coverage` (`-coverpkg=./...`, so in-process testscript and
   Cobra tests count; container-free tests only; branch coverage "not available in Go"), the full suite with `-race`,
   and golangci-lint v2 + gofmt/goimports + `go vet` + govulncheck via `iru-go-code-quality` diffed against the
-  baseline — and last, only when the repository has `integration`-tagged tests, the container-backed stage
+  baseline; for a bucket that added or changed Bubble Tea screens/components, a UI stage checking that every one of
+  them has `.txt` captures in `.ui-screenshots/` for each of its states × `.ui-quality.yml` directions × themes and
+  applying the accessibility level (enforce → violations fail the bucket, report → listed) — and last, only when the
+  repository has `integration`-tagged tests, the container-backed stage
   (`iru-go-test` with `tags: integration`) serialized repository-wide behind the shared atomic-`mkdir`
   `.integration-test.lock` (owner file, stale after 60 minutes, bounded ~45-minute wait, released on every exit path,
   `lock: held` passed to the gate); plain CLI end-to-end tests (testscript) need no lock, and Docker unavailable makes
@@ -81,6 +84,11 @@ Detect once and reuse for every gate call below (the same facts `iru-go-code-one
   `race: no` and Step 5 says the full suite ran without `-race` and why.
 - **Quality tools wired**: `.golangci.yml` (v2 when `version: "2"`), `command -v golangci-lint`, `command -v
   govulncheck`; a missing tool is reported, not installed by this skill.
+- **Terminal UI** — `charm.land/bubbletea/v2` (or v1) in `go.mod`, the TUI package(s) (`internal/tui/`), the capture
+  helper (`ui_screenshots_test.go`) and `.ui-quality.yml` at the repository root (missing = `accessibility: enforce`,
+  `directions: [ltr, rtl]`, `themes: [light, dark]`). Note whether the TUI adapts to the background (a `Theme` built
+  with `lipgloss.LightDark` from `tea.BackgroundColorMsg`) — the themes 3.5a expects are the listed ones it defines
+  plus `no-color` (only `no-color` for a single palette).
 - **Docker** — `docker info` now, recorded for Step 3.7 (only when integration-tagged tests exist).
 
 Then collect the files every task is expected to touch and capture a single pre-change baseline via `iru-gate-runner`:
@@ -204,7 +212,28 @@ packages (`./internal/cli`, …). Then run, in this order — **3.1–3.6 gate t
    `go test -count=1 -race ./...`.) Never the integration tag. If everything passes, report back only that and the
    count; otherwise only the failing test names, messages, and any `WARNING: DATA RACE` with the two goroutines' top
    frames."})`. Fix regressions and races and re-invoke until green. A race is always a defect in this bucket's code or
-   tests (shared state between parallel tests counts) — never suppressed.
+   tests (shared state between parallel tests counts) — never suppressed. When Step 1 found a terminal UI, add
+   `\nui: yes` to the args and ask for the UI-capture summary too (directory cleared, captures per kind, malformed
+   names, accessibility rule-id counts, level applied) — this unfiltered `./...` run is the full UI run that clears
+   and refills `.ui-screenshots/`.
+
+5a. **Terminal-UI captures and accessibility** — only when the bucket added or changed a TUI screen or component (a
+   file in the TUI package, a sub-model, a delegate/render function); otherwise say "no UI changes" in Step 5. Using
+   3.5's run (no extra test run):
+
+   - **Coverage of the matrix**: for every screen/component the bucket added or changed (the type names from the
+     tasks' `Screen › Region › Component` trees, cross-checked against the diff), list
+     `.ui-screenshots/<screen|component>/<Id>/` (`find … -name '*.txt'`). Every visual state its doc comment lists
+     must have a capture, and every captured `<state>` must exist for each `.ui-quality.yml` direction × each expected
+     theme (Step 1). A missing combination or an Id with no directory → add the capture through the task that owns
+     the component, re-run 3.3 and 3.5, re-check. Flows the bucket changed need their `flow/<name>/NN-<step>` steps.
+   - **Malformed names** reported by the gate → fix the test that wrote them (the documentation skills ignore them).
+   - **Accessibility at the `.ui-quality.yml` level**: `enforce` → a violation already failed a test in 3.5 — fix the
+     component (never weaken the check); `report` → record the rule-id counts from the gate's summary for Step 5;
+     `off` → say "accessibility checks off". These are the asserted TUI checks (`tui-color-only`, `tui-help-line`,
+     `tui-keyboard`) — no automated audit exists for terminal UIs; say so.
+   - Nothing here needs a terminal, device or container, so this stage is never "unverified" for environment
+     reasons. A PNG next to a `.txt` is optional and never required.
 
 6. **Code quality**, diffed against Step 1's baseline, via `iru-gate-runner`: `Agent({description: "Check for new Go
    quality issues in task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
@@ -292,6 +321,8 @@ per-file coverage and the race/integration results:
 ```
 - [x] Task 3. **Add `list` command with `--limit`/`--cursor`** — internal/cli/list.go (91%), internal/catalog/list.go
   (88%); list_test.go + list.txtar + list.golden.json; -race clean; no new golangci-lint issues; no container-backed tests.
+- [x] Task 4. **Add order list screen** — internal/tui/orders.go (90%); UI: OrdersScreen + OrderList captured
+  (5 states × ltr/rtl × no-color), accessibility enforce: 0 violations.
 ```
 
 If a stage was unverified, say so with the reason — `integration unverified (Docker unavailable)`, `-race not run (cgo
@@ -309,6 +340,10 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
   CLI reference/man pages need regenerating; any `go.mod`/`go.sum` change.
 - **The test results** (3.3, 3.5 incl. races found and fixed) and **the container-backed result** (3.7): passed,
   failed-and-fixed, **unverified** with the reason, or "no container-backed tests".
+- **The UI stage** (3.5a): per added/changed screen/component the states × directions × themes captured (or the
+  gaps fixed), malformed names, the accessibility level applied and its result (violations fixed under `enforce`,
+  rule-id counts under `report`, "off"), and that the checks are asserted TUI checks rather than an automated audit
+  — or "no UI changes".
 - **Coverage exceptions accepted**, with reasoning; logic reachable only through a TTY or a container that should move
   behind an interface.
 - **Golden files refreshed** in 3.3, each with the reason the output change was intended.
@@ -335,6 +370,9 @@ versions:
   56.8% of `./...`).
 - `golangci-lint run` (v2 config from `iru-go-code-one-task`'s `reference/code-style.md`) and `govulncheck ./...`
   reported 0 issues / no vulnerabilities; `golangci-lint config verify` accepted the config.
+- Stage 3.5a (UI captures and accessibility, added for the UI contract) was written without a Go toolchain on the
+  authoring machine: the capture-name validation it relies on (in `iru-go-test`) was exercised with Python, the Go
+  side is unverified.
 - **Not verified**: this orchestration skill was not dry-run end to end by its author, and the `iru-go-*` gate skills
   were being written concurrently — their args are used exactly as the shared contract fixes them (`iru-go-test`:
   packages, `run:`/`skip:`/`tags:`/`race:`/`lock: held`; `iru-go-coverage`: targets, `bar:`/`coverpkg:`/`tags:`;

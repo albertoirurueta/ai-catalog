@@ -16,6 +16,9 @@ gets killed in the background.
    `setQueryData`) on success. Don't copy query results into `useState`. Don't add a server-state library for one
    task — with none installed, write a small typed hook returning a discriminated union (`{ status: "loading" } |
    { status: "success"; data } | { status: "error"; error }`) with an `AbortController` cancelled on unmount.
+   For a list screen, the view model hook exposes the **whole list** as immutable item UI states with stable ids
+   plus paging flags (`{ items, loadingMore, endReached }`) — `useInfiniteQuery` + `select`, or the store — and
+   keeps selection/expansion keyed by id there, never inside a row (`ui-implementation.md`, "Collections").
 4. **Shared client state** — React context for low-frequency values (theme, session, feature flags), or the
    project's store (Zustand, Redux Toolkit, Jotai, MobX). Don't introduce a store; don't put high-frequency values
    (scroll position, text input) in a context that re-renders the whole tree — split the context or use a

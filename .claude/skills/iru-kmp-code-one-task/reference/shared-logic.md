@@ -116,6 +116,9 @@ Use the store the project already has:
 - A `ViewModel` exposes `StateFlow<UiState>` and plain functions for user intents (`fun onRefresh()`), launches work
   in `viewModelScope`, and never holds a reference to a UI object (`Context`, a `View`, a `UIViewController`).
 - `viewModelScope` uses `Dispatchers.Main.immediate` — tests must `Dispatchers.setMain(...)` (`testing.md`).
+- For UI, the view model owns the **whole** screen state, including a collection's full item list (each item a
+  small immutable state with a stable `id`), paging flags and selection keyed by id; derived display values are
+  computed here, not in the views (`ui-implementation.md`).
 - With `ui: native`, the iOS app owns the `ViewModel`'s lifetime and must call `clear()`-equivalent cleanup when the
   screen goes away — see `native-ui.md`.
 - `SavedStateHandle` is available in the multiplatform lifecycle artifacts (`lifecycle-viewmodel-savedstate`) — use

@@ -145,13 +145,20 @@ remaining cost-sensitive choices with the Actions-minutes, SonarCloud and Pages 
 |`new` or `existing` (informational), and `ask`, `keep`, `update` or `replace` to pre-answer the per-file question.
 |None, `ask`
 
+|`ui`
+|No
+|`none` or `tui`. Detected from disk when absent (a Ratatui, Bubble Tea or Terminal.Gui dependency). With `tui`, the
+Linux test job uploads `.ui-screenshots/` (the UI tests' text captures) as a 7-day `ui-screenshots` artifact
+(`if: always()`, `if-no-files-found: ignore`); no new job is added.
+|Detected from disk
+
 |`security-dependency-review`, `security-osv`, `security-gitleaks`, `security-codeql`
 |No
 |Each `yes` or `no`, toggling that security job.
 |`yes` (`security-codeql` is `no` for Swift on a private repository)
 |===
 
-Other shared-vocabulary keys (`ci`, `ui`, `description`, `license`, `developer-*`, `organization-url`, `owner`) are
+Other shared-vocabulary keys (`ci`, `description`, `license`, `developer-*`, `organization-url`, `owner`) are
 accepted; `description` and `license` feed the Homebrew formula and the rest are ignored and named in the report.
 
 == Outputs
@@ -159,6 +166,9 @@ accepted; `description` and `license` feed the Homebrew formula and the rest are
 * `.github/workflows/build.yml` and `.github/scripts/cli_smoke_test.sh`, always.
 * `.github/workflows/release.yml` unless `distribution: none`, with `.github/scripts/homebrew_formula.py` for the
   Homebrew channel (not Go) and `.github/scripts/lcov_to_sonar_generic.py` for Swift with Sonar.
+* With a terminal UI (`ui: tui`), a `ui-screenshots` artifact step in `build.yml`'s Linux test job that uploads the
+  `.ui-screenshots/` text captures written by the UI tests (see
+  xref:guides/building-user-interfaces.adoc[Building user interfaces]).
 * `.github/workflows/sync.yml` with `.github/scripts/sync_versions.py` for `branching: gitflow`.
 * `.github/workflows/security.yml` and `.github/dependabot.yml`, always.
 * A report with the mode, per-file action (created / updated / replaced / kept as is), adaptations for non-standard

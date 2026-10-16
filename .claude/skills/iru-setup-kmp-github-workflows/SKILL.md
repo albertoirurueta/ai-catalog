@@ -8,7 +8,9 @@ description: >-
   `koverXmlReport` + `koverVerify` at 80%, `:androidApp:assembleDebug`, optional `./gradlew sonar`), a cost-gated
   macOS `ios` job (`ios-ci: all|stable|none` — macOS minutes cost ~10× Linux on private repositories — running the
   Kotlin/Native `:shared:iosSimulatorArm64Test`, `xcodegen generate`, SwiftLint, and `xcodebuild build` or, with
-  `ci-tests: full`, `xcodebuild test` of the `iosApp` scheme on the newest iOS simulator), and an Antora + Dokka
+  `ci-tests: full`, `xcodebuild test` of the `iosApp` scheme on the newest iOS simulator) — each test job also
+  uploads the UI tests' `.ui-screenshots/` captures as a 7-day `ui-screenshots-android`/`ui-screenshots-ios`
+  artifact (`if: always()`, `if-no-files-found: ignore`, no extra job or runner) — and an Antora + Dokka
   (`api/`) docs job deployed to GitHub Pages (`pages: yes`) or uploaded as a workflow artifact (`pages: no`);
   `release.yml` per `distribution` (`internal`: Firebase App Distribution + TestFlight; `store`: Google Play +
   TestFlight — a signed `:androidApp:bundleRelease` from the `SIGNING_*` env vars, and an `xcodebuild archive`/
@@ -297,6 +299,11 @@ exist in App Store Connect before the first TestFlight upload.
   `lint-results-debug.sarif`, `shared/build/reports/detekt/detekt.sarif`, `:shared:dokkaGenerate` →
   `shared/build/dokka/html`, `xcodebuild test -scheme iosApp`) was produced by `iru-setup-kmp-app`'s own
   verification run.
+- **UI screenshot uploads (2026-10-16)**: the two `Upload UI screenshots` steps were added to rendered copies of
+  combinations (1)–(3) in `$TMPDIR/iru-verify/kmp/ui-contract/wf/` and all three passed `actionlint` 1.7.12 again;
+  combination (3) (`ios-ci: none`) has only the Android upload. The captures themselves come from
+  `iru-setup-kmp-app`'s UI tests (`--android` from the Linux test step, `--ios` from `iosSimulatorArm64Test` and,
+  with `ci-tests: full`, the `ImageRenderer` XCTest).
 - **Unverified locally, never a blocker**: every job on GitHub's runners (incl. the `~/.konan` cache, Homebrew
   installs on the image), the Sonar scan, CodeQL extraction (notably Kotlin 2.4 support in the `java-kotlin`
   extractor), OSV-Scanner/gitleaks/dependency-review results, the signed Android bundle and Play/Firebase uploads,

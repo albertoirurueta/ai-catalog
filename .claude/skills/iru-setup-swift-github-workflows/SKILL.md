@@ -1,6 +1,6 @@
 ---
 name: iru-setup-swift-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, for the app flavor (`iru-setup-apple-app`'s contract) a Linux SwiftLint/`swift format` job, a macOS `Packages/Core` job (`swift test --enable-code-coverage` + `llvm-cov`, 80% line bar, DocC) and one matrix leg per platform scheme (`<AppName>-iOS`/`-watchOS`/`-visionOS`/`-macOS`, each `xcodegen generate`/`tuist generate`, `xcodebuild build-for-testing` against `generic/platform=<P> Simulator`, then `test-without-building` on `platform=<P> Simulator,name=<device>,OS=<newest runtime>` resolved from `xcrun simctl` — visionOS tests reported unverified when the runner image has no visionOS runtime; `.xcresult` uploaded), an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: plain `xcodebuild archive` + `-exportArchive` with `destination: upload` to App Store Connect via an API key for iOS (watch app embedded), visionOS and a standalone watchOS app, Developer ID export + notarization + stapling for macOS — the Fastfile's `match` + `beta`/`release` lane drives the iOS upload only when `fastlane/` exists and `signing: fastlane-match`; no job requires Fastlane), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, the four `security-*` opt-outs, `visibility` (`public`/`private`/`internal` — drives the Actions-minutes, SonarCloud and Pages cost guidance), `ci-tests` (`unit` — unit-test targets only, the app flavor's XCUITest bundle skipped, every macOS minute costing ~10× Linux — or `full` — unit + UI tests on every selected destination), `pages` (`yes`/`no` — `no` keeps the DocC + Antora build but uploads it as a workflow artifact instead of deploying to GitHub Pages), and `on-existing` (`ask`/`keep`/`update`/`replace`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it resolves `visibility` itself (`gh repo view`, else asks) and asks `sonar`/`ci-tests`/`pages` with that visibility's cost facts (never `ci` — invoking it means CI is wanted). Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Announces whether it is creating the pipeline from scratch or updating an existing one; creates every workflow that doesn't exist, and for each one that already exists warns and asks Update (merge using the templates as reference, keeping foreign steps/jobs) / Keep as is (listing every mismatch with this run's choices) / Replace (regenerate, customizations lost) / Stop, explaining each consequence (`on-existing` answers for every file at once). Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, for the app flavor (`iru-setup-apple-app`'s contract) a Linux SwiftLint/`swift format` job, a macOS `Packages/Core` job (`swift test --enable-code-coverage` + `llvm-cov`, 80% line bar, DocC) and one matrix leg per platform scheme (`<AppName>-iOS`/`-watchOS`/`-visionOS`/`-macOS`, each `xcodegen generate`/`tuist generate`, `xcodebuild build-for-testing` against `generic/platform=<P> Simulator`, then `test-without-building` on `platform=<P> Simulator,name=<device>,OS=<newest runtime>` resolved from `xcrun simctl` — visionOS tests reported unverified when the runner image has no visionOS runtime; `.xcresult` uploaded, and the UI tests' `.ui-screenshots/` captures — written by the test processes through `TEST_RUNNER_UI_SCREENSHOTS_DIR` and recovered from the `.xcresult` with `xcrun xcresulttool export attachments` — uploaded from the same leg as a 7-day `ui-screenshots-<scheme>` artifact; a library with SwiftUI views uploads its `swift test` captures the same way), an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: plain `xcodebuild archive` + `-exportArchive` with `destination: upload` to App Store Connect via an API key for iOS (watch app embedded), visionOS and a standalone watchOS app, Developer ID export + notarization + stapling for macOS — the Fastfile's `match` + `beta`/`release` lane drives the iOS upload only when `fastlane/` exists and `signing: fastlane-match`; no job requires Fastlane), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, the four `security-*` opt-outs, `visibility` (`public`/`private`/`internal` — drives the Actions-minutes, SonarCloud and Pages cost guidance), `ci-tests` (`unit` — unit-test targets only, the app flavor's XCUITest bundle skipped, every macOS minute costing ~10× Linux — or `full` — unit + UI tests on every selected destination), `pages` (`yes`/`no` — `no` keeps the DocC + Antora build but uploads it as a workflow artifact instead of deploying to GitHub Pages), and `on-existing` (`ask`/`keep`/`update`/`replace`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it resolves `visibility` itself (`gh repo view`, else asks) and asks `sonar`/`ci-tests`/`pages` with that visibility's cost facts (never `ci` — invoking it means CI is wanted). Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Announces whether it is creating the pipeline from scratch or updating an existing one; creates every workflow that doesn't exist, and for each one that already exists warns and asks Update (merge using the templates as reference, keeping foreign steps/jobs) / Keep as is (listing every mismatch with this run's choices) / Replace (regenerate, customizations lost) / Stop, explaining each consequence (`on-existing` answers for every file at once). Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -388,6 +388,17 @@ jobs:
       # with such a target (e.g. a `<Name>IntegrationTests` testTarget), `--skip <Name>IntegrationTests`.
       - name: Build and test with coverage
         run: swift test --enable-code-coverage --parallel <skip-integration-tests>
+
+      # UI contract: only when the package ships SwiftUI/UIKit/AppKit views whose tests capture screenshots through
+      # the UIScreenshots helper (it writes <repo root>/.ui-screenshots directly under swift test); omit otherwise.
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Export lcov coverage
         run: |
@@ -857,6 +868,8 @@ jobs:
         if: steps.destination.outputs.test != ''
         env:
           TEST_DESTINATION: ${{ steps.destination.outputs.test }}
+          # UI contract: the test processes write captures here (xcodebuild strips the TEST_RUNNER_ prefix).
+          TEST_RUNNER_UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
         run: |
           set -eo pipefail
           signing=()
@@ -883,6 +896,34 @@ jobs:
           name: ${{ matrix.scheme }}-xcresult
           path: build/${{ matrix.scheme }}.xcresult
           retention-days: 14
+
+      - name: Collect UI screenshots from the xcresult
+        if: (!cancelled()) && hashFiles(format('build/{0}.xcresult/Info.plist', matrix.scheme)) != ''
+        run: |
+          set -eo pipefail
+          export_dir="$RUNNER_TEMP/attachments-$SCHEME"
+          xcrun xcresulttool export attachments --path "build/$SCHEME.xcresult" --output-path "$export_dir" > /dev/null
+          python3 - "$export_dir" .ui-screenshots <<'PY'
+          import json, os, re, shutil, sys
+          export, out = sys.argv[1], sys.argv[2]
+          for test in json.load(open(os.path.join(export, "manifest.json"))):
+              for a in test["attachments"]:
+                  name = re.sub(r"_\d+_[0-9A-Fa-f-]{36}(\.\w+)?$", "", a["suggestedHumanReadableName"])
+                  name = re.sub(r"\.png$", "", name)
+                  if re.match(r"^(component|screen|flow)~", name):
+                      path = os.path.join(out, name.replace("~", "/") + ".png")
+                      os.makedirs(os.path.dirname(path), exist_ok=True)
+                      shutil.copyfile(os.path.join(export, a["exportedFileName"]), path)
+          PY
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots-${{ matrix.scheme }}
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
   # >>> sonar
 
   # Linux: the scan itself needs no Xcode. Skipped on pull requests from forks (no SONAR_TOKEN).
@@ -1041,7 +1082,13 @@ Notes specific to this template:
   (`xcrun --sdk <iphonesimulator|watchsimulator|xrsimulator> --show-sdk-version`) so an older Xcode never picks a
   runtime it can't drive.
 - **`ci-tests` maps onto `-skip-testing:<AppName>UITests-<P>`** in every leg (`unit`); `full` runs the UI tests too
-  (on macOS after the Automation Mode check). Each UI-test leg boots a simulator and launches the app — macOS
+  (on macOS after the Automation Mode check).
+- **UI screenshots (UI contract)**: each leg's test step passes `TEST_RUNNER_UI_SCREENSHOTS_DIR`, the leg then copies
+  the captures the test processes attached to the `.xcresult` (`<kind>~<Id>~<file>` — the only route out of the
+  sandboxed macOS host app) into `.ui-screenshots/` with `xcrun xcresulttool export attachments`, and uploads the
+  directory as a 7-day `ui-screenshots-<scheme>` artifact (`if-no-files-found: ignore` — a `ci-tests: unit` leg still
+  carries the unit-test component captures). No extra job, runner or minutes: it runs inside the existing leg.
+  Verified locally: the step's YAML parses and its script rebuilt the contract tree from a real Xcode 27.1 `.xcresult`. Each UI-test leg boots a simulator and launches the app — macOS
   minutes billed at ~10× Linux on a private repository.
 - **The coverage bar is Core's**, measured by `swift test` + `llvm-cov` in the `core` job — exactly
   `iru-setup-macos-github-workflows`' step. The app legs don't pass `-enableCodeCoverage`: the scheme's `xccov` report

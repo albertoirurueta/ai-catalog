@@ -9,8 +9,186 @@
   the screen appears, since typing goes through the system input sheet). Every app `xcodebuild test` is serialized
   behind `.simulator-test.lock` by the Swift gates.
 
+- **`Targets/<Platform>/Tests/Support/UIScreenshots.swift`** — the UI contract's shared screenshot helper
+  (`UIQuality` reads `.ui-quality.yml`; `UIScreenshots` writes `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`
+  under `UI_SCREENSHOTS_DIR` or `<repository root>/.ui-screenshots` and attaches each capture to the test), compiled
+  into **both** test targets (the UI-test target lists the file in its sources — `project-templates.md`).
+
 One copy per platform folder; the files use `#if os(...)` so the same text compiles on every platform. Rendered and
 run on 2026-10-16 (see SKILL.md Known quirks for the per-platform results).
+
+### `Targets/<Platform>/Tests/Support/UIScreenshots.swift` (every platform)
+
+Component tests call `try UIScreenshots.render(<SwiftUI view>, id: "<Type>", state: "<state>", direction:, theme:)`
+from a `@Test(arguments: UIQuality.directions, UIQuality.themes)` (SwiftUI-native leaves only — `ImageRenderer` draws
+`List`/`TextField`/`Toggle` as placeholders), or `UIScreenshots.capture(<UIView/NSView>, …)` for UIKit/AppKit views.
+
+```swift
+import CoreGraphics
+import Foundation
+import ImageIO
+import SwiftUI
+import Testing
+import UniformTypeIdentifiers
+import XCTest
+
+#if os(iOS) || os(visionOS)
+    import UIKit
+#elseif os(macOS)
+    import AppKit
+#endif
+
+// Shared by the unit-test and UI-test targets (UI contract: iru-swift-code-one-task reference/ui-contract.md).
+
+/// The repository's `.ui-quality.yml`; a missing or unreadable file means the defaults.
+enum UIQuality {
+    enum Accessibility: String { case enforce, report, off }
+
+    static let accessibility = Accessibility(rawValue: values["accessibility"]?.first ?? "") ?? .enforce
+    static let directions = (values["directions"] ?? ["ltr", "rtl"]).compactMap(UIScreenshots.Direction.init)
+    static let themes = (values["themes"] ?? ["light", "dark"]).compactMap(UIScreenshots.Theme.init)
+
+    /// Every direction × theme pair to capture.
+    static var matrix: [(UIScreenshots.Direction, UIScreenshots.Theme)] {
+        directions.flatMap { direction in themes.map { (direction, $0) } }
+    }
+
+    private static let values: [String: [String]] = {
+        guard let root = UIScreenshots.repositoryRoot(),
+            let text = try? String(contentsOf: root.appending(path: ".ui-quality.yml"), encoding: .utf8)
+        else { return [:] }
+        var result: [String: [String]] = [:]
+        for line in text.split(separator: "\n") {
+            let content = line.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)[0]
+            let parts = content.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2, !parts[1].isEmpty else { continue }
+            result[parts[0]] = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+                .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        }
+        return result
+    }()
+}
+
+/// Saves captures as `<UI_SCREENSHOTS_DIR | <repository root>/.ui-screenshots>/<kind>/<Id>/
+/// <state>--<direction>--<theme>[--<variant>…].png` and attaches each one to the running test as
+/// `<kind>~<Id>~<file>`, so `iru-swift-test` can recover it from the `.xcresult` when the test process can't write
+/// to the host disk (a sandboxed macOS host app, a device).
+enum UIScreenshots {
+    enum Kind: String { case component, screen, flow }
+    enum Direction: String { case ltr, rtl }
+    enum Theme: String { case light, dark }
+
+    /// The contract's relative path for one capture.
+    static func path(
+        _ kind: Kind, _ id: String, state: String, direction: Direction, theme: Theme, variants: [String] = []
+    ) -> String {
+        "\(kind.rawValue)/\(id)/" + ([state, direction.rawValue, theme.rawValue] + variants).joined(separator: "--")
+            + ".png"
+    }
+
+    /// Writes PNG data under the screenshots directory (best effort) and attaches it to the current test.
+    @MainActor
+    static func record(_ png: Data, at path: String) {
+        let name = path.replacingOccurrences(of: "/", with: "~")
+        if Test.current != nil {
+            Attachment.record(png, named: name)
+        } else {
+            let attachment = XCTAttachment(data: png, uniformTypeIdentifier: UTType.png.identifier)
+            attachment.name = name
+            attachment.lifetime = .keepAlways
+            XCTContext.runActivity(named: "Screenshot \(path)") { $0.add(attachment) }
+        }
+        guard let url = directory()?.appending(path: path) else { return }
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? png.write(to: url)
+    }
+
+    /// Renders a SwiftUI component with `ImageRenderer`. SwiftUI-native content only: `List`, `ScrollView`,
+    /// `TextField`, `Toggle` and UIKit/AppKit-backed views render as placeholders — capture those in XCUITest.
+    @MainActor
+    static func render(
+        _ view: some View, _ kind: Kind = .component, id: String, state: String, direction: Direction,
+        theme: Theme, variants: [String] = [], width: CGFloat = 390
+    ) throws {
+        let content = view.frame(width: width).background(.background)
+            .environment(\.layoutDirection, direction == .rtl ? .rightToLeft : .leftToRight)
+            .environment(\.colorScheme, theme == .dark ? .dark : .light)
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = 2
+        let image = try #require(renderer.cgImage, "ImageRenderer produced no image for \(id)")
+        let png = try #require(pngData(image))
+        record(png, at: path(kind, id, state: state, direction: direction, theme: theme, variants: variants))
+    }
+
+    #if os(iOS) || os(visionOS)
+        /// Captures a UIKit view (a component, or a view controller's `view`) at a fixed size.
+        @MainActor
+        static func capture(
+            _ view: UIView, _ kind: Kind = .component, id: String, state: String, direction: Direction,
+            theme: Theme, size: CGSize = CGSize(width: 390, height: 844), variants: [String] = []
+        ) throws {
+            let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+            window.traitOverrides.layoutDirection = direction == .rtl ? .rightToLeft : .leftToRight
+            window.overrideUserInterfaceStyle = theme == .dark ? .dark : .light
+            view.frame = window.bounds
+            window.addSubview(view)
+            window.isHidden = false
+            view.layoutIfNeeded()
+            let png = UIGraphicsImageRenderer(bounds: view.bounds).pngData { view.layer.render(in: $0.cgContext) }
+            record(png, at: path(kind, id, state: state, direction: direction, theme: theme, variants: variants))
+        }
+    #elseif os(macOS)
+        /// Captures an AppKit view (a component, or a view controller's `view`) at a fixed size.
+        @MainActor
+        static func capture(
+            _ view: NSView, _ kind: Kind = .component, id: String, state: String, direction: Direction,
+            theme: Theme, size: CGSize = CGSize(width: 480, height: 320), variants: [String] = []
+        ) throws {
+            view.frame = CGRect(origin: .zero, size: size)
+            view.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
+            setDirection(direction == .rtl ? .rightToLeft : .leftToRight, of: view)
+            view.layoutSubtreeIfNeeded()
+            let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            let png = try #require(bitmap.representation(using: .png, properties: [:]))
+            record(png, at: path(kind, id, state: state, direction: direction, theme: theme, variants: variants))
+        }
+
+        @MainActor
+        private static func setDirection(_ direction: NSUserInterfaceLayoutDirection, of view: NSView) {
+            view.userInterfaceLayoutDirection = direction
+            view.subviews.forEach { setDirection(direction, of: $0) }
+        }
+    #endif
+
+    /// PNG-encodes a `CGImage` with ImageIO (no UIKit/AppKit needed).
+    static func pngData(_ image: CGImage) -> Data? {
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil)
+        else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination) ? data as Data : nil
+    }
+
+    /// The directory holding `.git`, walking up from this source file.
+    static func repositoryRoot(file: String = #filePath) -> URL? {
+        var url = URL(filePath: file).deletingLastPathComponent()
+        while url.path() != "/" {
+            if FileManager.default.fileExists(atPath: url.appending(path: ".git").path()) { return url }
+            url.deleteLastPathComponent()
+        }
+        return nil
+    }
+
+    private static func directory() -> URL? {
+        if let path = ProcessInfo.processInfo.environment["UI_SCREENSHOTS_DIR"], !path.isEmpty {
+            return URL(filePath: path)
+        }
+        return repositoryRoot()?.appending(path: ".ui-screenshots")
+    }
+}
+```
 
 
 ### `Targets/<Platform>/Tests/LaunchOptionsTests.swift` (every platform)
@@ -252,6 +430,14 @@ struct AppShellTests {
 
 ### `Targets/<Platform>/UITests/<AppName>UITests.swift` (every platform)
 
+The screen tests of the catalog's UI contract (`iru-swift-code-one-task`'s `reference/ui-contract.md`): the behaviour
+test runs once (left-to-right, light), `testCapturesTheGreetingScreen` relaunches the app per `.ui-quality.yml`
+direction × theme (right-to-left through `-AppleLanguages (ar)` + `-AppleTextDirection`/`-NSForceRightToLeftWritingDirection`;
+dark through `XCUIDevice.shared.appearance`, or `-AppleInterfaceStyle Dark` on macOS; watchOS is dark only) and
+records `.ui-screenshots/screen/<ScreenType>/default--<direction>--<theme>--<platform-variant>.png`, and
+`testGreetingScreenAccessibility` runs `performAccessibilityAudit()` at the configured level (`enforce` fails,
+`report` passes, both attach each issue as `a11y~<ScreenType>~<rule>`; `off` skips).
+
 ```swift
 import XCTest
 
@@ -262,13 +448,27 @@ final class <AppName>UITests: XCTestCase {
     }
 
     @MainActor
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(
+        direction: UIScreenshots.Direction = .ltr, theme: UIScreenshots.Theme = .light
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         #if os(macOS)
             // Start from a fresh window instead of restoring the last session. Keep --uitesting LAST: the
             // argument domain reads "-key value" pairs, so a leading "--uitesting" would swallow the next flag.
             app.launchArguments += ["-ApplePersistenceIgnoreState", "YES"]
+            if theme == .dark {
+                app.launchArguments += ["-AppleInterfaceStyle", "Dark"]
+            }
+        #elseif !os(watchOS)
+            XCUIDevice.shared.appearance = theme == .dark ? .dark : .light
         #endif
+        app.launchArguments +=
+            direction == .rtl
+            ? [
+                "-AppleLanguages", "(ar)", "-AppleLocale", "ar_SA", "-AppleTextDirection", "YES",
+                "-NSForceRightToLeftWritingDirection", "YES",
+            ]
+            : ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launchArguments.append("--uitesting")
         app.launch()
         return app
@@ -313,5 +513,53 @@ final class <AppName>UITests: XCTestCase {
             #endif
         }
     #endif
+
+    /// Captures the greeting screen in every `.ui-quality.yml` direction × theme (UI contract §6–§7).
+    @MainActor
+    func testCapturesTheGreetingScreen() throws {
+        #if os(watchOS)
+            let matrix = UIQuality.matrix.filter { $0.1 == .dark }  // watchOS has no light appearance
+        #else
+            let matrix = UIQuality.matrix
+        #endif
+        for (direction, theme) in matrix {
+            let app = launchApp(direction: direction, theme: theme)
+            XCTAssertTrue(app.buttons["greetButton"].waitForExistence(timeout: 10))
+            UIScreenshots.record(
+                app.windows.firstMatch.screenshot().pngRepresentation,
+                at: UIScreenshots.path(
+                    .screen, "<ScreenType>", state: "default", direction: direction, theme: theme,
+                    variants: ["<platform-variant>"]))
+            app.terminate()
+        }
+    }
+
+    /// Runs Xcode's accessibility audit at the `.ui-quality.yml` level (UI contract §8).
+    @MainActor
+    func testGreetingScreenAccessibility() throws {
+        try XCTSkipIf(UIQuality.accessibility == .off, "accessibility: off in .ui-quality.yml")
+        let app = launchApp()
+        XCTAssertTrue(app.buttons["greetButton"].waitForExistence(timeout: 10))
+        try app.performAccessibilityAudit { issue in
+            let note = XCTAttachment(string: issue.compactDescription)
+            note.name = "a11y~<ScreenType>~\(Self.ruleID(issue.auditType))"
+            note.lifetime = .keepAlways
+            self.add(note)
+            return UIQuality.accessibility == .report  // true = accept the issue, false = fail the test
+        }
+    }
+
+    private static func ruleID(_ type: XCUIAccessibilityAuditType) -> String {
+        var names: [(XCUIAccessibilityAuditType, String)] = [
+            (.contrast, "contrast"), (.elementDetection, "element-detection"), (.hitRegion, "hit-region"),
+            (.sufficientElementDescription, "sufficient-element-description"),
+        ]
+        #if os(macOS)
+            names += [(.action, "action"), (.parentChild, "parent-child")]
+        #else
+            names += [(.dynamicType, "dynamic-type"), (.textClipped, "text-clipped"), (.trait, "trait")]
+        #endif
+        return names.first { type.contains($0.0) }?.1 ?? "other"
+    }
 }
 ```
