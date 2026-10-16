@@ -1,12 +1,12 @@
 = Setup Swift Gitignore
-:description: Creates or refreshes a Swift/Xcode project's root .gitignore for SwiftPM build output, Xcode artifacts, Package.resolved, Fastlane, and signing files.
-:keywords: iru-setup-swift-gitignore, claude code skill, swiftpm, xcode, xcodegen, tuist, fastlane, docc, macos desktop app, dmg, gitignore, bootstrap
+:description: Creates or refreshes a Swift/Xcode project's root .gitignore: SwiftPM and Xcode output, Package.resolved, Fastlane, CLI dist output, signing files.
+:keywords: iru-setup-swift-gitignore, claude code skill, swiftpm, xcode, xcodegen, tuist, fastlane, docc, macos desktop app, swift command-line tool, dmg, gitignore, bootstrap
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Create or refresh the root `.gitignore` for a Swift package or Apple app project, composing a universal
 SwiftPM/Xcode base plus conditionally-detected sections for generator-managed Xcode projects, `Package.resolved`,
-Fastlane, macOS desktop distribution output, signing material, and Antora/DocC documentation output — never overwriting an existing file without
+Fastlane, macOS desktop distribution output, command-line tool outputs (`flavor: cli`), signing material, and Antora/DocC documentation output — never overwriting an existing file without
 warning the user, showing a diff of the proposed merge, and asking Update / Keep as is / Replace first.
 
 == Purpose
@@ -56,16 +56,16 @@ warn-and-ask step, even under `mode: new`.
 
 |`flavor`
 |No
-|`library` or `app` — informs the `Package.resolved` commit-vs-ignore recommendation. Passed straight through by
-an orchestrator (e.g. `iru-setup-swift-library`/`iru-setup-apple-app`) instead of re-detecting it.
-|Inferred from `Package.swift`'s declared products or the presence of an `.xcodeproj`/`.xcworkspace`/app
+|`library`, `app` or `cli` — informs the `Package.resolved` commit-vs-ignore recommendation. Passed straight through by
+an orchestrator (e.g. `iru-setup-swift-library`/`iru-setup-apple-app`/`iru-setup-cli-repository`) instead of re-detecting it.
+|Inferred (the `cli` rule first): an `.executableTarget` on `ArgumentParser` with no Xcode project means `cli`; otherwise from `Package.swift`'s declared products or the presence of an `.xcodeproj`/`.xcworkspace`/app
 `Info.plist`; left unresolved (asked together with `package-resolved`) if no signal is present yet.
 
 |`package-resolved`
 |No
 |`commit` or `ignore` — the pre-resolved answer for whether `Package.resolved` is tracked or ignored, so a caller
 that already knows the answer skips the `AskUserQuestion` prompt.
-|Asked via `AskUserQuestion` (recommended default: commit for `flavor: app`, ignore for `flavor: library`); if
+|Asked via `AskUserQuestion` (recommended default: commit for `flavor: app` and `flavor: cli`, ignore for `flavor: library`); if
 `flavor` is unknown and the user has no preference, defaults to commit.
 
 |`on-existing`
@@ -74,6 +74,12 @@ that already knows the answer skips the `AskUserQuestion` prompt.
 the others apply that choice without asking (the warning and diff are still printed). Meant for scripted runs.
 |`ask`
 |===
+
+== Command-line tool outputs
+
+With `flavor: cli` (or when `scripts/generate-docs.sh` exists) the skill adds root-anchored `/dist/`, `/build/`, `/*.tar.gz`,
+`/*.zip` and `/SHA256SUMS` for the docs generator's and release packaging's output. The generated Antora partial
+`cli-reference.adoc` stays committed, and `Package.resolved` is committed by default for a CLI.
 
 == Outputs
 
@@ -84,7 +90,7 @@ the others apply that choice without asking (the warning and diff are still prin
   entries are listed), or Replace (template only; hand-added entries lost), unless `on-existing` answers for them.
 * A closing report stating the path announced (from scratch or update), the action actually taken (created /
   updated / replaced / kept as is) and who chose it (user or `on-existing`), naming which conditional sections (generator-managed Xcode project, `Package.resolved`,
-  Fastlane, signing material, Antora build output, DocC output) were included versus skipped and why, the
+  Fastlane, command-line tool outputs, signing material, Antora build output, DocC output) were included versus skipped and why, the
   `Package.resolved` commit-vs-ignore decision and its reasoning, and warnings that detection is heuristic and
   that an already-tracked path this skill now proposes to ignore needs a manual `git rm -r --cached`.
 
@@ -128,6 +134,7 @@ None — `iru-setup-swift-gitignore` is a leaf skill; it does not call any other
   generated files (the SwiftPM/Xcode project layout, Antora docs build output) already in place, passing
   `flavor`, and `package-resolved` and `on-existing` when supplied. `mode` is deliberately not passed, since the
   skill's own `.gitignore`-presence check is the more precise signal.
+* xref:skills/iru-setup-cli-repository.adoc[] — for the `swift` flavor, with `flavor: cli`, after `iru-setup-swift-cli`; `on-existing` is passed only when supplied.
 * xref:skills/iru-setup-macos-repository.adoc[] — Step 6, with `flavor: app`, after `iru-setup-macos-app` and `iru-setup-antora`, so the macOS distribution section can detect `scripts/make-dmg.sh`/`ExportOptions-*.plist`; `on-existing` is passed only when supplied.
 
 === Related agents

@@ -6,7 +6,7 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 
 Bootstrap a minimal, working Antora documentation site for a repository: verify/install the Node.js toolchain,
 install Antora plus its extensions, scaffold `antora.yml`/`antora-playbook.yml` and a `ROOT` module with three
-starter pages, and confirm the site actually builds. The component name is derived from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml` `[project].name`, a .NET solution's `*.slnx`/`*.sln` file name, or an XcodeGen `project.yml`'s `name:`), a Python `.dev0` or .NET/PHP `-dev` pre-release suffix is stripped from the starting version like `-SNAPSHOT` (for an Apple app the version comes from `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`), and for Python projects the optional API-docs entry in the starter pages points at the Sphinx build (`docs/api/`, published under the site's `api/`).
+starter pages, and confirm the site actually builds. The component name is derived from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml` `[project].name`, the root `Cargo.toml` `[package] name`, the last element of the `go.mod` `module` path (a `/vN` suffix skipped), a Swift package's executable product name, a .NET solution's `*.slnx`/`*.sln` file name, or an XcodeGen `project.yml`'s `name:`), a Python `.dev0` or .NET/PHP `-dev` pre-release suffix is stripped from the starting version like `-SNAPSHOT` (for an Apple app the version comes from `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`; for a command-line tool from `Cargo.toml`, `internal/version/version.go`, `Version.swift` or `Directory.Build.props`), and for Python projects the optional API-docs entry in the starter pages points at the Sphinx build (`docs/api/`, published under the site's `api/`).
 
 == Purpose
 
@@ -77,6 +77,8 @@ and the current `docs/` layout).
   applied (updated / kept as is / replaced, and whether it came from the user or from `on-existing`, or that the
   user chose Stop), and, under **Keep as is**, every gap left unfilled. It then groups what already existed versus what this run created or corrected, plus a reminder to review
   the generated starter pages.
+* For a command-line tool repository, nothing extra: the generated `cli-reference.adoc` page and its nav entry are
+  added afterwards by xref:skills/iru-setup-cli-repository.adoc[], and an existing one is kept as is on **Update**.
 
 == Execution flow
 
@@ -131,6 +133,9 @@ None — `iru-setup-antora` is a leaf skill; it does not call any other skill in
 * xref:skills/iru-setup-php-repository.adoc[] — Step 6, Antora docs site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-quarkus-repository.adoc[] — Step 4, Antora documentation site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-kmp-repository.adoc[] — Step 5, Antora docs site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, right after the KMP app scaffold and before the workflows step.
+* xref:skills/iru-setup-cli-repository.adoc[] — Step 5, Antora docs site, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, right after the Rust/Go/Swift/.NET CLI scaffold and before the gitignore step; the CLI reference page is added afterwards.
+* xref:skills/iru-setup-macos-repository.adoc[] — Step 5, Antora docs site, via the `iru-isolated-skill-executor` agent.
+* xref:skills/iru-setup-windows-repository.adoc[] — Step 5, Antora docs site, via the `iru-isolated-skill-executor` agent.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 1, bootstraps the Antora site if docs/antora.yml is absent, via a xref:agents/overview.adoc[`general-purpose`] sub-agent.
 * xref:skills/iru-build-docs.adoc[] — Step 1, conditionally: only when no `antora.yml` is found anywhere in the repository, and only after asking the user whether to bootstrap Antora documentation now.
 

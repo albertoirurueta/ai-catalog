@@ -1,0 +1,117 @@
+= Setup Rust Gitignore
+:description: Creates or updates the root .gitignore for a Rust repository, ignoring /target/ and coverage files while keeping Cargo.lock committed for binary targets.
+:keywords: iru-setup-rust-gitignore, claude code skill, rust, cargo, gitignore, cargo-fuzz, cargo-llvm-cov, repository setup
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or refresh the root `.gitignore` of a Rust repository — the command-line tool layout produced by
+xref:skills/iru-setup-rust-cli.adoc[] or any other Cargo crate or workspace. Cargo writes almost everything under one
+directory, so the work lies in not ignoring what must stay tracked. An existing `.gitignore` is never overwritten
+without showing a diff and getting approval.
+
+== Purpose
+
+`iru-setup-rust-gitignore` writes a short template: the anchored `/target/` directory (which also holds xtask output
+under `target/dist`, rustdoc, cargo-llvm-cov and nextest reports), coverage files written elsewhere (`lcov.info`,
+`*.profraw`, `*.profdata`), rustfmt backups, pending snapshot files, env files (keeping `.env.example`), the Antora
+build output, editor/OS noise and the repository-wide `.integration-test.lock/`. A cargo-fuzz section is added only when
+`fuzz/Cargo.toml` exists.
+
+`Cargo.lock` is committed (no ignore line) for any package with a binary target. For a library-only workspace the skill
+asks (or reads `cargo-lock`) whether to commit it (recommended) or ignore it. It never ignores `rust-toolchain.toml`,
+`.cargo/config.toml`, `deny.toml`, golden test files or the generated-but-committed `cli-reference.adoc`, and it checks
+the draft with `git check-ignore` against those files before proposing it. When `.gitignore` exists it announces an
+update, shows the merged draft as a diff, and asks Update / Keep as is / Replace.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-rust-gitignore
+----
+
+Optionally with an `args` block of `key: value` lines (see below) for scripted runs.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`cargo-lock`
+|No
+|`commit` or `ignore` — pre-resolved answer for a library-only crate. Ignored for a package with a binary target, which always commits `Cargo.lock` (an `ignore` is reported and overridden).
+|Asked (commit recommended)
+
+|`mode`
+|No
+|`new` or `existing`. An existing file still goes through the Update / Keep as is / Replace question unless `on-existing` decides.
+|Detected from the root `.gitignore`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace` — how to treat an existing `.gitignore` in scripted runs; the warning and diff are still printed.
+|`ask`
+|===
+
+Any other key forwarded by xref:skills/iru-setup-cli-repository.adoc[] (such as `language`, `ui` or `bin-name`) is ignored and named in the report.
+
+== Outputs
+
+* A root `.gitignore` — created, updated (merged, keeping hand-added lines), replaced with the template, or left untouched when kept as is.
+* A report stating whether the run was from scratch or an update, the action taken (created / updated / replaced / kept as is, and whether it came from the user or `on-existing`), the `Cargo.lock` decision with its reasoning, which conditional sections were included or skipped, the result of the safety check, and any already-tracked file under a newly ignored path with the `git rm -r --cached` it needs.
+* Explicit warnings: review the file before committing; writing `.gitignore` never untracks committed files (rotate any committed secret); keep `Cargo.lock` committed for binaries and regenerate the CLI reference with `cargo xtask docs` instead of ignoring it.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-rust-gitignore"] --> B["Step 0: parse args\n(cargo-lock, mode, on-existing)"]
+    B --> C["Step 1: survey Cargo.toml, bin targets,\nfuzz, Antora, tracked files, existing .gitignore"]
+    C --> D{".gitignore exists?"}
+    D -- no --> E["Announce creating from scratch"]
+    D -- yes --> F["Announce updating existing"]
+    E --> G["Step 2: base template\n(/target/, coverage, env, editors, lock dir)"]
+    F --> G
+    G --> H["Step 3: Cargo.lock decision\nand cargo-fuzz section"]
+    H --> I{"Binary target?"}
+    I -- yes --> J["Commit Cargo.lock, no line"]
+    I -- no --> K["Use cargo-lock arg or ask\ncommit or ignore"]
+    J --> L["Step 4: compose draft, merge existing lines,\ngit check-ignore safety check"]
+    K --> L
+    L --> M{"Existing file?"}
+    M -- no --> W["Step 6: write .gitignore"]
+    M -- yes --> N["Step 5: show diff"]
+    N --> O{"on-existing set?"}
+    O -- yes --> P["Apply keep, update or replace"]
+    O -- no --> Q{"AskUserQuestion:\nUpdate, Keep as is, Replace"}
+    P --> W
+    Q -- Update or Replace --> W
+    Q -- Keep as is --> R
+    W --> R["Report mode, action, Cargo.lock decision,\nsections, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-rust-gitignore` is a leaf skill; it only reads manifests and config files, runs read-only `cargo metadata` and `git` commands, and writes `.gitignore`.
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] — Step 6, root .gitignore for the `rust` language, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+Also named as a follow-up step by xref:skills/iru-setup-rust-cli.adoc[] when run standalone.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-rust-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

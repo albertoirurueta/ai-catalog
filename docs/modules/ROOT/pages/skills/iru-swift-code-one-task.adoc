@@ -1,6 +1,6 @@
 = Swift Code One Task
-:description: Implements one Swift task from an implementation plan, detecting package-vs-app shape and target, applying Swift 6 conventions, then checking it off.
-:keywords: iru-swift-code-one-task, claude code skill, swift, ios, uikit, visionos, macos appkit, swiftui mvvm mvc, xcodebuild compile check, implement plan task
+:description: Implements one Swift task from a plan in a package, Apple app or swift-argument-parser CLI, applying Swift 6 conventions, then checking it off.
+:keywords: iru-swift-code-one-task, claude code skill, swift, ios, uikit, visionos, macos appkit, swiftui mvvm mvc, swift cli tool, argument parser, xcodebuild compile check, implement plan task
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -29,6 +29,10 @@ Before reading anything, Step 1 works out which of two shapes the repository is:
 * **A plain Swift Package** — a `Package.swift` at or near the root with no `.xcodeproj`/generator manifest
   alongside it. Code lives under `Sources/<Target>/` and `Tests/<Target>Tests/`, one pair per `Package.swift`
   target.
+  A **command-line tool** is a plain package whose `Package.swift` declares an `.executableTarget` depending on
+  `ArgumentParser` (reported by `iru-explore` as `Project type: cli-tool (swift)`). In the `iru-setup-swift-cli`
+  layout the logic lives in a `Sources/<Bin>Kit/` library, `Sources/<Bin>/` holds thin swift-argument-parser
+  commands, and the tests are `Tests/<Bin>KitTests/` (in-process) plus `Tests/<Bin>CLITests/` (runs the built binary).
 * **An Apple app project** — an `.xcodeproj` exists or is generated, via `project.yml` (XcodeGen), `Project.swift`
   (Tuist), or, with neither manifest, a hand-maintained `*.xcodeproj` whose `project.pbxproj` is the source of
   truth. An app project frequently also has a local `Packages/Core` package holding testable logic behind thin,
@@ -57,6 +61,9 @@ Logic an app task adds goes to `Packages/Core` (Foundation + Observation only, n
 detected architecture's folder; only views, view controllers, window/scene controllers, menus/commands, the
 composition root (`App`, `AppDelegate`, `SceneDelegate`), background-task/notification registration, and protocol
 implementations that must touch a UI or platform framework belong in the app target.
+
+In a command-line tool, logic, output and errors go to `<Bin>Kit`; a new subcommand's thin struct (flags, command
+metadata and one call into the Kit) goes to `Sources/<Bin>/` and is registered in the root's `subcommands:`.
 
 It then works out which **target** the task's file paths or description name — a path under `Sources/<Target>/`
 or `Packages/Core/Sources/<Target>/` names that target directly; a path under a per-platform app target directory
@@ -122,6 +129,14 @@ typed throws with `enum: Error` error types, naming per the Swift API Design Gui
 |The task touches a visionOS target or destination: windows, volumes, immersive spaces, ornaments, hover effects, `RealityView`/`Model3D`
 |SwiftUI-only visionOS conventions: `ImmersiveSpace`/`openImmersiveSpace`, ornaments, hover effects, `RealityView` basics.
 
+|`cli.md`
+|The package is a command-line tool and the task adds or changes a command, flag, output, error/exit code, prompt, signal/cleanup, child process or the CLI tests
+|Where code goes (`<Bin>Kit` vs thin commands), swift-argument-parser patterns, implementing the contract in a new command, testing the executable, Linux portability.
+
+|`cli-contract.md`
+|With `cli.md`, whenever a CLI task changes what a caller observes: stdout/stderr, exit codes, `--format`/JSON, colour, prompts, `--dry-run`/`--yes`, `schema`/help
+|The catalog's shared, language-agnostic CLI contract (streams, exit codes, TTY/colour, machine output, safety and idempotency, configuration, self-description, startup).
+
 |`package-api.md`
 |The task changes a `public` declaration in a library package's target
 |Semver-stable package API conventions, availability, `Package.swift` hygiene.
@@ -132,7 +147,7 @@ and a platform target
 |Per-platform app structure conventions.
 |===
 
-A new screen in a SwiftUI macOS app reads `architecture.md` + `macos.md` + `swiftui.md`; one in an AppKit app reads `architecture.md` + `macos.md` + `appkit.md` (plus `swiftui.md` only when it hosts SwiftUI content). A new screen in a SwiftUI iOS app reads `architecture.md` + `ios.md` + `swiftui.md`; in a UIKit iOS app `architecture.md` + `ios.md` + `uikit.md` (plus `swiftui.md` only when it hosts SwiftUI); a visionOS scene reads `architecture.md` + `visionos.md` + `swiftui.md`.
+A new screen in a SwiftUI macOS app reads `architecture.md` + `macos.md` + `swiftui.md`; one in an AppKit app reads `architecture.md` + `macos.md` + `appkit.md` (plus `swiftui.md` only when it hosts SwiftUI content). A new screen in a SwiftUI iOS app reads `architecture.md` + `ios.md` + `swiftui.md`; in a UIKit iOS app `architecture.md` + `ios.md` + `uikit.md` (plus `swiftui.md` only when it hosts SwiftUI); a visionOS scene reads `architecture.md` + `visionos.md` + `swiftui.md`. A new command in a command-line tool reads `cli.md` + `cli-contract.md` + `testing.md` (and `docc.md` for its Kit types), never the app files.
 
 Every file states the same override: the rules are the default for **new** code, and a file that consistently
 does something else wins — the divergence is reported in Step 8 rather than silently restyled. If `reference/`
@@ -168,7 +183,7 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 |No
 |The skill's own bundled reference directory (`README.md`, `code-style.md`, `docc.md`, `testing.md`,
 `swiftui.md`, `package-api.md`, `app-structure.md`, `architecture.md`, `macos.md`, `appkit.md`, `ios.md`,
-`uikit.md`, `visionos.md`). If missing, the skill falls back to `CLAUDE.md` and the
+`uikit.md`, `visionos.md`, `cli.md`, `cli-contract.md`). If missing, the skill falls back to `CLAUDE.md` and the
 surrounding code's style, and says so in its report rather than guessing at what the reference would have said.
 |Bundled with the skill
 |===
@@ -181,7 +196,7 @@ surrounding code's style, and says so in its report rather than guessing at what
   they are more specific, and the surrounding file's existing style wherever it consistently differs.
 * Swift Testing (or XCTest where warranted) tests added/updated covering the new/changed behavior, including a
   case per documented `- Throws:` — not run by this skill; the caller runs the suite once for the whole bucket.
-* A compile-check of the touched target (`swift build --build-tests`, or `xcodebuild build-for-testing` against
+* A compile-check of the touched target (`swift build --build-tests` — also for a command-line tool, or `xcodebuild build-for-testing` against
   `platform=macOS` or a generic `generic/platform=<P> Simulator` destination for iOS/visionOS/watchOS, after regenerating the project if the manifest changed) — passed, fixed, found unrelated to this task, or reported
   unavailable.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation

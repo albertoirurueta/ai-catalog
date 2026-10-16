@@ -7,7 +7,7 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 A custom agent that runs a single verification/quality-gate skill — tests, coverage, code-quality/lint, license
 headers, doc-comment audits, security scans, or a full project build — across any of the catalog's language
 tracks (Java and Kotlin on Maven or Gradle, Spring Boot, Quarkus, PHP, .NET, TypeScript including NestJS and
-Next.js, Python including FastAPI and Django, Android, Kotlin Multiplatform, React Native, Swift, Windows desktop apps), in an isolated context, optionally diffs the result against a baseline, and reports back
+Next.js, Python including FastAPI and Django, Android, Kotlin Multiplatform, React Native, Swift, Windows desktop apps, Rust, Go), in an isolated context, optionally diffs the result against a baseline, and reports back
 only a compact, structured summary.
 
 == Purpose
@@ -17,7 +17,7 @@ dozen call sites across `iru-code`, `iru-code-one-task-group`, and every `<key>-
 (`iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`,
 `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`,
 `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`,
-`iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`, `iru-windows-code-one-task-group`, `iru-swift-code-one-task-group`): invoke a verification skill, diff it against a
+`iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`, `iru-windows-code-one-task-group`, `iru-rust-code-one-task-group`, `iru-go-code-one-task-group`, `iru-swift-code-one-task-group`): invoke a verification skill, diff it against a
 baseline if one is given, and return only the distilled outcome — never the raw
 Surefire/JaCoCo/lcov/clover.xml/xccov/SARIF/checkstyle-result.xml/pmd.xml/spotbugsXml.xml/eslint/detekt/ktlint/
 phpstan/psalm/phpcs/swiftlint/detect-secrets output or a full build log. Centralizing the "report back only X, not
@@ -28,20 +28,22 @@ It always prefers invoking the matching Claude Code skill over a raw command:
 
 * Tests — `iru-java-test` (Maven or Gradle, Java or Kotlin sources), `iru-dotnet-test` (incl. Windows desktop solutions — WPF/WinUI/WinForms — with a `ui`
   selector for FlaUI desktop UI tests on Windows), `iru-typescript-test`,
-  `iru-php-test` (Pest/PHPUnit), `iru-python-test` (pytest, incl. pytest-django), `iru-android-test`, `iru-kmp-test` (Kotlin Multiplatform — Android host/JVM tests, plus Kotlin/Native iOS tests and the iOS host app's XCTest on macOS), `iru-swift-test`.
+  `iru-php-test` (Pest/PHPUnit), `iru-python-test` (pytest, incl. pytest-django), `iru-android-test`, `iru-kmp-test` (Kotlin Multiplatform — Android host/JVM tests, plus Kotlin/Native iOS tests and the iOS host app's XCTest on macOS), `iru-swift-test`,
+  `iru-rust-test` (cargo-nextest or `cargo test`, doctests, `#[ignore]`d container tests), `iru-go-test` (`go test -json`, `-race`, `integration` build tag).
 * Coverage — `iru-java-coverage` (JaCoCo from Maven or Gradle, `quarkus-jacoco`, or Kover), `iru-dotnet-coverage`,
   `iru-typescript-coverage` (lcov line/branch %), `iru-php-coverage` (PHPUnit/Pest Clover XML line %; branch
   coverage reported as unavailable rather than invented), `iru-python-coverage` (coverage.py Cobertura XML line/branch %), `iru-android-coverage` (JaCoCo XML line/branch %),
-  `iru-kmp-coverage` (Kover XML line/branch %; JVM/Android targets only — iOS reported as not measurable), `iru-swift-coverage` (llvm-cov/`xccov` %).
+  `iru-kmp-coverage` (Kover XML line/branch %; JVM/Android targets only — iOS reported as not measurable), `iru-swift-coverage` (llvm-cov/`xccov` %),
+  `iru-rust-coverage` (cargo-llvm-cov line/region %), `iru-go-coverage` (coverprofile statement %; Go has no branch coverage).
 * Code quality/lint — `iru-java-code-quality` (Checkstyle/PMD/SpotBugs), `iru-dotnet-code-quality` (StyleCop/CA
   rules), `iru-kotlin-code-quality` (detekt/ktlint), `iru-typescript-code-quality` (ESLint/Biome/oxlint),
   `iru-php-code-quality` (PHPStan/Psalm error identifiers, PHPCS/Pint/PHP-CS-Fixer sniffs and rules),
-  `iru-python-code-quality` (Ruff rule codes, mypy error codes, Bandit test ids), `iru-android-code-quality` (Detekt/ktlint/Android Lint), `iru-kmp-code-quality` (detekt/ktlint/Android Lint/SwiftLint across KMP modules), `iru-swift-code-quality` (SwiftLint) — all keyed by the
+  `iru-python-code-quality` (Ruff rule codes, mypy error codes, Bandit test ids), `iru-android-code-quality` (Detekt/ktlint/Android Lint), `iru-kmp-code-quality` (detekt/ktlint/Android Lint/SwiftLint across KMP modules), `iru-swift-code-quality` (SwiftLint), `iru-rust-code-quality` (clippy lint ids, rustfmt, cargo-deny), `iru-go-code-quality` (golangci-lint `<linter>:<rule>` ids, go vet, govulncheck) — all keyed by the
   tool's own stable rule id so a baseline diff matches on rule plus file, not on message text or shifting line
   numbers.
 * Doc-comment audits — `iru-java-javadoc`, `iru-kotlin-kdoc` (KDoc/Dokka), `iru-dotnet-docfx`,
-  `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (docstrings + Sphinx), `iru-android-dokka`, `iru-kmp-dokka` (KDoc + Dokka multiplatform), `iru-swift-docc`.
-* `iru-check-license`, `iru-check-security`, and full project builds (Maven, Gradle, npm, Composer, uv, ...).
+  `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (docstrings + Sphinx), `iru-android-dokka`, `iru-kmp-dokka` (KDoc + Dokka multiplatform), `iru-swift-docc`, `iru-rust-rustdoc` (rustdoc + doctests), `iru-go-godoc` (Go doc comments).
+* `iru-check-license`, `iru-check-security`, and full project builds (Maven, Gradle, npm, Composer, uv, Cargo, Go, ...).
 
 It falls back to the equivalent raw command (`mvn test -Dtest=X`, `./gradlew test --tests X`, `dotnet test --filter`,
 `vendor/bin/phpunit --filter X`, `uv run pytest tests/test_x.py`, ...) only when the prompt says the matching skill is unavailable or none exists in
@@ -94,6 +96,13 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
   Native (Expo or Metro): baseline and quality diff (`iru-typescript-code-quality`), license headers, TSDoc
   (`iru-typescript-tsdoc`), scoped and full Jest runs (`iru-typescript-test`), coverage
   (`iru-typescript-coverage`), plus the Maestro/native-build checks it adds.
+* xref:skills/iru-rust-code-one-task-group.adoc[] and xref:skills/iru-go-code-one-task-group.adoc[] — the same per-bucket
+  pattern for Rust and Go: quality baseline and diff (`iru-rust-code-quality`/`iru-go-code-quality`), license headers,
+  doc audits (`iru-rust-rustdoc`/`iru-go-godoc`), scoped and full tests (`iru-rust-test`/`iru-go-test`), and the coverage
+  check (`iru-rust-coverage`/`iru-go-coverage`).
+* xref:skills/iru-setup-rust-cli.adoc[], xref:skills/iru-setup-go-cli.adoc[], xref:skills/iru-setup-swift-cli.adoc[] and
+  xref:skills/iru-setup-dotnet-cli.adoc[] — the verification step that closes out each command-line tool scaffold
+  (build, lint, tests, coverage, release dry run), run through this agent because the logs are long.
 * xref:skills/iru-kmp-generate-all-tests.adoc[] — Steps 3, 6 and 7, the coverage measurement before and after
   generating tests (xref:skills/iru-kmp-coverage.adoc[]) and the full test suite run (xref:skills/iru-kmp-test.adoc[]).
 * xref:skills/iru-typescript-generate-all-tests.adoc[], xref:skills/iru-android-generate-all-tests.adoc[], and

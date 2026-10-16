@@ -1,0 +1,119 @@
+= Rust Bump Version
+:description: Sets a Rust crate or Cargo workspace version to an exact SemVer value in Cargo.toml, lockstep members, path dependency requirements and Cargo.lock.
+:keywords: iru-rust-bump-version, claude code skill, rust, cargo, cargo workspace, semver, version bump, cargo.lock, release
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a Rust project's version to an exact, caller-supplied value across every place that must agree with it, following
+the catalog's `x.y.z-dev` development-version convention.
+
+== Purpose
+
+`iru-rust-bump-version` never computes a version; it validates the given string as SemVer 2.0 (what Cargo requires),
+warns when it is a pre-release other than `-dev` or carries build metadata, and applies it. An embedded Python helper,
+driven by `cargo metadata` and regex-based TOML edits that keep comments, formatting and CRLF line endings, offers
+`--list`, `--dry-run` and `--force` modes. It rewrites the root `Cargo.toml` `[package] version` and
+`[workspace.package] version` (which members declaring `version.workspace = true` inherit), the `[package] version` of
+other publishable members that move in lockstep, and the `version = "..."` requirement of every path dependency on those
+packages (keeping an `=`, `^` or `~` operator), so the workspace still resolves across a `-dev`, release, next `-dev`
+cycle. Members with `publish = false` (such as `xtask`) or their own version are reported and left alone. It refreshes
+`Cargo.lock` with `cargo update --workspace --offline`, which only re-locks the workspace's own entries, and refuses to
+write when version locations disagree until the user confirms. Step 5 documents the pre-release convention that
+`iru-release` calls it against, and it can optionally sync README and Antora version mentions.
+
+== Purpose group
+
+xref:index.adoc#group-rust[Rust Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-rust-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<new-version>`
+|Yes
+|Literal target version, such as `1.4.0` or `1.5.0-dev`. Never computed by this skill.
+|Asked for if missing.
+
+|`sync-files`
+|No
+|`yes` or `no`: also update README and Antora version mentions (`cargo install --version`, dependency snippets,
+`cargo add`, "Latest release" markers, `docs/antora.yml`).
+|Ask when such mentions exist.
+
+|`next-version`
+|No
+|Upcoming development version that "Current development version" markers should show after a release. Only meaningful
+with `sync-files: yes`.
+|None
+
+|`dry-run`
+|No
+|`yes` prints the diff and writes nothing; `Cargo.lock` is not refreshed.
+|`no`
+|===
+
+== Outputs
+
+* Updated version locations in the root and member `Cargo.toml` files, and a refreshed `Cargo.lock`.
+* Optionally updated README and Antora version mentions.
+* A report: each location with its old and new value, lockstep packages, inheriting members, members left untouched
+  (and why), every file changed, any disagreement aligned with `--force`, whether it was a dry run, and the
+  sanity-check result (`--list` agreement, `cargo pkgid`, `cargo check --locked`).
+* A warning to review the diff before committing; hard-coded version literals and golden `--version` outputs are
+  reported, not changed.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: resolve inputs\nask for version if missing"] --> S1{"Step 1: valid SemVer 2.0?"}
+    S1 -- no --> RJ["Refuse: not a SemVer version"]
+    S1 -- yes --> S2["Step 2: write helper,\nsurvey locations with --list"]
+    S2 --> M{"No version found or\nlocations disagree?"}
+    M -- yes --> Q["Ask user: which packages,\nor align with --force"]
+    M -- no --> S3
+    Q --> S3["Step 3: look for mirrored mentions"]
+    S3 --> S4{"Step 4: dry-run?"}
+    S4 -- yes --> DR["Show unified diff only; stop"]
+    S4 -- no --> AP["Step 4: apply helper;\ncargo update --workspace --offline"]
+    AP --> S6["Step 6: sanity check\n--list, cargo pkgid, cargo check --locked"]
+    S6 --> S7{"Step 7: sync files?"}
+    S7 -- yes --> SY["Scoped README, Antora and\nantora.yml updates"]
+    S7 -- no --> S8
+    SY --> S8["Step 8: report"]
+    DR --> S8
+    RJ --> S8
+....
+
+== Dependencies
+
+=== Invokes
+
+None — it runs an embedded Python helper and `cargo` commands directly. Step 5 is a documented convention for callers
+rather than an invocation.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, version bump for Rust projects (two calls per release).
+
+Also referenced (not invoked) by xref:skills/iru-setup-rust-cli.adoc[] and
+xref:skills/iru-setup-cli-github-workflows.adoc[], whose scaffold and `sync.yml` workflow follow the `x.y.z-dev`
+convention this skill maintains.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-rust-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

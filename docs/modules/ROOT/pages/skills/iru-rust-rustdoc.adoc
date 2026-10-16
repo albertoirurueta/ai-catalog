@@ -1,0 +1,103 @@
+= Rust Rustdoc
+:description: Audits Rust crates for complete rustdoc on public items, fills the gaps, and verifies with doc lints, cargo doc under -D warnings and cargo test --doc.
+:keywords: iru-rust-rustdoc, claude code skill, rust, rustdoc, doctests, clippy, cargo doc, intra-doc links, audit rustdoc, fill missing docs
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Make sure a set of Rust items carry complete, well-formed rustdoc, filling in whatever is missing, then prove the
+result through the doc lints, a warnings-as-errors `cargo doc` build and the doctests. It only adds or completes doc
+comments (`///` and `//!`) — it never changes behavior, signatures, attributes, `use` lines or any non-doc code.
+
+== Purpose
+
+`iru-rust-rustdoc` surveys the Cargo workspace (library roots, binaries, which targets run doctests), then audits
+every public item reachable from the crate API: the crate root `//!` docs, public modules, structs, enums with each
+variant, `pub` fields, traits, functions, methods, consts, type aliases and exported macros. It discovers the
+project's documentation bar first (`[lints]` tables, CI `RUSTDOCFLAGS`, docs.rs metadata, house style) and then writes
+what is missing following the rustdoc and API Guidelines convention: a one-sentence summary, `# Errors`, `# Panics`,
+`# Safety` and runnable `# Examples` sections, and intra-doc links instead of bare names.
+
+It knows that doctests only run for library targets, so a bin-only crate's `main.rs` examples are never compiled; it
+documents binary items for readers but puts examples on the library items the binary calls, which is why this
+catalog's CLI scaffold keeps the logic in `lib.rs`. Test code, benches, examples and generated code are out of scope.
+
+== Purpose group
+
+xref:index.adoc#group-rust[Rust Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-rust-rustdoc <items-or-files>
+/iru-rust-rustdoc
+----
+
+Comma-separated item paths such as `crate::output::Envelope` or `commands::greet::run`, and files or globs such as
+`src/output.rs,src/commands/*.rs`, are accepted.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`items-or-files`
+|No
+|One or more item paths, files or globs resolving to `.rs` files. Item paths resolve to the defining module file (a
+module path covers the whole file, an item path covers that item and its public members). `target/`, `tests/`,
+`benches/`, `examples/`, `build.rs`, generated and git-ignored files are dropped and named in the report.
+|Non-test `.rs` files touched by uncommitted changes plus commits on the current branch not yet on the base branch;
+an empty scope stops with "nothing to document".
+|===
+
+== Outputs
+
+* Edited `.rs` files with added or completed doc comments: crate and module `//!` docs, summaries, field and variant
+  docs, `# Errors`, `# Panics`, `# Safety` sections, doctest examples and intra-doc links.
+* A per-file report: public items already fully documented, gaps found and filled (kind and what was added).
+* The verification result: doc lints clean or what remains, `cargo doc` with `-D warnings` pass or open warnings, and
+  doctests passed or failed ("none" for a bin-only crate).
+* The convention used and where it came from, arguments dropped, and pre-existing out-of-scope failures as follow-ups.
+  Raw tool output is never pasted.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-rust-rustdoc\n(optional items or files)"] --> B["Step 0: Survey the workspace\n(library roots, binaries, doctest targets)"]
+    B --> C["Step 1: Determine scope,\ndrop tests, examples, generated code"]
+    C --> D{"Scope empty?"}
+    D -- yes --> E["Report nothing to document and stop"]
+    D -- no --> F["Step 2: Discover the project's documentation bar\n(lints, CI flags, house style)"]
+    F --> G["Step 3: Audit each file\nwith forced doc lints and a full read"]
+    G --> H["Step 4: Write the missing docs\n(capture warning baseline first)"]
+    H --> I["Step 5: Verify with doc lints,\ncargo doc -D warnings, cargo test --doc"]
+    I --> J{"New warnings or failures\nin in-scope files?"}
+    J -- yes --> K["Fix the docs and re-run"]
+    K --> I
+    J -- no --> L["Step 6: Report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-rust-rustdoc` is a leaf skill; it edits doc comments and runs `cargo clippy`, `cargo doc` and
+`cargo test --doc` directly.
+
+=== Invoked by
+
+* xref:skills/iru-rust-code-one-task-group.adoc[] — Step 3, rustdoc for touched production files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+Also referenced (not invoked) by xref:skills/iru-rust-code-quality.adoc[] and xref:skills/iru-setup-rust-cli.adoc[]
+(as one of the gate skills the scaffold is verified against).
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[] — callers run this skill inside an `iru-gate-runner` sub-agent; the skill does not spawn agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-rust-rustdoc/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -51,16 +51,18 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   toolchain, detected inside — the `expo` dependency decides), `windows` (Windows desktop apps on .NET 10 — WPF,
   WinUI 3 or Windows Forms, detected inside from the app csproj, with MVVM `ViewModels/` or MVC `Controllers/` in a
   UI-free `net10.0` Core project; plain .NET libraries/services stay `dotnet`, and macOS desktop apps use `swift`),
-  `database`
+  `rust` (Rust crates — clap command-line tools with an optional Ratatui terminal UI, workspaces, `xtask`), `go`
+  (Go modules — Cobra command-line tools with an optional Bubble Tea terminal UI, testscript e2e), `database`
   — each key `<key>` has an `iru-<key>-code-one-task-group` + `iru-<key>-code-one-task` pair (keys are discovered
   from the installed directories, never hardcoded). The group skill captures one quality baseline for the whole
   group, runs `iru-<key>-code-one-task` once per task — in parallel when the group allows it (`database` is always
   sequential) — and validates the group once (license → doc comments → tests → 80% coverage → quality diff vs
   baseline), instead of once per task. Coding skills detect build tool (Maven / Gradle KTS / Gradle Groovy,
-  npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
+  npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip, Cargo, Go modules) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
   container-backed or server-starting stage (Spring Testcontainers, Quarkus Dev Services, NestJS e2e, Next.js
   Playwright, WordPress `wp-env`, Python testcontainers `integration`-marked pytest tests, React Native Maestro/Detox
-  e2e with Metro on port 8081, KMP iOS simulator test runs, Windows FlaUI desktop UI tests) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
+  e2e with Metro on port 8081, KMP iOS simulator test runs, Windows FlaUI desktop UI tests, Rust `#[ignore]`d and Go
+  `integration`-tagged container tests) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
   `.integration-test.lock` (owner file, stale after 60 min, released on every exit path, gitignored); Docker
   unavailable makes that stage "unverified", never silently skipped, and the coverage gate counts only tests
   that need no containers. The same rule covers devices: no booted simulator/emulator (or no macOS host for an iOS
@@ -70,14 +72,18 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `llvm-cov`, since the app scheme's `xccov` can't see it) and the UI layer is reported "not measured"; on a
   non-Windows host every Windows app-run/WinUI/UI-test/packaging stage is "unverified (needs Windows)" while the
   Core tests and the `EnableWindowsTargeting` compile of WPF/WinForms still run; macOS XCUITest runs drive the real
-  desktop and stay behind the Swift gates' `.simulator-test.lock`.
+  desktop and stay behind the Swift gates' `.simulator-test.lock`. Command-line tools need no lock for their
+  end-to-end tests (they run the real binary or command tree in-process, with no containers or devices): the 80% bar
+  is measured on the library unit the scaffolds keep the logic in (`src/lib.rs`, `internal/`, `<Bin>Kit`,
+  `src/<Tool>.Core`), and a Swift or .NET CLI keeps the `swift`/`dotnet` key — those coding skills detect the CLI
+  shape (an ArgumentParser `.executableTarget`; a System.CommandLine `Exe`) themselves.
 - **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
   `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to six
   `AskUserQuestion` rounds of up to three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple,
-  Desktop — macOS app / Windows app), every round ending in a "Something in the next group" escape hatch (the last in
+  Desktop & command line — macOS app / Windows app / command-line tool), every round ending in a "Something in the next group" escape hatch (the last in
   "None of these"); an option bundling
   several types (Web app → React/Next.js/Angular, WordPress → plugin/block theme, Android, Apple, cross-platform
-  mobile → React Native/Kotlin Multiplatform/Ionic) gets one bounded follow-up (React Native's `toolchain:
+  mobile → React Native/Kotlin Multiplatform/Ionic, command-line tool → Rust/Go/Swift/C# .NET) gets one bounded follow-up (React Native's `toolchain:
   expo|metro` is then asked by the front door because it changes the macOS CI cost picture), while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
   `layout`/`frontend`, NestJS `orm`, Next.js `output`, Python `database`/`orm`/`api`/`python-version`, KMP `ui`) are left to the orchestrator, asks the shared inputs once, and delegates to the
   matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
@@ -89,14 +95,16 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   **Keep as is** (report mismatches with this run's choices) / **Replace** (regenerate, customizations lost), with
   a **Stop** option where it makes sense; `mode: existing` alone never means "update silently" — only an explicit
   `on-existing` does. Final reports repeat the mode and the per-component action (created / updated / replaced /
-  kept as is / skipped (ci: no)). The ten `*-repository`
+  kept as is / skipped (ci: no)). The eleven `*-repository`
   stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`,
   `iru-setup-typescript-repository`, `iru-setup-php-repository`, `iru-setup-python-repository`,
   `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository`,
-  `iru-setup-macos-repository`, `iru-setup-windows-repository` — each also run standalone, and each chains the
+  `iru-setup-macos-repository`, `iru-setup-windows-repository`, `iru-setup-cli-repository` — each also run
+  standalone, and each chains the
   same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
   `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`
-  (Quarkus reuses `iru-setup-java-gitignore`, macOS reuses `iru-setup-swift-gitignore`). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
+  (Quarkus reuses `iru-setup-java-gitignore`, macOS reuses `iru-setup-swift-gitignore`; the CLI orchestrator picks
+  the scaffold and gitignore skill by `language` and shares one workflows skill). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
   `react`, `angular`, `react-native`, `ionic`, `nestjs` (`iru-setup-nestjs-app`), or `nextjs` (`iru-setup-nextjs-web`),
   and its `react-native` flavor takes `toolchain: expo|metro` (forwarded to `iru-setup-react-native-app` and
   `iru-setup-typescript-github-workflows`: Expo framework with EAS/CNG and `native-builds: eas|local`, or a bare React
@@ -119,13 +127,26 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   Linux CI for everything that can run there and Windows runners for the app build, UI tests and per-RID
   zip/MSIX/App Installer releases (signed with Azure Artifact Signing or a `.pfx`; optional WinGet; or a Microsoft
   Store submission);
+  `iru-setup-cli-repository` scaffolds one agent-friendly command-line tool with `language: rust|go|swift|dotnet`
+  (via `iru-setup-rust-cli` / `iru-setup-go-cli` / `iru-setup-swift-cli` / `iru-setup-dotnet-cli`, then
+  `iru-setup-rust-gitignore` / `iru-setup-go-gitignore` / `iru-setup-swift-gitignore` `flavor: cli` /
+  `iru-setup-dotnet-gitignore`, and `iru-setup-cli-github-workflows` for all four) and `ui: none|tui` (Ratatui, Bubble
+  Tea, or a .NET terminal UI; never offered for Swift, whose only TUI library is dormant). Every scaffold implements the
+  same contract from the author's *Building CLIs for AI Agents* guide — stdout for data / stderr for messages, exit
+  codes 0–7 plus 130/143, `--format text|json|jsonl` with a `schemaVersion` and a JSON error envelope, TTY- and
+  `NO_COLOR`-aware colour, no prompt without a terminal (`--no-input`/`--yes`), `--dry-run` for mutations, generated
+  `completion` and a machine-readable `schema`, a CLI reference + man page generated from the command tree — and the
+  coding skills' `reference/cli-contract.md` repeats it verbatim per language; `cross-os-ci: all|stable` schedules the
+  macOS/Windows test legs, and `distribution: internal` (release binaries + `SHA256SUMS` + build-provenance
+  attestations) / `store` (plus `channels`: crates.io, Homebrew tap, Scoop, WinGet, a NuGet .NET tool) drive
+  `release.yml`;
   `iru-setup-php-repository`'s picks `laravel`, `wordpress-plugin`, `wordpress-theme` (block theme), or
   `prestashop-module` (`iru-setup-php-laravel` / `-wordpress` / `-prestashop`); `iru-setup-python-repository`'s picks
   `fastapi` (`iru-setup-python-fastapi`) or `django` (`iru-setup-python-django`), sharing
   `iru-setup-python-gitignore`/`iru-setup-python-github-workflows`; `iru-setup-quarkus-repository`
   (via `iru-setup-quarkus-service`, `quarkus-stack.yml` manifest) takes `language: java|kotlin`,
   `build-tool: maven|gradle` (Gradle = Kotlin DSL), and `layout: single|hexagonal`.
-  `iru-setup-java-springboot` is the eleventh orchestrator but follows its own manifest-driven chain instead: it
+  `iru-setup-java-springboot` is the twelfth orchestrator but follows its own manifest-driven chain instead: it
   interviews the user once, writes a `springboot-stack.yml` manifest, delegates the reactor's generation to its
   `iru-setup-java-springboot-*` sub-skills (pom, modules, apis, optional hilla, testcontainers, platform,
   github-workflows) plus `iru-update-java-springboot-documentation` for the Antora site, and only then fills the
@@ -164,7 +185,10 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `php` (Laravel `config/app.php`, WordPress plugin/theme headers, PrestaShop module class; `x.y.z-dev`
   convention), `python` (`pyproject.toml` `[project].version` + `__version__` literals; PEP 440 `x.y.z.dev0`
   convention; VCS-derived versions left to the git tag), `dotnet` (`Directory.Build.props` `<Version>` + the
-  four-part MSIX `Identity Version` of a Windows app; `x.y.z-dev` convention; macOS desktop apps use `swift`)) and delegates the actual version-file edit to whichever key matches the detected project, keeping
+  four-part MSIX `Identity Version` of a Windows app; `x.y.z-dev` convention; macOS desktop apps use `swift`),
+  `rust` (`Cargo.toml` `[package]`/`[workspace.package]` version + the `Cargo.lock` entry; `x.y.z-dev`), `go` (the
+  `Version` literal in `internal/version/version.go`, overridden by `-ldflags -X` at release; `x.y.z-dev`; a major
+  ≥ 2 needs the `/vN` module path), and `swift` also owns a Swift CLI's `Version.swift`) and delegates the actual version-file edit to whichever key matches the detected project, keeping
   its own branch/PR/label/changelog steps ecosystem-agnostic.
 - **Android reference repository**: every `iru-*android*` skill's embedded templates are genericized from a single
   real repository, https://github.com/albertoirurueta/irurueta-android-glutils (`lib/` + Compose `app/`,
@@ -187,6 +211,11 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `iru-setup-windows-*`) follows the official Microsoft Learn docs (WPF, WinUI 3/Windows App SDK, Windows Forms,
   CommunityToolkit.Mvvm, MSIX, Store, WinGet) plus the docs repository's C# pages, because the docs repository's
   own Windows Apps section (albertoirurueta/docs issue 191) isn't written yet — switch the citations once it is.
+  Command-line tools in every language follow the docs repository's `ai/cli-for-agents/` section (*Building CLIs for
+  AI Agents* — https://www.irurueta.com/ai/cli-for-agents/index.html: streams and exit codes, TTY/colour, machine
+  output, safety, frameworks, TUIs, packaging, testing, documenting); Rust guidance also cites its
+  `programming-languages/rust/` pages, while Go has no pages there, so the Go skills cite the official docs
+  (go.dev, Cobra, Bubble Tea, golangci-lint, GoReleaser). Keep new CLI guidance consistent with that section.
 - **Template verification**: every scaffold/workflows/gate skill's embedded templates are meant to be exercised
   against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)
   before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can't be
@@ -209,7 +238,10 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
   `Packages/Core`), `kmp` (Kover coverage; detekt/ktlint/Android Lint/SwiftLint); the `dotnet` gates also serve the
   `windows` key (WPF/WinUI/WinForms awareness, `EnableWindowsTargeting` off Windows, a `ui` selector for FlaUI tests);
   `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`, `iru-kmp-dokka`,
-  `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (Ruff `D` + Sphinx build), `iru-android-dokka`, `iru-swift-docc`; plus
+  `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (Ruff `D` + Sphinx build), `iru-android-dokka`, `iru-swift-docc`,
+  `iru-rust-rustdoc` (rustdoc + doctests), `iru-go-godoc`; the Rust gates `iru-rust-test` (nextest or `cargo test`) /
+  `-coverage` (cargo-llvm-cov) / `-code-quality` (clippy, rustfmt, cargo-deny) and the Go gates `iru-go-test` /
+  `-coverage` (coverprofile; Go has no branch coverage) / `-code-quality` (golangci-lint v2, go vet, govulncheck); plus
   `iru-check-license`/`iru-check-security`. Used throughout `iru-code`, `iru-code-one-task-group`, and every
   `iru-<key>-code-one-task-group` that validates (all but `database`), and recommended by `iru-plan` for the scoped
   test-run step it writes into generated plans.

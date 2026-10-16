@@ -136,7 +136,10 @@ flags) for JS/TS, Detekt / ktlint / Android Lint (`detekt.yml`, `.editorconfig` 
 (`phpstan.neon*`, `psalm.xml`, `phpcs.xml*`, `pint.json`, `.php-cs-fixer.dist.php`) for PHP, Ruff / mypy
 (`[tool.ruff]`/`[tool.mypy]` in `pyproject.toml`, `ruff.toml`/`.ruff.toml`, `mypy.ini`/`setup.cfg`, the
 `[tool.django-stubs]`/pydantic mypy plugins) plus `[tool.pytest.ini_options]` markers for Python, SwiftLint /
-swift-format (`.swiftlint.yml`, `.swift-format`) for Swift, and so on — read any such config found rather than assuming defaults).
+swift-format (`.swiftlint.yml`, `.swift-format`) for Swift, clippy / rustfmt / cargo-deny (`[lints]` in
+`Cargo.toml`, `clippy.toml`, `rustfmt.toml`, `deny.toml`) for Rust, golangci-lint (`.golangci.yml`, v1 vs v2 config) for
+Go, and so on — and for a command-line tool, whether the change keeps its stdout/stderr, `--json` schema and exit-code
+contract intact — read any such config found rather than assuming defaults).
 
 ## Step 6 — Delegate to the `code-review` skill when available
 

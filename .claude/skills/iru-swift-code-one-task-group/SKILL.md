@@ -37,6 +37,13 @@ lines (one gate call per scheme), instead of re-deriving them per gate call. Als
 bucket on a Command-Line-Tools-only machine will need Step 3's test/coverage/full-suite stages reported as
 unverified rather than a false pass.
 
+A **package** whose `Package.swift` declares an `.executableTarget` depending on `ArgumentParser` is a
+**command-line tool** (`iru-explore`'s `Project type: cli-tool (swift)`; the `iru-setup-swift-cli` layout): record the
+executable target `<Bin>`, its logic library `<Bin>Kit`, the in-process test target `<Bin>KitTests` and the end-to-end
+test target `<Bin>CLITests` (it runs the built binary through `Process`). It is package-kind in every respect below —
+`swift test`, no simulator, no `.simulator-test.lock`, no containers — and its 80% coverage bar is measured on the
+`Sources/<Bin>Kit/` files (plus any `Sources/<Bin>/` file the bucket touched, which the spawned binaries cover).
+
 Then determine which target(s) this bucket's tasks touch, using the same heuristic `iru-swift-code-one-task`'s own
 Step 1 uses per task: a path under `Sources/<Target>/` or `Packages/Core/Sources/<Target>/` wins; a path under a
 per-platform app target directory names that target; otherwise infer from what each task describes. Record this
@@ -100,7 +107,9 @@ Once every task that didn't block has been implemented, run the following once f
    members were documented/completed and in which files, whether any target's DocC catalog landing page had to be
    created or extended, and whether the symbol-graph audit and doc-build verification passed."})`. If it reports
    the build failed, fix and re-invoke until it reports success. Skip if `iru-swift-docc` isn't installed.
-3. **Acquire the simulator lock** — app-kind buckets only; a package needs no simulator and skips 3a/3d entirely.
+3. **Acquire the simulator lock** — app-kind buckets only; a package needs no simulator and skips 3a/3d entirely
+   (a command-line tool included: its `<Bin>CLITests` spawn the tool as a plain child process — no simulator, no
+   desktop session, nothing shared to serialize).
    `xcodebuild test` (scoped, coverage, and full-suite runs below all use it) drives a Simulator destination that
    only one run may occupy at a time — two overlapping `xcodebuild test` runs against the same destination collide
    on boot state and produce results that are unreliable rather than merely slow, the same reasoning
@@ -135,6 +144,9 @@ Once every task that didn't block has been implemented, run the following once f
    reason, and the first message/stack-trace line for each."})` (omit `scheme:`/`destination:` for a package). If
    failures are reported, identify which task's code they trace back to, fix that task's implementation and/or
    tests, and re-invoke this same check — repeat until it reports all tests passed.
+   For a command-line tool, the selector covers both layers: the `<Bin>KitTests` suites for the changed Kit types and
+   the `<Bin>CLITests` cases for every command the bucket added or changed (`swift test` builds the executable first
+   because `<Bin>CLITests` depends on it).
    With several in-scope schemes, make one call per scheme (each with its own `scheme:`/`destination:`), all under
    the same lock; a scheme recorded "unverified (no … simulator runtime installed)" in Step 1 is skipped here and
    reported as such — never as passed.
@@ -148,11 +160,19 @@ Once every task that didn't block has been implemented, run the following once f
    see a statically linked local package, so that call measures it with `swift test` + `llvm-cov` (no simulator, no
    lock needed). For a macOS desktop app (`iru-setup-macos-app` layout) `Packages/Core` is where the 80% bar applies;
    app-target UI code (views, view controllers, `App` scenes) is reported "not measured" — never 0%, and never part of the bar.
+   For a **command-line tool**, scope the call to the bucket's `Sources/<Bin>Kit/` and `Sources/<Bin>/` files with
+   `kind: package` and ask for the full suite (no filter) with **every** test binary — `<Bin>KitTests` first and
+   `<Bin>CLITests` via `-object` — so `llvm-cov` sees the profiles of the binaries the CLI tests spawn (the scaffold's
+   `ToolProcess` forwards `LLVM_PROFILE_FILE`; without that forwarding the executable target reads 0% and a stray
+   `default.profraw` lands in the package root — report it rather than counting the thin commands as uncovered). The
+   bar applies to the Kit files; a `Sources/<Bin>/` command file below it is closed with a `<Bin>CLITests` case, never
+   by moving logic out of the Kit.
    The bar is **80% line coverage**; branch coverage is never part of it. For anything under 80%, add tests for its
    uncovered lines (via the task that owns it, from the ranges `iru-swift-coverage` reports), re-run Step 3.4 to
    confirm, then re-check coverage here.
 6. **Full suite**, to catch regressions elsewhere, via `iru-gate-runner`:
-   - **Package**: `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt: "Run
+   - **Package** (a command-line tool's `<Bin>CLITests` end-to-end target is part of this run — never filter it out):
+     `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt: "Run
      `swift test` with no filter. If everything passes, report back only that all tests passed. If anything fails,
      report back only the failing test names, the failure reason, and the first message/stack-trace line for
      each."})`.

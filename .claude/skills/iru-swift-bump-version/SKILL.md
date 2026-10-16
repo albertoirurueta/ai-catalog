@@ -1,6 +1,6 @@
 ---
 name: iru-swift-bump-version
-description: Set a Swift library or Apple app project's version to an exact value. For a SwiftPM library — which has no in-tree version field at all, since SwiftPM resolves a dependency's version from its git tag — this rewrites only the files that mirror that tag by convention: `version.txt` (created if missing and the repository's `sync.yml`/README convention expects one), the root `CHANGELOG.md`'s `## [Unreleased]` heading (renamed to `## [<new-version>] - <date>` with a fresh `## [Unreleased]` reopened above it, Keep a Changelog style), and README `.package(url: …, from: "x.y.z")`/`exact: "x.y.z"` dependency snippets — then reports that the actual release is the git tag itself, not a file. For an Apple app it rewrites `MARKETING_VERSION` (and increments `CURRENT_PROJECT_VERSION` per the rule in Step 4) in whichever project format is present: XcodeGen's `project.yml` (`settings: base:`), Tuist's `Project.swift` (`settings: .settings(base: [...])`), a `*.xcconfig` file, or — for a hand-maintained `.xcodeproj` with no generator — via `agvtool new-marketing-version`/`agvtool new-version -all` (or a documented `sed` fallback on `project.pbxproj`). Invoke as `/iru-swift-bump-version <new-version>` where `<new-version>` is the literal target version (e.g. `1.4.0`, `1.4.0-rc.1`) — this skill does not compute bumps itself, it only applies the value it's given (a future `iru-release`-style caller computes the release version per the convention documented in Step 5 and passes it through). Also accepts `args`: `sync-files: yes|no` (default: ask) to also update `docs/antora.yml`/Antora page version mentions (and, for an app, a README version mention), `dry-run: yes|no` (default `no`) to print the diff without writing anything, and `kind: library|app` to override the auto-detected project kind when both a `Package.swift` and a generator manifest/`.xcodeproj` are present. Reports the old and new version and every file touched. Equivalent to `iru-typescript-bump-version`/`iru-android-bump-version` for the Swift/Apple ecosystem. Use whenever the user, or another skill such as `iru-release`, needs a Swift package's convention files or an Apple app's `MARKETING_VERSION` set to a specific value instead of hand-editing them.
+description: Set a Swift library, command-line tool or Apple app project's version to an exact value. For a Swift command-line tool (a `Package.swift` with an `.executableTarget` on `ArgumentParser`, e.g. the `iru-setup-swift-cli` layout) it rewrites the in-tree version literal — `Sources/<Bin>Kit/Version.swift`'s `toolVersion = "x.y.z[-dev]"` and/or a `version: "…"` inside a `CommandConfiguration(...)` — with an embedded, tested Python helper (`--list`/`--dry-run`), following the `x.y.z-dev` development-version convention. For a SwiftPM library — which has no in-tree version field at all, since SwiftPM resolves a dependency's version from its git tag — this rewrites only the files that mirror that tag by convention: `version.txt` (created if missing and the repository's `sync.yml`/README convention expects one), the root `CHANGELOG.md`'s `## [Unreleased]` heading (renamed to `## [<new-version>] - <date>` with a fresh `## [Unreleased]` reopened above it, Keep a Changelog style), and README `.package(url: …, from: "x.y.z")`/`exact: "x.y.z"` dependency snippets — then reports that the actual release is the git tag itself, not a file. For an Apple app it rewrites `MARKETING_VERSION` (and increments `CURRENT_PROJECT_VERSION` per the rule in Step 4) in whichever project format is present: XcodeGen's `project.yml` (`settings: base:`), Tuist's `Project.swift` (`settings: .settings(base: [...])`), a `*.xcconfig` file, or — for a hand-maintained `.xcodeproj` with no generator — via `agvtool new-marketing-version`/`agvtool new-version -all` (or a documented `sed` fallback on `project.pbxproj`). Invoke as `/iru-swift-bump-version <new-version>` where `<new-version>` is the literal target version (e.g. `1.4.0`, `1.4.0-rc.1`) — this skill does not compute bumps itself, it only applies the value it's given (a future `iru-release`-style caller computes the release version per the convention documented in Step 5 and passes it through). Also accepts `args`: `sync-files: yes|no` (default: ask) to also update `docs/antora.yml`/Antora page version mentions (and, for an app, a README version mention), `dry-run: yes|no` (default `no`) to print the diff without writing anything, and `kind: library|app|cli` to override the auto-detected project kind when both a `Package.swift` and a generator manifest/`.xcodeproj` are present. Reports the old and new version and every file touched. Equivalent to `iru-typescript-bump-version`/`iru-android-bump-version` for the Swift/Apple ecosystem. Use whenever the user, or another skill such as `iru-release`, needs a Swift package's convention files or an Apple app's `MARKETING_VERSION` set to a specific value instead of hand-editing them.
 model: haiku
 ---
 
@@ -12,7 +12,10 @@ version field the package manager itself reads — a consumer's `.package(url:, 
 package's **git tag**, full stop, so this skill only rewrites the files that exist purely by this catalog's own
 convention to mirror that tag (`version.txt`, `CHANGELOG.md`, README snippets), never a value SwiftPM itself
 consults. An Apple **app**, by contrast, does carry an in-tree version: `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`
-in whichever project format (XcodeGen, Tuist, raw `.xcconfig`, or `.xcodeproj`) is in play. This skill never computes
+in whichever project format (XcodeGen, Tuist, raw `.xcconfig`, or `.xcodeproj`) is in play. A Swift **command-line
+tool** carries one too: the string literal its `--version` prints (`Version.swift`'s `toolVersion`, or a
+`CommandConfiguration(version:)` literal), which follows the `x.y.z-dev` convention on the integration branch. This
+skill never computes
 a version itself — it applies exactly the version string it's given, validated for shape. The "which version to
 compute next" logic belongs to the caller and is defined in Step 5, mirroring `iru-typescript-bump-version`'s Step 5
 and `iru-android-bump-version`'s Step 5.
@@ -34,7 +37,7 @@ Parse the invocation:
     to the release value (see Step 8).
   - `dry-run: yes|no` — default `no`. When `yes`, run every step through composing the new file contents and
     showing the diff (Step 7), then stop — do not write anything, and say so plainly in the report.
-  - `kind: library|app` — overrides Step 2's auto-detected project kind. Use this when a repository legitimately
+  - `kind: library|app|cli` — overrides Step 2's auto-detected project kind. Use this when a repository legitimately
     carries both a root `Package.swift` (e.g. a local `Packages/Core` package used by an app target) and a
     generator manifest/`.xcodeproj` — auto-detection alone can't disambiguate which one the user means to bump.
 
@@ -66,6 +69,11 @@ non-matching but plausible string, only flag it, mirroring `iru-android-bump-ver
 
 Determine the project kind (honor `args: kind` if given, otherwise auto-detect):
 
+- **Command-line tool** (checked first): a root `Package.swift` declaring an `.executableTarget` that depends on
+  `ArgumentParser` (`grep -n 'executableTarget\|ArgumentParser' Package.swift`), no generator manifest/`.xcodeproj`
+  at the root, **and** Step 3b's helper finds a version literal under `Sources/` → `kind: cli`, Step 3b applies. An
+  ArgumentParser package with no literal (its `--version` isn't wired, or it reads the version from elsewhere) falls
+  through to **Library** — the git tag is then its only version; say so.
 - **Library**: a root `Package.swift` exists and no generator manifest/`.xcodeproj` is present at the root →
   `kind: library`, Step 3 applies.
 - **App**: any of `project.yml` (XcodeGen), `Project.swift` (Tuist), or a `*.xcodeproj` directory exists at the
@@ -161,6 +169,97 @@ context), show the diff and confirm before trusting it silently — this regex i
 must match both the `from:`/`exact:` keyword forms and doesn't anchor on `.package(url:` (a snippet can wrap across
 lines), so a false-positive match elsewhere in the README is possible in principle, though not observed in this
 skill's own verification.
+
+## Step 3b — Read and rewrite a command-line tool's version literal (`kind: cli`)
+
+A Swift command-line tool keeps its version in source, because `--version` must print it: in the
+`iru-setup-swift-cli` layout that is `Sources/<Bin>Kit/Version.swift` (`public let toolVersion = "0.1.0-dev"`,
+which the root command's `CommandConfiguration(version: toolVersion)` reads), and in other ArgumentParser tools often a
+literal `version: "1.2.3"` inside `CommandConfiguration(...)`. The helper below finds both — a `*version*`-named
+`let`/`var` string literal in any `Version.swift`, a `toolVersion`/`version` literal elsewhere under `Sources/`, and a
+semver-looking `version: "…"` in a file that builds a `CommandConfiguration` — and rewrites every one of them, never
+`.build/`, `Tests/` or a differently-named literal such as `apiVersion = "2.0.0"`. Write it to a scratch file outside
+the repository and run it from the repository root:
+
+```python
+import difflib, os, re, sys
+
+# Usage: python3 -I cli_version.py <package-root> [--list | --dry-run <new> | <new>]
+LITERAL = re.compile(
+    r'^(?P<head>[ \t]*(?:(?:public|package|internal|fileprivate|private|static|nonisolated)[ \t]+)*(?:let|var)[ \t]+'
+    r'(?P<name>\w*[Vv]ersion\w*)(?:[ \t]*:[ \t]*String)?[ \t]*=[ \t]*")(?P<value>\d+\.\d+\.\d+[^"\\\n]*)(?P<tail>")',
+    re.MULTILINE,
+)
+CONFIG = re.compile(r'(?P<head>\bversion:[ \t]*")(?P<value>\d+\.\d+\.\d+[^"\\\n]*)(?P<tail>")')
+
+
+def sources(root):
+    base = os.path.join(root, "Sources")
+    for directory, dirs, files in os.walk(base):
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and not d.endswith(".docc"))
+        for name in sorted(files):
+            if name.endswith(".swift"):
+                yield os.path.join(directory, name)
+
+
+def find(root):
+    hits = []
+    for path in sources(root):
+        text = open(path, encoding="utf-8").read()
+        in_version_file = os.path.basename(path) == "Version.swift"
+        for match in LITERAL.finditer(text):
+            # Outside Version.swift only `toolVersion`/`version` count, so an `apiVersion = "2.0.0"` is left alone.
+            if in_version_file or match.group("name") in ("toolVersion", "version"):
+                hits.append((path, "literal", match))
+        if "CommandConfiguration" in text:
+            for match in CONFIG.finditer(text):
+                hits.append((path, "CommandConfiguration", match))
+    return hits
+
+
+def main():
+    root, args = sys.argv[1], sys.argv[2:]
+    hits = find(root)
+    if not hits:
+        sys.exit("no version literal found under Sources/ (Version.swift or CommandConfiguration(version:))")
+    values = sorted({match.group("value") for _, _, match in hits})
+    for path, kind, match in hits:
+        print(f"{os.path.relpath(path, root)}: {kind} {match.group('value')!r}")
+    if len(values) > 1:
+        print(f"WARNING: the literals disagree: {values}")
+    if not args or args[0] == "--list":
+        return
+    dry = args[0] == "--dry-run"
+    new = args[1] if dry else args[0]
+    for path in sorted({path for path, _, _ in hits}):
+        old = open(path, encoding="utf-8").read()
+        spans = {match.span() for hit_path, kind, match in hits if hit_path == path and kind == "literal"}
+        text = LITERAL.sub(lambda m: m.group("head") + new + m.group("tail") if m.span() in spans else m.group(0), old)
+        if "CommandConfiguration" in text:
+            text = CONFIG.sub(lambda m: m.group("head") + new + m.group("tail"), text)
+        if text == old:
+            continue
+        if dry:
+            rel = os.path.relpath(path, root)
+            sys.stdout.writelines(difflib.unified_diff(old.splitlines(True), text.splitlines(True), rel, rel))
+        else:
+            open(path, "w", encoding="utf-8").write(text)
+            print(f"updated {os.path.relpath(path, root)}")
+
+
+main()
+```
+
+1. `python3 -I <scratch>/cli_version.py . --list` — prints every literal (`path: literal|CommandConfiguration 'value'`);
+   the old version is that value. If the literals disagree (`WARNING: the literals disagree`), show them and ask
+   which is authoritative before writing. No literal → exit 1 ("no version literal found"): report that `--version`
+   isn't wired and stop (or fall back to the library path if the user confirms).
+2. `python3 -I <scratch>/cli_version.py . --dry-run <new-version>` prints a unified diff (Step 7's preview);
+   `python3 -I <scratch>/cli_version.py . <new-version>` writes and prints `updated <path>` per file.
+
+A tool's README `.package(from:)` snippets don't apply (a CLI isn't consumed as a dependency) and `CHANGELOG.md` is
+left to the caller (`iru-release`'s own Step 7 writes the release section) — only Step 8's optional sync (README /
+`docs/antora.yml` / Antora version mentions, e.g. a Homebrew or download snippet) touches other files.
 
 ## Step 4 — Read and rewrite app files (`MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`)
 
@@ -324,6 +423,12 @@ in-tree pre-release marker for a library at all**:
   `new-version` to update `version.txt`/`CHANGELOG.md`/README (Step 3), and separately creates the actual git tag
   itself (this skill never tags — tagging is a release-orchestration action, not a file-rewrite one, and belongs to
   the caller, exactly as this skill never commits).
+- **Command-line tool** (`kind: cli`): the in-tree literal carries a `-dev` pre-release suffix on the integration
+  branch (`0.1.0-dev`), exactly like this catalog's PHP/.NET/Rust/Go command-line conventions. `iru-release` strips
+  it for the release (`0.1.0-dev` → `0.1.0`, calling this skill with `0.1.0`), and the next development value is the
+  minor bump plus `-dev` (`0.2.0-dev`) — written by the repository's `sync.yml` after the release, or by a second call
+  of this skill against `develop`. The release tag is the version without a `v` prefix and must equal the literal
+  (the release workflow checks it).
 - **App**: `MARKETING_VERSION` **is** the release version in-tree (there's no separate pre-release file to bump
   either, but for a different reason than the library case — an app's "current development version" is simply
   whatever `MARKETING_VERSION` already says, since TestFlight/App Store builds are distinguished from each other by
@@ -345,6 +450,10 @@ in-tree pre-release marker for a library at all**:
   it never touches `Package.swift`, but worth surfacing) — show the actual error and don't report success blindly.
   Verified locally: run against a throwaway `DemoLib` package (Swift 6.4 toolchain, `swift-tools-version:5.10`),
   exits `0` and prints the expected JSON manifest (name, platforms, products, targets).
+- **Command-line tool**: build and ask the binary — `swift build --product <bin>` then
+  `"$(swift build --show-bin-path)/<bin>" --version` must print exactly `<new-version>` (the `<bin>` is the
+  `.executable` product name in `Package.swift`). A compile error here means the helper matched something it
+  shouldn't have — show it and restore the file from the diff.
 - **App**: regenerate the Xcode project from its manifest and confirm the new value round-trips through
   `xcodebuild -showBuildSettings`:
   ```bash
@@ -423,6 +532,8 @@ Summarize:
   that **the git tag itself is the actual release artifact** — this skill does not create it, the caller must run
   `git tag <new-version>` (typically un-prefixed, matching this catalog's `git tag --sort=-v:refname` convention
   used elsewhere) and push it once the changes here are committed.
+- **Command-line tool**: every literal rewritten (path + kind), the `--version` read-back, and that `CHANGELOG.md`
+  was left to the caller.
 - **App**: which file(s) `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` were rewritten in (`project.yml`,
   `Project.swift`, one or more `*.xcconfig` files, or via `agvtool`/`project.pbxproj` sed), the old/new
   `CURRENT_PROJECT_VERSION` build number, and any per-target override left untouched that needs manual review
@@ -489,3 +600,10 @@ Verified in `$TMPDIR/iru-verify/swift/bump-version/`, using the local toolchain 
   original) <(printf '%s' "$var")` one-liner silently drops the file's trailing newline once the new content has
   passed through a bash command substitution, producing a spurious "no newline at end of file" diff line; computing
   the diff inside the same `python3` process that built the replacement text avoids this.
+- **Step 3b, command-line tool** (verified 2026-10-16 in `$TMPDIR/iru-verify/cli/swift/iru-swift-bump-version/`, Swift
+  6.4): on a copy of an `iru-setup-swift-cli` scaffold, `--list` found only `Sources/MyToolKit/Version.swift`
+  (`'0.1.0-dev'`); `--dry-run 0.1.0` printed a one-line diff and wrote nothing; `0.1.0` rewrote it, `swift build`
+  succeeded and `my-tool --version` printed `0.1.0`; `0.2.0-dev` then rewrote it again. On a second package with no
+  `Version.swift` and `CommandConfiguration(abstract: "Does things (fast).", version: "1.2.3-dev", …)` plus a
+  `static let apiVersion = "2.0.0"`, only the `CommandConfiguration` literal changed (parentheses in the abstract
+  didn't confuse it; `apiVersion` untouched). A package with no literal exits 1 with "no version literal found".

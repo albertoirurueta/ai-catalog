@@ -163,7 +163,8 @@ Then, unless Step 0 already resolved a `license` value from `args`, ask about th
 - Apache License 2.0 (recommended) — `Apache License 2.0` / `http://www.apache.org/licenses/LICENSE-2.0.txt`
 - MIT License — `The MIT License` / `https://opensource.org/license/mit`
 - No license (proprietary / all rights reserved) — omit the license-header comment from every generated Swift
-  file (Steps 6) and from `.swiftlint.yml`'s `file_header` rule (Step 7)
+  file (Steps 5–6) and from `.swiftlint.yml`'s `file_header` rule (Step 7) — both its configuration and its
+  `opt_in_rules` entry
 - Other — ask for the license's display name and URL directly afterward
 
 If a license is chosen (anything but "No license"), remind the user in the final report to also add a matching
@@ -269,7 +270,13 @@ skill is the one responsible for the repository's actual `.gitignore` (see its o
 covers).
 
 Then rewrite `Package.swift` in full with this template — genericized, verified end-to-end while building this
-skill (`swift build` succeeds, including resolving `swift-docc-plugin` over the network — see Step 10):
+skill (`swift build` succeeds, including resolving `swift-docc-plugin` over the network — see Step 10). When a
+license was chosen, prepend the same license-header comment the Swift sources get (Step 6) **above** the
+`// swift-tools-version` line, followed by a blank line: SwiftPM accepts leading comments before the tools-version
+declaration (verified with Swift 6.4 — `swift package describe` and `swift build` both succeed), and without it
+SwiftLint's `file_header` rule fails `swiftlint lint --strict` on `Package.swift`, which the CI step lints along with
+everything else (SwiftLint has no per-rule path exclusion — a `file_header: excluded:` key is rejected as an invalid
+configuration and the rule silently falls back to its default):
 
 ```swift
 // swift-tools-version: 6.0
@@ -478,6 +485,7 @@ opt_in_rules:
   - empty_string
   - explicit_init
   - fatal_error_message
+  - file_header  # omit this line too if "No license" was chosen in Step 2
   - first_where
   - force_unwrapping
   - implicitly_unwrapped_optional
@@ -496,7 +504,6 @@ opt_in_rules:
   - strict_fileprivate
   - toggle_bool
   - unneeded_parentheses_in_closure_argument
-  - unused_import
   - vertical_whitespace_closing_braces
   - vertical_whitespace_opening_braces
   - yoda_condition
@@ -515,17 +522,37 @@ line_length:
 excluded:
   - .build
   - Tests
+
+# `swiftlint analyze` only (needs a compiler log) — not a lint rule
+analyzer_rules:
+  - unused_import
+
+# The formatter owns layout: swift-format and SwiftFormat both add trailing commas to multi-line collections
+disabled_rules:
+  - trailing_comma
 ```
 
-**Unverified locally** (this environment has no `brew`, and no prebuilt `swiftlint` binary could be installed to
-confirm this config actually parses and every listed `opt_in_rules` id is still valid under the current SwiftLint
-release — SwiftLint periodically renames or retires rule ids across major versions). Cross-check every rule id
-against the SwiftLint release notes/`swiftlint rules` output before relying on this file as-is; the
-`iru-swift-code-quality` skill already treats a missing `swiftlint` binary as "not wired" rather than silently
-skipping the check, so a rule-id typo here will surface the first time that skill actually runs SwiftLint against
-a repository with it installed. `excluded: .build` is required regardless — SwiftLint otherwise walks the entire
-build cache (including fetched `swift-docc-plugin`/`swift-docc-symbolkit` checkouts under `.build/checkouts`) and
-lints third-party source it doesn't own.
+**Why this shape** (verified on 2026-10-16 with SwiftLint 0.65.1 and the Swift 6.4 toolchain's `swift format`, in
+`$TMPDIR/iru-verify/swift-lint-fix/`, against a `swift package init --type library` package carrying this file and
+the `.swift-format` below):
+
+- `file_header` is an **opt-in** rule, so configuring it is not enough: without its `opt_in_rules` entry SwiftLint
+  prints `Found a configuration for 'file_header' rule, but it is not enabled in 'opt_in_rules'` and never checks
+  headers. With both, a header-less source file fails `--strict` with `File Header Violation`.
+- `unused_import` is an **analyzer** rule — it only runs under `swiftlint analyze` with a compiler log — so it lives
+  under `analyzer_rules`; listed in `opt_in_rules` it only produces a configuration warning.
+- `trailing_comma` is **disabled** because both formatters this skill offers add trailing commas to multi-line
+  collections and argument lists (`swift format format` did, in `Package.swift` and in sources); with the rule on,
+  every formatted file fails `swiftlint lint --strict`, and the two tools fight forever.
+- Result: `swiftlint lint --strict` and `swift format lint --strict --recursive Sources Tests Package.swift` both exit 0
+  on the formatted, headered package; the previous version of this template failed `--strict` with five
+  `trailing_comma` errors and two configuration warnings on the same package.
+
+Rule ids can still be renamed or retired across SwiftLint major versions — `iru-swift-code-quality` treats a missing
+`swiftlint` binary as "not wired" rather than silently skipping the check, so a stale id surfaces the first time it
+runs. `excluded: .build` is required regardless — SwiftLint otherwise walks the entire build cache (including fetched
+`swift-docc-plugin`/`swift-docc-symbolkit` checkouts under `.build/checkouts`) and lints third-party source it
+doesn't own.
 
 ### `.swift-format` (when `formatter: swift-format`, the default)
 

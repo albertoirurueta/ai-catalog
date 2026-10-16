@@ -1,0 +1,123 @@
+= Setup Go Gitignore
+:description: Creates or updates the root .gitignore for a Go module or CLI tool, with root-anchored binaries, coverage output, GoReleaser dist and optional vendoring.
+:keywords: iru-setup-go-gitignore, claude code skill, go, golang, gitignore, goreleaser, vendoring, go.work, repository setup
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or refresh the root `.gitignore` of a Go module — typically a command-line tool scaffolded by
+xref:skills/iru-setup-go-cli.adoc[]. The template is a trimmed, house-style version of GitHub's `Go.gitignore`
+extended with what this catalog's scaffold, gates and release tooling write. It never overwrites an existing
+`.gitignore` without showing a diff and getting approval.
+
+== Purpose
+
+`iru-setup-go-gitignore` ignores the binaries `go build` leaves at the repository root (root-anchored, so
+`cmd/<bin>/` stays tracked), test binaries and profiles, coverage output (`coverage.out`, `*.coverprofile`,
+`/covdata/`), the `/build/` report and docs-generator directory, GoReleaser's `/dist/`, per-developer
+`go.work`/`go.work.sum`, env files (keeping `.env.example`), editor/OS files and the repository-wide
+`.integration-test.lock/`. `/vendor/` is ignored only when dependencies are not vendored (detected, or asked);
+`go.work` is left alone when the repository tracks a deliberate workspace. Antora and root Node sections are added
+only when detected.
+
+It never ignores `go.mod`, `go.sum`, `testdata/` or `.secrets.baseline`, and removes a `go.sum` ignore line from an
+existing file. The draft is checked with `git check-ignore` so it cannot hide `cmd/*/main.go`, `internal/`, testscript
+files or the committed CLI reference page. When `.gitignore` exists it announces an update, shows a diff and asks
+Update / Keep as is / Replace.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-go-gitignore
+----
+
+Optionally with an `args` block of `key: value` lines (see below) for scripted runs.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`bin-name`
+|No
+|Comma-separated binary name(s) to ignore at the root.
+|Every `cmd/<name>/` with a `main.go`, else the module path's last element, else none
+
+|`vendor`
+|No
+|`yes` (dependencies vendored, `vendor/` committed) or `no` (ignore `/vendor/`).
+|Detected from `vendor/modules.txt`; asked when ambiguous
+
+|`mode`
+|No
+|`new` or `existing`. An existing file still goes through the Update / Keep as is / Replace question unless `on-existing` decides.
+|Detected from the root `.gitignore`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace` — how to treat an existing `.gitignore` in scripted runs; the warning and diff are still printed.
+|`ask`
+|===
+
+Any other key forwarded by xref:skills/iru-setup-cli-repository.adoc[] (such as `language`, `ui` or `distribution`) is ignored and named in the report.
+
+== Outputs
+
+* A root `.gitignore` — created, updated (merged, keeping hand-added lines), replaced with the template, or left untouched when kept as is.
+* A report stating whether the run was from scratch or an update, the action taken (created / updated / replaced / kept as is, and its source), the binary names used, the vendoring and workspace decisions, which conditional sections were included or skipped, whether a `go.sum` ignore line was removed, the `git check-ignore` result, and any tracked file under a newly ignored path with the `git rm -r --cached` it needs.
+* Explicit warnings: review the file before committing; writing `.gitignore` never untracks committed files; always commit `go.mod` and `go.sum`; rotate any committed `.env` credentials.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-go-gitignore"] --> B["Step 0: parse args\n(bin-name, vendor, mode, on-existing)"]
+    B --> C["Step 1: survey go.mod, binaries, vendoring,\ngo.work, GoReleaser, Antora, existing .gitignore"]
+    C --> V1{"Vendor state unclear?"}
+    V1 -- yes --> V2["AskUserQuestion:\nvendoring or not"]
+    V1 -- no --> D
+    V2 --> D{".gitignore exists?"}
+    D -- no --> E["Announce creating from scratch"]
+    D -- yes --> F["Announce updating existing"]
+    E --> G["Step 2: base template\n(root binaries, test and coverage output,\nbuild, dist, go.work, vendor, env, editors)"]
+    F --> G
+    G --> H["Step 3: Antora and Node sections\nif detected"]
+    H --> I["Step 4: compose draft, merge existing lines,\ndrop go.sum ignore, check-ignore safety check"]
+    I --> M{"Existing file?"}
+    M -- no --> W["Step 6: write .gitignore"]
+    M -- yes --> N["Step 5: show diff"]
+    N --> O{"on-existing set?"}
+    O -- yes --> P["Apply keep, update or replace"]
+    O -- no --> Q{"AskUserQuestion:\nUpdate, Keep as is, Replace"}
+    P --> W
+    Q -- Update or Replace --> W
+    Q -- Keep as is --> R
+    W --> VR["Verify with git check-ignore"]
+    VR --> R["Report mode, action, decisions,\nsections, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-go-gitignore` is a leaf skill; it only reads `go.mod`, GoReleaser and docs config, runs read-only `git` commands, and writes `.gitignore`.
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] — Step 6, root .gitignore for the `go` language (passing `bin-name`), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+Also named as a follow-up step by xref:skills/iru-setup-go-cli.adoc[] when run standalone.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-go-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,0 +1,191 @@
+= Setup Swift CLI
+:description: Scaffolds an agent-friendly Swift command-line tool: SwiftPM package, thin ArgumentParser executable, testable Kit library, tests, DocC and docs generator.
+:keywords: iru-setup-swift-cli, claude code skill, swift, swiftpm, swift-argument-parser, cli, docc, swift testing, scaffold, bootstrap a swift cli
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable Swift command-line tool at the repository root that follows this catalog's agent-friendly CLI contract.
+
+== Purpose
+
+`iru-setup-swift-cli` scaffolds a SwiftPM package (`swift-tools-version` 6.0 by default, Swift 6 language mode, macOS 15+ and Linux)
+from templates embedded in its `reference/` files. The executable target `Sources/<Bin>/` is deliberately thin: an
+`AsyncParsableCommand` root plus the `greet [NAME]`, `completion <bash|zsh|fish>` and `schema [COMMAND] [--asciidoc]`
+subcommands and `--version`. Every behavior lives in the `Sources/<Bin>Kit/` library so it is unit-tested in-process:
+
+* the exit-code enum exactly as the catalog's CLI contract (0-7, 130, 143), with usage errors mapped to exit 2 instead of
+  swift-argument-parser's default 64;
+* `--help`/`--version` on stdout, a JSON error envelope on stderr, `--format text|json|jsonl`/`--json`;
+* colour and prompt policy (`--no-color`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, `isatty` per stream, `--no-input`, `CI=true`);
+* SIGINT/SIGTERM handling (exit 130/143), SIGPIPE ignored, and a `schema` command tree built from `--experimental-dump-help`.
+
+It also writes Swift Testing targets (an in-process Kit suite targeting at least 80% line coverage, and a CLI suite that runs the
+built executable and asserts stdout, stderr and exit status), `.swift-format`, `.swiftlint.yml`, a DocC catalog,
+`scripts/generate-docs.sh` (man page, shell completions, `schema.json` and an Antora CLI-reference partial) and, when
+opted in, `sonar-project.properties`. No terminal UI is offered, because the only Swift TUI library has been dormant since
+2024; the Rust or Go scaffold is recommended for a full-screen TUI. The skill announces whether it is scaffolding from
+scratch or updating, and for every file group it owns that already exists it warns and asks Update / Keep as is / Replace /
+Stop (unless `on-existing` decides). It never overwrites hand-written source and writes no CI workflow, `.gitignore`, README,
+changelog, `LICENSE` or Antora page.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-swift-cli
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrator (for example xref:skills/iru-setup-cli-repository.adoc[]) as
+newline-separated `key: value` lines, so already-resolved questions are skipped. Unknown shared-vocabulary keys are ignored
+and named in the report.
+|None — every field is asked interactively.
+
+|`bin-name`
+|Yes (unless supplied via `args`)
+|Executable name matching `^[a-z][a-z0-9-]*$`. The PascalCase `<Bin>` (module and type prefix) and the `<BIN>_` environment
+prefix are derived from it.
+|None
+
+|`package-name`
+|No
+|SwiftPM package identity written to `Package(name:)`.
+|`bin-name`
+
+|`description`
+|Yes (unless supplied via `args`)
+|One sentence; becomes the root command's abstract and the man page `NAME` line.
+|None
+
+|`swift-version`
+|No
+|The `swift-tools-version` floor; must not exceed the installed toolchain.
+|`6.0`
+
+|`platforms`
+|No
+|`macos=<major.minor>`; Linux is always supported and needs no entry. Other Apple platforms are reported and ignored.
+|`macos=15.0` (the floor, because the Kit uses `Synchronization.Mutex`)
+
+|`owner`
+|No
+|GitHub owner; only feeds the Sonar defaults.
+|Parsed from `origin`
+
+|`license`
+|Yes (unless supplied via `args`)
+|Display name, SPDX expression or `none`; drives the license header on every generated `.swift` file and SwiftLint's
+`file_header` rule.
+|None — user chooses (Apache License 2.0 recommended)
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Populate the generated license headers.
+|None
+
+|`open-source` / `visibility` / `ci`
+|No
+|Only key the `sonar` recommendation (`internal` counts as `private`).
+|Asked stand-alone for `open-source`; otherwise unset
+
+|`sonar`
+|No
+|`cloud`, `self-hosted` or `none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when not `none`; gates
+`sonar-project.properties`.
+|`cloud` recommended only for a public open-source repository, otherwise `none`
+
+|`distribution`
+|No
+|`none`, `internal` or `store`; recorded for the report only (release archives and the Homebrew formula belong to
+xref:skills/iru-setup-cli-github-workflows.adoc[]).
+|Unset
+
+|`mode`
+|No
+|`new` or `existing`. `existing` never means a silent gap-fill; Step 1 still warns and asks per file group.
+|`new`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; answers the per-group question for every existing group at once.
+|`ask`
+|===
+
+== Outputs
+
+* `Package.swift`, `.swift-format`, `.swiftlint.yml` and `scripts/generate-docs.sh` (kept executable).
+* `Sources/<Bin>/` with the root command and the `greet`, `completion` and `schema` subcommands.
+* `Sources/<Bin>Kit/` with the contract implementation (exit codes, error envelope, output, terminal, streams, signal trap,
+  command runner, schema) plus a DocC catalog `<Bin>Kit.docc/<Bin>Kit.md`, and `Version.swift` holding the single
+  `toolVersion = "0.1.0-dev"` literal.
+* `Tests/<Bin>KitTests/` (in-process Swift Testing) and `Tests/<Bin>CLITests/` (runs the built binary).
+* `sonar-project.properties`, only when `sonar` is not `none`.
+* A report of the resolved names, versions (live versus fallback), license, per-group action (created, updated, replaced or
+  kept as is), what is included or omitted and why (no TUI, config-file extension point, ignored keys), the pass, fail or
+  unverified result of each verification command, suggested Antora pages, and a warning block (review generated files, run
+  `iru-setup-swift-gitignore` with `flavor: cli`, keep `toolVersion` a single literal, Sonar prerequisites, re-check
+  dependency versions before a first release).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-swift-cli] --> B["Step 0: Resolve inputs from args"]
+    B --> C["Step 1: Survey repository\nfor existing files"]
+    C --> D{"What is there?"}
+    D -- nothing --> E["Announce: scaffolding from scratch"]
+    D -- Swift CLI scaffold --> F["Announce: updating; list files;\nread current names as defaults"]
+    D -- foreign layout --> G{"Add only non-conflicting pieces\nor stop?"}
+    G -- stop --> Z1[Report nothing changed; end]
+    G -- add pieces --> H
+    F --> H{"on-existing set?"}
+    H -- yes --> I["Apply it to every existing group"]
+    H -- no --> J{"AskUserQuestion per group:\nUpdate / Keep / Replace / Stop"}
+    J -- Stop --> Z1
+    J -- other --> K["Record per-group decision"]
+    E --> L
+    I --> L
+    K --> L["Step 2: Ask unresolved inputs\n(bin-name, description, license,\nsonar, developer info)"]
+    L --> M["Step 3: Infer owner and repo\nfrom origin"]
+    M --> N["Step 4: Look up swift-argument-parser and\nswift-docc-plugin versions; check toolchain"]
+    N --> O["Step 5: Render templates with\nrender-templates.py into a scratch dir"]
+    O --> P["Step 6: Copy staged files per\nper-group decision"]
+    P --> Q["Step 7: Verify via iru-gate-runner:\nbuild, tests, coverage, format, SwiftLint,\nDocC, docs generator, smoke checks, release build"]
+    Q --> R["Step 8: Report mode, per-group action,\nverification results, contract and warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-swift-coverage.adoc[] — optionally, in Step 7 for the coverage check, run through the
+  xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent (the skill may instead run `llvm-cov` directly).
+
+The Step 7 build, test, format, SwiftLint, DocC and docs-generator commands are also run through
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] rather than inline.
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] — the `swift` flavor delegates the scaffold to this skill, passing resolved
+  inputs through `args`.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 runs the build, tests, coverage and quality checks through
+  it so the caller gets a compact summary instead of long logs.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-swift-cli/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,10 +1,10 @@
 = Swift Bump Version
-:description: Sets a SwiftPM library's version.txt, CHANGELOG.md, and README, or an Apple app's MARKETING_VERSION/CURRENT_PROJECT_VERSION, to an exact version.
-:keywords: iru-swift-bump-version, claude code skill, swift, swiftpm, xcodegen, tuist, xcconfig, agvtool, bump version, sync files
+:description: Sets a Swift CLI's version literal, a SwiftPM library's version.txt/CHANGELOG/README, or an Apple app's MARKETING_VERSION to an exact version.
+:keywords: iru-swift-bump-version, claude code skill, swift, swift cli, swiftpm, xcodegen, tuist, xcconfig, agvtool, bump version, sync files
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
-Set a Swift (SwiftPM library) or Apple app (XcodeGen/Tuist/xcconfig/`.xcodeproj`) project's version to an exact
+Set a Swift (SwiftPM library or command-line tool) or Apple app (XcodeGen/Tuist/xcconfig/`.xcodeproj`) project's version to an exact
 literal value across every file that needs to agree with it. A SwiftPM library carries no in-tree version field at
 all — a consumer resolves it against the package's git tag — so this skill only rewrites the files that mirror that
 tag by this catalog's own convention (`version.txt`, `CHANGELOG.md`, README dependency snippets). An Apple app, by
@@ -13,6 +13,12 @@ project format is present. This skill never computes a version itself; it only a
 given, after validating its shape.
 
 == Purpose
+
+A Swift command-line tool (a `Package.swift` with an `.executableTarget` on `ArgumentParser`, such as the
+`iru-setup-swift-cli` layout) keeps its version in source: `Version.swift`'s `toolVersion` and/or a
+`CommandConfiguration(version:)` literal, following the `x.y.z-dev` convention on the integration branch. The skill
+rewrites those literals with an embedded, tested Python helper (`--list`/`--dry-run`) and checks that `<bin> --version`
+prints the new value.
 
 `iru-swift-bump-version` is the Swift/Apple-ecosystem equivalent of `iru-java-bump-version`/`iru-typescript-bump-version`/
 `iru-android-bump-version`: a small, deterministic skill a caller (typically `iru-release`) can invoke with a
@@ -59,7 +65,7 @@ running the sanity check.
 
 |`kind` (args)
 |No
-|Overrides the auto-detected project kind (`library`/`app`). Needed only when a repository legitimately has both a
+|Overrides the auto-detected project kind (`library`/`app`/`cli`). Needed only when a repository legitimately has both a
 root `Package.swift` and a generator manifest/`.xcodeproj` (e.g. an app with a local `Packages/Core` package).
 |Auto-detected from which manifest files exist at the repository root; asked via `AskUserQuestion` if both are
 present and this isn't given.
@@ -67,6 +73,7 @@ present and this isn't given.
 
 == Outputs
 
+* **Command-line tool**: every `toolVersion`/`CommandConfiguration(version:)` literal under `Sources/` rewritten; `CHANGELOG.md` left to the caller.
 * **Library**: `version.txt` updated (or created, only if the repository's `sync.yml`/README actually reference
   it); `CHANGELOG.md`'s `## [Unreleased]` heading renamed to `## [<new-version>] - <date>` with a fresh
   `## [Unreleased]` reopened above it (skipped if the file doesn't exist); README `.package(url:, from:/exact:)`
@@ -76,7 +83,7 @@ present and this isn't given.
   (`agvtool`/`project.pbxproj` sed) actually carries the value.
 * Optionally, `docs/antora.yml`'s `version:` field, Antora pages with a literal dependency snippet, and/or a README
   version badge mention, if `sync-files` was accepted.
-* A sanity check: `swift package dump-package` for a library, or an Xcode project regenerate +
+* A sanity check: `swift package dump-package` for a library, a `swift build` plus `<bin> --version` read-back for a command-line tool, or an Xcode project regenerate +
   `xcodebuild -showBuildSettings` round-trip (or `agvtool what-version`/`what-marketing-version` read-back for a
   hand-maintained `.xcodeproj`) for an app.
 * A report of the detected kind, the old and new version, every file actually changed (or skipped and why), and an
@@ -95,6 +102,8 @@ flowchart TD
     B -- yes --> D["Validate shape against\nX.Y.Z(-pre)(+build) regex\n(warn, don't stop, if it doesn't match)"]
     D --> E["Survey project kind: Package.swift only means library;\nproject.yml/Project.swift/.xcodeproj means app;\nboth present and no kind arg means ask via AskUserQuestion\n(honor args: kind override otherwise)"]
     E --> F{Kind resolved?}
+    F -- cli --> H2["Rewrite Version.swift toolVersion /\nCommandConfiguration version literals\nvia the Python helper"]
+    H2 --> J
     F -- neither found --> G["Hard stop: ask for correct path\nor different project layout"]
     F -- library --> H["Rewrite version.txt, CHANGELOG.md,\nand README .package snippets"]
     F -- app --> I["Rewrite MARKETING_VERSION and\nCURRENT_PROJECT_VERSION in project.yml /\nProject.swift / *.xcconfig / agvtool"]
@@ -102,7 +111,7 @@ flowchart TD
     I --> J
     J -- yes --> K["Show diff for every file;\nwrite nothing; skip sanity check"]
     J -- no --> L["Write files"]
-    L --> M["Sanity check: swift package dump-package (library)\nor generate + xcodebuild / agvtool read-back (app)"]
+    L --> M["Sanity check: swift package dump-package (library), build + --version (cli)\nor generate + xcodebuild / agvtool read-back (app)"]
     K --> N
     M --> N{sync-files given?}
     N -- no --> O["Ask whether to sync\nantora.yml / doc pages / README badge"]

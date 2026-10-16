@@ -1,0 +1,110 @@
+= Go Godoc
+:description: Audits Go packages for complete go.dev doc comments, fills the gaps from the real code, and verifies with revive, godot, gofmt, go vet and go doc.
+:keywords: iru-go-godoc, claude code skill, go, godoc, doc comments, golangci-lint, revive, godot, cobra, audit doc comments
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Make sure a set of Go packages carry complete, well-formed doc comments as defined by go.dev/doc/comment, filling in
+whatever is missing, then prove the result through revive's doc rules, `godot` and `go doc`. It only adds or completes
+comments (and a `doc.go` file holding a package comment when none exists) — it never changes behavior, signatures,
+imports or any non-comment code.
+
+== Purpose
+
+`iru-go-godoc` detects the Go module (and `go.work` workspace) and the installed golangci-lint version, then discovers
+the project's real documentation bar: the `.golangci.yml` revive, godot, dupword and misspell settings, whether a
+`comments` exclusion preset hides revive's doc findings, and the observed comment style. It audits every package
+comment (`Package <name> …`, or `<Bin> …` for `package main`) and every exported function, method, type, constant,
+variable, interface method and non-obvious struct field, generating comments grounded in the actual implementation —
+returns, matchable sentinel or typed errors, side effects, concurrency safety — and keeping existing `Deprecated:`
+paragraphs.
+
+Verification uses a dedicated throwaway golangci-lint v2 config enabling only revive's `exported` and
+`package-comments` rules plus `godot`, so a project config that excludes the `comments` preset cannot mask gaps. It
+also runs `gofmt -l`, `go build`, `go vet`, and `go doc -all` per package to prove every comment renders and to catch
+unresolved `[Name]` doc links. When golangci-lint is missing or only v1, it falls back to a `go doc` plus grep audit.
+Test files, `testdata/`, `vendor/` and generated files are never edited.
+
+== Purpose group
+
+xref:index.adoc#group-go[Go Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-go-godoc <packages-files-or-identifiers>
+/iru-go-godoc
+----
+
+Comma-separated package patterns (`./internal/cli/...`), files (`internal/greet/greet.go`) or identifiers
+(`internal/greet.Greeting`, `github.com/acme/tool/internal/output.Envelope`) are accepted.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`packages-files-or-identifiers`
+|No
+|One or more Go package patterns, files or identifiers, comma-separated. `_test.go` files, `testdata/`, `vendor/` and
+files marked `Code generated … DO NOT EDIT.` are dropped and named in the report.
+|Non-test `.go` files touched by uncommitted changes plus commits on the current branch not yet on the base branch; an
+empty scope stops with "nothing to document".
+|===
+
+== Outputs
+
+* Edited `.go` files with added or completed doc comments, plus a new `doc.go` holding only the package comment (and
+  the sibling license header) when a multi-file package had none.
+* A per-package report: symbols already documented, gaps found and filled (kind and what was added).
+* The verification result per check — revive `exported`/`package-comments`, `godot`, `gofmt -l`, `go build`/`go vet`,
+  `go doc` rendering and unresolved doc links — and which checks could not run (fallback audit when golangci-lint is
+  missing).
+* Follow-ups: stutter renames, a project `comments` exclusion preset that hides these findings, and pre-existing
+  out-of-scope failures. Raw tool output is never pasted.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-go-godoc\n(optional packages, files, identifiers)"] --> B["Step 0: Detect module,\ngo toolchain, golangci-lint version"]
+    B --> C{"Go toolchain\ninstalled?"}
+    C -- no --> D["Stop: Go toolchain not installed"]
+    C -- yes --> E["Step 1: Determine scope,\ndrop tests, testdata, generated files"]
+    E --> F{"Scope empty?"}
+    F -- yes --> G["Report nothing to document and stop"]
+    F -- no --> H["Step 2: Discover the project's doc bar\n(golangci config, observed style)"]
+    H --> I["Step 3: Audit each package\nwith dedicated revive + godot config and a full read"]
+    I --> J["Step 4: Write the missing comments\nand doc.go package comments"]
+    J --> K["Step 5: Verify with revive and godot,\ngofmt, go build, go vet, go doc"]
+    K --> L{"New findings in\nin-scope files?"}
+    L -- yes --> M["Fix the comments and re-run"]
+    M --> K
+    L -- no --> N["Step 6: Report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-go-godoc` is a leaf skill; it edits doc comments and runs golangci-lint, `gofmt`, `go build`, `go vet` and
+`go doc` directly. It follows `iru-update-docs`'s scope approach by convention but calls no skill.
+
+=== Invoked by
+
+* xref:skills/iru-go-code-one-task-group.adoc[] — doc comments for touched packages, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+Also referenced (not invoked) by xref:skills/iru-go-code-quality.adoc[] (it names this skill as the fixer for
+`revive:package-comments` and `godot` findings) and xref:skills/iru-setup-go-cli.adoc[] (as one of the gate skills the
+scaffold is detected and called by).
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[] — callers run this skill inside an `iru-gate-runner` sub-agent; the skill does not spawn agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-go-godoc/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

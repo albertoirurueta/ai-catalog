@@ -118,16 +118,23 @@ Determine three values first:
 
 - **`name`**: a short slug for the project — the Antora *component* name, used in `start_page` references like
   `<name>::index.adoc`. Derive it from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml`
-  `[project].name`, Go module base name, a .NET solution's `*.slnx`/`*.sln` file name, an XcodeGen `project.yml`'s
-  `name:`, etc.), lowercased with no spaces.
+  `[project].name`, the root `Cargo.toml` `[package] name`, the last element of the `go.mod` `module` path (skipping a
+  `/vN` major-version suffix — `github.com/acme/hello-cli/v2` → `hello-cli`), a Swift package's executable product
+  name in `Package.swift`, a .NET solution's `*.slnx`/`*.sln` file name, an XcodeGen `project.yml`'s `name:`, etc.),
+  lowercased with no spaces.
 - **`title`**: the human-readable project name (e.g. from a README's top heading, `pom.xml`'s `<name>`, or
   `package.json`'s `name` capitalized).
 - **`version`**: the current release version, preferring, in order: (1) the latest GitHub release
   (`gh release view --json tagName -q .tagName` or `gh api repos/{owner}/{repo}/releases/latest`), (2) the latest
   git tag (`git tag --sort=-v:refname | head -1`), (3) the project manifest's version with any pre-release suffix
   like `-SNAPSHOT` (or Python's PEP 440 `.dev0`, or the `-dev` suffix .NET's `Directory.Build.props` `<Version>` and
-  PHP use) stripped — for an Apple app, `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`. If none of
-  these resolve, ask the user for a starting version rather than guessing.
+  PHP use) stripped — for an Apple app, `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`. The
+  manifest version of a command-line tool lives in: Rust — `[package] version` in the root `Cargo.toml` (never the
+  `xtask` member's `0.0.0`); Go — `var Version = "…"` in `internal/version/version.go` (`go.mod` has no version; a
+  module without that file relies on tags only); Swift — `public let toolVersion = "…"` in
+  `Sources/<Bin>Kit/Version.swift`; .NET — `<Version>` in `Directory.Build.props`. Each carries a `-dev` suffix on
+  the integration branch (e.g. `0.1.0-dev` → `0.1.0`). If none of these resolve, ask the user for a starting version
+  rather than guessing.
 
 Write (or, if `antora.yml` already exists and Step 2's answer was **Update**, only correct genuinely wrong fields
 rather than rewriting the whole file; under **Replace**, rewrite it from this template, carrying over the existing
@@ -300,6 +307,11 @@ rather than reordering what's already there:
 * xref:installation.adoc[]
 * xref:reference.adoc[]
 ```
+
+A command-line tool repository later gains a generated `cli-reference.adoc` page (written from the command tree by
+the CLI scaffold's docs generator) and its `* xref:cli-reference.adoc[Command-line reference]` nav entry —
+`iru-setup-cli-repository` adds both after this skill runs. Don't create that page or entry here; on **Update**,
+an existing one is like any other existing page and nav entry — kept as is.
 
 ## Step 11 — Ignore the build output
 

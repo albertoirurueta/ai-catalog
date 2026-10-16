@@ -1,6 +1,6 @@
 = Setup Readme
-:description: Creates or refreshes a repository README.md with badges, a status table, doc links and install or run steps for libraries, services, apps and plugins.
-:keywords: iru-setup-readme, claude code skill, readme, badges, react native, kotlin multiplatform, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, macos app, windows desktop app, installation instructions
+:description: Creates or refreshes a README.md with badges, a status table, doc links and install or run steps for libraries, services, apps, plugins and CLIs.
+:keywords: iru-setup-readme, claude code skill, readme, badges, react native, kotlin multiplatform, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, macos app, windows desktop app, command-line tool, rust, go, installation instructions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -18,9 +18,11 @@ description, license, build tool, current and latest-released versions), taking 
 isn't installed does it fall back to a minimal one-manifest check. Beyond the library and app stacks (Java/Maven,
 Gradle/Kotlin, Vite+React, Angular, Hilla, Expo, Ionic, Android, Swift, plain TypeScript), it tailors sections
 for macOS desktop apps (SwiftUI/AppKit), Windows desktop apps (WPF/WinUI 3/Windows Forms), Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress plugins and themes,
-PrestaShop modules, plain Composer packages, NestJS, Next.js, FastAPI, Django and plain Python packages. Identity is read from the file that owns it for
+PrestaShop modules, plain Composer packages, NestJS, Next.js, FastAPI, Django, plain Python packages, command-line tools (Rust clap/Ratatui, Go Cobra/Bubble Tea, Swift ArgumentParser, .NET System.CommandLine) and plain Rust crates and Go modules. Identity is read from the file that owns it for
 each stack: `springboot-stack.yml`/`quarkus-stack.yml`, `gradle.properties`, `config/app.php` (Laravel), the
-WordPress plugin/theme headers, the PrestaShop module class, `pyproject.toml` (`[project].name`/`version`, `requires-python`, with framework versions from `uv.lock`), `project.yml`/`Project.swift` (macOS apps, adding the deployment target, UI framework and App Sandbox status rows), `Directory.Build.props` and the app `*.csproj`/`Package.appxmanifest` (Windows apps: `<Version>`, target framework, UI stack, Windows App SDK version, MSIX identity), or git tags.
+WordPress plugin/theme headers, the PrestaShop module class, `pyproject.toml` (`[project].name`/`version`, `requires-python`, with framework versions from `uv.lock`), `project.yml`/`Project.swift` (macOS apps, adding the deployment target, UI framework and App Sandbox status rows), `Directory.Build.props` and the app `*.csproj`/`Package.appxmanifest` (Windows apps: `<Version>`, target framework, UI stack, Windows App SDK version, MSIX identity), or git tags. For Rust and Go it reads `Cargo.toml` (`[package]`, `[[bin]]`, `rust-version`, `publish`) or `go.mod` (module path, `go` and `toolchain` lines, `cmd/<bin>/`); Swift and .NET command-line tools use `Package.swift` and `Directory.Build.props`/`global.json`.
+
+Command-line tools (`cli-tool (rust|go|swift|dotnet)`) get their own treatment: status-table rows for the toolchain floor, argument parser, terminal-UI library and release targets; crates.io/docs.rs, pkg.go.dev, NuGet and GitHub-release badges (each only after a live check); a link to the generated CLI reference page; and an install section listing only the channels the release workflow really wires (Homebrew tap, `cargo install`, `go install`, Scoop/WinGet, `dotnet tool install -g`, or the release archive with `SHA256SUMS` and `gh attestation verify`) plus build from source. Plain `rust`/`go` projects get only identity, badges, docs links and a `cargo add`/`go get` snippet.
 
 Desktop apps (`macos-app`, `windows-app`) get no dependency snippet: when a release workflow exists the README gets an "Install" subsection matched to what it publishes (a notarized DMG or Mac App Store link; a Windows zip, MSIX/`.appinstaller`, `winget install` or Microsoft Store link — store URLs as placeholders), followed by "Build and run locally" steps (`xcodegen`/`xcodebuild`/`swift test` for macOS; `dotnet build`/`dotnet run`/`dotnet test --filter "TestCategory!=UI"` and the .NET 10 SDK prerequisite for Windows).
 
@@ -150,7 +152,7 @@ flowchart TD
     C --> D
     C --> D["Step 2: Gather project identity\n(repo/host, description, license,\nmulti-stack detection, versions)"]
     D --> E["Step 3: Gather badge sources\n(CI unless ci: no, SonarCloud unless\nsonar: none, registry badges, PHP/WP/\nPrestaShop/Python requirements, PyPI, GHCR image)"]
-    E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/PHP/Swift/\nNode/TS/Python/framework/Distribution rows)"]
+    E --> F["Step 4: Build project status table\n(+ platform/SDK/Kotlin/PHP/Swift/\nNode/TS/Python/framework/Distribution rows;\nCLI: toolchain floor, parser, TUI, targets)"]
     F --> G["Step 5: Gather documentation links\n(+ generated API docs: TypeDoc,\nCompodoc, Storybook, Dokka, phpDoc, DocC, Sphinx,\nOpenAPI schema;\nno github.io links under pages: no)"]
     G --> H["Step 6: Compose Installation or\nGetting Started (dependency snippets,\nservice/plugin run commands,\nGHCR pull, store links)"]
     H --> I["Step 7: Write how-it-works\nsection with a real example\n(curl for services; via Explore agent)"]
@@ -188,6 +190,8 @@ flowchart TD
 * xref:skills/iru-setup-php-repository.adoc[] — Step 10, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-quarkus-repository.adoc[] — Step 8, root README.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-kmp-repository.adoc[] — Step 9, last in its chain, runs `iru-setup-readme` via
+  `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
+* xref:skills/iru-setup-cli-repository.adoc[] — Step 9, last in its chain, runs `iru-setup-readme` via
   `iru-isolated-skill-executor` with the resolved shared args (`sonar`, `ci`, `pages`, and `on-existing` when it was supplied).
 
 === Related agents

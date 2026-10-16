@@ -1,0 +1,215 @@
+= Setup CLI GitHub Workflows
+:description: Creates or updates GitHub Actions CI, contract smoke tests, release, sync and security workflows for Rust, Go, Swift and .NET command-line tools.
+:keywords: iru-setup-cli-github-workflows, claude code skill, github actions, cli, rust, go, swift, dotnet, goreleaser, smoke test, dependabot
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffolds or updates the CI/CD and security pipeline of an agent-friendly command-line tool repository written in Rust,
+Go, Swift or C#/.NET — the layouts produced by `iru-setup-rust-cli`, `iru-setup-go-cli`, `iru-setup-swift-cli` and
+`iru-setup-dotnet-cli`.
+
+== Purpose
+
+`iru-setup-cli-github-workflows` follows two rules. Everything that can run on Linux runs on `ubuntu-latest` (lint,
+tests, coverage, the contract smoke test, docs, Sonar, CodeQL except Swift's), and the macOS (~10x Linux minutes on a
+private repository) and Windows (~1.7x) legs run the same tests only as often as `cross-os-ci` says, after the lint job
+passes. And the binary is tested the way an agent uses it: every CI leg ends with a smoke test of the built executable
+against the catalog's CLI contract, and every release target is smoke-tested on its own runner before it is packaged.
+
+It writes:
+
+* `build.yml` — runs on pushes to the integration/stable branches, pull requests and `workflow_dispatch`. Lint and
+  format with warnings as errors (rustfmt, Clippy, rustdoc and cargo-deny; golangci-lint v2, go vet and govulncheck;
+  SwiftLint and swift format; dotnet format and analyzers), tests with an 80% coverage bar, reports for Sonar, and a
+  contract smoke test of the built binary (`--version`/`--help` exit 0, unknown command exits 2, `greet --json` carries
+  `schemaVersion: 1`, the JSON error envelope with exit 3, `schema` is JSON, no ESC bytes with `NO_COLOR` or without a
+  TTY). A macOS and Windows test matrix is gated by `cross-os-ci` (`all` or `stable`; Swift has no Windows leg).
+  `ci-tests: full` adds the release-mode build and smoke test on every leg and any container-backed tests; Go adds a
+  GoReleaser snapshot of every target. A docs job builds Antora, API docs (rustdoc, `go doc` text, DocC, DocFX) and the
+  CLI reference regenerated from the command tree and diffed against the committed page, deployed to GitHub Pages or
+  uploaded as an artifact.
+* `.github/scripts/cli_smoke_test.sh` — the contract smoke test shared by every language.
+* `release.yml` per `distribution` — `internal`: native per-target binaries on native runners packaged as flat
+  `<bin>-<version>-<target>.tar.gz` or `.zip` archives with `SHA256SUMS`, build-provenance attestations and a GitHub
+  Release upload. `store`: additionally the package channels (crates.io, Homebrew, Scoop, WinGet, NuGet). A
+  `workflow_dispatch` dry run publishes nothing. Plus `homebrew_formula.py` for the Homebrew channel and
+  `lcov_to_sonar_generic.py` for Swift with Sonar.
+* `sync.yml` plus `.github/scripts/sync_versions.py` (gitflow only) — merges the release back into the integration
+  branch and moves the version to the next `x.(y+1).0-dev`.
+* The shared security block — `security.yml` (dependency-review, CodeQL, OSV-Scanner, gitleaks) and
+  `.github/dependabot.yml` for `cargo`, `gomod`, `swift` or `nuget` plus `github-actions`.
+
+It announces whether it is creating the pipeline from scratch or updating one, and for each existing workflow, script or
+Dependabot file warns and asks Update, Keep as is, Replace or Stop, naming each concrete mismatch. It ends with the
+required-secrets table.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-cli-github-workflows
+/iru-setup-cli-github-workflows <args>
+----
+
+`args` is a block of `key: value` lines, one per line. Standalone, the skill resolves `visibility` itself and asks the
+remaining cost-sensitive choices with the Actions-minutes, SonarCloud and Pages cost facts for that visibility (never
+`ci` — invoking it means CI is wanted).
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`language`
+|No
+|`rust`, `go`, `swift` or `dotnet`.
+|Detected from disk; asked when several or none match
+
+|`bin-name`
+|No
+|The command name.
+|Detected from the manifest (Rust `[[bin]]`, Go `cmd/<name>/`, Swift executable product, .NET `AssemblyName`)
+
+|`branching`
+|No
+|`gitflow` or `main-only`; `main-only` writes no `sync.yml`.
+|`gitflow` when an integration branch exists or the version ends in `-dev`
+
+|`integration-branch`, `stable-branch`
+|No
+|Branch names.
+|`develop` / `main`
+
+|`cross-os-ci`
+|No
+|`all` (macOS/Windows legs on every push and PR) or `stable` (stable branch and manual runs only).
+|Asked; `all` for public, `stable` for private
+
+|`ci-tests`
+|No
+|`unit` or `full` (adds release-mode build and smoke test on every leg, and container tests).
+|`full` for public, asked for private (`unit` recommended)
+
+|`pages`
+|No
+|`yes` deploys docs to GitHub Pages; `no` uploads them as an artifact.
+|`yes` for public, asked otherwise
+
+|`distribution`
+|No
+|`none`, `internal` or `store`.
+|`store` for open source, else asked (`internal` recommended)
+
+|`channels`
+|No
+|Comma list of package channels, only with `store`.
+|Language defaults (Rust `crates-io,homebrew`; Go `homebrew,scoop,winget`; Swift `homebrew`; .NET `nuget,winget`)
+
+|`homebrew-tap`, `winget-package-id`
+|No
+|Tap repository `owner/repo` and WinGet `PackageIdentifier`.
+|`<owner>/homebrew-tap`, `<Owner>.<BinName>`
+
+|`crates-auth`, `nuget-auth`, `nuget-user`
+|No
+|`trusted` or `token`/`api-key` publishing auth, and the nuget.org account for trusted publishing.
+|`trusted`
+
+|`notarize`
+|No
+|`yes` or `no` (Swift Developer ID notarization).
+|`yes` when `distribution` is not `none`
+
+|`attestations`
+|No
+|`yes` or `no` for build-provenance attestations.
+|`yes` for public; `no` for private unless on Enterprise Cloud
+
+|`sonar`
+|No
+|`cloud`, `self-hosted` or `none`, plus `sonar-organization`, `sonar-project-key`, `sonar-host-url`.
+|Asked; `cloud` recommended only for public open source
+
+|`open-source`, `visibility`
+|No
+|`visibility` is `public`, `private` or `internal` (`internal` counts as private).
+|`gh repo view`, else asked
+
+|`mode`, `on-existing`
+|No
+|`new` or `existing` (informational), and `ask`, `keep`, `update` or `replace` to pre-answer the per-file question.
+|None, `ask`
+
+|`security-dependency-review`, `security-osv`, `security-gitleaks`, `security-codeql`
+|No
+|Each `yes` or `no`, toggling that security job.
+|`yes` (`security-codeql` is `no` for Swift on a private repository)
+|===
+
+Other shared-vocabulary keys (`ci`, `ui`, `description`, `license`, `developer-*`, `organization-url`, `owner`) are
+accepted; `description` and `license` feed the Homebrew formula and the rest are ignored and named in the report.
+
+== Outputs
+
+* `.github/workflows/build.yml` and `.github/scripts/cli_smoke_test.sh`, always.
+* `.github/workflows/release.yml` unless `distribution: none`, with `.github/scripts/homebrew_formula.py` for the
+  Homebrew channel (not Go) and `.github/scripts/lcov_to_sonar_generic.py` for Swift with Sonar.
+* `.github/workflows/sync.yml` with `.github/scripts/sync_versions.py` for `branching: gitflow`.
+* `.github/workflows/security.yml` and `.github/dependabot.yml`, always.
+* A report with the mode, per-file action (created / updated / replaced / kept as is), adaptations for non-standard
+  layouts, the choices made, what was left unverified locally, every open gap, the required-secrets table
+  (`SONAR_TOKEN`, tap/bucket/WinGet tokens, crates.io and NuGet credentials, Apple notarization secrets), repository
+  settings to check, and the naming and install/verification facts for `iru-setup-readme`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-cli-github-workflows"] --> B["Step 0: parse args; standalone, ask visibility,\ncross-os-ci, ci-tests, pages, sonar,\ndistribution, channels"]
+    B --> C{"Invalid combination?\ne.g. homebrew on private repo"}
+    C -- yes --> B
+    C -- no --> D["Step 1: survey language, scaffold contract,\nGo release config, Antora, existing files"]
+    D --> E{"Windows or macOS desktop app,\nor layout differs?"}
+    E -- "desktop app" --> STOP["Stop: point at the windows or macos\nworkflows skill"]
+    E -- "layout differs" --> E2["Ask: stop or continue with adaptations"]
+    E2 -- Stop --> STOP2["End without changes"]
+    E2 -- Continue --> F
+    E -- no --> F["Announce mode; per existing file:\nUpdate / Keep as is / Replace / Stop"]
+    F -- Stop --> STOP2
+    F --> G["Step 2: look up action, tool and runner versions"]
+    G --> H["Step 3: render shared and language templates"]
+    H --> I["Step 4: write files, chmod +x scripts"]
+    I --> J["Step 5: actionlint, script syntax checks,\nrun Linux job commands and host release\nbuild via iru-gate-runner"]
+    J --> K["Step 6: report mode, actions, secrets table,\nsettings, warnings, open gaps"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — this skill calls no other skill. It only mentions `iru-setup-antora` (recommended first, since the docs job fails
+without an Antora site), the `iru-setup-rust-cli`, `iru-setup-go-cli`, `iru-setup-swift-cli` and `iru-setup-dotnet-cli`
+scaffolds (whose layout contract the templates assume), `iru-setup-windows-github-workflows` and
+`iru-setup-macos-github-workflows` (where a desktop app belongs; the latter's `lcov_to_sonar_generic.py` is copied for
+Swift), the bump-version skills whose `x.(y+1).0-dev` convention `sync.yml` follows, and `iru-setup-readme` (told the
+workflow names and release asset names).
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] — Step 7, CI/CD and security workflows, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 5, runs the long local verification commands (lint, tests
+  with the coverage bar, the smoke test on the debug binary, the host release build, GoReleaser snapshot, and the
+  version sync script) and returns compact results.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-cli-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

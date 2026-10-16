@@ -57,7 +57,9 @@ name, a copyright line, or a URL to the license text:
   (`/* ... */`, `//`, `#`, `<!-- -->`, etc. — e.g. `.kt` headers use `/* ... */` or a block of `//` lines, same as
   Java; `.swift` idiomatically uses `//` line comments, though `/* ... */` is also fine; `.ts`/`.tsx` use
   `/* ... */`/`/** ... */` or `//`, same as other JS-family files; `.py` uses a block of `#` lines — never a
-  string literal/docstring, which would displace the module docstring), same wording, same line wrapping, same
+  string literal/docstring, which would displace the module docstring; `.rs` and `.go` use a block of `//` lines
+  (or `/* ... */`) — never `///`/`//!` in Rust, which are doc comments, and never directly above Go's `package`
+  clause without a blank line, which would turn the header into the package doc comment), same wording, same line wrapping, same
   copyright line format (holder name, contact, year). Cross-check 2-3 more instances of that extension to confirm the format is
   consistent repo-wide; if instances disagree, prefer the version used by the newest files (`git log -1 --
   <file>` per candidate) and note the inconsistency in the final report rather than silently picking one.
@@ -124,6 +126,11 @@ Using the Edit tool (or Write only for brand-new files):
   line there — so insert the `#` header after them, then a blank line; the module docstring (and any
   `from __future__ import …`, which must precede other statements) stays below the header, unchanged. When
   auditing, skip past those lines before looking for the header, and don't mistake them for one.
+- **Rust and Go files**: Rust inner attributes and crate docs (`#![…]`, `//!`) stay below the header — insert the
+  `//` header first, then a blank line. A Go `//go:build` constraint must stay before the `package` clause and be
+  followed by a blank line — put the header above it, then a blank line; keep a blank line between the header and
+  `package` so `go doc` doesn't pick the header up as the package comment. Skip Go generated files
+  (`// Code generated … DO NOT EDIT.`).
 - **Wrong header**: replace only the header comment block, leaving everything else in the file — including any
   code-level Javadoc/docstring immediately below it — untouched.
 - Never alter code logic, imports, formatting elsewhere in the file, or comments that aren't part of the license

@@ -1,0 +1,108 @@
+= Go Code Quality
+:description: Runs a Go module's wired golangci-lint v2, go vet, gofmt and govulncheck checks and reports issue counts by tool and rule id, with optional baseline diff.
+:keywords: iru-go-code-quality, claude code skill, go, golangci-lint, go vet, govulncheck, gofmt, lint, static analysis, baseline diff
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run every static-analysis and style check a Go project actually has wired, golangci-lint v2 (linters and formatters), `go vet` and govulncheck, and report every issue grouped by tool and by rule id. It is a read-only reporting skill: it never fixes issues, applies formatting, adds `//nolint`, tidies modules, or edits tool configuration unless asked to as a follow-up.
+
+== Purpose
+
+`iru-go-code-quality` works on modules and `go.work` workspaces alike, for command-line tools, libraries and services. It reads the project's real invocation from CI, Makefile or Taskfile and pre-commit configuration, verifies which tools are installed and configured, runs each one with machine-readable output, and parses every report with one embedded stdlib Python parser into per-tool totals and per-rule-id counts. Rule ids look like `revive:exported`, `gosec:G204`, `staticcheck:SA1019`, `govet:printf`, `errcheck` or `govulncheck:GO-2021-0113`.
+
+A tool that is not wired is named as skipped, never reported as "0 issues". A v1 golangci-lint config is rejected as a tooling failure with the `golangci-lint migrate` fix, and an unreachable vulnerability database is reported as skipped. When a calling skill supplies a baseline, only new issues are reported.
+
+== Purpose group
+
+xref:index.adoc#group-go[Go Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-go-code-quality
+/iru-go-code-quality <file-or-dir>[,<file-or-dir>...]
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+|`scope`
+|No
+|Comma-separated `.go` files or directories (`internal/greet/run.go`, `internal/cli`). Non-existent paths are dropped with a note. Files are mapped to their packages for the run (Go type-checks whole packages) and findings outside the scope are filtered out; govulncheck is always module-wide.
+|None — the whole module (`./...`, or one `./<dir>/...` per module of a `go.work` workspace whose root is not a module).
+
+|`baseline`
+|No
+|Per-tool/per-rule-id counts, or an itemized `tool rule file:line` list from an earlier run of this skill, supplied in the calling prompt, used to report only new issues.
+|None — plain counts are reported.
+|===
+
+Tools and how they count as wired:
+
+[cols="1,3", options="header"]
+|===
+|Tool |Wired when
+
+|golangci-lint
+|Installed and a config file (`.golangci.yml`, `.yaml`, `.toml` or `.json`) or a CI/Makefile `golangci-lint run` exists. The config must declare `version: "2"`; with no config it runs with the `standard` defaults and says so
+
+|go vet
+|Always (part of the toolchain); reported in its own bucket, separate from golangci-lint's `govet`
+
+|gofmt
+|Always, but only as a standalone check when golangci-lint is not wired or enables no formatter, to avoid double-counting
+
+|govulncheck
+|Installed, or run via CI or a `tool` directive in `go.mod`; needs network access to the vulnerability database
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation: an overall total first, then per tool whether it ran or was skipped (and why), the config and version in force, its total, and one line per rule-id bucket with its count.
+* A `file:line — message` list when the scope is smaller than the whole module or on request; per-rule lists are capped at 20 entries with "(+N more)".
+* Families called out: `typecheck` first (code does not compile), `gosec:*` and called `govulncheck:*` findings (security) early, `revive:exported`, `revive:package-comments` and `godot` (doc comments, handed to xref:skills/iru-go-godoc.adoc[]), and formatter findings (fixed by running the formatter as a follow-up).
+* govulncheck findings split into called, imported-only and required-only; the last two are informational.
+* With a baseline, only issues new since it are reported, matched on tool, rule id and file rather than line numbers; a new `govulncheck:*` id is flagged as a new advisory or new dependency.
+* Tool failures (golangci-lint exit 3, a v1 config, `go vet` on a package that does not build, govulncheck without network) get their own line with the first error line.
+* Temporary reports under `build/iru-go-cq-*` are deleted. No source or configuration is modified, and no `--fix`, write-mode formatter, `//nolint` or `go mod tidy` is applied.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-go-code-quality\n(optional scope and baseline)"] --> B["Step 0: resolve scope and baseline,\nread CI and Makefile invocation"]
+    B --> C["Step 1: verify which tools\nare wired"]
+    C --> D{"golangci-lint config\nv1?"}
+    D -- yes --> E["Report tooling failure with\ngolangci-lint migrate fix"]
+    D -- no --> F["Step 2: run each wired tool\nread-only to build/ reports"]
+    E --> F
+    F --> G["Step 3: parse every report into\ntool, rule id and issues"]
+    G --> H{"Baseline supplied?"}
+    H -- yes --> I["Step 4: keep only new issues\nagainst the baseline"]
+    H -- no --> J["Step 4: bucket by tool\nand rule id"]
+    I --> K["Report totals, skipped tools\nand tool failures"]
+    J --> K
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-go-code-quality` is a leaf skill. It only runs Go tooling (golangci-lint, `go vet`, gofmt, govulncheck) and an embedded Python parser.
+
+=== Invoked by
+
+* xref:skills/iru-go-code-one-task-group.adoc[] — baseline capture before the work and a diffed re-run after it, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-code.adoc[] — names it as the code-quality gate for the `go` plan key.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-go-code-quality/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

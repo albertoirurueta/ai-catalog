@@ -1,0 +1,142 @@
+= Rust Code One Task Group
+:description: Implements a bucket of Rust tasks, then validates it once for license headers, rustdoc, tests, 80% coverage and clippy, serializing container tests.
+:keywords: iru-rust-code-one-task-group, claude code skill, rust, cargo, clippy, cargo-llvm-cov, testcontainers lock, validate task group, code coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of Rust tasks from a plan's task group end to end: capture a single pre-change quality
+baseline, run `iru-rust-code-one-task` once per task (in parallel when the group allows it), then validate the whole
+bucket once — license headers, rustdoc, scoped tests, 80% line coverage, the full suite, and a clippy/rustfmt/cargo-deny
+regression check — with any container-backed tests serialized behind a repository-wide lock.
+
+== Purpose
+
+`iru-rust-code-one-task-group` is the Cargo package/workspace counterpart to the other `<key>-code-one-task-group`
+skills (notably `iru-go-code-one-task-group` and `iru-windows-code-one-task-group`), built on
+`iru-rust-code-quality`, `iru-rust-test`, `iru-rust-coverage` and `iru-rust-rustdoc`. It detects the shape once —
+workspace members and lib/bin targets, features, the CLI contract, end-to-end test files, golden/snapshot files,
+`#[ignore]`d container-backed tests, an `xtask` docs generator, and the wired quality tools — and captures one
+pre-change quality baseline for every file the bucket is expected to touch.
+
+It then implements each task via `iru-rust-code-one-task`, concurrently through `iru-isolated-skill-executor` agents
+when the plan marks the group `Parallelizable: yes`. Tasks that share `src/cli.rs`, the dispatch or `mod` declarations
+in `lib.rs`, the exit-code/output modules, `Cargo.toml`/`Cargo.lock`, or a golden file always run sequentially,
+whatever the verdict. Each task checks off its own box with a "group validation pending" note; this skill confirms or
+backfills it and notifies the user.
+
+Validation runs once, cheapest first, every check through an `iru-gate-runner` agent: license headers, rustdoc (plus
+regenerating committed CLI docs through the crate's `xtask` when the command tree changed), scoped tests, an 80%
+per-file line-coverage gate (cargo-llvm-cov, container-free tests only, end-to-end runs of the binary included — the
+test helper must forward `LLVM_PROFILE_FILE` after `env_clear()` or `main.rs` reads 0%), the full suite with doctests,
+and clippy/rustfmt/cargo-deny diffed against the baseline. Last, and only when the repository has them, `#[ignore]`d
+container-backed tests (testcontainers) run behind the shared atomic-`mkdir` `.integration-test.lock`; Docker being
+unavailable makes that stage "unverified", never silently skipped. Plain CLI end-to-end tests need no lock.
+
+== Purpose group
+
+xref:index.adoc#group-rust[Rust Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-rust-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every Rust-tagged task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and
+any relevant "Current code state" context.
+|None — this skill is always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source, test, golden/snapshot files created or modified per task, via `iru-rust-code-one-task`.
+* License headers and rustdoc kept current across every `.rs` file the bucket touched, checked once for the bucket;
+  committed generated CLI docs regenerated through `xtask` when the command tree changed.
+* Tests reaching at least 80% line coverage on every changed or added production source file (accepted exceptions —
+  `xtask`/`build.rs`, a truly thin `main.rs`, terminal-bound lines — are named, never silent).
+* A transient `.integration-test.lock/` directory (with an `owner` file) held only while the container-backed stage
+  runs, added to the root `.gitignore` if missing, and always released before the skill finishes.
+* `implementation_plan.md` with each task's checkbox checked and its "group validation pending" note replaced by the
+  final coverage, quality and container-test outcome.
+* User-facing notifications per task as it lands and once when group validation completes.
+* A summary handed back to `iru-code-one-task-group`: shape detected, per-task files/tests/coverage/quality, coverage
+  exceptions, generated-docs result, the container-backed result (passed, fixed, unverified with reason, or none),
+  lock behavior, and any task that stopped on a blocker.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-rust-code-one-task-group"] --> B["Step 1: detect shape (workspace, features, CLI contract,\ncontainer tests, xtask docs, Docker);\ncapture pre-change quality baseline\n(iru-rust-code-quality via iru-gate-runner)"]
+    B --> C{"Bucket Parallelizable?"}
+    C -- yes --> D["Step 2: iru-rust-code-one-task per task\nin parallel (iru-isolated-skill-executor);\nshared files / Cargo.toml tasks run sequentially"]
+    C -- no --> E["Step 2: iru-rust-code-one-task\nfor each task, one at a time"]
+    D --> F["Confirm or backfill each task's box;\nnotify user"]
+    E --> F
+    F --> G["Step 3.1-3.2: license headers, rustdoc,\nregenerate committed CLI docs via xtask"]
+    G --> H["Step 3.3-3.5: scoped tests,\n80% per-file coverage, full suite with doctests"]
+    H -- failure or low coverage traced to a task --> L["Fix that task;\nre-run the affected check(s)"]
+    L --> H
+    H -- clean --> I["Step 3.6: clippy, rustfmt, cargo-deny\ndiffed against baseline"]
+    I -- new issue --> L
+    I -- clean --> J{"Container-backed #[ignore] tests,\nbucket touches them, Docker available?"}
+    J -- no --> P["Step 4: finalize each task's note;\nnotify user"]
+    J -- yes --> K["Step 3.7a: acquire .integration-test.lock\n(mkdir; poll ~30s if held; stale after 60 min;\ntimeout ~45 min = unverified)"]
+    K --> M["Step 3.7: run ignored container tests\nwith lock: held (iru-gate-runner)"]
+    M -- assertion failure --> L
+    M --> N["Step 3.7b: release lock on every exit path"]
+    N --> P
+    P --> Q["Step 5: report the bucket's\noutcome to the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-rust-code-one-task.adoc[] — Step 2, once per task in the bucket, via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent when the bucket is parallelizable
+  (all tasks at once) or directly, one at a time, otherwise — that skill implements exactly what the task specifies,
+  writes its tests, formats its own files, compile-checks, and checks off its own checkbox with a "group validation
+  pending" note.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than
+directly, so verbose report output stays out of this skill's own context:
+
+* xref:skills/iru-rust-code-quality.adoc[] — Step 1 (pre-change baseline) and Step 3.6 (clippy, rustfmt and cargo-deny
+  regression check against that baseline).
+* xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every `.rs` file the bucket touched.
+* xref:skills/iru-rust-rustdoc.adoc[] — Step 3.2, rustdoc for every item the bucket touched, with `cargo doc` and
+  doctests passing.
+* xref:skills/iru-rust-test.adoc[] — Step 3.3 (scoped tests), Step 3.5 (full suite with doctests) and Step 3.7
+  (`ignored: only` container-backed tests with `lock: held`).
+* xref:skills/iru-rust-coverage.adoc[] — Step 3.4, per-file line coverage (cargo-llvm-cov) for every changed or added
+  production source file.
+
+The regeneration of committed CLI docs through the crate's `xtask` (Step 3.2) is run directly by `iru-gate-runner`
+rather than through a named skill, so it has no dedicated skill xref.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] — Step 2, bucket for key `rust`.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per task in the bucket
+  (Step 2) when the group is parallelizable, so each task's own implementation transcript doesn't accumulate in this
+  skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — spawned for the baseline capture (Step 1) and every validation
+  check (Step 3), keeping full reports out of this skill's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-rust-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

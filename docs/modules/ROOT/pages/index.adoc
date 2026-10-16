@@ -1,6 +1,6 @@
 = AI Catalog
-:description: 169 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, Python, .NET, TypeScript, mobile, Windows and macOS desktop.
-:keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development, windows desktop apps, macos desktop apps, dotnet wpf winui winforms
+:description: 192 Claude Code Skills and 3 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
+:keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development, windows desktop apps, macos desktop apps, dotnet wpf winui winforms, rust and go development, command-line tools
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -288,6 +288,41 @@ features, and where the underlying models genuinely differ.
 |Regenerate this documentation site itself from the current set of skills and agents on disk.
 |xref:skills/iru-generate-skill-docs.adoc[]
 
+|`iru-go-bump-version`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Sets a Go module's in-tree Version literal to an exact value and verifies -ldflags -X overrides point at it.
+|xref:skills/iru-go-bump-version.adoc[]
+
+|`iru-go-code-one-task`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Implements one Go plan task (code + tests), compile-checks with go build/vet, and checks off its box.
+|xref:skills/iru-go-code-one-task.adoc[]
+
+|`iru-go-code-one-task-group`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Implements one Go task bucket, then validates it once: license, godoc, tests, 80% coverage, -race, quality diff.
+|xref:skills/iru-go-code-one-task-group.adoc[]
+
+|`iru-go-code-quality`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Runs golangci-lint v2, go vet, gofmt and govulncheck on a Go module; reports issues by tool and rule id.
+|xref:skills/iru-go-code-quality.adoc[]
+
+|`iru-go-coverage`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Measures Go statement coverage from container-free tests via -coverpkg; reports per-file gaps against a bar.
+|xref:skills/iru-go-coverage.adoc[]
+
+|`iru-go-godoc`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Audits Go packages for complete doc comments, fills gaps from the code, verifies with revive/godot/go doc.
+|xref:skills/iru-go-godoc.adoc[]
+
+|`iru-go-test`
+|xref:index.adoc#group-go[Go Development Tooling]
+|Runs Go tests via `go test -json` (race, testscript, `integration` build tag) and reports a compact summary.
+|xref:skills/iru-go-test.adoc[]
+
 |`iru-issue`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Takes a GitHub issue or Jira ticket from branch creation through plan, implementation and a reviewed draft PR.
@@ -573,6 +608,41 @@ features, and where the underlying models genuinely differ.
 |Cuts a release_x.y.z branch from develop, delegates the version bump, drafts release notes and opens the release PR.
 |xref:skills/iru-release.adoc[]
 
+|`iru-rust-bump-version`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Sets a Rust crate or Cargo workspace to an exact SemVer version across Cargo.toml, path deps and Cargo.lock.
+|xref:skills/iru-rust-bump-version.adoc[]
+
+|`iru-rust-code-one-task`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Implements one Rust plan task (code + tests) in a Cargo crate/workspace, rustfmt + cargo check, then checks it off.
+|xref:skills/iru-rust-code-one-task.adoc[]
+
+|`iru-rust-code-one-task-group`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Implements one Rust task bucket, then validates it once: license, rustdoc, tests, 80% coverage, clippy diff.
+|xref:skills/iru-rust-code-one-task-group.adoc[]
+
+|`iru-rust-code-quality`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Runs Clippy, rustfmt and cargo-deny on a Rust workspace; reports issues by tool and rule id, with baseline diff.
+|xref:skills/iru-rust-code-quality.adoc[]
+
+|`iru-rust-coverage`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Measures Rust line/region coverage with cargo-llvm-cov (lcov + JSON), reporting uncovered ranges per target.
+|xref:skills/iru-rust-coverage.adoc[]
+
+|`iru-rust-rustdoc`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Audits Rust public items for complete rustdoc, fills gaps, verifies via doc lints, `cargo doc` and doctests.
+|xref:skills/iru-rust-rustdoc.adoc[]
+
+|`iru-rust-test`
+|xref:index.adoc#group-rust[Rust Development Tooling]
+|Runs Rust tests via cargo-nextest or `cargo test`, plus doctests and `#[ignore]` container tests; compact summary.
+|xref:skills/iru-rust-test.adoc[]
+
 |`iru-setup-android-app`
 |xref:index.adoc#group-android-bootstrap[Android Bootstrap]
 |Scaffolds a Gradle Kotlin DSL Android application module with signing, Compose/Views UI, Sonar, and distribution wiring.
@@ -617,6 +687,36 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Creates or updates a root CHANGELOG.md from tags, GitHub Releases, readme.txt and diffs in Keep a Changelog format.
 |xref:skills/iru-setup-changelog.adoc[]
+
+|`iru-setup-cli-github-workflows`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Creates or updates CI, contract smoke test, release, sync and security workflows for Rust/Go/Swift/.NET CLI tools.
+|xref:skills/iru-setup-cli-github-workflows.adoc[]
+
+|`iru-setup-cli-repository`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Orchestrates a Rust/Go/Swift/.NET CLI repository bootstrap: scaffold, docs, gitignore, CI/release, changelog, README.
+|xref:skills/iru-setup-cli-repository.adoc[]
+
+|`iru-setup-dotnet-cli`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Scaffolds an agent-friendly .NET 10 CLI: Core contract library, System.CommandLine AOT tool, MSTest tests, DocFX.
+|xref:skills/iru-setup-dotnet-cli.adoc[]
+
+|`iru-setup-dotnet-gitignore`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Creates or merges a .NET command-line tool's root `.gitignore` (bin/obj, publish output, coverage, docs build).
+|xref:skills/iru-setup-dotnet-gitignore.adoc[]
+
+|`iru-setup-go-cli`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Scaffolds an agent-friendly Go CLI (Cobra, exit-code contract, testscript, golangci-lint, GoReleaser, gendocs).
+|xref:skills/iru-setup-go-cli.adoc[]
+
+|`iru-setup-go-gitignore`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Creates or merges a Go command-line tool's root `.gitignore` (binaries, GoReleaser dist, coverage, docs build).
+|xref:skills/iru-setup-go-gitignore.adoc[]
 
 |`iru-setup-ionic-app`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
@@ -817,6 +917,21 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
 |Catalog-wide bootstrap front door: detects project type, asks shared cost-aware inputs, delegates to one stack orchestrator.
 |xref:skills/iru-setup-repository.adoc[]
+
+|`iru-setup-rust-cli`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Scaffolds an agent-friendly Rust CLI: Cargo workspace, clap, exit codes, JSON output, optional Ratatui, xtask docs.
+|xref:skills/iru-setup-rust-cli.adoc[]
+
+|`iru-setup-rust-gitignore`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Creates or merges a Rust command-line tool's root `.gitignore` (target/, dist output, coverage, docs build).
+|xref:skills/iru-setup-rust-gitignore.adoc[]
+
+|`iru-setup-swift-cli`
+|xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+|Scaffolds an agent-friendly Swift CLI: SwiftPM package, thin ArgumentParser executable, Kit library, tests, DocC.
+|xref:skills/iru-setup-swift-cli.adoc[]
 
 |`iru-setup-swift-github-workflows`
 |xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
@@ -1362,6 +1477,46 @@ through the xref:index.adoc#group-dotnet[.NET Development Tooling].
 * xref:skills/iru-setup-windows-github-workflows.adoc[`iru-setup-windows-github-workflows`] — build, release,
   sync, security, and Dependabot workflows with a Linux Core job and a Windows job (FlaUI UI tests, MSIX).
 
+[[group-cli-bootstrap]]
+=== Command-Line Tool Bootstrap
+
+Scaffolding (or updating) a native, agent-friendly command-line tool repository — in Rust, Go, Swift, or C#/.NET —
+with a stable exit-code and `--json` output contract, an optional terminal UI, a generated CLI reference page, and
+release binaries plus package channels.
+
+[TIP]
+====
+`iru-setup-cli-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`] (Round 6, "Desktop & command line", or a detected
+`cli-tool (…)` project type). It resolves the language (`rust`/`go`/`swift`/`dotnet`), `ui: none|tui` (always `none`
+for Swift), branching, and the shared cost-aware inputs once, then chains the same six-step shape as the other
+`*-repository` orchestrators: scaffold (`iru-setup-rust-cli` / `-go-cli` / `-swift-cli` / `-dotnet-cli`) →
+`iru-setup-antora` (plus wiring the generated CLI reference page into the nav) → the language's gitignore skill
+(`iru-setup-rust-gitignore` / `-go-gitignore` / `iru-setup-swift-gitignore` with `flavor: cli` /
+`iru-setup-dotnet-gitignore`) → `iru-setup-cli-github-workflows` (skipped with `ci: no`) → `iru-setup-changelog` →
+`iru-setup-readme`, each via `iru-isolated-skill-executor`. Each member also runs standalone. Day-to-day coding on
+the result goes through the xref:index.adoc#group-rust[Rust] and xref:index.adoc#group-go[Go] Development Tooling
+groups, or the existing xref:index.adoc#group-swift[Swift] and xref:index.adoc#group-dotnet[.NET] ones, whose
+`-code-one-task` skills detect the CLI shape.
+====
+
+* xref:skills/iru-setup-cli-repository.adoc[`iru-setup-cli-repository`] — orchestrator: bootstraps a Rust, Go,
+  Swift or .NET command-line tool repository end to end in one pass.
+* xref:skills/iru-setup-rust-cli.adoc[`iru-setup-rust-cli`] — scaffolds a Cargo workspace with a clap command tree,
+  exit-code/JSON contract, optional Ratatui UI, tests, and an `xtask` docs generator.
+* xref:skills/iru-setup-go-cli.adoc[`iru-setup-go-cli`] — scaffolds a Cobra CLI with optional Bubble Tea UI,
+  testscript tests, golangci-lint, GoReleaser, and generated docs.
+* xref:skills/iru-setup-swift-cli.adoc[`iru-setup-swift-cli`] — scaffolds a SwiftPM package with a thin
+  ArgumentParser executable over a testable Kit library, DocC, and a docs generator.
+* xref:skills/iru-setup-dotnet-cli.adoc[`iru-setup-dotnet-cli`] — scaffolds a .NET 10 System.CommandLine tool over a
+  Core contract library, Native AOT, MSTest, DocFX, and `dotnet tool` packaging.
+* xref:skills/iru-setup-rust-gitignore.adoc[`iru-setup-rust-gitignore`],
+  xref:skills/iru-setup-go-gitignore.adoc[`iru-setup-go-gitignore`],
+  xref:skills/iru-setup-dotnet-gitignore.adoc[`iru-setup-dotnet-gitignore`] — create or merge the root
+  `.gitignore` for each language's CLI layout (Swift reuses `iru-setup-swift-gitignore` with `flavor: cli`).
+* xref:skills/iru-setup-cli-github-workflows.adoc[`iru-setup-cli-github-workflows`] — CI, a CLI-contract smoke test,
+  cross-platform release (archives, checksums, attestations, package channels), sync, and the shared security block.
+
 [[group-intake]]
 === Ticket Intake
 
@@ -1857,6 +2012,52 @@ rarely needs them invoked directly during the xref:index.adoc#group-cycle[Issue-
 * xref:skills/iru-windows-code-one-task.adoc[`iru-windows-code-one-task`] — implements a single Windows desktop
   task's code and tests; called once per task by `iru-windows-code-one-task-group`.
 
+[[group-rust]]
+=== Rust Development Tooling
+
+The Rust counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing plan tasks in any Cargo crate or workspace
+(a library, a service, or a command-line tool scaffolded by xref:skills/iru-setup-rust-cli.adoc[`iru-setup-rust-cli`]),
+plus the point-in-time checks (cargo-nextest/`cargo test`, cargo-llvm-cov, Clippy/rustfmt/cargo-deny, rustdoc) and a version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group: `iru-code-one-task-group` dispatches every bucket tagged `rust` to
+`iru-rust-code-one-task-group`, which captures one quality baseline, runs `iru-rust-code-one-task` once per task (in
+parallel when allowed, via `iru-isolated-skill-executor`), and validates the bucket once via the gate skills below
+through `iru-gate-runner` — with the 80% line-coverage gate on container-free tests and `#[ignore]`d container tests serialized behind `.integration-test.lock`.
+====
+
+* xref:skills/iru-rust-code-one-task-group.adoc[`iru-rust-code-one-task-group`] — implements a Rust bucket and validates it once: license headers, rustdoc, tests, 80% coverage, and a Clippy quality diff.
+* xref:skills/iru-rust-code-one-task.adoc[`iru-rust-code-one-task`] — implements a single Rust task with its tests, then rustfmt + `cargo check`; called once per task by the group skill.
+* xref:skills/iru-rust-test.adoc[`iru-rust-test`] — runs tests via cargo-nextest or `cargo test`, plus doctests and `#[ignore]`d container tests, reporting a compact summary.
+* xref:skills/iru-rust-coverage.adoc[`iru-rust-coverage`] — measures line/region coverage with cargo-llvm-cov and reports uncovered ranges per target.
+* xref:skills/iru-rust-code-quality.adoc[`iru-rust-code-quality`] — runs Clippy, rustfmt and cargo-deny, reporting issues by tool and lint id with an optional baseline diff.
+* xref:skills/iru-rust-rustdoc.adoc[`iru-rust-rustdoc`] — audits public items for complete rustdoc, fills gaps, and verifies with doc lints, `cargo doc` and doctests.
+* xref:skills/iru-rust-bump-version.adoc[`iru-rust-bump-version`] — sets a crate/workspace version across `Cargo.toml`, path dependencies and `Cargo.lock`; called by `iru-release`.
+
+[[group-go]]
+=== Go Development Tooling
+
+The Go counterpart to xref:index.adoc#group-java[Java Development Tooling] — implementing plan tasks in any Go module
+(a library, a service, or a command-line tool scaffolded by xref:skills/iru-setup-go-cli.adoc[`iru-setup-go-cli`]),
+plus the point-in-time checks (`go test -json` with `-race`, coverprofile statement coverage, golangci-lint/go vet/govulncheck, doc comments) and a version-bump skill for the release pipeline.
+
+[TIP]
+====
+Same shape as the Java group: `iru-code-one-task-group` dispatches every bucket tagged `go` to
+`iru-go-code-one-task-group`, which captures one quality baseline, runs `iru-go-code-one-task` once per task (in
+parallel when allowed, via `iru-isolated-skill-executor`), and validates the bucket once via the gate skills below
+through `iru-gate-runner` — with the 80% statement-coverage gate on container-free tests and `integration`-tagged tests serialized behind `.integration-test.lock`.
+====
+
+* xref:skills/iru-go-code-one-task-group.adoc[`iru-go-code-one-task-group`] — implements a Go bucket and validates it once: license headers, doc comments, tests, 80% coverage, `-race`, and a quality diff.
+* xref:skills/iru-go-code-one-task.adoc[`iru-go-code-one-task`] — implements a single Go task with its tests, then `go build`/`go vet`; called once per task by the group skill.
+* xref:skills/iru-go-test.adoc[`iru-go-test`] — runs `go test -json` (race, testscript, `integration` build tag) and reports a compact pass/fail summary.
+* xref:skills/iru-go-coverage.adoc[`iru-go-coverage`] — measures statement coverage via `-coverpkg` and a profile parser, reporting per-file gaps against a bar.
+* xref:skills/iru-go-code-quality.adoc[`iru-go-code-quality`] — runs golangci-lint v2, go vet, gofmt and govulncheck, reporting issues by tool and rule id with a baseline diff.
+* xref:skills/iru-go-godoc.adoc[`iru-go-godoc`] — audits packages for complete doc comments, fills gaps from the code, and verifies with revive/godot/`go doc`.
+* xref:skills/iru-go-bump-version.adoc[`iru-go-bump-version`] — sets a module's in-tree `Version` literal and verifies `-ldflags -X` overrides point at it; called by `iru-release`.
+
 [[group-database]]
 === Database Development Tooling
 
@@ -2132,6 +2333,18 @@ flowchart LR
         SETUP_WINDOWS_REPOSITORY["iru-setup-windows-repository"]
     end
 
+    subgraph GROUP_CLI_BOOTSTRAP["Command-Line Tool Bootstrap"]
+        SETUP_CLI_GITHUB_WORKFLOWS["iru-setup-cli-github-workflows"]
+        SETUP_CLI_REPOSITORY["iru-setup-cli-repository"]
+        SETUP_DOTNET_CLI["iru-setup-dotnet-cli"]
+        SETUP_DOTNET_GITIGNORE["iru-setup-dotnet-gitignore"]
+        SETUP_GO_CLI["iru-setup-go-cli"]
+        SETUP_GO_GITIGNORE["iru-setup-go-gitignore"]
+        SETUP_RUST_CLI["iru-setup-rust-cli"]
+        SETUP_RUST_GITIGNORE["iru-setup-rust-gitignore"]
+        SETUP_SWIFT_CLI["iru-setup-swift-cli"]
+    end
+
     subgraph GROUP_INTAKE["Ticket Intake"]
         CREATE_GITHUB_ISSUE["iru-create-github-issue"]
         CREATE_JIRA_TICKET["iru-create-jira-ticket"]
@@ -2259,6 +2472,26 @@ flowchart LR
         DOTNET_DOCFX["iru-dotnet-docfx"]
         DOTNET_GENERATE_ALL_TESTS["iru-dotnet-generate-all-tests"]
         DOTNET_TEST["iru-dotnet-test"]
+    end
+
+    subgraph GROUP_RUST["Rust Development Tooling"]
+        RUST_BUMP_VERSION["iru-rust-bump-version"]
+        RUST_CODE_ONE_TASK["iru-rust-code-one-task"]
+        RUST_CODE_ONE_TASK_GROUP["iru-rust-code-one-task-group"]
+        RUST_CODE_QUALITY["iru-rust-code-quality"]
+        RUST_COVERAGE["iru-rust-coverage"]
+        RUST_RUSTDOC["iru-rust-rustdoc"]
+        RUST_TEST["iru-rust-test"]
+    end
+
+    subgraph GROUP_GO["Go Development Tooling"]
+        GO_BUMP_VERSION["iru-go-bump-version"]
+        GO_CODE_ONE_TASK["iru-go-code-one-task"]
+        GO_CODE_ONE_TASK_GROUP["iru-go-code-one-task-group"]
+        GO_CODE_QUALITY["iru-go-code-quality"]
+        GO_COVERAGE["iru-go-coverage"]
+        GO_GODOC["iru-go-godoc"]
+        GO_TEST["iru-go-test"]
     end
 
     subgraph GROUP_DATABASE["Database Development Tooling"]
@@ -2675,6 +2908,48 @@ flowchart LR
     WINDOWS_CODE_ONE_TASK -.spawns.-> AGT_ISE
     KMP_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
     KMP_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
+    CODE -.-> RUST_CODE_QUALITY
+    CODE -.-> GO_CODE_QUALITY
+    CODE_ONE_TASK_GROUP --> RUST_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> GO_CODE_ONE_TASK_GROUP
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_CODE_ONE_TASK
+    RUST_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_CODE_QUALITY
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_COVERAGE
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_RUSTDOC
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_TEST
+    GO_CODE_ONE_TASK_GROUP -.-> GO_CODE_ONE_TASK
+    GO_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    GO_CODE_ONE_TASK_GROUP -.-> GO_CODE_QUALITY
+    GO_CODE_ONE_TASK_GROUP -.-> GO_COVERAGE
+    GO_CODE_ONE_TASK_GROUP -.-> GO_GODOC
+    GO_CODE_ONE_TASK_GROUP -.-> GO_TEST
+    RELEASE --> RUST_BUMP_VERSION
+    RELEASE --> GO_BUMP_VERSION
+    SETUP_REPOSITORY -.-> SETUP_CLI_REPOSITORY
+    SETUP_CLI_REPOSITORY -.-> SETUP_RUST_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_GO_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_SWIFT_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_DOTNET_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_CLI_REPOSITORY -.-> SETUP_RUST_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_GO_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_DOTNET_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_CLI_GITHUB_WORKFLOWS
+    SETUP_CLI_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_CLI_REPOSITORY -.-> SETUP_README
+    SETUP_SWIFT_CLI -.-> SWIFT_COVERAGE
+    RUST_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    GO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    SETUP_RUST_CLI -.spawns.-> AGT_GATE
+    SETUP_GO_CLI -.spawns.-> AGT_GATE
+    SETUP_SWIFT_CLI -.spawns.-> AGT_GATE
+    SETUP_DOTNET_CLI -.spawns.-> AGT_GATE
+    SETUP_CLI_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    RUST_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    GO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    SETUP_CLI_REPOSITORY -.spawns.-> AGT_ISE
 ....
 
 == Common workflows
@@ -2727,6 +3002,7 @@ flowchart TD
     FD --> SW["iru-setup-swift-repository"]
     FD --> MAC["iru-setup-macos-repository"]
     FD --> WIN["iru-setup-windows-repository"]
+    FD --> CLI["iru-setup-cli-repository"]
     Q --> Q1["iru-setup-quarkus-service → iru-setup-antora →\niru-setup-java-gitignore → iru-setup-quarkus-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     T --> T1["library / react / nextjs / angular / nestjs /\nreact-native (expo or metro) / ionic scaffold → iru-setup-antora →\niru-setup-typescript-gitignore → iru-setup-typescript-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     PH --> P1["iru-setup-php-laravel / -wordpress / -prestashop →\niru-setup-antora → iru-setup-php-gitignore →\niru-setup-php-github-workflows → iru-setup-changelog → iru-setup-readme"]
@@ -2734,12 +3010,48 @@ flowchart TD
     K --> K1["iru-setup-kmp-app (compose or native UI) →\niru-setup-antora → iru-setup-kmp-gitignore →\niru-setup-kmp-github-workflows → iru-setup-changelog → iru-setup-readme"]
     MAC --> MAC1["iru-setup-macos-app (swiftui or appkit) →\niru-setup-antora → iru-setup-swift-gitignore →\niru-setup-macos-github-workflows → iru-setup-changelog → iru-setup-readme"]
     WIN --> WIN1["iru-setup-windows-app (wpf, winui or winforms) →\niru-setup-antora → iru-setup-windows-gitignore →\niru-setup-windows-github-workflows → iru-setup-changelog → iru-setup-readme"]
+    CLI --> CLI1["iru-setup-rust-cli / -go-cli / -swift-cli / -dotnet-cli →\niru-setup-antora → language gitignore →\niru-setup-cli-github-workflows → iru-setup-changelog → iru-setup-readme"]
 ....
 
 `iru-setup-repository` is the usual way in: it detects a non-empty repository's type via `iru-explore` (or asks
-over up to six rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple, Desktop), collects the shared,
+over up to six rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple, Desktop & command line), collects the shared,
 cost-aware inputs once, and delegates to exactly one orchestrator via `iru-isolated-skill-executor`, forwarding
 `mode: existing` when the repository already has content.
+
+=== Setting up a command-line tool
+
+`iru-setup-cli-repository` bootstraps a native, agent-friendly CLI — the twelfth `*-repository` orchestrator. It
+asks the language once (and, for Rust/Go/.NET, whether a terminal UI is wanted), then runs the same six steps as
+every other stack, each in its own `iru-isolated-skill-executor` context:
+
+[mermaid]
+....
+flowchart TD
+    A["/iru-setup-cli-repository\n(or iru-setup-repository: cli-tool)"] --> L{"language?"}
+    L -- rust --> R["iru-setup-rust-cli\n(clap, optional Ratatui)"]
+    L -- go --> G["iru-setup-go-cli\n(Cobra, optional Bubble Tea)"]
+    L -- swift --> S["iru-setup-swift-cli\n(ArgumentParser, ui: none)"]
+    L -- dotnet --> D["iru-setup-dotnet-cli\n(System.CommandLine, Native AOT)"]
+    R --> AN["iru-setup-antora\n(+ generated CLI reference page in nav)"]
+    G --> AN
+    S --> AN
+    D --> AN
+    AN --> GI["language gitignore\n(rust / go / swift flavor: cli / dotnet)"]
+    GI --> CI{"ci: yes?"}
+    CI -- yes --> W["iru-setup-cli-github-workflows\n(CI, contract smoke test, release, security)"]
+    CI -- no --> CH
+    W --> CH["iru-setup-changelog"]
+    CH --> RD["iru-setup-readme\n(install channels actually wired)"]
+....
+
+Decision points: the language (`rust`/`go`/`swift`/`dotnet`), `ui: none|tui` (forced to `none` for Swift), branching
+(`gitflow` or main-only), `mode: new|existing`, and `ci` — `ci: no` skips the workflows step and its security block.
+The orchestrator stops when the repository holds several competing manifests or isn't a command-line tool. From
+then on, planned work flows through the usual cycle below: `iru-plan` tags tasks `rust`, `go`, `swift` or `dotnet`,
+and `iru-code-one-task-group` dispatches them to `iru-rust-code-one-task-group`, `iru-go-code-one-task-group`,
+`iru-swift-code-one-task-group` or `iru-dotnet-code-one-task-group`, which detect the CLI shape and keep the
+exit-code/`--json` contract and the generated CLI reference in sync. `iru-release` bumps the version through
+`iru-rust-bump-version` / `iru-go-bump-version` / `iru-swift-bump-version` / `iru-dotnet-bump-version`.
 
 === Setting up a new Spring Boot service
 

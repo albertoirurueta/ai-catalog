@@ -1,0 +1,174 @@
+= Setup Dotnet Cli
+:description: Scaffolds an agent-friendly .NET 10 command-line tool: solution, Core library, System.CommandLine executable, Native AOT, MSTest tests and DocFX.
+:keywords: iru-setup-dotnet-cli, claude code skill, dotnet, csharp, system.commandline, native aot, dotnet tool, mstest, docfx, scaffold cli
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable, agent-friendly .NET 10 / C# 14 command-line tool: a solution with a framework-free `Core` library that implements the catalog's CLI contract, a thin System.CommandLine 2.0 executable, MSTest 4 tests and DocFX API docs.
+
+== Purpose
+
+`iru-setup-dotnet-cli` bootstraps a new .NET command-line tool from an embedded, verified house template. At the repository root it writes `global.json`, `Directory.Build.props`, central package management in `Directory.Packages.props`, `.editorconfig`, `stylecop.json`, a `<ToolName>.slnx` solution, `tests/coverlet.runsettings` and a DocFX `docfx.json`.
+
+The `src/<ToolName>.Core` project (`net10.0`, `IsAotCompatible`) holds the whole CLI contract: the exit-code enum (0-7, 130, 143), the JSON error envelope on stderr, deterministic source-generated System.Text.Json output, the colour and prompt policies, signal handling with `PosixSignalRegistration`, the `schema` model, static bash/zsh/fish/PowerShell completion scripts and a generated AsciiDoc CLI reference plus man page.
+
+The thin `src/<ToolName>` executable is published as a Native AOT binary and packed as a .NET tool (RID-specific packages plus an `any` fallback, so `dotnet tool install` and `dnx` both work). It offers the commands `greet`, `completion`, `schema`, `--version`, a hidden `gen-docs` and, with `ui: tui`, a TTY-gated Terminal.Gui v2 `browse` command.
+
+The skill announces whether it is scaffolding from scratch or updating an existing .NET CLI. For every file group it owns that already exists it warns and asks Update / Keep as is / Replace / Stop (unless `on-existing` decides), and it never overwrites hand-written source. A foreign layout (a single-project `dotnet new console` app, System.CommandLine betas, a Spectre.Console.Cli app, a `.sln` with other projects) is never converted: the skill either adds its pieces alongside or stops. Every version is looked up at run time, with a verified fallback table.
+
+The layout is the scaffold contract that the .NET coding and gate skills and xref:skills/iru-setup-cli-github-workflows.adoc[] detect and call. The skill writes no CI workflow, `.gitignore` (see xref:skills/iru-setup-dotnet-gitignore.adoc[]), README, changelog, `LICENSE` or Antora site, and no Sonar file.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-dotnet-cli
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`args`
+|No
+|Pre-resolved parameters passed by an orchestrating skill (e.g. xref:skills/iru-setup-cli-repository.adoc[]) as newline-separated `key: value` lines, parsed in Step 0 so no already-resolved field is asked again. Unknown keys from a full shared-args set (`language`, `ci-tests`, `pages`, `publish`, ...) are ignored and named in the report.
+|None -- every field is asked interactively
+
+|`tool-name`
+|Yes (unless supplied via `args`)
+|PascalCase C# identifier (`^[A-Z][A-Za-z0-9]*$`) used for the solution, projects and root namespace.
+|`bin-name` PascalCased
+
+|`bin-name`
+|Yes (unless supplied via `args`)
+|The command users type and the executable/assembly name (`^[a-z][a-z0-9-]*$`).
+|Repository directory name, lower-cased
+
+|`package-id`
+|No
+|NuGet package id of the .NET tool. The skill checks the NuGet flat-container API and warns when the id is already taken.
+|`bin-name`
+
+|`description`
+|Yes (unless supplied via `args`)
+|One line saying what the tool does; it becomes the root command help text, the package description and the man page NAME line.
+|None
+
+|`ui`
+|No
+|`none` or `tui`. `tui` adds a TTY-gated full-screen Terminal.Gui v2 `browse` command; it is not offered when no stable Terminal.Gui 2.x exists.
+|`none`
+
+|`version`
+|No
+|Tool version written to `Directory.Build.props`.
+|`0.1.0-dev` for `branching: gitflow`, `0.1.0` for `main-only`
+
+|`branching`
+|No
+|`gitflow` or `main-only`.
+|`gitflow`
+
+|`license`
+|Yes (unless supplied via `args`)
+|MIT License, Apache License 2.0, No license, or Other (SPDX id). When one is chosen the report reminds the user to add a root `LICENSE`.
+|None -- user must choose
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Package metadata and the `__Company__` placeholder.
+|None
+
+|`owner`
+|No
+|Repository owner, used when no `origin` remote exists.
+|Inferred from `git remote get-url origin`
+
+|`open-source` / `visibility`
+|No
+|Open-source flag and `public`/`private`/`internal`; only used to key the `sonar` and `distribution` recommendations.
+|Asked stand-alone; otherwise from the orchestrator
+
+|`ci`
+|No
+|Whether CI will exist; recorded for the report only.
+|Unset
+
+|`sonar` (+ `sonar-organization` / `sonar-project-key` / `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; recorded for the report only, since no file carries the keys.
+|`cloud` only for an open-source public repository, otherwise `none`
+
+|`distribution` / `channels`
+|No
+|`none`/`internal`/`store` and a comma list of channels (`nuget`, `winget`); recorded for the report only. The `PackAsTool` settings are always written.
+|`store` when open source, otherwise `internal`
+
+|`mode`
+|No
+|`new` or `existing`. `existing` never means a silent gap-fill: Step 1 still warns and asks per existing file group.
+|`new`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; answers Step 1's per-group question for every existing group at once (the warning is still printed).
+|`ask`
+|===
+
+== Outputs
+
+* Repository-level build and quality files: `global.json` (SDK pinned, `rollForward: latestFeature`), `Directory.Build.props`, `Directory.Packages.props` (StyleCop.Analyzers as a `GlobalPackageReference`), `.editorconfig`, `stylecop.json`, `<ToolName>.slnx`, `tests/coverlet.runsettings`, `docfx.json` and `docfx/`.
+* `src/<ToolName>.Core/` with the exit codes, the `Output/`, `Terminal/`, `Greeting/`, `Schema/`, `Completion/` and `Docs/` namespaces, and `Browse/BrowseState.cs` for `ui: tui`.
+* `src/<ToolName>/` with the `Exe` project (assembly `<bin>`, `PublishAot`, `PackAsTool`), `Program.cs`, `CliApp`, `GlobalOptions`, `ToolCommand` and the `Greet`, `Completion`, `Schema` and `GenDocs` commands, plus `BrowseCommand.cs` for `ui: tui`.
+* `tests/<ToolName>.Core.Tests` (about 99% Core line and branch coverage) and `tests/<ToolName>.Cli.Tests` (in-process command tree runs with captured stdout/stderr, plus opt-in published-binary smoke tests).
+* `docs/modules/ROOT/pages/cli-reference.adoc`, generated by `gen-docs` during verification (the only Antora page the skill creates); the man page and completion scripts under `artifacts/` are gitignored build output.
+* A report with the resolved names, `ui`, version and license; whether the run scaffolded, updated or stopped; the per-group action (created / updated / replaced / kept as is) with mismatches and possibly lost customizations; which toolchain versions were live versus fallback; the scaffold contract table; and a block of explicit warnings (review generated files, run `iru-setup-dotnet-gitignore`, the NuGet package id must be free and RID packages pushed before the pointer package, Sonar token needed).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-dotnet-cli] --> B["Step 0: Resolve inputs\nfrom args"]
+    B --> C["Step 1: Survey repository\nfor existing files"]
+    C --> D{"Layout found?"}
+    D -- none --> D1["Announce: scaffolding\nfrom scratch"]
+    D -- existing CLI layout --> D2["Announce: updating; per group\nUpdate / Keep as is / Replace / Stop"]
+    D -- foreign layout --> D3{"Add pieces alongside\nor stop?"}
+    D2 --> D4{"Stop chosen?"}
+    D4 -- yes --> Z1[Report nothing changed; end]
+    D3 -- stop --> Z1
+    D4 -- no --> E
+    D3 -- alongside --> E
+    D1 --> E["Step 2: Collect remaining inputs\n(bin-name, tool-name, package-id,\ndescription, ui, license)"]
+    E --> F["Step 3: Infer owner and\nrepository URL from git remote"]
+    F --> G["Step 4: Look up toolchain versions\n(NuGet, .NET release metadata)\nwith fallback table"]
+    G --> H["Step 5: Read the four reference files\nand resolve placeholders"]
+    H --> I["Step 6: Write templates per group decision;\nconfirm dotnet sln list"]
+    I --> J["Step 7: Verify via iru-gate-runner:\nbuild, format, tests and coverage,\nNative AOT publish, pack, DocFX, gen-docs"]
+    J --> K["Step 8: Report mode, per-group action,\nscaffold contract, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-setup-dotnet-cli` is a leaf skill; it does not call any other skill in this catalog. It reads its own `reference/` templates and only names sibling skills (`iru-setup-dotnet-gitignore`, `iru-setup-cli-github-workflows`, `iru-setup-antora`, `iru-check-license`) in its report and warnings. It also detects the contract file of `iru-dotnet-code-one-task` when that skill is installed.
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] -- the command-line tool bootstrap orchestrator runs `iru-setup-dotnet-cli` as its scaffold step for the `dotnet` language, passing the resolved shared inputs through `args`.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- Step 7 runs the restore/build, `dotnet format`, tests with coverage, Native AOT publish and smoke checks, packaging, DocFX and `gen-docs` through this agent so the caller gets a compact pass/fail summary instead of raw logs.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-dotnet-cli/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

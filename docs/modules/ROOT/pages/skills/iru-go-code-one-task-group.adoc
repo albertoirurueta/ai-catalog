@@ -1,0 +1,143 @@
+= Go Code One Task Group
+:description: Implements a bucket of Go tasks, then validates it once for licenses, godoc, tests, 80% coverage, race detector and quality, with container tests locked.
+:keywords: iru-go-code-one-task-group, claude code skill, go, golang, cobra, bubble tea, testscript, golangci-lint, validate task group, code coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of Go tasks from a plan's task group end to end: capture a single pre-change quality baseline,
+run `iru-go-code-one-task` once per task (in parallel when the group allows it), then validate the entire bucket once
+-- license headers, doc comments, scoped tests, an 80% statement-coverage gate per changed file, a full-suite run
+with the race detector, a code-quality regression check, and, only when the repository has `integration`-tagged tests,
+a container-backed stage serialized behind a repository-wide lock.
+
+== Purpose
+
+`iru-go-code-one-task-group` is the Go counterpart to `iru-rust-code-one-task-group` and
+`iru-fastapi-code-one-task-group`, built on `iru-go-code-quality`, `iru-go-test`, `iru-go-coverage`, and
+`iru-go-godoc`. It works in any Go module -- an agent-friendly Cobra / Bubble Tea v2 command-line tool scaffolded by
+`iru-setup-go-cli`, or any other library, service or CLI. It detects the shape once (module path and `go` directive,
+`go.work` workspace, `cmd/<bin>/` plus `internal/` layout, CLI framework, testscript `.txtar` end-to-end tests,
+teatest, `integration`-tagged tests, golangci-lint v2 config, cgo availability for `-race`), captures one baseline
+for every file the bucket is expected to touch, then implements each task via `iru-go-code-one-task` -- concurrently
+when the plan marks the group `Parallelizable: yes`, one at a time otherwise. Tasks sharing `root.go`, the
+exit-code/envelope files, `go.mod`/`go.sum`, or a golden file are always run sequentially, whatever the verdict.
+
+`iru-go-code-one-task` checks off each task's box in `implementation_plan.md` itself with a "group validation
+pending" note; this skill re-reads the file as each agent reports back, backfills any box that didn't land, and later
+replaces each note with the final outcome. Validation runs cheapest first, every check through an `iru-gate-runner`
+agent so no raw report reaches this context. Coverage is measured per changed file from one whole-module run with
+`-coverpkg=./...`, so in-process Cobra tests and testscript re-executions both count; branch coverage is reported as
+not available in Go. The full suite runs with `-race` when cgo is available. Only container-backed tests take the
+shared `.integration-test.lock`; plain CLI end-to-end tests need no lock, and Docker being unavailable makes that
+stage "unverified", never silently skipped. A failure traced to a task sends that task back for a fix and a re-run of
+the affected checks. A medium model is used on purpose: the plan carries the hard reasoning.
+
+== Purpose group
+
+xref:index.adoc#group-go[Go Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-go-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every Go-tagged task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and
+any relevant "Current code state" context.
+|None -- this skill is always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source, test, `.txtar` script and golden files created/modified per task, via `iru-go-code-one-task`.
+* License headers and doc comments kept current across every file/package the bucket touched, checked once for the
+  whole bucket rather than once per task.
+* Tests achieving at least 80% statement coverage for each changed/added production file (container-free tests only).
+* A transient `.integration-test.lock/` directory (with an `owner` file) held only while the container-backed stage
+  runs, added to the repository's root `.gitignore` if missing, and always released before this skill finishes.
+* `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note -- first an
+  "implemented, group validation pending" note written by `iru-go-code-one-task`, then replaced with the final
+  coverage, race, quality and integration outcome.
+* User-facing notifications at both phases: per task as its implementation lands, and once when group validation
+  completes.
+* A summary handed back to the caller (`iru-code-one-task-group`): the shape detected, per task the files, tests,
+  per-file coverage and quality outcome, interface changes (commands, flags, exit codes, JSON fields), `go.mod`
+  changes, test and race results, the container-backed result (passed, unverified with reason, or none), accepted
+  coverage exceptions, refreshed golden files, lock behavior, and any blocked task.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-go-code-one-task-group] --> B["Step 0: lock rules\n(one container-backed run at a time)"]
+    B --> C["Step 1: detect module, layout, testscript,\nintegration tests, race, tools, Docker;\ncapture pre-change quality baseline\n(iru-go-code-quality, via iru-gate-runner)"]
+    C --> D{Bucket Parallelizable?}
+    D -- yes --> E["Step 2: invoke go-code-one-task for every task\nconcurrently (via iru-isolated-skill-executor);\nshared files or go.mod always sequential"]
+    D -- no --> F["Step 2: invoke go-code-one-task\nfor each task, one at a time"]
+    E --> G["Confirm/backfill each task's box; notify user;\ngo build and go vet on the combined tree"]
+    F --> G
+    G --> H["Step 3.1-3.2: license headers, doc comments\n(via iru-gate-runner)"]
+    H --> I["Step 3.3: scoped tests\n(via iru-gate-runner)"]
+    I --> J["Step 3.4: 80% coverage per changed file\n(via iru-gate-runner)"]
+    J --> K["Step 3.5: full suite with race detector\n(via iru-gate-runner)"]
+    K --> L["Step 3.6: code quality regression\ncheck vs. baseline (via iru-gate-runner)"]
+    L -- failure or new issue traced to a task --> M["Fix that task's implementation;\nre-run the affected check(s)"]
+    M --> I
+    L -- clean --> N{"integration-tagged tests exist,\nbucket touches them, Docker up?"}
+    N -- no --> R["Report stage as none / unverified\n(Docker unavailable)"]
+    N -- yes --> O["Step 3.7a: acquire .integration-test.lock\n(HELD: poll ~30s; stale after 60min broken;\ntimeout ~45min: unverified)"]
+    O --> P["Step 3.7: iru-go-test with\ntags: integration and lock: held\n(via iru-gate-runner)"]
+    P -- assertion failure --> M
+    P --> Q["Step 3.7b: release lock\n(on every exit path)"]
+    Q --> S["Step 4: finalize each task's note\nwith final outcome; notify user"]
+    R --> S
+    S --> T["Step 5: report the bucket's\noutcome to the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-go-code-one-task.adoc[] -- Step 2, once per task in the bucket, via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent when the bucket is
+  parallelizable (all tasks at once) or directly, one at a time, otherwise -- that skill implements exactly what the
+  task specifies, writes/updates its tests, formats and compile-checks, and checks off its own checkbox in
+  `implementation_plan.md` with a "group validation pending" note before reporting back.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than
+directly, so verbose report output stays out of this skill's own context:
+
+* xref:skills/iru-go-code-quality.adoc[] -- Step 1 (pre-change baseline for the bucket) and Step 3.6 (final
+  regression check against that baseline).
+* xref:skills/iru-check-license.adoc[] -- Step 3.1, license headers for every `.go` file the bucket touched.
+* xref:skills/iru-go-godoc.adoc[] -- Step 3.2, doc comments for every package the bucket touched.
+* xref:skills/iru-go-test.adoc[] -- Step 3.3 (scoped tests), Step 3.5 (full suite with `-race`), and Step 3.7
+  (container-backed stage with `tags: integration` and `lock: held`).
+* xref:skills/iru-go-coverage.adoc[] -- Step 3.4, statement coverage with `-coverpkg=./...` for every changed/added
+  production file.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] -- Step 2, bucket for key go.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] -- spawned once per task in the
+  bucket (Step 2) when the group is parallelizable, so each task's own implementation transcript doesn't accumulate
+  in this skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- spawned for the baseline capture (Step 1) and every
+  validation check (Step 3), keeping full reports out of this skill's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-go-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,6 +1,6 @@
 = .NET Code One Task
-:description: Implements a single .NET/C# task's code and tests from a plan, then checks off its implementation_plan.md checkbox with a group-validation-pending note.
-:keywords: iru-dotnet-code-one-task, claude code skill, dotnet, csharp, xunit, nunit, mstest, implementation plan, unit tests
+:description: Implements one .NET/C# task's code and tests, with System.CommandLine and Native AOT guidance for CLI tools, then checks off its plan checkbox.
+:keywords: iru-dotnet-code-one-task, claude code skill, dotnet, csharp, xunit, nunit, mstest, implementation plan, unit tests, system.commandline, native aot, cli tool
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -24,10 +24,27 @@ moved to `iru-dotnet-code-one-task-group`, which validates them once for the who
 per task, cutting the redundant tool invocations that used to happen here for every single task. It hands back
 only a short summary; it never captures a quality baseline or runs any test/coverage/quality check itself.
 
+*CLI-shaped projects.* Step 0 detects a command-line tool: a `*.csproj` with `OutputType` `Exe`, none of
+`UseWPF`/`UseWinUI`/`UseWindowsForms`, and a `System.CommandLine` (or `Spectre.Console.Cli`) reference or
+`PackAsTool`/`PublishAot` (`iru-explore` reports `Project type: cli-tool (dotnet)`). When it applies, the skill reads
+`reference/README.md`, `reference/cli.md` (System.CommandLine 2.0 patterns, Spectre.Console under the colour policy,
+Native AOT/trimming rules, testing commands in-process) and, for tasks that add or change a command, flag, output,
+error or exit path, `reference/cli-contract.md` (streams, exit codes, TTY/colour/prompts, JSON envelope, safety).
+Logic goes in the framework-free `src/<Tool>.Core`, commands stay thin in `src/<Tool>/Commands/`, new JSON output
+types are registered in the source-generated JSON context, and exit codes/error envelope are never renumbered or
+reshaped. After implementing, it runs `dotnet build -c Release` on each touched project so trim/AOT analyzer
+(IL2xxx/IL3xxx), StyleCop and CA errors surface immediately, and regenerates the CLI reference (or flags it as
+still needed). Tests go in `tests/<Tool>.Core.Tests` and, through the in-process runner, `tests/<Tool>.Cli.Tests`.
+For any other project the `reference/` directory is not read.
+
 Windows desktop app repositories (a `WinExe` project with `UseWPF`, `UseWinUI` or `UseWindowsForms`; `iru-explore`'s
 `windows-app`, plan key `windows`) are out of scope: the skill stops and hands the request to
 xref:skills/iru-windows-code-one-task.adoc[] (which knows the UI-free Core project split, MVVM/MVC layouts and
 host-dependent compile checks), even for tasks that only touch that repository's `src/<App>.Core` project.
+
+A command-line tool project (an `Exe` project on System.CommandLine, as scaffolded by
+xref:skills/iru-setup-dotnet-cli.adoc[]) is detected in a new Step 0; only then does the skill load its `reference/`
+files and compile-check the projects it touched.
 
 == Purpose group
 
@@ -60,6 +77,9 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 * Source and test files created/modified per the task, following this repository's conventions from `CLAUDE.md`
   (target framework/language version, `var`/nullable reference types only where already used, full XML doc
   comments, `ArgumentException`/`ArgumentNullException` for invalid arguments, no new NuGet dependencies).
+* For CLI-shaped projects: Core logic/result records/error codes in `src/<Tool>.Core`, thin commands registered in
+  the root command, JSON output types registered in the source-generated context, and a regenerated (or flagged)
+  CLI reference page.
 * Tests added/updated in this project's existing test framework, covering the new/changed behavior — not run by
   this skill; the caller runs them once for the whole bucket.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
@@ -75,8 +95,11 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 flowchart TD
     A["Start /dotnet-code-one-task\n(task description)"] --> W{"Windows desktop app\n(WinExe + UseWPF/UseWinUI/\nUseWindowsForms)?"}
     W -- yes --> W2["Stop: hand the request to\nwindows-code-one-task"]
-    W -- no --> B["Step 1: re-check current\ncode state from disk"]
-    B --> C["Step 2: implement exactly what\nthe task specifies"]
+    W -- no --> X{"Step 0: CLI-shaped\n(Exe + System.CommandLine)?"}
+    X -- yes --> X2["Read reference/README.md, cli.md,\ncli-contract.md"]
+    X -- no --> B
+    X2 --> B["Step 1: re-check current\ncode state from disk"]
+    B --> C["Step 2: implement exactly what the task specifies\n(CLI: also dotnet build -c Release\nfor trim/AOT errors)"]
     C --> D["Step 3: write/update tests\n(xUnit/NUnit/MSTest; not run here)"]
     D --> E{"Ambiguous, or approach\ninfeasible against real code?"}
     E -- yes --> F["Step 4: stop; leave checkbox\nunchecked; report blocker to caller"]
@@ -88,7 +111,7 @@ flowchart TD
 
 === Invokes
 
-None — `iru-dotnet-code-one-task` is a leaf skill; it does not call any other skill in this catalog. License
+None — `iru-dotnet-code-one-task` is a leaf skill; it does not call any other skill in this catalog (it only reads its own `reference/` files for CLI-shaped projects). License
 headers, XML doc comments, scoped tests, coverage, and quality checks all moved to
 `iru-dotnet-code-one-task-group`.
 

@@ -154,6 +154,7 @@ resulting `llvm-cov`/`xccov` output, it does not call any other skill in this ca
 
 === Invoked by
 
+* xref:skills/iru-setup-swift-cli.adoc[] — verification step, package-path coverage over the Kit and CLI sources (or llvm-cov directly).
 * xref:skills/iru-swift-code-one-task-group.adoc[] — Step 3.5, once per task group, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to check every changed/new file in the group meets
   the coverage bar.
