@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup TypeScript Repository :: AI Catalog</title>
+    <meta name="description" content="End-to-end bootstrap or update of an npm/TypeScript repository of seven flavors, resolving the React Native Expo or Metro toolchain once.">
+    <meta name="keywords" content="iru-setup-typescript-repository, claude code skill, npm, typescript, react native, expo, metro, nextjs, nestjs, ionic, repository bootstrap">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/building-user-interfaces.html">Building user interfaces</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task.html">Django Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task-group.html">Django Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-bump-version.html">.NET Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task.html">FastAPI Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task-group.html">FastAPI Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-bump-version.html">Go Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task.html">Go Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task-group.html">Go Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-quality.html">Go Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-coverage.html">Go Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-godoc.html">Go Godoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-test.html">Go Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-bump-version.html">KMP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task.html">KMP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task-group.html">KMP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-quality.html">KMP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-coverage.html">KMP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-dokka.html">KMP Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-generate-all-tests.html">KMP Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-test.html">KMP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-code-quality.html">Kotlin Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-kdoc.html">Kotlin KDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task.html">Kotlin Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task-group.html">Kotlin Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task.html">NestJS Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task-group.html">NestJS Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task.html">Next.js Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task-group.html">Next.js Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-bump-version.html">PHP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task.html">PHP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task-group.html">PHP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-quality.html">PHP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-coverage.html">PHP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-phpdoc.html">PHP PHPDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-test.html">PHP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-bump-version.html">Python Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-code-quality.html">Python Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-coverage.html">Python Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-docstrings.html">Python Docstrings</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-test.html">Python Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task.html">Quarkus Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task-group.html">Quarkus Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-bump-version.html">React Native Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task.html">React Native Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task-group.html">React Native Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-bump-version.html">Rust Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task.html">Rust Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task-group.html">Rust Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-quality.html">Rust Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-coverage.html">Rust Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-rustdoc.html">Rust Rustdoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-test.html">Rust Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-github-workflows.html">Setup CLI GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-repository.html">Setup CLI Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-cli.html">Setup Dotnet Cli</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-gitignore.html">Setup Dotnet Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-cli.html">Setup Go CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-gitignore.html">Setup Go Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-app.html">Setup KMP App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-github-workflows.html">Setup KMP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-gitignore.html">Setup KMP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-repository.html">Setup KMP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-app.html">Setup macOS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-github-workflows.html">Setup macOS GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-repository.html">Setup macOS Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nestjs-app.html">Setup NestJS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nextjs-web.html">Setup Next.js Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-github-workflows.html">Setup PHP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-gitignore.html">Setup PHP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-laravel.html">Setup PHP Laravel</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-prestashop.html">Setup PHP PrestaShop</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-repository.html">Setup PHP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-wordpress.html">Setup PHP WordPress</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-django.html">Setup Python Django</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-fastapi.html">Setup Python FastAPI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-github-workflows.html">Setup Python GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-gitignore.html">Setup Python Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-repository.html">Setup Python Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-github-workflows.html">Setup Quarkus GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-repository.html">Setup Quarkus Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-service.html">Setup Quarkus Service</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-cli.html">Setup Rust CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-gitignore.html">Setup Rust Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-cli.html">Setup Swift CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-app.html">Setup Windows App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-github-workflows.html">Setup Windows GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-gitignore.html">Setup Windows Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-repository.html">Setup Windows Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task.html">Windows Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task-group.html">Windows Code One Task Group</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-setup-typescript-repository.html">Setup TypeScript Repository</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-setup-typescript-repository.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup TypeScript Repository</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>End-to-end bootstrap for an npm/TypeScript repository of any of seven flavors. It collects the flavor, the
+project&#8217;s identity, and the shared pipeline parameters once, announces whether it is setting up from scratch or
+updating an existing repository, then orchestrates six other skills in a fixed order so nothing is asked twice.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-typescript-repository</code> is the front door for starting (or catching up) a brand-new npm/TypeScript
+repository, whatever its shape — a published library, a React, Next.js or Angular web app, a NestJS backend
+service, or a React Native or Ionic mobile app. Rather than duplicating each flavor&#8217;s scaffold logic, documentation setup, <code>.gitignore</code> rules, CI
+workflows, changelog bootstrapping, or README generation, it resolves the <code>flavor</code> and <code>mode</code>, gathers the
+project&#8217;s identity and the shared pipeline parameters (open-source, publish/distribution, Sonar, integration
+branch, Node version, package manager, repository visibility, CI, CI test scope, GitHub Pages) plus the
+flavor-specific choices that shape later steps (React Native <code>toolchain</code> Expo or Metro, NestJS <code>orm</code>/<code>database</code>, Next.js <code>output</code>/<code>e2e</code>) once, and passes each
+downstream skill only the <code>args</code> keys it actually accepts. It opens with a "Setup mode" statement and an inventory
+of every component it owns (absent / present / partial); the keep/update/replace question for pre-existing files is
+asked by each sub-skill, never by this orchestrator, and the final report lists the action taken per component.
+For private or internal repositories it states the cost context (included Actions minutes per plan, macOS minutes
+roughly 10x Linux for the iOS release job and the Metro iOS simulator build, SonarCloud being free only for public open-source projects, GitHub Pages
+requiring a paid plan) and recommends accordingly.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-typescript-bootstrap" class="xref page">TypeScript/Node Bootstrap</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-setup-typescript-repository</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Optionally followed by <code>args</code> (<code>key: value</code> lines, one per line) to pre-resolve any input below.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>flavor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>library</code>/<code>react</code>/<code>nextjs</code>/<code>angular</code>/<code>nestjs</code>/<code>react-native</code>/<code>ionic</code>. Pre-selected from an <code>iru-explore</code>
+<code>Project type:</code> line earlier in the conversation (confirmed with one question), otherwise resolved via two short
+<code>AskUserQuestion</code> rounds (web app then React/Next.js/Angular; mobile app then React Native vs. Ionic; backend
+service sets <code>nestjs</code> directly), plus a further round for Ionic&#8217;s own <code>framework</code> choice.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mode</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>new</code>/<code>existing</code>. Defaults to <code>existing</code> (confirmed) when <code>package.json</code> already exists at the repository root,
+otherwise <code>new</code> without asking. Any other owned artifact already present still makes this an update for that
+component, even under <code>mode: new</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Derived from <code>package.json</code> presence</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>on-existing</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ask</code>/<code>keep</code>/<code>update</code>/<code>replace</code>. Never asked by this skill; forwarded to every file-writing sub-skill only when it
+arrived via <code>args</code>, so they apply it instead of asking per pre-existing file.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Not forwarded (each sub-skill asks)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code> / <code>scope</code> / <code>app-id</code> / <code>app-slug</code> / <code>description</code> / <code>license</code> / <code>developer-name</code> / <code>developer-email</code> /
+<code>organization-url</code> / <code>directory</code> / <code>storybook</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes (per flavor)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Free-text project-identity fields, asked directly; which apply depends on the resolved flavor (e.g. <code>scope</code> is
+library-only, <code>app-id</code> is Ionic and React Native (required for Metro, optional for Expo), <code>description</code> is not collected for angular/react-native). <code>name</code> is mapped to
+each scaffold skill&#8217;s own key (<code>package-name</code>, <code>app-name</code> or <code>name</code>).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — user must supply</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>open-source</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the repository is open source. Drives the recommended defaults for <code>publish</code>/<code>distribution</code>/<code>sonar</code>/
+<code>visibility</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>visibility</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>public</code>/<code>private</code>/<code>internal</code>. Detected via <code>gh repo view</code> when the repository has a GitHub remote, otherwise asked
+(Public recommended when open source). A contradictory combination (open source but private/internal) is flagged.
+<code>internal</code> is treated like <code>private</code> for every cost decision.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Detected, else asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ci</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code>/<code>no</code>: generate GitHub Actions workflows. For private/internal repositories the Actions-minutes cost (and
+macOS cost for the iOS release job) is stated first. With <code>no</code>, the workflows step is skipped entirely (no
+workflows, <code>security.yml</code>, or Dependabot config) and <code>ci-tests</code>/<code>pages</code> are not asked.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked (<code>yes</code> recommended)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ci-tests</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>unit</code>/<code>full</code>. Only asked when <code>ci: yes</code> for <code>react</code>/<code>angular</code>/<code>ionic</code>, <code>nextjs</code> with <code>e2e: playwright</code>, and <code>nestjs</code>
+(whose e2e suite starts a real database via Testcontainers when <code>orm</code> is set): unit tests only (recommended for
+private/internal) or unit plus e2e (recommended for public). Also asked for Metro <code>react-native</code> (<code>full</code> adds Maestro flows on an Android emulator). Left unset for <code>library</code>, Expo <code>react-native</code>, and <code>nextjs</code>
+with <code>e2e: none</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked where applicable</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pages</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code>/<code>no</code>: publish the Antora site (and, for <code>react</code>/<code>angular</code>/static <code>nextjs</code>, the web app) to GitHub Pages. Defaults to <code>yes</code> for
+public repositories without asking; for private/internal, <code>no</code> is recommended because Pages needs a paid plan and
+the site would be public.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code> if public, else asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>accessibility</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>enforce</code>, <code>report</code> or <code>off</code>&#8201;&#8212;&#8201;UI flavors only (<code>react</code>, <code>nextjs</code>, <code>angular</code>, <code>react-native</code>, <code>ionic</code>; ignored with a note for <code>library</code>/<code>nestjs</code>): the automated accessibility level of the UI tests, written by the scaffold to <code>.ui-quality.yml</code>. Asked once in Step 4 (regardless of <code>ci</code>) with Enforce recommended and forwarded to the UI scaffolds. See <a href="../guides/building-user-interfaces.html" class="xref page">Building user interfaces</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked for UI flavors</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>publish</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Library only: publish to the public npm registry.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code> if open source, else asked (<code>no</code> recommended)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>distribution</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">React Native/Ionic: <code>none</code>/<code>internal</code>/<code>store</code>. NestJS and server-output Next.js: <code>none</code>/<code>internal</code> only, where
+<code>internal</code> pushes the container image to GHCR. Static Next.js export: forced to <code>none</code> without asking.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>store</code> if open source (mobile), else asked (<code>internal</code> recommended)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sonar</code> (+ <code>sonar-organization</code>/<code>sonar-project-key</code>/<code>sonar-host-url</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cloud</code>/<code>self-hosted</code>/<code>none</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cloud</code> only if open source and public, else asked (<code>none</code> recommended)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">React Native only: <code>expo</code> (the Expo framework) or <code>metro</code> (a bare React Native Community CLI app with committed <code>android/</code>/<code>ios/</code> projects). From <code>args</code>, else the <code>iru-explore</code> parenthesis, else detected on an existing repository (an <code>expo</code> dependency means <code>expo</code>; <code>metro.config.js</code>, committed native projects or the community CLI mean <code>metro</code>), else asked once with Expo recommended; forwarded to the scaffold and workflows skills.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Detected, else asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>native-builds</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">React Native with <code>toolchain: expo</code> only: <code>eas</code> (cloud builds) or <code>local</code>. Never asked or forwarded for Metro, whose native projects are always built locally.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>eas</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>framework</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ionic only: its own UI framework, <code>angular</code> or <code>react</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>orm</code> / <code>database</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NestJS only: <code>none</code>/<code>typeorm</code>/<code>prisma</code>/<code>mongoose</code>/<code>drizzle</code> and <code>postgresql</code>/<code>mysql</code>/<code>mongodb</code> (asked only when
+<code>orm</code> is not <code>none</code>). Collected here because the workflows skill needs <code>orm</code>. <code>module-system</code> and <code>http</code> are left
+for the scaffold to ask.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>none</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>output</code> / <code>e2e</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Next.js only: <code>server</code> (standalone Node) or <code>static</code> (export, deployable to Pages), and <code>playwright</code>/<code>none</code>. Collected
+here because they change <code>release.yml</code> and <code>build.yml</code>. <code>router</code>, <code>cache-components</code> and <code>styling</code> are left for the
+scaffold to ask.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>integration-branch</code> / <code>stable-branch</code> / <code>node-version</code> / <code>package-manager</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared pipeline parameters fed to the scaffold and workflow skills. <code>integration-branch</code> is also forwarded to
+<code>iru-setup-typescript-library</code> only, for its changeset <code>baseBranch</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>develop</code> / <code>main</code> / <code>24</code> / <code>npm</code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Also accepted: <code>distribution&#8217;s and `sonar&#8217;s detail keys as listed above, and `name</code>/<code>scope</code>/identity fields per flavor.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>A "Setup mode" announcement (from scratch vs updating an existing repository) with a per-component inventory (for UI flavors including <code>.ui-quality.yml</code>).</p>
+</li>
+<li>
+<p>The flavor&#8217;s own scaffold output — <code>package.json</code> and toolchain files (via <code>iru-setup-typescript-library</code>,
+<code>iru-setup-react-web</code>, <code>iru-setup-nextjs-web</code>, <code>iru-setup-angular-web</code>, <code>iru-setup-nestjs-app</code>,
+<code>iru-setup-react-native-app</code>, or <code>iru-setup-ionic-app</code>). When files
+already exist, the scaffold skill itself asks Update / Keep as is / Replace per file (or applies <code>on-existing</code>).</p>
+</li>
+<li>
+<p>A scaffolded Antora documentation site under <code>docs/</code> (via <code>iru-setup-antora</code>).</p>
+</li>
+<li>
+<p>A root <code>.gitignore</code> covering <code>node_modules/</code>, build output, coverage, and the Antora build output (via
+<code>iru-setup-typescript-gitignore</code>).</p>
+</li>
+<li>
+<p><code>build.yml</code>/<code>release.yml</code>/<code>sync.yml</code>/<code>security.yml</code> GitHub Actions workflows and <code>.github/dependabot.yml</code> (via
+<code>iru-setup-typescript-github-workflows</code>) — skipped entirely when <code>ci: no</code>, with the security block (Dependabot,
+dependency-review, CodeQL, OSV-Scanner, gitleaks) skipped alongside.</p>
+</li>
+<li>
+<p>A root <code>CHANGELOG.md</code> backfilled from git/GitHub release history (via <code>iru-setup-changelog</code>).</p>
+</li>
+<li>
+<p>A root <code>README.md</code> with badges, a project-status table, documentation links, and installation instructions
+(via <code>iru-setup-readme</code>).</p>
+</li>
+<li>
+<p>A final report summarizing the resolved flavor/mode/identity/license/pipeline parameters (including visibility, ci, ci-tests, pages), which files were
+  created / updated / replaced / kept as is / skipped (ci: no) with mismatches listed for kept files, the cost
+context for private repositories, the consolidated required-secrets table, decisions made on the user&#8217;s
+  behalf, and an explicit warning to review every generated file before building, committing, or relying on CI.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A[Start /iru-setup-typescript-repository] --> B["Step 0: Parse args\n(key: value lines)"]
+    B --> C{"Step 1: Resolve flavor &amp; mode"}
+    C -- flavor unset or\nfrom iru-explore --> C1["AskUserQuestion:\nlibrary / web app / backend service / mobile app,\nthen react vs nextjs vs angular,\nreact-native vs ionic, ionic framework"]
+    C1 --> C1b["If react-native: resolve toolchain once\n(args / iru-explore / detected /\nasked: Expo vs Metro)"]
+    C1b --> C2
+    C -- flavor set --> C2["Announce setup mode:\nfrom scratch, or updating with\ncomponent inventory"]
+    C2 --> D["Step 2: Collect project identity\n(skipped when mode existing and\npackage.json present)"]
+    D --> E["Step 3: Collect flavor-specific inputs\n(directory, storybook, app-slug,\napp-id, native-builds for expo, nestjs orm, nextjs output/e2e)"]
+    E --> F["Step 4: Collect shared pipeline params\n(open-source, visibility, ci, publish/distribution,\nsonar, ci-tests, pages, accessibility for UI flavors,\nbranches, node, package manager)"]
+    F --> I["Step 5: Run flavor's scaffold skill\n(via sub-agent; it asks\nUpdate / Keep / Replace per file)"]
+    I -- user chose stop --> J[Stop entire pipeline; report]
+    I -- ok or kept --> K["Step 6: Run setup-antora\n(via sub-agent)"]
+    K --> L["Step 7: Run setup-typescript-gitignore\n(via sub-agent)"]
+    L --> L2{"Step 8: ci is no?"}
+    L2 -- yes --> L3["Skip workflows and security block;\nrecord skipped in report"]
+    L2 -- no --> M["Derive docs-tool from flavor\n(or from disk for nextjs/nestjs);\nrun setup-typescript-github-workflows\n(via sub-agent)"]
+    M -- workflows existed, user stopped --> N["Note in report;\ncontinue"]
+    M -- ok --> N
+    L3 --> N
+    N --> O["Step 9: Run setup-changelog\n(via sub-agent)"]
+    O --> P["Step 10: Run setup-readme\n(via sub-agent)"]
+    P --> Q["Step 11: Report per-component actions,\ncost context, secrets table, and review warnings"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>Each of the following is invoked via the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a>
+agent rather than a direct <code>Skill</code> call — every sub-skill re-derives what it needs straight from the filesystem
+this orchestrator has just written to, so only a short completion summary needs to come back, keeping each
+sub-skill&#8217;s own exploration/file reads out of this orchestrator&#8217;s own context:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-typescript-library.html" class="xref page">Setup TypeScript Library</a> — Step 5, when <code>flavor: library</code>: writes <code>package.json</code> and the
+library toolchain, passing identity and pipeline <code>args</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-react-web.html" class="xref page">Setup React Web</a> — Step 5, when <code>flavor: react</code>: scaffolds a Vite React app, passing
+identity, pipeline, and <code>storybook</code> <code>args</code> (no <code>publish</code>/<code>distribution</code> key).</p>
+</li>
+<li>
+<p><a href="iru-setup-nextjs-web.html" class="xref page">Setup Next.js Web</a> — Step 5, when <code>flavor: nextjs</code>: scaffolds a Next.js app, passing
+identity, <code>output</code>, <code>e2e</code>, <code>distribution</code>, <code>package-manager</code>, <code>node-version</code> and pipeline <code>args</code>; <code>router</code>,
+<code>cache-components</code> and <code>styling</code> only if they arrived via <code>args</code>. <code>pages</code> is deliberately not sent.</p>
+</li>
+<li>
+<p><a href="iru-setup-nestjs-app.html" class="xref page">Setup NestJS App</a> — Step 5, when <code>flavor: nestjs</code>: scaffolds a NestJS service, passing
+identity, <code>orm</code>, <code>database</code> (only when <code>orm</code> is not <code>none</code>), <code>distribution</code>, <code>package-manager</code>, <code>node-version</code> and
+pipeline <code>args</code>; <code>module-system</code> and <code>http</code> only if they arrived via <code>args</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-angular-web.html" class="xref page">Setup Angular Web</a> — Step 5, when <code>flavor: angular</code>: scaffolds an Angular CLI app, passing
+identity (no <code>description</code>), <code>directory</code>, and pipeline <code>args</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-react-native-app.html" class="xref page">Setup React Native App</a> — Step 5, when <code>flavor: react-native</code>: scaffolds an Expo or Metro
+React Native app, passing identity (no <code>description</code>), <code>toolchain</code>, <code>app-id</code>, <code>app-slug</code>, <code>app-directory</code>,
+<code>native-builds</code> (Expo only), and <code>distribution</code> <code>args</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-ionic-app.html" class="xref page">Setup Ionic App</a> — Step 5, when <code>flavor: ionic</code>: scaffolds a Capacitor hybrid app, passing
+<code>framework</code>, <code>app-id</code>, identity, and <code>distribution</code> <code>args</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-antora.html" class="xref page">Setup Antora</a> — Step 6: scaffolds the Antora documentation site, invoked with no <code>args</code>
+(or only <code>on-existing</code> when supplied) since it derives the component name/title/version directly from <code>package.json</code>. Run before Step 8 so that
+skill&#8217;s own docs-config survey finds it already in place.</p>
+</li>
+<li>
+<p><a href="iru-setup-typescript-gitignore.html" class="xref page">Setup TypeScript Gitignore</a> — Step 7: writes or updates the root <code>.gitignore</code>, invoked
+with no <code>args</code> (or only <code>on-existing</code> when supplied) since it explores the repository directly (package manager, framework, Playwright, docs
+tooling).</p>
+</li>
+<li>
+<p><a href="iru-setup-typescript-github-workflows.html" class="xref page">Setup TypeScript GitHub Workflows</a> — Step 8: writes the CI/CD workflows, passing <code>flavor</code>,
+the pipeline parameters (including <code>visibility</code>, <code>pages</code>, and <code>ci-tests</code> where resolved),
+<code>publish</code>/<code>distribution</code>/<code>toolchain</code>/<code>native-builds</code> (Expo only)/<code>framework</code>/<code>orm</code>/<code>output</code>/<code>e2e</code> (only when the flavor uses them), and the
+derived <code>docs-tool</code> as <code>args</code>. Skipped entirely when <code>ci: no</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-changelog.html" class="xref page">Setup Changelog</a> — Step 9: bootstraps the root <code>CHANGELOG.md</code>, invoked with no <code>args</code> (or
+only <code>on-existing</code> when supplied) since it works from the repository&#8217;s own git tag/GitHub Release history.</p>
+</li>
+<li>
+<p><a href="iru-setup-readme.html" class="xref page">Setup Readme</a> — Step 10, last: bootstraps the root <code>README.md</code>, passing <code>sonar</code>, <code>ci</code>, and <code>pages</code>
+(plus <code>on-existing</code> when supplied); it explores the finished state left by every earlier step.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-repository.html" class="xref page">Setup Repository</a> — Step 4, TypeScript, web, NestJS, Next.js and mobile bootstrap, via the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> agent.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> — spawned once per sub-skill
+(Steps 5–10, except Step 8 when <code>ci: no</code>), so all six sub-skills' own exploration/file-read transcripts don&#8217;t accumulate in this
+orchestrator&#8217;s context over the course of a single bootstrap run.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-typescript-repository/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

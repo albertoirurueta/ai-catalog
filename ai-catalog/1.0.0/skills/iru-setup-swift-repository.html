@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup Swift Repository :: AI Catalog</title>
+    <meta name="description" content="Bootstraps a brand-new (or catches up an existing) Swift package or Apple app repository end-to-end in one pass, for either flavor.">
+    <meta name="keywords" content="iru-setup-swift-repository, claude code skill, swiftpm, xcodegen, tuist, antora, github actions, changelog, readme, repository bootstrap">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/building-user-interfaces.html">Building user interfaces</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task.html">Django Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task-group.html">Django Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-bump-version.html">.NET Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task.html">FastAPI Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task-group.html">FastAPI Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-bump-version.html">Go Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task.html">Go Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task-group.html">Go Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-quality.html">Go Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-coverage.html">Go Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-godoc.html">Go Godoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-test.html">Go Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-bump-version.html">KMP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task.html">KMP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task-group.html">KMP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-quality.html">KMP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-coverage.html">KMP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-dokka.html">KMP Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-generate-all-tests.html">KMP Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-test.html">KMP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-code-quality.html">Kotlin Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-kdoc.html">Kotlin KDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task.html">Kotlin Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task-group.html">Kotlin Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task.html">NestJS Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task-group.html">NestJS Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task.html">Next.js Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task-group.html">Next.js Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-bump-version.html">PHP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task.html">PHP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task-group.html">PHP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-quality.html">PHP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-coverage.html">PHP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-phpdoc.html">PHP PHPDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-test.html">PHP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-bump-version.html">Python Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-code-quality.html">Python Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-coverage.html">Python Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-docstrings.html">Python Docstrings</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-test.html">Python Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task.html">Quarkus Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task-group.html">Quarkus Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-bump-version.html">React Native Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task.html">React Native Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task-group.html">React Native Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-bump-version.html">Rust Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task.html">Rust Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task-group.html">Rust Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-quality.html">Rust Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-coverage.html">Rust Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-rustdoc.html">Rust Rustdoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-test.html">Rust Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-github-workflows.html">Setup CLI GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-repository.html">Setup CLI Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-cli.html">Setup Dotnet Cli</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-gitignore.html">Setup Dotnet Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-cli.html">Setup Go CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-gitignore.html">Setup Go Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-app.html">Setup KMP App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-github-workflows.html">Setup KMP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-gitignore.html">Setup KMP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-repository.html">Setup KMP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-app.html">Setup macOS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-github-workflows.html">Setup macOS GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-repository.html">Setup macOS Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nestjs-app.html">Setup NestJS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nextjs-web.html">Setup Next.js Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-github-workflows.html">Setup PHP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-gitignore.html">Setup PHP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-laravel.html">Setup PHP Laravel</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-prestashop.html">Setup PHP PrestaShop</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-repository.html">Setup PHP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-wordpress.html">Setup PHP WordPress</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-django.html">Setup Python Django</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-fastapi.html">Setup Python FastAPI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-github-workflows.html">Setup Python GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-gitignore.html">Setup Python Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-repository.html">Setup Python Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-github-workflows.html">Setup Quarkus GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-repository.html">Setup Quarkus Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-service.html">Setup Quarkus Service</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-cli.html">Setup Rust CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-gitignore.html">Setup Rust Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-cli.html">Setup Swift CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-app.html">Setup Windows App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-github-workflows.html">Setup Windows GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-gitignore.html">Setup Windows Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-repository.html">Setup Windows Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task.html">Windows Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task-group.html">Windows Code One Task Group</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-setup-swift-repository.html">Setup Swift Repository</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-setup-swift-repository.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup Swift Repository</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>End-to-end bootstrap for a Swift repository of either flavor — a SwiftPM library or a native Apple app. It
+collects the project&#8217;s identity and pipeline parameters once, resolves which flavor and branching model apply,
+and orchestrates six other skills in a fixed order so nothing is asked twice.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-swift-repository</code> is the top-level entry point (standalone, or as the Swift/Apple branch of
+<code>iru-setup-repository</code>) for starting or catching up a Swift repository, whichever of its two flavors it is: a
+redistributable SwiftPM <code>library</code>, or a native iOS/iPadOS/macOS/watchOS/visionOS <code>app</code> generated from an XcodeGen
+or Tuist manifest, with SwiftUI or programmatic UIKit for its iOS/iPadOS target and an MVVM or MVC core (a
+macOS-only app is pointed to <a href="iru-setup-macos-repository.html" class="xref page">Setup macOS Repository</a> instead). Rather than duplicating the flavor&#8217;s own scaffold logic, documentation scaffolding, <code>.gitignore</code> setup,
+CI/CD workflows, changelog bootstrapping, and README generation, it gathers the shared inputs — project identity
+(package name or app name/bundle-id prefix, license, developer name/email/organization URL), flavor-specific
+inputs (platforms, minimum deployment targets, generator, signing, and for an app <code>ui</code>/<code>architecture</code>), and pipeline parameters (branching model,
+integration/stable branch, macOS runner, open-source/visibility/publish/distribution/sonar, and the cost-aware
+CI choices <code>ci</code>, <code>ci-tests</code> and <code>pages</code>) — once, and passes each downstream skill only the <code>args</code> keys its own
+Step 0 accepts. It announces up front whether it is setting the repository up from scratch or updating an existing
+one (with an absent/present/partial inventory of every component it owns). It never skips the scaffold itself:
+every sub-skill warns about and asks Update / Keep as is / Replace for each pre-existing file it owns (or applies
+<code>on-existing</code> from <code>args</code> in scripted runs), and the final report states per component whether it was created,
+updated, replaced, kept as is, or skipped (<code>ci: no</code>). Because macOS runner minutes cost roughly 10x Linux minutes
+on private repositories, the CI questions are asked with visibility-aware cost guidance.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-swift-bootstrap" class="xref page">Swift/Apple Bootstrap</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-setup-swift-repository</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>flavor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>library</code> (a SwiftPM package) or <code>app</code> (an XcodeGen/Tuist-generated native app). Detected from
+<code>Package.swift</code>/<code>project.yml</code>/<code>Project.swift</code> on disk when absent, else asked via <code>AskUserQuestion</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Detected, else asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>branching</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gitflow</code> (integration + stable branch, <code>sync.yml</code> bumps the post-release version) or <code>main-only</code> (a single
+stable branch, no <code>sync.yml</code>).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gitflow</code>, asked to confirm</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mode</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>new</code> or <code>existing</code>. Defaults to <code>existing</code> (confirmed) when the flavor&#8217;s scaffold manifest already exists at
+the repository root, otherwise <code>new</code> without asking. No longer decides what happens to individual files: any
+owned artifact already on disk is handled by its owning sub-skill&#8217;s Update / Keep as is / Replace question.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Detected, else <code>new</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-name</code> (library) / <code>app-name</code> + <code>bundle-id-prefix</code> (app)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Free-text project-identity fields specific to the resolved flavor, asked in Step 2 using exactly the key names
+the scaffold skill reads. Skipped entirely in <code>mode: existing</code> when the scaffold manifest is on disk (identity is
+read from it).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>license</code>, <code>developer-name</code>, <code>developer-email</code>, <code>organization-url</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared identity fields for both flavors, resolved once via <code>AskUserQuestion</code> for the license (Apache 2.0
+recommended for <code>library</code>, MIT for <code>app</code>, No license, or Other) and plain conversation for the rest.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — user must choose</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>platforms</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flavor-specific vocabulary: <code>ios, ipados, macos, watchos, tvos, visionos, linux</code> for <code>library</code>; <code>ios, ipados,
+macos, watchos, visionos</code> for <code>app</code> (tvOS refused). <code>AskUserQuestion</code> multi-select (visionOS as a follow-up),
+at least one required; an <code>args</code>-supplied list is not re-asked for an app, while a library still gets the
+tvOS/visionOS/Linux follow-up. A macOS-only app selection offers to switch to <code>iru-setup-macos-repository</code> — only
+when the user picked the platforms here, never when <code>platforms</code> arrived via <code>args</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ui</code> (app only)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>swiftui</code> (recommended) or <code>uikit</code> (programmatic UIKit with a scene delegate, no storyboards) for the iOS/iPadOS
+target; asked only when <code>ios</code> or <code>ipados</code> is selected. watchOS, visionOS and macOS targets stay SwiftUI. In
+<code>mode: existing</code> it is detected instead (<code>Targets/iOS/Sources/SceneDelegate.swift</code> or a <code>UIWindowSceneDelegate</code>
+with no SwiftUI <code>App</code> → <code>uikit</code>) and confirmed, or omitted so <code>iru-setup-apple-app</code> detects it.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked when <code>ios</code>/<code>ipados</code> selected (detected in <code>mode: existing</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code> (app only)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mvvm</code> or <code>mvc</code>. <code>ui: swiftui</code> resolves to <code>mvvm</code> without asking; <code>ui: uikit</code> asks MVC (recommended) or MVVM.
+In <code>mode: existing</code> it is detected from <code>Packages/Core/Sources/Core/Controllers/</code> (<code>mvc</code>) vs <code>…/ViewModels/</code>
+(<code>mvvm</code>) and confirmed, or omitted for <code>iru-setup-apple-app</code> to detect.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mvvm</code> for SwiftUI; asked for UIKit (detected in <code>mode: existing</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>min-deployment-targets</code> (library) / <code>min-deployment-target</code> (app)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Per-platform OS versions for a library (no universal default, asked directly); for an app the iOS deployment
+target, which <code>iru-setup-apple-app</code> maps per platform (<code>18.0</code> → macOS 15 / watchOS 11 / visionOS 2; identical
+numbers from 26 on), deliberately left for <code>iru-setup-apple-app</code> to resolve from local simulator runtimes unless supplied.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked (library) / resolved downstream (app)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator</code> (app only)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>xcodegen</code> (recommended for a single-target/platform app) or <code>tuist</code> (for a modular app), via
+<code>AskUserQuestion</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>signing</code> (app only)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>fastlane-match</code>, <code>api-key</code>, or <code>none</code>, asked alongside <code>distribution</code> in Step 4.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>none</code> when <code>distribution: none</code>, else asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>integration-branch</code>, <code>stable-branch</code>, <code>runner</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">CI pipeline parameters consumed by <code>iru-setup-swift-github-workflows</code>. Integration branch skipped entirely for
+<code>main-only</code>. For an app, <code>xcode-27</code> (preview image, with <code>xcode-version: 27.1</code>, the Xcode the scaffold was
+verified with) is offered next to the GA <code>macos-26</code> runner.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>develop</code>, <code>main</code>, <code>macos-26</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>open-source</code>, <code>publish</code> (library), <code>distribution</code> (app), <code>sonar</code> (+ detail keys)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared open-source-driven pipeline vocabulary, resolved via <code>AskUserQuestion</code> with open-source-dependent
+recommended defaults; passed through unchanged to Steps 5 and 8. <code>sonar: cloud</code> is recommended only for a public
+open-source repository (SonarCloud needs a paid plan for private projects); with <code>ci: no</code> it recommends <code>none</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>publish</code>/<code>distribution</code> default <code>yes</code>/<code>store</code> when open source; <code>sonar</code> defaults <code>cloud</code> when open source and
+public, otherwise asked with <code>none</code> recommended</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>visibility</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>public</code>, <code>private</code> or <code>internal</code> (behaves like <code>private</code> for every cost decision). Taken from <code>args</code>, else
+detected with <code>gh repo view --json visibility</code>, else asked (Public recommended when open source). Warns when an
+open-source project is private/internal.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Detected, else asked</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ci</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code>/<code>no</code>&#8201;&#8212;&#8201;whether GitHub Actions workflows are generated at all. Asked with the cost facts (free on public
+repositories; included minutes on private ones; macOS minutes about 10x Linux). <code>no</code> skips Step 8 entirely
+(no workflows, <code>security.yml</code>, Dependabot config or <code>sync_versions.py</code>) and <code>ci-tests</code>/<code>pages</code> are not asked.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code> recommended for public; asked for private</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ci-tests</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>unit</code> (unit-test targets only; UI-test bundles/integration targets stay local) or <code>full</code> (adds UI tests).
+Only meaningful when <code>ci: yes</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>full</code> recommended for public, <code>unit</code> for private/internal</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pages</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code>/<code>no</code>&#8201;&#8212;&#8201;deploy the DocC + Antora site to GitHub Pages, or only upload it as a workflow artifact. Only
+meaningful when <code>ci: yes</code>. Defaulted to <code>yes</code> without asking for public repositories; private asks with <code>no</code>
+recommended (Pages on private repos needs a paid plan and the site is public).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code> public; asked for private</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>accessibility</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>enforce</code>, <code>report</code> or <code>off</code>&#8201;&#8212;&#8201;<code>app</code> flavor only (ignored for <code>library</code>): the level of the UI tests' automated accessibility checks (<code>performAccessibilityAudit()</code>), written by <code>iru-setup-apple-app</code> to <code>.ui-quality.yml</code>. Asked in Step 4 with Enforce recommended; forwarded to the scaffold skill. See <a href="../guides/building-user-interfaces.html" class="xref page">Building user interfaces</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Asked for <code>app</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>on-existing</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ask</code>/<code>keep</code>/<code>update</code>/<code>replace</code>&#8201;&#8212;&#8201;how every sub-skill treats prior setup it finds. Never asked here; forwarded
+to the sub-skills only when supplied via <code>args</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ask</code> (each sub-skill asks)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>xcode-version</code>, <code>release-please</code>, <code>formatter</code>, <code>package-resolved</code>, <code>security-*</code> opt-outs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Pass-through toggles never asked by this orchestrator — each downstream skill resolves or asks its own default
+when the key isn&#8217;t supplied.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resolved downstream</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>A "Setup mode" announcement (from scratch vs. updating, with a component inventory) before any question.</p>
+</li>
+<li>
+<p>The flavor&#8217;s own scaffold: <code>Package.swift</code> + <code>Sources/</code>/<code>Tests/</code> (via <code>iru-setup-swift-library</code>), or the
+generator manifest + <code>Packages/Core</code> + <code>Targets/</code> + <code>fastlane/Fastfile</code> (via <code>iru-setup-apple-app</code>) — always
+invoked; the scaffold skill decides per existing file whether to update, keep or replace it.</p>
+</li>
+<li>
+<p>For the <code>app</code> flavor, <code>.ui-quality.yml</code> at the repository root (reported by the scaffold with the chosen <code>accessibility</code> level); the scaffold&#8217;s UI tests capture the sample screen into the gitignored <code>.ui-screenshots/</code>, which CI uploads as a 7-day artifact.</p>
+</li>
+<li>
+<p>A scaffolded Antora documentation site under <code>docs/</code> (via <code>iru-setup-antora</code>).</p>
+</li>
+<li>
+<p>A root <code>.gitignore</code> covering <code>.build/</code>, <code>DerivedData/</code>, <code><strong>.xcresult</code>, generated <code></strong>.xcodeproj</code>/<code>*.xcworkspace</code>,
+signing material, and the Antora build output (via <code>iru-setup-swift-gitignore</code>).</p>
+</li>
+<li>
+<p><code>build.yml</code>/<code>release.yml</code> (+ <code>sync.yml</code> and <code>.github/scripts/sync_versions.py</code> for gitflow), <code>security.yml</code>,
+and <code>.github/dependabot.yml</code> (via <code>iru-setup-swift-github-workflows</code>) — all skipped when <code>ci: no</code>.</p>
+</li>
+<li>
+<p>A root <code>CHANGELOG.md</code> backfilled from git tag/GitHub Release history (via <code>iru-setup-changelog</code>).</p>
+</li>
+<li>
+<p>A root <code>README.md</code> with badges, a project-status table, documentation links, and installation instructions
+(via <code>iru-setup-readme</code>).</p>
+</li>
+<li>
+<p>A final report summarizing the resolved flavor/branching/mode, identity/license/pipeline parameters
+(<code>visibility</code>, <code>ci</code>, <code>ci-tests</code>, <code>pages</code> included), a per-component table of whether each was created, updated,
+replaced, kept as is (with any listed mismatches) or skipped (<code>ci: no</code>), the Sonar coverage conversion
+(<code>lcov_to_sonar_generic.py</code> for both flavors), the consolidated required-secrets/settings table (including
+<code>APPLE_TEAM_ID</code> for a distributed app), every decision
+made on the user&#8217;s behalf, and explicit warnings to review every generated file before building, committing,
+or relying on CI.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A[Start /iru-setup-swift-repository] --> B["Step 0: Parse args\n(key: value lines)"]
+    B --> C["Step 1: Resolve flavor,\nbranching and mode;\nprint Setup mode announcement\n(from scratch or update + inventory)"]
+    C --> D{"mode existing and\nscaffold manifest on disk?"}
+    D -- yes --> D1["Step 2: Skip identity questions\n(read from manifest)"]
+    D -- no --> D2["Step 2: Collect project identity\n(package-name or app-name/bundle-id,\nlicense, developer info)"]
+    D1 --> E
+    D2 --> E["Step 3: Collect flavor-specific inputs\n(platforms, min-deployment-target(s),\ngenerator for app; visionOS follow-up)"]
+    E --> E2{"app with macOS only?"}
+    E2 -- "yes, platforms\nasked here" --> E3["Offer to switch to\niru-setup-macos-repository"]
+    E2 -- "no, or platforms\nfrom args" --> E4["app: ui swiftui/uikit (iOS/iPadOS only) and\narchitecture; detected + confirmed in\nmode existing, else asked (swiftui means\nmvvm, uikit asks mvc/mvvm)"]
+    E3 -- "declined" --> E4
+    E4 --> F["Step 4: Collect shared pipeline parameters\n(branches, runner, open-source, visibility,\npublish/distribution, signing, ci, sonar,\nci-tests, pages, accessibility for app)"]
+    F --> I["Step 5: Run flavor's scaffold skill\n(iru-setup-swift-library or\niru-setup-apple-app, via sub-agent;\nasks Update / Keep / Replace per file)"]
+    I -- "user chose stop,\nno manifest on disk" --> J[Stop entire pipeline; report]
+    I -- "ok, or stop but\nmanifest exists" --> K["Step 6: Run setup-antora\n(documentation site, via sub-agent)"]
+    K --> L["Step 7: Run setup-swift-gitignore\n(root .gitignore, via sub-agent)"]
+    L --> M{"Step 8: ci is no?"}
+    M -- yes --> M1["Skip workflows entirely;\nrecord skipped (ci: no)"]
+    M -- no --> M2["Run setup-swift-github-workflows\n(CI/CD + security workflows, via sub-agent)"]
+    M2 -- "workflows existed,\nuser chose stop" --> N["Note in report;\nSteps 5-7 still valid"]
+    M2 -- ok --> O
+    N --> O
+    M1 --> O["Step 9: Run setup-changelog\n(root CHANGELOG.md, via sub-agent)"]
+    O --> P["Step 10: Run setup-readme\n(root README.md, via sub-agent)"]
+    P --> Q["Step 11: Report per-component outcome,\nsecrets table, decisions and warnings"]</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>Each of the following is invoked via the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a>
+agent rather than a direct <code>Skill</code> call — every sub-skill re-derives what it needs straight from the filesystem
+this orchestrator has just written to, so only a short completion summary needs to come back, keeping each
+sub-skill&#8217;s own exploration/file reads (and the two scaffold skills' very long template listings) out of this
+orchestrator&#8217;s own context. Every sub-agent runs with <code>run_in_background: false</code> since each step depends on the
+previous one&#8217;s files being on disk:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-swift-library.html" class="xref page">Setup Swift Library</a> — Step 5, <code>flavor: library</code>: writes <code>Package.swift</code> and the source
+folders, passing Steps 2–4&#8217;s answers (<code>package-name</code>, <code>platforms</code>, <code>min-deployment-targets</code>, license, developer
+fields, <code>open-source</code>, <code>publish</code>, <code>sonar</code> + detail keys, <code>formatter</code> if supplied, <code>visibility</code>, <code>ci</code>,
+<code>on-existing</code> if supplied, <code>mode</code>) as <code>args</code>. Always invoked, even when <code>Package.swift</code> already exists.</p>
+</li>
+<li>
+<p><a href="iru-setup-apple-app.html" class="xref page">Setup Apple App</a> — Step 5, <code>flavor: app</code>: writes the generator manifest,
+  <code>Packages/Core</code>, per-platform <code>Targets/</code>, and an optional <code>signing</code>/<code>distribution</code>-gated <code>fastlane/Fastfile</code>, passing the app-specific identity
+  (<code>app-name</code>, <code>bundle-id-prefix</code>), <code>platforms</code>, <code>generator</code>, <code>ui</code>, <code>architecture</code>, <code>distribution</code>, <code>signing</code>,
+<code>min-deployment-target</code> if supplied, license, developer
+  fields, <code>open-source</code>, <code>sonar</code> + detail keys, <code>visibility</code>, <code>ci</code>, <code>on-existing</code> if supplied, and <code>mode</code> as
+  <code>args</code>. Always invoked, even when the generator manifest already exists.</p>
+</li>
+<li>
+<p><a href="iru-setup-antora.html" class="xref page">Setup Antora</a> — Step 6: scaffolds the Antora documentation site, invoked with no <code>args</code>
+(only <code>on-existing</code> when supplied) since it derives the component name/title/version directly from the manifest Step 5 just wrote (or an initial
+<code>1.0.0</code> if no tags/releases exist yet). Run before Step 8 so that skill&#8217;s own docs-site check finds everything
+in place.</p>
+</li>
+<li>
+<p><a href="iru-setup-swift-gitignore.html" class="xref page">Setup Swift Gitignore</a> — Step 7: writes or updates the root <code>.gitignore</code>, passing
+<code>flavor</code> (so its <code>Package.resolved</code> recommendation matches the project shape) and <code>package-resolved</code> only if
+supplied, plus <code>on-existing</code> if supplied; <code>mode</code> is deliberately not passed since the skill&#8217;s own <code>.gitignore</code>-presence check is the more
+precise signal.</p>
+</li>
+<li>
+<p><a href="iru-setup-swift-github-workflows.html" class="xref page">Setup Swift GitHub Workflows</a> — Step 8, skipped entirely when <code>ci: no</code>: writes the
+CI/CD + security workflows, passing
+<code>flavor</code>, <code>platforms</code>, <code>branching</code>, <code>integration-branch</code> (gitflow only), <code>stable-branch</code>, <code>runner</code>,
+<code>xcode-version</code> if supplied, <code>generator</code>/<code>signing</code> (app only), <code>release-please</code> if supplied (library only),
+<code>open-source</code>, <code>publish</code>/<code>distribution</code>, <code>sonar</code> + detail keys, <code>visibility</code>, <code>ci-tests</code>, <code>pages</code>,
+<code>security-*</code> if supplied, <code>on-existing</code> if supplied, and <code>mode</code> as <code>args</code>.</p>
+</li>
+<li>
+<p><a href="iru-setup-changelog.html" class="xref page">Setup Changelog</a> — Step 9: bootstraps the root <code>CHANGELOG.md</code>, invoked with no <code>args</code>
+(only <code>on-existing</code> when supplied) since it works from the repository&#8217;s own git tag/GitHub Release history; position relative to Steps 5–8
+doesn&#8217;t matter functionally.</p>
+</li>
+<li>
+<p><a href="iru-setup-readme.html" class="xref page">Setup Readme</a> — Step 10, last: bootstraps the root <code>README.md</code>, passing <code>sonar</code>, <code>ci</code>,
+<code>pages</code> (only when <code>ci: yes</code>) and <code>on-existing</code> if supplied, and otherwise exploring the finished state left by
+every earlier step.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-repository.html" class="xref page">Setup Repository</a> — Step 4, Swift library/Apple app bootstrap, via the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> agent; it asks its own visionOS follow-up and passes <code>platforms</code> in <code>args</code>, which this skill then doesn&#8217;t re-ask for an app.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> — spawned once per sub-skill (Steps
+5–10), so all six sub-skills' own exploration/file-read transcripts don&#8217;t accumulate in this orchestrator&#8217;s
+context over the course of a single bootstrap run.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-swift-repository/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
