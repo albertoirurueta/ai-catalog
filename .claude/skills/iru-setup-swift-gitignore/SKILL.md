@@ -6,7 +6,9 @@ description: Create or update the root `.gitignore` for a Swift package/library 
   (XcodeGen) or `Project.swift` (Tuist) is present — kept tracked otherwise, since a hand-maintained `.xcodeproj` is
   a real source file), `Package.resolved` (asked via `AskUserQuestion`: commit it for an app, ignore it for a
   library — with the reasoning), Fastlane output (`fastlane/report.xml`, `fastlane/screenshots/`,
-  `fastlane/test_output/`, when `fastlane/` exists), signing material (`*.p8`, `*.p12`, `*.mobileprovision`,
+  `fastlane/test_output/`, when `fastlane/` exists), macOS desktop distribution output (root `/build/` — or only its
+  generated subfolders when something under `build/` is tracked —, `*.xcarchive/`, `*.dmg`, `*-notarize.zip`, when
+  `scripts/make-dmg.sh` or an `ExportOptions-*.plist` exists), signing material (`*.p8`, `*.p12`, `*.mobileprovision`,
   `*.cer`), `.DS_Store`, and, when detected, Antora docs build output (`docs/build/`) and DocC-generated API
   reference (`docs/api/`). Invoke as `/iru-setup-swift-gitignore`, optionally with `args`: `mode: new|existing`
   (default: detected from whether a root `.gitignore` already exists), `flavor: library|app` and
@@ -63,6 +65,12 @@ Detect the following before composing content — every one of these gates a Ste
   whether it's currently tracked (`git ls-files -- '*.xcodeproj' '*.xcworkspace'` when a `.gitignore` doesn't
   already exist, before assuming) so Step 3 doesn't propose ignoring something already committed out from under it.
 - `fastlane/` directory at the root → Fastlane is in use for this project.
+- `scripts/make-dmg.sh` or any root `ExportOptions-*.plist` → a macOS desktop app that archives, exports and packages
+  itself (`iru-setup-macos-app`'s layout): its `xcodebuild archive`/`-exportArchive`/DMG/notarization output lands
+  under the root `build/`. Also check whether that root `build/` holds anything that must stay tracked:
+  `git ls-files -- build` (anything listed is committed) and, when `build/` exists, `ls build` for entries that
+  aren't generated output (generated = `dd*`, `docc`, `export*`, `*.xcarchive`, `*.xcresult`, `*.dmg`,
+  `*-notarize.zip`, `SourcePackages`) — e.g. a hand-made `build/branding/` icon source.
 - `docs/antora.yml` or `docs/antora-playbook.yml` → Antora documentation site (see `iru-setup-antora`).
 - Any `*.docc` directory, or `swift-docc-plugin`/`DocCPlugin` referenced in `Package.swift`'s `dependencies`/
   `plugins`, or a `docs/api`-shaped output path configured for `iru-swift-docc` → DocC-generated API reference is
@@ -88,9 +96,16 @@ xcuserdata/
 
 # OS noise
 .DS_Store
+
+# Repository-wide lock serializing simulator / macOS desktop UI-test runs (iru-swift-code-one-task-group)
+.simulator-test.lock/
 ```
 
 This section is unconditional — include it verbatim. Notes on specific lines:
+
+- `.simulator-test.lock/` is the atomic-`mkdir` lock directory (with its `owner` file) that
+  `iru-swift-code-one-task-group` creates around every app-kind `xcodebuild test` run — a simulator destination or,
+  for a macOS desktop app, the real desktop session XCUITest drives. Always transient, never committed.
 
 - `.swiftpm/xcode/` is scoped to that one subdirectory, **not** the whole `.swiftpm/`, deliberately: SwiftPM also
   writes `.swiftpm/configuration/` (e.g. per-package `Package.swift` resolution/registry settings) which is
@@ -149,6 +164,25 @@ sibling skill) in the target repository.
   Skip entirely if no `fastlane/` directory exists — don't preemptively add Fastlane's own output paths when the
   project has no Fastlane setup to speak of. `fastlane/Fastfile`, `fastlane/Appfile`, and any other Fastlane
   configuration files stay tracked (not covered by this section).
+
+- **macOS desktop distribution output** (`scripts/make-dmg.sh` or a root `ExportOptions-*.plist` found in Step 1):
+  when nothing under the root `build/` is tracked or hand-made (Step 1's check), add
+  ```gitignore
+  # macOS desktop distribution output — xcodebuild archive/-exportArchive, scripts/make-dmg.sh, notarization
+  /build/
+  *.xcarchive/
+  *.dmg
+  *-notarize.zip
+  ```
+  `/build/` is anchored to the root on purpose: it never matches `docs/build/` (the Antora section's own entry) or
+  a nested `App/Resources/build/` folder, and `Packages/Core/.build/` is already covered by `.build/`. When Step 1
+  found tracked or hand-made content under `build/`, don't ignore the directory — replace the `/build/` line with
+  the generated subfolders only (`/build/dd*/`, `/build/docc/`, `/build/export*/`; archives, result bundles and DMGs
+  are covered by `*.xcarchive/`, `*.xcresult` and `*.dmg` wherever they land) and name the kept paths in the report.
+  `*-notarize.zip` is the `ditto` zip `iru-setup-macos-github-workflows`' release job submits to `notarytool` (a
+  zip can't be stapled, so it is a throwaway). `scripts/make-dmg.sh`, `ExportOptions-*.plist`, `project.yml`,
+  `App/**` and `Packages/Core/**` (sources, tests, `Package.swift`, `Package.resolved`) stay tracked. Skip the whole
+  section when neither file exists.
 
 - **Signing material** — unconditional (see Step 2's note on why this isn't gated on Fastlane): add
   ```gitignore
@@ -285,6 +319,20 @@ editing this section. Separately, `.swiftpm/xcode/` vs. ignoring the whole `.swi
 SwiftPM writes real, shareable configuration under `.swiftpm/configuration/` (package registry/resolution settings)
 that must stay trackable, so any future edit that "simplifies" this to a single `.swiftpm/` line would silently
 start hiding that directory — confirmed above that the scoped line does not do so.
+
+**macOS desktop distribution section** — verified on 2026-10-16 in
+`$TMPDIR/iru-verify/macos/iru-setup-macos-github-workflows/gitignore-check/` (a copy of an `iru-setup-macos-app`
+scaffold after a real `xcodegen generate`, `xcodebuild test`/`archive`/`-exportArchive`, DocC and
+`scripts/make-dmg.sh` run, plus the rendered `.github/`), with the base + XcodeGen + signing + this section +
+`docs/build/` composed into `.gitignore`:
+
+| Path | Expected | Result |
+|---|---|---|
+| `build/dd/…`, `build/docc/`, `build/export/MyMacApp.app`, `build/MyMacApp.xcarchive`, `build/MyMacApp-1.0.0.dmg` | ignored | ignored — `.gitignore:/build/` |
+| `foo.dmg` (repository root) / `MyMacApp-notarize.zip` | ignored | ignored — `*.dmg` / `*-notarize.zip` |
+| `docs/build/site/index.html` / `Packages/Core/.build/…` | ignored | ignored — `docs/build/` / `.build/` (not by `/build/`) |
+| `project.yml`, `Packages/Core/{Package.swift,Package.resolved,Sources/**,Tests/**}`, `App/{Sources,Resources,UITests}/**`, `scripts/make-dmg.sh`, `ExportOptions-developer-id.plist`, `sonar-project.properties`, `.github/**`, `docs/antora.yml`, `.swiftlint.yml` | **tracked** | **not ignored** (`git check-ignore` silent; `git add -A` staged 40 files, none under `build/`, no `.dmg`/`.xcarchive`/`.xcodeproj`) |
+| Fallback (a tracked `build/branding/icon.png`): `/build/dd*/`, `/build/docc/`, `/build/export*/` + `*.xcarchive/` + `*.dmg` | generated output ignored, `build/branding/icon.png` and `App/Resources/build/keep.txt` tracked | as expected; a root-anchored `/build/` also leaves `App/Resources/build/` untouched |
 
 Not independently re-verified here (already covered by the sibling gitignore skills' own verification, and nothing
 Swift-specific changes their behavior): the generic diff/`git diff --no-index`-based approval flow in Step 5, and

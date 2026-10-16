@@ -1,6 +1,6 @@
 = .NET Coverage
 :description: Runs Coverlet through dotnet test and reads the generated Cobertura XML report to give exact line and branch coverage percentages for .NET classes.
-:keywords: iru-dotnet-coverage, claude code skill, dotnet, coverlet, cobertura, code coverage report, unit testing, csharp
+:keywords: iru-dotnet-coverage, claude code skill, dotnet, coverlet, cobertura, windows desktop, runsettings, code coverage report, unit testing, csharp
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -17,6 +17,16 @@ instead of an eyeballed guess. It reuses `iru-dotnet-test`'s selector syntax to 
 accepts an explicit list of target classes, and — for classes under the bar — points to the exact uncovered
 lines/branches directly from the same XML's per-line `hits` data, without needing a separate HTML report the way
 JaCoCo does.
+
+It detects Windows desktop projects, the host and the test runner exactly as `iru-dotnet-test` does (new Step 0).
+For a Windows desktop app (a `WinExe` UI project) the coverage subject is the UI-free Core project: UI tests
+(`[TestCategory("UI")]`) never count and are filtered out with `TestCategory!=UI`, target classes living in the app
+project are reported as **not measured (UI layer)** rather than 0%, and on a non-Windows host each portable test
+project is run separately (never the whole solution — a `net*-windows*` test project aborts the run), naming every
+test project that wasn't run. It honours a `tests/coverlet.runsettings` (or the project's `RunSettingsFilePath`),
+handles Microsoft.Testing.Platform projects (where `coverlet.collector` doesn't apply), extracts a class's Cobertura
+entry including its compiler-generated nested types, and counts only the class-level `<lines>` list because every
+line appears twice. A "Known quirks" section records what was verified on macOS with the .NET 10 SDK.
 
 == Purpose group
 
@@ -61,6 +71,7 @@ for a wildcard/namespace/trait selector where no name can be inferred, every cla
 * For classes under the bar: the exact uncovered line numbers and partially-covered branches, read straight from
   the Cobertura XML's per-line `hits`/`condition-coverage` data.
 * A target class absent from the XML entirely is reported as 0% coverage, not as an error.
+* For a Windows desktop app: a **Not measured (UI layer)** list of the app-project classes in scope (never counted toward the bar), and the test projects that weren't run on this host (e.g. the UI-test project off Windows).
 * No source or test code is ever modified, and coverage is never re-run to try to raise a number.
 
 == Execution flow
@@ -68,21 +79,24 @@ for a wildcard/namespace/trait selector where no name can be inferred, every cla
 [mermaid]
 ....
 flowchart TD
-    A["Start /dotnet-coverage\n(optional selector, target classes)"] --> B{Selector given?}
+    A["Start /dotnet-coverage\n(optional selector, target classes)"] --> A2["Step 0: parse arguments; detect Windows-desktop\nprojects, host and test runner"]
+    A2 --> B{Selector given?}
     B -- yes --> C["Scope tests using dotnet-test's\nselector syntax"]
     B -- no --> D["Run full suite"]
     C --> E
     D --> E{Target classes given?}
     E -- yes --> F["Use given class list"]
     E -- no --> G["Infer from test selector\n(FooTests -> Foo), or defer to\nevery class touched by the run"]
-    F --> H["Delete stale TestResults;\nrun dotnet test --collect:\nXPlat Code Coverage"]
+    F --> H["Delete stale TestResults; run dotnet test\n--collect XPlat Code Coverage (+ runsettings,\nTestCategory!=UI; portable projects one by one\noff Windows)"]
     G --> H
     H --> I{Test run succeeded?}
     I -- no --> J["Report failure, stop\n(don't read a stale report)"]
     I -- yes --> K["Find and read the generated\ncoverage.cobertura.xml"]
     K --> L["Compute line / branch coverage %\nper target class from &amp;lt;line&amp;gt; elements"]
     L --> M{Class found in the XML?}
-    M -- no --> N["Report 0% (not an error)"]
+    M -- no --> M2{In a Windows app's\nUI project?}
+    M2 -- yes --> M3["Report: not measured"]
+    M2 -- no --> N["Report 0% (not an error)"]
     M -- yes --> O["Report exact %; state pass/fail\nvs. any given bar"]
     N --> P
     O --> P{Under the bar?}
@@ -103,6 +117,7 @@ does not call any other skill in this catalog.
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to check every changed/new class in the bucket meets the
   80% coverage bar (falling back to `dotnet test --collect:"XPlat Code Coverage"` directly if this skill is
   unavailable).
+* xref:skills/iru-windows-code-one-task-group.adoc[] — Step 3, via `iru-gate-runner`, the Core-project coverage bar for a Windows desktop app bucket.
 * xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated through the `iru-gate-runner` agent so its full `coverage.cobertura.xml`-derived report never lands directly in this conversation, and so the whole suite runs once per batch rather than once per class.
 
 === Related agents

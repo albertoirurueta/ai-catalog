@@ -1,6 +1,6 @@
 = .NET Code Quality
-:description: Runs StyleCop.Analyzers and CA rule Roslyn analyzers via a dotnet build with a SARIF log, reporting style and reliability issues grouped by tool.
-:keywords: iru-dotnet-code-quality, claude code skill, dotnet, csharp, stylecop, roslyn analyzers, sarif, code quality, static analysis, lint
+:description: Runs StyleCop, CA and MSTest Roslyn analyzers via per-project SARIF builds, Windows-desktop aware, reporting issues by tool and diffed against a baseline.
+:keywords: iru-dotnet-code-quality, claude code skill, dotnet, csharp, stylecop, roslyn analyzers, sarif, windows desktop, wpf, winui, code quality, static analysis, lint
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -21,6 +21,16 @@ an `ErrorLog` diagnostic file, classifies every result by its `ruleId` prefix (`
 the analyzer rules, with `CS`/`IDE` diagnostics noted separately as out of scope), and can scope its summary to a
 single project/file/class even though the underlying build always analyzes the whole targeted solution/project.
 
+It is also Windows-desktop aware and safe for multi-project solutions. A single shared `ErrorLog` path is overwritten by
+parallel project builds (verified: the file was not even valid JSON), so for a solution it builds once to put
+dependencies in place and then re-compiles each project on its own with its own SARIF log (or reads the per-project
+`obj/<Project>.sarif` logs when `Directory.Build.props` already writes them, as the `iru-setup-windows-app` scaffold
+does). On a non-Windows host it passes `-p:EnableWindowsTargeting=true` so WPF and Windows Forms projects are
+analyzed too, and reports a WinUI 3 project (whose XAML compiler only runs on Windows) as "not analyzed (needs
+Windows)" rather than failing or implying it is clean. Results carrying a non-empty `suppressions` array are counted
+separately, not as issues; the `MSTEST`, `WPF`/`WFO`/`WFAC` and `MVVMTK` rule prefixes are classified as their own
+groups. A closing "Known quirks" section records what was verified on macOS with the .NET 10 SDK.
+
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -38,6 +48,11 @@ xref:index.adoc#group-dotnet[.NET Development Tooling]
 [cols="1,1,3,2", options="header"]
 |===
 |Argument |Required |Description |Default
+
+|`baseline`
+|No
+|A `baseline: <previous issue list>` line (passed by the `*-code-one-task-group` skills): only issues not present in the baseline are reported — compared by rule id, file and, when unmoved, line — plus a one-line count of baseline issues that disappeared.
+|None — every issue is reported.
 
 |`path-or-class-name`
 |No
@@ -57,6 +72,7 @@ whole targeted solution/project regardless — Roslyn analyzers have no per-file
   as clean — or, if it isn't actually configured on the project, as not-configured rather than a false clean pass.
 * Any `CS` (compiler) or `IDE` (`.editorconfig`-driven) diagnostics found are mentioned as a separate, out-of-scope
   bucket rather than folded into either tool's count.
+* With a `baseline:`, only the newly introduced issues plus the count of resolved ones; suppressed results and projects not analyzed on this host (a WinUI project off Windows) are named separately — "not analyzed", never "no issues".
 * No source, project file, `.editorconfig`, or `stylecop.json` is ever modified.
 
 == Execution flow
@@ -65,17 +81,21 @@ whole targeted solution/project regardless — Roslyn analyzers have no per-file
 ....
 flowchart TD
     A["Start /dotnet-code-quality\n(optional path-or-class-name)"] --> B["Check StyleCop.Analyzers and CA rules\nare actually configured on the project"]
-    B --> C["dotnet clean; dotnet build\nwith -p:ErrorLog=...sarif,version=2"]
+    B --> B2["Windows desktop projects?\nnote host; add EnableWindowsTargeting\noff Windows; skip WinUI projects"]
+    B2 --> C["dotnet clean; dotnet build, one SARIF log\nper project (or the repo's own\nobj/*.sarif logs)"]
     C --> D{Build produced\na SARIF log?}
     D -- no, genuine compile error --> E["Report failure, stop\n(reports not freshly regenerated)"]
     D -- yes --> F["Read the generated .sarif file"]
-    F --> G["Classify each result by ruleId prefix:\nSA/SX, CA, CS, IDE"]
+    F --> G["Classify each result by ruleId prefix:\nSA/SX, CA, MSTEST, WPF/WFO, MVVMTK, CS, IDE;\nset aside suppressed results"]
     G --> H{Scope argument given?}
     H -- yes --> I["Filter results to the\nmatching file/project/class"]
     H -- no --> J["Keep full solution-wide results"]
     I --> K
     J --> K["Group findings by tool, then by file"]
-    K --> L["Report file:line, rule, severity, message,\nplus totals per tool and overall"]
+    K --> K2{baseline: given?}
+    K2 -- yes --> K3["Keep only issues absent from\nthe baseline; count resolved ones"]
+    K2 -- no --> L
+    K3 --> L["Report file:line, rule, severity, message,\nplus totals per tool and overall"]
 ....
 
 == Dependencies
@@ -87,10 +107,11 @@ it does not call any other skill in this catalog.
 
 === Invoked by
 
-* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for .NET plans, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-code.adoc[] — Step 3 and 7, quality baseline and comparison for .NET plans (and the `windows` key, which also resolves here), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-dotnet-code-one-task-group.adoc[] — Steps 1 and 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to capture a pre-change baseline covering every type the
   bucket touches and later diff the post-change result against it.
+* xref:skills/iru-windows-code-one-task-group.adoc[] — the same baseline-and-diff role for Windows desktop app buckets, via `iru-gate-runner`.
 
 === Related agents
 

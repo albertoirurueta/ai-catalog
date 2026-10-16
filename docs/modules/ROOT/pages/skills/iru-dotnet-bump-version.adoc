@@ -1,0 +1,131 @@
+= .NET Bump Version
+:description: Sets a .NET project's version to an exact value in Directory.Build.props or csproj files and in MSIX manifests as a four-part x.y.z.0 identity version.
+:keywords: iru-dotnet-bump-version, claude code skill, dotnet, msbuild, directory.build.props, msix, appxmanifest, windows desktop, bump version, release
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a .NET project's version to an exact literal value in every place that must agree with it: the MSBuild `<Version>`
+(or `<VersionPrefix>` plus `<VersionSuffix>`) and, for a packaged Windows desktop app, the MSIX package identity
+version. This skill never computes a version itself; it applies exactly the string it is given, after validating its
+shape, and never commits, tags, builds or packages anything.
+
+== Purpose
+
+`iru-dotnet-bump-version` is the .NET counterpart of `iru-java-bump-version`, `iru-php-bump-version` and the other
+`iru-<key>-bump-version` skills. It works for a .NET library, a service or a Windows desktop app (WPF, WinUI 3,
+Windows Forms) alike. An embedded, tested Python helper (with `--list` and `--dry-run` modes) rewrites the root
+`Directory.Build.props` when it declares a version, otherwise every non-test `*.csproj` that does, plus the
+`<Identity Version="x.y.z.0">` of every tracked `Package.appxmanifest` and `packaging/AppxManifest.xml` -- always the
+four-part numeric value derived from the new version (pre-release suffix stripped, revision `0`, as the Microsoft
+Store requires). It preserves BOMs and CRLF line endings, never touches test projects, reports but never rewrites
+explicit `<AssemblyVersion>`/`<FileVersion>` values, and refuses to write when the `<Version>` locations disagree
+until the user confirms. Projects whose version comes from git (MinVer, Nerdbank.GitVersioning, GitVersion) are
+reported and left unchanged. Step 5 of the skill is the authoritative statement of this catalog's `x.y.z-dev`
+development-version convention for callers such as `iru-release`.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-dotnet-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`new-version`
+|Yes
+|The exact target version (e.g. `1.4.0`, `1.5.0-dev`). Validated against `X.Y.Z` / `X.Y.Z-dev`; another SemVer
+pre-release is flagged and confirmed, anything else (`1.0`, `v1.2.3`, `1.2.3.4`) is refused because the MSIX identity
+needs exactly three numeric parts. Empty or whitespace-containing values are rejected up front.
+|None -- the skill asks for it if omitted.
+
+|`sync-files` (args)
+|No
+|Whether to also update README/Antora version mentions (`Latest release` markers, `dotnet add package` and
+`winget install` snippets, `docs/antora.yml` for releases only).
+|Ask -- once, after Step 3 shows such mentions exist.
+
+|`next-version` (args)
+|No
+|The upcoming `-dev` version. Only meaningful with `sync-files: yes`: "Latest release" markers show `new-version`,
+"Current development version" markers show this value, so a release never regresses a development marker.
+`iru-release` passes it.
+|None -- a development marker is then updated only if `new-version` is itself a `-dev` value; otherwise it is left
+untouched and the report warns.
+
+|`dry-run` (args)
+|No
+|When `yes`, print every diff, then stop without writing anything or running the sanity check.
+|`no`
+|===
+
+== Outputs
+
+* `Directory.Build.props` (or each non-test `*.csproj` when it declares none): `<Version>` set to the new version, or
+  `<VersionPrefix>` set to `X.Y.Z` and `<VersionSuffix>` to the suffix (empty for a release).
+* Every tracked `Package.appxmanifest` and `packaging/AppxManifest.xml`: `<Identity Version>` set to `X.Y.Z.0`.
+* Optionally, README/Antora version mentions mapped by release versus development marker, if `sync-files` was accepted.
+* A sanity check (`--list` agreement and `dotnet msbuild -getProperty:Version`), skipped on a dry run.
+* A report of every location with its old value, the new values, explicit `AssemblyVersion`/`FileVersion` values left
+  untouched, any MSIX identity that was out of step, and a warning to review the diff before committing.
+* No commit or tag is created, and a committed `.appinstaller` file is reported but not rewritten.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-dotnet-bump-version\n&amp;lt;new-version&amp;gt; [args: sync-files, next-version, dry-run]"] --> B["Step 0: resolve inputs\nask for new-version if missing"]
+    B --> C["Step 1: validate X.Y.Z / X.Y.Z-dev\nwarn and confirm other SemVer, refuse the rest"]
+    C --> D["Step 2: write the Python helper,\nrun --list to survey version locations"]
+    D --> E{Version found?}
+    E -- "no, version from git (MinVer etc.)" --> F["Report: tag is the version,\nchange nothing"]
+    E -- "no, SDK default" --> G["Ask whether to add Version\nto Directory.Build.props"]
+    E -- yes --> H{Locations disagree?}
+    G --> H
+    H -- yes --> I["Ask whether to align all\n(passes --force)"]
+    H -- no --> J["Step 3: look for README / Antora mentions"]
+    I --> J
+    J --> K{dry-run: yes?}
+    K -- yes --> L["Step 4: print unified diff only"]
+    K -- no --> M["Step 4: write Version and MSIX identity x.y.z.0\nStep 6: --list + msbuild -getProperty:Version"]
+    L --> N
+    M --> N{sync-files accepted?}
+    N -- yes --> O["Step 7: update README / antora.yml / pages\nwith release vs development marker mapping"]
+    N -- no --> P
+    O --> P["Step 8: report old/new values, files changed,\nreview-before-commit warning"]
+    F --> P
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-dotnet-bump-version` is a leaf skill; it only runs a `python3` helper and sanity-check commands
+(`dotnet msbuild`, `git ls-files`).
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] -- Step 6, version bump for `windows-app` and `dotnet` projects (called once for the
+  release value and once for the next development value), per the `x.y.z-dev` convention defined in this skill's
+  Step 5.
+
+The scaffold written by xref:skills/iru-setup-windows-app.adoc[] (the `Directory.Build.props` `<Version>` and the MSIX
+identity versions) and the `sync.yml` workflow written by xref:skills/iru-setup-windows-github-workflows.adoc[] follow
+the same convention, but neither invokes this skill.
+
+=== Related agents
+
+None -- this skill runs inline; it is not invoked from inside a custom agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-dotnet-bump-version/SKILL.md[`SKILL.md` on GitHub] -- the file this page was generated from.

@@ -1,7 +1,8 @@
 ---
 name: iru-setup-swift-repository
 description: End-to-end bootstrap for a Swift repository of either flavor — collects `flavor` (`library`, a SwiftPM
-  package, or `app`, an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS app; asked via `AskUserQuestion`
+  package, or `app`, an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS/visionOS app, SwiftUI or (for the
+  iOS/iPadOS target) UIKit; asked via `AskUserQuestion`
   when absent and not detectable from disk), `branching` (`gitflow`/`main-only`), the project's identity
   (`package-name` for a library; `app-name` + `bundle-id-prefix` for an app; plus license and developer
   name/email/organization URL), the flavor-specific inputs (`platforms`, `min-deployment-targets`/
@@ -15,7 +16,8 @@ description: End-to-end bootstrap for a Swift repository of either flavor — co
   in that order, via
   `iru-isolated-skill-executor`, so nothing is asked twice and no sub-skill receives a key its own Step 0 doesn't
   accept. Invoke as `/iru-setup-swift-repository`, optionally with `args` (`key: value` lines) to pre-resolve
-  `flavor`, `branching`, `mode` (`new`/`existing`), `platforms`, `generator`, `signing`, `open-source`, `publish`,
+  `flavor`, `branching`, `mode` (`new`/`existing`), `platforms`, `generator`, `signing`, `ui`, `architecture`,
+  `open-source`, `publish`,
   `distribution`, `visibility`, `ci`, `ci-tests`, `pages`, `on-existing`, `sonar` (+ `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`), `integration-branch`,
   `stable-branch`, `runner`, `xcode-version`, `release-please`, `formatter`, `min-deployment-targets`/
@@ -88,7 +90,8 @@ Recognized keys:
   arrived here via `args`).
 - **Flavor-specific inputs** named in Step 3: `platforms`, `min-deployment-targets` (`library`),
   `min-deployment-target` (`app`), `generator` (`xcodegen`/`tuist` — `app` only), `signing`
-  (`fastlane-match`/`api-key`/`none` — `app` only).
+  (`fastlane-match`/`api-key`/`none` — `app` only), `ui` (`swiftui`/`uikit` — `app` only, the iOS/iPadOS target's UI
+  framework) and `architecture` (`mvvm`/`mvc` — `app` only).
 - **Identity fields** named in Step 2: `package-name` (`library`); `app-name`, `bundle-id-prefix` (`app`); and,
   for both, `license`, `developer-name`, `developer-email`, `organization-url`.
 - **Pass-through toggles**, forwarded untouched if supplied but never asked by this orchestrator (see Steps 2, 7
@@ -119,7 +122,8 @@ Unless `flavor` was already supplied via `args`, resolve it:
   project for them.
 - Nothing on disk yet, or genuinely ambiguous → `AskUserQuestion` with two options: **Library** (a redistributable
   SwiftPM package consumed via a tagged git URL and optionally listed on the Swift Package Index — no app target)
-  / **App** (a native SwiftUI iOS/iPadOS/macOS/watchOS application whose Xcode project is generated on demand
+  / **App** (a native iOS/iPadOS/macOS/watchOS/visionOS application — SwiftUI, or UIKit for the iOS/iPadOS target —
+  whose Xcode project is generated on demand
   from an XcodeGen or Tuist manifest, distributed via TestFlight/the App Store, never published as a package).
 
 Map the resolved `flavor` to its scaffold skill for the rest of this run:
@@ -234,9 +238,36 @@ directly.
     follow-up that **extends** the supplied list (skip the follow-up only when the supplied value already names
     at least one of `tvos`/`visionos`/`linux`, since then the caller evidently spoke the full vocabulary). The
     merged list is what Steps 5 and 8 receive.
-  - `app`: `ios`, `ipados`, `macos`, `watchos` only. Relay `iru-setup-apple-app`'s caveat that `ipados` is not a
-    separate target — it widens the iOS target's `TARGETED_DEVICE_FAMILY` — and that `watchos` without `ios`
-    produces a standalone (companion-less) watch app.
+  - `app`: `ios`, `ipados`, `macos`, `watchos`, `visionos` (tvOS is not offered — `iru-setup-apple-app` refuses it).
+    Ask the first four in one multi-select and *visionOS / none of these* as a follow-up, since `AskUserQuestion`
+    allows at most four options. When `platforms` arrived via `args`, don't ask either question — the caller
+    (e.g. `iru-setup-repository`, which asks its own visionOS follow-up) already decided, and re-asking would
+    double-ask a user who answered "no". Relay
+    `iru-setup-apple-app`'s caveats: `ipados` is not a separate target — it widens the iOS target's
+    `TARGETED_DEVICE_FAMILY` —, `watchos` without `ios` produces a standalone (companion-less) watch app, visionOS
+    builds are verified anywhere but its tests need a visionOS simulator runtime, and a **macOS-only** app is better
+    served by `iru-setup-macos-repository` (AppKit, MVC, Developer ID/DMG distribution) — offer to switch when
+    `macos` is the only platform the user selected here. Don't offer it when `platforms` arrived via `args`: the
+    caller (e.g. `iru-setup-repository`, which routes a macOS desktop app to `iru-setup-macos-repository` itself)
+    already chose this orchestrator for that list.
+- **`app` only — ui** (only when `ios` or `ipados` is selected; skip when resolved from `args`). **`mode: existing`
+  with the iOS target's sources on disk: detect, don't ask fresh** — `Targets/iOS/Sources/SceneDelegate.swift`, or a
+  `UIWindowSceneDelegate`/`UIApplicationDelegate` type under `Targets/iOS/Sources/` with no SwiftUI `@main struct … :
+  App`, → `uikit`; an `@main struct … : App` → `swiftui` — and confirm the detected value with the user (one
+  `AskUserQuestion`, the detected value first and marked "(Detected)"); if nothing decides it, omit `ui` from Step 5's
+  `args` so `iru-setup-apple-app`'s own Step 1 detects it. Otherwise (`mode: new`, or no iOS sources yet) —
+  `AskUserQuestion`: **SwiftUI (Recommended)** (`swiftui`) / **UIKit** (`uikit` — programmatic UIKit with a scene
+  delegate and a `UINavigationController` root, no storyboards). watchOS, visionOS and a macOS target alongside other
+  platforms are always SwiftUI — say so when they're selected.
+- **`app` only — architecture** (skip when resolved from `args`). **`mode: existing`: detect, don't ask fresh** —
+  `Packages/Core/Sources/Core/Controllers/` present → `mvc` (a `ViewModels/` beside it is the scaffolded UIKit-MVC +
+  SwiftUI-platforms mix, still `mvc`); only `Packages/Core/Sources/Core/ViewModels/` → `mvvm` — confirm it the same
+  way as `ui`, or, when neither folder exists (an older scaffold with a flat placeholder), omit `architecture` from
+  Step 5's `args` and let `iru-setup-apple-app`'s Step 1 resolve it. Otherwise: `ui: swiftui` → `mvvm` without asking (SwiftUI has
+  no controllers; say why MVC isn't offered); `ui: uikit` → `AskUserQuestion`: **MVC (Recommended)** (`mvc` — Cocoa
+  Touch's own pattern: a UI-free controller in `Packages/Core` behind a passive-view protocol, the `UIViewController`
+  as its view) / **MVVM** (`mvvm` — `@Observable` view models in `Packages/Core`, bound through UIKit's Observation
+  tracking; the scaffold adds the `UIObservationTrackingEnabled` opt-in below iOS 26).
   The same list is passed verbatim to Step 5's scaffold and Step 8's workflows skill, so `Package.swift`'s
   `platforms:` array / the generator manifest's targets and CI's per-platform test destinations always agree.
 - **`library` only — min-deployment-targets**: for each selected Apple platform (`ios`/`ipados` counted once,
@@ -246,8 +277,9 @@ directly.
   selection. When the platforms follow-up above extended an `args`-supplied list with `tvos`/`visionos`, ask
   the minimum version for just those added platforms and append them to whatever `min-deployment-targets`
   `args` already carried.
-- **`app` only — min-deployment-target**: a single OS version applied to every selected platform. **Deliberately
-  left unasked** unless `args` supplied it: `iru-setup-apple-app` resolves its default itself from the locally
+- **`app` only — min-deployment-target**: the **iOS** deployment target (e.g. `26.0` or `18.0`), which
+  `iru-setup-apple-app` maps **per platform** (its Step 5 table) — identical numbers from 26 on, while `18.0` →
+  iOS/iPadOS 18.0, macOS 15, watchOS 11, visionOS 2 — not one value written verbatim for every platform. **Deliberately left unasked** unless `args` supplied it: `iru-setup-apple-app` resolves its default itself from the locally
   installed simulator runtimes (Step 4 there — the bare current SDK major is *not* safe, since installed
   simulator runtimes lag it by one), which this orchestrator can't do better. Pass it through only if supplied.
 - **`app` only — generator** (`AskUserQuestion`, two options): **XcodeGen** (recommended for a single-target or
@@ -273,10 +305,13 @@ already resolved from `args`, and skip the integration branch entirely when `bra
 
 Notes on these, so the two halves of the pipeline can't disagree:
 
-- **`runner`** is a CI-only parameter: `macos-26` is GitHub's stable, generally-available image (SwiftLint
-  preinstalled); `xcode-27` is the newer-Xcode public-preview image label, only worth choosing when the project
-  needs an Xcode 27 feature the GA image's newest Xcode lacks, with the caveat that a preview image can change
-  with less notice and always needs the `brew install swiftlint` path. `iru-setup-swift-github-workflows` looks
+- **`runner`** is a CI-only parameter: `macos-26` is GitHub's stable, generally-available image (Xcode up to 26.6);
+  `xcode-27` is the newer-Xcode public-preview image label (Xcode 27.x). `iru-setup-apple-app`'s templates were
+  verified on Xcode 27.1, so for the `app` flavor offer `xcode-27` (with `xcode-version: 27.1`) next to `macos-26` and
+  state the trade-off — GA stability vs. the Xcode the scaffold was verified with; a preview image can change with
+  less notice. Neither arm64 image preinstalls SwiftLint (only the Intel `macos-26-intel` image lists it, per the
+  October 2026 runner-images READMEs) — the workflows skill runs SwiftLint in a Linux job instead. Both arm64 images
+  ship a visionOS simulator runtime, so selected `visionos` targets are tested in CI. `iru-setup-swift-github-workflows` looks
   up the currently available labels at run time — this orchestrator just forwards the choice.
 - **`xcode-version`** is *not* asked here: `iru-setup-swift-github-workflows` resolves its default from the
   chosen runner image's own `(default)`-marked Xcode row at run time. Pass it through only if `args` supplied it.
@@ -390,6 +425,7 @@ Agent({
   subagent_type: "iru-isolated-skill-executor",
   prompt: "Invoke Skill({skill: \"iru-setup-apple-app\", args: \"app-name: <app-name>\\n
     bundle-id-prefix: <bundle-id-prefix>\\nplatforms: <platforms, comma-separated>\\ngenerator: <generator>\\n
+    ui: <ui, when resolved>\\narchitecture: <architecture>\\n
     min-deployment-target: <..., only if supplied>\\ndistribution: <distribution>\\nsigning: <signing>\\n
     license: <license display name, or 'none'>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
@@ -493,12 +529,12 @@ Agent({
     visibility: <visibility>\\nci-tests: <ci-tests>\\npages: <pages>\\non-existing: <..., only if supplied>\\n
     mode: <mode>\"}). Report back: whether it ran from scratch or as an update, and for each of build.yml,
     release.yml, sync.yml + .github/scripts/sync_versions.py (gitflow only), security.yml, .github/dependabot.yml
-    and lcov_to_sonar_generic.py (library + sonar only) whether it was created, updated, replaced or kept as is
+    and .github/scripts/lcov_to_sonar_generic.py (either flavor, sonar only) whether it was created, updated, replaced or kept as is
     (with every mismatch it listed for a kept file), or whether the user chose to stop; how ci-tests and pages
     were applied (UI-test bundles skipped or not, Pages deploy vs. docs artifact); the runner label and
     xcode-version it resolved, any open gap it flagged (missing docs/antora.yml, a Packages/Core without the
-    swift-docc-plugin dependency, README/version wording not matching sync_versions.py, a <team-id> still to
-    supply), and the full required-secrets/environments table it produced for this flavor/branching/options.",
+    swift-docc-plugin dependency, README/version wording not matching sync_versions.py, an APPLE_TEAM_ID secret
+    still to add), and the full required-secrets/environments table it produced for this flavor/branching/options.",
   run_in_background: false
 })
 ```
@@ -590,7 +626,8 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   which `release.yml` archive/export/TestFlight/notarization steps were generated; `store`/non-`none` unless the
   user opted out (or the project isn't open source and declined it), stated plainly rather than left implicit.
 - **`sonar`**: `cloud`/`self-hosted`/`none`, and whether `sonar-project.properties`, the coverage-conversion
-  step (`lcov_to_sonar_generic.py` for a library, `xccov-to-sonarqube-generic.sh` for an app) and the
+  step (`.github/scripts/lcov_to_sonar_generic.py` for both flavors — an app converts `Packages/Core`'s
+  `llvm-cov` lcov, not an `.xcresult`) and the
   `SonarSource/sonarqube-scan-action` step were included — if `none`, note whether that's the expected
   non-open-source/private default or a direct user choice; if Sonar is configured with `ci: no`, state that no CI
   step sends reports (analysis only runs when someone runs the scanner manually).
@@ -603,11 +640,12 @@ Unless Step 8 was skipped (`ci: no`), reproduce the **consolidated required-secr
 `iru-setup-swift-github-workflows` reported in Step 8 verbatim (it's already scoped to exactly this flavor/branching/options — don't re-derive or expand it):
 `SONAR_TOKEN` for a non-`none` `sonar`; `MATCH_GIT_URL`/`MATCH_PASSWORD` for `signing: fastlane-match`;
 `APP_STORE_CONNECT_API_KEY_ID`/`APP_STORE_CONNECT_API_KEY_ISSUER_ID`/`APP_STORE_CONNECT_API_KEY_BASE64` for
-`signing: api-key` (and also, regardless of `signing`, for notarization when `macos` is selected); `GITHUB_TOKEN`
-is automatic. Then its repository-settings notes: GitHub Pages source set to **GitHub Actions** for the docs
+`signing: api-key` (and also, regardless of `signing`, for notarization when `macos` is selected); `APPLE_TEAM_ID`
+for an app whose `distribution` isn't `none` (`release.yml` fills `DEVELOPMENT_TEAM` and the export plists'
+`teamID` from it at run time); `GITHUB_TOKEN` is automatic. Then its repository-settings notes: GitHub Pages source set to **GitHub Actions** for the docs
 deploy (only when `pages: yes`), and — gitflow only — "Workflow permissions" allowing GitHub Actions to create pull requests for
-`sync.yml`. For an app, add the Apple Developer Team ID placeholder the workflows skill leaves for the user to
-supply, and the `fastlane match` certs repository / App Store Connect API key that must exist before the first
+`sync.yml`. For an app, add the `APPLE_TEAM_ID` secret the workflows read (no Team ID is committed to any file),
+and the `fastlane match` certs repository / App Store Connect API key that must exist before the first
 signed build.
 
 List every decision made on the user's behalf: the license question's flavor-dependent recommendation (Step 2);

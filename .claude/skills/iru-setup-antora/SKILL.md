@@ -118,13 +118,16 @@ Determine three values first:
 
 - **`name`**: a short slug for the project — the Antora *component* name, used in `start_page` references like
   `<name>::index.adoc`. Derive it from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml`
-  `[project].name`, Go module base name, etc.), lowercased with no spaces.
+  `[project].name`, Go module base name, a .NET solution's `*.slnx`/`*.sln` file name, an XcodeGen `project.yml`'s
+  `name:`, etc.), lowercased with no spaces.
 - **`title`**: the human-readable project name (e.g. from a README's top heading, `pom.xml`'s `<name>`, or
   `package.json`'s `name` capitalized).
 - **`version`**: the current release version, preferring, in order: (1) the latest GitHub release
   (`gh release view --json tagName -q .tagName` or `gh api repos/{owner}/{repo}/releases/latest`), (2) the latest
   git tag (`git tag --sort=-v:refname | head -1`), (3) the project manifest's version with any pre-release suffix
-  like `-SNAPSHOT` (or Python's PEP 440 `.dev0`) stripped. If none of these resolve, ask the user for a starting version rather than guessing.
+  like `-SNAPSHOT` (or Python's PEP 440 `.dev0`, or the `-dev` suffix .NET's `Directory.Build.props` `<Version>` and
+  PHP use) stripped — for an Apple app, `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`. If none of
+  these resolve, ask the user for a starting version rather than guessing.
 
 Write (or, if `antora.yml` already exists and Step 2's answer was **Update**, only correct genuinely wrong fields
 rather than rewriting the whole file; under **Replace**, rewrite it from this template, carrying over the existing

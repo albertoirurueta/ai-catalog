@@ -1,6 +1,6 @@
 = .NET Generate All Tests
 :description: Scans an entire .NET codebase for classes lacking tests or below 80% coverage and writes or extends unit tests until every class clears the bar.
-:keywords: iru-dotnet-generate-all-tests, claude code skill, dotnet, csharp, unit testing, code coverage, xunit, nunit, mstest, generate tests
+:keywords: iru-dotnet-generate-all-tests, claude code skill, dotnet, csharp, unit testing, windows desktop, code coverage, xunit, nunit, mstest, generate tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -17,6 +17,13 @@ per task. It explores the whole codebase to build an inventory of testable class
 test code — it does not add license headers, doc comments, or run a code-quality pass, and it only touches
 production source code when a class is genuinely untestable as written (e.g. no seam to substitute a hard
 dependency), which it reports explicitly rather than silently redesigning the class.
+
+With several `.sln`/`.slnx` files and no obvious target it asks which to use. For a Windows desktop app repository
+(a `WinExe` project with `UseWPF`/`UseWinUI`/`UseWindowsForms`; plan key `windows`) the skill applies only to the
+UI-free Core project (`src/<App>.Core`) and its portable test project (`tests/<App>.Core.Tests`): classes in the app
+project (windows, pages, forms, code-behind, converters) are listed as "excluded — UI layer, not measured" in the
+final report rather than given tests that need a UI thread, logic found there is named as a candidate to move into
+Core, and FlaUI/`[TestCategory("UI")]` tests are never generated.
 
 == Purpose group
 
@@ -55,7 +62,8 @@ flowchart TD
     A[Start /iru-dotnet-generate-all-tests] --> B{".sln/.csproj found?"}
     B -- no --> B1[Stop: .NET/C# only]
     B -- yes --> C["Explore agent: inventory every\nmain-source class + existing test\nconvention + test project(s)"]
-    C --> D{"Any test project exists?"}
+    C --> C2["Windows desktop app: restrict scope to the Core\nproject; list app-project classes as\nexcluded (UI layer)"]
+    C2 --> D{"Any test project exists?"}
     D -- no --> D1[Stop: ask user, this skill\nextends tests, doesn't scaffold a project]
     D -- yes --> E["gate-runner: single dotnet-coverage run\nover every candidate class\n(batched if the list is large)"]
     E --> F["Classify: missing tests /\nbelow 80% / already sufficient"]

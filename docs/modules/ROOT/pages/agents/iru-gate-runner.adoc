@@ -7,7 +7,7 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 A custom agent that runs a single verification/quality-gate skill — tests, coverage, code-quality/lint, license
 headers, doc-comment audits, security scans, or a full project build — across any of the catalog's language
 tracks (Java and Kotlin on Maven or Gradle, Spring Boot, Quarkus, PHP, .NET, TypeScript including NestJS and
-Next.js, Python including FastAPI and Django, Android, Kotlin Multiplatform, React Native, Swift), in an isolated context, optionally diffs the result against a baseline, and reports back
+Next.js, Python including FastAPI and Django, Android, Kotlin Multiplatform, React Native, Swift, Windows desktop apps), in an isolated context, optionally diffs the result against a baseline, and reports back
 only a compact, structured summary.
 
 == Purpose
@@ -17,7 +17,7 @@ dozen call sites across `iru-code`, `iru-code-one-task-group`, and every `<key>-
 (`iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`,
 `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`,
 `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`,
-`iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`, `iru-swift-code-one-task-group`): invoke a verification skill, diff it against a
+`iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`, `iru-windows-code-one-task-group`, `iru-swift-code-one-task-group`): invoke a verification skill, diff it against a
 baseline if one is given, and return only the distilled outcome — never the raw
 Surefire/JaCoCo/lcov/clover.xml/xccov/SARIF/checkstyle-result.xml/pmd.xml/spotbugsXml.xml/eslint/detekt/ktlint/
 phpstan/psalm/phpcs/swiftlint/detect-secrets output or a full build log. Centralizing the "report back only X, not
@@ -26,7 +26,8 @@ to be — once.
 
 It always prefers invoking the matching Claude Code skill over a raw command:
 
-* Tests — `iru-java-test` (Maven or Gradle, Java or Kotlin sources), `iru-dotnet-test`, `iru-typescript-test`,
+* Tests — `iru-java-test` (Maven or Gradle, Java or Kotlin sources), `iru-dotnet-test` (incl. Windows desktop solutions — WPF/WinUI/WinForms — with a `ui`
+  selector for FlaUI desktop UI tests on Windows), `iru-typescript-test`,
   `iru-php-test` (Pest/PHPUnit), `iru-python-test` (pytest, incl. pytest-django), `iru-android-test`, `iru-kmp-test` (Kotlin Multiplatform — Android host/JVM tests, plus Kotlin/Native iOS tests and the iOS host app's XCTest on macOS), `iru-swift-test`.
 * Coverage — `iru-java-coverage` (JaCoCo from Maven or Gradle, `quarkus-jacoco`, or Kover), `iru-dotnet-coverage`,
   `iru-typescript-coverage` (lcov line/branch %), `iru-php-coverage` (PHPUnit/Pest Clover XML line %; branch
@@ -85,6 +86,10 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
   KDoc/Dokka audit (xref:skills/iru-kmp-dokka.adoc[]), scoped and full Android/JVM tests and the Kotlin/Native iOS and
   `iosApp` XCTest runs (xref:skills/iru-kmp-test.adoc[]), and the Kover coverage check
   (xref:skills/iru-kmp-coverage.adoc[]).
+* xref:skills/iru-windows-code-one-task-group.adoc[] — the same per-bucket pattern for Windows desktop apps
+  (WPF, WinUI 3, Windows Forms): baseline and quality diff (`iru-dotnet-code-quality`), license headers, XML docs
+  (`iru-dotnet-docfx`), scoped and full tests (`iru-dotnet-test`, including the lock-serialized `ui` selector on
+  Windows), and the Core-project coverage check (`iru-dotnet-coverage`).
 * xref:skills/iru-react-native-code-one-task-group.adoc[] — Steps 1 and 3, the same per-bucket pattern for React
   Native (Expo or Metro): baseline and quality diff (`iru-typescript-code-quality`), license headers, TSDoc
   (`iru-typescript-tsdoc`), scoped and full Jest runs (`iru-typescript-test`), coverage

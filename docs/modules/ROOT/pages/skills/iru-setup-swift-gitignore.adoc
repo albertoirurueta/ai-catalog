@@ -1,12 +1,12 @@
 = Setup Swift Gitignore
 :description: Creates or refreshes a Swift/Xcode project's root .gitignore for SwiftPM build output, Xcode artifacts, Package.resolved, Fastlane, and signing files.
-:keywords: iru-setup-swift-gitignore, claude code skill, swiftpm, xcode, xcodegen, tuist, fastlane, docc, gitignore, bootstrap
+:keywords: iru-setup-swift-gitignore, claude code skill, swiftpm, xcode, xcodegen, tuist, fastlane, docc, macos desktop app, dmg, gitignore, bootstrap
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Create or refresh the root `.gitignore` for a Swift package or Apple app project, composing a universal
 SwiftPM/Xcode base plus conditionally-detected sections for generator-managed Xcode projects, `Package.resolved`,
-Fastlane, signing material, and Antora/DocC documentation output — never overwriting an existing file without
+Fastlane, macOS desktop distribution output, signing material, and Antora/DocC documentation output — never overwriting an existing file without
 warning the user, showing a diff of the proposed merge, and asking Update / Keep as is / Replace first.
 
 == Purpose
@@ -16,7 +16,15 @@ warning the user, showing a diff of the proposed merge, and asking Update / Keep
 `.DS_Store`) plus sections detected from the actual project — an XcodeGen/Tuist-generated `.xcodeproj`/
 `.xcworkspace` (only when `project.yml`/`Project.swift` is present; otherwise the project file is hand-maintained
 and must stay tracked), a `Package.resolved` commit-vs-ignore decision (resolved via `args` or asked through
-`AskUserQuestion`, informed by `flavor`), Fastlane output paths, signing material, and Antora/DocC build output.
+`AskUserQuestion`, informed by `flavor`), Fastlane output paths, macOS desktop distribution output, signing material, and Antora/DocC build output.
+A macOS desktop app is recognised by `scripts/make-dmg.sh` or a root `ExportOptions-*.plist` (the `iru-setup-macos-app`
+layout): its archive/export/DMG/notarization output lands under the root `build/`, so the skill first checks
+(`git ls-files -- build`, `ls build`) whether anything there must stay tracked, then adds an anchored `/build/` plus
+`*.xcarchive/`, `*.dmg` and `*-notarize.zip` — or, when `build/` holds tracked or hand-made content such as a branding
+icon source, only its generated subfolders (`/build/dd*/`, `/build/docc/`, `/build/export*/`). `/build/` is anchored so it
+never matches `docs/build/`. The base now also ignores the transient `.simulator-test.lock/` directory that
+`iru-swift-code-one-task-group` creates around every app-kind `xcodebuild test` run (simulator or macOS desktop UI
+tests). The section was verified against a real `iru-setup-macos-app` scaffold run.
 It announces whether it is creating `.gitignore` from scratch or updating an existing one. It mirrors the diff-and-approve contract shared with the sibling
 xref:skills/iru-setup-java-gitignore.adoc[] / xref:skills/iru-setup-typescript-gitignore.adoc[] /
 xref:skills/iru-setup-android-gitignore.adoc[] skills, adapted for the Swift/Xcode ecosystem, and fits into the
@@ -92,7 +100,8 @@ flowchart TD
     C1 --> D
     E --> D["Step 2: Compose universal base\n(.build/, DerivedData/, *.xcresult,\nxcuserdata/, .swiftpm/xcode/, .DS_Store)"]
     D --> F["Step 3: Detect project-specific additions:\nXcodeGen/Tuist manifest, fastlane/,\nAntora docs, DocC catalog/plugin"]
-    F --> G{"Package.swift present?\nResolve Package.resolved"}
+    F --> F2["macOS desktop app signals?\nmake-dmg.sh / ExportOptions-*.plist:\ncheck whether build/ holds tracked content"]
+    F2 --> G{"Package.swift present?\nResolve Package.resolved"}
     G -- "package-resolved given" --> H["Use pre-resolved value"]
     G -- "not given" --> I["AskUserQuestion:\ncommit or ignore\n(informed by flavor)"]
     H --> J["Step 4: Compose proposed content\n(merge with existing lines if any)"]
@@ -119,6 +128,7 @@ None — `iru-setup-swift-gitignore` is a leaf skill; it does not call any other
   generated files (the SwiftPM/Xcode project layout, Antora docs build output) already in place, passing
   `flavor`, and `package-resolved` and `on-existing` when supplied. `mode` is deliberately not passed, since the
   skill's own `.gitignore`-presence check is the more precise signal.
+* xref:skills/iru-setup-macos-repository.adoc[] — Step 6, with `flavor: app`, after `iru-setup-macos-app` and `iru-setup-antora`, so the macOS distribution section can detect `scripts/make-dmg.sh`/`ExportOptions-*.plist`; `on-existing` is passed only when supplied.
 
 === Related agents
 

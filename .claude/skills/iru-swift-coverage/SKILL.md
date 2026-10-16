@@ -1,6 +1,6 @@
 ---
 name: iru-swift-coverage
-description: Generate a Swift code coverage report — for a Swift package, `swift test --enable-code-coverage` followed by `xcrun llvm-cov report`/`llvm-cov export -format=lcov` against the resulting `.xctest` test binary and `default.profdata`; for an Xcode app target, `xcodebuild test -enableCodeCoverage YES -resultBundlePath <bundle>.xcresult` followed by `xcrun xccov view --report --json` — then reports the exact line-coverage and function-coverage percentages, and uncovered line ranges, for the file(s)/type(s) in scope. Invoke as `/iru-swift-coverage [scope]`, where `[scope]` is a comma-separated list of file paths (e.g. `Sources/Demo/Calculator.swift`) or type simple names (e.g. `Calculator`), or with no argument to report the whole package/target. Also accepts `key: value` lines: `kind: package|app` to override auto-detection between a `Package.swift` SwiftPM library and an Xcode `.xcodeproj`/`.xcworkspace` app, `xcresult: <path>` to parse an already-produced `.xcresult` bundle instead of re-running `xcodebuild`, and `scheme:`/`destination:`/`target:` to override what `iru-swift-test` would otherwise infer. Detects which coverage path is actually wired (a test target exists at all; for an app, a scheme with code coverage obtainable) and reports "coverage not wired" (naming exactly what's missing) instead of a false 0%/100%. Branch coverage is reported as unavailable — verified locally against Swift 6.4/Xcode 27: `llvm-cov report`'s Branches column stays `0 0 -` for Swift sources even with `-Xswiftc -profile-coverage-mapping`, and `xccov`'s JSON schema has no branch field at all. Equivalent to `iru-java-coverage`/`iru-typescript-coverage`/`iru-android-coverage` for the Swift/Apple-platform stack. Use whenever the user wants to check, or verify a bar (e.g. "at least 80% line coverage") for, a Swift file, type, or whole package/app target, instead of eyeballing `swift test`/`xcodebuild test` console output.
+description: Generate a Swift code coverage report — for a Swift package, `swift test --enable-code-coverage` followed by `xcrun llvm-cov report`/`llvm-cov export -format=lcov` against the resulting `.xctest` test binary and `default.profdata`; for an Xcode app target, `xcodebuild test -enableCodeCoverage YES -resultBundlePath <bundle>.xcresult` followed by `xcrun xccov view --report --json` — then reports the exact line-coverage and function-coverage percentages, and uncovered line ranges, for the file(s)/type(s) in scope. Invoke as `/iru-swift-coverage [scope]`, where `[scope]` is a comma-separated list of file paths (e.g. `Sources/Demo/Calculator.swift`) or type simple names (e.g. `Calculator`), or with no argument to report the whole package/target. Also accepts `key: value` lines: `package-path: <dir>` to measure an app's local SwiftPM package (e.g. `Packages/Core`, which the app scheme's `xccov` report can't see), `kind: package|app` to override auto-detection between a `Package.swift` SwiftPM library and an Xcode `.xcodeproj`/`.xcworkspace` app, `xcresult: <path>` to parse an already-produced `.xcresult` bundle instead of re-running `xcodebuild`, and `scheme:`/`destination:`/`target:` to override what `iru-swift-test` would otherwise infer. Detects which coverage path is actually wired (a test target exists at all; for an app, a scheme with code coverage obtainable) and reports "coverage not wired" (naming exactly what's missing) instead of a false 0%/100%. Branch coverage is reported as unavailable — verified locally against Swift 6.4/Xcode 27: `llvm-cov report`'s Branches column stays `0 0 -` for Swift sources even with `-Xswiftc -profile-coverage-mapping`, and `xccov`'s JSON schema has no branch field at all. Equivalent to `iru-java-coverage`/`iru-typescript-coverage`/`iru-android-coverage` for the Swift/Apple-platform stack. Use whenever the user wants to check, or verify a bar (e.g. "at least 80% line coverage") for, a Swift file, type, or whole package/app target, instead of eyeballing `swift test`/`xcodebuild test` console output.
 model: haiku
 ---
 
@@ -21,8 +21,13 @@ passes explicit `key: value` lines, honor them and skip the matching inference b
 - `xcresult: <path>` — an already-produced `.xcresult` bundle; skip Step 2's `xcodebuild` run entirely and go
   straight to parsing it (Step 3's app path).
 - `scheme:`, `destination:`, `target:`/`module:` — override what would otherwise be inferred the same way
-  `iru-swift-test` infers them (scheme from `xcodebuild -list`, destination from the first available simulator
-  for iOS/tvOS/watchOS or `platform=macOS` for a macOS app, target from `Package.swift`'s test target(s)).
+  `iru-swift-test` infers them (its Step 3: scheme from `xcodebuild -list` — for `iru-setup-apple-app`'s per-platform
+  schemes `<AppName>-iOS`/`-macOS`/`-watchOS`/`-visionOS`, the scheme of the platform whose `Targets/<Platform>/`
+  files are in scope; destination from its `resolve_destination` — `platform=<iOS|watchOS|visionOS>
+  Simulator,name=<device>,OS=<newest runtime version>` — or `platform=macOS` for a macOS scheme; target from
+  `Package.swift`'s test target(s)).
+- `package-path: <dir>` — run the **package** path inside that directory (e.g. `Packages/Core`) even though the
+  repository is an app: the way to measure an app's local SwiftPM package (see Step 1's rule 5).
 - A bar/threshold line (e.g. `bar: 80`) is only used for Step 4's pass/fail wording — it never changes what runs.
 
 ## Step 1 — Detect which coverage path is wired
@@ -45,6 +50,16 @@ find . -maxdepth 2 \( -name "Package.swift" -o -name "project.yml" -o -name "Pro
    found"**. A `project.yml`/`Project.swift` present without a generated `.xcodeproj`/`.xcworkspace` yet needs
    `xcodegen generate`/`tuist generate` first — same caveat as `iru-swift-test`'s Step 1, this skill does not run
    that generation itself.
+
+5. **An app whose scope lives in a local SwiftPM package** — every in-scope file is under a directory holding its
+   own `Package.swift` (e.g. `Packages/Core/Sources/...` in the layout `iru-setup-apple-app`/`iru-setup-macos-app`
+   scaffold), or `package-path:` was given → run the **package** path *inside that package directory* (`swift test
+   --enable-code-coverage` + `llvm-cov`, every command below with `--package-path <dir>` or from `cd <dir>`). The
+   app path can't measure it: the local package is linked statically into the app, and `xccov` on the app scheme
+   attributes none of the package's sources (verified on 2026-10-16 against an `iru-setup-macos-app` scaffold with
+   Xcode 27.1 — `Packages/Core` measured 100% lines through `swift test` + `llvm-cov`, while the app scheme's
+   `.xcresult` listed only the app target's files). A scope mixing package files and app-target files takes both
+   paths and reports each file from the path that measured it.
 
 **Do not improvise an `xcodebuild test -scheme <PackageName>` run against a bare `Package.swift`-only
 repository** even though SwiftPM auto-generates a scheme that makes it technically work — verified locally: the
@@ -106,10 +121,22 @@ xcodebuild test -scheme <Scheme> -destination '<destination>' -enableCodeCoverag
   -resultBundlePath <path>.xcresult
 ```
 
-`<destination>` follows the same rule `iru-swift-test` uses: `platform=macOS` for a macOS app target, or
-`platform=iOS Simulator,name=<first available iPhone>` (etc. for tvOS/watchOS) — resolved via `xcrun simctl list
-devices available` (run with `timeout 120` or piped to `head`, it can be slow). Delete a stale
-`<path>.xcresult` first — `xcodebuild` refuses to overwrite an existing result bundle at the same path.
+`<destination>` follows `iru-swift-test`'s Step 3 exactly — reuse its `resolve_destination` function rather than
+re-implementing it: `platform=macOS` for a macOS scheme, otherwise `platform=<iOS|watchOS|visionOS>
+Simulator,name=<device>,OS=<runtime version>` for the newest installed runtime the selected Xcode supports. The
+`OS=` part is required: device names repeat across runtimes (`iPhone 17` under iOS 26.4 and 27.0). With
+per-platform schemes (`<AppName>-iOS`/`-macOS`/`-watchOS`/`-visionOS`, `iru-setup-apple-app`), measure each
+in-scope platform's `Targets/<Platform>/` files with that platform's scheme — one run and one `.xcresult` per scheme.
+Delete a stale `<path>.xcresult` first — `xcodebuild` refuses to overwrite an existing result bundle at the same
+path.
+
+**No simulator runtime for the platform** (typically **visionOS** — `resolve_destination visionOS "Apple Vision Pro"`
+prints nothing when `xcrun simctl list runtimes` has no visionOS runtime): don't download one and don't report 0%.
+Report that scheme's app-target files **"unverified (no visionOS simulator runtime installed)"** (or the matching
+iOS/watchOS wording) after `xcodebuild build-for-testing -scheme <AppName>-visionOS -destination
+'generic/platform=visionOS Simulator'` confirms they compile. This never affects the bar in that layout: the
+`Targets/**` UI layer is "not measured" anyway, and `Packages/Core` is measured through the package path (Step 1's
+rule 5) with no simulator at all.
 
 If `xcresult:` was given in Step 0, skip this command entirely and use that path directly in Step 3.
 
@@ -348,7 +375,16 @@ summary above back to its caller — never the raw `llvm-cov`/`xccov` output.
   silently fails (verified: an unresolved path produced zero matches with no error from `awk`).
 - `swiftlint`, `xcodegen`, `tuist`, `xcbeautify`, `periphery`, `swiftformat` are irrelevant to this skill (no
   lint/format step here) and were not needed for verification.
-- Only a macOS destination (`platform=macOS`) was exercised for the app path's `xcodebuild test` invocation in
-  this environment; the `platform=iOS Simulator,...` form for iOS/tvOS/watchOS apps follows the same flags but
-  was not independently re-run here — `iru-swift-test`'s own destination-resolution logic (first available
-  simulator via `xcrun simctl list devices available`) should be reused rather than re-implemented.
+- **macOS desktop app scaffold (`iru-setup-macos-app`: Automatic signing, empty `DEVELOPMENT_TEAM`)**: the app
+  path's plain `xcodebuild test … -destination 'platform=macOS' -enableCodeCoverage YES` succeeds without signing
+  overrides — verified 2026-10-16 (Xcode 27.1) on a copy of the `appkit-mvc` scaffold with a fresh
+  `-derivedDataPath` ("Sign to Run Locally"; `xccov` reported `CoreTests` and `MyMacApp.app`). See `iru-swift-test`'s
+  Known quirks for when `CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=` is needed instead (a real
+  team set but its certificate missing — unverified).
+- The app path's simulator form was exercised on 2026-10-16 (Xcode 27.1) against copies of `iru-setup-apple-app`
+  scaffolds: `iru-swift-test`'s `resolve_destination` gave `platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0` and
+  `platform=watchOS Simulator,name=Apple Watch Series 12 (46mm),OS=27.0` (both ran their schemes' tests, 11/11) and
+  nothing for visionOS (no runtime installed — `build-for-testing` against `generic/platform=visionOS Simulator`
+  succeeded, tests unverified). In that layout the bar is measured with `package-path: Packages/Core` (`swift test` +
+  `llvm-cov`, 100% lines on both copies) — the per-scheme `xccov` runs only matter for app-target files, which are
+  "not measured".

@@ -1,0 +1,205 @@
+= Setup Windows Repository
+:description: Bootstraps or updates a Windows desktop app repository on .NET 10 (WPF, WinUI 3 or Windows Forms): solution, Antora docs, gitignore, CI, changelog, README.
+:keywords: iru-setup-windows-repository, claude code skill, windows desktop, wpf, winui, winforms, dotnet, msix, github actions, antora, readme
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a Windows desktop app repository on .NET 10. It resolves the UI stack, architecture,
+branching model and mode once, collects the app's identity and the shared pipeline parameters once, prints a
+setup-mode statement (from scratch, or an inventory of the prior setup it found), then orchestrates six other skills
+in a fixed order so nothing is asked twice.
+
+== Purpose
+
+`iru-setup-windows-repository` is the Windows stack orchestrator invoked by `iru-setup-repository` (project type
+`windows-app`) or run standalone. Rather than duplicating solution scaffolding, documentation setup, `.gitignore`
+generation, CI/CD authoring, changelog bootstrapping or README generation, it passes each downstream skill only the
+`args` keys that skill's own Step 0 accepts. It always invokes the scaffold skill, even in `mode: existing`: every
+component sub-skill announces whether it is creating or updating, warns about the prior setup it owns, and asks Update /
+Keep as is / Replace per file (or applies `on-existing` when it arrived via `args`).
+
+Scope is desktop apps built with C# on .NET: a plain .NET class library or ASP.NET Core service, .NET MAUI, Avalonia,
+Uno Platform and Electron are not scaffolded. `ui` is `wpf`, `winui` or `winforms`; `architecture` is `mvvm` for WPF
+and WinUI (MVC is not offered, with an explanation) and `mvc` or `mvvm` for Windows Forms. Pipeline questions are
+cost-aware: `visibility` drives recommendations about Actions minutes (the roughly 1.7x Windows multiplier),
+SonarCloud pricing and GitHub Pages availability, and `ci: no` skips the workflows step entirely (security block
+included). Release questions cover `distribution` (`none`, `internal` or `store`), `signing`
+(`artifact-signing`, `certificate` or `none`) and `winget`.
+
+== Purpose group
+
+xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-windows-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ui`
+|No
+|`wpf`, `winui` or `winforms`. Detected from the app csproj (`UseWPF`/`UseWinUI`/`UseWindowsForms`) and confirmed,
+otherwise asked via `AskUserQuestion`.
+|Detected or asked (WPF recommended)
+
+|`architecture`
+|No
+|`mvvm` or `mvc`. Detected from `ViewModels/` or `Controllers/` in the Core project; forced to `mvvm` for WPF/WinUI;
+asked only for Windows Forms.
+|Detected, forced or asked
+
+|`branching`
+|No
+|`gitflow` (integration + stable branch, `sync.yml`) or `main-only` (no `sync.yml`).
+|Asked; `gitflow` recommended
+
+|`mode`
+|No
+|`new` or `existing`. Defaults to `existing` (confirmed) when a `*.sln`/`*.slnx` or other prior artifact exists,
+otherwise `new` without asking. Every sub-skill still asks per pre-existing file.
+|Detected from disk
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. Never asked here; forwarded to component sub-skills only when supplied.
+|`ask` (sub-skills ask)
+
+|Identity fields (`app-name`, `display-name`, `publisher`, `publisher-display-name`, `package-name`, `license`,
+`developer-name`, `developer-email`, `organization-url`, optionally `root-namespace`, `version`)
+|Yes (unresolved ones)
+|Asked in Step 2 using the keys `iru-setup-windows-app` reads; skipped entirely when a solution already exists.
+|None -- user must supply
+
+|`integration-branch`, `stable-branch`
+|No
+|Shared branch names; the integration branch is skipped for `main-only` and when `ci: no`.
+|`develop`, `main`
+
+|`open-source`, `visibility`
+|No
+|`visibility` is detected with `gh repo view` or asked; open source with a private repository is flagged as
+contradictory. `internal` behaves like `private`.
+|Asked or detected
+
+|`ci`
+|No
+|`yes`/`no`: generate GitHub Actions workflows at all. `no` skips Step 7 and the `ci-tests`/`pages` questions.
+|Asked
+
+|`ci-tests`
+|No
+|`unit` (Core tests on Linux plus a Windows build) or `full` (also the FlaUI desktop UI tests on a Windows runner).
+|Asked; `full` for public, `unit` for private
+
+|`pages`
+|No
+|`yes`/`no`: publish Antora + DocFX docs to GitHub Pages or upload them as a workflow artifact.
+|`yes` for public; asked otherwise (`no` recommended)
+
+|`distribution`, `signing`, `winget`
+|No
+|Release shape: `none`/`internal` (GitHub Releases)/`store` (Microsoft Store); `artifact-signing`/`certificate`/`none`;
+whether to open a WinGet pull request on each release.
+|`internal` when open source; Artifact Signing recommended; `winget` defaults to no
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
+|Asked
+
+|`msix`, `ui-tests`, `rids`
+|No
+|Scaffold toggles passed through untouched if supplied; `msix: no` is sent for an unsigned WPF/WinForms `internal` release.
+|Left to the scaffold's defaults
+
+|`publish`
+|No
+|Accepted and ignored (an app is not published to NuGet); noted in the report.
+|None
+|===
+
+== Outputs
+
+* The .NET 10 solution scaffold -- Core project, WPF/WinUI/WinForms app project, tests, quality config, DocFX and
+  optional MSIX packaging (via `iru-setup-windows-app`), created or updated per file group according to the user's
+  answers.
+* A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
+* A root `.gitignore` (via `iru-setup-windows-gitignore`).
+* CI/CD workflows -- `build.yml`, `release.yml`, `sync.yml` + `sync_versions.py` (gitflow), `security.yml` and
+  `.github/dependabot.yml` (via `iru-setup-windows-github-workflows`); none when `ci: no`.
+* A root `CHANGELOG.md` (via `iru-setup-changelog`) and a root `README.md` (via `iru-setup-readme`).
+* A final report: setup mode, resolved `ui`/`architecture`/`branching`/`mode`, identity, license and pipeline
+  parameters, a per-component table with the action taken (created / updated / replaced / kept as is / skipped
+  (`ci: no`)), the consolidated required-secrets table (omitted when no workflows were generated), decisions made on
+  the user's behalf, and an explicit warning block (Windows-only verification, MSIX publisher matching the signing
+  subject, accounts and secrets that must exist).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-windows-repository] --> B["Step 0: Parse args\n(ui, architecture, branching, mode, visibility,\nci, ci-tests, pages, distribution, signing, identity)"]
+    B --> C["Step 1: Resolve ui, architecture, branching, mode\nand print Setup mode\n(from scratch, or inventory of prior setup)"]
+    C --> D["Step 2: Collect app identity\n(skipped when a solution exists)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, sonar, ci-tests,\npages, distribution, signing, winget)"]
+    E --> G["Step 4: Run iru-setup-windows-app\n(via sub-agent)\nasks Update / Keep / Replace / Stop"]
+    G -- user chose stop --> STOP[Stop entire pipeline; report]
+    G -- ok --> H["Step 5: Run iru-setup-antora"]
+    H --> I["Step 6: Run iru-setup-windows-gitignore"]
+    I --> CI{"ci: no?"}
+    CI -- yes --> K["Step 7 skipped\n(no workflows or security block)"]
+    CI -- no --> J["Step 7: Run iru-setup-windows-github-workflows"]
+    J -- "user chose stop,\nnote it and continue" --> K2["Step 8: Run iru-setup-changelog"]
+    J -- ok --> K2
+    K --> K2
+    K2 --> L["Step 9: Run iru-setup-readme"]
+    L --> M["Step 10: Report setup mode, per-component actions,\nrequired secrets, review warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent rather than a direct `Skill` call, so only a short completion summary flows back and the scaffold's long
+template listings stay out of this orchestrator's context. Every sub-agent is launched with
+`run_in_background: false` since each step depends on the previous one's files being on disk:
+
+* xref:skills/iru-setup-windows-app.adoc[] -- Step 4: writes or updates the solution, Core, app and test projects,
+  quality config, DocFX and packaging, passing Steps 1-3's answers as `args`. Always invoked, even in `mode: existing`.
+  The first restore downloads every NuGet package (and the Windows App SDK for WinUI).
+* xref:skills/iru-setup-antora.adoc[] -- Step 5: scaffolds or updates the Antora site, with no `args` (only
+  `on-existing` when supplied).
+* xref:skills/iru-setup-windows-gitignore.adoc[] -- Step 6: writes or updates the root `.gitignore`, with no `args`
+  (only `on-existing` when supplied).
+* xref:skills/iru-setup-windows-github-workflows.adoc[] -- Step 7, skipped entirely when `ci: no`: writes the CI/CD,
+  release and security workflows, passing `branching`, branches, `ci-tests`, `pages`, `distribution`, `signing`, `winget`,
+  Sonar keys and related args.
+* xref:skills/iru-setup-changelog.adoc[] -- Step 8: bootstraps or updates `CHANGELOG.md` from the repository's tag and
+  release history.
+* xref:skills/iru-setup-readme.adoc[] -- Step 9, last: bootstraps or updates `README.md`, passing only `sonar`, `ci`,
+  `pages` (and `on-existing` when supplied).
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] -- Step 4, `windows-app` bootstrap (`ui` taken from the detected project
+  type), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+It can also be run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] -- spawned once per sub-skill
+  (Steps 4-9), so all six sub-skills' exploration transcripts don't accumulate in this orchestrator's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-windows-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

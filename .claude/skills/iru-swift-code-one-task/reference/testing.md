@@ -118,6 +118,75 @@ All of the following were built and run against a real Swift 6.4 toolchain (`swi
   files see a package's/app's own non-public API. It cannot reach `private`/`fileprivate` declarations; don't
   widen those just to test them (see the next section).
 
+## macOS app tests (desktop)
+
+- **Logic tests live in `Packages/Core`** (Swift Testing): view models and MVC controllers with fake services, and —
+  for MVC — a fake passive view that records what the controller told it (`architecture.md`):
+
+  ```swift
+  @MainActor
+  final class FakeGreetingView: GreetingView {
+    private(set) var messages: [String] = []
+    func showMessage(_ message: String) { messages.append(message) }
+    func setGreetEnabled(_ enabled: Bool) {}
+  }
+
+  @Suite("GreetingController")
+  @MainActor
+  struct GreetingControllerTests {
+
+    @Test("greetRequested shows the greeting")
+    func greetRequestedShowsGreeting() {
+      let view = FakeGreetingView()
+      let controller = GreetingController(service: FakeGreetingService())
+      controller.view = view
+      controller.greetRequested(name: "Ada")
+      #expect(view.messages == ["Hi Ada"])
+    }
+  }
+  ```
+
+  Never instantiate an `NSViewController`/SwiftUI view in a unit test just to raise coverage — the UI layer is
+  "not measured".
+- **XCUITest on macOS drives the real desktop session** (real keyboard focus, mouse, menu bar), not a simulator: a
+  test launches the app with `XCUIApplication()`, `launchArguments.append("--uitesting")` (the app then starts from
+  an empty/in-memory store — `macos.md`), `launch()`, and interacts with Mac idioms: `click()`/`rightClick()`/
+  `hover()` (not `tap()`), `typeText(_:)` into a clicked field, `app.typeKey("n", modifierFlags: .command)` for
+  shortcuts, and menus through `app.menuBars.menuBarItems["File"].click()` then
+  `app.menuBars.menuItems["New Item"].click()`. Scope queries to `app.windows.firstMatch` and query by
+  accessibility identifier; wait with `waitForExistence(timeout:)` / `wait(for: \.exists, toEqual: true,
+  timeout:)`, never `sleep`.
+- The first run on a machine needs the Accessibility/automation permission for Xcode's test runner, and the run
+  takes over the screen — which is why `iru-swift-code-one-task-group` serializes it behind its lock. This skill only
+  writes UI tests; it never runs them.
+
+## iOS/iPadOS and visionOS app tests (simulator)
+
+- **Logic tests live in `Packages/Core`** exactly as above (view models, MVC controllers with a fake passive view,
+  fake services) — never instantiate a `UIViewController`/SwiftUI view to raise coverage.
+- **XCUITest runs on a simulator** (`-destination 'platform=iOS Simulator,name=…'`/`platform=visionOS Simulator,…`):
+  `XCUIApplication()`, then `launchArguments += ["--uitesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]`
+  (the app starts from an in-memory store, skips onboarding and permission prompts, disables animations — `ios.md`;
+  the `-AppleLanguages`/`-AppleLocale` pair pins the language so label assertions don't break on a localized
+  simulator) and `launchEnvironment["KEY"] = "value"` for test-only configuration, then `launch()`. Set them in
+  `setUp`, mark tests `@MainActor`, and set `continueAfterFailure = false`.
+- Touch idioms: `tap()`, `typeText(_:)` into a tapped field, `swipeUp()`/`swipeLeft()` (swipe actions, scrolling),
+  `press(forDuration:)`; navigation through `app.navigationBars.buttons`, `app.tabBars.buttons["Notes"]`, cells via
+  `app.cells`. Device state: `XCUIDevice.shared.orientation = .landscapeLeft` (test both size classes when layout
+  changes), `XCUIDevice.shared.press(.home)` then `app.activate()` for background/foreground paths.
+- **Query by accessibility identifier**, never by localized label or index where an identifier is possible: the app
+  sets `.accessibilityIdentifier("nameField")` (SwiftUI) or `nameField.accessibilityIdentifier = "nameField"` (UIKit)
+  on every element a test touches — the scaffold's lower-camel-case `<element><Role>` style (`nameField`,
+  `greetButton`, `greetingLabel`, `errorLabel`); follow whatever style the project already uses. Wait with `waitForExistence(timeout:)` /
+  `wait(for: \.exists, toEqual: true, timeout:)`, never `sleep`.
+- System permission alerts belong to SpringBoard: the `--uitesting` path should avoid triggering them; where a test
+  must, use `addUIInterruptionMonitor(withDescription:)` or query
+  `XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow"]`.
+- Accessibility regressions: one `try app.performAccessibilityAudit(for: [.dynamicType, .contrast, .hitRegion,
+  .sufficientElementDescription, .textClipped])` test per main screen; ignore a known issue only inside the closure,
+  with a comment.
+- UI tests need a booted simulator and are serialized by `iru-swift-code-one-task-group`; this skill only writes them.
+
 ## What to cover
 
 - **The behavior the task added or changed**, through the type's `public`/`package`/`internal` API — the happy

@@ -1,6 +1,6 @@
 = Swift Code One Task Group
 :description: Implements a bucket of Swift tasks, then validates it once for license headers, DocC, tests, coverage, and quality, serializing simulator runs.
-:keywords: iru-swift-code-one-task-group, claude code skill, swift, swiftpm, xcodebuild, docc, swiftlint, simulator, implementation plan, code coverage
+:keywords: iru-swift-code-one-task-group, claude code skill, swift, ios, visionos, macos desktop app, xcodebuild simulator lock, validate task group, code coverage
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -23,7 +23,16 @@ rare concurrent-write race clobbered it, and notifies the user before group-wide
 app-target test/coverage/full-suite run boots and drives an iOS/tvOS/watchOS Simulator, and only one such run can
 safely use a given destination at a time, every `xcodebuild test` invocation is serialized behind a repository-wide
 `mkdir`-based lock (`.simulator-test.lock`) so two parallel task groups never collide; a Swift Package's
-`swift test` needs no simulator and never takes this lock. A failure traced to a specific task sends that task back
+`swift test` needs no simulator and never takes this lock. For an app it resolves the bucket's scheme(s) once —
+with `iru-setup-apple-app`'s per-platform schemes (`<AppName>-iOS`, `-macOS`, `-watchOS`, `-visionOS`) the schemes of
+the platforms whose `Targets/<Platform>/` files the bucket touches, plus every platform scheme for the full-suite run —
+and each scheme's destination (`platform=macOS`, or a simulator destination always pinned with `OS=<runtime>` because
+device names repeat across runtimes), then makes one gate call per scheme. A platform with no installed simulator
+runtime (typically visionOS) is compile-checked with a `generic/platform=visionOS Simulator` destination and reported
+"unverified (no visionOS simulator runtime installed)" — a runtime is never downloaded. Coverage for files under a
+local `Packages/Core` package goes in a separate `package-path: Packages/Core` call (measured with `swift test` +
+`llvm-cov`, no simulator or lock), since the app scheme's `xccov` report can't see a statically linked local package;
+that is where the 80% bar applies, while app-target UI code is reported "not measured". A macOS desktop app bucket needs no simulator runtime, but its XCUITest run drives the real desktop session through the same lock; those UI tests need the test runner's Accessibility/automation permission and an unlocked, logged-in desktop, and without them the UI-test stage is reported unverified, not passed. On a non-macOS host every app stage is reported "unverified (needs macOS)". A failure traced to a specific task sends that task back
 for a fix and a re-run of the affected checks, rather than re-validating the whole bucket.
 
 == Purpose group
@@ -66,15 +75,16 @@ verdict and any relevant "Current code state" context.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group
   validation completes.
 * A summary handed back to the caller (`iru-code-one-task-group`): per task, target, files touched, tests
-  added/updated, coverage achieved, code-quality outcome, any unverified stage, and any task that stopped on a
-  blocker.
+  added/updated, coverage achieved, code-quality outcome, any unverified stage (no full Xcode install, lock wait
+  timeout, a platform scheme with no simulator runtime such as visionOS), how the simulator lock behaved, and any
+  task that stopped on a blocker.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-swift-code-one-task-group] --> B["Step 1: detect project shape (package/app),\nscheme/destination, touched target(s);\ncapture pre-change quality baseline\n(iru-swift-code-quality, via iru-gate-runner)"]
+    A[Start /iru-swift-code-one-task-group] --> B["Step 1: detect project shape (package/app),\nper-platform scheme to OS-pinned destination map\n(no runtime: unverified + generic build),\ntouched target(s); capture pre-change quality baseline\n(iru-swift-code-quality, via iru-gate-runner)"]
     B --> C{Bucket Parallelizable?}
     C -- yes --> D["Step 2: invoke swift-code-one-task\nfor every task concurrently\n(via iru-isolated-skill-executor)"]
     C -- no --> E["Step 2: invoke swift-code-one-task\nfor each task, one at a time"]
@@ -83,7 +93,7 @@ flowchart TD
     F --> G["Step 3.1-3.2: license headers, DocC\n(via iru-gate-runner)"]
     G --> H{"App-kind bucket?"}
     H -- yes --> I["Step 3.3: acquire simulator lock\n(mkdir .simulator-test.lock)"]
-    H -- no --> K["Step 3.4-3.6: scoped tests, coverage,\nfull suite (via iru-gate-runner)"]
+    H -- no --> K["Step 3.4-3.6: scoped tests, coverage,\nfull suite, one call per scheme;\nPackages/Core coverage via package-path\n(via iru-gate-runner)"]
     I -- HELD --> I2["Wait, poll ~30s;\nstale lock (&amp;gt;60min) broken;\nwait timeout (~45min) reported unverified"]
     I2 --> I
     I -- ACQUIRED --> K
@@ -115,11 +125,13 @@ directly, so verbose report output stays out of this skill's own context:
   regression check against that baseline).
 * xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
 * xref:skills/iru-swift-docc.adoc[] — Step 3.2, DocC documentation for every type the bucket touched.
-* xref:skills/iru-swift-test.adoc[] — Step 3.4, a scoped test run for every test the bucket affected.
-* xref:skills/iru-swift-coverage.adoc[] — Step 3.5, line coverage for every changed/new file/type in the bucket.
+* xref:skills/iru-swift-test.adoc[] — Step 3.4, a scoped test run for every test the bucket affected, one call per
+  in-scope scheme with its `kind:`/`scheme:`/`destination:` lines.
+* xref:skills/iru-swift-coverage.adoc[] — Step 3.5, line coverage for every changed/new file/type in the bucket, one
+  call per scheme plus a separate `package-path: Packages/Core` call for local-package files.
 
-Step 3.6's full-suite run (`swift test` for a package, `xcodebuild test` for an app, under the Step 3.3 simulator
-lock) is run directly by `iru-gate-runner` rather than through a named skill, so it has no dedicated skill xref.
+Step 3.6's full-suite run (`swift test` for a package, `xcodebuild test` once per platform scheme for an app, under
+the Step 3.3 simulator lock) is run directly by `iru-gate-runner` rather than through a named skill, so it has no dedicated skill xref.
 
 === Invoked by
 

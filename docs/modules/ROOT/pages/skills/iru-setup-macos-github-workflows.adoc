@@ -1,0 +1,155 @@
+= Setup macOS GitHub Workflows
+:description: Creates or updates GitHub Actions and Dependabot for a macOS app: Linux lint, cost-gated macOS tests, DocC docs, notarized DMG release, App Store upload.
+:keywords: iru-setup-macos-github-workflows, claude code skill, github actions, macos, xcodebuild, notarization, dmg, app store connect, dependabot, swiftlint
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold or update the CI/CD pipeline for a macOS desktop app built by `iru-setup-macos-app`, around one cost rule:
+what can run on Linux runs on `ubuntu-latest`, and only what needs Xcode uses the macOS runner, because macOS minutes
+cost about 10x Linux minutes on a private repository.
+
+== Purpose
+
+`iru-setup-macos-github-workflows` is the CI/CD step of the macOS chain run by `iru-setup-macos-repository`, and it also
+works standalone. It writes `build.yml` (a Linux `lint` job running SwiftLint and swift-format in a `swift` container;
+a cost-gated macOS job, `macos-ci: all|stable`, with `needs: lint`, running the Core tests with an 80% line-coverage
+bar, `xcodegen generate`, `xcodebuild test` with ad-hoc signing, optionally the XCUITest UI tests, and DocC; an
+optional Linux SonarQube job; and an Antora docs job merged with the DocC archive), `release.yml` per `distribution`
+(`internal`: Developer ID archive and export, notarized and stapled app and DMG, Gatekeeper check, attached to the
+GitHub Release; `store`: archive and upload to App Store Connect), `sync.yml` plus `sync_versions.py` for gitflow (next
+`MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` + 1), and the shared security block (`security.yml` with
+dependency-review, CodeQL `swift`, OSV-Scanner and gitleaks; Dependabot for `swift` and `github-actions`). Everything
+uses Xcode's own tools; there is no Fastlane.
+
+The templates assume `iru-setup-macos-app`'s scaffold contract; on a different layout the skill warns, asks whether to
+continue and adapts the commands. It announces whether it is creating or updating, asks Update / Keep as is / Replace /
+Stop per existing file naming each mismatch (unless `on-existing` decides), looks up runner images and action versions
+at run time, and ends with the required-secrets table. Standalone it resolves `visibility` and asks
+`macos-ci`/`ci-tests`/`pages`/`sonar` with the cost facts for that visibility; there is no `ci` key.
+
+== Purpose group
+
+xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-macos-github-workflows
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`branching`
+|No
+|`gitflow` or `main-only`. `main-only` writes no `sync.yml`/`sync_versions.py`.
+|`gitflow` when an integration branch exists, else asked
+
+|`integration-branch`, `stable-branch`
+|No
+|Branch names, confirmed against `git branch -a`.
+|`develop`, `main`
+
+|`runner`, `xcode-version`
+|No
+|macOS runner label and the Xcode version for `maxim-lobanov/setup-xcode`.
+|`macos-26`; `project.yml`'s Xcode version or the image default
+
+|`macos-ci`
+|No
+|`all` or `stable`: when the macOS job and CodeQL `swift` run.
+|Asked with cost facts
+
+|`ci-tests`
+|No
+|`unit` or `full` (adds the XCUITest UI tests to the macOS job).
+|`full` for public; asked for private (`unit` recommended)
+
+|`pages`
+|No
+|`yes` publishes Antora + DocC to GitHub Pages; `no` uploads a workflow artifact.
+|`yes` for public; asked otherwise (`no` recommended)
+
+|`distribution`
+|No
+|`none`, `internal` or `store`.
+|Read from the committed `ExportOptions-*.plist`; asked only when ambiguous
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`.
+|Read from `sonar-project.properties` when present; else asked
+
+|`open-source`, `visibility`
+|No
+|`visibility` is detected with `gh repo view` or asked; `internal` behaves like `private`.
+|Detected or asked
+
+|`mode`, `on-existing`
+|No
+|`mode` is informational; `on-existing` is `ask`, `keep`, `update` or `replace`.
+|`ask`
+
+|`security-*` toggles
+|No
+|Each gates one `security.yml` job.
+|`yes`
+|===
+
+== Outputs
+
+* `.github/workflows/build.yml`, `release.yml` (when `distribution` is not `none`), `sync.yml` and
+  `.github/scripts/sync_versions.py` (gitflow), `security.yml`, `.github/dependabot.yml`, and
+  `.github/scripts/lcov_to_sonar_generic.py` when Sonar is configured.
+* A verification pass: `actionlint` (or a YAML parse), `py_compile` of the scripts and, on macOS with the scaffold, a
+  local run of the `lint` and `macos` job commands through `iru-gate-runner`. Signing, notarization, App Store upload
+  and runner behavior are reported unverified.
+* A report with the action per file, the job and runner layout (restating the roughly 10x macOS cost), the options
+  applied and the required-secrets table (`SONAR_TOKEN`, Apple team ID, App Store Connect API key, Developer ID
+  certificate) plus repository-settings notes. It also tells `iru-setup-readme` the workflow names, the DMG asset name
+  and the docs URL.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-macos-github-workflows] --> B["Step 0: Parse args; standalone: resolve visibility,\nmacos-ci, ci-tests, pages, sonar"]
+    B --> C["Step 1: Survey repository (project.yml, export plists,\nexisting workflows); announce mode;\nUpdate / Keep / Replace / Stop per file"]
+    C -- user chose stop --> STOP[Stop and report]
+    C --> D["Step 2: Look up versions and runner images\n(fallback table)"]
+    D --> E["Step 3: Render templates\nbuild, release, sync, security, dependabot"]
+    E --> F["Step 4: Write files per decision"]
+    F --> G["Step 5: Verify (actionlint or YAML parse,\npy_compile, local lint and macos job commands)"]
+    G --> H["Step 6: Report per-file actions, job layout,\nrequired secrets and settings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-setup-macos-github-workflows` invokes no other catalog skill; it writes workflow files from its own
+`reference/workflow-templates.md` and runs `gh`, `git`, `actionlint`, `xcodegen`, `xcodebuild` and `python3` directly.
+The generated `sync.yml` follows the version convention of xref:skills/iru-swift-bump-version.adoc[] and the layout
+contract of xref:skills/iru-setup-macos-app.adoc[], but neither is called.
+
+=== Invoked by
+
+* xref:skills/iru-setup-macos-repository.adoc[] -- Step 7 (skipped when `ci: no`), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing `branching`, branches,
+  `runner`, `macos-ci`, `ci-tests`, `pages`, `distribution`, the Sonar keys, `mode` and `on-existing` so nothing is
+  asked twice.
+
+It can also be run directly by a person to add or refresh the pipeline later.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- runs the local verification of the job commands (Step 5).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-macos-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

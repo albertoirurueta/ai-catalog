@@ -1,6 +1,6 @@
 = Setup Readme
 :description: Creates or refreshes a repository README.md with badges, a status table, doc links and install or run steps for libraries, services, apps and plugins.
-:keywords: iru-setup-readme, claude code skill, readme, badges, react native, kotlin multiplatform, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, installation instructions
+:keywords: iru-setup-readme, claude code skill, readme, badges, react native, kotlin multiplatform, spring boot, quarkus, laravel, wordpress, nestjs, nextjs, fastapi, django, python, macos app, windows desktop app, installation instructions
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -17,10 +17,12 @@ description, license, build tool, current and latest-released versions), taking 
 `iru-explore` itself, so the manifest to project-type table lives in exactly one place; only when `iru-explore`
 isn't installed does it fall back to a minimal one-manifest check. Beyond the library and app stacks (Java/Maven,
 Gradle/Kotlin, Vite+React, Angular, Hilla, Expo, Ionic, Android, Swift, plain TypeScript), it tailors sections
-for Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress plugins and themes,
+for macOS desktop apps (SwiftUI/AppKit), Windows desktop apps (WPF/WinUI 3/Windows Forms), Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress plugins and themes,
 PrestaShop modules, plain Composer packages, NestJS, Next.js, FastAPI, Django and plain Python packages. Identity is read from the file that owns it for
 each stack: `springboot-stack.yml`/`quarkus-stack.yml`, `gradle.properties`, `config/app.php` (Laravel), the
-WordPress plugin/theme headers, the PrestaShop module class, `pyproject.toml` (`[project].name`/`version`, `requires-python`, with framework versions from `uv.lock`), or git tags.
+WordPress plugin/theme headers, the PrestaShop module class, `pyproject.toml` (`[project].name`/`version`, `requires-python`, with framework versions from `uv.lock`), `project.yml`/`Project.swift` (macOS apps, adding the deployment target, UI framework and App Sandbox status rows), `Directory.Build.props` and the app `*.csproj`/`Package.appxmanifest` (Windows apps: `<Version>`, target framework, UI stack, Windows App SDK version, MSIX identity), or git tags.
+
+Desktop apps (`macos-app`, `windows-app`) get no dependency snippet: when a release workflow exists the README gets an "Install" subsection matched to what it publishes (a notarized DMG or Mac App Store link; a Windows zip, MSIX/`.appinstaller`, `winget install` or Microsoft Store link — store URLs as placeholders), followed by "Build and run locally" steps (`xcodegen`/`xcodebuild`/`swift test` for macOS; `dotnet build`/`dotnet run`/`dotnet test --filter "TestCategory!=UI"` and the .NET 10 SDK prerequisite for Windows).
 
 Badges are only emitted for resources that exist: CI status, SonarCloud/SonarQube, npm, Maven Central, Swift
 Package Index, Packagist, PyPI (Python libraries only) and WordPress.org (all only after a live check that the package or slug is published),
@@ -28,7 +30,7 @@ static PHP/Python/WordPress/PrestaShop requirement badges (plus FastAPI/Django f
 actual `images:` value. The project status table grows extra rows (platforms, SDKs, Kotlin, PHP, Swift tools,
 Node engine, TypeScript, framework, Distribution) only for the stacks they apply to. Documentation links cover the
 Antora site, Maven/Gradle site report, Sonar dashboard, generated API docs (TypeDoc, Compodoc, Storybook, Dokka
-including Spring Boot's `/api/kdoc/`, phpDocumentor, DocC, Sphinx, generated REST/gRPC/AsyncAPI docs and OpenAPI schemas for FastAPI/Django), a static-export
+including Spring Boot's `/api/kdoc/`, phpDocumentor, DocC (Swift/macOS apps, from the workflow's `api/` copy step), DocFX (.NET/Windows desktop apps, when `docfx.json` exists), Sphinx, generated REST/gRPC/AsyncAPI docs and OpenAPI schemas for FastAPI/Django), a static-export
 live site, registry/store pages and `CHANGELOG.md`.
 
 Libraries get an Installation section (Maven, Gradle with an optional version-catalog form, npm plus pnpm/yarn

@@ -6,7 +6,7 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 
 Bootstrap a minimal, working Antora documentation site for a repository: verify/install the Node.js toolchain,
 install Antora plus its extensions, scaffold `antora.yml`/`antora-playbook.yml` and a `ROOT` module with three
-starter pages, and confirm the site actually builds. The component name is derived from the project identifier (Maven `artifactId`, npm package `name`, or `pyproject.toml` `[project].name`), a Python `.dev0` pre-release suffix is stripped from the starting version like `-SNAPSHOT`, and for Python projects the optional API-docs entry in the starter pages points at the Sphinx build (`docs/api/`, published under the site's `api/`).
+starter pages, and confirm the site actually builds. The component name is derived from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml` `[project].name`, a .NET solution's `*.slnx`/`*.sln` file name, or an XcodeGen `project.yml`'s `name:`), a Python `.dev0` or .NET/PHP `-dev` pre-release suffix is stripped from the starting version like `-SNAPSHOT` (for an Apple app the version comes from `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`), and for Python projects the optional API-docs entry in the starter pages points at the Sphinx build (`docs/api/`, published under the site's `api/`).
 
 == Purpose
 

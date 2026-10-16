@@ -1,66 +1,101 @@
 ---
 name: iru-setup-apple-app
 description: >-
-  Scaffold a new native Apple app (iOS/iPadOS/macOS/watchOS, SwiftUI, Swift 6) at the repository root —
-  a generator manifest (XcodeGen's `project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one
-  application target per selected platform with a SwiftUI `App` entry point, `MARKETING_VERSION`/
-  `CURRENT_PROJECT_VERSION`, `SWIFT_STRICT_CONCURRENCY = complete`, and Info.plist keys, a shared `Packages/Core`
-  local SwiftPM package for testable business logic, a Swift Testing unit-test target and an XCUITest UI-test
-  target per platform, watchOS companion-app wiring when both `ios` and `watchos` are selected, `.swiftlint.yml`,
-  `.swift-format`, a `fastlane/Fastfile` with lanes gated by `signing`/`distribution`, and `sonar-project.properties`
-  (omitted when `sonar: none`). The generated `.xcodeproj`/`.xcworkspace` is never committed — it's regenerated on
-  demand by `xcodegen generate`/`tuist generate` and gitignored by the companion `iru-setup-swift-gitignore` skill.
-  Invoke as `/iru-setup-apple-app`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`,
-  `bundle-id-prefix`, `platforms` (multi-select: `ios`, `ipados`, `macos`, `watchos` — `ipados` alone or alongside
-  `ios` widens the iOS target's `TARGETED_DEVICE_FAMILY` rather than adding a second target), `generator`
-  (`xcodegen`/`tuist` — asked when unset, with XcodeGen recommended for a single-target app and Tuist for a
-  modular, multi-package app), `min-deployment-target`, `distribution` (`none`/`internal`/`store`), `signing`
-  (`fastlane-match`/`api-key`/`none`), `license`, `developer-name`, `developer-email`, `organization-url`,
-  `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `visibility`
-  (`public`/`private`/`internal`, keying the Sonar recommendation), `ci` (`yes`/`no` — with `no`, Sonar is
-  configured build-side only), `on-existing` (`ask`/`keep`/`update`/`replace`), and `mode` (`new`/`existing`) — so
-  an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks `open-source` first and
-  derives the `sonar` question's default from that answer. Announces whether it is scaffolding from scratch or
-  updating an existing app; for each of its files that already exists (manifest, `Packages/Core/Package.swift`,
-  lint/format config, `fastlane/Fastfile`, `sonar-project.properties`) it warns and asks Update (merge, keep
-  customizations) / Keep as is / Replace (regenerate from template) / Stop, explaining each consequence —
-  `on-existing` answers for every file at once, and `mode: existing` no longer means a silent gap-fill; hand-written
-  app/test source is never overwritten.
-  Every generator/tool version is looked up at run time (GitHub releases API, and the Homebrew formula/cask JSON
-  API — reachable over plain HTTPS without `brew` itself installed), falling back to the versions recorded in this
-  file when a lookup fails. Equivalent to `iru-setup-android-app`/`iru-setup-react-native-app` for the native Apple
-  stack; use `iru-setup-swift-library` instead for a pure SwiftPM library with no app target. Use whenever a new
-  native iOS/iPadOS/macOS/watchOS application needs its project generator manifest, shared package, test targets,
-  lint/format config, and Fastlane/Sonar tooling bootstrapped from this house template, instead of hand-configuring
-  each Xcode build setting.
+  Scaffold a new native Apple app (iOS/iPadOS/macOS/watchOS/visionOS, Swift 6) at the repository root — a generator
+  manifest (XcodeGen's `project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one application target
+  `<AppName>-<Platform>` (scheme of the same name) per selected platform with `MARKETING_VERSION`/
+  `CURRENT_PROJECT_VERSION`, `SWIFT_STRICT_CONCURRENCY = complete`, Info.plist keys and a pinned test host; a shared
+  UI-framework-free `Packages/Core` local SwiftPM package (Foundation + Observation only: `Models/`, `Services/`, plus
+  `ViewModels/` for `architecture: mvvm` or `Controllers/` + a passive-view protocol for `architecture: mvc`) whose
+  Swift Testing suite covers 100% of its lines; per-platform `Targets/<Platform>/{Sources,Tests,UITests}` — SwiftUI
+  `App` + MVVM screen, or for the iOS/iPadOS target with `ui: uikit` a programmatic UIKit app (`AppDelegate` +
+  `UIWindowSceneDelegate` with a scene manifest, `UINavigationController` root, `UIViewController` laid out in code,
+  `mvc` controller core or `mvvm` with UIKit Observation tracking, `UIObservationTrackingEnabled` below iOS 26);
+  a `--uitesting` launch argument and accessibility identifiers on every control; a Swift Testing unit-test target
+  and an XCUITest UI-test target per platform, watchOS companion-app wiring when `ios` and `watchos` are both
+  selected, `.swiftlint.yml`, `.swift-format`, an optional `fastlane/Fastfile` with lanes gated by `signing`/
+  `distribution`, and `sonar-project.properties` (omitted when `sonar: none`). The generated `.xcodeproj`/
+  `.xcworkspace` is never committed. Invoke as `/iru-setup-apple-app`. Accepts pre-resolved inputs via `args`
+  (`key: value` lines) — `app-name`, `bundle-id-prefix`, `platforms` (multi-select: `ios`, `ipados`, `macos`,
+  `watchos`, `visionos` — `ipados` widens the iOS target's `TARGETED_DEVICE_FAMILY` rather than adding a target;
+  tvOS is not supported), `ui` (`swiftui`/`uikit`, iOS/iPadOS target only, default `swiftui`), `architecture`
+  (`mvvm`/`mvc`; `mvc` only with `uikit`), `generator` (`xcodegen`/`tuist`), `min-deployment-target`,
+  `distribution` (`none`/`internal`/`store`), `signing` (`fastlane-match`/`api-key`/`none`), `license`,
+  `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/
+  `sonar-project-key`/`sonar-host-url`), `visibility`, `ci`, `on-existing` (`ask`/`keep`/`update`/`replace`) and
+  `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; stand-alone it asks
+  `open-source` first and derives the `sonar` default from it. Announces whether it is scaffolding from scratch or
+  updating; for each owned file that already exists it warns and asks Update / Keep as is / Replace / Stop (unless
+  `on-existing` decides) and never overwrites hand-written source. Versions are looked up at run time with a dated
+  October 2026 fallback table. Equivalent to `iru-setup-android-app`/`iru-setup-react-native-app` for the native
+  Apple stack; use `iru-setup-macos-app` for a macOS-only (SwiftUI or AppKit) desktop app and
+  `iru-setup-swift-library` for a pure SwiftPM library. Use whenever a new native iOS/iPadOS/macOS/watchOS/visionOS
+  application needs its project manifest, testable core, tests, lint/format config and Fastlane/Sonar tooling
+  bootstrapped from this house template.
 model: haiku
 ---
 
 # Setup Apple App
 
-Generate a complete, buildable native Apple application scaffold — a project-generator manifest (XcodeGen's
-`project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one application target per selected platform,
-a shared `Packages/Core` local SwiftPM package that holds all testable business logic, per-platform Swift Testing
-unit-test and XCUITest UI-test targets, lint/format config, a gated `fastlane/Fastfile`, and `sonar-project.properties`
-— from explicit example templates embedded in this skill (Step 5).
+Generate a complete, buildable native Apple application scaffold — a project-generator manifest declaring one
+application target per selected platform, a UI-free `Packages/Core` local package holding all testable logic, the
+per-platform UI layer (SwiftUI everywhere, or programmatic UIKit for the iOS/iPadOS target), unit and UI tests,
+lint/format config, an optional gated `fastlane/Fastfile` and `sonar-project.properties` — from the templates in this
+skill's `reference/` files. The XcodeGen path of every template was rendered into throwaway projects and proven
+against the real toolchain on 2026-10-16 (Xcode 27.1, Swift 6.4, XcodeGen 2.46.0, SwiftLint 0.65.1) — see **Known
+quirks / verification notes**.
 
-This skill never writes application binaries to source control: `.xcodeproj`/`.xcworkspace` are always generator
-output, regenerated on demand (`xcodegen generate` or `tuist generate`) and gitignored — the companion
-`iru-setup-swift-gitignore` skill covers this, run it right after this one if it hasn't run yet. This skill also
-never runs `xcodegen`/`tuist` itself when neither binary is installed (Step 7 says exactly what that means for
-verification) — it only ever writes the manifest text; the person running this skill installs the generator
-(`brew install xcodegen` / `brew install tuist`, or `mint run …`) before their first `generate`.
+The layout is the **scaffold contract** the Swift coding and gate skills (`iru-swift-code-one-task(-group)`,
+`iru-swift-test`, `iru-swift-coverage`, `iru-swift-code-quality`, `iru-swift-docc`, `iru-swift-bump-version`),
+`iru-explore` (which recognizes `Targets/<Platform>/Sources/` as this skill's layout) and
+`iru-setup-swift-github-workflows` rely on — Step 8's contract table lists the confirmed names, commands and paths.
+`Packages/Core`'s `ViewModels/` vs `Controllers/` layout is the same contract `iru-setup-macos-app` uses
+(`iru-swift-code-one-task`'s `reference/architecture.md`). Facts come from the author's docs (cited as "irurueta docs:
+apps/apple/<page>.adoc"): `app-structure-and-lifecycle.adoc` (SwiftUI `App`, UIKit scene life cycle and scene
+manifest, mandatory with the 27 SDK), `uikit-and-appkit-interop.adoc` (view controllers, Auto Layout, UIKit
+Observation tracking, storyboards as legacy), `app-architecture.adoc` (MV vs MVVM with Observation, protocol-typed
+services and test doubles), `multiplatform-projects.adoc` (destinations, separate watchOS target, `#if os`),
+`ipados.adoc` (multiple scenes, device families) and `visionos.adoc` (native visionOS vs "Designed for iPad").
+
+This skill never commits generator output: `.xcodeproj`/`.xcworkspace` are regenerated on demand (`xcodegen
+generate` / `tuist generate`) and gitignored by the companion `iru-setup-swift-gitignore` skill — run it right after
+this one. It never installs XcodeGen/Tuist/SwiftLint itself (`brew install xcodegen`/`tuist`/`swiftlint`, or
+`mint run …`, is the user's call).
+
+**Not supported**: tvOS — the author's docs repository has no tvOS page, so there is no grounded template; say so if
+asked and suggest adding a tvOS target by hand. Mac Catalyst and "Designed for iPad/iPhone" destinations are not
+generated either (native targets only).
+
+## Reference files — read only what this run needs
+
+| Read | When |
+|---|---|
+| `reference/project-templates.md` | **Always.** `project.yml` (or `Project.swift` + `Tuist.swift`), `.swiftlint.yml`, `.swift-format`, `fastlane/Fastfile`, `sonar-project.properties`. |
+| `reference/core-templates.md` | **Always.** `Packages/Core` (Package.swift, DocC catalog, Models/Services, ViewModels or Controllers) and its Swift Testing tests. |
+| `reference/swiftui-templates.md` | Any SwiftUI target: iOS/iPadOS with `ui: swiftui`, and every `macos`/`watchos`/`visionos` target. Also `LaunchOptions.swift` (every target). |
+| `reference/uikit-templates.md` | `ui: uikit` — the iOS/iPadOS target's `AppDelegate`, `SceneDelegate`, `GreetingViewController` (mvc or mvvm), `GreetingLayout`. |
+| `reference/test-templates.md` | **Always.** Per-target unit tests (per `ui`/`architecture`) and the XCUITest. |
+
+**Conditional-marker convention used in every reference file**: a line `// >>> <condition>` (or `# >>>`,
+`<!-- >>> … -->`) opens a block written only when the condition holds; the matching `<<< <condition>` closes it;
+marker lines are never written. A heading suffixed `(<condition>[, <condition>])` exists only when every listed
+condition holds. Conditions: `platform: iOS|macOS|watchOS|visionOS` (inside a per-platform block: which platform it is
+being rendered for), `ui: swiftui|uikit`, `architecture: mvvm|mvc`, `watchos-companion` (`watchos` + `ios`/`ipados`),
+`watchos-standalone` (`watchos` alone), `observation-tracking-opt-in` (= `ui: uikit` + `architecture: mvvm` + an iOS
+deployment target below `26`), `swiftui-screen` (= `architecture: mvvm` or any SwiftUI target), `distribution: none|internal|store`, `sonar` (= `sonar` is not `none`), `sonar: cloud`.
+`<placeholder>` values come from Step 5's table and are substituted in headings (file paths) too.
 
 ## Step 0 — Resolve inputs
 
-This skill can be invoked stand-alone (`/iru-setup-apple-app`) or as a step inside another skill (e.g. a future
-`iru-setup-apple-repository` or the catalog's `iru-setup-repository` front door), which resolves these same inputs
-itself and passes them through `args` as `key: value` lines, one per line, e.g.:
+Invoked stand-alone (`/iru-setup-apple-app`) or by `iru-setup-swift-repository` / the `iru-setup-repository` front
+door, which pass resolved answers as `key: value` lines, e.g.:
 
 ```
 app-name: My App
 bundle-id-prefix: com.example
-platforms: ios,ipados,watchos
+platforms: ios,ipados,watchos,visionos
+ui: uikit
+architecture: mvc
 generator: xcodegen
 min-deployment-target: 26.0
 distribution: store
@@ -79,976 +114,420 @@ ci: yes
 mode: new
 ```
 
-Parse any such lines from `args` now. Every field found here is resolved — skip asking about it in Step 2. Only
-fields genuinely missing from `args` still need a question. If `args` is absent or doesn't look like this format,
-treat everything as unset and ask normally.
+Parse any such lines from `args` now. Every field found here is resolved — skip asking about it in Step 2. If `args`
+is absent or doesn't look like this format, treat everything as unset and ask normally.
 
-Recognized keys: `app-name`, `bundle-id-prefix` (reverse-DNS, e.g. `com.example` — the app's own bundle id is this
-plus a slugified `app-name`, e.g. `com.example.myapp`), `platforms` (comma-separated subset of `ios`, `ipados`,
-`macos`, `watchos` — see Step 2 for how `ipados` combines with `ios`), `generator` (`xcodegen`/`tuist`),
-`min-deployment-target` (a single OS version number applied to every selected platform, e.g. `26.0` — default
-looked up in Step 4), `distribution` (`none`/`internal`/`store`), `signing` (`fastlane-match`/`api-key`/`none`),
-`license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar`
-(`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`, `sonar-organization`/
-`sonar-project-key`/`sonar-host-url`, `visibility` (`public`/`private`/`internal` — the GitHub repository's
-visibility, only used to key Step 2's Sonar recommendation; `internal` behaves like `private`), `ci` (`yes`/`no` —
-whether GitHub Actions workflows will exist to send Sonar reports; see Step 2's `ci: no` note), `on-existing`
-(`ask`/`keep`/`update`/`replace`, default `ask` — how Step 1 treats each already-existing file), and `mode`
-(`new`/`existing`).
+| Key | Values / default |
+|---|---|
+| `app-name` | display name (`CFBundleDisplayName`), e.g. `My App`; `<AppName>` (target stem, module, product, `@main` type) is its PascalCase form, e.g. `MyApp` |
+| `bundle-id-prefix` | reverse-DNS, e.g. `com.example`; the app's bundle id is this plus a slugified `app-name` (`com.example.myapp`) |
+| `platforms` | comma-separated subset of `ios`, `ipados`, `macos`, `watchos`, `visionos` (Step 2 explains how `ipados` combines with `ios`). `tvos` is answered with "not supported by this skill" (see intro) and dropped |
+| `ui` | `swiftui` (default) / `uikit` — applies **only to the iOS/iPadOS target**; ignored (and named in the report) when neither `ios` nor `ipados` is selected |
+| `architecture` | `ui: swiftui` → `mvvm` only (never asked); `ui: uikit` → `mvc` (default, recommended) or `mvvm`. `ui: swiftui` + `architecture: mvc` is rejected with Step 2's explanation. The choice shapes `Packages/Core`; with `ui: uikit` + `mvc` and SwiftUI platforms (macOS/watchOS/visionOS) also selected, Core gets both `Controllers/` and `ViewModels/` (Step 2) |
+| `generator` | `xcodegen` / `tuist` — asked when unset |
+| `min-deployment-target` | the iOS deployment target, e.g. `26.0` (default from Step 4); other platforms get their equivalent from Step 5's table |
+| `distribution` | `none` / `internal` / `store` |
+| `signing` | `fastlane-match` / `api-key` / `none` |
+| `license`, `developer-name`, `developer-email`, `organization-url` | report + copyright line |
+| `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`) | the `sonar` recommendation (Step 2); `visibility` is only used for that; `internal` behaves like `private` |
+| `on-existing` | `ask` (default) / `keep` / `update` / `replace` — how Step 1 treats each already-existing file |
+| `mode` | `new` / `existing` |
 
-`mode: existing` is this catalog's shared signal (set by a front door that already ran `iru-explore` and knows this
-is an established repository) that this is an update rather than a from-scratch run. It **no longer means a silent
-gap-fill**: Step 1 still warns about and asks per already-existing file (unless `on-existing` says otherwise).
-`mode: new` or an unset `mode` follows the same Step 1 survey — the files actually on disk decide whether each one
-is created or updated.
+`mode: existing` is this catalog's shared signal that this is an update rather than a from-scratch run. It **never
+means a silent gap-fill**: Step 1 still warns about and asks per already-existing file (unless `on-existing` says
+otherwise). `mode: new` or an unset `mode` follows the same Step 1 survey — the files on disk decide whether each one is
+created or updated. Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, `branching`, …) are
+ignored and named in the report.
 
 ## Step 1 — Survey the repository
 
 Check, at the repository root, for this skill's owned files: the manifest (`project.yml`, or `Project.swift` +
 `Tuist.swift`), `Packages/Core/Package.swift`, `.swiftlint.yml`, `.swift-format`, `fastlane/Fastfile`, and
 `sonar-project.properties`; plus the source skeleton (`Packages/Core/Sources`/`Tests`, `Targets/*/Sources`,
-`Targets/*/Tests`, `Targets/*/UITests`) and any hand-maintained `*.xcodeproj`/`*.xcworkspace`. Then tell the user,
-before anything else, which of the two this run is:
+`Targets/*/Tests`, `Targets/*/UITests`) and any hand-maintained `*.xcodeproj`/`*.xcworkspace`. When updating, also
+read the current evidence for Step 2's defaults: app name, bundle id prefix, platforms (`Targets/<Platform>/`
+folders and manifest targets), deployment targets, `ui` (`Targets/iOS/Sources/SceneDelegate.swift` /
+`UIApplicationDelegate` = `uikit`; `@main struct … App` = `swiftui`) and `architecture` (`Core/ViewModels/` = `mvvm`,
+`Core/Controllers/` = `mvc`; neither = an older scaffold of this skill with the flat `Greeter` placeholder). Then tell
+the user, before anything else, which of these this run is:
 
 - **Nothing exists**: "**Scaffolding the Apple app from scratch** — none of this skill's files exist yet." Skip
-  straight to Step 2; every Step 5 file is *created*.
+  straight to Step 2; every file is *created*.
 - **Only a hand-maintained `.xcodeproj`/`.xcworkspace` exists, with neither `project.yml` nor `Project.swift`**:
   this isn't this skill's scaffold — it's a project that predates any generator. Warn the user explicitly and ask
   whether to adopt XcodeGen/Tuist going forward (this skill can then write a manifest describing the *existing*
   targets as a starting point, best-effort) or stop. Don't attempt to reverse-engineer the `.xcodeproj` file
   automatically — confirm the target list with the user first. The remaining owned files then follow the per-file
   rule below.
+- **An `iru-setup-macos-app` layout** (`App/Sources`, one macOS target): not this skill's scaffold — warn and suggest
+  `iru-setup-macos-app` instead; continue only on an explicit yes, adding files alongside, never moving any.
 - **Any owned file exists**: "**Updating an existing Apple app** — found: <list of paths>." For each existing owned
   file, **warn** and resolve what to do with it. If `on-existing` is `keep`/`update`/`replace`, apply it to every
   existing file without asking (still print the warning and the list). Otherwise (`on-existing: ask` or unset —
   and regardless of `mode`), ask with `AskUserQuestion`, one question per file, batching up to four per call, with
   these consequences stated in the option descriptions:
-  - **Update (Recommended)** — merge: add what's missing and correct outdated parts using Step 5's template as
-    reference (e.g. a missing platform target triple, `SWIFT_STRICT_CONCURRENCY = complete`, a Fastfile lane now
-    gated in by `signing`/`distribution`, stale `sonar.*` keys), keeping every target, scheme, build setting, lane
-    or key this skill doesn't own. You review a diff before it's written; customizations survive, but a part this
-    skill owns may be rewritten.
+  - **Update (Recommended)** — merge: add what's missing and correct outdated parts using the reference template
+    (e.g. a missing platform target triple, the pinned `TEST_HOST`/`BUNDLE_LOADER`, the watch app's `WKApplication`
+    key, a UIKit scene manifest, `SWIFT_STRICT_CONCURRENCY = complete`, a Fastfile lane now gated in by
+    `signing`/`distribution`, stale `sonar.*` keys), keeping every target, scheme, build setting, lane or key this
+    skill doesn't own. You review a diff before it's written; customizations survive, but a part this skill owns may
+    be rewritten.
   - **Keep as is** — leave the file untouched. Nothing customized changes, but it may stay out of date or disagree
     with this run's choices — say so concretely in the question when it does (e.g. "`fastlane/Fastfile` has a
     `release` lane but you chose `distribution: internal`", "`sonar-project.properties` exists but you chose
-    `sonar: none`", "`project.yml` has no watchOS target but you selected `watchos`"); Step 8 lists each mismatch.
-  - **Replace** — regenerate from Step 5's template. The result matches this house pattern exactly, but every
-    target, scheme, build-setting, lane or key customization in that file is lost — recoverable only from git
-    history. Never recommended by default. When the manifest is replaced, first read its current app name, bundle
-    id prefix, platforms and deployment target and offer them as the defaults for whichever Step 2 question Step 0
-    didn't already resolve via `args`.
+    `sonar: none`", "`project.yml` has no visionOS target but you selected `visionos`", "`project.yml`'s test targets
+    have no `TEST_HOST` — `xcodebuild test` fails with *Could not find test host*"); Step 8 lists each mismatch.
+  - **Replace** — regenerate from the template. The result matches this house pattern exactly, but every target,
+    scheme, build-setting, lane or key customization in that file is lost — recoverable only from git history. Never
+    recommended by default. When the manifest is replaced, first read its current values and offer them as the
+    defaults for whichever Step 2 question Step 0 didn't already resolve.
   - **Stop** — end this skill now without changing anything. Report this and end here.
 
   Questions about `fastlane/Fastfile`/`sonar-project.properties` whose expected content depends on Step 2's
   `signing`/`distribution`/`sonar` answers are asked after Step 2 resolves those (or now, if `args` already did).
 
-  The source skeleton is never part of this question: whatever the decision, never touch any existing file under
+  The source skeleton is never part of this question: whatever the decision, never touch an existing file under
   `Targets/*/Sources`, `Targets/*/Tests`, `Targets/*/UITests`, or `Packages/Core/Sources`/`Packages/Core/Tests`
-  beyond the placeholder files this skill creates originally (detect by exact content match against Step 5's
-  templates before overwriting any Swift file) — missing placeholder files for a newly selected platform are
-  created. Record each file's decision; Step 6 applies it and Step 8 reports it as **created / updated / replaced /
-  kept as is**.
+  unless its content exactly matches one of this skill's templates (current or the earlier flat `Greeter`/
+  `ContentView`/`<AppName>App` placeholders) — such an untouched placeholder may be upgraded to the current template.
+  Missing files are created: a newly selected platform's `Targets/<Platform>/…`, the `Core/Models`, `Core/Services`
+  and `Core/ViewModels`|`Core/Controllers` folders (added alongside a legacy `Greeter.swift`, which is never deleted).
+  A requested `architecture`/`ui` that contradicts existing hand-written sources (e.g. `Core/Controllers/` exists but
+  `architecture: mvvm` was asked) is reported, not converted — switching architecture is a coding task, not a
+  scaffold step. Record each file's decision; Step 6 applies it and Step 8 reports it as **created / updated /
+  replaced / kept as is**.
 
 ## Step 2 — Collect the required inputs
 
 For any field Step 0 already resolved from `args`, use that value directly and don't ask about it again. For
-everything else, ask the user directly (plain conversation, pre-filling defaults found in Step 1 if updating an
-existing scaffold):
+everything else, ask the user (plain conversation, pre-filling defaults found in Step 1 when updating):
 
-- **app-name** — the display name, e.g. `My App` (written to each target's `CFBundleDisplayName` and used to
-  derive the app-slug for the bundle id and directory names, e.g. `myapp`).
-- **bundle-id-prefix** — reverse-DNS, e.g. `com.example`. The iOS/iPadOS/macOS target's bundle id is
-  `<bundle-id-prefix>.<app-slug>`; the watchOS companion target (only when both `ios`/`ipados` and `watchos` are
-  selected) is `<bundle-id-prefix>.<app-slug>.watchkitapp` — a distinct, nested id is required by Apple's watch-app
-  submission rules even for the modern single-target (extension-free) watch app model this skill generates.
+- **app-name** — the display name, e.g. `My App` (each target's `CFBundleDisplayName`; derives `<app-slug>` for the
+  bundle id, e.g. `myapp`, and `<AppName>`, e.g. `MyApp`).
+- **bundle-id-prefix** — reverse-DNS, e.g. `com.example`. The iOS/iPadOS/macOS/visionOS targets' bundle id is
+  `<bundle-id-prefix>.<app-slug>` (one App Store Connect record, one product per platform); the watchOS companion
+  target (only when both `ios`/`ipados` and `watchos` are selected) is `<bundle-id-prefix>.<app-slug>.watchkitapp` —
+  a distinct, nested id required by Apple's watch-app rules even for the modern single-target watch app this skill
+  generates (irurueta docs: apps/apple/multiplatform-projects.adoc, "The separate watchOS target").
 - **platforms** — bounded multi-select (`AskUserQuestion`, at least one required): `ios`, `ipados`, `macos`,
-  `watchos`.
+  `watchos`, `visionos`. (tvOS isn't offered — see the intro.)
   - **`ipados` is not a separate Xcode target.** Selecting it alongside `ios` widens the one iOS application
-    target's `TARGETED_DEVICE_FAMILY` to `"1,2"` (iPhone + iPad) instead of `"1"` (iPhone only). Selecting `ipados`
-    **without** `ios` still produces exactly one iOS-platform target, just with `TARGETED_DEVICE_FAMILY` set to
-    `"2"` alone (iPad only) — the destination platform is still `iOS` (there is no separate "iPadOS" SDK/platform
-    value in Xcode). Say this explicitly back to the user so the choice isn't misread as adding a fourth target.
-  - `macos` and `watchos` each produce their own, fully separate application target (different platform,
-    different `deploymentTarget`, different Info.plist).
-  - `watchos` **without** `ios`/`ipados` also selected produces a standalone watch app (no `WKCompanionAppBundleIdentifier`,
-    no embed wiring) — state this is unusual (nearly every shipped watch app has an iOS companion) but supported.
+    target's `TARGETED_DEVICE_FAMILY` to `"1,2"` (iPhone + iPad) instead of `"1"`. Selecting `ipados` **without**
+    `ios` produces the same iOS-platform target with `TARGETED_DEVICE_FAMILY` `"2"` (iPad only) — there is no
+    separate "iPadOS" SDK/platform value. With `ui: uikit`, `ipados` also sets `UIApplicationSupportsMultipleScenes`
+    to `true` (several windows on iPad; irurueta docs: apps/apple/ipados.adoc, "Opting in to multiple scenes"). Say
+    this back to the user so the choice isn't misread as adding a target.
+  - `macos`, `watchos` and `visionos` each produce their own, fully separate application target.
+  - `visionos` is a **native** visionOS SwiftUI app (`platform: visionOS`, SDK `xros`, `TARGETED_DEVICE_FAMILY` 7), not
+    the "Designed for iPad" compatibility mode an iPad app gets automatically on Apple Vision Pro (irurueta docs:
+    apps/apple/visionos.adoc, "Bringing iPad and iPhone Apps to visionOS"). Its simulator runtime is a separate
+    download in Xcode (Settings › Components); without it the target still builds, but its tests can't run.
+  - `watchos` **without** `ios`/`ipados` produces a standalone watch app (`WKWatchOnly`, no companion wiring) — state
+    this is unusual but supported.
+  - `macos` together with other platforms stays a **SwiftUI** target (this skill's multi-platform shape). For a
+    macOS-only app — or one that should be AppKit, sandboxed, notarized as a DMG — point the user to
+    `iru-setup-macos-app` instead.
+- **ui** — only when `ios` or `ipados` is selected (`AskUserQuestion`):
+  - **SwiftUI (Recommended)** (`swiftui`) — one `App`/`WindowGroup` and the same SwiftUI screen on every platform;
+    Apple's default for new apps.
+  - **UIKit** (`uikit`) — programmatic UIKit for the iOS/iPadOS target: `AppDelegate` + `UIWindowSceneDelegate` with
+    a scene manifest (mandatory from the 27 SDK — an app without the scene life cycle fails to launch), a
+    `UINavigationController` root and a `UIViewController` laid out in code with Auto Layout; **no storyboards**
+    (irurueta docs: apps/apple/app-structure-and-lifecycle.adoc, "Mandatory with the 27 SDK";
+    apps/apple/uikit-and-appkit-interop.adoc). For teams with UIKit experience or an existing UIKit codebase.
+  - Say that the **watchOS and visionOS targets stay SwiftUI** either way: watchOS has no `UIViewController`-based app
+    model (WatchKit apps are SwiftUI-only today), and a native visionOS app's windows, volumes and immersive spaces
+    are SwiftUI scenes — UIKit there only runs as an iPad-compatible app. A selected `macos` target stays SwiftUI too
+    (AppKit lives in `iru-setup-macos-app`).
+- **architecture** — only when more than one is valid:
+  - `ui: swiftui` → `mvvm` without asking. Say why `mvc` isn't offered: SwiftUI has no controller layer — views are
+    values driven by observable state — so screen logic lives in a per-screen `@MainActor @Observable` view model in
+    `Packages/Core/Sources/Core/ViewModels/` (irurueta docs: apps/apple/app-architecture.adoc, "MV with Observation vs
+    MVVM"); pick UIKit for MVC.
+  - `ui: uikit` → `AskUserQuestion`: **MVC (Recommended)** (`mvc`) — Cocoa Touch's native pattern: the
+    `UIViewController` owns widgets, actions and lifecycle; a UI-free `@MainActor` controller in
+    `Packages/Core/Sources/Core/Controllers/` decides what to show and drives the view through a passive-view protocol,
+    so the logic is unit-tested headless. **MVVM** (`mvvm`) — an `@Observable` view model in `Core/ViewModels/`; the
+    view controller renders it in `viewWillLayoutSubviews()`, re-run by UIKit's automatic Observation tracking (on by
+    default from iOS 26; with an iOS deployment target below 26 the scaffold adds `UIObservationTrackingEnabled` to
+    Info.plist).
+  - With `ui: uikit` + `mvc` and other SwiftUI platforms selected (watchOS/visionOS/macOS), `Packages/Core` gets
+    **both** `Controllers/` (the UIKit screen) and `ViewModels/` (the SwiftUI screens) — say so; the coding skill
+    treats that as "mixed" and follows each feature's existing pattern.
 - **generator** — `xcodegen` or `tuist`, asked with a stated recommendation when unset: **XcodeGen** for a
-  single-target (or single-platform-family) app — it's a thin, fast, single-file-manifest wrapper with the
-  smallest learning curve; **Tuist** for a modular app that already has (or will grow) multiple internal SwiftPM
-  packages beyond the one shared `Packages/Core` this skill scaffolds, since Tuist's own module graph, caching, and
-  `tuist generate --no-open` workflow pay off once there's more than one internal package to wire together. This
-  skill's own templates (Step 5) produce an equivalent single `Packages/Core` package either way — the
-  recommendation is about which tool scales better as *more* packages get added later, not a difference in what
-  gets generated today.
-- **min-deployment-target** — a single OS version number (e.g. `26.0`) applied to every selected platform's
-  `deploymentTarget`/`deploymentTargets`. Default: looked up in Step 4 (the current major SDK version minus one,
-  which is what's actually installed as a simulator runtime — see Step 4's note on why the bare current SDK major
-  is *not* a safe default). Offer that looked-up value as the default rather than asking open-endedly; macOS and
-  watchOS share the same numeric major as iOS under Apple's unified year-based versioning (confirmed locally:
-  Xcode 27 ships iOS/macOS/watchOS/tvOS/visionOS SDKs all at major `27`), so one value covers every platform.
+  single-target (or single-platform-family) app — a thin, fast, single-file manifest with the smallest learning
+  curve, and the path this skill verifies end to end; **Tuist** for a modular app that already has (or will grow)
+  multiple internal SwiftPM packages beyond `Packages/Core`, since Tuist's module graph, caching and `tuist generate`
+  workflow pay off once there's more than one internal package (its manifest here is syntax-checked only).
+- **min-deployment-target** — the **iOS** deployment target (e.g. `26.0`); every other selected platform gets its
+  equivalent from Step 5's table (identical numbers from 26 on under Apple's year-based versioning; `18.0` maps to
+  macOS 15 / watchOS 11 / visionOS 2). Offer Step 4's looked-up default (`26.0`, the docs' baseline) as the
+  recommendation; offer `18.0` as the lower option (still supported; UIKit MVVM then needs the
+  `UIObservationTrackingEnabled` opt-in, and `updateProperties()`/`isInteractivelyResizing` need `#available` guards)
+  and the current SDK major (e.g. `27.0`) only when a matching simulator runtime is installed. Never offer below
+  `18.0`.
 - **Developer name**, **developer email**, **organizationUrl** — recorded in Step 8's report and in each Info.plist's
   `NSHumanReadableCopyright`.
 
-Then, unless Step 0 already resolved a `license` value from `args`, ask about the **license** with
-`AskUserQuestion` (mirrors this catalog's other setup skills):
+Then, unless Step 0 already resolved a `license` value, ask about the **license** with `AskUserQuestion`: MIT License
+(recommended for app source not meant for redistribution as a library) / Apache License 2.0 / No license
+(proprietary) / Other (ask for the display name and URL). If a license is chosen, remind the user in Step 8 to add a
+matching root `LICENSE` file if missing — `iru-check-license` can verify/backfill source headers against it.
 
-- MIT License (recommended for app source not meant for redistribution as a library)
-- Apache License 2.0
-- No license (proprietary / all rights reserved)
-- Other — ask for the license's display name and URL directly afterward
-
-If a license is chosen (anything but "No license"), remind the user in Step 8 to also add a matching `LICENSE`
-file at the repository root if one doesn't exist yet — `iru-check-license` can verify/backfill source headers
-against it once it's there.
-
-Then resolve `open-source`, `sonar`, `distribution`, and `signing` — skip any of the four Step 0 already resolved
-from `args`. When invoked stand-alone with none of them pre-resolved, ask `open-source` *first* (`AskUserQuestion`:
-yes/no) and derive the recommended default for `sonar` from that answer, per this catalog's shared convention:
+Then resolve `open-source`, `sonar`, `distribution`, and `signing` — skip any already resolved. When invoked
+stand-alone with none of them pre-resolved, ask `open-source` *first* (yes/no) and derive the recommended `sonar`
+default from that answer, per this catalog's shared convention:
 
 - **open-source** — is this repository open source? Yes / No.
-- **sonar** — whether to wire up a SonarQube/SonarCloud scan (`sonar-project.properties`, typically consumed by a
-  CI workflow such as `iru-setup-swift-github-workflows`, so it's worth setting up here even if that workflow comes
-  later). Recommend **SonarCloud** (`cloud`) only when open-source is Yes **and** `visibility` is `public` (or
-  unknown — `visibility` isn't asked by this skill; it only arrives via `args`); otherwise state that SonarCloud
-  (SonarQube Cloud) is free only for public/open-source projects — a private project needs a paid plan, per its
-  current pricing — and recommend **None** (`none`), offering **self-hosted SonarQube** (Community Build is free,
-  but you run the server) as the second option. **When `ci: no` arrived via `args`**, say plainly that no workflow
-  will send analysis or coverage reports automatically — analysis would only run when someone runs the scanner
-  manually with a token — and recommend `none`; if the user still picks `cloud`/`self-hosted`, write
-  `sonar-project.properties` (the build-side config) only and note in Step 8 that no CI step sends reports:
-  - `cloud` — ask for the `sonar.organization` key, offering `<owner>-github` (the owner parsed in Step 3) as the
-    suggested default. Default `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url` to
-    `https://sonarcloud.io`, confirming both with the user rather than assuming silently.
-  - `self-hosted` — ask for `sonar.host.url` directly (no sensible default), plus `sonar.organization` only if that
-    server has organizations enabled, and `sonar.projectKey`.
-  - `none` — skip `sonar-project.properties` entirely (Step 5/6).
+- **sonar** — whether to wire up a SonarQube/SonarCloud scan (`sonar-project.properties`, consumed by a CI workflow
+  such as `iru-setup-swift-github-workflows`). Recommend **SonarCloud** (`cloud`) only when open-source is Yes **and**
+  `visibility` is `public` (or unknown); otherwise state that SonarCloud is free only for public/open-source projects
+  and recommend **None** (`none`), offering **self-hosted SonarQube** (Community Build is free, but you run the
+  server) second. **When `ci: no` arrived via `args`**, say plainly that no workflow will send reports and recommend
+  `none`; if the user still picks `cloud`/`self-hosted`, write `sonar-project.properties` only and note in Step 8 that
+  no CI step sends reports:
+  - `cloud` — ask for `sonar.organization`, offering `<owner>-github` (Step 3) as the default; default
+    `sonar.projectKey` to `<owner>_<repo>` and `sonar.host.url` to `https://sonarcloud.io`, confirming both.
+  - `self-hosted` — ask for `sonar.host.url`, plus `sonar.organization` only if that server has organizations
+    enabled, and `sonar.projectKey`.
+  - `none` — skip `sonar-project.properties` entirely.
 - **distribution** — `none`/`internal`/`store`:
-  - `none` — builds are for local install/manual QA only via Xcode or a direct `xcodebuild archive`. No TestFlight/
-    App Store lanes are written to the Fastfile; `signing` still matters for whether even a locally-run archive can
-    be code-signed (see below).
-  - `internal` — TestFlight internal testing is the target. The Fastfile gets a `beta` lane
-    (`build_app` + `upload_to_testflight`); no public App Store submission lane.
-  - `store` — full App Store Connect production submission is intended. The Fastfile gets both the `beta` lane and
-    a `release` lane (`upload_to_app_store`/`deliver`); Step 8 flags the App Store Connect credentials this will
-    need either way.
-- **signing** — `fastlane-match`/`api-key`/`none`, asked with the distribution answer in view (skip the question
-  and default to `none` outright when `distribution: none` was chosen and the user doesn't want a signed local
-  archive either — confirm this rather than assuming):
-  - **`fastlane-match`** — team-shared distribution certificates and provisioning profiles, stored encrypted in a
-    private git repo and synced via `fastlane match`. Recommended when more than one person/machine needs to
-    produce signed builds (the common case for a team). Needs a `MATCH_GIT_URL` (the certs repo) and
-    `MATCH_PASSWORD` (the repo's encryption passphrase) as CI secrets — this skill never creates that certs repo or
-    generates certificates itself.
-  - **`api-key`** — no shared cert repo; Xcode's automatic signing (`-allowProvisioningUpdates`) manages
-    certificates/profiles on demand, authenticated by an **App Store Connect API key** (a `.p8` key file, its Key
-    ID, and the Issuer ID) instead of an Apple ID + two-factor prompt. Recommended for a single-maintainer project
-    or a CI-only signing setup where nobody wants to manage a certs repo. Needs
-    `APP_STORE_CONNECT_API_KEY_ID`/`APP_STORE_CONNECT_API_KEY_ISSUER_ID`/`APP_STORE_CONNECT_API_KEY_BASE64` as CI
-    secrets.
-  - **`none`** — no automated signing at all. The Fastfile only gets a `test` lane; any archive/export is done by
-    hand in Xcode with whatever signing identity is locally available. Choosing this while `distribution` isn't
-    `none` is valid but unusual — warn the user in Step 8 that nothing in this scaffold will produce a distributable
-    build automatically.
+  - `none` — local install/manual QA only (Xcode or `xcodebuild archive`). No TestFlight/App Store lanes.
+  - `internal` — TestFlight internal testing; the Fastfile gets a `beta` lane (`build_app` + `upload_to_testflight`).
+  - `store` — App Store production submission; the Fastfile gets `beta` and `release` lanes; Step 8 flags the App
+    Store Connect credentials this needs.
+- **signing** — `fastlane-match`/`api-key`/`none`, asked with the distribution answer in view (default `none` outright
+  when `distribution: none` and the user doesn't want a signed local archive — confirm rather than assume):
+  - **`fastlane-match`** — team-shared certificates and profiles in an encrypted private git repo synced by
+    `fastlane match`; recommended when several people/machines sign. Needs `MATCH_GIT_URL`/`MATCH_PASSWORD` CI secrets
+    — this skill never creates that repo or any certificate.
+  - **`api-key`** — Xcode automatic signing (`-allowProvisioningUpdates`) authenticated by an **App Store Connect API
+    key**; recommended for a single maintainer or CI-only signing. Needs `APP_STORE_CONNECT_API_KEY_ID`/
+    `APP_STORE_CONNECT_API_KEY_ISSUER_ID`/`APP_STORE_CONNECT_API_KEY_BASE64` secrets. This path also works with **no
+    Fastlane at all** (`xcodebuild -exportArchive -authenticationKeyPath …`), which is what the macOS desktop skills do.
+  - **`none`** — no automated signing; the Fastfile only gets a `test` lane. Valid with `distribution` ≠ `none` but
+    unusual — warn in Step 8 that nothing here produces a distributable build automatically.
+
+**Fastlane is an intentional difference from the macOS desktop skills, and it stays optional.**
+`iru-setup-macos-app`/`iru-setup-macos-github-workflows` use plain `xcodebuild`/`notarytool`/`stapler` because the
+author's docs show everything working with Xcode alone (irurueta docs:
+apps/apple/macos-distribution-outside-the-app-store.adoc, apps/apple/ci-cd-xcode-cloud-and-command-line.adoc). This
+skill keeps its `fastlane/Fastfile` for teams that want `match` and TestFlight lanes, but nothing in the scaffold or
+in `iru-setup-swift-github-workflows` requires it: every contract command in Step 8 is plain `xcodebuild`, so the
+workflows skill can build, test, archive and upload without Fastlane.
 
 ## Step 3 — Infer repository information
 
-Don't ask for these — derive them from the current repository, the same way `iru-setup-java-library` and
-`iru-setup-android-app` do:
-
-- **Owner/repo and host**: parse `git remote get-url origin` (handles both `git@host:owner/repo.git` and
-  `https://host/owner/repo.git` forms). Used for Step 2's `sonar.organization`/`sonar.projectKey` defaults. If
-  there's no `origin` remote yet, ask the user directly instead of leaving these blank.
+Don't ask for these — parse `git remote get-url origin` (`git@host:owner/repo.git` or `https://host/owner/repo.git`)
+for `<owner>`/`<repo>` (Step 2's Sonar defaults). No `origin` remote → ask.
 
 ## Step 4 — Look up toolchain versions
 
-Every version below must be looked up at run time; fall back to the value in this table (what this skill's author
-actually observed in September 2026, against Xcode 27.0 / Swift 6.4) only when the lookup fails, and say so
-explicitly in Step 8's report.
+Look every version up at run time; fall back to this table (observed together on 2026-10-16) only when a lookup fails,
+and say so explicitly in Step 8.
 
-| Component | Lookup | September 2026 fallback |
+| Component | Lookup | October 2026 fallback |
 |---|---|---|
-| Xcode / Swift (informational, never installed by this skill) | `xcodebuild -version`, `swift --version` | Xcode `27.0` (build `27A266a`), Swift `6.4` |
-| Current SDK major (ceiling, **not** the safe default — see the note below) | `xcodebuild -showsdks` (read the `iOS`/`macOS`/`watchOS` SDK line's version) | `27.0` across iOS/macOS/watchOS/tvOS/visionOS — confirmed all share the same major under Apple's unified year-based versioning |
-| `min-deployment-target` default (the actual safe default) | `xcrun simctl list runtimes available` — use the highest *installed simulator runtime* major, not the SDK major | `26.0` — **confirmed locally**: Xcode 27's SDK is `27.0`, but the only installed simulator runtimes are `iOS/watchOS/tvOS 26.4`; targeting the bare SDK major as a deployment target would make the scaffold un-runnable on every locally available simulator |
-| XcodeGen | `gh api repos/yonaskolb/XcodeGen/releases/latest --jq .tag_name`, or `https://formulae.brew.sh/api/formula/xcodegen.json` (`.versions.stable`) — both work without `brew`/`gh` installed as long as the underlying HTTPS endpoint is reachable | `2.46.0` — **live-confirmed during this skill's verification**, both lookups agreed |
-| Tuist | **Do not** trust `gh api repos/tuist/tuist/releases/latest` alone (see the note below) — prefer `https://formulae.brew.sh/api/cask/tuist.json` (`.version`) | `4.208.0` — **live-confirmed during this skill's verification** via the Homebrew cask JSON API |
-| SwiftLint | `https://formulae.brew.sh/api/formula/swiftlint.json` (`.versions.stable`), or `gh api repos/realm/SwiftLint/releases/latest --jq .tag_name` | `0.65.1` |
-| `swift format` (toolchain-bundled formatter — never installed separately) | n/a — ships with the Swift toolchain itself | tracks the Swift version above (`6.4`) |
-| SwiftFormat (nicklockwood's third-party tool — only relevant if a project prefers it over the bundled `swift format`) | `https://formulae.brew.sh/api/formula/swiftformat.json` (`.versions.stable`) | `0.63.0` |
-| xcbeautify | `https://formulae.brew.sh/api/formula/xcbeautify.json` (`.versions.stable`) | `3.2.1` |
-| Periphery (unused-code scan, opt-in via `.periphery.yml` — not written by this skill) | `https://formulae.brew.sh/api/formula/periphery.json` (`.versions.stable`) | `3.8.0` |
-| Fastlane (gem) | `gem list -r fastlane --remote` (no install — this just queries the RubyGems index), or `https://rubygems.org/api/v1/versions/fastlane/latest.json` | `2.240.1` |
+| Xcode / Swift (informational, never installed) | `xcodebuild -version`, `swift --version` | Xcode `27.1` (`27A9275`), Swift `6.4` |
+| SDKs (ceiling) | `xcodebuild -showsdks` | iOS `27.1`, watchOS `27.0`, visionOS `27.0` (`xros`), macOS `27.0` |
+| Installed simulator runtimes | `xcrun simctl list runtimes` | iOS `18.5`/`26.4`/`27.0`, watchOS `11.5`/`26.5`/`27.0`, **no visionOS runtime** |
+| `min-deployment-target` default | `26.0` (the docs' baseline: deployment minimum 26, latest SDK) — lowered to the highest installed iOS runtime major only if no ≥ 26 runtime is installed; never higher than an installed runtime, or the scaffold's own tests can't run locally | `26.0` |
+| `<xcode-version>` (XcodeGen `options.xcodeVersion`, Tuist `compatibleXcodeVersions`) | `xcodebuild -version` major.minor | `27.1` |
+| XcodeGen | `https://formulae.brew.sh/api/formula/xcodegen.json` `.versions.stable`, or `gh api repos/yonaskolb/XcodeGen/releases/latest --jq .tag_name` | `2.46.0` |
+| Tuist | `https://formulae.brew.sh/api/cask/tuist.json` `.version` — **not** `gh api repos/tuist/tuist/releases/latest` (monorepo tags such as `helm@…`/`server@…` come first) | `4.208.0` |
+| SwiftLint | `https://formulae.brew.sh/api/formula/swiftlint.json` `.versions.stable` | `0.65.1` |
+| `swift format` | bundled with the toolchain | Swift 6.4's |
+| `swift-docc-plugin` (`<swift-docc-plugin-version>`) | `gh api repos/swiftlang/swift-docc-plugin/releases/latest --jq .tag_name` | `1.5.0` |
+| `swift-tools-version` in `Package.swift` | the lowest that declares every `.v<N>` used: `6.2` for `.v26`/`.v27` | `6.2` |
+| xcbeautify / Periphery / SwiftFormat (informational) | `formulae.brew.sh/api/formula/<name>.json` | `3.2.1` / `3.8.0` / `0.63.0` |
+| Fastlane (gem) | `https://rubygems.org/api/v1/versions/fastlane/latest.json` (no install) | `2.240.1` |
 
-**Tuist's GitHub releases are not a simple "latest tag" — confirmed while verifying this skill.** `tuist/tuist` is a
-monorepo whose `releases` endpoint mixes the CLI's own tags (`4.209.0-canary.*` prereleases sorted first),
-unrelated component tags (`server@1.341.0`, `xcresult-processor-image@0.149.0`, even a stray `helm@0.125.0` as the
-API's reported `"latest"` release), and no clean non-prerelease CLI tag near the top of that list at all. The
-Homebrew cask JSON API (`formulae.brew.sh/api/cask/tuist.json`) is the reliable source instead — it reports the
-real current stable release (`4.208.0`, matching the version Tuist's own installer/Homebrew formula ships) and
-needs no GitHub API pagination or prerelease filtering. **This same Homebrew JSON API works for every tool in the
-table above even though `brew` itself is not installed** — it's a plain HTTPS JSON endpoint
-(`formulae.brew.sh/api/formula/<name>.json` or `.../api/cask/<name>.json`, reading `.versions.stable` or
-`.version`), not a `brew` CLI call; prefer it over scraping GitHub releases whenever a project's release-tagging
-convention (like Tuist's) makes the GitHub API noisy.
+The Homebrew JSON API (`formulae.brew.sh/api/formula|cask/<name>.json`) is a plain HTTPS endpoint — it works without
+`brew` installed.
 
 ## Step 5 — Reference templates
 
-These templates are genericized (no real repository/org/person names; only `<placeholder>` markers) and were
-verified as far as this skill's own local environment allows — see Step 7 and "Known quirks / verification notes"
-for exactly what ran versus what's syntax-only. Substitute using Steps 2–4; keep everything else exactly as shown
-unless a platform/opt-in note below says otherwise.
-
-### `<placeholder>` resolution table
+Read the reference files (table above). Placeholders:
 
 | Placeholder | Source |
 |---|---|
-| `<app-name>` | Step 2 |
-| `<app-slug>` | Slugified `<app-name>` (lowercase, alphanumeric only), derived in Step 2 |
-| `<AppName>` | PascalCase form of `<app-name>` (each whitespace/`-`/`_`-separated word capitalized and concatenated, non-alphanumeric characters stripped, e.g. `My App` → `MyApp`) — the target-name stem, `PRODUCT_NAME`/`PRODUCT_MODULE_NAME`, the `@main` `App` type and the source/test file names |
-| `<device-family>` | `"1"` (`ios` only), `"2"` (`ipados` only), `"1,2"` (both) — from Step 2's platform selection |
-| `<xcode-version>` | Step 4's `xcodebuild -version` major.minor (e.g. `27.0`) |
-| `<min-deployment-target-major>` | The integer major of `<min-deployment-target>` (e.g. `26.0` → `26`), snapped to the nearest `.v<N>` case `PackageDescription` actually declares — see the `Packages/Core/Package.swift` note |
-| `<first-available-simulator-name>` | The first device listed under the current iOS runtime in `xcrun simctl list devices available`, resolved at scaffold time (Step 7/the Fastfile note) — a literal name, never left for the user to fill in |
-| `<bundle-id-prefix>` | Step 2 |
-| `<bundle-id>` | `<bundle-id-prefix>.<app-slug>` |
-| `<watch-bundle-id>` | `<bundle-id-prefix>.<app-slug>.watchkitapp` — only when `watchos` + (`ios`/`ipados`) are both selected |
-| `<min-deployment-target>` | Step 2/4 |
-| `<marketing-version>` | `1.0.0` (a fresh scaffold's starting version; `iru-swift-bump-version` rewrites this later) |
-| `<current-project-version>` | `1` |
+| `<app-name>` / `<app-slug>` / `<AppName>` | Step 2 (`My App` / `myapp` / `MyApp`; PascalCase = words capitalized and concatenated, non-alphanumerics stripped) |
+| `<bundle-id-prefix>` / `<bundle-id>` | Step 2 / `<bundle-id-prefix>.<app-slug>` |
+| `<watch-bundle-id>` | `<bundle-id>.watchkitapp` — only for `watchos-companion` |
+| `<platform-bundle-id>` | `<watch-bundle-id>` for a companion watchOS target, else `<bundle-id>` |
+| `<Platform>` | `iOS` (for `ios`/`ipados`), `macOS`, `watchOS`, `visionOS` — one per selected platform |
+| `<device-family>` | `"1"` (`ios`), `"2"` (`ipados`), `"1,2"` (both) |
+| `<supports-multiple-scenes>` | `true` when `ipados` is selected, else `false` (UIKit scene manifest) |
+| `<ios-deployment-target>` … `<visionos-deployment-target>`, `<platform-deployment-target>` | from `min-deployment-target` via the table below |
+| `<ios-major>` / `<macos-major>` / `<watchos-major>` / `<visionos-major>` | integer majors of the above, for `Package.swift`'s `.v<N>` |
+| `<xcode-version>` / `<swift-docc-plugin-version>` / tool versions | Step 4 |
+| `<marketing-version>` / `<current-project-version>` | `1.0.0` / `1` (`iru-swift-bump-version` rewrites them later) |
+| `<first-available-simulator-name>` | first device under the newest installed iOS runtime in `xcrun simctl list devices available` (a literal, resolved at scaffold time) |
 | `<owner>` / `<repo>` | Step 3 |
 | `<sonar-organization>` / `<sonar-project-key>` / `<sonar-host-url>` | Step 2 |
 | `<developer-name>` / `<developer-email>` / `<organization-url>` | Step 2 |
-| `<xcodegen-version>` / `<tuist-version>` / … | Step 4 |
 
-### Directory layout this skill produces
+Per-platform deployment targets (`Packages/Core` always declares macOS too, so `swift test` runs on the host):
+
+| iOS (`min-deployment-target`) | macOS | watchOS | visionOS |
+|---|---|---|---|
+| `26.0` or later (`N.0`) | `N.0` | `N.0` | `N.0` |
+| `18.0` | `15.0` | `11.0` | `2.0` |
+
+Directory layout produced (the **contract**):
 
 ```
-project.yml                        # XcodeGen manifest (generator: xcodegen)
-Project.swift                      # Tuist manifest        (generator: tuist)
-Tuist.swift                        # Tuist config           (generator: tuist)
-Packages/
-  Core/
-    Package.swift
-    Sources/Core/…                 # shared, testable business logic — no UIKit/SwiftUI/WatchKit imports
-    Tests/CoreTests/…              # Swift Testing
-Targets/
-  iOS/                             # written whenever `ios` or `ipados` is selected (one target either way)
-    Sources/<AppName>App.swift     # SwiftUI @main App entry
-    Sources/ContentView.swift
-    Tests/<AppName>Tests.swift     # Swift Testing, unit-test target
-    UITests/<AppName>UITests.swift # XCUITest, UI-test target
-  macOS/                           # written when `macos` is selected — same three-file shape
-    Sources/… Tests/… UITests/…
-  watchOS/                         # written when `watchos` is selected — same three-file shape
-    Sources/… Tests/… UITests/…
-.swiftlint.yml
-.swift-format
-fastlane/
-  Fastfile
-sonar-project.properties           # only when `sonar` != none
+project.yml                              XcodeGen manifest (generator: xcodegen) — or Project.swift + Tuist.swift
+Packages/Core/Package.swift              library Core, test target CoreTests, swift-docc-plugin
+Packages/Core/Sources/Core/Core.docc/    DocC landing page
+Packages/Core/Sources/Core/Models/       Greeting
+Packages/Core/Sources/Core/Services/     GreetingProviding, GreetingService, GreetingError
+Packages/Core/Sources/Core/ViewModels/   mvvm (and every SwiftUI target): GreetingViewModel (@MainActor @Observable)
+Packages/Core/Sources/Core/Controllers/  mvc: GreetingController (@MainActor) + GreetingView (passive-view protocol)
+Packages/Core/Tests/CoreTests/           Swift Testing, 100% line coverage of Core
+Targets/iOS/                             when ios and/or ipados is selected (one target either way)
+  Info.plist                             generated by xcodegen from project.yml's info: block
+  Sources/  swiftui: <AppName>App.swift, ContentView.swift
+            uikit:   AppDelegate.swift, SceneDelegate.swift, GreetingViewController.swift, GreetingLayout.swift
+            both:    LaunchOptions.swift
+  Tests/    LaunchOptionsTests.swift + swiftui: <AppName>Tests.swift | uikit: GreetingViewControllerTests.swift,
+            AppShellTests.swift
+  UITests/<AppName>UITests.swift
+Targets/macOS/ | Targets/watchOS/ | Targets/visionOS/   per selected platform — SwiftUI shape (App, ContentView,
+                                         LaunchOptions; LaunchOptionsTests, <AppName>Tests; <AppName>UITests)
+.swiftlint.yml  .swift-format
+fastlane/Fastfile                        optional (see Step 2)
+sonar-project.properties                 sonar ≠ none
 ```
 
-`.xcodeproj`/`.xcworkspace` are never written here — see this skill's intro. `.gitignore` entries for them
-(`*.xcodeproj/`, `*.xcworkspace/`, `.build/`, `DerivedData/`, `*.xcresult`, etc.) are the `iru-setup-swift-gitignore`
-skill's job, not this one's.
-
-### `project.yml` (XcodeGen)
-
-```yaml
-name: <app-name>
-options:
-  bundleIdPrefix: <bundle-id-prefix>
-  deploymentTarget:
-    iOS: "<min-deployment-target>"
-    macOS: "<min-deployment-target>"
-    watchOS: "<min-deployment-target>"
-  xcodeVersion: "<xcode-version>"
-configs:
-  Debug: debug
-  Release: release
-settings:
-  base:
-    SWIFT_VERSION: "6.0"
-    SWIFT_STRICT_CONCURRENCY: complete
-    # Written unquoted on purpose — iru-swift-bump-version and sync.yml's sync_versions.py rewrite these two
-    # keys by regex (quote-tolerant, but the unquoted form is the canonical one this catalog verifies against).
-    MARKETING_VERSION: <marketing-version>
-    CURRENT_PROJECT_VERSION: <current-project-version>
-packages:
-  Core:
-    path: Packages/Core
-targets:
-  # One block per selected platform — repeat this whole shape for macOS/watchOS with that platform's own
-  # deploymentTarget/bundle id/Info.plist keys (see the per-platform notes below). Shown here for iOS/iPadOS.
-  <AppName>-iOS:
-    type: application
-    platform: iOS
-    deploymentTarget: "<min-deployment-target>"
-    sources:
-      - path: Targets/iOS/Sources
-    dependencies:
-      - package: Core
-      # Only when `watchos` is also selected — embeds the watch app into the iOS app's build product:
-      - target: <AppName>-watchOS
-        embed: true
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: <bundle-id>
-        # The target is named <AppName>-iOS, which would otherwise yield a <AppName>_iOS module and a
-        # <AppName>-iOS.app/.ipa product — pin both so `@testable import <AppName>` resolves and release.yml's
-        # `build/export/<AppName>.ipa` path matches. Repeat on every app target (macOS/watchOS too).
-        PRODUCT_NAME: <AppName>
-        PRODUCT_MODULE_NAME: <AppName>
-        # "1" = iPhone only, "2" = iPad only, "1,2" = both — resolved per Step 2's ios/ipados selection.
-        TARGETED_DEVICE_FAMILY: "<device-family>"
-    info:
-      path: Targets/iOS/Info.plist
-      properties:
-        CFBundleDisplayName: <app-name>
-        NSHumanReadableCopyright: "Copyright © <developer-name>"
-        ITSAppUsesNonExemptEncryption: false
-        UILaunchScreen: {}
-  <AppName>Tests-iOS:
-    type: bundle.unit-test
-    platform: iOS
-    deploymentTarget: "<min-deployment-target>"
-    sources:
-      - path: Targets/iOS/Tests
-    dependencies:
-      - target: <AppName>-iOS
-  <AppName>UITests-iOS:
-    type: bundle.ui-testing
-    platform: iOS
-    deploymentTarget: "<min-deployment-target>"
-    sources:
-      - path: Targets/iOS/UITests
-    dependencies:
-      - target: <AppName>-iOS
-schemes:
-  <AppName>-iOS:
-    build:
-      targets:
-        <AppName>-iOS: all
-    test:
-      targets:
-        - <AppName>Tests-iOS
-        - <AppName>UITests-iOS
-    run:
-      config: Debug
-    archive:
-      config: Release
-```
-
-**Confirmed structurally valid** (`python3 -c "import yaml; yaml.safe_load(open('project.yml'))"` parses clean)
-against exactly this shape, with `<AppName>` → `MyApp`, one iOS target, no watchOS/macOS targets, `<device-family>`
-→ `"1,2"` — see "Known quirks" for what wasn't runnable (XcodeGen itself isn't installable here).
-
-Repeat the `targets`/`schemes` block per additional selected platform:
-
-- **macOS** — `platform: macOS`, target names `<AppName>-macOS`/`<AppName>Tests-macOS`/`<AppName>UITests-macOS`,
-  `type: application` stays the same (AppKit/SwiftUI `App` life cycle), the same `PRODUCT_NAME`/
-  `PRODUCT_MODULE_NAME: <AppName>` pair in `settings.base`, no `TARGETED_DEVICE_FAMILY` key (macOS doesn't use
-  it), Info.plist adds `LSMinimumSystemVersion: "<min-deployment-target>"`.
-  - Only when `distribution` isn't `none`: `settings.base` also needs `ENABLE_HARDENED_RUNTIME: true` (required for
-    `notarytool` to accept the archive later — see the Fastfile's `notarize_release` lane).
-- **watchOS** — `platform: watchOS`, target names `<AppName>-watchOS`/`<AppName>Tests-watchOS`/`<AppName>UITests-watchOS`,
-  Info.plist adds `WKCompanionAppBundleIdentifier: <bundle-id>` (only when `ios`/`ipados` is also selected — points
-  back at the iOS app), `PRODUCT_BUNDLE_IDENTIFIER: <watch-bundle-id>` plus the same `PRODUCT_NAME`/
-  `PRODUCT_MODULE_NAME: <AppName>` pair (each platform builds into its own products directory, and the embedded
-  watch app lands under the iOS bundle's `Watch/` folder, so the identical product name never collides). This is
-  the modern, single-target watch-app
-  shape (no separate WatchKit Extension target) — current for every watchOS version this skill's fallback Xcode
-  (27.0) supports.
-- **`ipados`-without-`ios`**: same iOS-platform target as above, just `<device-family>` → `"2"` and no iPad-specific
-  renaming — it's still literally the `<AppName>-iOS` target, per Step 2's note.
-
-### `Project.swift` + `Tuist.swift` (Tuist)
-
-`Tuist.swift` (project-wide Tuist config, one file regardless of platform count):
-
-```swift
-import ProjectDescription
-
-let tuist = Tuist(
-    project: .tuist(
-        compatibleXcodeVersions: .upToNextMajor("<xcode-version>")
-    )
-)
-```
-
-`Project.swift` (one `Target.target(...)` triple — app/unit-tests/UI-tests — per selected platform, collected into
-one `targets:` array; shown here for a single iOS/iPadOS platform):
-
-```swift
-import ProjectDescription
-
-let baseSettings: SettingsDictionary = [
-    "SWIFT_VERSION": "6.0",
-    "SWIFT_STRICT_CONCURRENCY": "complete",
-    // Swift string literals, so these stay quoted here (unlike project.yml) — iru-swift-bump-version and
-    // sync_versions.py match exactly this `"KEY": "value"` shape.
-    "MARKETING_VERSION": "<marketing-version>",
-    "CURRENT_PROJECT_VERSION": "<current-project-version>",
-]
-
-// Applied to every *app* target (never to the test targets, whose module names must stay distinct): pins the
-// product to <AppName>.app/.ipa and the module to <AppName>, since the target is named <AppName>-iOS.
-let appSettings: SettingsDictionary = baseSettings.merging([
-    "PRODUCT_NAME": "<AppName>",
-    "PRODUCT_MODULE_NAME": "<AppName>",
-]) { _, new in new }
-
-let iosTarget = Target.target(
-    name: "<AppName>-iOS",
-    destinations: .iOS,
-    product: .app,
-    bundleId: "<bundle-id>",
-    deploymentTargets: .iOS("<min-deployment-target>"),
-    infoPlist: .extendingDefault(with: [
-        "CFBundleDisplayName": "<app-name>",
-        "NSHumanReadableCopyright": "Copyright © <developer-name>",
-        "ITSAppUsesNonExemptEncryption": false,
-        "UILaunchScreen": [:],
-    ]),
-    sources: ["Targets/iOS/Sources/**"],
-    dependencies: [
-        .package(product: "Core"),
-        // Only when `watchos` is also selected:
-        .target(name: "<AppName>-watchOS"),
-    ],
-    settings: .settings(base: appSettings)
-)
-
-let iosTestTarget = Target.target(
-    name: "<AppName>Tests-iOS",
-    destinations: .iOS,
-    product: .unitTests,
-    bundleId: "<bundle-id>.tests",
-    deploymentTargets: .iOS("<min-deployment-target>"),
-    sources: ["Targets/iOS/Tests/**"],
-    dependencies: [.target(name: "<AppName>-iOS")]
-)
-
-let iosUITestTarget = Target.target(
-    name: "<AppName>UITests-iOS",
-    destinations: .iOS,
-    product: .uiTests,
-    bundleId: "<bundle-id>.uitests",
-    deploymentTargets: .iOS("<min-deployment-target>"),
-    sources: ["Targets/iOS/UITests/**"],
-    dependencies: [.target(name: "<AppName>-iOS")]
-)
-
-let project = Project(
-    name: "<app-name>",
-    packages: [.local(path: "Packages/Core")],
-    targets: [iosTarget, iosTestTarget, iosUITestTarget]
-    // Append macOS/watchOS's own three targets here, one Target.target(...) triple per platform, the same
-    // way project.yml repeats its `targets:` block per platform above.
-)
-```
-
-**Syntax-checked only, not typechecked** (`swiftc -parse Project.swift`/`Tuist.swift` both exit `0` against exactly
-these two files, with placeholders substituted) — `-parse` validates Swift grammar without resolving imports, so it
-never needed `ProjectDescription` (Tuist's manifest-only module) to actually exist locally. It does **not** confirm
-these calls match Tuist's real `ProjectDescription` API surface — that needs `tuist generate` itself, which this
-skill's environment can't run (see "Known quirks"). For `ipados`-without-`ios`, set `destinations: .iPad` instead of
-`.iOS` (Tuist, unlike XcodeGen, *does* expose a distinct `.iPad`/`.iPhone` destination pairing — use `[.iPhone,
-.iPad]` for both, `.iPad` alone for iPad-only, matching the same `TARGETED_DEVICE_FAMILY` semantics either generator
-produces underneath).
-
-### `Packages/Core/Package.swift`
-
-```swift
-// swift-tools-version: 6.0
-import PackageDescription
-
-let package = Package(
-    name: "Core",
-    platforms: [
-        .iOS(.v<min-deployment-target-major>),
-        .macOS(.v<min-deployment-target-major>),
-        .watchOS(.v<min-deployment-target-major>)
-        // Include only the platform entries whose corresponding app platform was selected in Step 2 — a
-        // `.watchOS` entry with no watchOS app target is harmless but needless.
-    ],
-    products: [
-        .library(name: "Core", targets: ["Core"])
-    ],
-    targets: [
-        .target(name: "Core", swiftSettings: [.swiftLanguageMode(.v6)]),
-        .testTarget(name: "CoreTests", dependencies: ["Core"], swiftSettings: [.swiftLanguageMode(.v6)])
-    ]
-)
-```
-
-**Fully verified — confirmed working, not just syntax-checked**: `swift build` and `swift test` both pass clean
-against exactly this `Package.swift` shape (with a trivial `Core`/`CoreTests` pair — see Step 7). `PackageDescription`'s
-`.v<N>` platform enum only accepts specific known minor/major combinations (e.g. `.v18`, `.v26`) — resolve
-`<min-deployment-target-major>` to the nearest value `PackageDescription` actually declares for the toolchain in
-use rather than an arbitrary string; `swift build` fails at manifest-parse time with a clear "referencing
-inaccessible" error if the requested version doesn't exist as an enum case, which is an easy, safe failure mode to
-catch before writing the rest of the scaffold.
-
-### `Packages/Core/Sources/Core/<Placeholder>.swift`
-
-```swift
-public struct Greeter: Sendable {
-    public init() {}
-
-    public func greeting(for name: String) -> String {
-        "Hello, \(name)!"
-    }
-}
-```
-
-A minimal, genuinely testable placeholder — replace with real business logic. Every type here should be `Sendable`
-(Swift 6's strict-concurrency default demands it the moment the type crosses an `async`/actor boundary, and
-`SWIFT_STRICT_CONCURRENCY = complete` in the app targets makes that a build error, not a warning, everywhere this
-package is used).
-
-### `Packages/Core/Tests/CoreTests/<Placeholder>Tests.swift`
-
-```swift
-import Testing
-@testable import Core
-
-@Suite("Greeter")
-struct GreeterTests {
-    @Test("greeting includes the given name")
-    func greetingIncludesName() {
-        let greeter = Greeter()
-        #expect(greeter.greeting(for: "World") == "Hello, World!")
-    }
-}
-```
-
-Swift Testing (`@Suite`/`@Test`/`#expect`), not XCTest — matches this catalog's Swift Testing default for unit
-tests (`iru-swift-code-one-task`'s own convention). **Confirmed passing**: `swift test` reports `1 test in 1 suite
-passed` against exactly this pair (see Step 7).
-
-### `Targets/<Platform>/Sources/<AppName>App.swift` (SwiftUI `App` entry point)
-
-```swift
-import Core
-import SwiftUI
-
-@main
-struct <AppName>App: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}
-```
-
-### `Targets/<Platform>/Sources/ContentView.swift`
-
-```swift
-import Core
-import SwiftUI
-
-struct ContentView: View {
-    private let greeter = Greeter()
-
-    var body: some View {
-        Text(greeter.greeting(for: "<app-name>"))
-            .padding()
-    }
-}
-
-#Preview {
-    ContentView()
-}
-```
-
-Both files are identical across platforms except the module name substitution — write one copy per selected
-platform's `Targets/<Platform>/Sources/`.
-
-### `Targets/<Platform>/Tests/<AppName>Tests.swift` (Swift Testing, unit-test target)
-
-```swift
-import Core
-import Testing
-@testable import <AppName>
-
-@Suite("ContentView")
-struct <AppName>Tests {
-    @Test("app module links against Core")
-    func linksAgainstCore() {
-        let greeter = Greeter()
-        #expect(greeter.greeting(for: "Test") == "Hello, Test!")
-    }
-}
-```
-
-A deliberately thin placeholder — its only job is to prove the app target's unit-test target actually compiles and
-links against both the app module and `Core` (`import Core` is what brings `Greeter` into scope — `@testable
-import <AppName>` re-exports nothing from the app's own dependencies; and `<AppName>` resolves only because the
-app target pins `PRODUCT_MODULE_NAME: <AppName>`, see the manifests above). Real app-target tests belong here once there's app-specific logic
-(view models, formatters, etc.) that doesn't belong in the platform-agnostic `Core` package.
-
-### `Targets/<Platform>/UITests/<AppName>UITests.swift` (XCUITest, UI-test target)
-
-```swift
-import XCTest
-
-final class <AppName>UITests: XCTestCase {
-    override func setUpWithError() throws {
-        continueAfterFailure = false
-    }
-
-    func testAppLaunches() throws {
-        let app = XCUIApplication()
-        app.launch()
-        // ContentView renders `Greeter().greeting(for: "<app-name>")`, i.e. the literal "Hello, <app-name>!".
-        XCTAssertTrue(app.staticTexts["Hello, <app-name>!"].waitForExistence(timeout: 5))
-    }
-}
-```
-
-XCUITest, not Swift Testing — Swift Testing does not yet ship a UI-automation driver equivalent to
-`XCUIApplication`, so this skill follows the same split `iru-setup-android-app`'s instrumented-test template does
-(Espresso/`XCUIApplication`-style black-box automation stays on the older framework; fast unit tests move to the
-newer one). **Unverified locally**: running this needs a booted simulator/device driving a real app UI, which this
-skill's verification (Step 7) never built (no `.xcodeproj` was ever generated — see "Known quirks").
-
-### `.swiftlint.yml`
-
-```yaml
-excluded:
-  - .build
-  - Packages/Core/.build
-  - "**/*.generated.swift"
-opt_in_rules:
-  - force_unwrapping
-  - implicitly_unwrapped_optional
-  - closure_spacing
-  - explicit_init
-  - empty_count
-  - fatal_error_message
-  - first_where
-  - overridden_super_call
-  - prohibited_super_call
-  - redundant_nil_coalescing
-  - sorted_imports
-  - unused_import
-reporter: json
-```
-
-### `.swift-format`
-
-```json
-{
-  "version": 1,
-  "lineLength": 120,
-  "indentation": { "spaces": 4 },
-  "tabWidth": 4,
-  "respectsExistingLineBreaks": true,
-  "lineBreakBeforeControlFlowKeywords": false,
-  "lineBreakBeforeEachArgument": false
-}
-```
-
-**Not optional — confirmed while verifying this skill.** `swift format lint --strict` with **no** `.swift-format`
-present falls back to the tool's own default style, which is **2-space indentation** — every 4-space-indented file
-in this skill's own templates above then fails with `error: [Indentation] unindent by 2 spaces` on nearly every
-line. Writing exactly this config (4-space indent) before running `swift format lint` is what makes it pass clean
-against Step 5's own templates (see Step 7). `swift format lint` auto-discovers `.swift-format` from the current
-directory (or nearest ancestor) with no `--configuration` flag needed — confirmed both with and without the flag
-give identical results once the file exists.
-
-### `fastlane/Fastfile`
-
-Base shape (always written, whatever `signing`/`distribution` resolved to):
-
-```ruby
-default_platform(:ios)
-
-platform :ios do
-  desc "Run unit tests"
-  lane :test do
-    run_tests(
-      scheme: "<AppName>-iOS",
-      destination: "platform=iOS Simulator,name=<first-available-simulator-name>"
-    )
-  end
-end
-```
-
-**Only when `signing: fastlane-match`**, add before the `test` lane:
-
-```ruby
-  desc "Sync distribution signing certificates and profiles"
-  private_lane :sync_signing do
-    match(type: "appstore", readonly: is_ci)
-  end
-```
-
-**Only when `signing: api-key`**, add instead:
-
-```ruby
-  desc "Authenticate to App Store Connect with an API key"
-  private_lane :connect_api_key do
-    app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_API_KEY_BASE64"],
-      is_key_content_base64: true
-    )
-  end
-```
-
-**Only when `signing` isn't `none` AND `distribution` isn't `none`**, add a `build` lane and, per `distribution`,
-`beta`/`release` lanes:
-
-```ruby
-  desc "Build a signed, distributable archive"
-  lane :build do
-    sync_signing if <signing == fastlane-match>
-    connect_api_key if <signing == api-key>
-    build_app(
-      scheme: "<AppName>-iOS",
-      export_method: "app-store",
-      xcargs: <"-allowProvisioningUpdates" only when signing == api-key, omitted otherwise>
-    )
-  end
-
-  # Only when distribution is internal or store:
-  desc "Upload the latest build to TestFlight"
-  lane :beta do
-    build
-    upload_to_testflight(skip_waiting_for_build_processing: true)
-  end
-
-  # Only when distribution is store:
-  desc "Submit the latest build to App Store review"
-  lane :release do
-    build
-    upload_to_app_store(skip_screenshots: true, skip_metadata: true, force: true)
-  end
-end
-```
-
-**Only when `macos` was selected AND `distribution` isn't `none` AND `signing` isn't `none`**, add:
-
-```ruby
-platform :mac do
-  desc "Build, notarize, and staple the macOS release archive"
-  lane :notarize_release do
-    connect_api_key if <signing == api-key>
-    build_app(scheme: "<AppName>-macOS", export_method: "developer-id")
-    notarize(package: lane_context[SharedValues::PKG_OUTPUT_PATH] || lane_context[SharedValues::IPA_OUTPUT_PATH])
-    # notarize (the fastlane plugin action) already staples on success; if it isn't installed, fall back to:
-    #   sh("xcrun notarytool submit '#{lane_context[SharedValues::IPA_OUTPUT_PATH]}' --wait ...")
-    #   sh("xcrun stapler staple '#{lane_context[SharedValues::IPA_OUTPUT_PATH]}'")
-  end
-end
-```
-
-`<first-available-simulator-name>` — resolved the same way Step 7's own verification resolves it: the first entry
-under the current iOS runtime section of `xcrun simctl list devices available` (confirmed `iPhone 17 Pro` in this
-skill's own environment; this is inherently machine-specific, so leave it as a literal name resolved at scaffold
-time, not a placeholder the user is expected to fill in later). **Fastlane lanes and signing are never executed by
-this skill or its verification** — every lane above is written but never run; Step 7/8 say so explicitly. `notarize`
-here refers to Fastlane's community `fastlane-plugin-notarize` (needs `fastlane add_plugin notarize`) — the raw
-`xcrun notarytool submit --wait` + `xcrun stapler staple` fallback in the comment needs no plugin and is what
-`iru-setup-swift-github-workflows`'s `release.yml` uses directly in CI instead of a Fastlane plugin.
-
-### `sonar-project.properties` (only when `sonar` != `none`)
-
-```
-sonar.organization=<sonar-organization>
-sonar.projectKey=<sonar-project-key>
-sonar.host.url=<sonar-host-url>
-sonar.sourceEncoding=UTF-8
-sonar.sources=Packages/Core/Sources,Targets/iOS/Sources,Targets/macOS/Sources,Targets/watchOS/Sources
-sonar.tests=Packages/Core/Tests,Targets/iOS/Tests,Targets/iOS/UITests,Targets/macOS/Tests,Targets/macOS/UITests,Targets/watchOS/Tests,Targets/watchOS/UITests
-sonar.swift.file.suffixes=.swift
-sonar.coverageReportPaths=sonarqube-generic-coverage.xml
-sonar.swift.swiftLint.reportPaths=swiftlint.json
-```
-
-List only the `sonar.sources`/`sonar.tests` path segments for platforms actually selected in Step 2 — omit any
-`Targets/<Platform>/…` entry whose platform wasn't chosen (the two example lines above show every platform for
-completeness; a real generated file only lists what exists on disk). `sonar.coverageReportPaths` names the same
-SonarQube-generic-format XML `iru-setup-swift-github-workflows`'s `build.yml` produces from `xccov`/`llvm-cov`
-output (via `slather` or SonarSource's `xccov-to-sonarqube-generic.sh`) — this skill never generates that XML
-itself, only names where CI will put it. Omit `sonar.organization` entirely for `sonar: self-hosted` servers
-without organizations enabled (per Step 2).
+`Packages/Core` never imports SwiftUI, UIKit, AppKit or WatchKit. `.xcodeproj`, `build/`, `DerivedData/`, `.build/`,
+`*.xcresult` are `iru-setup-swift-gitignore`'s job.
 
 ## Step 6 — Scaffold the project
 
 Apply Step 1's per-file decision to every file below: write a file that doesn't exist yet (*created*); for an
-existing one, merge per **Update** (show the diff first, e.g. `git diff --no-index <current> <draft>`, and write
-on approval — *updated*), leave it untouched per **Keep as is** (*kept as is*), or overwrite it from Step 5's
-template per **Replace** (*replaced*). Existing hand-written source under `Targets/`/`Packages/Core` is never
-overwritten (Step 1).
+existing one merge per **Update** (show `git diff --no-index <current> <draft>` and write on approval — *updated*),
+leave it per **Keep as is**, or overwrite per **Replace** (within Step 1's source-file limit).
 
-1. Write the manifest — `project.yml` (XcodeGen) or `Project.swift` + `Tuist.swift` (Tuist), per Step 2's
-   `generator` choice — with Step 2/3/4's values substituted, one `targets`/`Target.target(...)` triple per
-   selected platform, and the watchOS-embed/`TARGETED_DEVICE_FAMILY` conditionals applied.
-2. Create `Packages/Core/Sources/Core/` and `Packages/Core/Tests/CoreTests/`, and write `Package.swift` plus the
-   placeholder `Greeter.swift`/`GreeterTests.swift` pair from Step 5.
-3. For each selected platform, create `Targets/<Platform>/{Sources,Tests,UITests}/` and write that platform's
-   `<AppName>App.swift`, `ContentView.swift`, `<AppName>Tests.swift`, and `<AppName>UITests.swift` from Step 5.
-4. Write `.swiftlint.yml` and `.swift-format` at the repository root.
-5. Write `fastlane/Fastfile` with exactly the lanes Step 2's `signing`/`distribution` answers gate in (see Step
-   5's Fastfile section) — never write a lane this skill can't back with the chosen signing/distribution method.
-6. Write `sonar-project.properties` only when `sonar` != `none`, scoped to the platforms actually selected.
-7. Remind the user now (also repeated in Step 8) that the `.xcodeproj`/`.xcworkspace` this manifest describes does
-   not exist yet — it's created by running `xcodegen generate` or `tuist generate` from the repository root, which
-   this skill does not do automatically (see the intro).
+1. Write the manifest from `reference/project-templates.md` — `project.yml` or `Project.swift` + `Tuist.swift` —
+   with one app/unit-test/UI-test triple and one scheme per selected platform, the watchOS embed/companion keys,
+   `TARGETED_DEVICE_FAMILY`, the UIKit scene manifest and the `observation-tracking-opt-in` key applied.
+2. Write `Packages/Core` from `reference/core-templates.md` (`ViewModels/` when `architecture: mvvm` or any SwiftUI
+   target exists; `Controllers/` when `architecture: mvc`), with only the selected platforms (plus macOS) in
+   `platforms:`.
+3. For each selected platform, write `Targets/<Platform>/Sources` from `reference/swiftui-templates.md` (or, for the
+   iOS target with `ui: uikit`, `reference/uikit-templates.md`) plus `LaunchOptions.swift`, and `Tests`/`UITests` from
+   `reference/test-templates.md`.
+4. Write `.swiftlint.yml` and `.swift-format`.
+5. Write `fastlane/Fastfile` with exactly the lanes `signing`/`distribution` (and the iOS/iPadOS target) gate in —
+   never a lane the chosen method can't back, and no `platform :ios` lane without an iOS/iPadOS target.
+6. Write `sonar-project.properties` only when `sonar` ≠ `none`, scoped to the selected platforms.
+7. Remind the user that the `.xcodeproj`/`.xcworkspace` doesn't exist until `xcodegen generate` / `tuist generate`
+   runs from the repository root (every clone runs it first).
 
 ## Step 7 — Verify
 
-`brew` is not installed in this skill's own environment, so **neither XcodeGen nor Tuist could be installed or run
-here** — the manifest-generation step itself (`xcodegen generate`/`tuist generate`, and everything downstream of an
-actual `.xcodeproj`, including a real end-to-end app build/run) is **unverified locally**. What follows is what
-*was* run for real, run through the `iru-gate-runner` agent where output could be long:
+Run every command through the `iru-gate-runner` agent (never inline — the logs are long). macOS with a full Xcode
+only; elsewhere, or with Command Line Tools only, report every step "unverified (needs macOS/Xcode)". If
+`xcodegen`/`tuist`/`swiftlint` aren't installed, say so, mark their steps unverified, and never install them. Serialize
+every simulator run behind `.simulator-test.lock` like the Swift gates, and shut down any simulator this run booted.
 
-1. **`project.yml` structural validity**: `python3 -c "import yaml; yaml.safe_load(open('project.yml'))"` against
-   exactly Step 5's XcodeGen template (one iOS target, `TARGETED_DEVICE_FAMILY: "1,2"`) — parses clean.
-2. **`Project.swift`/`Tuist.swift` syntax**: `swiftc -parse Project.swift` and `swiftc -parse Tuist.swift` against
-   exactly Step 5's Tuist templates — both exit `0`. This is grammar-only (no typecheck, no `ProjectDescription`
-   resolution); it does not prove the Tuist API calls are correct, only that the Swift is well-formed.
-3. **`Packages/Core` actually builds and tests**: scaffolded the package exactly as Step 5 shows (`Package.swift`,
-   `Sources/Core/Greeter.swift`, `Tests/CoreTests/GreeterTests.swift`) in `$TMPDIR/iru-verify/swift/app/Packages/Core`
-   and ran `swift build` (succeeds) and `swift test` (`1 test in 1 suite passed`).
-4. **The `xcodebuild`/simulator/`.xcresult` path Step 5's Fastfile and the whole app workflow depend on** — proven
-   against the same `Core` package (a SwiftPM package opens directly in `xcodebuild` without any `.xcodeproj`,
-   exactly as this skill's verification requires):
-   - `xcodebuild test -scheme Core -destination 'platform=macOS' -enableCodeCoverage YES -resultBundlePath TestResults.xcresult` — succeeds (`** TEST SUCCEEDED **`).
-   - `xcrun simctl list devices available` (no `timeout` binary is installed on this machine — GNU coreutils isn't
-     present and `brew` can't supply it either; ran it plain, which returned promptly) — first iOS entry:
-     `iPhone 17 Pro`.
-   - `xcodebuild test -scheme Core -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -enableCodeCoverage YES -resultBundlePath TestResults-ios.xcresult` — succeeds.
-   - `xcrun xccov view --report --json TestResults.xcresult | head -c 600` and the same against the iOS run — both
-     produce the real, documented shape: a top-level `{"coveredLines","executableLines","lineCoverage","targets":[…]}`
-     object, `targets` listing each build product with its own `coveredLines`/`files`.
-   - `xcrun xcresulttool get test-results summary --path TestResults.xcresult` — the modern (Xcode 16+) subcommand;
-     produces a `devicesAndConfigurations`/`passedTests`/`failedTests`/`result` JSON summary. The legacy `get object`
-     form still exists but prints a deprecation notice recommending `get test-report` instead.
-5. **`.swift-format`/`.swiftlint.yml`**: `swift format lint --strict --recursive Sources Tests` against the scaffolded
-   `Packages/Core`, once with Step 5's `.swift-format` present (passes clean) and once without it (fails on nearly
-   every line — see Step 5's note). SwiftLint itself is **unverified locally** — no `swiftlint` binary is installed
-   and `brew install swiftlint` can't run.
-6. `gem list -r fastlane --remote` — confirms the RubyGems index is reachable and returns a real current version
-   without installing the gem. **Fastlane lanes, `match`, `notarize`, and any signing/upload step are never
-   executed** — this skill only wrote the Fastfile text (see Step 5/8).
+1. `cd Packages/Core && swift test --enable-code-coverage`, then `xcrun llvm-cov report
+   "$(swift build --show-bin-path)/CoreTests.xctest/Contents/MacOS/CoreTests" -instr-profile
+   "$(swift build --show-bin-path)/codecov/default.profdata" --ignore-filename-regex='(Tests/|DerivedSources|\.build/)'`
+   — expect 100% lines.
+2. `xcodegen generate` (or `tuist generate --no-open`).
+3. Per selected platform, `xcodebuild test -project <AppName>.xcodeproj -scheme <AppName>-<Platform> -destination
+   '<destination>' -derivedDataPath build/dd -resultBundlePath build/test-<Platform>.xcresult` (destinations in Step
+   8; macOS adds `CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=` and needs Automation Mode for its UI
+   test). Parse with `xcrun xcresulttool get test-results summary`. A platform whose simulator runtime isn't
+   installed (typically visionOS) is reported **"unverified (no <platform> simulator runtime installed)"** after
+   `xcodebuild build-for-testing -scheme <AppName>-<Platform> -destination 'generic/platform=<Platform> Simulator'`
+   proves it compiles — never download a runtime yourself.
+4. `swiftlint lint --strict` and `swift format lint --strict --recursive Targets Packages/Core/Sources
+   Packages/Core/Tests` from the root.
 
-Verification directory: `$TMPDIR/iru-verify/swift/app` (the `Packages/Core` package lives at
-`$TMPDIR/iru-verify/swift/app/Packages/Core`; the verification run writes nothing inside the repository being
-bootstrapped — it only ever touches that throwaway directory).
-
-Report pass/fail and any error output verbatim for a failure; don't dump a successful run's full log.
+Report pass/fail per command; quote error output verbatim for a failure only.
 
 ## Step 8 — Report
 
-Summarize what was generated: the resolved `app-name`/`bundle-id-prefix`/`<bundle-id>`, `platforms` selected (and
-how `ipados` combined with `ios`, if relevant), `min-deployment-target`, `generator`, the license chosen (or
-"none"), and the mode announced in Step 1 — scaffolded from scratch, updated an existing app, or the user chose
-to stop.
+Summarize: resolved `app-name`/`<AppName>`, `bundle-id-prefix`/`<bundle-id>`, `platforms` (how `ipados` combined with
+`ios`; that watchOS/visionOS/macOS targets are SwiftUI), `ui` and `architecture` (and why the others weren't offered),
+`min-deployment-target` and each platform's equivalent, `generator`, license, and whether the run scaffolded from
+scratch, updated an existing app, or stopped. State what was included versus omitted and why: `sonar` coordinates (or
+why `none`) and which platforms' paths `sonar-project.properties` lists; `distribution`/`signing` → exactly which
+Fastfile lanes exist and which CI secrets each needs (this skill never collects them), and that Fastlane is optional;
+which Step 4 versions were live versus fallback; ignored `args` keys. Then, per file, **created / updated / replaced /
+kept as is**, each mismatch of a kept file, and what a replaced one may have lost (tell the user to check `git diff`).
 
-State explicitly what was included versus omitted, and why:
+### Scaffold contract (confirmed by running it — downstream skills depend on these)
 
-- **`generator`**: `xcodegen`/`tuist` — restate the recommendation logic from Step 2 and which manifest file(s)
-  were written.
-- **`open-source`**/**`sonar`**: as Step 2 resolved them; if `sonar` != `none`, restate the `sonar.organization`/
-  `sonar.projectKey`/`sonar.host.url` written into `sonar-project.properties`, and which platforms' paths it lists.
-- **`distribution`**/**`signing`**: as resolved — restate exactly which Fastfile lanes exist as a result (`test`
-  only; `test`+`build`+`beta`; or `test`+`build`+`beta`+`release`, plus `notarize_release` if `macos` + a real
-  signing method were both chosen) and which CI secrets (`MATCH_GIT_URL`/`MATCH_PASSWORD` for `fastlane-match`;
-  `APP_STORE_CONNECT_API_KEY_ID`/`_ISSUER_ID`/`_KEY_BASE64` for `api-key`) each depends on — this skill never
-  collects or stores any of them.
-- Which Step 4 versions came from a live lookup versus this skill's recorded fallback.
-
-Then report, per Step 5 file, the action actually taken — **created / updated / replaced / kept as is** — and for
-every file kept as is, each concrete mismatch with this run's choices (e.g. a Fastfile lane no longer backed by
-`signing`/`distribution`, a leftover `sonar-project.properties` after `sonar: none`). If `visibility` or `ci`
-arrived via `args`, say how they shaped the `sonar` recommendation (and, for `ci: no` with Sonar configured, that
-no CI step sends reports). If existing files were replaced, explicitly list what could have been lost — any target, scheme, or
-build-setting customization beyond what Step 5's templates show — and tell the user to check `git diff` for
-anything they need to re-add.
+| What | Exact name / path / command |
+|---|---|
+| Project | `project.yml` → `xcodegen generate` → `<AppName>.xcodeproj` (gitignored). Per platform: targets `<AppName>-<Platform>` (app; product `<AppName>.app`, module `<AppName>`), `<AppName>Tests-<Platform>` (hosted, `TEST_HOST` pinned), `<AppName>UITests-<Platform>`; scheme `<AppName>-<Platform>` testing `CoreTests` + both test targets; local package product `Core` |
+| Schemes | `<AppName>-iOS` (ios/ipados), `<AppName>-macOS`, `<AppName>-watchOS`, `<AppName>-visionOS` |
+| Destinations | iOS: `platform=iOS Simulator,name=<device>` (e.g. `name=iPhone 18 Pro,OS=27.0`; add `OS=` when several runtimes have that device); watchOS: `platform=watchOS Simulator,name=Apple Watch Series 12 (46mm)`; visionOS: `platform=visionOS Simulator,name=Apple Vision Pro` (needs the visionOS runtime); macOS: `platform=macOS`; builds: `generic/platform=iOS Simulator` / `…=watchOS Simulator` / `…=visionOS Simulator`, archives `generic/platform=iOS` / `visionOS` / `watchOS` / `macOS` |
+| Versions | `project.yml` `settings.base` `MARKETING_VERSION: x.y.z` (unquoted) / `CURRENT_PROJECT_VERSION: n` — `iru-swift-bump-version`'s app path. Kind = app: root has `project.yml` (or `Project.swift`) and no root `Package.swift` |
+| Architecture marker | `Packages/Core/Sources/Core/ViewModels/` = MVVM; `Packages/Core/Sources/Core/Controllers/` (controller + `GreetingView` protocol) = MVC (both = mixed: UIKit MVC + SwiftUI platforms); `Targets/iOS/Sources/SceneDelegate.swift` + `AppDelegate` = UIKit, `@main struct … App` = SwiftUI; `Targets/<Platform>/Sources/` = this skill's layout |
+| Core tests + coverage (the bar) | `cd Packages/Core && swift test --enable-code-coverage` → `CoreTests.xctest` + `codecov/default.profdata` under `swift build --show-bin-path`; `llvm-cov report`/`export -format=lcov` — 100% lines for every variant |
+| All tests | `xcodebuild test -project <AppName>.xcodeproj -scheme <AppName>-<Platform> -destination '<destination>' -resultBundlePath <x>.xcresult` runs `CoreTests` + `<AppName>Tests-<Platform>` + `<AppName>UITests-<Platform>`; `-skip-testing:<AppName>UITests-<Platform>` for unit tests only |
+| App coverage | the UI layer (`Targets/**`) is "not measured" for the bar (also `sonar.coverage.exclusions`); measure Core with `swift test` |
+| Lint / format | `swiftlint lint --strict` (root; `included: Targets, Packages/Core/Sources, Packages/Core/Tests`; `reporter: json`) · `swift format lint --strict --recursive Targets Packages/Core/Sources Packages/Core/Tests` |
+| UI-test hooks | launch argument `--uitesting` (last; macOS also `-ApplePersistenceIgnoreState YES` before it) → `LaunchOptions.apply()` (animations off on iOS/visionOS); identifiers `nameField`, `greetButton`, `greetingLabel`, `errorLabel` |
+| UIKit specifics | Info.plist `UIApplicationSceneManifest` → `$(PRODUCT_MODULE_NAME).SceneDelegate`; `UIObservationTrackingEnabled: true` only for `mvvm` below iOS 26; no `UIMainStoryboardFile` |
+| Fastlane (optional) | `fastlane test` = `<AppName>-iOS` on `<first-available-simulator-name>`; never required by the workflows |
 
 ### Known quirks / verification notes
 
-- **Verified in `$TMPDIR/iru-verify/swift/app`** (outside this repository, nothing committed): `swift build` and
-  `swift test` both pass against the scaffolded `Packages/Core` (`Package.swift` + one `Greeter`/`GreeterTests`
-  pair, Swift tools version `6.0`, `swiftLanguageMode(.v6)`). `xcodebuild test -scheme Core -destination
-  'platform=macOS' -enableCodeCoverage YES -resultBundlePath TestResults.xcresult` and the same against
-  `-destination 'platform=iOS Simulator,name=iPhone 17 Pro'` both succeed, opening the bare SwiftPM package
-  directly (no `.xcodeproj` needed for `xcodebuild` to find a `Core` scheme — SwiftPM auto-generates one scheme per
-  product/target). Versions actually present: Xcode `27.0` (build `27A266a`), Swift `6.4`, SDKs at major `27` across
-  every platform, simulator runtimes installed at `26.4` (see below).
-- **`brew` is not installed, so `xcodegen generate`/`tuist generate` were never run, and neither was a real app
-  build.** Everything this skill claims about the *generated* `.xcodeproj` (scheme names beyond `Core` itself,
-  watchOS embed wiring actually linking, `TARGETED_DEVICE_FAMILY` actually producing a universal binary,
-  `fastlane build_app` succeeding) is derived from XcodeGen's/Tuist's documented behavior, not confirmed by running
-  either tool. The three things that *were* verified for real — the manifest's own syntax/YAML validity, the shared
-  `Packages/Core` package's build+test, and the `xcodebuild`/simulator/`.xcresult` mechanics a generated app project
-  would also rely on — are the closest approximation available without `brew`.
-- **Coverage attribution on a bare SwiftPM package opened directly in `xcodebuild` is misleading — a genuine, worth-
-  knowing quirk, not a Core.swift bug.** `xcrun xccov view --report --json TestResults.xcresult` against the
-  `xcodebuild test -scheme Core` run above reports the `Core` library target itself at `0/0` covered lines (`"name":
-  "Core", "coveredLines":0, "executableLines":0, "files":[]`) even though `Greeter.swift`'s one function definitely
-  ran — only the `CoreTests` target's own file shows nonzero coverage. The **reliable** path, confirmed separately:
-  `swift test --enable-code-coverage` (not `xcodebuild`) followed by `xcrun llvm-cov report
-  <bin-path>/CoreTests.xctest/Contents/MacOS/CoreTests -instr-profile <bin-path>/codecov/default.profdata` (bin
-  path from `swift build --show-bin-path`) correctly attributes `Sources/Core/Greeter.swift` at `100.00%` line
-  coverage. This is expected to resolve once `Packages/Core` is consumed as a real target *dependency* inside a
-  generated `.xcodeproj` (a different build graph than "a bare package opened directly by `xcodebuild`") — but
-  since that graph was never built here (no XcodeGen/Tuist), treat the `xccov`-against-a-raw-package result as an
-  artifact of this verification's own limitation, not a statement about how coverage will look in the real
-  generated app. `iru-swift-coverage` documents the correct per-project-kind path.
-- **`swift format lint --strict` needs a `.swift-format` file to match this skill's 4-space-indented templates —
-  without one, its default is 2-space indentation and every template above fails.** Confirmed: zero issues once
-  Step 5's `.swift-format` is present (auto-discovered from the current directory, no `--configuration` flag
-  needed); `[Indentation] unindent by 2/4 spaces` on nearly every line without it.
-- **The CoreSimulator service needed one `xcodebuild -runFirstLaunch` before the iOS Simulator destination would
-  work at all** — the very first `xcodebuild test -destination 'platform=iOS Simulator,…'` attempt in this
-  environment failed with `Loaded CoreSimulatorService is no longer valid for this process` /
-  `IDESimulatorFoundation` plug-in load errors; `xcodebuild -runFirstLaunch` (no `sudo` needed) resolved it and
-  every simulator run since has succeeded. If a fresh machine hits the same error, try that once before assuming
-  the environment is broken.
-- **Installed simulator runtimes lag the SDK major by one** — Xcode 27's SDKs report major `27` everywhere
-  (`xcodebuild -showsdks`), but `xcrun simctl list devices available` only has `iOS/tvOS/watchOS 26.4` runtimes
-  installed. This is why Step 4 resolves `min-deployment-target`'s default from the simulator-runtime lookup, not
-  the bare SDK major — targeting `27.0` as a deployment target would make the scaffold's own UI tests un-runnable
-  on every simulator this machine actually has.
-- **No `timeout` binary** on this machine (GNU coreutils isn't installed and `brew` can't supply it) — `xcrun
-  simctl list devices available` was run plain instead of wrapped in `timeout 120 …`; it returned promptly both
-  times, but a genuinely hung `simctl` call has no safety-net wrapper available in an environment like this one.
-- **`gh api repos/tuist/tuist/releases/latest`'s `"latest"` release was `helm@0.125.0`, not a Tuist CLI version at
-  all** — Tuist's monorepo release-tagging makes the GitHub releases API unreliable for "current CLI version";
-  `formulae.brew.sh/api/cask/tuist.json` (a plain HTTPS JSON call, no `brew` install required) was the reliable
-  source instead. See Step 4's version-lookup table.
-- Fastlane lanes (`test`, `build`, `beta`, `release`, `sync_signing`, `connect_api_key`, `notarize_release`) were
-  **never executed** — only written. `match`, TestFlight/App Store uploads, and notarization all need real Apple
-  Developer Program credentials this environment doesn't have and never will during a skill-authoring pass like
-  this one.
+- **Verified for real on 2026-10-16** in `$TMPDIR/iru-verify/apple/iru-setup-apple-app/{ios-swiftui-mvvm (ios+watchos),
+  ios-uikit-mvc, ios-uikit-mvvm, ios-uikit-mvvm-ios18, ios+ipados+visionos-swiftui, ios+macos-swiftui-extra, ios-uikit-mvc+visionos-mixed}`
+  (outside this repository) with Xcode 27.1 (27A9275), Swift 6.4, XcodeGen 2.46.0 and SwiftLint 0.65.1 (run from a
+  temp download, not installed): `swift test` (7–8 Core tests, **100.00% lines/regions/functions** of Core in every
+  variant), `xcodegen generate`, `xcodebuild test` on an iOS 27.0 iPhone 18 Pro simulator — ios-uikit-mvc 18/18,
+  ios-uikit-mvvm 17/17, ios-swiftui-mvvm 11/11, ios+ipados+visionos 11/11, **including the XCUITest** — the watchOS
+  scheme on an Apple Watch Series 12 (46mm) watchOS 27.0 simulator (11/11 incl. UI test, watch app embedded in the iOS
+  app), the macOS scheme's unit tests (10/10, ad-hoc signed; the macOS UI test needs Automation Mode — see
+  `iru-setup-macos-app`), `swiftlint lint --strict` (0 violations), `swift format lint --strict` (clean); the mixed UIKit-MVC + visionOS variant (both `Controllers/` and `ViewModels/`) builds for testing on both platforms with 12 Core tests at 100%.
+- **visionOS**: `xcodebuild build-for-testing -scheme MyApp-visionOS -destination 'generic/platform=visionOS Simulator'`
+  succeeds against the visionOS 27.0 SDK (`xrsimulator`, universal arm64/x86_64, `MinimumOSVersion` 26.0); its tests
+  are **unverified (no visionOS simulator runtime installed)** — `-destination 'platform=visionOS Simulator,name=Apple
+  Vision Pro'` fails with "Unable to find a device matching the provided destination specifier".
+- **UIKit Observation opt-in proven**: `ios-uikit-mvvm` with `min-deployment-target: 18.0` passes 17/17 on an iOS 18.5
+  simulator with `UIObservationTrackingEnabled`; the same project **without** the key fails three view-controller
+  tests (the view never re-renders) — the key is required below iOS 26. The UI test passed even without it (other
+  layout passes refresh the screen), so only the unit tests catch a missing opt-in. `strings` on the iOS 18.5
+  runtime's UIKitCore shows the `UIObservationTrackingEnabled` key; the 27.1 SDK declares `updateProperties()` as
+  `API_AVAILABLE(ios(26.0), tvos(26.0), visionos(26.0)) API_UNAVAILABLE(watchos)` — hence `viewWillLayoutSubviews()`.
+- **`TEST_HOST` must be pinned** — fixed in this version: XcodeGen derives a unit-test target's `TEST_HOST` from the
+  app *target* name (`<AppName>-iOS.app/<AppName>-iOS`), but `PRODUCT_NAME: <AppName>` builds `<AppName>.app`, so
+  `xcodebuild test` failed with "Could not find test host for <AppName>Tests-iOS". Older scaffolds need the Update.
+- **Embedded watch app needs `WKApplication: true`** — fixed in this version: without it, installing the iOS app on
+  the simulator failed with "Found WatchKit 2.0 app … but it does not have a WKWatchKitApp or WKApplication key set to
+  true in its Info.plist". A standalone watch app sets `WKWatchOnly: true` instead of the companion id.
+- **`Packages/Core` always declares `.macOS`**: `swift test` (the coverage bar) builds for the macOS host, where
+  `@Observable` needs macOS 14+; an iOS-only `platforms:` list would fall back to the old default macOS target.
+- **swift-format vs SwiftLint**: swift-format wants unconditional imports (incl. `@testable import`) above any
+  `#if … import` block (`OrderedImports`) and adds trailing commas that SwiftLint's `trailing_comma` rejects — that
+  rule is disabled. Without `.swift-format` the formatter defaults to 2-space indentation.
+- **Simulator-name ambiguity**: several runtimes ship the same device names (e.g. `iPhone 17` on 26.4 and 27.0) — add
+  `OS=<version>` to the destination. The "Metadata extraction skipped, no AppIntents.framework dependency" lines in
+  `xcodebuild` output are harmless.
+- If the iOS Simulator destination fails with `Loaded CoreSimulatorService is no longer valid`, run
+  `xcodebuild -runFirstLaunch` once.
+- **Tuist**: `Project.swift`/`Tuist.swift` pass `swiftc -parse` only; `tuist generate` was not run (Tuist isn't
+  available in the verification environment) — the `ProjectDescription` API calls are unconfirmed.
+- **Fastlane** lanes (`test`, `build`, `beta`, `release`, `sync_signing`, `connect_api_key`, `notarize_release`) are
+  written, never executed; `match`, TestFlight/App Store uploads and notarization need Apple Developer Program
+  credentials.
 
-Finish with an explicit **Warn explicitly** block:
+Finish with a **Warn explicitly** block:
 
-- **The user must review every generated file before running a generator, building, committing, or distributing.**
-  In particular: confirm the license choice matches an actual repository-root `LICENSE` file (or that none is
-  intended — suggest `iru-check-license` otherwise), replace the placeholder `Greeter`/`ContentView` with real
-  app logic, and run `iru-setup-swift-gitignore` right after this skill so `.xcodeproj`/`.xcworkspace`/
-  `DerivedData`/`.xcresult`/`xcuserdata` never get committed.
-- **`xcodegen generate`/`tuist generate` were never run — install the chosen generator
-  (`brew install xcodegen`/`brew install tuist`, or `mint run …`) and run it before opening this project in Xcode.**
-  This is the single largest unverified step in this skill (see "Known quirks").
-- If `sonar: cloud` or `sonar: self-hosted` was chosen, a `SONAR_TOKEN` repository secret and an actual SonarCloud/
-  SonarQube project matching `sonar.projectKey` still need to exist before a CI-driven scan will succeed — this
-  skill only writes `sonar-project.properties`, it never runs a scan itself.
-- If `signing` isn't `none`, the underlying Apple Developer Program membership, certificates/profiles (or the
-  App Store Connect API key), and — for `fastlane-match` — the private certs repo itself, all need to exist before
-  any Fastfile `build`/`beta`/`release`/`notarize_release` lane can succeed; this skill never collects, stores, or
-  generates any of them.
-- **Unverified locally, and never a blocker**: `xcodegen generate`/`tuist generate` and everything downstream of a
-  real `.xcodeproj` (the actual per-platform app build, the XCUITest UI-test target actually launching an app, the
-  watchOS embed wiring actually linking a companion app, SwiftLint itself), and every Fastlane lane. Everything
-  else in "Known quirks" above — the manifest's structural validity, `Packages/Core`'s build+test, the
-  `xcodebuild`/simulator/`.xcresult`/`xccov`/`xcresulttool` mechanics, and `swift format lint` — was run for real
-  while building and verifying this skill.
+- Review every generated file before building, committing or distributing; replace the `Greeting` sample with real
+  logic and confirm the license matches a root `LICENSE` (suggest `iru-check-license`).
+- Run `iru-setup-swift-gitignore` — `.xcodeproj`/`.xcworkspace`/`DerivedData`/`build/`/`.xcresult`/`xcuserdata` and
+  `.simulator-test.lock/` must never be committed; every clone runs `xcodegen generate` (or `tuist generate`) first.
+- visionOS tests need the visionOS simulator runtime (Xcode › Settings › Components); this skill never downloads it.
+- With `sonar` ≠ `none`, a `SONAR_TOKEN` secret and the Sonar project must exist before a scan works.
+- With `signing` ≠ `none`, the Apple Developer Program membership, certificates/profiles (or the API key) and — for
+  `fastlane-match` — the certs repo must exist before any `build`/`beta`/`release`/`notarize_release` lane works;
+  never commit certificates, `.p12` files or `.p8` keys.

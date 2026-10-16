@@ -8,21 +8,24 @@ description: >-
   `kotlin-springboot-hilla`), Quarkus services (`java-quarkus`, `kotlin-quarkus`), `typescript-library`,
   `react-web`, `nextjs`, `angular-web`, `nestjs`, PHP (`php-laravel`, `php-wordpress-plugin`,
   `php-wordpress-theme`, `php-prestashop-module`), Python (`python-fastapi`, `python-django`), `android-library`, `android-app`, `swift-library`, `apple-app`
-  (`ios`/`ipados`/`macos`/`watchos`), `react-native-app` (`expo`/`metro` toolchain), `ionic-app` (`angular`/`react`),
-  `kmp-app` (Kotlin Multiplatform for Android + iOS, `compose`/`native` UI) — by surveying the
+  (`ios`/`ipados`/`macos`/`watchos`/`visionos`, SwiftUI or UIKit, MVVM or MVC), `react-native-app` (`expo`/`metro` toolchain), `ionic-app` (`angular`/`react`),
+  `kmp-app` (Kotlin Multiplatform for Android + iOS, `compose`/`native` UI), and the desktop apps `macos-app`
+  (native macOS, `swiftui`/`appkit`) and `windows-app` (.NET 10, `wpf`/`winui`/`winforms`) — by surveying the
   working directory (running `iru-explore` first when it already holds code) to detect which one applies, asking
   only the shared, cross-cutting questions the detected/chosen type still needs, then delegating the actual
   scaffold to the matching stack orchestrator (`iru-setup-java-library-repository`, `iru-setup-java-springboot`,
   `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-  `iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`, or
-  `iru-setup-kmp-repository`) via `iru-isolated-skill-executor`. Accepts
+  `iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`,
+  `iru-setup-kmp-repository`, `iru-setup-macos-repository`, or `iru-setup-windows-repository`) via
+  `iru-isolated-skill-executor`. Accepts
   `args` (`key: value` lines) to pre-resolve `project-type`, `open-source`, `visibility`
   (`public`/`private`/`internal`, otherwise detected via `gh repo view` or asked), `ci` (`yes`/`no`), `ci-tests`
   (`unit`/`full`), `pages` (`yes`/`no`), `publish`, `distribution`, `sonar`
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, the stack-shape keys `language`, `build-tool`,
   `layout`, and `frontend` (JVM services), `python-version`, `platforms`, `framework`, `toolchain` (React Native
-  `expo`/`metro`), `native-builds`, `ui` (Kotlin Multiplatform `compose`/`native`), `integration-branch`,
+  `expo`/`metro`), `native-builds`, `ui` (Kotlin Multiplatform `compose`/`native`, macOS `swiftui`/`appkit`,
+  Windows `wpf`/`winui`/`winforms`), `architecture` (desktop apps' `mvvm`/`mvc`), `integration-branch`,
   `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` — forwarding each only
   to the delegated orchestrator whose own `args` contract actually accepts it, and never asking a question
   `args` already answered or one the delegated orchestrator asks itself. Asks whether CI workflows are wanted,
@@ -32,7 +35,7 @@ description: >-
   an inventory of the prior setup it found); on an existing repository it runs `iru-explore` first and forces
   `mode: existing`, and every delegated component then warns about each pre-existing artifact and asks whether to
   keep, update, or replace it. Use whenever a user wants to bootstrap (or catch up) a repository and either
-  doesn't know or shouldn't have to know which of this catalog's nine stack-specific setup orchestrators to
+  doesn't know or shouldn't have to know which of this catalog's eleven stack-specific setup orchestrators to
   invoke directly.
 model: sonnet
 ---
@@ -42,10 +45,11 @@ model: sonnet
 The catalog's single bootstrap front door. This skill does not scaffold anything itself — it detects or asks which
 of the supported project types the repository is (or should become), collects the handful of questions that are
 genuinely shared across every stack (open source, repository visibility, CI/CD and its test scope, Sonar, GitHub
-Pages, publish/distribution, and a few flavor-specific inputs), and then hands off to exactly one of nine existing
+Pages, publish/distribution, and a few flavor-specific inputs), and then hands off to exactly one of eleven existing
 stack orchestrators, each of which asks its own project-identity questions (groupId/artifactId, package/app name,
 slug, etc.) and its own stack-shape questions (JVM language/build tool/layout/frontend, NestJS ORM, Next.js output,
-PHP version floor, Python version/database/ORM/API, Kotlin Multiplatform UI approach, ...) and does the actual scaffolding.
+PHP version floor, Python version/database/ORM/API, Kotlin Multiplatform UI approach, desktop UI framework and
+MVVM/MVC architecture, ...) and does the actual scaffolding.
 
 ## Step 0 — Resolve inputs
 
@@ -83,7 +87,9 @@ library types only), `distribution` (`none`/`internal`/`store` — app types onl
 only) — **never asked here** (the delegated orchestrator asks them itself), only forwarded when supplied via `args`
 or pre-set by Step 1's detection — `platforms` (Apple app / Swift library), `framework` (Ionic's `angular`/`react`),
 `toolchain` (React Native's `expo`/`metro`), `native-builds` (React Native's `eas`/`local` — Expo toolchain
-only), `ui` (Kotlin Multiplatform's `compose`/`native` — never asked here, only forwarded), `python-version` (Python only — likewise never asked here), plus the
+only), `ui` (Kotlin Multiplatform's `compose`/`native`, macOS's `swiftui`/`appkit`, Windows' `wpf`/`winui`/
+`winforms` — never asked here, only forwarded), `architecture` (desktop apps' `mvvm`/`mvc` — likewise only
+forwarded), `python-version` (Python only — likewise never asked here), plus the
 pass-through-only keys `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`,
 `organization-url` (see Step 3's closing note — this skill never asks for these itself, it only forwards them when
 supplied). Every key found here is resolved — skip the matching question below. Any **other** `key: value` line
@@ -92,7 +98,9 @@ supplied). Every key found here is resolved — skip the matching question below
 `group-id`/`artifact-id`/`java-version` for `iru-setup-quarkus-repository`,
 `name`/`package`/`description`/`database`/`orm`/`api` for `iru-setup-python-repository`,
 `group-id`/`artifact-id`/`namespace` for `iru-setup-android-repository`, `app-name`/`application-id`/`bundle-id`/
-`namespace` for `iru-setup-kmp-repository`) is kept as an opaque pass-through: Step 4
+`namespace` for `iru-setup-kmp-repository`, `app-name`/`bundle-id`/`team-id`/`min-macos`/`sandbox` for
+`iru-setup-macos-repository`, `app-name`/`display-name`/`publisher`/`package-name`/`signing`/`winget` for
+`iru-setup-windows-repository`) is kept as an opaque pass-through: Step 4
 forwards it verbatim only if the delegated orchestrator's own Step 0, read on disk there, recognizes the key, and
 Step 5 lists every line that was dropped because no delegated skill accepts it — never silently (without this
 pass-through, a fully pre-resolved `mode: new` run still stops to ask for the package name and Node version).
@@ -105,11 +113,11 @@ returning any output, or any of these manifests present at any depth worth a sha
 `pom.xml`, `build.gradle`/`build.gradle.kts`, `settings.gradle`/`settings.gradle.kts`, `package.json`,
 `composer.json`, a root `style.css`/`theme.json` (WordPress theme), `pyproject.toml`, `requirements.txt`, `manage.py`,
 `setup.py`, `Package.swift`, `*.xcodeproj`, `project.yml`,
-`Project.swift`, `*.csproj`/`*.sln`.
+`Project.swift`, `*.csproj`/`*.sln`/`*.slnx`.
 
 - **Non-empty** (a real, at-least-partially-scaffolded repository): run `Skill({skill: "iru-explore"})` with no
   ticket argument — this is a codebase-only exploration, not one grounded in a ticket. Read the `- Project type:`
-  line (and, for JVM services, the `- Build & layout:` line) from its `## Tech stack` report block. Set
+  line (and, for JVM services and `apple-app`, the `- Build & layout:` line) from its `## Tech stack` report block. Set
   `mode: existing` (unless `args` already supplied `mode`) and pre-select the recommended Step 2 option from the
   value reported, per the mapping table below. If the line reads `multiple`, list the reported
   `<module-path>: <type>` entries to the user and treat this as a repository that needs more than one bootstrap
@@ -125,13 +133,13 @@ java-library, java-springboot, java-springboot-hilla, kotlin-springboot, kotlin-
 kotlin-quarkus, typescript-library, react-web, angular-web, nestjs, nextjs, php-laravel, php-wordpress-plugin,
 php-wordpress-theme, php-prestashop-module, php-library, python-fastapi, python-django, python-library,
 android-library, android-app, swift-library,
-apple-app (ios, ipados, macos, watchos), react-native-app (expo|metro), ionic-app (angular|react),
-kmp-app (compose|native), dotnet, other, unknown
+apple-app (ios, ipados, macos, watchos, visionos), macos-app (swiftui|appkit), react-native-app (expo|metro),
+ionic-app (angular|react), kmp-app (compose|native), windows-app (wpf|winui|winforms), dotnet, other, unknown
 ```
 
 (`multiple` is also possible — handled above, not a project type in its own right.) Map a detected value straight
 to its Step 2 option and the stack-shape `args` it pre-sets — offer that option as the first choice, labeled
-"(detected)", instead of running the full five-round interview, and forward the pre-set keys in Step 4 so the
+"(detected)", instead of running the full six-round interview, and forward the pre-set keys in Step 4 so the
 delegated orchestrator confirms rather than re-asks them:
 
 | Detected `Project type:` | Step 2 option | Delegated orchestrator | Pre-set `args` |
@@ -161,6 +169,8 @@ delegated orchestrator confirms rather than re-asks them:
 | `react-native-app (…)` | Cross-platform → React Native | `iru-setup-typescript-repository` | `flavor: react-native`, `toolchain` from the parenthetical |
 | `ionic-app (…)` | Cross-platform → Ionic | `iru-setup-typescript-repository` | `flavor: ionic`, `framework` from the parenthetical |
 | `kmp-app (…)` | Cross-platform → Kotlin Multiplatform | `iru-setup-kmp-repository` | `ui` from the parenthetical |
+| `macos-app (…)` | Desktop → macOS app | `iru-setup-macos-repository` | `ui` from the parenthetical |
+| `windows-app (…)` | Desktop → Windows app | `iru-setup-windows-repository` | `ui` from the parenthetical |
 
 - **Kotlin Spring Boot build tool**: a root `pom.xml` → `build-tool: maven`; `settings.gradle.kts`/`build.gradle.kts`
   → `build-tool: gradle`. A Groovy-DSL-only Gradle build (`settings.gradle`/`build.gradle`) → send no `build-tool`
@@ -173,6 +183,10 @@ delegated orchestrator confirms rather than re-asks them:
 - `apple-app (…)`, `ionic-app (…)`, and `react-native-app (…)` also pre-fill Step 3's `platforms`/`framework`/
   `toolchain` questions from the parenthetical, so the user only needs to confirm rather than re-answer them.
   `kmp-app (…)`'s `ui` is forwarded as detected and confirmed by `iru-setup-kmp-repository`, never asked here.
+  Likewise `apple-app (…)`'s `Build & layout:` line carries the iOS target's UI framework (`swiftui`/`uikit`) and
+  the `Packages/Core` architecture (`mvvm`/`mvc`) — forward each one it names as `ui`/`architecture` (Step 4) — values
+  detected from disk, so neither this skill nor `iru-setup-swift-repository` asks them fresh; tell the user which
+  values were detected so a wrong one can be corrected before the scaffold runs.
 - A `kmp-app` repository also contains an Android application module and an `iosApp/` — they belong to the KMP
   app, so never offer `android-app`/`apple-app` for them or treat the repository as `multiple`.
 - `php-library` — a plain Composer package. This catalog has **no scaffold skill for it** (`iru-setup-php-repository`
@@ -187,9 +201,17 @@ delegated orchestrator confirms rather than re-asks them:
   `iru-python-coverage`, `iru-python-code-quality`, `iru-python-docstrings`) and `iru-setup-antora`,
   `iru-setup-python-gitignore`, `iru-setup-changelog`, `iru-setup-readme` can still be run individually — and stop
   here for this run, exactly like `dotnet` below.
-- `dotnet` — this catalog has **no bootstrap orchestrator for .NET**. Report that plainly (project type detected:
-  `dotnet`; no `iru-setup-dotnet-repository`-style skill exists in this catalog to delegate to) and stop here for
-  this run rather than falling through to Step 2 — there is nothing to offer.
+- `macos-app (…)` / `windows-app (…)` forward only `ui` from the parenthetical; `architecture` is detected and
+  confirmed by the delegated orchestrator itself (from `ViewModels/` vs. `Controllers/`), never asked here. An
+  `apple-app (…)` whose platforms include `macos` *and* another platform — or a macOS-only `iru-setup-apple-app`
+  scaffold (`Targets/macOS/…`), which `iru-explore` keeps as `apple-app (macos)` — stays `apple-app`; never offer
+  `macos-app` for it.
+- `dotnet` — this catalog has **no bootstrap orchestrator for a plain .NET library or service** (Windows desktop
+  apps are `windows-app`, above). Report that plainly (project type detected: `dotnet`; no
+  `iru-setup-dotnet-repository`-style skill exists in this catalog to delegate to; the .NET gate skills
+  `iru-dotnet-test`/`-coverage`/`-code-quality`/`-docfx` and `iru-setup-antora`, `iru-setup-changelog`,
+  `iru-setup-readme` can still be run individually) and stop here for this run rather than falling through to
+  Step 2 — there is nothing to offer.
 - `other` / `unknown` / no ticket detected at all — fall through to asking the user directly in Step 2, with no
   pre-selection; a stack `iru-explore` couldn't place isn't one this skill can guess a delegated orchestrator for
   either.
@@ -232,10 +254,10 @@ action actually taken per component.
 Skip this step entirely when `project-type` was already resolved — either supplied via `args`, or detected in
 Step 1 and confirmed by the user (offered as that option's first entry, labeled "(detected)").
 
-Otherwise resolve it with `AskUserQuestion`, in up to five rounds (the tool caps each question at four options,
-so each round offers three concrete project types plus one explicit escape hatch). Rounds 1–4 end with a fourth
+Otherwise resolve it with `AskUserQuestion`, in up to six rounds (the tool caps each question at four options,
+so each round offers up to three concrete project types plus one explicit escape hatch). Rounds 1–5 end with a fourth
 option, **"Something in the next group"**, whose label names the theme the next round covers (e.g. "Something in
-the next group (mobile/native)") — picking it moves on to the next round without forcing a pick. Round 5 is the
+the next group (mobile/native)") — picking it moves on to the next round without forcing a pick. Round 6 is the
 last round, so its fourth option is instead **"None of these"**: choosing it means `project-type: other` — ask the
 user to describe the stack in one line, and report per Step 5 that this catalog has no bootstrap orchestrator for
 it (the same outcome as a detected `dotnet`/`other` in Step 1) rather than guessing a delegated skill to force it
@@ -253,7 +275,11 @@ instead of walking them through the remaining rounds.
   the next group (mobile & Apple).
 - **Round 5 — "Mobile & Apple"** (only if Round 4 ended on the escape hatch): Android ("library or app") / Apple
   ("Swift library or iOS/iPadOS/macOS/watchOS app") / Cross-platform mobile app ("React Native, Kotlin Multiplatform, or Ionic") /
-  None of these.
+  Something in the next group (desktop).
+- **Round 6 — "Desktop"** (only if Round 5 ended on the escape hatch): macOS desktop app ("native Mac app in Swift —
+  SwiftUI or AppKit, MVVM or MVC; notarized DMG or Mac App Store") / Windows desktop app ("C# on .NET 10 — WPF,
+  WinUI 3 or Windows Forms, MVVM or MVC; MSIX, WinGet or Microsoft Store") / None of these. (A Mac app that also
+  targets iOS/iPadOS/watchOS is Round 5's *Apple → Apple app*, not this round's macOS option.)
 
 Four options bundle two or three types, so picking one asks **one** bounded follow-up `AskUserQuestion` right away
 — these are part of resolving `project-type` (they decide the delegated orchestrator's `flavor`, and whether Step 3
@@ -303,6 +329,8 @@ Step 0's `args` or Step 1's detection supplied them, and otherwise leaves them t
 | Cross-platform → React Native | `react-native-app` | `iru-setup-typescript-repository` | `flavor: react-native`, `toolchain`, `native-builds` (Expo only) |
 | Cross-platform → Kotlin Multiplatform | `kmp-app` | `iru-setup-kmp-repository` | `ui` only when detected or in `args` |
 | Cross-platform → Ionic | `ionic-app` | `iru-setup-typescript-repository` | `flavor: ionic`, `framework` |
+| macOS desktop app | `macos-app` | `iru-setup-macos-repository` | `ui` only when detected or in `args` |
+| Windows desktop app | `windows-app` | `iru-setup-windows-repository` | `ui` only when detected or in `args` |
 
 A user who wants a plain Composer PHP library (no Laravel/WordPress/PrestaShop) ends on "None of these" or types
 it via *Other* — handle it like a detected `php-library` in Step 1 (no orchestrator; point at the individually
@@ -314,7 +342,7 @@ a detected `python-library`.
 Ask only what the resolved `project-type` actually needs, skipping anything already resolved by `args` or by
 Step 1's detection. Every question here uses `AskUserQuestion` (header ≤ 12 characters, 2–4 options, recommended
 option first and labeled "(Recommended)") and follows this catalog's shared open-source- and visibility-driven
-convention (see any of the nine delegated orchestrators' own Step 0–4 for the identical wording this mirrors). Ask
+convention (see any of the eleven delegated orchestrators' own Step 0–4 for the identical wording this mirrors). Ask
 them in the order below — `visibility` and `ci` change the recommendations of everything after them.
 
 1. **open-source** — is this repository open source? Yes / No, asked directly with no default. Drives the
@@ -350,8 +378,10 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      when the resolved type builds on macOS (`swift-library`, `apple-app`, `kmp-app` — its iOS framework, Kotlin/Native
      iOS tests, and the `iosApp` host build always need a macOS runner —, `react-native-app` with `toolchain: metro`
      (an iOS `xcodebuild` job) or `toolchain: expo` + `native-builds: local` — question 8 hasn't been asked yet, so
-     state it conditionally unless `args` resolved it — and `ionic-app` iOS builds) — the ~10× macOS multiplier, estimating plainly that a few
-     dozen macOS builds a month can exhaust 2,000 included minutes. Offer **No** as "no workflows — build, test, and
+     state it conditionally unless `args` resolved it —, `ionic-app` iOS builds, and `macos-app` — every build, test,
+     notarization and DocC job) — the ~10× macOS multiplier, estimating plainly that a few dozen macOS builds a
+     month can exhaust 2,000 included minutes; for `windows-app`, the ~1.7× Windows multiplier (its pipeline keeps
+     the Core tests, coverage and docs on Linux and uses Windows for the app build, UI tests and packaging). Offer **No** as "no workflows — build, test, and
      release locally (re-run the stack's `-github-workflows` skill later to add them)".
    - `ci: no` means the delegated orchestrator skips its workflows step entirely (no `.github/workflows/*`, no
      `security.yml`, no `.github/dependabot.yml`, no sync script) — and with it the shared security block
@@ -386,7 +416,9 @@ them in the order below — `visibility` and `ci` change the recommendations of 
    billed on a private repository); Kotlin/Native iOS simulator tests plus the `iosApp` XCTest suite on macOS
    (`kmp-app` — every macOS minute ~10×; `unit` keeps CI to the shared JVM/Android host tests plus an iOS compile
    check); XCUITest UI tests on every selected destination (`apple-app`, every macOS minute
-   ~10×); an integration-test target if one exists (`swift-library`, `typescript-library`).
+   ~10×); XCUITest UI tests that launch the app on the macOS runner's desktop (`macos-app`, ~10×); FlaUI desktop UI
+   tests on a Windows runner (`windows-app`, ~1.7×; `unit` keeps CI to the Core tests on Linux plus a Windows build);
+   an integration-test target if one exists (`swift-library`, `typescript-library`).
    - **`unit`** — "Unit tests only (cheaper: fewer minutes, faster feedback). Integration / instrumentation / e2e
      tests stay local." Recommend for private/internal repositories.
    - **`full`** — "Unit + integration / instrumentation / e2e tests (complete verification, uses considerably more
@@ -409,9 +441,18 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      does this get published for other projects to depend on (Maven Central / npm / the Swift Package Index,
      per the type)? Default **Yes** when open source; otherwise ask with **No** recommended — these registries are
      for redistributable artifacts, which usually isn't the point of closed-source code.
-   - **`distribution`** — app types (`android-app`, `apple-app`, `react-native-app`, `ionic-app`, `kmp-app`):
-     `none`/`internal`/`store`. Default **`store`** only when open source; otherwise ask with **`internal`**
-     recommended, `none` as the local-install-only alternative. The service, PHP, and Python types use the same key with
+   - **`distribution`** — app types (`android-app`, `apple-app`, `react-native-app`, `ionic-app`, `kmp-app`,
+     `macos-app`, `windows-app`): `none`/`internal`/`store`. Default **`store`** only when open source; otherwise ask
+     with **`internal`** recommended, `none` as the local-install-only alternative. The two desktop types read the
+     values differently — say so in the option descriptions, and default them to **`internal`** even when open
+     source (a GitHub Release is the natural public download for a desktop app):
+     - **`macos-app`** — `internal` = a Developer ID–signed, notarized and stapled DMG attached to a GitHub Release;
+       `store` = an App Store Connect upload (TestFlight / Mac App Store review; the App Sandbox is mandatory). Both
+       need a paid Apple Developer Program membership.
+     - **`windows-app`** — `internal` = self-contained zips per architecture plus, when signed, an MSIX and an
+       `.appinstaller` file on GitHub Releases (WinGet optional); `store` = an MSIX submission to the Microsoft Store
+       through Partner Center. The signing method (Azure Artifact Signing / a `.pfx` certificate / none) and WinGet
+       are asked by `iru-setup-windows-repository`. The service, PHP, and Python types use the same key with
      their own value sets and meanings — offer only the values the delegated orchestrator accepts:
      - **Quarkus service** — `registry`/`none`: **Registry (Recommended)** = a container image pushed to GHCR when
        a release is published (free for public repositories; storage/transfer quotas for private ones); **None** =
@@ -440,8 +481,11 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      visionOS / Linux?" with options `tvos` / `visionos` / `linux` (none required) — and append every selected
      value to `platforms`. This follow-up is necessary because Step 4 always forwards `platforms` pre-resolved,
      and `iru-setup-swift-repository`'s own Step 0 skips any question whose key was supplied — so a library's
-     extra platforms can only reach `Package.swift` if this front door collects them itself. Never ask it for an
-     Apple app: `iru-setup-apple-app` accepts only the four values above.
+     extra platforms can only reach `Package.swift` if this front door collects them itself. For an **Apple app**,
+     ask a narrower follow-up instead — "Also target visionOS?" (`visionos` / none) — for the same reason
+     (`iru-setup-apple-app` accepts `visionos` but not `tvos` or `linux`). Never offer `tvos`/`linux` for an app. If
+     the user picks `macos` alone for an Apple app, suggest the macOS desktop app type (Round 6) instead —
+     `iru-setup-macos-repository` covers AppKit, MVC and Developer ID/DMG distribution.
    - **Ionic app** — framework (`AskUserQuestion`, two options): **Angular** or **React**. Pre-fill from Step 1's
      detected `ionic-app (…)` parenthetical when present.
    - **React Native app** — toolchain (`AskUserQuestion`, two options; pre-fill from Step 1's detected
@@ -452,6 +496,10 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      **only for `toolchain: expo`**, native-builds (`AskUserQuestion`, two options, default **`eas`**): does CI
      build the iOS/Android binaries via cloud builds (`eas`), or does it need a full local native toolchain
      (`local`)? Never ask or forward `native-builds` for `toolchain: metro`.
+   - **macOS / Windows desktop app** — nothing here: `ui` (SwiftUI vs. AppKit; WPF vs. WinUI 3 vs. Windows Forms),
+     `architecture` (MVVM vs. MVC, offered only where both are valid), the app identity and the platform-specific
+     release questions (sandbox; signing, WinGet) are asked by `iru-setup-macos-repository` /
+     `iru-setup-windows-repository`.
    - **Kotlin Multiplatform app** — nothing here: `ui` (`compose` shared Compose Multiplatform UI vs. `native`
      Jetpack Compose + SwiftUI) and the app identity are asked by `iru-setup-kmp-repository`.
    - **Spring Boot / Quarkus / NestJS / Next.js / PHP / Python** — nothing here. Their stack-shape questions are asked by
@@ -468,7 +516,8 @@ them in the order below — `visibility` and `ci` change the recommendations of 
 `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` are
 **never actively asked here** — this front door only forwards them when they arrived via its own `args`
 (`iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-`iru-setup-python-repository`, `iru-setup-android-repository`, and `iru-setup-swift-repository` all accept these as `args` keys and would
+`iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository`,
+`iru-setup-macos-repository`, and `iru-setup-windows-repository` all accept these as `args` keys and would
 otherwise ask their own equivalent question; `iru-setup-java-library-repository` and `iru-setup-java-springboot`
 accept none of them and always ask their own identity/branch questions directly
 regardless of what this skill would pass). Asking them here would either duplicate a question the delegated skill
@@ -489,12 +538,14 @@ the table above once actually invoking:
 - `.claude/skills/iru-setup-android-repository/SKILL.md`
 - `.claude/skills/iru-setup-swift-repository/SKILL.md`
 - `.claude/skills/iru-setup-kmp-repository/SKILL.md`
+- `.claude/skills/iru-setup-macos-repository/SKILL.md`
+- `.claude/skills/iru-setup-windows-repository/SKILL.md`
 - `.claude/skills/iru-explore/SKILL.md` Step 7, for the `## Tech stack` report shape Step 1 already relied on.
 - `.claude/agents/iru-isolated-skill-executor.md`, for how it runs a named skill and reports back.
 
-Then delegate via `iru-isolated-skill-executor`, exactly one of the nine, always passing `mode` and every shared
+Then delegate via `iru-isolated-skill-executor`, exactly one of the eleven, always passing `mode` and every shared
 input Step 3 resolved (omitting any key the target skill's own Step 0 doesn't recognize — never send an invented
-key). All nine orchestrators accept the cost/CI keys `visibility`, `ci`, `ci-tests`, and `pages`, plus
+key). All eleven orchestrators accept the cost/CI keys `visibility`, `ci`, `ci-tests`, and `pages`, plus
 `on-existing`: always send `visibility` and `ci`; send `ci-tests` and `pages` only when `ci: yes` (they're
 meaningless otherwise); send `on-existing` **only** when it arrived via this skill's own `args` — never invent a
 value, so an interactive run leaves every component free to warn and ask per pre-existing artifact:
@@ -565,13 +616,25 @@ and `pages` (when `ci: yes`), and `on-existing` (when supplied via `args`), per 
   plus the same pass-through branch/license/developer keys when supplied (the `android-app` example above).
 - **`swift-library`** / **`apple-app`** → `iru-setup-swift-repository`, `args`: `flavor` (`library`/`app`),
   `mode`, `platforms` (comma-separated), `open-source`, the cost/CI keys, `publish` (library) / `distribution`
-  (app), `sonar` (+ detail keys), plus the same pass-through branch/license/developer keys when supplied. Neither
+  (app), `sonar` (+ detail keys), `ui`/`architecture` (app only, when supplied via `args` or detected on
+  `iru-explore`'s `Build & layout:` line in Step 1 — otherwise omitted, so `iru-setup-swift-repository` detects
+  and confirms them in `mode: existing`, or asks them fresh in `mode: new`), plus the same pass-through branch/license/developer keys when supplied. Neither
   `flavor` needs `branching` sent — `iru-setup-swift-repository` asks that itself, as it isn't one of this skill's
   `args` keys.
 - **`kmp-app`** → `iru-setup-kmp-repository`, `args`: `mode`, `open-source`, the cost/CI keys, `distribution`,
   `sonar` (+ detail keys), `ui` only when Step 1 detected it or `args` supplied it, plus the same pass-through
   branch/license/developer keys and identity keys (`app-name`, `application-id`, `bundle-id`, `namespace`) when
   supplied. Never send `publish` or `flavor` — it scaffolds apps only.
+- **`macos-app`** → `iru-setup-macos-repository`, `args`: `mode`, `open-source`, the cost/CI keys, `distribution`,
+  `sonar` (+ detail keys), `ui` only when Step 1 detected it or `args` supplied it, `architecture`/`macos-ci`/
+  `runner`/`min-macos`/`sandbox`/`category` only when supplied via `args`, plus the same pass-through
+  branch/license/developer keys and identity keys (`app-name`, `bundle-id`, `team-id`) when supplied. Never send
+  `publish`, `flavor` or `platforms` — it scaffolds macOS-only apps.
+- **`windows-app`** → `iru-setup-windows-repository`, `args`: `mode`, `open-source`, the cost/CI keys,
+  `distribution`, `sonar` (+ detail keys), `ui` only when Step 1 detected it or `args` supplied it,
+  `architecture`/`signing`/`winget`/`msix`/`ui-tests`/`rids` only when supplied via `args`, plus the same
+  pass-through branch/license/developer keys and identity keys (`app-name`, `display-name`, `publisher`,
+  `publisher-display-name`, `package-name`) when supplied. Never send `publish` or `flavor`.
 
 If the on-disk Step 0 of the target orchestrator turns out **not** to recognize one of the cost/CI keys (e.g. an
 older copy of it was installed), don't send that key — instead tell the user the orchestrator will ask that
@@ -594,8 +657,9 @@ flagged — a short structured summary, not the delegated run's full transcript.
 
 Summarize for the user:
 
-- The resolved `project-type` (and, for `apple-app`/`ionic-app`/`react-native-app`/`kmp-app`, the
-  platforms/framework/toolchain/UI approach that came with it; for a
+- The resolved `project-type` (and, for `apple-app`/`ionic-app`/`react-native-app`/`kmp-app`/`macos-app`/
+  `windows-app`, the platforms/framework/toolchain/UI approach — and, for the desktop types, the MVVM/MVC
+  architecture the orchestrator reported — that came with it; for a
   Spring Boot or Quarkus service, the language/build tool/layout/frontend the delegated orchestrator reported —
   the final `java-*`/`kotlin-*` key comes from its answers), the
   setup mode restated as in Step 1's announcement ("set up from scratch" / "updated an existing repository") with

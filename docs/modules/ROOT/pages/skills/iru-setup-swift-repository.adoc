@@ -12,11 +12,12 @@ and orchestrates six other skills in a fixed order so nothing is asked twice.
 
 `iru-setup-swift-repository` is the top-level entry point (standalone, or as the Swift/Apple branch of
 `iru-setup-repository`) for starting or catching up a Swift repository, whichever of its two flavors it is: a
-redistributable SwiftPM `library`, or a native iOS/iPadOS/macOS/watchOS `app` generated from an XcodeGen or Tuist
-manifest. Rather than duplicating the flavor's own scaffold logic, documentation scaffolding, `.gitignore` setup,
+redistributable SwiftPM `library`, or a native iOS/iPadOS/macOS/watchOS/visionOS `app` generated from an XcodeGen
+or Tuist manifest, with SwiftUI or programmatic UIKit for its iOS/iPadOS target and an MVVM or MVC core (a
+macOS-only app is pointed to xref:skills/iru-setup-macos-repository.adoc[] instead). Rather than duplicating the flavor's own scaffold logic, documentation scaffolding, `.gitignore` setup,
 CI/CD workflows, changelog bootstrapping, and README generation, it gathers the shared inputs — project identity
 (package name or app name/bundle-id prefix, license, developer name/email/organization URL), flavor-specific
-inputs (platforms, minimum deployment targets, generator, signing), and pipeline parameters (branching model,
+inputs (platforms, minimum deployment targets, generator, signing, and for an app `ui`/`architecture`), and pipeline parameters (branching model,
 integration/stable branch, macOS runner, open-source/visibility/publish/distribution/sonar, and the cost-aware
 CI choices `ci`, `ci-tests` and `pages`) — once, and passes each downstream skill only the `args` keys its own
 Step 0 accepts. It announces up front whether it is setting the repository up from scratch or updating an existing
@@ -78,13 +79,32 @@ recommended for `library`, MIT for `app`, No license, or Other) and plain conver
 |`platforms`
 |Yes
 |Flavor-specific vocabulary: `ios, ipados, macos, watchos, tvos, visionos, linux` for `library`; `ios, ipados,
-macos, watchos` for `app`. `AskUserQuestion` multi-select, at least one required.
+macos, watchos, visionos` for `app` (tvOS refused). `AskUserQuestion` multi-select (visionOS as a follow-up),
+at least one required; an `args`-supplied list is not re-asked for an app, while a library still gets the
+tvOS/visionOS/Linux follow-up. A macOS-only app selection offers to switch to `iru-setup-macos-repository` — only
+when the user picked the platforms here, never when `platforms` arrived via `args`.
 |None
+
+|`ui` (app only)
+|No
+|`swiftui` (recommended) or `uikit` (programmatic UIKit with a scene delegate, no storyboards) for the iOS/iPadOS
+target; asked only when `ios` or `ipados` is selected. watchOS, visionOS and macOS targets stay SwiftUI. In
+`mode: existing` it is detected instead (`Targets/iOS/Sources/SceneDelegate.swift` or a `UIWindowSceneDelegate`
+with no SwiftUI `App` → `uikit`) and confirmed, or omitted so `iru-setup-apple-app` detects it.
+|Asked when `ios`/`ipados` selected (detected in `mode: existing`)
+
+|`architecture` (app only)
+|No
+|`mvvm` or `mvc`. `ui: swiftui` resolves to `mvvm` without asking; `ui: uikit` asks MVC (recommended) or MVVM.
+In `mode: existing` it is detected from `Packages/Core/Sources/Core/Controllers/` (`mvc`) vs `…/ViewModels/`
+(`mvvm`) and confirmed, or omitted for `iru-setup-apple-app` to detect.
+|`mvvm` for SwiftUI; asked for UIKit (detected in `mode: existing`)
 
 |`min-deployment-targets` (library) / `min-deployment-target` (app)
 |No
-|Per-platform OS versions for a library (no universal default, asked directly); a single OS version for an app,
-deliberately left for `iru-setup-apple-app` to resolve from local simulator runtimes unless supplied.
+|Per-platform OS versions for a library (no universal default, asked directly); for an app the iOS deployment
+target, which `iru-setup-apple-app` maps per platform (`18.0` → macOS 15 / watchOS 11 / visionOS 2; identical
+numbers from 26 on), deliberately left for `iru-setup-apple-app` to resolve from local simulator runtimes unless supplied.
 |Asked (library) / resolved downstream (app)
 
 |`generator` (app only)
@@ -101,7 +121,8 @@ deliberately left for `iru-setup-apple-app` to resolve from local simulator runt
 |`integration-branch`, `stable-branch`, `runner`
 |No
 |CI pipeline parameters consumed by `iru-setup-swift-github-workflows`. Integration branch skipped entirely for
-`main-only`.
+`main-only`. For an app, `xcode-27` (preview image, with `xcode-version: 27.1`, the Xcode the scaffold was
+verified with) is offered next to the GA `macos-26` runner.
 |`develop`, `main`, `macos-26`
 
 |`open-source`, `publish` (library), `distribution` (app), `sonar` (+ detail keys)
@@ -168,7 +189,9 @@ when the key isn't supplied.
   (via `iru-setup-readme`).
 * A final report summarizing the resolved flavor/branching/mode, identity/license/pipeline parameters
   (`visibility`, `ci`, `ci-tests`, `pages` included), a per-component table of whether each was created, updated,
-  replaced, kept as is (with any listed mismatches) or skipped (`ci: no`), the consolidated required-secrets/settings table, every decision
+  replaced, kept as is (with any listed mismatches) or skipped (`ci: no`), the Sonar coverage conversion
+  (`lcov_to_sonar_generic.py` for both flavors), the consolidated required-secrets/settings table (including
+  `APPLE_TEAM_ID` for a distributed app), every decision
   made on the user's behalf, and explicit warnings to review every generated file before building, committing,
   or relying on CI.
 
@@ -183,8 +206,12 @@ flowchart TD
     D -- yes --> D1["Step 2: Skip identity questions\n(read from manifest)"]
     D -- no --> D2["Step 2: Collect project identity\n(package-name or app-name/bundle-id,\nlicense, developer info)"]
     D1 --> E
-    D2 --> E["Step 3: Collect flavor-specific inputs\n(platforms, min-deployment-target(s),\ngenerator for app)"]
-    E --> F["Step 4: Collect shared pipeline parameters\n(branches, runner, open-source, visibility,\npublish/distribution, signing, ci, sonar,\nci-tests, pages)"]
+    D2 --> E["Step 3: Collect flavor-specific inputs\n(platforms, min-deployment-target(s),\ngenerator for app; visionOS follow-up)"]
+    E --> E2{"app with macOS only?"}
+    E2 -- "yes, platforms\nasked here" --> E3["Offer to switch to\niru-setup-macos-repository"]
+    E2 -- "no, or platforms\nfrom args" --> E4["app: ui swiftui/uikit (iOS/iPadOS only) and\narchitecture; detected + confirmed in\nmode existing, else asked (swiftui means\nmvvm, uikit asks mvc/mvvm)"]
+    E3 -- "declined" --> E4
+    E4 --> F["Step 4: Collect shared pipeline parameters\n(branches, runner, open-source, visibility,\npublish/distribution, signing, ci, sonar,\nci-tests, pages)"]
     F --> I["Step 5: Run flavor's scaffold skill\n(iru-setup-swift-library or\niru-setup-apple-app, via sub-agent;\nasks Update / Keep / Replace per file)"]
     I -- "user chose stop,\nno manifest on disk" --> J[Stop entire pipeline; report]
     I -- "ok, or stop but\nmanifest exists" --> K["Step 6: Run setup-antora\n(documentation site, via sub-agent)"]
@@ -216,8 +243,9 @@ previous one's files being on disk:
   fields, `open-source`, `publish`, `sonar` + detail keys, `formatter` if supplied, `visibility`, `ci`,
   `on-existing` if supplied, `mode`) as `args`. Always invoked, even when `Package.swift` already exists.
 * xref:skills/iru-setup-apple-app.adoc[] — Step 5, `flavor: app`: writes the generator manifest,
-  `Packages/Core`, per-platform `Targets/`, and `fastlane/Fastfile`, passing the app-specific identity
-  (`app-name`, `bundle-id-prefix`), `platforms`, `generator`, `distribution`, `signing`, license, developer
+  `Packages/Core`, per-platform `Targets/`, and an optional `signing`/`distribution`-gated `fastlane/Fastfile`, passing the app-specific identity
+  (`app-name`, `bundle-id-prefix`), `platforms`, `generator`, `ui`, `architecture`, `distribution`, `signing`,
+`min-deployment-target` if supplied, license, developer
   fields, `open-source`, `sonar` + detail keys, `visibility`, `ci`, `on-existing` if supplied, and `mode` as
   `args`. Always invoked, even when the generator manifest already exists.
 * xref:skills/iru-setup-antora.adoc[] — Step 6: scaffolds the Antora documentation site, invoked with no `args`
@@ -243,7 +271,7 @@ previous one's files being on disk:
 
 === Invoked by
 
-* xref:skills/iru-setup-repository.adoc[] — Step 4, Swift library/Apple app bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-setup-repository.adoc[] — Step 4, Swift library/Apple app bootstrap, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent; it asks its own visionOS follow-up and passes `platforms` in `args`, which this skill then doesn't re-ask for an app.
 
 === Related agents
 

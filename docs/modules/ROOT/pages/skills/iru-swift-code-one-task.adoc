@@ -1,6 +1,6 @@
 = Swift Code One Task
 :description: Implements one Swift task from an implementation plan, detecting package-vs-app shape and target, applying Swift 6 conventions, then checking it off.
-:keywords: iru-swift-code-one-task, claude code skill, swift, swiftpm, xcodegen, tuist, xcodebuild, swift testing, docc, implementation plan, task implementation
+:keywords: iru-swift-code-one-task, claude code skill, swift, ios, uikit, visionos, macos appkit, swiftui mvvm mvc, xcodebuild compile check, implement plan task
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -34,13 +34,40 @@ Before reading anything, Step 1 works out which of two shapes the repository is:
   truth. An app project frequently also has a local `Packages/Core` package holding testable logic behind thin,
   per-platform UI targets.
 
+For an app project it also detects, once from the repository:
+
+* **The layout and the touched target's platform** — `App/Sources/` with a single macOS app target is the
+  `iru-setup-macos-app` layout (a **macOS-only desktop app**, compile-checked with `platform=macOS`, no simulator);
+  `Targets/<Platform>/Sources/` is the `iru-setup-apple-app` multiplatform layout, where the folder names the target
+  (`Targets/iOS/` covers iPhone **and** iPad, plus `Targets/macOS/`, `Targets/watchOS/`, `Targets/visionOS/`). The
+  platform is confirmed against the manifest (XcodeGen `platform:`/`supportedDestinations:`, Tuist `destinations:`)
+  or the target's `SDKROOT`. iPadOS is an iOS target whose destinations include iPad; a visionOS destination on an
+  iOS target, or a standalone `xros` target, is visionOS.
+* **The UI framework** of the touched target — `swiftui` (a `@main struct ...: App` with `some Scene`), `uikit` (a
+  `UIApplicationDelegate`/`UIWindowSceneDelegate` with `UIViewController` subclasses and no SwiftUI `App`) or
+  `appkit` (an `NSApplicationDelegate` with `NSWindowController`/`NSViewController` subclasses). Hosted content in
+  the other framework doesn't change the answer; visionOS and watchOS targets are SwiftUI.
+* **The architecture** from the layout contract (`Packages/Core/Sources/Core/ViewModels/` → MVVM,
+  `.../Controllers/` → MVC; neither → MV for SwiftUI, MVC for UIKit/AppKit; both → decided per target, UIKit/AppKit
+  targets in `Controllers/` and SwiftUI targets in `ViewModels/`, the scaffolded UIKit-MVC + SwiftUI-platforms mix).
+  SwiftUI uses MVVM or MV, UIKit/AppKit MVC or MVVM; a task never switches it. The 80% coverage bar covers
+  `Packages/Core` only; the app targets are "not measured".
+
+Logic an app task adds goes to `Packages/Core` (Foundation + Observation only, no SwiftUI/UIKit/AppKit import) in the
+detected architecture's folder; only views, view controllers, window/scene controllers, menus/commands, the
+composition root (`App`, `AppDelegate`, `SceneDelegate`), background-task/notification registration, and protocol
+implementations that must touch a UI or platform framework belong in the app target.
+
 It then works out which **target** the task's file paths or description name — a path under `Sources/<Target>/`
 or `Packages/Core/Sources/<Target>/` names that target directly; a path under a per-platform app target directory
 (read from the manifest's `targets:`/`Target(...)` list rather than guessed) names that target; otherwise the
 skill infers from the described behavior (reusable logic with no UI import vs. a SwiftUI/UIKit/AppKit view for
 one platform), defaulting to the package's main target (or `Packages/Core`) when genuinely ambiguous. This
 package/app choice, plus the target, decides both which `reference/` files apply and Step 5's compile-check
-command (`swift build --build-tests` vs. `xcodebuild build-for-testing -scheme <Scheme>`).
+command (`swift build --build-tests` vs. `xcodebuild build-for-testing -scheme <AppName>-<Platform>` with
+`-destination 'generic/platform=<P> Simulator'` for an iOS/iPadOS, watchOS or visionOS target, or `platform=macOS`
+for a macOS one). The generic destination needs no installed simulator runtime, so a missing visionOS runtime never
+makes the compile-check "unavailable".
 
 === The bundled reference library
 
@@ -65,11 +92,35 @@ typed throws with `enum: Error` error types, naming per the Swift API Design Gui
 
 |`testing.md`
 |The task writes or updates tests — nearly every task
-|Swift Testing/XCTest conventions: Swift Testing by default, XCTest only for XCUITest and `measure`.
+|Swift Testing/XCTest conventions: Swift Testing by default, XCTest only for XCUITest and `measure`; logic tests in `Packages/Core` with fake services and passive views; macOS XCUITest on the real desktop session; iOS/iPadOS/visionOS XCUITest on a simulator (`--uitesting` launch arguments, accessibility identifiers, SpringBoard permission alerts, `performAccessibilityAudit`).
 
 |`swiftui.md`
 |The task adds or changes a SwiftUI `View` or view model
-|SwiftUI view composition conventions.
+|SwiftUI view composition conventions, plus pointers to `macos.md`, `ios.md`, `visionos.md` and `architecture.md` for platform scenes and view-model placement.
+
+|`architecture.md`
+|The task adds or changes a view model, an MVC controller or its view protocol, a service protocol/test double, or decides whether logic goes in `Packages/Core` or the app target — every app task (macOS, iOS/iPadOS, visionOS) not confined to one existing function
+|Layout/platform detection table, MVVM vs. MVC contract, the UI-free `Packages/Core` boundary, fakes and passive views for testing.
+
+|`macos.md`
+|The task touches a macOS app target: scenes/windows, menus/commands/shortcuts, Settings, `MenuBarExtra`, file access (panels, sandbox, security-scoped bookmarks), entitlements/hardened runtime
+|Mac-only scene, menu, file-access and sandbox conventions.
+
+|`appkit.md`
+|The task adds or changes AppKit code: `NSWindowController`/`NSViewController`/`NSView`, target-action, delegates/data sources, `NSMenu`, Auto Layout in code, AppKit MVVM via Observation tracking, `NSHostingView`
+|AppKit conventions for macOS apps.
+
+|`ios.md`
+|The task touches an iOS/iPadOS app target: `scenePhase`/lifecycle, background tasks, notifications, permission prompts, the privacy manifest, widgets/App Intents, iPad windows/menu bar/pointer/keyboard, size classes, Dynamic Type, Keychain secrets
+|iOS/iPadOS conventions: suspension model, `BGTaskScheduler`/background `URLSession`, `Info.plist` usage-description keys, `PrivacyInfo.xcprivacy` required-reason APIs, accessibility.
+
+|`uikit.md`
+|The task adds or changes UIKit code: app/scene delegates, `UIViewController`/`UIView`, Auto Layout in code, navigation/tab/split containers, diffable collection views, traits, UIKit MVVM via Observation tracking, `UIHostingController` interop
+|Programmatic scene-based UIKit conventions, diffable data sources with compositional layout, `UIAction`, MVC over a UI-free Core controller and MVVM via Observation tracking (`updateProperties()` on iOS 26+, `UIObservationTrackingEnabled` on iOS 18).
+
+|`visionos.md`
+|The task touches a visionOS target or destination: windows, volumes, immersive spaces, ornaments, hover effects, `RealityView`/`Model3D`
+|SwiftUI-only visionOS conventions: `ImmersiveSpace`/`openImmersiveSpace`, ornaments, hover effects, `RealityView` basics.
 
 |`package-api.md`
 |The task changes a `public` declaration in a library package's target
@@ -80,6 +131,8 @@ typed throws with `enum: Error` error types, naming per the Swift API Design Gui
 and a platform target
 |Per-platform app structure conventions.
 |===
+
+A new screen in a SwiftUI macOS app reads `architecture.md` + `macos.md` + `swiftui.md`; one in an AppKit app reads `architecture.md` + `macos.md` + `appkit.md` (plus `swiftui.md` only when it hosts SwiftUI content). A new screen in a SwiftUI iOS app reads `architecture.md` + `ios.md` + `swiftui.md`; in a UIKit iOS app `architecture.md` + `ios.md` + `uikit.md` (plus `swiftui.md` only when it hosts SwiftUI); a visionOS scene reads `architecture.md` + `visionos.md` + `swiftui.md`.
 
 Every file states the same override: the rules are the default for **new** code, and a file that consistently
 does something else wins — the divergence is reported in Step 8 rather than silently restyled. If `reference/`
@@ -114,7 +167,8 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 |`reference/`
 |No
 |The skill's own bundled reference directory (`README.md`, `code-style.md`, `docc.md`, `testing.md`,
-`swiftui.md`, `package-api.md`, `app-structure.md`). If missing, the skill falls back to `CLAUDE.md` and the
+`swiftui.md`, `package-api.md`, `app-structure.md`, `architecture.md`, `macos.md`, `appkit.md`, `ios.md`,
+`uikit.md`, `visionos.md`). If missing, the skill falls back to `CLAUDE.md` and the
 surrounding code's style, and says so in its report rather than guessing at what the reference would have said.
 |Bundled with the skill
 |===
@@ -127,13 +181,14 @@ surrounding code's style, and says so in its report rather than guessing at what
   they are more specific, and the surrounding file's existing style wherever it consistently differs.
 * Swift Testing (or XCTest where warranted) tests added/updated covering the new/changed behavior, including a
   case per documented `- Throws:` — not run by this skill; the caller runs the suite once for the whole bucket.
-* A compile-check of the touched target (`swift build --build-tests`, or `xcodebuild build-for-testing` after
-  regenerating the project if the manifest changed) — passed, fixed, found unrelated to this task, or reported
+* A compile-check of the touched target (`swift build --build-tests`, or `xcodebuild build-for-testing` against
+  `platform=macOS` or a generic `generic/platform=<P> Simulator` destination for iOS/visionOS/watchOS, after regenerating the project if the manifest changed) — passed, fixed, found unrelated to this task, or reported
   unavailable.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
   pending" note, written immediately once the task finishes cleanly — before this skill reports back. Left
   untouched if the task stopped on a blocker.
-* A short summary handed back to the caller: project shape and target detected, reference file(s) read, file(s)
+* A short summary handed back to the caller: project shape and target detected (plus, for an app, the layout, the target's platform — macOS / iOS-iPadOS /
+  visionOS —, its UI framework and the architecture), reference file(s) read, file(s)
   touched, tests added/updated, compile-check result, whether the run stopped on a blocker, and any deliberate
   deviation from `reference/`.
 
@@ -142,7 +197,7 @@ surrounding code's style, and says so in its report rather than guessing at what
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-swift-code-one-task\n(task description)"] --> B["Step 1: detect package vs. app shape\nand target; read only needed reference/ files"]
+    A["Start /iru-swift-code-one-task\n(task description)"] --> B["Step 1: detect package vs. app shape\nand target (app: layout, platform macOS/iOS/\nvisionOS, SwiftUI/UIKit/AppKit, MVVM/MVC);\nread only needed reference/ files"]
     B -- "reference/ missing" --> B2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
     B2 --> C
     B --> C["Step 2: re-check current code state;\nnote existing concurrency/access/ordering style"]

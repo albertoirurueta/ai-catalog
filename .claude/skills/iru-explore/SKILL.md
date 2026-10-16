@@ -1,7 +1,7 @@
 ---
 name: iru-explore
 description: >-
-  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), React Native (Expo vs. bare React Native CLI/Metro toolchain), Ionic/Capacitor, Kotlin Multiplatform (Compose Multiplatform vs. native UI), Android (library vs. application, Compose), and SwiftPM/Xcode/XcodeGen/Tuist stacks — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
+  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), React Native (Expo vs. bare React Native CLI/Metro toolchain), Ionic/Capacitor, Kotlin Multiplatform (Compose Multiplatform vs. native UI), Android (library vs. application, Compose), SwiftPM/Xcode/XcodeGen/Tuist stacks, macOS desktop apps (SwiftUI vs. AppKit, MVVM vs. MVC), and Windows desktop apps on .NET (WPF, WinUI 3, Windows Forms; MVVM vs. MVC) — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -269,8 +269,16 @@ fallback when manifests are absent or ambiguous:
       wizard's single `composeApp/` module) and the test/coverage plugins (Kover, detekt, ktlint) on the `Build &
       layout:` line. A `com.android.application` module that only exists to host the KMP `shared` module is part
       of the KMP app — never a separate `android-app`, and never `multiple`.
-  - `*.csproj`/`*.fsproj`/`*.sln` → C#/.NET (or F#); check for `Microsoft.AspNetCore.*` (ASP.NET Core), `*.Maui`/
-    Xamarin (cross-platform mobile), WPF/WinForms project types.
+  - `*.csproj`/`*.fsproj`/`*.sln`/`*.slnx` → C#/.NET (or F#); check for `Microsoft.AspNetCore.*` (ASP.NET Core),
+    `*.Maui`/Xamarin (cross-platform mobile), and Windows desktop project types:
+    - A project with `<OutputType>WinExe</OutputType>` (or a `net*-windows*` target framework) and
+      `<UseWPF>true`, `<UseWinUI>true` (Windows App SDK / WinUI 3, usually with a `Package.appxmanifest`) or
+      `<UseWindowsForms>true` → a **Windows desktop app**: record the UI stack (`wpf`/`winui`/`winforms`) and the
+      architecture from the layout — a UI-free `src/<App>.Core` project with `ViewModels/` (or MVVM Toolkit
+      `ObservableObject`/`[ObservableProperty]` usages) → MVVM; `Controllers/` plus view interfaces → MVC — on the
+      `Build & layout:` line, together with the test framework (MSTest/xUnit/NUnit), FlaUI UI tests and MSIX
+      packaging (`Package.appxmanifest`, `packaging/AppxManifest.xml`, `*.wapproj`). A WPF/WinForms *library* (no
+      `WinExe`) stays plain `dotnet`.
   - `package.json` → JavaScript/TypeScript; check `dependencies`/`devDependencies`:
     - `vite` + `react` (typically alongside a `vite.config.*` file) → Vite + React web app.
     - `@angular/cli` and/or `@angular/core`, corroborated by an `angular.json` at the project root → Angular CLI
@@ -339,6 +347,15 @@ fallback when manifests are absent or ambiguous:
       `SUPPORTED_PLATFORMS` / `TARGETED_DEVICE_FAMILY` in the `.pbxproj` or an `.xcconfig`.
     - Either way, check `import SwiftUI` vs. `import UIKit` in source files for the UI framework in use, and
       `.m`/`.mm`/`.h` file presence for Objective-C alongside `.swift`.
+    - An app whose **only** platform is macOS (one `platform: macOS` app target / `.macOS(...)` deployment target, no
+      iOS/watchOS/visionOS target) **and** the macOS desktop layout — an `App/` UI layer plus a UI-free local
+      `Packages/Core`, with no per-platform `Targets/<Platform>/` folders (those mean an `iru-setup-apple-app`
+      scaffold, which stays `apple-app (macos)`), or a hand-maintained/other macOS-only project that has neither
+      layout → a **macOS desktop app**: record the UI framework (`swiftui` — a SwiftUI `App`;
+      `appkit` — an `NSApplicationDelegate` with `NSWindowController`/`NSViewController` and no SwiftUI `App`) and the
+      architecture from the layout (`Packages/Core/Sources/Core/ViewModels/` → MVVM; `…/Controllers/` → MVC), the App
+      Sandbox/hardened-runtime entitlements, and the distribution files (`ExportOptions-*.plist`,
+      `scripts/make-dmg.sh`) on the `Build & layout:` line.
   - `CMakeLists.txt`, `Makefile`, `*.vcxproj` with `.c`/`.cpp`/`.h`/`.hpp` sources → C/C++.
   - `go.mod` → Go. `Cargo.toml` → Rust. `Gemfile` → Ruby.
 - **Source-level fallback**: when manifests are absent, sparse, or ambiguous (e.g. a monorepo with multiple
@@ -410,8 +427,9 @@ Summarize for the user in plain text (no file output unless asked):
     kotlin-springboot-hilla, java-quarkus, kotlin-quarkus, typescript-library, react-web, angular-web, nestjs,
     nextjs, php-laravel, php-wordpress-plugin, php-wordpress-theme, php-prestashop-module, php-library,
     python-fastapi, python-django, python-library,
-    android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos),
-    react-native-app (expo|metro), ionic-app (angular|react), kmp-app (compose|native), dotnet, other, unknown>
+    android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos, visionos),
+    macos-app (swiftui|appkit), react-native-app (expo|metro), ionic-app (angular|react),
+    kmp-app (compose|native), windows-app (wpf|winui|winforms), dotnet, other, unknown>
   - Build & layout: <JVM backends: e.g. "Gradle (Kotlin DSL, wrapper), hexagonal reactor (domain/, application/,
     infrastructure/, api/)" or "Maven (wrapper), layered single-module"; NestJS: e.g. "ESM, Vitest, TypeORM";
     Next.js: e.g. "Next 16, App Router, cacheComponents: true"; PHP: e.g. "PHP ^8.3, Pest"; Python: e.g. "Python
@@ -463,21 +481,32 @@ Summarize for the user in plain text (no file output unless asked):
   | `android-app`             | Gradle `com.android.application` plugin (direct or via `libs.versions.toml` alias)         |
   | `swift-library`           | `Package.swift` with a `.library(...)` product                                             |
   | `apple-app`               | `Package.swift` `.executable(...)` product, or an Xcode/XcodeGen/Tuist app target          |
+  | `macos-app`               | An Xcode/XcodeGen/Tuist app whose **only** platform is macOS, not in the `iru-setup-apple-app` `Targets/<Platform>/` layout |
   | `react-native-app`        | `expo`/`react-native` deps (+ `app.json`/`metro.config.js`/`eas.json`, `ios/`+`android/`)   |
   | `kmp-app`                 | Kotlin Multiplatform plugin with Android + iOS targets (+ `iosApp/`, `commonMain/`)         |
   | `ionic-app`               | `@ionic/angular` or `@ionic/react` (+ `@capacitor/core`, `capacitor.config.*`)              |
-  | `dotnet`                  | `*.csproj`/`*.fsproj`/`*.sln` present (library, ASP.NET Core, MAUI/Xamarin, WPF/WinForms)   |
+  | `windows-app`             | A `WinExe` `*.csproj` with `UseWPF`/`UseWinUI`/`UseWindowsForms` (Windows desktop app)      |
+  | `dotnet`                  | Any other `*.csproj`/`*.fsproj`/`*.sln`/`*.slnx` (library, ASP.NET Core, MAUI/Xamarin)      |
   | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Go, Rust, Ruby, C/C++, a KMP library with no app) |
   | `unknown`                 | Nothing in Step 5 matched any manifest or source-level signal                              |
 
   - `apple-app` lists its detected target platforms in parentheses, using the platform keys `ios`, `ipados`,
-    `macos`, `watchos` (e.g. `apple-app (ios, ipados)`) — derived from `Package.swift`'s `platforms:` array,
-    `project.yml`/`Project.swift`'s `deploymentTarget`, or `SUPPORTED_PLATFORMS`/`TARGETED_DEVICE_FAMILY`, as
-    detected in Step 5.
+    `macos`, `watchos`, `visionos` (e.g. `apple-app (ios, ipados)`) — derived from `Package.swift`'s `platforms:`
+    array, `project.yml`/`Project.swift`'s `deploymentTarget`/`platform`, or `SUPPORTED_PLATFORMS`/
+    `TARGETED_DEVICE_FAMILY`, as detected in Step 5. Its `Build & layout:` line also records the iOS target's UI
+    framework (`swiftui`, or `uikit` — a `UIApplicationDelegate` + `UIWindowSceneDelegate` with no SwiftUI `App`) and
+    the architecture from `Packages/Core/Sources/Core/ViewModels/` (MVVM) vs `…/Controllers/` (MVC).
   - `ionic-app` lists its underlying framework in parentheses — `ionic-app (angular)` or `ionic-app (react)` —
     from whichever of `@ionic/angular`/`@ionic/react` was found.
   - `react-native-app` lists its toolchain in parentheses — `react-native-app (expo)` or `react-native-app (metro)`
     — per Step 5's rule (the `expo` dependency decides; committed native folders alone don't).
+  - `macos-app` lists its UI framework in parentheses — `macos-app (swiftui)` or `macos-app (appkit)`. It takes
+    precedence over `apple-app (macos)` except for an `iru-setup-apple-app` scaffold (`Targets/macOS/…`), which stays
+    `apple-app (macos)` so it keeps its own setup chain; an app with macOS plus any other Apple platform stays
+    `apple-app`.
+  - `windows-app` lists its UI stack in parentheses — `windows-app (wpf)`, `windows-app (winui)` or
+    `windows-app (winforms)`. Its `src/<App>.Core` class library and test projects are part of the same value,
+    never extra `dotnet` entries or `multiple`.
   - `kmp-app` lists its UI approach in parentheses — `kmp-app (compose)` (Compose Multiplatform shared UI) or
     `kmp-app (native)` (shared logic, platform-native UI). Its Android host module (`androidApp/`) and `iosApp/`
     are part of the same value, never extra `android-app`/`apple-app` entries or `multiple`.

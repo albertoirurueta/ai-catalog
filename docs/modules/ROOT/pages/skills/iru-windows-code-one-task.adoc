@@ -1,0 +1,115 @@
+= Windows Code One Task
+:description: Implements one plan task in a Windows desktop app on .NET 10 (WPF, WinUI 3, WinForms): Core-first code, MSTest tests, per-project compile-check, checkbox.
+:keywords: iru-windows-code-one-task, claude code skill, windows desktop, wpf, winui, winforms, mvvm, mvc, implementation plan, dotnet, task implementation
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement a single task from a Windows desktop app `implementation_plan.md`-style task list -- just the implementation,
+its tests and the checkbox update -- detecting the UI stack, architecture and host at runtime and loading only the
+matching guidance from the skill's own `reference/` directory.
+
+== Purpose
+
+`iru-windows-code-one-task` is the narrowest execution unit for a `windows` task in the `iru-code` pipeline, and the
+Windows desktop counterpart of `iru-dotnet-code-one-task`. It detects the UI stack from the app `*.csproj` (`UseWPF`,
+`UseWinUI`, `UseWindowsForms`), the architecture from the UI-free Core project (`ViewModels/` for MVVM with
+CommunityToolkit.Mvvm, `Controllers/` plus `Views/I<X>View.cs` for MVC), the test framework and runner, packaging files
+and the host OS, then reads `reference/README.md` and only the files the task needs (code style and architecture
+always; testing, XML docs, MVVM Toolkit or MVC, one of WPF/WinUI/WinForms, packaging, security as relevant).
+
+Two things set it apart from the plain .NET skill. Logic lives in `src/<App>.Core` (plain `net10.0`), where the 80%
+coverage bar is measured, so deciding where code goes comes first and UI types never enter Core. And part of the solution
+only builds or runs on Windows: WPF and WinForms compile elsewhere with `EnableWindowsTargeting`, but a WinUI project
+cannot, and "unavailable" is never reported as "passed". It writes or updates tests in the right project, compile-checks
+each touched project, then checks off its own checkbox with a "group validation pending" note. It does not capture a
+quality baseline, add license headers, run tests, coverage or analyzers, launch the app or package anything; the group
+skill does those once per bucket.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-windows-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Task description
+|Yes
+|The task's own text, including its exact `implementation_plan.md` checkbox line(s) and its sub-tasks' text, plus any
+relevant "Current code state" context.
+|None -- always invoked with a specific task's text, normally by `iru-windows-code-one-task-group`.
+|===
+
+== Outputs
+
+* Production code in the right project: Core models, services, view models or controllers first, then app-project
+  service implementations, XAML or forms and DI registration, with XML doc comments on every public/protected member.
+* New or updated tests: `tests/<App>.Core.Tests` for Core logic and, only when the task asks, a `[TestCategory("UI")]`
+  FlaUI test in `tests/<App>.UITests` -- written but not run.
+* A per-project compile-check (`dotnet build`, with `-p:EnableWindowsTargeting=true` off Windows; a WinUI app project is
+  reported "compile-check unavailable (needs Windows)").
+* `implementation_plan.md` with this task's checkbox (and its sub-tasks') checked and a "group validation pending" note;
+  left untouched if the task stopped on a blocker.
+* A short summary: shape detected (`ui`, architecture, Core project, test runner, host), projects and files touched,
+  tests added, compile-check result per project, bindings or DI registrations only a run can verify, blockers and any
+  deviation from `reference/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-windows-code-one-task] --> B["Step 0: detect solution, UI stack,\nCore project, architecture, tests,\npackaging, host OS"]
+    B --> C{"App project found?"}
+    C -- no --> C1[Report blocker: task mis-tagged]
+    C -- yes --> D["Step 1: decide project(s);\nread reference/README.md and only\nthe files the task needs"]
+    D --> E["Step 2: re-read current code,\nbound views and DI registration"]
+    E --> F["Step 3: implement exactly the task\n(Core first, then app project, XAML, DI)"]
+    F --> G["Step 4: write/update tests\nin the right test project (not run)"]
+    G --> H["Step 5: dotnet build each touched project\n(EnableWindowsTargeting off Windows;\nWinUI unavailable off Windows)"]
+    H --> I{"Build failure?"}
+    I -- in this task's code --> F
+    I -- outside scope --> J["Re-run once; note in report"]
+    I -- no --> K
+    J --> K{"Step 6: blocker or\nneeds user decision?"}
+    K -- yes --> L["Ask user / report blocked;\nleave checkbox untouched"]
+    K -- no --> M["Step 7: check off this task's\ncheckbox with 'group validation\npending' note"]
+    M --> N["Step 8: report outcome"]
+    L --> N
+....
+
+== Dependencies
+
+=== Invokes
+
+None. `iru-windows-code-one-task` does not invoke any other catalog skill or spawn any agent -- it only reads its
+`reference/` files, edits the code, test and plan files the task names, and runs `dotnet build` directly for
+compile-checks.
+
+=== Invoked by
+
+* xref:skills/iru-windows-code-one-task-group.adoc[] -- Step 2, once per task in a bucket (concurrently, in a single
+  batch of `Agent` calls, when the group is marked parallelizable; one at a time otherwise), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's full text
+  including its exact checkbox line(s). That caller confirms the checkbox landed, then replaces the "pending" note with
+  the final validation outcome.
+
+The scaffold layout it assumes is the one written by xref:skills/iru-setup-windows-app.adoc[].
+
+=== Related agents
+
+None spawned by this skill itself; it is run inside an
+xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent by its caller.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-windows-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

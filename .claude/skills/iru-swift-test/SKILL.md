@@ -21,7 +21,7 @@ Steps 1–2:
   an `.xcodeproj`/`.xcworkspace` and the caller knows which one to exercise).
 - `scheme: <name>` — the Xcode scheme to test (app path only).
 - `destination: <xcodebuild destination string>` — e.g. `platform=macOS`, `platform=iOS
-  Simulator,name=iPhone 17,OS=latest` (app path only).
+  Simulator,name=iPhone 18 Pro,OS=27.0` (app path only).
 - `workspace: <path>.xcworkspace` / `project: <path>.xcodeproj` — disambiguate when more than one exists.
 
 `[selector]` shapes, mapped in Step 2/Step 4:
@@ -91,28 +91,67 @@ name) rather than passing it through raw.
 ## Step 3 — App path: resolve scheme/destination and build `-only-testing:`
 
 **Scheme**: use `scheme:` if given. Otherwise run `xcodebuild -list` (add `-project <path>`/`-workspace <path>`
-only if `project:`/`workspace:` was given or more than one exists at the repository root) and pick the sole
-scheme it reports; if several are listed, prefer one that doesn't contain "Tests"/"UITests" in its name and state
-that choice explicitly in the report, or ask which one if the prompt/caller can answer.
+only if `project:`/`workspace:` was given or more than one exists at the repository root) and:
 
-**Destination**: use `destination:` if given. Otherwise infer the platform from the project (macOS-only tooling
-→ `platform=macOS`; an iOS/iPadOS target → an iOS Simulator destination). For a simulator destination, resolve
-the first available iPhone:
+- **Per-platform schemes** (`iru-setup-apple-app`'s layout — `Targets/<Platform>/` directories and schemes
+  `<AppName>-iOS`, `<AppName>-macOS`, `<AppName>-watchOS`, `<AppName>-visionOS`, each testing `CoreTests` +
+  `<AppName>Tests-<Platform>` + `<AppName>UITests-<Platform>`): ignore XcodeGen's `Core` package scheme and pick by
+  scope — a selector or file under `Targets/<Platform>/` (or a `<AppName>Tests-<Platform>`/`<AppName>UITests-<Platform>`
+  target) → that platform's scheme only; a `Packages/Core`-only selector (`CoreTests/…`) → the first platform scheme
+  in the order iOS, macOS, watchOS, visionOS (every scheme runs `CoreTests`); no selector (the whole suite) → **every**
+  platform scheme, one `xcodebuild test` per scheme with its own destination and result bundle, reported per scheme.
+  `-only-testing:` then names `<AppName>Tests-<Platform>`/`<AppName>UITests-<Platform>`/`CoreTests`.
+- **Otherwise**: pick the sole scheme it reports; if several are listed, prefer one that doesn't contain
+  "Tests"/"UITests" in its name and state that choice explicitly in the report, or ask which one if the
+  prompt/caller can answer.
+
+**Destination**: use `destination:` if given. Otherwise infer the platform — from the scheme suffix
+(`-iOS`/`-watchOS`/`-visionOS`/`-macOS`) for per-platform schemes, else from the project (macOS-only tooling →
+`platform=macOS`; an iOS/iPadOS target → an iOS Simulator destination). A macOS scheme gets `platform=macOS`. For a
+simulator platform, resolve the **newest installed runtime** that the selected Xcode's simulator SDK supports and its
+first matching device, and **always add `OS=<runtime version>`** — several runtimes ship the same device names
+(`iPhone 17` exists under iOS 26.4 and 27.0), and without `OS=` `xcodebuild` silently picks one of them (verified:
+no warning is printed), so the run's OS version is not the one you think:
 
 ```bash
-xcrun simctl list devices available -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data['devices'].items():
-    for d in devices:
-        if d['name'].startswith('iPhone'):
-            print(d['name']); sys.exit(0)
-"
+# resolve_destination <iOS|watchOS|visionOS> <device-name prefix: iPhone | iPad | Apple Watch | Apple Vision Pro>
+resolve_destination() {
+  local sdk
+  case "$1" in
+    iOS) sdk=iphonesimulator ;;
+    watchOS) sdk=watchsimulator ;;
+    visionOS) sdk=xrsimulator ;;
+  esac
+  SDK_VERSION="$(xcrun --sdk "$sdk" --show-sdk-version)" PLATFORM="$1" PREFIX="$2" python3 -c '
+import json, os, subprocess
+def ver(v): return tuple(int(x) for x in v.split(".")[:2])
+platform, prefix, sdk = os.environ["PLATFORM"], os.environ["PREFIX"], ver(os.environ["SDK_VERSION"])
+names = {platform, "xrOS"} if platform == "visionOS" else {platform}
+runtimes = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "runtimes", "available", "-j"]))["runtimes"]
+devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))["devices"]
+for rt in sorted((r for r in runtimes if r["platform"] in names and ver(r["version"]) <= sdk),
+                 key=lambda r: ver(r["version"]), reverse=True):
+    for d in devices.get(rt["identifier"], []):
+        if d["name"].startswith(prefix):
+            print("platform=%s Simulator,name=%s,OS=%s" % (platform, d["name"], rt["version"]))
+            raise SystemExit
+'
+}
+resolve_destination iOS iPhone   # → platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0
 ```
 
-and build `destination: platform=iOS Simulator,name=<that name>`. Default to `platform=macOS` when the project's
-target platform can't be determined and the scheme builds for macOS at all — it needs no simulator boot and is
-the fastest destination to verify against.
+Device prefixes: `iPhone` for an iOS scheme (`iPad` when the target's `TARGETED_DEVICE_FAMILY` is `"2"` — iPad
+only), `Apple Watch` for watchOS, `Apple Vision Pro` for visionOS. `xcrun simctl list` can be slow on the first call
+— give it a generous timeout rather than treating a slow response as a hang. Default to `platform=macOS` when the
+project's target platform can't be determined and the scheme builds for macOS at all — it needs no simulator boot
+and is the fastest destination to verify against.
+
+**Empty result = no usable runtime.** For **visionOS** (its simulator runtime is a separate Xcode component that is
+often not installed) don't fail and don't download anything: confirm the scheme compiles with `xcodebuild
+build-for-testing -scheme <AppName>-visionOS -destination 'generic/platform=visionOS Simulator'` and report that
+scheme **"unverified (no visionOS simulator runtime installed)"** — never as passed, never as 0 tests. For iOS/watchOS
+an empty result is a real environment problem: report "no <platform> simulator runtime installed" for that scheme
+(also unverified, named as such), not a test failure.
 
 **`-only-testing:` selector**, from `[selector]` (the test target/bundle name — usually `<Product>Tests` — must
 be known or discoverable via `xcodebuild -list`'s "Targets" section or the project file):
@@ -236,6 +275,9 @@ piped into a small recursive-descent script, or `jq '.. | objects | select(.node
   first line of its assertion/expectation message, and — for the app path — point to the `.xcresult` bundle path
   for the full detail instead of dumping it.
 - Do not attempt to fix failing tests or modify source/test code unless the user asks for that as a next step.
+- **Unverified schemes**: a per-platform scheme whose runtime is missing (typically visionOS) is listed as
+  "unverified (no visionOS simulator runtime installed)" with its `build-for-testing` result — the other schemes'
+  counts still stand.
 - **Warn explicitly**: an app-path run needs a full Xcode install (not just Command Line Tools) and, for a
   simulator destination, a matching simulator runtime already downloaded — a missing runtime fails at destination
   resolution, before any test runs, and looks unrelated to the test code itself.
@@ -263,6 +305,26 @@ All of the following were verified locally in `$TMPDIR/iru-verify/swift/test/` (
   Testing), not their intersection.
 - **`-resultBundlePath` requires a path that does not already exist** — a second `xcodebuild test` run reusing the
   same `.xcresult` path fails immediately; always `rm -rf` it first or use a fresh (e.g. timestamped) path.
+- **A macOS desktop app (`iru-setup-macos-app` scaffold: `CODE_SIGN_STYLE: Automatic`, empty `DEVELOPMENT_TEAM`)
+  tests with plain `xcodebuild test` — no signing overrides needed.** Verified 2026-10-16 (Xcode 27.1) on copies of
+  the `swiftui-mvvm` and `appkit-mvc` scaffolds (App Sandbox on), each with a fresh `-derivedDataPath`:
+  `xcodebuild test -project MyMacApp.xcodeproj -scheme MyMacApp -destination 'platform=macOS'
+  -skip-testing:MyMacAppUITests` → `** TEST SUCCEEDED **`, exit 0 (also with `-enableCodeCoverage YES`); Xcode signs
+  with "Sign to Run Locally". Adding `CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=` (what the
+  scaffold contract's "All tests" row passes) gave the identical result and identity, so this skill doesn't add them.
+  Not verified: a project whose `DEVELOPMENT_TEAM` names a real team with Automatic signing — that needs the team's
+  development certificate in the keychain; on a machine without it, pass those three overrides (only for a
+  `platform=macOS` destination; they ad-hoc sign, so a test that depends on a real team identity/entitlement, e.g.
+  iCloud or a keychain access group, would not run as in production).
+- **Per-platform schemes and `OS=` destinations (`iru-setup-apple-app` scaffold)** — verified 2026-10-16 with Xcode
+  27.1 (iOS 18.5/26.4/27.0 and watchOS 11.5/26.5/27.0 runtimes, no visionOS runtime) on copies of the scaffold
+  (`$TMPDIR/iru-verify/apple/iru-setup-swift-github-workflows/`): `xcodebuild -list` printed `Core`, `MyApp-iOS`,
+  `MyApp-visionOS`, `MyApp-watchOS`; `resolve_destination` returned `platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0`,
+  `platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=27.0` (`iPad`), `platform=watchOS Simulator,name=Apple Watch
+  Series 12 (46mm),OS=27.0`, and nothing for visionOS; `MyApp-iOS` 11/11 and `MyApp-watchOS` 11/11 (each incl. its
+  UI test), UIKit `MyApp-iOS` with `-skip-testing:MyAppUITests-iOS` 17/17, `MyApp-visionOS` `build-for-testing`
+  against `generic/platform=visionOS Simulator` succeeded. `-destination 'platform=visionOS Simulator,name=Apple
+  Vision Pro'` without a runtime fails with "Unable to find a device matching the provided destination specifier".
 - **One `xcodebuild test` run in this environment crashed while finalizing diagnostics** (`Fatal error: Unable to
   read directory contents for .../TestResults.xcresult/Staging/.../<n>.logarchive/68`, exit 133) during log
   staging under a `$TMPDIR`-nested path, yet the `.xcresult` bundle was still fully written and

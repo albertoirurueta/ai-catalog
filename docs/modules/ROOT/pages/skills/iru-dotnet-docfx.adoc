@@ -1,6 +1,6 @@
 = .NET DocFX
 :description: Audits C# types for missing XML doc comments, generates the missing ones, and validates the result by building a DocFX documentation site.
-:keywords: iru-dotnet-docfx, claude code skill, dotnet, docfx, xml doc comments, csharp, generate documentation, code documentation
+:keywords: iru-dotnet-docfx, claude code skill, dotnet, docfx, xml doc comments, csharp, windows desktop, generate documentation, code documentation
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -18,7 +18,17 @@ rules, a `docfx.json` filter config, or observed practice in nearby types) and p
 every type/field/property/event/constructor/method/enum member/nested type in scope, fills in what's missing,
 extends namespace-level documentation only where this project already uses that convention, and proves the
 result actually builds via DocFX where the tool is installed — installing it itself if it's missing, and
-reporting plainly if that install fails rather than silently skipping the check.
+reporting plainly if that install fails rather than silently skipping the check. A repository-local tool manifest
+(`.config/dotnet-tools.json` listing `docfx`) is preferred via `dotnet tool restore`/`dotnet docfx`, and `DOTNET_ROOT`
+is set when the SDK sits in a non-default location.
+
+For Windows desktop app repositories (a `WinExe` project with `UseWPF`/`UseWindowsForms`/`UseWinUI`) it uses the
+root `docfx.json` that the `iru-setup-windows-app` scaffold writes as-is — `metadata[].src` is limited to the UI-free
+Core project and the CI docs job publishes the result under the Antora site's `api/`. Types in the app project are
+still audited and documented, but appear in the site only if `docfx.json` includes that project: WPF/WinForms
+metadata extraction works on any host with `EnableWindowsTargeting=true`, while a WinUI project builds only on
+Windows, so off Windows its DocFX check is reported as unverified (needs Windows) and `docfx.json` is never widened.
+A "Known quirks" section records what was verified on macOS (DocFX 2.81 as a local tool).
 
 == Purpose group
 
@@ -83,10 +93,12 @@ flowchart TD
     J --> K["Generate missing doc comments grounded in\nimplementation + git diff/log + conventions"]
     K --> L["Apply edits with the Edit tool"]
     L --> M{docfx installed?}
-    M -- no --> N["Attempt dotnet tool install -g docfx"]
+    M -- no --> N["Prefer dotnet tool restore (tool manifest);\nelse attempt dotnet tool install -g docfx"]
     N -- fails --> O["Report: code documented,\nDocFX report skipped, show install error"]
     N -- succeeds --> P
     M -- yes --> P["docfx metadata + docfx build\n(scaffold docfx.json via docfx init -y if missing)"]
+    P -- WinUI project off Windows --> P2["Report DocFX check as\nunverified (needs Windows)"]
+    P2 --> R
     P -- fails/warns on in-scope files --> Q["Fix offending comments,\nre-run until clean"]
     P -- clean --> R["Report: per-type gaps filled,\nnamespace-doc status, build result,\n_site/ path"]
     Q --> R
@@ -104,6 +116,7 @@ it does not call any other skill in this catalog.
 * xref:skills/iru-dotnet-code-one-task-group.adoc[] — Step 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to update XML doc comments for every type the bucket
   touched and confirm the DocFX build passes (or was skipped cleanly because `docfx` isn't installed).
+* xref:skills/iru-windows-code-one-task-group.adoc[] — the same per-bucket doc-comment audit for Windows desktop app buckets, via `iru-gate-runner`.
 
 === Related agents
 

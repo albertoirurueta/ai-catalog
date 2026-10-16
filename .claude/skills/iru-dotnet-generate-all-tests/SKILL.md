@@ -1,6 +1,6 @@
 ---
 name: iru-dotnet-generate-all-tests
-description: For a .NET/C# project or solution only, explore the whole codebase to find every class that has no corresponding unit test class, or whose measured line coverage falls below 80%, using the `iru-dotnet-coverage` skill to get the exact percentage per class — then generate new tests (or extend existing ones) until each reaches that bar, following this project's own test framework and style. Invoke as `/iru-dotnet-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a .NET/C# project (no `.sln`/`.csproj` found). Use whenever the user wants comprehensive unit test coverage brought up across an entire .NET codebase in one pass, instead of writing tests for one class or task at a time.
+description: For a .NET/C# project or solution only, explore the whole codebase to find every class that has no corresponding unit test class, or whose measured line coverage falls below 80%, using the `iru-dotnet-coverage` skill to get the exact percentage per class — then generate new tests (or extend existing ones) until each reaches that bar, following this project's own test framework and style. Invoke as `/iru-dotnet-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a .NET/C# project (no `.sln`/`.csproj` found). For a Windows desktop app (WPF, WinUI 3, Windows Forms — plan key `windows`) it targets only the UI-free Core project and its portable test project, reporting app-project/UI-layer classes as excluded ("not measured") rather than writing UI-thread tests for them; per-task Windows work goes through `iru-windows-code-one-task(-group)`. Use whenever the user wants comprehensive unit test coverage brought up across an entire .NET codebase in one pass, instead of writing tests for one class or task at a time.
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -22,8 +22,15 @@ find . \( -name "*.sln" -o -name "*.csproj" \) -not -path "*/bin/*" -not -path "
 
 - **None found**: this skill applies only to .NET/C# projects. Tell the user plainly and stop — do not attempt
   any other language's equivalent or partial exploration.
-- **Found**: continue. If there are multiple `.sln` files and no obvious single target, ask the user which
+- **Found**: continue. If there are multiple `.sln`/`.slnx` files and no obvious single target, ask the user which
   solution to scope this run to (same convention as `iru-dotnet-test`/`iru-dotnet-coverage`).
+- **Windows desktop app** (a `*.csproj` with `<OutputType>WinExe</OutputType>` and `UseWPF`/`UseWinUI`/
+  `UseWindowsForms` — plan key `windows`, whose per-task work goes through `iru-windows-code-one-task(-group)`): this
+  skill still applies, but only to the UI-free Core project (`src/<App>.Core`) and its portable test project
+  (`tests/<App>.Core.Tests`). Classes in the app project (windows, pages, forms, code-behind, converters, UI service
+  implementations) are listed as "excluded — UI layer, not measured" in the Step 8 report, never given unit tests
+  that need a UI thread; logic found there is named as a candidate to move into Core. Never generate FlaUI/UI tests
+  here — `[TestCategory("UI")]` tests are outside the coverage bar and `iru-dotnet-coverage` excludes them.
 
 ## Step 2 — Discover every candidate class and the existing test convention
 

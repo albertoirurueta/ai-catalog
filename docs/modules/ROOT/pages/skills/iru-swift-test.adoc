@@ -1,6 +1,6 @@
 = Swift Test
 :description: Runs a Swift project's tests via swift test --filter for packages or xcodebuild -only-testing for Xcode apps, scoped to a selector.
-:keywords: iru-swift-test, claude code skill, swift, swiftpm, xcodebuild, xctest, swift testing, xcresulttool, run unit tests, test selector
+:keywords: iru-swift-test, claude code skill, swift, xcodebuild, swift testing, ios simulator, visionos, per-platform schemes, run unit tests, test selector
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -17,6 +17,22 @@ package vs. app from the repository layout, parses whichever result format that 
 for `swift test`, an `.xcresult` bundle via `xcresulttool` for `xcodebuild test`), and — critically — detects the
 "selector matched zero tests" case that both runners otherwise hide behind a passing, exit-0 result. It is the
 Swift/Apple-platforms equivalent of `iru-java-test`/`iru-typescript-test`/`iru-android-test`.
+
+Its Known quirks now record that a macOS desktop app scaffolded by `iru-setup-macos-app` (Automatic signing, empty
+`DEVELOPMENT_TEAM`) tests with a plain `xcodebuild test -destination 'platform=macOS'` — Xcode signs with "Sign to
+Run Locally", so no signing overrides are added (verified on Xcode 27.1 for both the SwiftUI/MVVM and AppKit/MVC
+scaffolds); only a project naming a real team whose certificate is missing needs ad-hoc overrides (unverified).
+
+For an `iru-setup-apple-app` multiplatform project it understands the **per-platform schemes** (`<AppName>-iOS`,
+`-macOS`, `-watchOS`, `-visionOS`, each running `CoreTests` plus that platform's unit and UI test targets, with
+XcodeGen's `Core` package scheme ignored): a selector under `Targets/<Platform>/` runs only that platform's scheme, a
+`Packages/Core`-only selector runs the first platform scheme (iOS, macOS, watchOS, visionOS order), and the whole
+suite runs every platform scheme, reported per scheme. Simulator destinations are resolved to the newest installed
+runtime the selected Xcode supports and **always pinned with `OS=`**, because device names repeat across runtimes and
+`xcodebuild` otherwise silently picks one. A platform with no installed runtime — typically visionOS — is
+compile-checked against `generic/platform=visionOS Simulator` and reported "unverified (no visionOS simulator runtime
+installed)", never as passed and never downloaded (verified on Xcode 27.1 for the iOS, UIKit iOS, watchOS and
+visionOS scaffold schemes).
 
 == Purpose group
 
@@ -51,14 +67,16 @@ has both a `Package.swift` and an `.xcodeproj`/`.xcworkspace` and the caller alr
 |`scheme`
 |No
 |`key: value` — the Xcode scheme to test (app path only).
-|Auto-detected via `xcodebuild -list` (the sole scheme, or the one not containing "Tests"/"UITests" when several exist).
+|Auto-detected via `xcodebuild -list`: with per-platform schemes, picked by the selector's scope (every platform
+scheme for the whole suite); otherwise the sole scheme, or the one not containing "Tests"/"UITests" when several exist.
 
 |`destination`
 |No
 |`key: value` — an `xcodebuild` destination string, e.g. `platform=macOS` or
-`platform=iOS Simulator,name=iPhone 17,OS=latest` (app path only).
-|Inferred from the project's target platform: the first available iPhone simulator, or `platform=macOS` when the
-target platform can't be determined.
+`platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0` (app path only).
+|Inferred from the scheme suffix or the project: `platform=macOS` for a macOS scheme; otherwise the first `iPhone`
+(`iPad` for an iPad-only target), `Apple Watch` or `Apple Vision Pro` device of the newest supported installed
+runtime, always with `OS=`; `platform=macOS` when the target platform can't be determined.
 
 |`workspace` / `project`
 |No
@@ -141,6 +159,8 @@ this skill infers everything itself in Steps 1–3.
 * Package path: totals parsed from the console's `Executed <N> tests, with <F> failures...`/`Test run with <N>
   tests...` lines (XCTest and Swift Testing both run in one `swift test` invocation).
 * App path: totals from `xcresulttool get test-results summary` (`passedTests`/`failedTests`/`totalTestCount`/`result`).
+* With several per-platform schemes, results reported per scheme; a scheme without a simulator runtime (typically
+  visionOS) listed as "unverified (no visionOS simulator runtime installed)" with its `build-for-testing` result.
 * On failures: each failing test's name plus the first line of its assertion/expectation message — for the app
   path, also the `.xcresult` bundle path for full detail instead of dumping it.
 * **"Selector matched no tests"** reported explicitly and distinctly from a clean pass, for the zero-match case
@@ -159,9 +179,10 @@ flowchart TD
     C -- "project.yml/Project.swift only,\nnot yet generated" --> F["Stop: run xcodegen/tuist\ngenerate first"]
     C -- "nothing found" --> G["Stop: no Swift package\nor Xcode project found"]
     D --> H["Step 2: map selector to\nswift test --filter / --skip"]
-    E --> I["Step 3: resolve scheme &amp; destination,\nmap selector to\n-only-testing: / -skip-testing:"]
+    E --> I["Step 3: resolve scheme(s) by scope\n(per-platform schemes) and OS-pinned\ndestination; map selector to\n-only-testing: / -skip-testing:"]
+    I -- "no simulator runtime\n(e.g. visionOS)" --> I2["build-for-testing against generic\nvisionOS Simulator; report scheme\nunverified, other schemes still run"]
     H --> J["Step 4: run swift test"]
-    I --> K["Step 4: rm -rf .xcresult,\nrun xcodebuild test\n-resultBundlePath"]
+    I --> K["Step 4: rm -rf .xcresult,\nrun xcodebuild test\n-resultBundlePath (once per scheme)"]
     J --> L["Step 5: parse console output\n(XCTest + Swift Testing lines)"]
     K --> M["Step 5: parse .xcresult via\nxcresulttool get test-results\nsummary / tests"]
     L --> N{"Zero-match case?\n(no Executed / Test run lines)"}

@@ -1,0 +1,187 @@
+= Setup macOS Repository
+:description: Bootstraps or updates a native macOS app repository (Swift 6, XcodeGen, SwiftUI or AppKit): Xcode scaffold, Antora docs, gitignore, CI, changelog, README.
+:keywords: iru-setup-macos-repository, claude code skill, macos, swiftui, appkit, xcodegen, notarization, dmg, github actions, antora, readme
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a native macOS desktop app repository. It resolves the UI framework, architecture, branching
+model and mode once, collects the app's identity, the macOS-specific inputs and the shared pipeline parameters once,
+prints a setup-mode statement (from scratch, or an inventory of the prior setup it found), then orchestrates six other
+skills in a fixed order so nothing is asked twice.
+
+== Purpose
+
+`iru-setup-macos-repository` is the macOS stack orchestrator invoked by `iru-setup-repository` (project type
+`macos-app`) or run standalone. Rather than duplicating Xcode scaffolding, documentation setup, `.gitignore`
+generation, CI/CD authoring, changelog bootstrapping or README generation, it passes each downstream skill only the
+`args` keys that skill's own Step 0 accepts. It always invokes the scaffold skill, even in `mode: existing`: every
+component sub-skill announces whether it is creating or updating, warns about the prior setup it owns, and asks Update /
+Keep as is / Replace per file (or applies `on-existing` when it arrived via `args`).
+
+It only scaffolds macOS-only apps: if the manifest declares targets for more than one Apple platform it stops and points
+at `iru-setup-swift-repository`. `ui` is `swiftui` or `appkit`; `architecture` is `mvvm` for SwiftUI and `mvc` or `mvvm`
+for AppKit. Pipeline questions are cost-aware: `visibility` drives recommendations about Actions minutes, the roughly
+10x macOS multiplier (`macos-ci`), SonarCloud pricing and GitHub Pages availability, and `ci: no` skips the workflows
+step entirely (security block included). `distribution` is `none`, `internal` (Developer ID signed, notarized and
+stapled DMG on GitHub Releases) or `store` (Mac App Store). The `.gitignore` step reuses
+`iru-setup-swift-gitignore` rather than a macOS-specific skill.
+
+== Purpose group
+
+xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-macos-repository
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ui`
+|No
+|`swiftui` or `appkit`. Detected from the sources and confirmed, otherwise asked via `AskUserQuestion`.
+|Detected or asked
+
+|`architecture`
+|No
+|`mvvm` or `mvc`. `mvvm` is forced for SwiftUI; asked only for AppKit.
+|Detected, forced or asked
+
+|`branching`
+|No
+|`gitflow` (integration + stable branch, `sync.yml`) or `main-only`.
+|Asked; `gitflow` recommended
+
+|`mode`
+|No
+|`new` or `existing`. Defaults to `existing` (confirmed) when a manifest or prior artifact exists, otherwise `new`.
+Every sub-skill still asks per pre-existing file.
+|Detected from disk
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`. Never asked here; forwarded to component sub-skills only when supplied.
+|`ask` (sub-skills ask)
+
+|Identity fields (`app-name`, `bundle-id`, `team-id`, `license`, `developer-name`, `developer-email`,
+`organization-url`, optionally `version`, `build-number`)
+|Yes (unresolved ones)
+|Asked in Step 2 using the keys `iru-setup-macos-app` reads; skipped when a project already exists.
+|None -- user must supply
+
+|`min-macos`, `sandbox`, `category`
+|No
+|macOS-specific toggles passed through untouched if supplied.
+|Left to the scaffold's defaults
+
+|`integration-branch`, `stable-branch`, `runner`, `xcode-version`
+|No
+|Shared pipeline parameters; the integration branch is skipped for `main-only` and when `ci: no`.
+|`develop`, `main`, `macos-26`, resolved downstream
+
+|`open-source`, `visibility`
+|No
+|`visibility` is detected with `gh repo view` or asked; open source with a private repository is flagged as
+contradictory.
+|Asked or detected
+
+|`ci`, `macos-ci`, `ci-tests`, `pages`
+|No
+|Whether to generate workflows; when the macOS jobs run (`all`/`stable`); `unit` or `full` (also XCUITest UI tests);
+Pages versus a workflow artifact.
+|Asked with cost-aware recommendations
+
+|`distribution`
+|No
+|`none`, `internal` or `store`.
+|`internal` when open source; otherwise asked
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
+|Asked
+
+|`publish`
+|No
+|Accepted and ignored (an app is not published as a package); noted in the report.
+|None
+|===
+
+== Outputs
+
+* The Xcode project scaffold -- XcodeGen `project.yml`, UI-free `Packages/Core`, the SwiftUI or AppKit `App/` layer,
+  unit and UI tests, quality configs and packaging helpers (via `iru-setup-macos-app`).
+* A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
+* A root `.gitignore` (via `iru-setup-swift-gitignore`).
+* CI/CD workflows -- `build.yml`, `release.yml`, `sync.yml` + `sync_versions.py` (gitflow), `security.yml` and
+  `.github/dependabot.yml` (via `iru-setup-macos-github-workflows`); none when `ci: no`.
+* A root `CHANGELOG.md` (via `iru-setup-changelog`) and a root `README.md` (via `iru-setup-readme`).
+* A final report: setup mode, resolved `ui`/`architecture`/`branching`/`mode`, identity, license and pipeline
+  parameters, a per-component table with the action taken (created / updated / replaced / kept as is / skipped
+  (`ci: no`)), the consolidated required-secrets table, decisions made on the user's behalf and an explicit warning
+  block.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-macos-repository] --> B["Step 0: Parse args\n(ui, architecture, branching, mode, visibility,\nci, macos-ci, ci-tests, pages, identity)"]
+    B --> C["Step 1: Resolve ui, architecture, branching, mode\nand print Setup mode\n(stop if multi-platform: use swift-repository)"]
+    C --> D["Step 2: Collect app identity\n(skipped when a project exists)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, macos-ci, sonar,\nci-tests, pages, distribution)"]
+    E --> G["Step 4: Run iru-setup-macos-app\n(via sub-agent)\nasks Update / Keep / Replace / Stop"]
+    G -- user chose stop --> STOP[Stop entire pipeline; report]
+    G -- ok --> H["Step 5: Run iru-setup-antora"]
+    H --> I["Step 6: Run iru-setup-swift-gitignore"]
+    I --> CI{"ci: no?"}
+    CI -- yes --> K["Step 7 skipped\n(no workflows or security block)"]
+    CI -- no --> J["Step 7: Run iru-setup-macos-github-workflows"]
+    J -- "user chose stop,\nnote it and continue" --> K2["Step 8: Run iru-setup-changelog"]
+    J -- ok --> K2
+    K --> K2
+    K2 --> L["Step 9: Run iru-setup-readme"]
+    L --> M["Step 10: Report setup mode, per-component actions,\nrequired secrets, review warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+Each of the following is invoked via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent rather than a direct `Skill` call, so only a short completion summary flows back. Every sub-agent is launched
+with `run_in_background: false` since each step depends on the previous one's files being on disk:
+
+* xref:skills/iru-setup-macos-app.adoc[] -- Step 4: writes or updates the Xcode project, Core package, UI layer, tests
+  and packaging helpers, passing Steps 1-3's answers as `args`. Always invoked, even in `mode: existing`.
+* xref:skills/iru-setup-antora.adoc[] -- Step 5: scaffolds or updates the Antora site (only `on-existing` when supplied).
+* xref:skills/iru-setup-swift-gitignore.adoc[] -- Step 6: writes or updates the root `.gitignore` (only `on-existing`
+  when supplied).
+* xref:skills/iru-setup-macos-github-workflows.adoc[] -- Step 7, skipped entirely when `ci: no`: writes the CI/CD,
+  release and security workflows, passing `branching`, branches, `runner`, `macos-ci`, `ci-tests`, `pages`,
+  `distribution`, Sonar keys and related args.
+* xref:skills/iru-setup-changelog.adoc[] -- Step 8: bootstraps or updates `CHANGELOG.md`.
+* xref:skills/iru-setup-readme.adoc[] -- Step 9, last: bootstraps or updates `README.md`, passing only `sonar`, `ci`,
+  `pages` (and `on-existing` when supplied).
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] -- Step 4, `macos-app` bootstrap (`ui` taken from the detected project
+  type), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+It can also be run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] -- spawned once per sub-skill
+  (Steps 4-9), so all six sub-skills' exploration transcripts don't accumulate in this orchestrator's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-macos-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.
