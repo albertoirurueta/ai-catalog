@@ -1,6 +1,6 @@
 = Setup PHP WordPress
-:description: Scaffolds a WordPress plugin or block theme repository with Composer, WPCS, PHPStan, Brain Monkey unit tests and wp-env integration tests.
-:keywords: iru-setup-php-wordpress, claude code skill, wordpress, plugin, block theme, composer, phpcs, phpstan, wp-env, brain monkey
+:description: Scaffolds a WordPress plugin or block theme with Composer, WPCS, PHPStan, Brain Monkey unit tests, wp-env integration tests and Playwright UI tests.
+:keywords: iru-setup-php-wordpress, claude code skill, wordpress, plugin, block theme, composer, phpcs, phpstan, wp-env, playwright, ui tests, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -14,12 +14,12 @@ reports success.
 the main plugin file (full header, `ABSPATH` guard, version constant), a namespaced PSR-4 `src/` (composition root,
 filter service with a documented custom hook, settings page whose `admin-post.php` handler checks nonce and
 capability, REST route with a `permission_callback`), `uninstall.php`, `languages/`, a WordPress.org `readme.txt`
-and `.distignore`; `blocks: yes` additionally wires `@wordpress/scripts` and a first dynamic block. With
+and `.distignore`; `blocks: yes` additionally adds a `blocks/` source directory built by `@wordpress/scripts` and a first dynamic block. With
 `flavor: theme` it writes a block theme (`style.css` header, `theme.json` v3, templates, parts, translatable patterns
 and a minimal `functions.php`). Both flavors get `composer.json` with the catalog's shared scripts, `phpcs.xml.dist`
 (WordPress-Extra, WordPress-Docs, PHPCompatibilityWP), `phpstan.neon.dist` (phpstan-wordpress, level 6), a Brain
 Monkey `unit` suite, a `WP_UnitTestCase` `integration` suite running in a dedicated `@wordpress/env` environment,
-sample tests, Clover/JUnit output under `build/logs/`, and `sonar-project.properties` when Sonar is on.
+sample tests, Clover/JUnit output under `build/logs/`, browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]) and `sonar-project.properties` when Sonar is on. The UI tests are a `.ui-quality.yml`, a `playwright.config.ts` extending `wp-scripts test-playwright` against the wp-env tests instance, `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper, a test-only RTL mu-plugin and a sample spec (the plugin's `ContentNotice` component or the theme's `Index` screen) that captures `.ui-screenshots/` across left-to-right/right-to-left x light/dark with an accessibility check.
 
 Dependency versions, the PHP floor and the WordPress floor/tested-up-to versions are resolved live (Packagist, npm,
 php.net, api.wordpress.org) with a documented fallback table; PHPUnit stays on 9.6 because the WordPress test library
@@ -77,7 +77,7 @@ for `theme.json` v3 and blocks).
 
 |`blocks`
 |No
-|`yes` or `no` (plugin only): adds `@wordpress/scripts` and a first dynamic block.
+|`yes` or `no` (plugin only): adds a `blocks/` source directory and a first dynamic block (`@wordpress/scripts` itself is always installed for the UI tests).
 |Asked; `no` recommended for a start.
 
 |`open-source`, `visibility`, `ci`, `distribution`
@@ -89,6 +89,11 @@ for `theme.json` v3 and blocks).
 |No
 |`cloud`, `self-hosted` or `none`.
 |`cloud` recommended only for public open-source repositories, otherwise `none`.
+
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`.
+|`enforce` (asked in Step 2 when unresolved)
 
 |`mode`
 |No
@@ -105,10 +110,11 @@ for `theme.json` v3 and blocks).
 
 * The plugin or block theme skeleton and shared tooling files described above (created, updated, replaced, or kept as
   is per file).
+* `.ui-quality.yml`, `playwright.config.ts`, `tests/e2e/support/ui-screenshots.ts`, `tests/e2e/mu-plugins/iru-ui-test-direction.php` and the sample spec(s) (`ContentNotice.spec.ts`, plus a block spec with `blocks: yes`; or `Index.spec.ts` for a theme); screenshots land in `.ui-screenshots/` as `<state>--<direction>--<theme>.png`.
 * A generated `composer.lock`/`package-lock.json` after installing dependencies, and (with `blocks: yes`) a built
   `build/` directory.
 * Verification of the fast gates (unit tests, coverage, PHPStan, PHPCS) and, when Docker is available and the user
-  agrees, the wp-env integration suite, run under the repository-wide `.integration-test.lock/`.
+  agrees, the wp-env integration suite and browser UI tests (Chromium installed with `npx playwright install chromium`; unverified without a browser), run under the repository-wide `.integration-test.lock/`.
 * A report starting with the setup mode (created from scratch or updated) covering identity, floors and their
   sources, live versus fallback versions, the PHPUnit 9 decision, per-file action, gate results, and explicit
   warnings (review the files, WordPress.org slug approval and `Contributors:` for store distribution, namespace
@@ -136,9 +142,9 @@ flowchart TD
     K --> L["Step 7: composer install and npm install\n(Docker fallback)"]
     L --> M{"Composer or Docker\navailable?"}
     M -- no --> N["Report dependencies not installed"]
-    M -- yes --> O["Step 8: run unit tests, coverage,\nPHPStan, PHPCS"]
+    M -- yes --> O["Step 8: run unit tests, coverage,\nPHPStan, PHPCS; install Chromium"]
     O --> P{"Docker available and\nuser accepts?"}
-    P -- yes --> Q["Run wp-env integration suite\nunder the integration lock"]
+    P -- yes --> Q["Run wp-env integration suite and\nbrowser UI tests under the integration lock"]
     P -- no --> R["Mark integration unverified"]
     Q --> S["Step 9: report mode, files, gates, warnings"]
     R --> S

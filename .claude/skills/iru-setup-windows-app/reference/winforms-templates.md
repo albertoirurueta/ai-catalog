@@ -74,7 +74,14 @@ internal static class Program
     {
         // High DPI (PerMonitorV2), visual styles and the default font come from the project file.
         ApplicationConfiguration.Initialize();
-        Application.SetColorMode(SystemColorMode.System);
+
+        // The UI tests pass --ui-theme / --ui-direction (UiTestOptions); without them the system settings apply.
+        Application.SetColorMode(UiTestOptions.Theme switch
+        {
+            "light" => SystemColorMode.Classic,
+            "dark" => SystemColorMode.Dark,
+            _ => SystemColorMode.System,
+        });
 
         var builder = Host.CreateApplicationBuilder(
             new HostApplicationBuilderSettings { ContentRootPath = AppContext.BaseDirectory });
@@ -93,6 +100,12 @@ internal static class Program
         using var host = builder.Build();
         host.Start();
         var mainForm = host.Services.GetRequiredService<MainForm>();
+        if (UiTestOptions.IsRightToLeft)
+        {
+            mainForm.RightToLeft = RightToLeft.Yes;
+            mainForm.RightToLeftLayout = true;
+        }
+
         // >>> architecture: mvc
         _ = host.Services.GetRequiredService<MainController>(); // attaches to the form; disposed with the host
         // <<< architecture: mvc

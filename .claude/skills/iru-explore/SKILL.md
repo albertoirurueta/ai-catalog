@@ -461,6 +461,9 @@ Summarize for the user in plain text (no file output unless asked):
     Kover, detekt, ktlint"; command-line tools: e.g. "clap 4 + ratatui (ui: tui), xtask, nextest, cargo-llvm-cov"
     or "Cobra, cmd/mytool + internal/, testscript, golangci-lint v2, GoReleaser" or "swift-argument-parser,
     MyTool + MyToolKit" or "System.CommandLine, Native AOT, Spectre.Console, MyTool.Core" — omit for other stacks>
+  - User interface: <"none" — or the UI stack(s) and where, e.g. "Jetpack Compose (app/), 14 screens, 31
+    components; .ui-quality.yml accessibility: enforce; Antora ui/ section: present (12 screen pages)" — or for a
+    requested change that adds UI: the screens/components it introduces>
   - Antora docs: <e.g. docs/ (antora.yml component "my-lib") — or "none found">
   - Repository host: <e.g. GitHub (github.com/org/repo) — or Bitbucket / Azure DevOps / TFS, with base URL — or
     "no remote configured" — or "none — not a git repository">
@@ -471,7 +474,11 @@ Summarize for the user in plain text (no file output unless asked):
   file-based checks in Step 4/5).
   If the repo has multiple modules/stacks, break the codebase lines out per module. If the requested change
   introduces something new (per Step 5), say so explicitly here rather than folding it silently into the
-  existing list. Always state the Antora docs and Repository host lines, even when the answer is "none found"/"no
+  existing list. The **User interface** line tells `iru-plan` to decompose the change into screens/components
+  (with virtualized collections, UI tests, screenshots and accessibility checks) and `iru-update-docs` to maintain
+  the UI pages: name the UI framework(s), count screens (navigable destinations) and reusable components roughly,
+  read `.ui-quality.yml` if present, and check whether the Antora module already has a `ui/` section. Always state
+  the Antora docs and Repository host lines, even when the answer is "none found"/"no
   remote", so later skills like `iru-update-docs` or ones creating branches/PRs don't need to re-check.
 
   **The `Project type:` line** is a normalized, single-token-per-module summary of the Step 5 signals — this

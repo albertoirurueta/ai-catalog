@@ -16,11 +16,18 @@ description: >-
   both modules aggregated at the root (`./gradlew koverXmlReport` → `build/reports/kover/report.xml`, `koverVerify`
   at 80% line coverage), Dokka 2 on `shared` (`shared/build/dokka/html`), `iosApp/.swiftlint.yml`, and a root
   `sonar {}` block (omitted when `sonar: none`), with sample code and tests in every source set (commonTest,
-  androidHostTest, iosTest, androidApp Robolectric, iosAppTests) so coverage starts at 100%. Invoke as
+  androidHostTest, iosTest, androidApp Robolectric, iosAppTests) so coverage starts at 100%, and — per the catalog's
+  UI contract — a `.ui-quality.yml` at the root plus UI test wiring: for `ui: compose` a `commonTest`
+  `uitest/UiScreenshots.kt` helper (Robolectric `UiTest` base on the Android host, PNG capture on both targets,
+  semantics accessibility check) and a `GreetingScreenTest` capturing `.ui-screenshots/screen/GreetingScreen/` across
+  left-to-right/right-to-left × light/dark on Android and iOS; for `ui: native` the same in `androidApp/src/test`
+  (Robolectric + `createComposeRule()`) and an `ImageRenderer` `UIScreenshots.swift` helper + test in `iosAppTests`.
+  Invoke as
   `/iru-setup-kmp-app`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `ui` (`compose`/`native`),
   `app-name`, `application-id`, `bundle-id`, `namespace`, `project-name`, `min-sdk`, `compile-sdk`, `target-sdk`,
   `ios-deployment-target`, `version-name`, `version-code`, `team-id`, `license`, `developer-name`,
-  `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/
+  `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `accessibility`
+  (`enforce`/`report`/`off`, default `enforce` — written to `.ui-quality.yml`), `sonar` (+ `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`), `mode` (`new`/`existing`) and
   `on-existing` (`ask`/`keep`/`update`/`replace`) — so `iru-setup-kmp-repository` can supply them without
   re-prompting; stand-alone it asks `open-source` first and derives the `sonar` default from it. Announces whether
@@ -90,6 +97,7 @@ sonar-organization: example-org-github
 sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
 distribution: store
+accessibility: enforce
 mode: new
 on-existing: ask
 ```
@@ -105,7 +113,9 @@ Developer Team ID, default empty — set later in `Config.xcconfig` or supplied 
 only keys the `sonar` recommendation), `ci` (`yes`/`no` — only keys the `sonar` recommendation), `sonar`
 (`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `distribution`
 (`none`/`internal`/`store` — recorded for the report; the store/TestFlight uploads live in
-`iru-setup-kmp-github-workflows`' `release.yml`, so the build files are identical for every value), `mode`
+`iru-setup-kmp-github-workflows`' `release.yml`, so the build files are identical for every value), `accessibility`
+(`enforce`/`report`/`off`, default `enforce` — the automated accessibility level of the UI tests, written to
+`.ui-quality.yml`; never asked stand-alone, just defaulted), `mode`
 (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key found is resolved —
 skip its question in Step 2. Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, …) are
 ignored and named in the report.
@@ -121,7 +131,8 @@ Check for every file Step 6 would write: `settings.gradle.kts`, root `build.grad
 `gradle/libs.versions.toml`, the wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper/*`), `detekt.yml`,
 `.editorconfig`, `shared/build.gradle.kts`, `shared/src/**`, `androidApp/build.gradle.kts`, `androidApp/src/**`,
 `androidApp/proguard-rules.pro`, `iosApp/project.yml`, `iosApp/Configuration/Config.xcconfig`, `iosApp/iosApp/**`,
-`iosApp/iosAppTests/**`, `iosApp/.swiftlint.yml`, and any committed `iosApp/*.xcodeproj`. Then tell the user which
+`iosApp/iosAppTests/**`, `iosApp/.swiftlint.yml`, `.ui-quality.yml`, and any committed `iosApp/*.xcodeproj`. Then
+tell the user which
 of the two this run is doing:
 
 - **Scaffolding from scratch** — none exist: go to Step 2.
@@ -130,17 +141,20 @@ of the two this run is doing:
   present): **`settings.gradle.kts`**, **root `build.gradle.kts`**, **`gradle/libs.versions.toml`**,
   **`gradle.properties`**, **the Gradle wrapper**, **`shared/build.gradle.kts`**, **`androidApp/build.gradle.kts`**,
   **quality config** (`detekt.yml`, `.editorconfig`, `iosApp/.swiftlint.yml`), **`iosApp/project.yml`**,
-  **`iosApp/Configuration/Config.xcconfig`**, and **the source skeleton** (everything under `shared/src`,
+  **`iosApp/Configuration/Config.xcconfig`**, **`.ui-quality.yml`**, and **the source skeleton** (everything under `shared/src`,
   `androidApp/src`, `iosApp/iosApp`, `iosApp/iosAppTests`). Unless `on-existing` decides, ask with
   `AskUserQuestion`, one question per group (batch up to 4 per call), naming each concrete conflict with this run's
   choices (e.g. "`shared/build.gradle.kts` applies `org.jetbrains.compose` but you chose `ui: native`", "the root
-  `build.gradle.kts` has a `sonar {}` block but you chose `sonar: none`", "`gradle.properties` has no
+  `build.gradle.kts` has a `sonar {}` block but you chose `sonar: none`", "`.ui-quality.yml` says `accessibility:
+  report` but you chose `enforce`", "`gradle.properties` has no
   `VERSION_NAME`/`VERSION_CODE` — the Android app's version is a literal in `androidApp/build.gradle.kts`"):
-  - **Update (Recommended for build files, wrapper, quality config and `project.yml`)** — "Merge: add what's missing
+  - **Update (Recommended for build files, wrapper, quality config, `project.yml` and `.ui-quality.yml`)** — "Merge: add what's missing
     and correct outdated parts using this skill's template as reference — plugins, catalog aliases, the Kover/
     detekt/ktlint/Dokka/lint/Sonar wiring, the version properties, toolchain versions bumped to Step 4's lookup;
     keep every dependency, target, source set, build type, scheme and setting this skill doesn't own. You review a
-    diff; customizations survive, but a customized part this skill owns may be rewritten." For the source skeleton,
+    diff; customizations survive, but a customized part this skill owns may be rewritten." For `.ui-quality.yml`,
+    Update sets `accessibility` to this run's value and adds missing keys, keeping customized `directions`/`themes`.
+    For the source skeleton,
     Update only creates its missing files.
   - **Keep as is (Recommended for the source skeleton and `Config.xcconfig`)** — "Leave the file(s) untouched.
     Nothing you customized changes, but they may stay out of date or disagree with this run's choices — the report
@@ -227,6 +241,7 @@ discipline `iru-setup-android-app` documents).
 | `androidx.test:core-ktx` | `https://dl.google.com/dl/android/maven2/androidx/test/group-index.xml` | `1.7.0` |
 | JUnit 4 | Maven Central `junit/junit` | `4.13.2` |
 | Robolectric | `https://repo1.maven.org/maven2/org/robolectric/robolectric/maven-metadata.xml` | `4.17` (tests pinned to `sdk=35`, see quirks) |
+| AndroidX Compose UI (`ui: compose` — `ui-test-manifest` for the Robolectric UI tests; `ui: native` takes it from the BOM) | `https://dl.google.com/android/maven2/androidx/compose/ui/ui-test-manifest/maven-metadata.xml` — highest stable, at most the line Compose Multiplatform maps to | `1.12.1` |
 | detekt Gradle plugin | `https://plugins.gradle.org/m2/io/gitlab/arturbosch/detekt/io.gitlab.arturbosch.detekt.gradle.plugin/maven-metadata.xml` (`dev.detekt` 2.x is still alpha — don't adopt it by default) | `1.23.8` |
 | ktlint Gradle plugin | `https://plugins.gradle.org/m2/org/jlleitschuh/gradle/ktlint/org.jlleitschuh.gradle.ktlint.gradle.plugin/maven-metadata.xml` | `14.2.0` |
 | Kover | `https://plugins.gradle.org/m2/org/jetbrains/kotlinx/kover/org.jetbrains.kotlinx.kover.gradle.plugin/maven-metadata.xml` (`sort -V` — plain `tail` returns `0.9.9` before `0.9.11`) | `0.9.11` |
@@ -254,6 +269,8 @@ Read the four reference files (table above). Placeholders:
 | `<marketing-version>` | `<version-name>` without `-SNAPSHOT` (App Store Connect rejects pre-release strings) |
 | `<min-sdk>` / `<compile-sdk>` / `<target-sdk>` / `<ios-deployment-target>` | Step 2/4 |
 | `<robolectric-sdk>` | the newest SDK the resolved Robolectric runs without failing (`35` with Robolectric 4.17) |
+| `<androidx-compose-ui-version>` | Step 4 (`ui: compose` only) |
+| `<accessibility>` | Step 0 (default `enforce`) |
 | `<gradle-version>` / `<gradle-distribution-sha256>` / every `<…-version>` in the catalog | Step 4 |
 | `<sonar-organization>` / `<sonar-project-key>` / `<sonar-host-url>` | Step 2 |
 
@@ -261,21 +278,22 @@ Directory layout produced:
 
 ```
 settings.gradle.kts  build.gradle.kts  gradle.properties  gradle/libs.versions.toml  gradle/wrapper/*  gradlew(.bat)
-detekt.yml  .editorconfig
+detekt.yml  .editorconfig  .ui-quality.yml
 shared/build.gradle.kts
 shared/src/commonMain/kotlin/<package-path>/{Platform,Greeting,GreetingUiState}.kt   (+ App.kt — ui: compose)
-shared/src/commonTest/kotlin/<package-path>/{GreetingTest,GreetingUiStateTest}.kt
+shared/src/commonTest/kotlin/<package-path>/{GreetingTest,GreetingUiStateTest}.kt     (+ GreetingScreenTest.kt, uitest/UiScreenshots.kt — ui: compose)
 shared/src/androidMain/kotlin/<package-path>/AndroidPlatform.kt
-shared/src/androidHostTest/kotlin/<package-path>/AndroidPlatformTest.kt
+shared/src/androidHostTest/kotlin/<package-path>/AndroidPlatformTest.kt             (+ uitest/UiTest.android.kt — ui: compose)
 shared/src/iosMain/kotlin/<package-path>/IOSPlatform.kt                              (+ MainViewController.kt — ui: compose)
-shared/src/iosTest/kotlin/<package-path>/IOSPlatformTest.kt
+shared/src/iosTest/kotlin/<package-path>/IOSPlatformTest.kt                         (+ uitest/UiTest.ios.kt — ui: compose)
 androidApp/build.gradle.kts  androidApp/proguard-rules.pro
 androidApp/src/main/AndroidManifest.xml  androidApp/src/main/res/{values,drawable,mipmap-anydpi-v26}/*
 androidApp/src/main/kotlin/<package-path>/android/MainActivity.kt
 androidApp/src/test/kotlin/<package-path>/android/MainActivityTest.kt  androidApp/src/test/resources/robolectric.properties
+androidApp/src/test/kotlin/<package-path>/android/{GreetingScreenTest,uitest/UiScreenshots}.kt   (ui: native)
 iosApp/project.yml  iosApp/Configuration/Config.xcconfig  iosApp/.swiftlint.yml
 iosApp/iosApp/{MainApp,ContentView}.swift  iosApp/iosApp/Info.plist                 (+ GreetingModel.swift — ui: native)
-iosApp/iosAppTests/iosAppTests.swift
+iosApp/iosAppTests/iosAppTests.swift                                                (+ GreetingScreenTests.swift, UIScreenshots.swift — ui: native)
 ```
 
 `iosApp/iosApp.xcodeproj` is never written or committed — `xcodegen generate` (run in `iosApp/`) creates it, and
@@ -292,8 +310,8 @@ exist are always written.
    `https://raw.githubusercontent.com/gradle/gradle/v<gradle-version>/<path>` (`curl -fsSL -o`, the jar is binary),
    or run `gradle wrapper --gradle-version <gradle-version>` if a local Gradle exists; then write
    `gradle-wrapper.properties` from the reference (it adds `distributionSha256Sum`) and `chmod +x gradlew`.
-2. Write the Gradle files, `detekt.yml` and `.editorconfig` from `reference/gradle-templates.md`, applying the `ui`/
-   `sonar` markers.
+2. Write the Gradle files, `detekt.yml`, `.editorconfig` and `.ui-quality.yml` from `reference/gradle-templates.md`,
+   applying the `ui`/`sonar` markers and `<accessibility>`.
 3. Write `shared/` from `reference/shared-templates.md`, `androidApp/` from `reference/android-templates.md`,
    `iosApp/` from `reference/ios-templates.md` — each with `__pkg__` replaced by `<package-path>` and only the
    `ui`-matching variant files.
@@ -322,6 +340,14 @@ minutes.
    device"). This also exercises the `embedAndSignAppleFrameworkForXcode` pre-build phase. Serialize it behind
    `.integration-test.lock` too.
 
+4. **UI captures**: after 1–3, `.ui-screenshots/screen/GreetingScreen/` must hold one PNG per state (`default`,
+   `long-content`, `rtl-content`) × `ltr`/`rtl` × `light`/`dark` per platform — `--android` from
+   `testAndroidHostTest` (`ui: compose`) or `testDebugUnitTest` (`ui: native`), `--ios` from `iosSimulatorArm64Test`
+   (`ui: compose`) or the `xcodebuild test` run (`ui: native`; add `TEST_RUNNER_UI_SCREENSHOTS_DIR=<dir>` to send them
+   elsewhere). A re-run after deleting the directory needs `--rerun` after each Gradle test task — Gradle restores
+   up-to-date/cached test tasks without executing them, so no captures are written. iOS captures on a non-macOS host
+   are "unverified locally".
+
 Report pass/fail per command; quote error output verbatim for a failure only.
 
 ## Step 8 — Report
@@ -330,7 +356,8 @@ Summarize: resolved `ui`, `app-name`, `application-id`, `bundle-id`, `namespace`
 `VERSION_NAME`/`VERSION_CODE`/`MARKETING_VERSION`, license (or none), and whether the run scaffolded from scratch,
 updated an existing project, or stopped. Then, per Step 1 group, the action taken — **created / updated / replaced /
 kept as is** — and whether it came from the user or `on-existing`, listing each mismatch of a kept group and, for a
-replaced one, what customizations could have been lost (check `git diff`).
+replaced one, what customizations could have been lost (check `git diff`). `.ui-quality.yml` is listed with its
+action and the `accessibility` level it holds.
 
 State what was included versus omitted and why: `ui`; `open-source`/`sonar` (the coordinates written, or why `none`;
 with `ci: no`, that no CI step sends reports); `distribution` (informational — release jobs come from
@@ -384,8 +411,8 @@ ignored `args` keys.
 - **The AGP KMP library plugin registers no `lint` task**; `com.android.lint` applied to `shared` adds `:shared:lint`.
 - **`kotlin { android { withHostTest {} } }`** is the verified form (the coding agent also confirmed the
   `withHostTestBuilder {}` spelling); `androidHostTest` is the source set either way. A Compose UI test
-  (`runComposeUiTest`) in `commonTest` NPEs on the Android host test without Robolectric — put any sample Compose UI
-  test in `iosTest`, or test UI on Android through Robolectric in `androidApp/src/test` as this scaffold does.
+  (`runComposeUiTest`) in `commonTest` NPEs on the Android host test without Robolectric — which is why `ui: compose`
+  runs its host tests under Robolectric through the `UiTest` base class (see the UI contract wiring note below).
 - **Kotlin default arguments are invisible from Swift** — `Greeting` has an explicit no-arg constructor and
   `GreetingUiState.Companion` an `initial()` overload, so Swift calls `Greeting()` / `GreetingUiState.companion.initial()`.
 - **XcodeGen/TEST_HOST**: renaming the app's `PRODUCT_NAME` (e.g. to `$(APP_NAME)`) breaks `iosAppTests`
@@ -402,6 +429,20 @@ ignored `args` keys.
   Add `ARCHS=arm64` (verified), use a concrete simulator destination, or add an `iosX64()` target for Intel Macs.
 - **SwiftLint**: `unused_import` belongs under `analyzer_rules`; `sorted_imports` sorts `@testable import iosApp`
   first.
+- **UI contract wiring verified on 2026-10-16** in `$TMPDIR/iru-verify/kmp/ui-contract/scaffold-{compose,native}`
+  (Robolectric 4.17, `androidx.compose.ui:ui-test-manifest` 1.12.1, Xcode 27.0, iPhone 18 Pro on iOS 27.0): `ui:
+  compose` — `GreetingScreenTest` in `commonTest` (`androidx.compose.ui.test.v2.runComposeUiTest`, extending the
+  `UiTest` base) passed under `testAndroidHostTest` and `iosSimulatorArm64Test` and wrote 12 `--android` + 12 `--ios`
+  PNGs; `./gradlew build koverVerify detekt ktlintCheck :shared:dokkaGenerate` stayed green and Kover stayed at 100%
+  (27/27 lines). `ui: native` — the Robolectric `GreetingScreenTest` wrote 12 `--android` PNGs, `xcodebuild test` ran
+  the `ImageRenderer` test and wrote 12 `--ios` PNGs (to `TEST_RUNNER_UI_SCREENSHOTS_DIR`, and to `<repo>/.ui-screenshots`
+  through `#filePath` without it), `swiftlint lint --strict` clean, Kover 100%. Findings baked into the templates:
+  `runComposeUiTest` without Robolectric NPEs on the Android host; `setContent` may be called only once per test on
+  Android (the matrix drives a `mutableStateOf`); the simulator only sees `SIMCTL_CHILD_`-prefixed variables;
+  `-Xexpect-actual-classes` silences the Beta warning for `expect abstract class UiTest`; Material's `Button` is 40dp
+  tall but its touch bounds are 48dp (the check uses `touchBoundsInRoot`); ATF's `enableAccessibilityChecks()` exists
+  only on `ComposeTestRule` and reported nothing under Robolectric, so the host tests use the semantics check instead.
+  Not verified: an iOS accessibility audit for `ui: native` (needs an XCUITest target the scaffold doesn't add).
 - **Unverified locally, never a blocker**: the `sonar` task (needs a token and project), signed release builds,
   device/archive builds (need a Team ID and certificates), and anything distribution-related.
 

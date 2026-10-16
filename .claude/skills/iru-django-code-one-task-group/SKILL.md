@@ -21,8 +21,12 @@ description: >-
   integration`, testcontainers PostgreSQL or a database server), serialized repository-wide behind the same atomic
   `mkdir`-based `.integration-test.lock` as the other `*-code-one-task-group` skills (owner file, stale after 60
   minutes, bounded ~45-minute wait, released on every exit path, `lock: held` passed to the gate so it doesn't
-  re-acquire). Docker unavailable makes that stage **unverified**, never silently skipped, and the coverage verdict
-  never depends on it. `iru-django-code-one-task` checks off each task's box itself with a "group validation
+  re-acquire), then — for a bucket that touched templates, static assets, template tags or HTML-rendering views —
+  the browser UI stage under the same lock (`iru-python-test ui`: pytest-playwright + `live_server`, every changed
+  screen/component checked for its states × `.ui-quality.yml` directions × themes in `.ui-screenshots/`, axe
+  accessibility at the configured level — `enforce` violations fail the bucket, `report` ones are listed). Docker
+  unavailable makes the integration stage **unverified**, a missing Playwright browser the UI stage, never silently
+  skipped, and the coverage verdict never depends on either. `iru-django-code-one-task` checks off each task's box itself with a "group validation
   pending" note; this skill backfills any that didn't land and replaces each note with the final outcome. Invoke as
   `/iru-django-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
   group's `Parallelizable` verdict, and any relevant "Current code state" context. The Django counterpart to
@@ -108,6 +112,10 @@ Detect once — and reuse in every gate prompt below rather than letting each ga
   that start containers → needs Docker (`docker info` now; record availability); a database server the test settings
   read from env (`POSTGRES_HOST`, `DATABASE_URL`) → needs that server reachable. No integration tests at all → Step 3.9
   is skipped and Step 5 says so.
+- **UI test wiring** — pytest-playwright and axe-playwright-python in the dev dependencies, a `ui` marker in the
+  pytest config, `tests/ui/ui_screenshots.py`, and `.ui-quality.yml` at the repository root (missing = `enforce`,
+  `[ltr, rtl]`, `[light, dark]`). Absent wiring with a bucket that touches UI → Step 3.10 is **unverified (no UI test
+  wiring)** and Step 5 says so; this skill doesn't add the dependencies.
 - **Quality wiring** — Ruff / Black, mypy (django-stubs plugin) / pyright, Bandit, djLint, django-upgrade — only so the
   baseline prompt can name them; `iru-python-code-quality` detects them itself.
 
@@ -144,7 +152,9 @@ the whole bucket. It's acquired in Step 3.9a, immediately before the run that ne
       implementation_plan.md checkbox line(s) for itself and its sub-tasks, its sub-tasks' own text, and any relevant
       Current code state context>\"}). Report back: the detected shape, the files touched (including settings,
       URLconf, INSTALLED_APPS edits), every migration generated (name, auto-generated or hand-written data migration),
-      the fast tests added/updated and their result, the integration tests written but not run, any deviation from the
+      the fast tests added/updated and their result, the integration tests written but not run, for UI work the
+      Screen › Region › Component tree and the browser UI tests written but not run (their <kind>/<Id> and visual
+      states), any deviation from the
       skill's reference/, any insecure or N+1 neighbouring code noticed, and whether the task stopped on a blocker.
       Fast tests only, scoped to the files you touched — no coverage, no full suite, no integration marker/tag, nothing
       that starts Docker or needs a database server, no -n/--parallel: sibling agents run concurrently and the
@@ -173,7 +183,8 @@ blocking the rest of the bucket.
 Derive the validation scope first: the union of the files each agent reported, cross-checked against a fresh
 `git status`, `git diff --name-only`, and `git diff --name-only --cached` (an agent's report can miss a migration or an
 `INSTALLED_APPS` edit). Keep three lists: **production files** (excluding migrations), **test files**, and
-**migrations**. Then run, in this order — cheapest first; **3.1–3.8 gate the bucket, 3.9 runs only once they pass**:
+**migrations**. Then run, in this order — cheapest first; **3.1–3.8 gate the bucket, 3.9 and 3.10 run only once they
+pass**:
 
 1. **License headers**, via `iru-gate-runner`: `Agent({description: "Add license headers for task group",
    subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-check-license\", args:
@@ -357,7 +368,37 @@ Derive the validation scope first: the union of the files each agent reported, c
      production code, re-run 3.3–3.8 afterwards. An integration failure the fast tests missed is a finding worth
      reporting even once fixed.
 
-9b. **Release the lock** as soon as 3.9's agent has reported back and any fix-and-re-run cycle is over:
+10. **Browser UI tests** — only for a bucket whose changes include templates, static assets (CSS/JS), template
+    tags/partials, or views that render HTML (when unsure, run it), and only once 3.1–3.8 pass. It starts a live
+    server and a browser, so it runs **under the integration lock**: when 3.9 ran, keep the lock through this stage
+    (release in 3.9b afterwards); when 3.9 was skipped, acquire it exactly as in 3.9a first (owner text "Django UI").
+    ```
+    Agent({
+      description: "Run Django browser UI tests for task group",
+      subagent_type: "iru-gate-runner",
+      prompt: "Invoke Skill({skill: \"iru-python-test\", args: \"ui\nlock: held\"}) in the Django project at
+        <project root> — this skill already holds .integration-test.lock, so do not acquire or release it. Full UI run
+        (no paths), so the screenshot directory is cleared first. Report back only: pass/fail counts; each failing
+        test node id with its first failure line; the screenshot count per kind and every <kind>/<Id> directory with
+        its file names; malformed names; the .ui-quality.yml accessibility level applied with the violation count and
+        rule ids; and whether the run was unverified (browser not installed, lock timeout) rather than failed.",
+      run_in_background: false
+    })
+    ```
+    Then, against that report:
+    - **Screenshot matrix** — for every screen and component the bucket added or changed (the per-task agents'
+      `Screen › Region › Component` trees and their reported `<kind>/<Id>` entries), `<shots>/<kind>/<Id>/` must hold
+      a capture for each visual state the task named × each `.ui-quality.yml` direction × each theme. A missing
+      combination or a malformed name is a defect: the owning task adds the capture (via `capture_ui_state`) and the
+      stage re-runs.
+    - **Accessibility** — `enforce`: violations failed their tests; fix the markup (labels, alt text, contrast in
+      both themes, landmarks) in the owning task and re-run — never lower the level or skip the check. `report`:
+      list the rule ids in Step 5, not a failure. `off`: say so.
+    - **Unverified** — no Playwright browser, no UI test wiring, or the lock wait timed out: record **UI tests
+      unverified (<reason>)**, never passed, and continue to Step 4.
+
+9b. **Release the lock** as soon as 3.9's agent (and 3.10's, when this bucket has a UI stage) has reported back and
+   any fix-and-re-run cycle is over:
 
    ```bash
    rm -f .integration-test.lock/owner && rmdir .integration-test.lock
@@ -366,8 +407,8 @@ Derive the validation scope first: the union of the files each agent reported, c
    On **every** exit path — pass, failure, environment failure, a blocked task, a user interrupt, or a hard stop. If you
    took the lock, you release it before this skill returns.
 
-Integration-test coverage is never measured or reported as a gate figure here; the only coverage number this skill
-quotes is 3.5's fast-test figure.
+Integration-test and UI-test coverage are never measured or reported as gate figures here; the only coverage number
+this skill quotes is 3.5's fast-test figure.
 
 ## Step 4 — Finalize progress notes and notify the user
 
@@ -380,11 +421,14 @@ Then replace each task's "group validation pending" note in `implementation_plan
 ```
 - [x] Task 2. **Add `reserve_copies` service and `POST /api/v1/books/{id}/reserve/`** — services.py, api/views.py,
   migration 0004_book_reserved_copies; 94% line coverage (fast tests only); check/makemigrations/spectacular clean;
-  no new Ruff/mypy issues; integration test_reserve_postgres passed.
+  no new Ruff/mypy issues; integration test_reserve_postgres passed; UI tests passed — 24 screenshots
+  (screen/BookListScreen, component/BookRow), accessibility enforce: 0 violations.
 ```
 
 If the integration stage was unverified, say so with the reason (`integration tests unverified (Docker unavailable)`,
-`… (no database server)`, `… (lock held by another group)`) — silence reads as a pass. Same for an unverified coverage
+`… (no database server)`, `… (lock held by another group)`) — silence reads as a pass. The same for the UI stage
+(`UI tests unverified (Playwright browser not installed)`, `… (no UI test wiring)`), and with `report` name the
+violated rule ids (`accessibility report: image-alt×2`). Same for an unverified coverage
 gate. Leave blocked tasks unchecked with their blocker note. Notify the user that group validation completed, with the
 bucket-wide result.
 
@@ -406,6 +450,10 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
 - **The integration result** — passed, failed-and-fixed, **unverified** with the reason, or "no integration tests" —
   and how the lock behaved whenever it wasn't an immediate uncontended acquire (wait time, a broken stale lock and its
   owner text, a timeout), plus confirmation it was released.
+- **The UI stage** (3.10) — not applicable (no UI touched), passed, failed-and-fixed, or **unverified** with the
+  reason; the `Screen › Region › Component` trees the tasks reported; screenshot counts per kind and any matrix gap
+  or malformed name fixed; the accessibility level applied and its violations (rule ids — fixed under `enforce`,
+  listed under `report`).
 - Whether a new quality issue was left in place as unavoidable and why; whether license-header generation was skipped;
   any sequential-ordering deviation applied in Step 2; a guessed runner prefix; and which task(s), if any, stopped on a
   blocker, with enough detail for the caller to surface it further up.

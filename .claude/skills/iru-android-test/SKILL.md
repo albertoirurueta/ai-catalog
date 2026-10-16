@@ -1,6 +1,6 @@
 ---
 name: iru-android-test
-description: Run an Android/Kotlin project's JUnit 4 unit test suite via the Android Gradle Plugin's `testDebugUnitTest` task, optionally scoped to a test class, method, wildcard pattern, or a `lib`/`app` module path, and only run instrumented tests (`connectedAndroidTest`) when the prompt explicitly asks for them and a device/emulator is actually attached. Invoke as `/iru-android-test` to run the whole `lib` module's unit test suite, or `/iru-android-test [selector]` where `[selector]` is a class name (`FooTest`), a class+method (`FooTest#testSomething`), a wildcard pattern (`*ServiceTest`), or a path under a module's `src/test`/`src/androidTest` tree (`lib/src/test/java/.../FooTest.kt`, `app/src/test/...`) — the module (`:lib` by default, `:app` when the path says so) and the `--tests` pattern are both derived from the selector. Report-only: parses `<module>/build/test-results/testDebugUnitTest/*.xml` (JUnit XML) for pass/fail/skip counts and failing-test detail, never dumps raw Gradle/JUnit output, and never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down Android unit (or, on request, instrumented) tests instead of invoking `./gradlew` by hand.
+description: Run an Android/Kotlin project's JUnit 4 unit test suite via the Android Gradle Plugin's `testDebugUnitTest` task, optionally scoped to a test class, method, wildcard pattern, or a `lib`/`app` module path, and only run instrumented tests (`connectedAndroidTest`) when the prompt explicitly asks for them and a device/emulator is actually attached. Invoke as `/iru-android-test` to run the whole `lib` module's unit test suite, or `/iru-android-test [selector]` where `[selector]` is a class name (`FooTest`), a class+method (`FooTest#testSomething`), a wildcard pattern (`*ServiceTest`), or a path under a module's `src/test`/`src/androidTest` tree (`lib/src/test/java/.../FooTest.kt`, `app/src/test/...`) — the module (`:lib` by default, `:app` when the path says so) and the `--tests` pattern are both derived from the selector. Report-only: parses `<module>/build/test-results/testDebugUnitTest/*.xml` (JUnit XML) for pass/fail/skip counts and failing-test detail, never dumps raw Gradle/JUnit output, and never fixes a failing test or modifies source/test code. A `ui: jvm|device|all` line (or a leading `ui` selector) runs the UI tests per the catalog's UI contract instead: the Robolectric + Roborazzi component/screen tests on the JVM (no emulator needed) and/or the instrumented Espresso/Compose flow tests on an attached device or emulator (none attached → that stage is reported unverified, never passed), with `UI_SCREENSHOTS_DIR` set (default `<repo root>/.ui-screenshots`) and cleared only at the start of a full (unscoped) UI run, device captures collected from AGP's additional test output (or `adb pull /sdcard/googletest/test_outputfiles/ui-screenshots`) into the contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` layout, every name validated, and a report of screenshot counts per kind, malformed names, Accessibility Test Framework results (count + check ids, never raw dumps) and the `.ui-quality.yml` accessibility level applied. Use whenever the user wants to run, re-run, or narrow down Android unit (or, on request, instrumented) tests instead of invoking `./gradlew` by hand.
 model: haiku
 ---
 
@@ -25,6 +25,9 @@ that case honor them and skip the matching inference in Step 1/2.
   table and Step 2's pattern.
 - The prompt (not necessarily the selector itself) asking for instrumented/on-device/`connectedAndroidTest`
   tests → also run Step 4, honoring its device-attached gate.
+- A `ui: jvm|device|all` line, or a selector starting with the word `ui` (`ui`, `ui OrderRowTest`) → a UI run
+  (Step 4b) instead of the plain unit run; `ui` alone means `ui: all`. Any class/pattern after it scopes the run —
+  a scoped UI run never clears the screenshot directory.
 
 ## Step 1 — Resolve the module and verify prerequisites
 
@@ -99,6 +102,95 @@ adb devices
 Results land under `<module>/build/outputs/androidTest-results/connected/**/*.xml` — same JUnit XML shape Step 5
 parses; parse and report the same way, labeled as instrumented results.
 
+## Step 4b — UI run (only for a `ui` selector)
+
+The UI tests follow the catalog's UI contract: component and screen tests render on the JVM through Robolectric
+and capture with Roborazzi through the module's `testing/UiScreenshots.kt` helper; flow tests run instrumented on
+a device and write captures through AndroidX Test Storage (`DeviceUiScreenshots.kt`). Both read the same names.
+
+1. **Resolve the directory and the level.** `UI_SCREENSHOTS_DIR` from the environment if set (absolute path),
+   else `<repo root>/.ui-screenshots`; export it for every Gradle call below (the forked test JVMs inherit it).
+   Read `.ui-quality.yml` at the repository root for `accessibility` (`enforce`/`report`/`off`; missing file or
+   key = `enforce`). On a **full** UI run (no class/pattern given) delete only that screenshot directory's
+   contents first (`rm -rf "$UI_SCREENSHOTS_DIR" && mkdir -p "$UI_SCREENSHOTS_DIR"`), so it holds exactly this run;
+   a scoped run adds to what is there.
+2. **JVM stage** (`ui: jvm` or `all`) — the same task as Step 3, scoped by any pattern given:
+   ```bash
+   UI_SCREENSHOTS_DIR="$UI_SCREENSHOTS_DIR" ./gradlew :<module>:testDebugUnitTest [--tests '<pattern>' ...]
+   ```
+   The helper forces Roborazzi to record, so no `-Proborazzi.test.record=true` is needed; a repository that opted
+   into Roborazzi baselines keeps running its own `verifyRoborazziDebug` separately.
+3. **Device stage** (`ui: device` or `all`) — only when `adb devices` lists a device in state `device` (Step 4's
+   gate); otherwise report this stage **unverified (no device/emulator attached)** and continue with the JVM
+   results. With a device:
+   ```bash
+   adb logcat -c
+   ./gradlew :<module>:connectedDebugAndroidTest \
+     -Pandroid.testInstrumentationRunnerArguments.uiAccessibility=<level> \
+     [-Pandroid.testInstrumentationRunnerArguments.class=<fully.qualified.TestClass>]
+   adb logcat -d -s AccessibilityValidator > <module>/build/outputs/ui-accessibility-logcat.txt
+   ```
+   Then copy every file under `<module>/build/outputs/connected_android_test_additional_output/**/ui-screenshots/`
+   into `$UI_SCREENSHOTS_DIR`, keeping the path below `ui-screenshots/`; when that directory doesn't exist (the
+   module doesn't set `useTestStorageService`), fall back to
+   `adb pull /sdcard/googletest/test_outputfiles/ui-screenshots "$UI_SCREENSHOTS_DIR/.device"` and move its
+   contents up one level. Never overwrite a JVM capture with a device one of the same name — report the clash.
+4. **Validate and summarize** with this parser (`python3 - "$UI_SCREENSHOTS_DIR" '<module>/build/test-results/testDebugUnitTest/*.xml' '<module>/build/outputs/androidTest-results/connected/**/*.xml'`):
+   ```python
+   import collections, glob, os, re, sys
+   import xml.etree.ElementTree as ET
+
+   shots = sys.argv[1]            # UI_SCREENSHOTS_DIR
+   results = sys.argv[2:]         # JUnit XML globs (unit and/or connected)
+   seg = r"[a-z0-9]+(?:-[a-z0-9]+)*"
+   name_re = re.compile(rf"^(component|screen|flow)/[^/]+/{seg}--(ltr|rtl)--(light|dark|high-contrast)(--{seg})*\.png$")
+   per_kind, malformed = collections.Counter(), []
+   for path in sorted(glob.glob(os.path.join(shots, "**", "*"), recursive=True)):
+       if os.path.isfile(path):
+           rel = os.path.relpath(path, shots).replace(os.sep, "/")
+           m = name_re.match(rel)
+           if m:
+               per_kind[m.group(1)] += 1
+           else:
+               malformed.append(rel)
+
+   a11y, failing = collections.Counter(), []
+   logged = re.compile(r"^.*AccessibilityHierarchyCheckResult (ERROR|WARNING) (\w+).*$", re.M)
+   thrown = re.compile(r"Reported by [\w.]*?\.(\w+Check)")
+   for pattern in results:
+       for path in glob.glob(pattern, recursive=True):
+           root = ET.parse(path).getroot()
+           out = (root.findtext("system-err") or "") + "\n" + (root.findtext("system-out") or "")
+           lines = {m.group(0) for m in logged.finditer(out)}          # each distinct ATF result once
+           for line in lines:
+               level, check = logged.match(line).groups()
+               a11y[f"{check}:{level.lower()}"] += 1
+           for tc in root.iter("testcase"):
+               for node in list(tc.findall("failure")) + list(tc.findall("error")):
+                   text = (node.get("message") or "") + (node.text or "")
+                   if "AccessibilityViewCheckException" in text or "AccessibilityCheckException" in text:
+                       checks = sorted(set(thrown.findall(text)))
+                       failing.append(f"{tc.get('classname')}#{tc.get('name')}: {', '.join(checks)}")
+                       if not lines:                                  # device runs: results only in the failure
+                           for check in checks:
+                               a11y[f"{check}:error"] += 1
+
+   print("screenshots:", dict(per_kind) or "none")
+   print("malformed:", len(malformed))
+   for rel in malformed[:20]:
+       print("  MALFORMED", rel)
+   print("accessibility results:", sum(a11y.values()), dict(a11y))
+   print("tests failed by accessibility checks:", len(failing))
+   for line in failing[:20]:
+       print("  A11Y-FAIL", line)
+   ```
+   It counts captures per kind, lists names that don't match the contract, and counts Accessibility Test
+   Framework results by `<CheckName>:<level>` from the Roborazzi lines on the test's stderr (`report` mode), or
+   from the `AccessibilityViewCheckException` of a failing test (`enforce` mode, and Espresso/Compose checks on a
+   device). In device `report` mode the results are only in the saved logcat file — count its lines naming a
+   `…checks.<Name>Check` the same way. Verified against real output from a Robolectric/Roborazzi run (see Known
+   quirks).
+
 ## Step 5 — Parse the JUnit XML results
 
 Gradle/AGP write one `TEST-<classname>.xml` file per test class under
@@ -155,6 +247,10 @@ instead of trying to parse a stale or missing report directory.
   trace instead of pasting it.
 - **Instrumented run skipped** (not asked for, or no device attached): say so explicitly rather than silently
   reporting only unit-test results as if that were the whole answer.
+- **UI run** (Step 4b): the JVM and device stages separately (pass/fail counts, or **unverified** with the reason),
+  screenshots per kind (`component`/`screen`/`flow`), malformed names (each listed), accessibility results (total,
+  per check id) and the tests failed by them, the `.ui-quality.yml` level applied, and whether the directory was
+  cleared (full run) or added to (scoped run). Never paste screenshots, logcat or ATF dumps.
 - **Warn explicitly**: a first run on a clean machine downloads Robolectric's `android-all` jars (can be hundreds
   of MB) and may take minutes — don't mistake a long first run for a hang; `ANDROID_HOME`/`local.properties` must
   already be correct or the build fails before any test executes; this skill never fixes failing tests or
@@ -175,6 +271,16 @@ instead of trying to parse a stale or missing report directory.
   incompatible with some third-party Gradle plugins/tasks; if a run fails with a configuration-cache-specific
   error unrelated to the tests themselves, retry once with `--no-configuration-cache` before treating it as a
   real test failure.
+- **UI run, verified** in `$TMPDIR/iru-verify/android/ui/` (outside this repository) with AGP 9.4.1, Kotlin
+  2.4.21, Gradle 9.8.1, Compose BOM 2026.09.00, Robolectric 4.17 and Roborazzi 1.76.0: Compose and Views
+  Robolectric tests wrote `component/Greeting/default--{ltr,rtl}--{light,dark}.png` and
+  `screen/MainActivity/typical-data--…png` through the helper, `UI_SCREENSHOTS_DIR` set on the `./gradlew` command
+  line reached the forked test JVM, and Roborazzi's ATF check failed the test in `Error` mode and only logged in
+  `LogOnly` mode; Step 4b's parser was run against those captures plus a hand-made malformed name and against the
+  real stderr/failure text of that check. Robolectric `sdk=36` on JDK 21 failed with `IllegalAccessException …
+  jdk.internal.access` (fixed with `jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")` in
+  `testOptions.unitTests.all {}`); `sdk=35` needed nothing. **The device stage (`connectedDebugAndroidTest`, Test
+  Storage pull, `uiAccessibility` runner argument, logcat) was compile-checked only — no emulator was run.**
 - This skill's JUnit-XML parsing (Step 5) was verified against hand-written sample files under
   `$TMPDIR/iru-verify/android/gates/junit/` only, per this catalog's convention that gate-skill authors verify
   their own parsing logic against small fixtures rather than running the heavy Gradle build themselves — the live

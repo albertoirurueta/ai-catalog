@@ -26,7 +26,8 @@ description: >-
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, the stack-shape keys `language` (JVM
   `java`/`kotlin`, or a command-line tool's `rust`/`go`/`swift`/`dotnet`), `build-tool`,
-  `layout`, and `frontend` (JVM services), `python-version`, `platforms`, `framework`, `toolchain` (React Native
+  `layout`, and `frontend` (JVM services), `accessibility` (`enforce`/`report`/`off` — UI types: how strictly the UI
+  tests' automated accessibility checks gate, recorded in `.ui-quality.yml`), `python-version`, `platforms`, `framework`, `toolchain` (React Native
   `expo`/`metro`), `native-builds`, `ui` (Kotlin Multiplatform `compose`/`native`, macOS `swiftui`/`appkit`,
   Windows `wpf`/`winui`/`winforms`, a command-line tool's `none`/`tui`), `architecture` (desktop apps'
   `mvvm`/`mvc`), `integration-branch`,
@@ -94,7 +95,8 @@ or pre-set by Step 1's detection — `platforms` (Apple app / Swift library), `f
 `toolchain` (React Native's `expo`/`metro`), `native-builds` (React Native's `eas`/`local` — Expo toolchain
 only), `ui` (Kotlin Multiplatform's `compose`/`native`, macOS's `swiftui`/`appkit`, Windows' `wpf`/`winui`/
 `winforms`, a command-line tool's `none`/`tui` — never asked here, only forwarded), `architecture` (desktop apps' `mvvm`/`mvc` — likewise only
-forwarded), `python-version` (Python only — likewise never asked here), plus the
+forwarded), `accessibility` (`enforce`/`report`/`off` — UI types only; how strictly the UI tests' automated
+accessibility checks gate, recorded by the UI scaffold in `.ui-quality.yml`), `python-version` (Python only — likewise never asked here), plus the
 pass-through-only keys `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`,
 `organization-url` (see Step 3's closing note — this skill never asks for these itself, it only forwards them when
 supplied). Every key found here is resolved — skip the matching question below. Any **other** `key: value` line
@@ -550,6 +552,20 @@ them in the order below — `visibility` and `ci` change the recommendations of 
      Step 1 detected or `args` supplied for these keys is forwarded in Step 4, so the orchestrator confirms it
      instead of asking again — and nothing is ever asked twice.
 
+9. **accessibility** (only for a resolved type with a user interface: `react-web`, `angular-web`, `nextjs`,
+   `ionic-app`, `react-native-app`, `android-app`, `android-library` (its sample app), `apple-app`, `macos-app`,
+   `kmp-app`, `windows-app`, `php-laravel`, `php-wordpress-plugin`, `php-wordpress-theme`, `php-prestashop-module`,
+   `python-django`, and the `*-springboot-hilla` types; for Spring Boot without a detected Hilla frontend and for
+   `cli-tool` — whose `frontend`/`ui` the orchestrator asks — leave it to the orchestrator) — "Run automated
+   accessibility checks in the UI tests?" Every UI scaffold follows the catalog's UI contract: composed
+   components with explicit inputs and events, virtualized lists, UI tests across states, left-to-right and
+   right-to-left, light and dark, screenshots reused by the Antora docs, and automated accessibility checks
+   (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility audit, Axe.Windows).
+   Options: **Enforce (Recommended)** — "violations fail the UI tests"; **Report only** — "violations are listed in
+   test reports but never fail the build"; **Off** — "no automated checks (accessible coding defaults still
+   apply)". The choice is written to `.ui-quality.yml` at the repository root, where the coding and test skills
+   read it; it can be changed there later by hand.
+
 `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` are
 **never actively asked here** — this front door only forwards them when they arrived via its own `args`
 (`iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
@@ -680,6 +696,13 @@ and `pages` (when `ci: yes`), and `on-existing` (when supplied via `args`), per 
   `module-path`, `go-version`, `package-name`, `swift-version`, `platforms`, `tool-name`, `package-id`) when
   supplied. Never send `publish` or `flavor`.
 
+**`accessibility`**: send it, when Step 3 resolved it (or `args` supplied it), to every orchestrator above whose
+on-disk Step 0 recognizes it — `iru-setup-typescript-repository` (UI flavors), `iru-setup-php-repository`,
+`iru-setup-python-repository` (`django`), `iru-setup-android-repository`, `iru-setup-swift-repository` (`app`),
+`iru-setup-kmp-repository`, `iru-setup-macos-repository`, `iru-setup-windows-repository`,
+`iru-setup-cli-repository` (it applies it only for `ui: tui`) and `iru-setup-java-springboot` (it applies it only
+for `frontend: hilla`) — and never to a type without a UI.
+
 If the on-disk Step 0 of the target orchestrator turns out **not** to recognize one of the cost/CI keys (e.g. an
 older copy of it was installed), don't send that key — instead tell the user the orchestrator will ask that
 question itself (or, if it has no such question, that the choice can't be applied by it), and list it in Step 5.
@@ -710,8 +733,8 @@ Summarize for the user:
   whether `mode` came from Step 1's survey or an explicit `args`/user answer, and every shared input from Step 3 as
   actually applied (`open-source`, `visibility` and whether it was supplied/detected via `gh`/asked, `ci`,
   `ci-tests`, `pages` — noting when `pages: yes` was defaulted because the repository is public —
-  `publish`/`distribution`, `sonar` + detail keys, `on-existing` if supplied, and any conditional flavor-specific
-  input).
+  `publish`/`distribution`, `sonar` + detail keys, `accessibility` for a UI type (and that `.ui-quality.yml`
+  records it), `on-existing` if supplied, and any conditional flavor-specific input).
 - A **per-component table** — the Step 1 inventory's rows, each with what the delegated orchestrator (named
   explicitly) reported doing: **created / updated / replaced / kept as is / skipped (ci: no)** and the file paths
   involved. Reproduce its report rather than re-deriving one, and list under it every mismatch it flagged between a

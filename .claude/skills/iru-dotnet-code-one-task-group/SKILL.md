@@ -22,7 +22,11 @@ description: >-
   framework-free `src/<Tool>.Core`): the coverage bar is measured on Core classes (the thin command tree is "not
   measured"), the in-process `tests/<Tool>.Cli.Tests` run in the full suite, and — when the bucket touched the CLI
   project, Core or the build files — a Native AOT `dotnet publish -r <host-rid> -c Release` must finish with zero
-  IL trim/AOT warnings and the generated CLI reference must be current.
+  IL trim/AOT warnings and the generated CLI reference must be current; when the bucket touched the optional
+  Terminal.Gui terminal UI, a UI stage per the catalog's UI contract runs its `[TestCategory("UI")]` view tests
+  (`iru-dotnet-test` selector `ui` — any host, no lock) and checks that every changed screen/component has its
+  `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt` capture for each visual state × `.ui-quality.yml`
+  direction.
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(uname *) Skill Agent
 ---
@@ -79,6 +83,19 @@ applies, Step 3 changes as follows (everything else is unchanged):
   `dotnet run --project src/<Tool> -c Release -- gen-docs --output-dir .` and check `git diff --exit-code --
   docs/modules/ROOT/pages/cli-reference.adoc`; if it changed, keep the regenerated page as part of the bucket and say
   so in Step 5 (never hand-edit it).
+- **3.9 Terminal UI stage** — only when the bucket touched the terminal UI (`src/<Tool>/Tui/`, a `Terminal.Gui` view
+  or the command hosting it, or Core state a view renders). The full suite (3.5) excludes `[TestCategory("UI")]`
+  tests, so run them here: `Agent({description: "Run terminal UI tests for task group", subagent_type:
+  "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-dotnet-test\", args: \"ui\nproject: tests/<Tool>.Cli.Tests\"}).
+  Report back only: pass/fail counts, each failure's test name and first message line, whether the filter matched no
+  tests, and the UI-contract summary — captures per kind and per <kind>/<Id>, malformed names, and the
+  .ui-quality.yml level applied with its accessibility violations (count + rule ids)."})`. Then, from that summary and the tasks' reported `Screen › Region › Component`
+  trees, check that every view the bucket added or changed has a `.txt` capture for each of its visual states × each
+  `.ui-quality.yml` `directions` entry (missing file → `[ltr, rtl]`); a gap is a missing test in the owning task — add
+  it and re-run. Accessibility is the asserted terminal checks (`tui-color-only`, `tui-help-line`, `tui-keyboard` —
+  no automated audit exists for terminals) at the `.ui-quality.yml` level: `enforce` → they failed their tests, fix
+  the view and re-run; `report` → list the `a11y-report.txt` violations in Step 5; `off` → say so. No UI tests at all
+  for a changed view → "terminal UI untested", never a pass.
 
 ## Step 1 — Capture one pre-change quality baseline for the whole bucket
 
@@ -178,8 +195,8 @@ not once per task:
    re-check until none remain. Leave a new issue in place only if fixing it is genuinely unavoidable (e.g. it
    would contradict what its task explicitly specifies) — record that, and why, for Step 4. Skip this item if
    `iru-dotnet-code-quality` is unavailable in this repository.
-7. **Native AOT publish check** and 8. **generated CLI reference** — CLI shape only, under the conditions and with
-   the commands given in "Command-line tools (CLI shape)" above.
+7. **Native AOT publish check**, 8. **generated CLI reference** and 9. **terminal UI stage** — CLI shape only, under
+   the conditions and with the commands given in "Command-line tools (CLI shape)" above.
 
 ## Step 4 — Finalize progress notes and notify the user
 
@@ -197,7 +214,8 @@ not run Step 3's validation against a task that never finished implementing.
 
 Hand control back to the caller (`iru-code-one-task-group`) with a summary covering the whole bucket: per task, the
 files touched, tests added/updated, coverage achieved, and code-quality outcome — including whether a new issue
-was left in place as unavoidable and why, whether license-header generation was skipped by the user, and which
+was left in place as unavoidable and why, the terminal UI stage's result when it ran (UI tests, captures per view
+and any missing state × direction, malformed names), whether license-header generation was skipped by the user, and which
 task(s), if any, stopped on a blocker (with enough detail for the caller to surface it further up).
 `implementation_plan.md`'s checkboxes are already checked (by `iru-dotnet-code-one-task` itself, backfilled here
 in Step 2 if needed) and finalized with their validation outcome (Step 4), and the user-facing progress

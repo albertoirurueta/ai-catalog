@@ -5,7 +5,7 @@
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 A custom agent that runs a single verification/quality-gate skill — tests, coverage, code-quality/lint, license
-headers, doc-comment audits, security scans, or a full project build — across any of the catalog's language
+headers, doc-comment audits, UI test runs, security scans, or a full project build — across any of the catalog's language
 tracks (Java and Kotlin on Maven or Gradle, Spring Boot, Quarkus, PHP, .NET, TypeScript including NestJS and
 Next.js, Python including FastAPI and Django, Android, Kotlin Multiplatform, React Native, Swift, Windows desktop apps, Rust, Go), in an isolated context, optionally diffs the result against a baseline, and reports back
 only a compact, structured summary.
@@ -43,6 +43,7 @@ It always prefers invoking the matching Claude Code skill over a raw command:
   numbers.
 * Doc-comment audits — `iru-java-javadoc`, `iru-kotlin-kdoc` (KDoc/Dokka), `iru-dotnet-docfx`,
   `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (docstrings + Sphinx), `iru-android-dokka`, `iru-kmp-dokka` (KDoc + Dokka multiplatform), `iru-swift-docc`, `iru-rust-rustdoc` (rustdoc + doctests), `iru-go-godoc` (Go doc comments).
+* UI test runs — the `ui`/e2e selector of the test gates (`iru-android-test`, `iru-dotnet-test`, `iru-typescript-test`, `iru-swift-test`, ...) that runs component, screen and flow tests capturing `.ui-screenshots/` across states, left-to-right/right-to-left and light/dark, with accessibility checks applied at the level set in `.ui-quality.yml`. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 * `iru-check-license`, `iru-check-security`, and full project builds (Maven, Gradle, npm, Composer, uv, Cargo, Go, ...).
 
 It falls back to the equivalent raw command (`mvn test -Dtest=X`, `./gradlew test --tests X`, `dotnet test --filter`,
@@ -54,7 +55,11 @@ relays the user's choice in its report, and it never modifies files beyond what 
 What it reports is exactly what the prompt asks for: for runs and builds, only pass or the failing names with their
 reasons; for coverage, only the requested percentages; for quality/security scans, a per-tool issue count and the
 per-file list (or only the newly introduced issues when a baseline was supplied); for license and doc audits, which
-files were missing, fixed or compliant.
+files were missing, fixed or compliant; for UI test runs, pass/fail plus the screenshot count per kind
+(`component`/`screen`/`flow`), any malformed screenshot file name, any screen or component missing a state × direction
+× theme capture, the accessibility level applied and the violation count by rule id (never the images or the raw
+accessibility report), and every UI stage that could not run (no browser, device, simulator or host OS) reported as
+unverified with its reason.
 
 == Tools
 

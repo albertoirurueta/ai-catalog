@@ -126,9 +126,9 @@ result; cover non-2xx and malformed-body paths implied by the KDoc `@throws`/res
 
 ```kotlin
 @OptIn(ExperimentalTestApi::class)
-class ProfileScreenTest {
+class ProfileScreenTest : UiTest() {   // UiTest: the module's Robolectric-on-Android base (ui-implementation.md)
     @Test
-    fun retryButton_click_invokesOnRetry() = runComposeUiTest {
+    fun retryButton_click_invokesOnRetry() = runComposeUiTest {   // androidx.compose.ui.test.v2.runComposeUiTest
         var retried = false
         setContent { AppTheme { ProfileScreen(state = ProfileUiState.Error, onRetry = { retried = true }) } }
 
@@ -146,9 +146,14 @@ class ProfileScreenTest {
   test in `commonTest` turns the Android host-test task red unless the module has an Android UI-test setup for it
   (Robolectric on the host-test classpath with Android resources enabled, per the JetBrains docs — unverified
   locally). So:
-  - module already runs Compose UI tests in `commonTest` successfully on Android → follow it;
+  - module already runs Compose UI tests in `commonTest` successfully on Android (the `UiTest` base class with a
+    Robolectric `actual`, Robolectric + `ui-test-manifest` in `androidHostTest`, as `iru-setup-kmp-app` scaffolds
+    and `ui-implementation.md` describes — verified on both targets) → follow it;
   - otherwise put Compose UI tests in **`iosTest`** (they run natively in the simulator) or a desktop `jvmTest` if
     the module has a `jvm()` target, and say so in the report. Never add Robolectric or a target to make it fit.
+- UI tests also capture every visual state across the `.ui-quality.yml` directions × themes into
+  `.ui-screenshots/` (platform segment `--android`/`--ios`) and call `checkUiAccessibility()` — the helper and the
+  matrix pattern are in `ui-implementation.md`.
 - Prefer testing state holders: a `ViewModel` test is faster, runs everywhere, and counts toward coverage; a UI test
   should assert wiring (a click calls the callback, state renders the right element), not business rules.
 
@@ -159,6 +164,8 @@ class ProfileScreenTest {
   if the target already does.
 - Test Swift-side logic: mapping Kotlin state to view data, the observable model's start/stop behavior. Kotlin
   logic is tested in Kotlin — don't re-test shared behavior from Swift.
+- `ui: native` SwiftUI views get `ImageRenderer` screenshot tests through `UIScreenshots.swift`
+  (`ui-implementation.md`); flows and the accessibility audit need an XCUITest target.
 - Fakes: Swift classes implementing the exported Kotlin protocols.
 
 ## What to cover

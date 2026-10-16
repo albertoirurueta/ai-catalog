@@ -140,7 +140,10 @@ add_action( 'admin_post_acme_save_loan', 'acme_loans_handle_save' );
   'before' )`. Never hard-code `<script>` tags or load jQuery/libraries WordPress already ships from a CDN.
 - **Blocks**: one directory per block with `block.json` (`apiVersion` 3), registered with
   `register_block_type( __DIR__ . '/build/loan-card' )`, built by `@wordpress/scripts`. Dynamic blocks render in
-  `render.php` — escape there like any template, and use `get_block_wrapper_attributes()`.
+  `render.php` — escape there like any template, and use `get_block_wrapper_attributes()`. A block is a UI
+  component in the sense of `ui-contract.md`: attributes are its inputs, `setAttributes`/callbacks its events,
+  `InnerBlocks`/patterns/template parts its composition — see `ui-implementation.md`, including bounded
+  `WP_Query`/Query Loop pagination (never `posts_per_page => -1` on content that grows).
 
 ## Block themes
 
@@ -175,6 +178,9 @@ Two kinds, usually two configs or suites — find which ones the project has (`i
   `wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) )`, `rest_do_request( new
   WP_REST_Request( 'POST', '/acme-loans/v1/loans' ) )`, `$this->go_to()`. **Write them, don't run them here** —
   the group skill runs them under its integration lock.
+- **Browser UI tests** (screens, blocks, flows — screenshot matrix and axe checks) use `wp-scripts test-playwright`
+  with `@wordpress/e2e-test-utils-playwright` against the wp-env tests instance (`ui-implementation.md`). Write
+  them, never run them here.
 - The WordPress test library pins the PHPUnit major it supports (via `yoast/phpunit-polyfills`) — check
   `composer.lock` and use annotations on PHPUnit 9 (`testing.md`).
 

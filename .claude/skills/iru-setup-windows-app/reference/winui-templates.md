@@ -180,6 +180,18 @@ public partial class App : Application
         _host.Start();
         var window = _host.Services.GetRequiredService<MainWindow>();
         window.Closed += OnMainWindowClosed;
+        if (window.Content is FrameworkElement root)
+        {
+            // The UI tests pass --ui-direction / --ui-theme (UiTestOptions); without them the system settings apply.
+            root.FlowDirection = UiTestOptions.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+            root.RequestedTheme = UiTestOptions.Theme switch
+            {
+                "light" => ElementTheme.Light,
+                "dark" => ElementTheme.Dark,
+                _ => ElementTheme.Default,
+            };
+        }
+
         window.Activate();
     }
 

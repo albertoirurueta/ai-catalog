@@ -14,7 +14,12 @@ description: >-
   directory: mandatory rules, the catalog's TypeScript agreements condensed for React Native, exactly one toolchain
   file (`expo.md` or `metro.md`), and, as the task needs them, native modules (Turbo Module spec + Kotlin + Obj-C++
   implementations, or the Expo Modules API), state and data (server state, AsyncStorage/MMKV, offline), UI and
-  platform (StyleSheet, safe areas, platform files, accessibility, FlatList performance, images, Reanimated), testing
+  platform (StyleSheet, safe areas, platform files, accessibility, FlatList performance, images, Reanimated), the
+  catalog's UI contract and its React Native mapping for any screen/component/list (`Screen › Region › Component`
+  decomposition, composition over inheritance, typed state props and `on…` events, `FlatList`/`SectionList` with a
+  memoized item component, a dev-only UI gallery reached by deep link, Maestro `takeScreenshot` captures per state ×
+  LTR/RTL × light/dark into `.ui-screenshots/`, `eslint-plugin-react-native-a11y` + role queries at the
+  `.ui-quality.yml` level), testing
   (RNTL queries and userEvent, native-module mocks, timers, navigation tests, Maestro/Detox flows written but not
   run), security (no secrets in the bundle, secure storage, deep-link/WebView/TLS hardening, logging hygiene), and
   TSDoc. Re-checks the current code state, implements exactly what the task specifies without hand-editing
@@ -102,6 +107,7 @@ task. The routing, restated:
 | `reference/native-modules.md` | The task adds/changes native code, a Codegen spec, an Expo module, or a config plugin. |
 | `reference/state-and-data.md` | State, hooks, context, server data, persistence, offline. |
 | `reference/ui-and-platform.md` | Layout, styling, lists, images, animations, accessibility, platform-specific behaviour. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI — the catalog-wide UI contract and its React Native mapping (decomposition, composition, state/events, virtualized lists, UI tests, the UI gallery + screenshots, accessibility level). |
 | `reference/testing.md` | The task writes or updates tests — nearly always. |
 | `reference/security.md` | Auth/tokens, config values, sensitive storage, deep links/intents, WebViews, networking/TLS, logging, permissions. |
 | `reference/tsdoc.md` | The task adds or changes an exported symbol. |
@@ -145,6 +151,12 @@ every installed copy of the app):
   WebView/`Linking` allow-lists.
 - **UI**: accessible role + name on every interactive element, virtualized lists for unbounded data, safe-area
   insets from `react-native-safe-area-context`, effects that clean up.
+- **UI work starts with the decomposition** (`reference/ui-contract.md` §2): before writing a screen or component,
+  write its `Screen › Region › Component` tree (inputs, events, visual states, what it reuses — search
+  `src/components/` and the feature folders first), then build leaves → composed components → screens → navigation
+  per `reference/ui-implementation.md`: presentational components with a `Readonly` state prop and `on…` callbacks,
+  the screen owning the view model hook, a `<Component>.fixtures.ts` per component, and `FlatList`/`SectionList` +
+  a memoized item component for every data-driven collection. Include the tree in the Step 7 report.
 
 Don't add anything the task didn't ask for — no speculative abstractions, no unrelated cleanup, no restyling, no
 navigator restructure, no new state layer.
@@ -159,6 +171,16 @@ adds, and validation of untrusted input. For native code, add the JS facade test
 lives natively and the project has native test targets, JUnit/XCTest tests per `reference/native-modules.md`. Add or
 extend a Maestro flow (or Detox test) only for a user-visible path the task adds, and only if the project already
 has that e2e framework.
+
+For UI work, follow `reference/ui-contract.md` §6–§8 as mapped in `reference/ui-implementation.md`: RNTL component
+and screen tests over every fixture state (behaviour once, LTR light; events with their payloads; disabled states
+silent; role/label queries), the component's/screen's entries in the UI gallery registry
+(`src/dev/ui-gallery/registry.tsx`) plus a `.maestro/ui/<Id>.yaml` capture flow calling the
+`.maestro/subflows/ui-capture.yaml` helper for each state × `.ui-quality.yml` direction × theme, `takeScreenshot`
+steps in any flow the task adds, and code that passes `eslint-plugin-react-native-a11y` at the `.ui-quality.yml`
+level. If the project has no gallery, deep-link scheme or `.maestro/` yet, write the RNTL tests and report the missing
+capture infrastructure instead of inventing it (a scheme is a config change — Step 5). Detox projects use
+`e2e/support/ui-screenshots.ts` instead of the subflow.
 
 Do not run anything — not Jest, not `tsc`, not ESLint, not Gradle/CocoaPods/`xcodebuild`, not Metro, not
 `expo prebuild`, not an e2e flow. `iru-react-native-code-one-task-group` does that once for the whole bucket, with the
@@ -205,6 +227,10 @@ Hand control back with a short summary:
 - **The files touched**, grouped as JS/TS, native (`android/`, `ios/`, `modules/<name>/`), and config (`app.json`,
   `package.json` `codegenConfig`, plugins) — and **the tests added/updated** (Jest, native JUnit/XCTest, Maestro/Detox
   flows), none of them run.
+- **For UI work**: the `Screen › Region › Component` decomposition (new vs reused, collection vs item), the UI tests
+  added (RNTL component/screen tests, gallery registry entries, `.maestro/ui/` capture flows, flow captures) and the
+  screenshot names they will produce (`<kind>/<Id>/<state>--<dir>--<theme>--<platform>`), plus any missing capture
+  infrastructure.
 - **Native impact**: which platform(s) changed natively, and what the group skill/user must do before it can be
   observed — `pod install`, a Gradle sync/build, a new development build, an `expo prebuild` check because a config
   plugin changed — and whether the change is OTA-compatible (EAS Update) or needs a new binary.

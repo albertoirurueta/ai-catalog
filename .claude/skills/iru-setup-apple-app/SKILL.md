@@ -12,7 +12,10 @@ description: >-
   `UIWindowSceneDelegate` with a scene manifest, `UINavigationController` root, `UIViewController` laid out in code,
   `mvc` controller core or `mvvm` with UIKit Observation tracking, `UIObservationTrackingEnabled` below iOS 26);
   a `--uitesting` launch argument and accessibility identifiers on every control; a Swift Testing unit-test target
-  and an XCUITest UI-test target per platform, watchOS companion-app wiring when `ios` and `watchos` are both
+  and an XCUITest UI-test target per platform — per the catalog's UI contract, a `.ui-quality.yml` at the root, the
+  shared `Tests/Support/UIScreenshots.swift` capture helper compiled into both test targets, and a UI test that
+  captures the sample screen in every left-to-right/right-to-left × light/dark cell into `.ui-screenshots/` and runs
+  `performAccessibilityAudit()` at the configured level — watchOS companion-app wiring when `ios` and `watchos` are both
   selected, `.swiftlint.yml`, `.swift-format`, an optional `fastlane/Fastfile` with lanes gated by `signing`/
   `distribution`, and `sonar-project.properties` (omitted when `sonar: none`). The generated `.xcodeproj`/
   `.xcworkspace` is never committed. Invoke as `/iru-setup-apple-app`. Accepts pre-resolved inputs via `args`
@@ -22,8 +25,8 @@ description: >-
   (`mvvm`/`mvc`; `mvc` only with `uikit`), `generator` (`xcodegen`/`tuist`), `min-deployment-target`,
   `distribution` (`none`/`internal`/`store`), `signing` (`fastlane-match`/`api-key`/`none`), `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `visibility`, `ci`, `on-existing` (`ask`/`keep`/`update`/`replace`) and
-  `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; stand-alone it asks
+  `sonar-project-key`/`sonar-host-url`), `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`, default
+  `enforce`), `on-existing` (`ask`/`keep`/`update`/`replace`) and `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; stand-alone it asks
   `open-source` first and derives the `sonar` default from it. Announces whether it is scaffolding from scratch or
   updating; for each owned file that already exists it warns and asks Update / Keep as is / Replace / Stop (unless
   `on-existing` decides) and never overwrites hand-written source. Versions are looked up at run time with a dated
@@ -111,6 +114,7 @@ sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
 visibility: public
 ci: yes
+accessibility: enforce
 mode: new
 ```
 
@@ -130,6 +134,7 @@ is absent or doesn't look like this format, treat everything as unset and ask no
 | `signing` | `fastlane-match` / `api-key` / `none` |
 | `license`, `developer-name`, `developer-email`, `organization-url` | report + copyright line |
 | `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`) | the `sonar` recommendation (Step 2); `visibility` is only used for that; `internal` behaves like `private` |
+| `accessibility` | `enforce` (default) / `report` / `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` (UI contract §8) |
 | `on-existing` | `ask` (default) / `keep` / `update` / `replace` — how Step 1 treats each already-existing file |
 | `mode` | `new` / `existing` |
 
@@ -142,8 +147,8 @@ ignored and named in the report.
 ## Step 1 — Survey the repository
 
 Check, at the repository root, for this skill's owned files: the manifest (`project.yml`, or `Project.swift` +
-`Tuist.swift`), `Packages/Core/Package.swift`, `.swiftlint.yml`, `.swift-format`, `fastlane/Fastfile`, and
-`sonar-project.properties`; plus the source skeleton (`Packages/Core/Sources`/`Tests`, `Targets/*/Sources`,
+`Tuist.swift`), `Packages/Core/Package.swift`, `.swiftlint.yml`, `.swift-format`, `.ui-quality.yml`,
+`fastlane/Fastfile`, and `sonar-project.properties`; plus the source skeleton (`Packages/Core/Sources`/`Tests`, `Targets/*/Sources`,
 `Targets/*/Tests`, `Targets/*/UITests`) and any hand-maintained `*.xcodeproj`/`*.xcworkspace`. When updating, also
 read the current evidence for Step 2's defaults: app name, bundle id prefix, platforms (`Targets/<Platform>/`
 folders and manifest targets), deployment targets, `ui` (`Targets/iOS/Sources/SceneDelegate.swift` /
@@ -176,7 +181,9 @@ the user, before anything else, which of these this run is:
     with this run's choices — say so concretely in the question when it does (e.g. "`fastlane/Fastfile` has a
     `release` lane but you chose `distribution: internal`", "`sonar-project.properties` exists but you chose
     `sonar: none`", "`project.yml` has no visionOS target but you selected `visionos`", "`project.yml`'s test targets
-    have no `TEST_HOST` — `xcodebuild test` fails with *Could not find test host*"); Step 8 lists each mismatch.
+    have no `TEST_HOST` — `xcodebuild test` fails with *Could not find test host*", "`.ui-quality.yml` says
+    `accessibility: report` but you chose `enforce`", "`project.yml`'s UI-test targets don't compile
+    `Tests/Support/UIScreenshots.swift`"); Step 8 lists each mismatch.
   - **Replace** — regenerate from the template. The result matches this house pattern exactly, but every target,
     scheme, build-setting, lane or key customization in that file is lost — recoverable only from git history. Never
     recommended by default. When the manifest is replaced, first read its current values and offer them as the
@@ -189,8 +196,11 @@ the user, before anything else, which of these this run is:
   The source skeleton is never part of this question: whatever the decision, never touch an existing file under
   `Targets/*/Sources`, `Targets/*/Tests`, `Targets/*/UITests`, or `Packages/Core/Sources`/`Packages/Core/Tests`
   unless its content exactly matches one of this skill's templates (current or the earlier flat `Greeter`/
-  `ContentView`/`<AppName>App` placeholders) — such an untouched placeholder may be upgraded to the current template.
-  Missing files are created: a newly selected platform's `Targets/<Platform>/…`, the `Core/Models`, `Core/Services`
+  `ContentView`/`<AppName>App` placeholders, or the pre-UI-contract `<AppName>UITests.swift` without the capture
+  and audit tests) — such an untouched placeholder may be upgraded to the current template.
+  Missing files are created: a newly selected platform's `Targets/<Platform>/…`, a missing
+  `Targets/<Platform>/Tests/Support/UIScreenshots.swift` helper (the UI-test targets then need the manifest's helper
+  source line — part of the manifest's Update), the `Core/Models`, `Core/Services`
   and `Core/ViewModels`|`Core/Controllers` folders (added alongside a legacy `Greeter.swift`, which is never deleted).
   A requested `architecture`/`ui` that contradicts existing hand-written sources (e.g. `Core/Controllers/` exists but
   `architecture: mvvm` was asked) is reported, not converted — switching architecture is a coding task, not a
@@ -274,7 +284,7 @@ Then, unless Step 0 already resolved a `license` value, ask about the **license*
 (proprietary) / Other (ask for the display name and URL). If a license is chosen, remind the user in Step 8 to add a
 matching root `LICENSE` file if missing — `iru-check-license` can verify/backfill source headers against it.
 
-Then resolve `open-source`, `sonar`, `distribution`, and `signing` — skip any already resolved. When invoked
+Then resolve `open-source`, `sonar`, `distribution`, `signing` and `accessibility` — skip any already resolved. When invoked
 stand-alone with none of them pre-resolved, ask `open-source` *first* (yes/no) and derive the recommended `sonar`
 default from that answer, per this catalog's shared convention:
 
@@ -307,6 +317,11 @@ default from that answer, per this catalog's shared convention:
     Fastlane at all** (`xcodebuild -exportArchive -authenticationKeyPath …`), which is what the macOS desktop skills do.
   - **`none`** — no automated signing; the Fastfile only gets a `test` lane. Valid with `distribution` ≠ `none` but
     unusual — warn in Step 8 that nothing here produces a distributable build automatically.
+
+- **accessibility** — asked only when unset: "Automated accessibility checks in UI tests?" — **Enforce
+  (Recommended)** (`enforce`: every `performAccessibilityAudit()` issue fails the UI tests) / **Report only**
+  (`report`: issues are attached and listed, never failing) / **Off** (`off`: the audit test skips; the coding
+  defaults — labels, Dynamic Type, contrast — still apply). Written to `.ui-quality.yml`.
 
 **Fastlane is an intentional difference from the macOS desktop skills, and it stays optional.**
 `iru-setup-macos-app`/`iru-setup-macos-github-workflows` use plain `xcodebuild`/`notarytool`/`stapler` because the
@@ -366,6 +381,9 @@ Read the reference files (table above). Placeholders:
 | `<owner>` / `<repo>` | Step 3 |
 | `<sonar-organization>` / `<sonar-project-key>` / `<sonar-host-url>` | Step 2 |
 | `<developer-name>` / `<developer-email>` / `<organization-url>` | Step 2 |
+| `<accessibility>` | Step 0/2 (`enforce` by default) — `.ui-quality.yml` |
+| `<ScreenType>` | the sample screen's type, the UI contract `<Id>` of its captures: `GreetingViewController` (`platform: iOS`, `ui: uikit`), else `ContentView` |
+| `<platform-variant>` | the capture's platform variant: `ios`, `macos`, `watchos`, `visionos` |
 
 Per-platform deployment targets (`Packages/Core` always declares macOS too, so `swift test` runs on the host):
 
@@ -391,17 +409,18 @@ Targets/iOS/                             when ios and/or ipados is selected (one
             uikit:   AppDelegate.swift, SceneDelegate.swift, GreetingViewController.swift, GreetingLayout.swift
             both:    LaunchOptions.swift
   Tests/    LaunchOptionsTests.swift + swiftui: <AppName>Tests.swift | uikit: GreetingViewControllerTests.swift,
-            AppShellTests.swift
-  UITests/<AppName>UITests.swift
+            AppShellTests.swift; Support/UIScreenshots.swift (UI contract helper, also compiled into UITests)
+  UITests/<AppName>UITests.swift          behaviour + screen captures (ltr/rtl × light/dark) + accessibility audit
 Targets/macOS/ | Targets/watchOS/ | Targets/visionOS/   per selected platform — SwiftUI shape (App, ContentView,
                                          LaunchOptions; LaunchOptionsTests, <AppName>Tests; <AppName>UITests)
 .swiftlint.yml  .swift-format
+.ui-quality.yml                          UI contract settings (accessibility level, directions, themes)
 fastlane/Fastfile                        optional (see Step 2)
 sonar-project.properties                 sonar ≠ none
 ```
 
 `Packages/Core` never imports SwiftUI, UIKit, AppKit or WatchKit. `.xcodeproj`, `build/`, `DerivedData/`, `.build/`,
-`*.xcresult` are `iru-setup-swift-gitignore`'s job.
+`*.xcresult` and `.ui-screenshots/` are `iru-setup-swift-gitignore`'s job.
 
 ## Step 6 — Scaffold the project
 
@@ -418,7 +437,8 @@ leave it per **Keep as is**, or overwrite per **Replace** (within Step 1's sourc
 3. For each selected platform, write `Targets/<Platform>/Sources` from `reference/swiftui-templates.md` (or, for the
    iOS target with `ui: uikit`, `reference/uikit-templates.md`) plus `LaunchOptions.swift`, and `Tests`/`UITests` from
    `reference/test-templates.md`.
-4. Write `.swiftlint.yml` and `.swift-format`.
+4. Write `.swiftlint.yml`, `.swift-format` and `.ui-quality.yml` (`project-templates.md`, `accessibility` from
+   Step 0/2).
 5. Write `fastlane/Fastfile` with exactly the lanes `signing`/`distribution` (and the iOS/iPadOS target) gate in —
    never a lane the chosen method can't back, and no `platform :ios` lane without an iOS/iPadOS target.
 6. Write `sonar-project.properties` only when `sonar` ≠ `none`, scoped to the selected platforms.
@@ -443,7 +463,10 @@ every simulator run behind `.simulator-test.lock` like the Swift gates, and shut
    test). Parse with `xcrun xcresulttool get test-results summary`. A platform whose simulator runtime isn't
    installed (typically visionOS) is reported **"unverified (no <platform> simulator runtime installed)"** after
    `xcodebuild build-for-testing -scheme <AppName>-<Platform> -destination 'generic/platform=<Platform> Simulator'`
-   proves it compiles — never download a runtime yourself.
+   proves it compiles — never download a runtime yourself. The UI tests' captures land in `.ui-screenshots/screen/
+   <ScreenType>/` (written directly from the simulator; on macOS recovered from the `.xcresult` by
+   `iru-swift-test`'s `ui` run, which the verification uses: `/iru-swift-test ui` with the scheme/destination) — expect
+   4 files per platform (2 on watchOS: dark only) and an accessibility audit at the `.ui-quality.yml` level.
 4. `swiftlint lint --strict` and `swift format lint --strict --recursive Targets Packages/Core/Sources
    Packages/Core/Tests` from the root.
 
@@ -457,7 +480,8 @@ Summarize: resolved `app-name`/`<AppName>`, `bundle-id-prefix`/`<bundle-id>`, `p
 scratch, updated an existing app, or stopped. State what was included versus omitted and why: `sonar` coordinates (or
 why `none`) and which platforms' paths `sonar-project.properties` lists; `distribution`/`signing` → exactly which
 Fastfile lanes exist and which CI secrets each needs (this skill never collects them), and that Fastlane is optional;
-which Step 4 versions were live versus fallback; ignored `args` keys. Then, per file, **created / updated / replaced /
+which Step 4 versions were live versus fallback; the `accessibility` level written to `.ui-quality.yml`; ignored
+`args` keys. Then, per file, **created / updated / replaced /
 kept as is**, each mismatch of a kept file, and what a replaced one may have lost (tell the user to check `git diff`).
 
 ### Scaffold contract (confirmed by running it — downstream skills depend on these)
@@ -474,6 +498,7 @@ kept as is**, each mismatch of a kept file, and what a replaced one may have los
 | App coverage | the UI layer (`Targets/**`) is "not measured" for the bar (also `sonar.coverage.exclusions`); measure Core with `swift test` |
 | Lint / format | `swiftlint lint --strict` (root; `included: Targets, Packages/Core/Sources, Packages/Core/Tests`; `reporter: json`) · `swift format lint --strict --recursive Targets Packages/Core/Sources Packages/Core/Tests` |
 | UI-test hooks | launch argument `--uitesting` (last; macOS also `-ApplePersistenceIgnoreState YES` before it) → `LaunchOptions.apply()` (animations off on iOS/visionOS); identifiers `nameField`, `greetButton`, `greetingLabel`, `errorLabel` |
+| UI contract | `.ui-quality.yml` (root, committed); helper `Targets/<Platform>/Tests/Support/UIScreenshots.swift` in both test targets; captures `.ui-screenshots/screen/<ScreenType>/default--<ltr\|rtl>--<light\|dark>--<platform-variant>.png` (also attached to the `.xcresult` as `screen~<ScreenType>~…`, `UI_SCREENSHOTS_DIR` passed as `TEST_RUNNER_UI_SCREENSHOTS_DIR`); audit issues attached as `a11y~<ScreenType>~<rule>` |
 | UIKit specifics | Info.plist `UIApplicationSceneManifest` → `$(PRODUCT_MODULE_NAME).SceneDelegate`; `UIObservationTrackingEnabled: true` only for `mvvm` below iOS 26; no `UIMainStoryboardFile` |
 | Fastlane (optional) | `fastlane test` = `<AppName>-iOS` on `<first-available-simulator-name>`; never required by the workflows |
 
@@ -516,6 +541,14 @@ kept as is**, each mismatch of a kept file, and what a replaced one may have los
   `xcodebuild -runFirstLaunch` once.
 - **Tuist**: `Project.swift`/`Tuist.swift` pass `swiftc -parse` only; `tuist generate` was not run (Tuist isn't
   available in the verification environment) — the `ProjectDescription` API calls are unconfirmed.
+- **UI contract additions (2026-10-16) are only partly verified**: `UIScreenshots.swift` and the new
+  `<AppName>UITests.swift` pass `swift format lint --strict` with this skill's `.swift-format` and type-check for
+  iOS 18, macOS 15, watchOS 11 and visionOS 2 (`swiftc -typecheck` against the 27.x SDKs); the helper itself ran under
+  `swift test` (macOS) and `xcodebuild test` on an iOS 27 simulator in a throwaway package, writing the contract files
+  and recovering them from the `.xcresult`. Not run: a regenerated scaffold (no XcodeGen on that machine), so the
+  manifest's extra UI-test source line, the XCUITest matrix run, `XCUIDevice.appearance`/`-AppleInterfaceStyle`
+  switching, the accessibility audit on the sample screen and SwiftLint on the helper are **unverified** — run Step 7
+  before trusting them.
 - **Fastlane** lanes (`test`, `build`, `beta`, `release`, `sync_signing`, `connect_api_key`, `notarize_release`) are
   written, never executed; `match`, TestFlight/App Store uploads and notarization need Apple Developer Program
   credentials.
@@ -524,8 +557,8 @@ Finish with a **Warn explicitly** block:
 
 - Review every generated file before building, committing or distributing; replace the `Greeting` sample with real
   logic and confirm the license matches a root `LICENSE` (suggest `iru-check-license`).
-- Run `iru-setup-swift-gitignore` — `.xcodeproj`/`.xcworkspace`/`DerivedData`/`build/`/`.xcresult`/`xcuserdata` and
-  `.simulator-test.lock/` must never be committed; every clone runs `xcodegen generate` (or `tuist generate`) first.
+- Run `iru-setup-swift-gitignore` — `.xcodeproj`/`.xcworkspace`/`DerivedData`/`build/`/`.xcresult`/`xcuserdata`,
+  `.ui-screenshots/` and `.simulator-test.lock/` must never be committed (`.ui-quality.yml` is); every clone runs `xcodegen generate` (or `tuist generate`) first.
 - visionOS tests need the visionOS simulator runtime (Xcode › Settings › Components); this skill never downloads it.
 - With `sonar` ≠ `none`, a `SONAR_TOKEN` secret and the Sonar project must exist before a scan works.
 - With `signing` ≠ `none`, the Apple Developer Program membership, certificates/profiles (or the API key) and — for

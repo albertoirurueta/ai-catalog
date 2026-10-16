@@ -26,6 +26,8 @@ test files, coverage, the full suite, and a quality-regression check against its
 a specific task sends that task back for a fix and a re-run of the affected checks, rather than re-validating the
 whole bucket.
 
+When the bucket added or changed UI in a `react`/`angular`/`ionic`/`hilla-frontend` project, a **UI stage** (Step 3.7) follows the quality check, per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]). It takes the repository-wide `.integration-test.lock`, checks the Playwright web-server ports, runs `iru-typescript-test` with the `ui` selector scoped to the bucket's specs, verifies the screenshot matrix in `.ui-screenshots/` (every changed component/screen state x the `.ui-quality.yml` directions x themes) and applies the accessibility level (`enforce` fails, `report` lists, `off` is noted). A project without Playwright, a busy port, a missing browser or a lock timeout makes the stage unverified, never silently passed; it never scaffolds Playwright or installs browsers.
+
 React Native is its own key: when Step 1 classifies the project as `react-native` (Expo or bare CLI/Metro) and
 `iru-react-native-code-one-task-group` is installed, the whole bucket is handed to that skill and this one stops,
 because it owns the native builds, Expo prebuild check, and device e2e stage this skill does not run. Without
@@ -68,10 +70,11 @@ verdict and any relevant "Current code state" context.
   outcome once bucket-wide validation passes.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group validation
   completes.
+* For UI buckets: screenshots under `.ui-screenshots/<kind>/<Id>/` from the scoped `ui` run, and per UI task a progress-note suffix such as the captured matrix and the accessibility result at the `.ui-quality.yml` level, or "UI unverified" with the reason. The `.integration-test.lock/` directory is held only during that stage and always released.
 * For a React Native bucket with `iru-react-native-code-one-task-group` installed: that skill's Step 5 report
   relayed as this skill's own, noting the hand-off.
 * A summary handed back to the caller (`iru-code-one-task-group`): per task, files touched, tests added/updated,
-  coverage achieved, code-quality outcome, and any task that stopped on a blocker.
+  coverage achieved, code-quality outcome, for UI tasks the decomposition tree, the screenshot-matrix result (captured or missing cells) and the accessibility result, or the UI stage's unverified reason, and any task that stopped on a blocker.
 
 == Execution flow
 
@@ -89,7 +92,11 @@ flowchart TD
     F --> G["Step 3: validate the whole bucket once —\nlicense headers, TSDoc, scoped tests,\ncoverage, full suite, quality vs. baseline"]
     G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
     H --> G
-    G -- clean --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
+    G -- clean --> U{"UI added or changed?"}
+    U -- no --> I
+    U -- yes --> U1["Step 3.7: UI stage: take .integration-test.lock,\nrun iru-typescript-test ui (scoped), check capture matrix\nand accessibility, release lock"]
+    U1 -- gap or enforce failure --> H
+    U1 --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
     I --> J["Step 5: report the bucket's\noutcome to the caller"]
 ....
 
@@ -114,7 +121,7 @@ directly, so verbose report output stays out of this skill's own context:
 * xref:skills/iru-check-license.adoc[] — Step 3.1, license headers for every file the bucket touched.
 * xref:skills/iru-typescript-tsdoc.adoc[] — Step 3.2, TSDoc for every exported symbol the bucket touched.
 * xref:skills/iru-typescript-test.adoc[] — Step 3.3, scoped tests for every file the bucket affected, plus the
-  Step 3.5 full-suite run (`npm test` / `pnpm test` / `yarn test`).
+  Step 3.5 full-suite run (`npm test` / `pnpm test` / `yarn test`) and the Step 3.7 UI stage's `ui` run (scoped Playwright specs, lock held).
 * xref:skills/iru-typescript-coverage.adoc[] — Step 3.4, coverage for every changed/new file in the bucket.
 
 === Invoked by

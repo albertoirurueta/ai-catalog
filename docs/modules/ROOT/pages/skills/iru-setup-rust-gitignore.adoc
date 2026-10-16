@@ -15,11 +15,13 @@ without showing a diff and getting approval.
 under `target/dist`, rustdoc, cargo-llvm-cov and nextest reports), coverage files written elsewhere (`lcov.info`,
 `*.profraw`, `*.profdata`), rustfmt backups, pending snapshot files, env files (keeping `.env.example`), the Antora
 build output, editor/OS noise and the repository-wide `.integration-test.lock/`. A cargo-fuzz section is added only when
-`fuzz/Cargo.toml` exists.
+`fuzz/Cargo.toml` exists, and a terminal-UI section (`.ui-screenshots/`, the UI tests' capture directory from the
+catalog's xref:guides/building-user-interfaces.adoc[UI contract]) when `ratatui` is a dependency or a root
+`.ui-quality.yml`/`.ui-screenshots/` exists.
 
 `Cargo.lock` is committed (no ignore line) for any package with a binary target. For a library-only workspace the skill
 asks (or reads `cargo-lock`) whether to commit it (recommended) or ignore it. It never ignores `rust-toolchain.toml`,
-`.cargo/config.toml`, `deny.toml`, golden test files or the generated-but-committed `cli-reference.adoc`, and it checks
+`.cargo/config.toml`, `deny.toml`, `.ui-quality.yml`, `src/tui/ui_screenshots.rs`, the committed `images/ui/` copies, golden test files or the generated-but-committed `cli-reference.adoc`, and it checks
 the draft with `git check-ignore` against those files before proposing it. When `.gitignore` exists it announces an
 update, shows the merged draft as a diff, and asks Update / Keep as is / Replace.
 

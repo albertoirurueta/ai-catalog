@@ -16,7 +16,7 @@ It writes:
 * a thin `cmd/<bin>/main.go` that only calls `cli.Main`, with a testscript driver `main_test.go`;
 * `internal/cli` (Cobra root, typed `*cli.Error`, exit codes 0-7/130/143 mapped in one place, JSON error envelope, colour and prompt handling, config, signals) with the sample commands `greet`, `schema`, `version` and `completion`;
 * `internal/version` (ldflags-injected version, `0.1.0-dev` in-tree);
-* with `ui: tui`, a Bubble Tea v2 and Lip Gloss v2 `browse` command in `internal/tui`;
+* with `ui: tui`, a Bubble Tea v2 and Lip Gloss v2 `browse` command in `internal/tui` (rendering only the names that fit the window), plus, per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]), a root `.ui-quality.yml`, an `internal/tui/ui_screenshots_test.go` helper and UI tests that capture every list state in each direction as `.ui-screenshots/screen/Model/<state>--<direction>--no-color.txt` with asserted accessibility checks;
 * unit tests plus testscript end-to-end scripts under `testdata/script/`;
 * a golangci-lint v2 `.golangci.yml`, a GoReleaser v2 `.goreleaser.yaml` (when `distribution` is not `none`), and `tools/gendocs` (man pages, Markdown, completions and the Antora `cli-reference.adoc`).
 
@@ -60,6 +60,11 @@ All inputs are optional `key: value` lines in `args`; any key found is resolved 
 |No
 |`none` or `tui`. `tui` adds the TTY-gated Bubble Tea `browse` command.
 |`none`
+
+|`accessibility`
+|No
+|`enforce`, `report` or `off`; only with `ui: tui`. The level written to `.ui-quality.yml`, which the TUI's UI tests read. For a terminal UI these are asserted checks (selection visible without colour, key help on screen), not an automated audit.
+|`enforce`
 
 |`go-version`
 |No
@@ -119,6 +124,7 @@ All inputs are optional `key: value` lines in `args`; any key found is resolved 
 
 == Outputs
 
+* With `ui: tui`, the root `.ui-quality.yml` (its own Step 1 group: Update keeps `directions`/`themes` and any existing `accessibility`, Replace rewrites it) and `internal/tui/ui_screenshots_test.go`; a run leaves 8 captures under `.ui-screenshots/screen/Model/` (4 states × `ltr`/`rtl`), to be gitignored by xref:skills/iru-setup-go-gitignore.adoc[]. These UI-contract additions are flagged in the skill as not compiled on the authoring machine, so the first `ui: tui` run's verification step is their proof.
 * The Go module and source skeleton described under Purpose, written with Step 1's per-group decision applied to existing files.
 * A verified project: build, vet (also `GOOS=windows` and `linux/arm64`), `gofmt`, race tests, coverage of at least 80%, golangci-lint, govulncheck, gendocs output, and contract smoke checks against the built binary; with GoReleaser installed, `goreleaser check` and a snapshot release.
 * A report of the resolved names, `go`/`toolchain` lines, version, license, distribution and channels, the mode, and per file group the action taken (created, updated, replaced or kept as is, with mismatches for kept groups), which versions were live versus fallback, ignored `args` keys, every verification result (unverified items with the reason), and suggested follow-up Antora pages.
@@ -143,7 +149,7 @@ flowchart TD
     J -- Stop --> Z1
     J -- other --> I
     E --> K
-    I --> K["Step 2: Collect missing inputs\n(bin-name, description, ui,\nlicense, distribution, channels)"]
+    I --> K["Step 2: Collect missing inputs\n(bin-name, description, ui,\naccessibility, license, distribution, channels)"]
     K --> L["Step 3: Infer owner and repo\nfrom git remote"]
     L --> M{"Step 4: go installed\nand new enough?"}
     M -- no --> Z2[Tell user to install Go; stop]

@@ -17,7 +17,7 @@ warnings as errors, `EnableWindowsTargeting` so WPF and WinForms build on Linux 
 project), central package management, `.editorconfig`, `stylecop.json`, an `<AppName>.slnx` solution, `src/<AppName>.Core`
 (models and services, plus `ViewModels/` for MVVM or `Controllers/` and a passive-view interface for MVC), the
 `src/<AppName>` UI project per `ui`, MSTest tests with `tests/coverlet.runsettings`, an optional FlaUI
-`tests/<AppName>.UITests` project, a DocFX `docfx.json`, generated placeholder icons and, for WPF/WinForms with
+`tests/<AppName>.UITests` project, a root `.ui-quality.yml`, a DocFX `docfx.json`, generated placeholder icons and, for WPF/WinForms with
 `msix: yes`, a `packaging/` folder with `AppxManifest.xml` and `build-msix.ps1`.
 
 The layout is the scaffold contract that `iru-windows-code-one-task`, `iru-windows-code-one-task-group`, the
@@ -27,6 +27,8 @@ and for each existing file group asks Update / Keep as is / Replace / Stop (unle
 overwrites hand-written source and treats a foreign layout (a single-project `dotnet new wpf` app, a `.sln` with other
 projects, a `.wapproj` packaging project) as foreign. Toolchain versions are looked up at run time with a recorded
 fallback table.
+
+The FlaUI project follows the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): the app reads `--ui-direction`/`--ui-theme` launch arguments through a `UiTestOptions` class, and the tests render the main screen in every left-to-right/right-to-left x light/dark combination, capture it into `.ui-screenshots/` with the shared `UiScreenshots` helper, and run an Axe.Windows accessibility scan at the level recorded in `.ui-quality.yml`. The helpers (`UiQuality`, `UiScreenshots`, `AccessibilityCheck`) come from `reference/uitest-templates.md`.
 
 == Purpose group
 
@@ -80,6 +82,11 @@ xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
 |`gitflow`/`main-only` (selects the default version); `none`/`internal`/`store` (drives the `msix` default).
 |Asked or supplied
 
+|`accessibility`
+|No
+|`enforce`/`report`/`off`: the automated accessibility level written to `.ui-quality.yml` (`enforce` fails the UI tests on Axe.Windows violations, `report` lists them in `.ui-screenshots/a11y-report.txt`, `off` skips the scan). Only used with `ui-tests: flaui`.
+|`enforce`
+
 |`license`, `developer-name`, `developer-email`, `organization-url`
 |No
 |Recorded for the report and license headers.
@@ -99,11 +106,11 @@ xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
 == Outputs
 
 * Build foundation: `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `stylecop.json`,
-  `<AppName>.slnx`.
-* `src/<AppName>.Core` (UI-free, `net10.0`), `src/<AppName>` (WPF, WinUI 3 or WinForms app), `app.manifest` and, for
+  `<AppName>.slnx`, and `.ui-quality.yml` (`accessibility`, `directions: [ltr, rtl]`, `themes: [light, dark]`; written for every `ui`).
+* `src/<AppName>.Core` (UI-free, `net10.0`), `src/<AppName>` (WPF, WinUI 3 or WinForms app), `app.manifest`, `UiTestOptions.cs` (the UI-test launch-argument hook) and, for
   WinUI, `Package.appxmanifest` and publish profiles.
 * `tests/<AppName>.Core.Tests` (MSTest 4 plus coverlet), `tests/coverlet.runsettings`, and optionally
-  `tests/<AppName>.UITests` (FlaUI, `[TestCategory("UI")]`, Windows only).
+  `tests/<AppName>.UITests` (FlaUI, `[TestCategory("UI")]`, Windows only) with the `UiQuality`, `UiScreenshots` and `AccessibilityCheck` helpers and a matrix capture test that writes `.ui-screenshots/screen/<MainWindow|MainForm>/<state>--<direction>--<theme>.png` (8 captures) and scans with Axe.Windows.
 * `docfx.json` for the Core API, generated icon and tile PNGs, and, with `msix: yes` for WPF/WinForms, `packaging/`.
 * A verification pass (restore, build with analyzers, `dotnet format`, Core tests and coverage, DocFX; Windows-only
   stages reported as unverified off Windows) and a report with the action per file group, versions used (live versus
@@ -114,7 +121,7 @@ xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-setup-windows-app] --> B["Step 0: Parse args\n(ui, architecture, identity, msix, ui-tests,\nbranching, distribution, mode)"]
+    A[Start /iru-setup-windows-app] --> B["Step 0: Parse args\n(ui, architecture, identity, msix, ui-tests,\naccessibility, branching, distribution, mode)"]
     B --> C["Step 1: Survey the repository\nfrom scratch, or update with\nUpdate / Keep / Replace / Stop per file group"]
     C -- user chose stop --> STOP[Stop and report]
     C --> D["Step 2: Collect required inputs\n(architecture matrix: WPF/WinUI mvvm only)"]

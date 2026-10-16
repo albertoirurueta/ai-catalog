@@ -9,7 +9,8 @@ description: >-
   `nextjs` (a Next.js web app, `output` `server` or `static`). `build.yml` runs on every push to the
   integration/stable branches, every pull request, and `workflow_dispatch` — checkout, Node setup with dependency
   caching, install, lint, format check, typecheck, unit tests with coverage, an optional SonarQube/SonarCloud scan
-  (skipped on fork pull requests), e2e per `ci-tests` (Playwright for the web flavors and Next.js; for NestJS the
+  (skipped on fork pull requests), e2e per `ci-tests` (Playwright for the web flavors and Next.js — every UI/e2e job
+  also uploads the UI tests' `.ui-screenshots/` directory as a 7-day `ui-screenshots` artifact; for NestJS the
   `test:e2e` suite with Testcontainers on the runner's Docker, after `prisma generate` when Prisma is used), the
   production build (plus an unpushed container-image build when a NestJS/Next.js server image is distributed), a
   docs build (TypeDoc/Compodoc/Storybook, gated by `docs-tool`) merged with an Antora build, and a GitHub Pages
@@ -23,7 +24,9 @@ description: >-
   runs EAS or local Gradle/Xcode builds per `native-builds`; for `react-native` with `toolchain` `metro` `build.yml`
   adds a Linux Android job (JDK 17, Gradle cache, `./gradlew assembleDebug testDebugUnitTest lint` from `android/`),
   a cost-gated macOS iOS job (`bundle install`, cached `pod install`, unsigned `xcodebuild build` for the
-  simulator) and, with `ci-tests` `full`, Maestro flows on a `reactivecircus/android-emulator-runner` emulator,
+  simulator) and, with `ci-tests` `full`, Maestro flows on a `reactivecircus/android-emulator-runner` emulator
+  (the dev-only UI gallery flows excluded — a release APK has no gallery — and flow captures uploaded from
+  `.ui-screenshots/`),
   while `release.yml` signs an AAB with the upload keystore from secrets and uploads it to Google Play (internal
   track for `distribution` `internal`, production for `store`) and archives/exports/uploads the iOS app to
   TestFlight with an App Store Connect API key; for `ionic` it builds Android/iOS store or internal artifacts per
@@ -628,6 +631,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
+        env:
+          # UI contract: the project's screenshot helper writes one PNG per state × direction × theme here
+          UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
         run: <package-manager-run> e2e
       - name: Upload Playwright report
         if: failure()
@@ -636,6 +642,14 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # Omit this whole step if docs-tool: none (Step 1). Keep exactly ONE of the two run: lines — the script name
       # differs per docs-tool: `docs` for typedoc/compodoc (both write docs/api), `build-storybook` for storybook
@@ -729,8 +743,8 @@ Notes specific to this template:
   `Upload Pages artifact` for `Upload docs artifact` and drops `deploy-docs` entirely. The artifact is kept for
   `retention-days` (30 here) and can be downloaded from the run's summary page. Nothing in this file then needs
   the Pages setting, the `github-pages` environment, or a paid plan on a private repository.
-- **`ci-tests: unit`** drops only the three Playwright steps (`Install Playwright browsers`, `Run e2e tests`,
-  `Upload Playwright report`); lint/format/typecheck/unit tests with coverage and the optional Sonar scan stay
+- **`ci-tests: unit`** drops only the four Playwright steps (`Install Playwright browsers`, `Run e2e tests`,
+  `Upload Playwright report`, `Upload UI screenshots`); lint/format/typecheck/unit tests with coverage and the optional Sonar scan stay
   unchanged. Browser installation alone is a noticeable share of a web flavor's build time, so this is the
   main minutes saving on private repositories.
 - The `concurrency` group on `deploy-pages`-style jobs matters: without it, two pushes to the stable branch in
@@ -839,6 +853,8 @@ jobs:
       - name: Run e2e tests
         env:
           CI: '1'
+          # UI contract: the project's screenshot helper writes one PNG per state × direction × theme here
+          UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
         run: <package-manager-run> test:e2e
       - name: Upload Playwright report
         if: failure()
@@ -847,6 +863,14 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # nestjs, or nextjs with output: server — only with distribution: internal (a Dockerfile exists). Builds the
       # release image without pushing, so a broken Dockerfile fails the pull request rather than the release
@@ -873,7 +897,8 @@ Notes specific to this template:
   with coverage (the only coverage Sonar sees — the e2e suites never feed the 80% gate) → build → e2e → image.
   The Next.js e2e needs the build first (Playwright drives the production server); the NestJS e2e boots its
   own `Test.createTestingModule` app and doesn't, but running after `build` costs nothing.
-- **`ci-tests: unit`** drops `Run e2e tests (Testcontainers)` (nestjs) or the three Playwright steps (nextjs);
+- **`ci-tests: unit`** drops `Run e2e tests (Testcontainers)` (nestjs) or the four Playwright steps, including
+  `Upload UI screenshots` (nextjs);
   everything else stays. For nestjs that also skips pulling the database image, the main minutes saving.
 - **Testcontainers on GitHub runners**: no `services:` block and no `DOCKER_HOST` tweak — Testcontainers finds
   the runner's Docker socket itself, and Ryuk cleans up. A self-hosted runner without Docker fails this step:
@@ -1071,9 +1096,11 @@ build in CI outside `release.yml`):
           api-level: <emulator-api-level>
           target: google_apis
           arch: x86_64
+          # --exclude-tags=ui-gallery: the UI gallery is dev-only (stripped from this release APK), so its capture
+          # flows stay local (iru-typescript-test e2e); ui-flow captures still land in .ui-screenshots/
           script: |
             adb install -r android/app/build/outputs/apk/release/app-release.apk
-            maestro test .maestro/ --format junit --output maestro-report.xml
+            maestro test .maestro/ --exclude-tags=ui-gallery -e UI_SCREENSHOTS_DIR="$GITHUB_WORKSPACE/.ui-screenshots" -e UI_THEME=light --format junit --output maestro-report.xml
 
       - name: Upload Maestro results
         if: failure()
@@ -1084,6 +1111,15 @@ build in CI outside `release.yml`):
             maestro-report.xml
             ~/.maestro/tests/
           retention-days: 14
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 ```
 
 Notes specific to this template:
@@ -1100,6 +1136,10 @@ Notes specific to this template:
   with `npx detox build --configuration android.emu.release` before the emulator step and `npx detox test
   --configuration android.emu.release --headless` as its `script:` — and say so in Step 8; the Maestro shape is
   the default because `iru-setup-react-native-app` scaffolds `.maestro/smoke.yaml`.
+- **UI screenshots in CI**: `Upload UI screenshots` (`if: always()`, 7 days, `if-no-files-found: ignore`) uploads
+  whatever the `ui-flow`-tagged Maestro flows captured on the emulator (light theme, `--android` variant). The
+  component/screen gallery captures need a debug build with Metro, so they are produced locally by
+  `iru-typescript-test`'s `e2e` selector, not here — no extra job or emulator minutes are spent on them.
 - **iOS e2e is not generated**: a Maestro/Detox run on an iOS simulator would add a second, much longer macOS
   job per run (simulator boot + Release build); keep it local (`iru-typescript-test e2e`) unless the user asks.
 - **`<emulator-api-level>`**: `35` by default — the same default as `iru-setup-android-github-workflows`'s
@@ -2907,6 +2947,9 @@ State explicitly what was wired versus omitted, and why:
   with `e2e: playwright`) or the Testcontainers `test:e2e` step (`nestjs`), or had no effect
   (`library`/`react-native` with `toolchain: expo`/`nextjs` with `e2e: none`, which have no e2e step here); for
   metro, whether the Maestro `e2e-android` job was added and how it moved the `ios` job's gate.
+  Whenever a UI/e2e job was generated (Playwright, or the metro Maestro job), say that it uploads `.ui-screenshots/`
+  as the `ui-screenshots` artifact (7 days, `if: always()`) and that the UI gallery captures of React Native
+  components/screens stay local.
 - **`pages`**: `yes` (deploy to GitHub Pages — defaulted without asking for a public repository, or chosen by
   the user for a private one) or `no` (docs, and for `react`/`angular`/`nextjs`-static the release bundle, uploaded as workflow
   artifacts only). For `react`/`angular`/`nextjs`-static with `pages: no`, state plainly that the app is not hosted anywhere by

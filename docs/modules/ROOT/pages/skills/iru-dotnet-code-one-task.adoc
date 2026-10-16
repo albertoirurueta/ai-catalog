@@ -1,6 +1,6 @@
 = .NET Code One Task
-:description: Implements one .NET/C# task's code and tests, with System.CommandLine and Native AOT guidance for CLI tools, then checks off its plan checkbox.
-:keywords: iru-dotnet-code-one-task, claude code skill, dotnet, csharp, xunit, nunit, mstest, implementation plan, unit tests, system.commandline, native aot, cli tool
+:description: Implements one .NET/C# task's code and tests, with System.CommandLine, Native AOT and Terminal.Gui UI-contract guidance for CLI tools, then checks its box
+:keywords: iru-dotnet-code-one-task, claude code skill, dotnet, csharp, xunit, nunit, mstest, implementation plan, unit tests, system.commandline, native aot, cli tool, terminal gui, ui contract
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -35,7 +35,7 @@ types are registered in the source-generated JSON context, and exit codes/error 
 reshaped. After implementing, it runs `dotnet build -c Release` on each touched project so trim/AOT analyzer
 (IL2xxx/IL3xxx), StyleCop and CA errors surface immediately, and regenerates the CLI reference (or flags it as
 still needed). Tests go in `tests/<Tool>.Core.Tests` and, through the in-process runner, `tests/<Tool>.Cli.Tests`.
-For any other project the `reference/` directory is not read.
+When the task adds or changes the optional Terminal.Gui terminal UI (a `Terminal.Gui` reference, `src/<Tool>/Tui/`, a `browse`-style command) it also reads `reference/ui-contract.md` (the catalog's UI contract) and `reference/ui-implementation.md` (composed `View` screens and components over Core state, `ListView`/`TableView` data sources, view tests on the ANSI driver). It decomposes the UI into a `Screen › Region › Component` tree first, keeps state and transitions in Core, and writes `[TestCategory("UI")]` view tests in `tests/<Tool>.Cli.Tests/Tui/` that render every visual state × `.ui-quality.yml` direction at a fixed size, assert keyboard behaviour once, capture `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt` through `UiScreenshots.SaveText`, and apply the asserted `tui-*` accessibility checks via `AccessibilityCheck.Apply` (helpers added when missing). See xref:guides/building-user-interfaces.adoc[Building user interfaces]. For any other project the `reference/` directory is not read.
 
 Windows desktop app repositories (a `WinExe` project with `UseWPF`, `UseWinUI` or `UseWindowsForms`; `iru-explore`'s
 `windows-app`, plan key `windows`) are out of scope: the skill stops and hands the request to
@@ -80,13 +80,17 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 * For CLI-shaped projects: Core logic/result records/error codes in `src/<Tool>.Core`, thin commands registered in
   the root command, JSON output types registered in the source-generated context, and a regenerated (or flagged)
   CLI reference page.
+* For terminal-UI tasks: composed `View`s in `src/<Tool>/Tui/`, `[TestCategory("UI")]` view tests in
+  `tests/<Tool>.Cli.Tests/Tui/`, and the `UiScreenshots`/`AccessibilityCheck` helpers when absent; captures land in
+  `.ui-screenshots/` as text files when the group runs the `ui` selector.
 * Tests added/updated in this project's existing test framework, covering the new/changed behavior — not run by
   this skill; the caller runs them once for the whole bucket.
 * `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
   pending" note, written immediately once the task finishes cleanly — before this skill reports back, and before
   the caller's own group-wide validation runs. Left untouched if the task stopped on a blocker.
-* A short summary handed back to the caller: file(s) touched, tests added/updated, and whether the run stopped
-  on a blocker.
+* A short summary handed back to the caller: file(s) touched, tests added/updated, for a terminal-UI task the
+  `Screen › Region › Component` decomposition and the UI tests with the captures they produce, and whether the run
+  stopped on a blocker.
 
 == Execution flow
 
@@ -96,11 +100,11 @@ flowchart TD
     A["Start /dotnet-code-one-task\n(task description)"] --> W{"Windows desktop app\n(WinExe + UseWPF/UseWinUI/\nUseWindowsForms)?"}
     W -- yes --> W2["Stop: hand the request to\nwindows-code-one-task"]
     W -- no --> X{"Step 0: CLI-shaped\n(Exe + System.CommandLine)?"}
-    X -- yes --> X2["Read reference/README.md, cli.md,\ncli-contract.md"]
+    X -- yes --> X2["Read reference/README.md, cli.md,\ncli-contract.md (+ ui-contract.md,\nui-implementation.md for terminal UI)"]
     X -- no --> B
     X2 --> B["Step 1: re-check current\ncode state from disk"]
-    B --> C["Step 2: implement exactly what the task specifies\n(CLI: also dotnet build -c Release\nfor trim/AOT errors)"]
-    C --> D["Step 3: write/update tests\n(xUnit/NUnit/MSTest; not run here)"]
+    B --> C["Step 2: implement exactly what the task specifies\n(CLI: also dotnet build -c Release\nfor trim/AOT errors; TUI: decompose first)"]
+    C --> D["Step 3: write/update tests\n(xUnit/NUnit/MSTest; TUI: UI view tests;\nnot run here)"]
     D --> E{"Ambiguous, or approach\ninfeasible against real code?"}
     E -- yes --> F["Step 4: stop; leave checkbox\nunchecked; report blocker to caller"]
     E -- no --> G["Step 5: check off this task's\ncheckbox + 'validation pending' note"]

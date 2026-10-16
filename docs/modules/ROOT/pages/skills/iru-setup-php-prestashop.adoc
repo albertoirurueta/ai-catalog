@@ -1,6 +1,6 @@
 = Setup PHP PrestaShop
-:description: Scaffolds a PrestaShop 8 and 9 module with Composer, PHPUnit, PHPStan, PHP-CS-Fixer, a Symfony configuration page and a packaging script.
-:keywords: iru-setup-php-prestashop, claude code skill, prestashop, module, composer, phpunit, phpstan, php-cs-fixer, addons, docker
+:description: Scaffolds a PrestaShop 8 and 9 module with Composer, PHPUnit, PHPStan, PHP-CS-Fixer, a Symfony config page, packaging script and Playwright UI tests.
+:keywords: iru-setup-php-prestashop, claude code skill, prestashop, module, composer, phpunit, phpstan, php-cs-fixer, playwright, ui tests, accessibility, addons
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -19,7 +19,7 @@ with 8.x and 9.x (form type, data configuration, services, route, controller, Tw
 `translations/`, `index.php` guards and license headers (AFL-3.0 by convention, or OSL-3.0, MIT, proprietary, other).
 Tooling comprises `prestashop/php-dev-tools`, a stub-based PHPStan config that needs no shop, PHP-CS-Fixer, a PHPUnit
 unit suite with Clover/JUnit output, an optional Integration suite with a Docker `prestashop/prestashop` plus MariaDB
-dev shop, `bin/package.sh` for the distributable zip, and `sonar-project.properties` when Sonar is on. Dev-dependency
+dev shop, `bin/package.sh` for the distributable zip, and `sonar-project.properties` when Sonar is on, and browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, a test-only `package.json` with Playwright and `@axe-core/playwright`, `playwright.config.ts` pointed at a running shop through `PS_BASE_URL` (specs skip when it is unset), the shared `tests/e2e/support/ui-screenshots.ts` helper, and a `FooterMessage` spec that captures the hook template across left-to-right/right-to-left x light/dark with an accessibility check. All of it is excluded from the module zip by `.distignore`. Dev-dependency
 versions are resolved by Composer under the pinned PHP platform, with a documented fallback table. On an existing
 module it adds tooling only and never the sample feature unless asked.
 
@@ -85,6 +85,11 @@ Optional `args`, one `key: value` per line (supplied by `iru-setup-php-repositor
 |`cloud`, `self-hosted` or `none`.
 |`cloud` recommended only for public open-source repositories, otherwise `none`.
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`.
+|`enforce` (asked in Step 2 when unresolved)
+
 |`mode`
 |No
 |`new` or `existing`.
@@ -100,10 +105,10 @@ Optional `args`, one `key: value` per line (supplied by `iru-setup-php-repositor
 
 * The module skeleton and tooling files listed in the skill (main class, `config.xml`, `logo.png`, `composer.json`,
   `config/`, `src/`, `views/`, `upgrade/`, `translations/`, `phpunit.xml.dist`, PHPStan configs and stubs,
-  `.php-cs-fixer.dist.php`, `.distignore`, `bin/package.sh`, optional `sonar-project.properties`), each created,
+  `.php-cs-fixer.dist.php`, the browser UI tests (`.ui-quality.yml`, `package.json`, `playwright.config.ts`, `tests/e2e/support/ui-screenshots.ts`, `tests/e2e/specs/FooterMessage.spec.ts`), `.distignore`, `bin/package.sh`, optional `sonar-project.properties`), each created,
   updated, replaced or kept as is.
 * Installed dev dependencies and verification results: Composer validation, PHP lint, unit tests, coverage line rate
-  (or unverified when no PCOV/Xdebug), PHPStan, PHP-CS-Fixer, the packaged zip contents, and optionally the Docker
+  (or unverified when no PCOV/Xdebug), PHPStan, PHP-CS-Fixer, the packaged zip contents (checked to hold no `tests/`, `package.json`, `node_modules/` or `playwright.config.ts`), the Playwright tooling check (`npx playwright test --list`; unverified without Node), the `.ui-screenshots/component/FooterMessage/` captures from a shop run (unverified without a shop), and optionally the Docker
   shop check per PrestaShop major.
 * A report starting with the setup mode and covering identity, license, PHP floor and its source, dependency versions
   (live or fallback), per-file action, gate results, distribution notes (PrestaShop Addons has no upload API; the

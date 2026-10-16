@@ -12,15 +12,20 @@ description: >-
   `views/@layout.tsx`, a customized `index.html`), the module-root `vitest.config.ts` extending Vaadin's generated
   Vite config with `@vitest/coverage-v8` lcov output, a sample `@testing-library/react` test, `eslint.config.js`
   (flat config, `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-config-prettier`) plus
-  `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format` scripts, the `.gitignore`
+  `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format`/`test:ui` scripts, per the
+  catalog's UI contract a Playwright component-testing setup in the web module (a standalone Vite component gallery
+  driven by Playwright's built-in `mount()` fixture, `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts`
+  helper, a `HomeView` story and a spec capturing `.ui-screenshots/screen/HomeView/` across left-to-right/right-to-left
+  × light/dark with an accessibility check) and `.ui-quality.yml` at the repository root (its `accessibility` level
+  from `args`, else the manifest's top-level `accessibility`, else `enforce`), the `.gitignore`
   additions this frontend needs, and — only when the manifest's `sonar.mode` isn't `none` — the `sonar.sources`/
   `sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to the root pom (Gradle: the root `sonar {}` block).
   The frontend files are identical for every language and build tool. Announces whether it is scaffolding the
   frontend from scratch or updating an existing one, and for every frontend file/build wiring it owns that already
   exists warns and asks Update (fill gaps) / Keep as is / Replace / Stop — or applies `on-existing` from `args`.
   Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest
-  path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`) and
-  `on-existing:` (`ask`/`keep`/`update`/`replace`) lines). Runs standalone against any build created by
+  path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`),
+  `on-existing:` (`ask`/`keep`/`update`/`replace`) and `accessibility:` (`enforce`/`report`/`off`) lines). Runs standalone against any build created by
   `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via
   `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is
   `hilla`. Reads `springboot-stack.yml` for the module layout, language, build tool and `sonar.mode`, and looks up
@@ -69,10 +74,15 @@ Parse `args` for `key: value` lines:
 stack-file: springboot-stack.yml
 mode: existing
 on-existing: ask
+accessibility: enforce
 ```
 
 `mode` (`new`/`existing`) is informational — it never means "update silently"; `on-existing`
 (`ask`/`keep`/`update`/`replace`, default `ask`) pre-answers Step 1's existing-frontend question for every file.
+
+`accessibility` (`enforce`/`report`/`off`) is the UI tests' automated accessibility level written to
+`.ui-quality.yml` (Step 4b). Resolve it from `args` first, else the manifest's top-level `accessibility` key
+(written by `iru-setup-java-springboot`, meaningful only with `frontend: hilla`), else `enforce` — never ask.
 
 `stack-file` defaults to `springboot-stack.yml` at the repository root. Read it in full, including
 `project.language` and `project.buildTool` (defaults above; stop and report a manifest pairing `gradle` with `java`). Stop and tell the user to
@@ -112,7 +122,8 @@ writing anything else, so a later re-run of `iru-setup-java-springboot` sees the
   `./gradlew :boot:tasks --group vaadin` lists them), and the `com.vaadin.hilla` plugin portal entry currently
   points at pre-releases only.
 - **Existing frontend.** Check for `<web-module>/src/main/frontend/`, `<web-module>/vitest.config.ts`,
-  `<web-module>/eslint.config.js`, and an existing `com.vaadin:hilla-spring-boot-starter`/
+  `<web-module>/eslint.config.js`, the UI-test files (`<web-module>/playwright.config.ts`, `<web-module>/playwright/`,
+  `<web-module>/e2e/`), `.ui-quality.yml` at the repository root, and an existing `com.vaadin:hilla-spring-boot-starter`/
   `vaadin-spring-boot-starter` dependency in `<web-module>/pom.xml` (Gradle: `boot/build.gradle.kts`, plus a `com.vaadin`
 plugin alias there). Say whether this run is **scaffolding the
   frontend from scratch** (none of these exist) or **updating an existing frontend** (list which exist). If any
@@ -377,7 +388,7 @@ export default overrideVaadinConfig(() => ({
       // and the CI workflow's coverage step both expect. Confirmed by an actual `vitest run --coverage`.
       reportsDirectory: '../../../coverage',
       include: ['**/*.{ts,tsx}'],
-      exclude: ['generated/**', '**/*.test.{ts,tsx}'],
+      exclude: ['generated/**', '**/*.test.{ts,tsx}', '**/*.story.tsx'],
     },
   },
 }));
@@ -411,6 +422,180 @@ purely a console warning; the test still runs and passes, confirmed by an actual
 moving the test elsewhere unless the user objects to the noise; it's the same layout Vaadin's own project
 generator produces.
 
+## Step 4b — UI contract: component gallery, screenshots and accessibility
+
+The catalog's UI contract (repeated in `iru-typescript-code-one-task/reference/ui-contract.md`) makes every
+component and screen test capture its states into `<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png`
+and run axe at the level `.ui-quality.yml` sets. Verified with `@vaadin/react-components` 25.3.2, Vite 8 and
+Playwright 1.64.1 outside a Maven build (the gallery, story and spec below, `Button` + `VirtualList` rendering, four
+captures, axe clean); the Maven/Gradle-integrated run is unverified. Component and screen tests use Playwright's built-in `mount()`
+fixture (`@playwright/test` ≥ 1.62) against a **gallery** page. Vaadin's own Vite config needs a completed
+`prepare-frontend` and roots Vite at `src/main/frontend`, so the gallery runs on a small standalone Vite server
+instead. Vitest browser mode stays the behaviour-test runner.
+
+1. **`.ui-quality.yml`** at the **repository root** (not the web module), with `accessibility` from Step 0:
+
+   ```yaml
+   # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+   directions: [ltr, rtl]      # screenshot matrix directions
+   themes: [light, dark]       # screenshot matrix themes
+   ```
+
+   An existing file follows Step 1's existing-frontend answer (**Update** sets only `accessibility` when `args` or the
+   manifest supplied it and adds missing keys; **Keep as is** reports a mismatch; **Replace** rewrites it).
+
+2. **devDependencies** (resolved like Step 1's others; fallbacks `@playwright/test@1.64.1`,
+   `@axe-core/playwright@4.14.0`): `@playwright/test`, `@axe-core/playwright`, and `@vitejs/plugin-react` only if
+   Vaadin's generated `package.json` doesn't already list it (never change a version Vaadin pins). Add the script
+   `"test:ui": "playwright test"`.
+
+3. **`<web-module>/e2e/support/ui-screenshots.ts`** — exactly the content of this skill's
+   `reference/ui-screenshots.ts`.
+
+4. **The gallery server** — `<web-module>/playwright/vite.config.ts`:
+
+   ```ts
+   // Standalone Vite server for the component gallery (Vaadin's own config needs prepare-frontend and its root).
+   import react from '@vitejs/plugin-react';
+   import { fileURLToPath } from 'node:url';
+   import { defineConfig } from 'vite';
+
+   export default defineConfig({
+     root: fileURLToPath(new URL('..', import.meta.url)),
+     plugins: [react()],
+     resolve: { alias: { Frontend: fileURLToPath(new URL('../src/main/frontend', import.meta.url)) } },
+     server: { port: 5174, strictPort: true },
+   });
+   ```
+
+   `<web-module>/playwright/gallery/index.html`:
+
+   ```html
+   <!doctype html>
+   <html lang="en">
+     <head>
+       <meta charset="UTF-8" />
+       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+       <title>Component gallery</title>
+     </head>
+     <body>
+       <main id="root"></main>
+       <script type="module" src="./main.tsx"></script>
+     </body>
+   </html>
+   ```
+
+   `<web-module>/playwright/gallery/main.tsx` — import here whatever global stylesheet the app's entry imports (e.g.
+   a `src/main/frontend/styles.css` with the Lumo theme), so stories look like the app:
+
+   ```tsx
+   // Component gallery for Playwright's built-in `mount()` fixture: renders one `*.story.tsx` export into #root.
+   import { StrictMode, type ComponentType } from 'react';
+   import { flushSync } from 'react-dom';
+   import { createRoot, type Root } from 'react-dom/client';
+
+   type StoryModule = Record<string, ComponentType<Record<string, unknown>>>;
+   const stories = import.meta.glob<StoryModule>('../../src/main/frontend/**/*.story.tsx');
+   const idOf = (file: string): string =>
+     file.replace(/^(\.\.\/)+src\/main\/frontend\//, '').replace(/\.story\.tsx$/, '');
+
+   async function resolve(storyId: string): Promise<ComponentType<Record<string, unknown>> | undefined> {
+     const sep = storyId.lastIndexOf('/');
+     const [storyPath, exportName] = [storyId.slice(0, sep), storyId.slice(sep + 1)];
+     const file = Object.keys(stories).find((f) => idOf(f) === storyPath || idOf(f).endsWith(`/${storyPath}`));
+     return file ? (await stories[file]())[exportName] : undefined;
+   }
+
+   const rootElement = document.getElementById('root') as HTMLElement;
+   let root: Root | undefined;
+
+   Object.assign(window, {
+     mount: async ({ story, props }: { readonly story: string; readonly props?: Record<string, unknown> }) => {
+       const Story = await resolve(story);
+       if (!Story) throw new Error(`Unknown story: ${story}`);
+       root ??= createRoot(rootElement); // reused, so update() reconciles and keeps state
+       flushSync(() =>
+         root?.render(
+           <StrictMode>
+             <Story {...props} />
+           </StrictMode>,
+         ),
+       );
+     },
+     unmount: async () => {
+       root?.unmount();
+       root = undefined;
+     },
+   });
+   ```
+
+5. **A story for the sample view** — stories live **outside `views/`** (every `.tsx` under `views/` becomes a
+   route): `src/main/frontend/stories/HomeView.story.tsx`:
+
+   ```tsx
+   import HomeView from 'Frontend/views/@index';
+
+   /** The home view as first rendered. */
+   export const Default = () => <HomeView />;
+   ```
+
+   (Vitest's coverage `exclude` above already leaves `*.story.tsx` out of the 80% bar.)
+
+6. **`<web-module>/playwright.config.ts`**:
+
+   ```ts
+   import { defineConfig, devices } from '@playwright/test';
+
+   export default defineConfig({
+     testDir: './e2e',
+     forbidOnly: !!process.env.CI,
+     retries: process.env.CI ? 2 : 0,
+     reporter: process.env.CI ? 'list' : 'html',
+     projects: [
+       {
+         name: 'components',
+         testDir: './e2e/components',
+         use: {
+           ...devices['Desktop Chrome'],
+           baseURL: 'http://localhost:5174/playwright/gallery/index.html',
+           serviceWorkers: 'block',
+           reuseContext: true,
+         },
+       },
+     ],
+     webServer: {
+       command: 'npx vite --config playwright/vite.config.ts',
+       url: 'http://localhost:5174/playwright/gallery/index.html',
+       reuseExistingServer: !process.env.CI,
+     },
+   });
+   ```
+
+   Screen and flow tests against the running Spring Boot app are a later addition (a second project whose
+   `webServer` starts the app); the scaffold ships the component project only.
+
+7. **The sample spec** — `<web-module>/e2e/components/HomeView.spec.ts`; Lumo's dark variant is the `theme="dark"`
+   attribute, so the matrix sets it per cell:
+
+   ```ts
+   import { expect, test } from '@playwright/test';
+   import { captureUiMatrix } from '../support/ui-screenshots';
+
+   test('HomeView renders the greeting', async ({ mount }) => {
+     const view = await mount('HomeView/Default');
+     await expect(view.getByText('Hello from <project-name>')).toBeVisible();
+   });
+
+   test('HomeView default state across the matrix', async ({ page, mount }, testInfo) => {
+     await captureUiMatrix(page, { kind: 'screen', id: 'HomeView', state: 'default' }, () => mount('HomeView/Default'), {
+       accessibility: { testInfo, include: '#root' },
+       onVariant: (p, _direction, theme) =>
+         p.evaluate((dark) => document.documentElement.setAttribute('theme', dark ? 'dark' : ''), theme === 'dark'),
+     });
+   });
+   ```
+
 ## Step 5 — `package.json` scripts, ESLint, and Prettier
 
 **`package.json`** — merge these into whatever `vaadin:prepare-frontend` already wrote (it owns the
@@ -424,6 +609,7 @@ below:
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "lint": "eslint src/main/frontend",
+    "test:ui": "playwright test",
     "format": "prettier --check src/main/frontend/**/*.{ts,tsx}"
   },
   "devDependencies": {
@@ -437,7 +623,9 @@ below:
     "typescript-eslint": "<resolved>",
     "eslint-plugin-react-hooks": "<resolved>",
     "eslint-config-prettier": "<resolved>",
-    "prettier": "<resolved>"
+    "prettier": "<resolved>",
+    "@playwright/test": "<resolved>",
+    "@axe-core/playwright": "<resolved>"
   }
 }
 ```
@@ -498,7 +686,14 @@ adds exactly three entries beyond what this reactor's `.gitignore` already has f
 <web-module>/node_modules/
 <web-module>/src/main/frontend/generated/
 <web-module>/vite.generated.ts
+<web-module>/test-results/
+<web-module>/playwright-report/
+# UI test screenshots (.ui-screenshots/), regenerated on every UI test run
+.ui-screenshots/
 ```
+
+The last three come from Step 4b's Playwright UI tests (Playwright's own output, and the UI contract's screenshot
+directory at the repository root). `.ui-quality.yml` is committed, never ignored.
 
 `vite.generated.ts` is regenerated ("This file will be overwritten on every run", per its own header comment) on
 every `prepare-frontend` run, unlike `vite.config.ts` (which is written once and meant to be edited). Do **not**
@@ -585,6 +780,23 @@ Agent({
 })
 ```
 
+then the UI tests (Step 4b), still in `<web-module>`:
+
+```
+Agent({
+  description: "Verify Hilla UI tests",
+  subagent_type: "iru-gate-runner",
+  prompt: "In <repository-root>/<web-module>, run `CI=1 npx playwright test` with
+    UI_SCREENSHOTS_DIR=<repository-root>/.ui-screenshots. Report only pass/fail per test, whether the failure was
+    an environment problem (browser executable missing, web server not starting) rather than an assertion, the
+    files written under .ui-screenshots/, and any accessibility violation rule ids.",
+  run_in_background: false
+})
+```
+
+A missing Chromium is **unverified** (tell the user `npx playwright install chromium`; never download it here),
+not a failure.
+
 On **Gradle**, the first gate's command is `./gradlew :boot:vaadinPrepareFrontend` (it is not part of
 `./gradlew build`'s task graph, so it must be run by name); the second gate is unchanged.
 
@@ -619,7 +831,10 @@ Summarize:
 - Whether the frontend was scaffolded from scratch or updated, and files written versus already present per Step
   1's answer (**created / updated / replaced / kept as is**), with each mismatch left in a kept file.
 - Whether `sonar.mode` triggered the Sonar additions, and to which properties.
-- The result of Step 8's two (or three) gate runs, including the resolved `<web-module>/coverage/lcov.info` path.
+- The result of Step 8's gate runs, including the resolved `<web-module>/coverage/lcov.info` path and the UI-test
+  run (captures under `.ui-screenshots/screen/HomeView/`, or **unverified** with the reason).
+- `.ui-quality.yml` with its action (**created / updated / replaced / kept as is**) and the `accessibility` level
+  written, and where it came from (`args`, the manifest, or the `enforce` default).
 - Whether Node was found globally or the plugin downloaded its own into `~/.vaadin` (first-run CI time cost).
 
 Warn explicitly:

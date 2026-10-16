@@ -19,7 +19,8 @@ Validation runs cheapest first: license headers, TSDoc, scoped unit tests, an 80
 alone (thin async Server Component pages and framework wiring are named exceptions), the full unit suite, and ESLint/Biome
 plus `next typegen` and `tsc --noEmit` diffed against the baseline. Then one `next build` whose route table is parsed and
 compared against the baseline and each task's declared intent, flagging unexpected rendering-mode changes, and last the
-Playwright suite. Because builds and Playwright's web server cannot run concurrently, both stages sit behind the atomic
+Playwright suite, which doubles as the UI stage of the catalog's UI contract (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]) when the bucket touched UI. Because builds and Playwright's web server cannot run concurrently, both stages sit behind the atomic
 `mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded wait of about 45 minutes, released on every
 exit path). A missing browser, occupied port or unavailable environment variable is reported as unverified, never as a pass.
 
@@ -52,6 +53,10 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 * Source and test files created or modified per task, via `iru-nextjs-code-one-task`.
 * License headers and TSDoc validated once for the bucket.
 * Unit tests with at least 80% line coverage for changed files, measured from unit tests only.
+* For a bucket that touched UI: the screenshot matrix check against `.ui-screenshots/` (every added/changed page and
+  Client Component captured for each visual state × `.ui-quality.yml` direction × theme), the accessibility (axe) result
+  at the configured `enforce`/`report`/`off` level, and each task's `Screen › Region › Component` tree — or an explicit
+  "unverified (no component gallery / no Playwright)".
 * A parsed `next build` route table for the bucket's routes, with every unexpected rendering-mode change resolved or
   recorded, and a Playwright result (passed, failed-and-fixed, flaky, not configured, or unverified).
 * `implementation_plan.md` with each task's checkbox checked and its pending note replaced by the final outcome.
@@ -81,7 +86,7 @@ flowchart TD
     B -- environment failure --> U
     B --> E{"Playwright configured and port free?"}
     E -- no --> U
-    E -- yes --> PW["3.8: Playwright e2e, CI=1"]
+    E -- yes --> PW["3.8: Playwright e2e, CI=1;\nUI stage: screenshot matrix + axe\nat the .ui-quality.yml level"]
     PW --> R["3.8b: release lock"]
     U --> R
     R --> S4["Step 4: finalize progress notes; notify user"]

@@ -140,6 +140,17 @@ final class FineCalculatorTest extends TestCase
 - Freeze time and randomness through injected clocks/randomizers (or Laravel's `freezeTime()`/`travel()`), never
   `sleep()`.
 
+## Browser UI tests
+
+A task that adds or changes UI also gets browser UI tests — Playwright + `@axe-core/playwright` specs in
+`tests/e2e/specs/` through the shared `tests/e2e/support/ui-screenshots.ts` helper (WordPress: `wp-scripts
+test-playwright` with `@wordpress/e2e-test-utils-playwright`), covering every visual state, the contract's data
+sets, the left-to-right/right-to-left × light/dark screenshot matrix and the accessibility check — per
+`ui-contract.md` §6–§8 and `ui-implementation.md`. Behaviour of a Blade/Livewire component can additionally be
+tested fast in PHP (`$this->blade()`, `Livewire::test()`), but those produce no screenshots. **This skill writes
+the browser specs and never runs them** — the group runs them through `iru-php-test`'s `ui` selector behind the
+integration lock.
+
 ## Pest architecture rules
 
 If the project has `arch()` tests (usually `tests/ArchTest.php` or `tests/Unit/ArchTest.php`), new code must pass

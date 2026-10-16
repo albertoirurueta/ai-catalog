@@ -80,7 +80,9 @@ final class GreetingViewController: NSViewController {
   for layout and — in MVVM — tracked reads (below). Always call `super`.
 - Never touch `view` from `init` (it forces `loadView()` early).
 - Child view controllers (`addChild(_:)` + adding its view, or `NSSplitViewController`/`NSTabViewController`) for
-  composite screens, rather than one view controller owning everything.
+  composite screens, rather than one view controller owning everything. Each child/region is a UI-contract component
+  (`ui-contract.md`, `ui-implementation.md`): `render(_:)` of a value-type state in, intent closures or a `@MainActor`
+  delegate out.
 
 ## Auto Layout in code
 
@@ -105,7 +107,9 @@ final class GreetingViewController: NSViewController {
   `NSTextFieldDelegate`, `NSTableViewDataSource`/`NSTableViewDelegate`, `NSWindowDelegate`, …; AppKit holds
   delegates weakly, so the owner keeps the helper alive. View-based tables: `makeView(withIdentifier:owner:)` reuse,
   `numberOfRows(in:)`; prefer `NSTableViewDiffableDataSource` + `NSDiffableDataSourceSnapshot` for changing data over
-  hand-written `insertRows`/`removeRows` bookkeeping.
+  hand-written `insertRows`/`removeRows` bookkeeping. Every data-driven list or grid is a view-based `NSTableView`/
+  `NSOutlineView` or an `NSCollectionView` over keyed item states — never one subview per item in an `NSStackView`
+  (`ui-implementation.md`, "Collections").
 - Delegate callbacks translate events into **controller/view-model calls**; they don't contain the feature logic.
 
 ## Menus built in code

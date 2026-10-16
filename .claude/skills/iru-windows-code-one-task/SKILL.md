@@ -12,8 +12,12 @@ description: >-
   (partial-property `[ObservableProperty]`, `[RelayCommand]`, `ObservableValidator`, messenger), WinForms MVC with a
   passive-view interface, WPF XAML/binding/Dispatcher/Fluent theme, WinUI `x:Bind`/`NavigationView`/`AppWindow`/MSIX
   manifest, WinForms designer/layout/high DPI/dark mode, MSTest 4 tests for view models and controllers plus FlaUI UI
-  tests marked `[TestCategory("UI")]`, MSIX packaging and publish properties, and desktop security — DPAPI, no
-  secrets in settings, no `XamlReader` on untrusted input, `asInvoker`). Re-checks the current code state, implements
+  tests marked `[TestCategory("UI")]`, the catalog's UI contract — screen › region › component decomposition,
+  `UserControl` components with dependency-property inputs and command/event outputs, virtualized recycling lists
+  over keyed view-model state, FlaUI screen/component/flow tests capturing `.ui-screenshots/` PNGs across
+  left-to-right/right-to-left × light/dark with an Axe.Windows accessibility check at the `.ui-quality.yml` level —
+  MSIX packaging and publish properties, and desktop security — DPAPI, no secrets in settings, no `XamlReader` on
+  untrusted input, `asInvoker`). Re-checks the current code state, implements
   exactly what the task specifies, writes/updates tests in the right project (`tests/<App>.Core.Tests` for Core logic,
   `tests/<App>.UITests` only for UI automation), compile-checks each touched project with `dotnet build` (passing
   `-p:EnableWindowsTargeting=true` on a non-Windows host so WPF/WinForms/UI-test projects still compile; a WinUI app
@@ -99,6 +103,7 @@ routes you to the rest — then read only what it points at. The routing, restat
 | `reference/wpf.md` | `ui: wpf` and the task touches XAML, code-behind, resources/styles, `App.xaml(.cs)`, or threading in the app. |
 | `reference/winui.md` | `ui: winui` and the task touches XAML, code-behind, navigation, windowing, or `Package.appxmanifest`. |
 | `reference/winforms.md` | `ui: winforms` and the task touches a form, a designer file, a user control, layout, or binding. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI (window, page, form, `UserControl`, `DataTemplate`, collection control, navigation). |
 | `reference/packaging.md` | `Package.appxmanifest`, `packaging/AppxManifest.xml`, capabilities, versions, publish properties/profiles, RIDs. |
 | `reference/security.md` | Secrets/credentials, settings files, file/registry access, loading XAML or other external input, elevation, MSIX capabilities, process launch. |
 
@@ -121,6 +126,12 @@ consistently does something else wins, and the divergence goes in Step 8.
 Apply `reference/code-style.md`, `reference/architecture.md`, and whichever optional files Step 1 selected, plus the
 repository's own `CLAUDE.md` where more specific. Work in dependency order: Core models/service interfaces → Core
 view models or controllers → app-project service implementations → XAML/forms → DI registration.
+
+When the task touches UI, **decompose first** (`reference/ui-contract.md` §2): write the `Screen › Region › Component`
+tree with each component's inputs, events and visual states, search for existing `UserControl`s/templates to reuse,
+then build leaves → composed components → screens → navigation, following `reference/ui-implementation.md` (UI-state
+records in Core, `UserControl`s with dependency-property inputs and command/`EventHandler<T>` outputs, collections in
+a virtualizing recycling container over a keyed `ObservableCollection`). Keep the tree for Step 8.
 
 Non-negotiable, because a gate or the other platform enforces them:
 
@@ -146,7 +157,13 @@ Follow `reference/testing.md` and the existing test style: Core logic → `tests
 A UI-automation test goes to `tests/<App>.UITests` only when the task asks for one, is marked
 `[TestCategory("UI")]` and `[OSCondition(OperatingSystems.Windows)]`, and launches the app through the scaffold's
 `AppLauncher` (`APP_AUMID` → `APP_EXE` → newest built exe). Cover the edge cases implied by the XML-doc
-`<exception>` contracts. Do not run the tests — `iru-windows-code-one-task-group` runs them once per bucket.
+`<exception>` contracts. A task that adds or changes a screen or component also adds its FlaUI UI tests per
+`reference/ui-contract.md` §6–8 and `reference/ui-implementation.md`: every visual state with minimal/typical/
+many-items data, behaviour asserted once (`ltr`/`light`), a `UiScreenshots.Save(…)` capture per state ×
+`UiQuality.Matrix` (direction × theme from `.ui-quality.yml`), and `AccessibilityCheck.Run(…)` after each capture;
+add the `UiQuality`/`UiScreenshots`/`AccessibilityCheck` helpers if the repository lacks them — but a missing
+`Axe.Windows` package is a new dependency (Step 6): add it only when the plan names it, else report it. Do not run the tests —
+`iru-windows-code-one-task-group` runs them once per bucket.
 
 ## Step 5 — Compile-check each touched project
 
@@ -215,6 +232,9 @@ Hand back a short summary:
   with the reference files actually read.
 - **The files touched** and **the tests added/updated** per test project (not run), including any `[TestCategory("UI")]`
   test.
+- **For a UI task**: the `Screen › Region › Component` decomposition (new vs reused components, inputs, events,
+  visual states) and the UI tests added with the screenshot names they will produce
+  (`<kind>/<Id>/<state>--<dir>--<theme>.png`) and whether they run the accessibility check.
 - **The compile-check result per project**: passed, failed on this task's code and fixed, failed outside this task's
   scope, or unavailable (and why — e.g. WinUI on a non-Windows host).
 - **Bindings or registrations that only a run can verify** (WPF `{Binding}` paths, DI registrations, resources looked
@@ -244,6 +264,12 @@ like the `iru-setup-windows-app` contract (`Directory.Build.props` with `EnableW
   `using`s unless `stylecop.json` sets `orderingRules.usingDirectivesPlacement: outsideNamespace`; `CA1707` rejects
   `Method_Scenario_Result` test names and `SA0001` fires in test projects that turn `GenerateDocumentationFile` off,
   unless the test projects relax them; MSTest 4's analyzers flag `Assert.IsTrue(true)` (`MSTEST0032`).
+- UI contract (2026-10-16, `$TMPDIR/iru-verify/windows/ui-contract/`): the `reference/ui-implementation.md` WPF
+  `UserControl` + recycling `ListBox` (XAML markup compile included) and the WinForms virtual-mode `UserControl`
+  built with 0 diagnostics (`WFO1000` fires when the input property lacks `[DesignerSerializationVisibility]`); the
+  `SyncById` keyed diff passed 6 MSTest cases; the `UiQuality`/`UiScreenshots`/`AccessibilityCheck` helpers compiled
+  against FlaUI.UIA3 5.0.0 + Axe.Windows 2.4.2; the WinUI theme/direction hook compiled against the Windows App SDK
+  reference assemblies. **Unverified locally (needs Windows)**: running any capture or Axe.Windows scan.
 - A minimal WinUI 3 project (Windows App SDK 2.5.1, `net10.0-windows10.0.19041.0`, `UseWinUI`) failed on macOS with
   `XamlCompiler output file "…/output.json" was not created. The XAML compiler may have crashed.` — hence
   "compile-check unavailable (needs Windows)" for WinUI. **Unverified locally (needs Windows)**: the WinUI build and

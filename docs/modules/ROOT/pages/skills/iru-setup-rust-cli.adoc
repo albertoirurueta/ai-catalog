@@ -72,6 +72,11 @@ file names, and, upper-cased, the `<BIN>_` environment prefix.
 |`none` or `tui` (adds a Ratatui `browse` picker and raises the MSRV to 1.88).
 |`none`
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — only with `ui: tui`: the level written to `.ui-quality.yml`, which the TUI's UI tests read. For a terminal UI these are asserted checks (selection visible without colour, key help on screen), not an automated audit.
+|`enforce`
+
 |`msrv`
 |No
 |Minimum supported Rust version for `rust-version`; never lower than the value computed from the dependency graph.
@@ -129,13 +134,19 @@ file names, and, upper-cased, the `<BIN>_` environment prefix.
 * `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml` and `.cargo/config.toml`.
 * `src/main.rs`, `src/lib.rs`, `src/cli.rs`, `src/exit.rs`, `src/error.rs`, `src/output.rs`, `src/term.rs`,
   `src/config.rs`, `src/signals.rs`, `src/tests.rs` and `src/commands/{mod,greet,completion,schema,version}.rs`.
-* With `ui: tui`: `src/commands/browse.rs` and `src/tui/{mod,app,ui}.rs`.
+* With `ui: tui`: `src/commands/browse.rs` and `src/tui/{mod,app,ui,ui_screenshots}.rs`, whose list renders only the
+  rows that fit.
+* With `ui: tui`, per the catalog's xref:guides/building-user-interfaces.adoc[UI contract]: `.ui-quality.yml` at the
+  repository root, and UI tests that capture every picker state in each direction as
+  `.ui-screenshots/screen/App/<state>--<direction>--no-color.txt` (a gitignored output; see
+  xref:skills/iru-setup-rust-gitignore.adoc[]) with the asserted accessibility checks. These additions were written
+  without a Rust toolchain and are flagged unverified in the skill until the first `ui: tui` run.
 * `tests/cli.rs`, `tests/golden/greet-ada.json` and a generated `tests/golden/schema.json`.
 * `xtask/Cargo.toml` and `xtask/src/main.rs`, plus generated man pages and completions under `target/dist/` and the CLI
   reference page `docs/modules/ROOT/pages/cli-reference.adoc` (or `target/dist/cli-reference.adoc` when the Antora
   module does not exist yet).
 * A report of the mode (from scratch, updated or stopped), the resolved identity, `ui`, version, MSRV, license, the
-  per-group action (created, updated, replaced, kept as is), crate versions used (live versus fallback), each
+  per-group action (including `.ui-quality.yml` for `ui: tui`) (created, updated, replaced, kept as is), crate versions used (live versus fallback), each
   verification result, anything unverified, ignored `args` keys, suggested Antora pages, and explicit warnings (review
   generated files, commit `Cargo.lock` and golden files, register new commands, run the gitignore skill, add
   `LICENSE`, Sonar and crates.io prerequisites).
@@ -155,7 +166,7 @@ flowchart TD
     D3 -- Stop --> Z
     D1 --> E
     D2 --> E
-    D3 --> E["Step 2: Ask missing inputs\nbin-name, crate-name, description, ui, license, branching, open-source, sonar, distribution"]
+    D3 --> E["Step 2: Ask missing inputs\nbin-name, crate-name, description, ui, accessibility, license, branching, open-source, sonar, distribution"]
     E --> F["Step 3: Infer owner and repo from git origin"]
     F --> G{"Step 4: cargo and rustup present?"}
     G -- no --> Z2["Tell user to install rustup; stop"]

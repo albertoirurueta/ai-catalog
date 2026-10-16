@@ -16,7 +16,12 @@ description: >-
   shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, bounded ~45-minute wait,
   released on every exit path) and passed to the gate as `lock: held`; an unavailable iOS stage (not macOS, no full
   Xcode, no simulator runtime, lock wait timeout) is reported "unverified", never silently skipped or reported as
-  passed. Scopes each gate by the module(s) the bucket touched (`shared`/`composeApp`, `androidApp`, `iosApp`) and by
+  passed. When the bucket touched UI (composables, `androidApp` UI, SwiftUI views) it adds a UI stage per the
+  catalog's UI contract: the UI tests through `iru-kmp-test`'s `ui` selector (Android host/Robolectric captures
+  without the lock, the iOS simulator and `iosApp` captures inside the locked iOS stage), a check that every
+  added/changed screen and component has a capture per visual state × `.ui-quality.yml` direction × theme × platform
+  (`--android`/`--ios`) in `.ui-screenshots/`, and the accessibility results applied at the configured
+  `enforce`/`report`/`off` level — device/simulator unavailable makes that part unverified, never passed. Scopes each gate by the module(s) the bucket touched (`shared`/`composeApp`, `androidApp`, `iosApp`) and by
   source set — a `commonMain` change runs every target's tests, `androidMain` only the Android host tests, `iosMain`
   only the iOS tests, `iosApp` Swift only the XCTest bundle. `iru-kmp-code-one-task` checks off each task's box itself
   with a "group validation pending" note; this skill backfills any that didn't land and replaces each note with the
@@ -87,6 +92,13 @@ Detect once and reuse for every gate call below (the same facts `iru-kmp-code-on
   | a public declaration of the framework-exported module | (per source set above) | **also** the `iosApp` XCTest bundle, since Swift callers compile against it |
 
 Record this once as the bucket's **validation scope** and reuse it, rather than re-deriving per gate.
+
+- **UI touched?** — the bucket added or changed a `@Composable` (shared with `ui: compose`, or in `androidApp`), a
+  SwiftUI view in `iosApp`, or a navigation graph. If so, collect each task's reported `Screen › Region › Component`
+  decomposition: the **UI inventory** (every added/changed screen and component `<Id>`, its kind, its visual states,
+  and the platforms it renders on — both for shared Compose UI and for a screen built natively on both sides, one for
+  a platform-only view) that Step 3.8 checks captures against. Read `.ui-quality.yml` at the repository root
+  (`accessibility`, `directions`, `themes`; missing file or key → `enforce`, `[ltr, rtl]`, `[light, dark]`).
 
 Then collect the files every task is expected to touch and capture a single pre-change baseline via
 `iru-gate-runner`:
@@ -259,6 +271,11 @@ tests to run — say so rather than reporting a pass).
      fix-and-re-run; for a long debugging session release it (3.7b), fix, and re-acquire before re-running. If the fix
      touched Kotlin production code, re-run 3.3–3.6 afterwards.
 
+   **UI-touched bucket**: add a `ui: yes` line to this prompt and ask the gate to also report the iOS captures
+   (count per kind, malformed names) and the accessibility violations (count + rule ids) — the Kotlin/Native
+   `runComposeUiTest` captures, the `iosApp` `ImageRenderer` captures and any XCUITest attachments are produced inside
+   this locked run, never in a separate simulator run.
+
 7b. **Release the lock** as soon as 3.7's agent has reported back and any fix-and-re-run cycle is over:
 
    ```bash
@@ -267,6 +284,27 @@ tests to run — say so rather than reporting a pass).
 
    Release it on **every** exit path — pass, failure, environment failure, a blocked task, a user interrupt, or a hard
    stop. If you took the lock, you own releasing it before this skill returns.
+
+8. **UI stage** — only for a UI-touched bucket (Step 1), after 3.7b; it needs no lock of its own because every
+   simulator-backed capture was already produced inside 3.7.
+   - **Android/JVM UI tests**, via `iru-gate-runner`: `Agent({description: "Run Android UI tests for task group",
+     subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-kmp-test\", args: \"ui <the bucket's UI
+     test classes or paths>\ntarget: android\"}). Report back only: pass/fail per target with failing tests, the
+     screenshot count per kind and platform, malformed capture names, the accessibility violations (count + rule
+     ids), the .ui-quality.yml level applied, and whether device flow tests ran or were unverified (and why)."})`.
+     A scoped run never clears `.ui-screenshots/`, so 3.7's iOS captures stay next to the Android ones. Fix failures
+     as in 3.3 and re-invoke until green.
+   - **Capture matrix check** — for every entry of Step 1's UI inventory, `find .ui-screenshots/<kind>/<Id> -name
+     '*.png'` and confirm one file per visual state × `.ui-quality.yml` direction × theme × platform it renders on
+     (`--android`, `--ios`). A missing cell is a gap in that task's UI test — add the capture through the owning task
+     and re-run its target's tests. Cells of a platform whose stage was unverified (3.7 skipped, no simulator) are
+     **unverified**, not missing.
+   - **Accessibility** at the `.ui-quality.yml` level: `enforce` — any violation already failed a UI test; trace it
+     to its task, fix it (label, touch target, contrast), re-run. `report` — list the violations (rule id + count +
+     component) in Step 5 without failing. `off` — say the automated checks were off (the coding defaults still
+     applied).
+   - Device flow tests (`androidApp/src/androidTest`) with no emulator attached are **unverified (no device)**, never
+     passed.
 
 ## Step 4 — Finalize progress notes and notify the user
 
@@ -280,6 +318,9 @@ coverage (JVM-measured) and the iOS result separately:
   SecureStoreContractTest/IosSecureStoreTest (commonMain 92% lines; iosMain not measurable); iOS tests passed;
   no new detekt/ktlint/Lint issues.
 ```
+
+For a UI-touched task add the UI outcome, e.g. `UI: 12 android + 12 ios captures, matrix complete, accessibility
+enforce — 0 violations` or `UI: android captured, ios unverified (not macOS)`.
 
 If the iOS stage was unverified, say so with the reason — `iOS unverified (not macOS)` or `iOS unverified (lock held
 by another group)` is actionable; silence reads as a pass. Leave blocked tasks unchecked with their blocker note.
@@ -296,6 +337,9 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
 - **The Android/JVM results** (3.3, 3.5) and **the iOS result** (3.7): passed, failed-and-fixed, **unverified** with
   the reason, or not in scope. Name any failure that showed on one target only, even once fixed.
 - **Coverage exceptions accepted**, with reasoning; iOS-only logic that should move to `commonMain`.
+- **The UI stage** (3.8, UI-touched buckets only): the UI inventory with its decomposition, screenshots per kind
+  and platform, missing matrix cells (fixed, or unverified with the reason), malformed names, accessibility
+  violations by rule id and the `.ui-quality.yml` level applied, and device/simulator parts reported unverified.
 - **How the lock behaved** whenever it wasn't an immediate uncontended acquire (wait time, a broken stale lock and its
   owner text, a timeout) and confirmation it was released.
 - Whether a new quality issue was left in place as unavoidable, whether license-header generation was skipped,

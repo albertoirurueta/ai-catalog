@@ -1,6 +1,6 @@
 ---
 name: iru-update-docs
-description: Update a repository's Antora AsciiDoc documentation to reflect changes already made to the codebase (new/changed APIs, types, behavior, or conventions). Invoke as `/iru-update-docs` to cover uncommitted changes plus commits on the current branch not yet on the base branch, or `/iru-update-docs <git-ref-or-range>` to scope it to a specific ref/range (e.g. a commit, `main..HEAD`, a tag). Diagrams use Mermaid (`[mermaid]` blocks) and equations use MathJax (raw `\( \)` / `\[ \]` LaTeX) where they clarify behavior and the docs pipeline already supports them. If a documentation MCP (e.g. Confluence, Notion) is connected, also finds the relevant existing page(s) there and proposes matching updates — showing the exact change for the user to approve before anything is sent; if that connector only exposes read-access tools with no way to create or update a page, warns the user and skips this part instead. Use whenever source changes should be reflected in the docs site instead of leaving pages stale.
+description: Update a repository's Antora AsciiDoc documentation to reflect changes already made to the codebase (new/changed APIs, types, behavior, or conventions). Invoke as `/iru-update-docs` to cover uncommitted changes plus commits on the current branch not yet on the base branch, or `/iru-update-docs <git-ref-or-range>` to scope it to a specific ref/range (e.g. a commit, `main..HEAD`, a tag). Diagrams use Mermaid (`[mermaid]` blocks) and equations use MathJax (raw `\( \)` / `\[ \]` LaTeX) where they clarify behavior and the docs pipeline already supports them. If a documentation MCP (e.g. Confluence, Notion) is connected, also finds the relevant existing page(s) there and proposes matching updates — showing the exact change for the user to approve before anything is sent; if that connector only exposes read-access tools with no way to create or update a page, warns the user and skips this part instead. For repositories with a user interface it also maintains a **User interface** section — a navigation-flows page plus one page per screen/page/activity and per component/fragment/view/control, illustrated with the screenshots the UI tests captured under `.ui-screenshots/` (states × left-to-right/right-to-left × light/dark), copying only the screenshots the pages use into `images/ui/`, replacing the images of changed components and discarding the rest (`reference/ui-docs.md`). Use whenever source changes should be reflected in the docs site instead of leaving pages stale.
 model: sonnet
 ---
 
@@ -103,6 +103,27 @@ When editing:
 - Preserve any existing disclaimers/notices (e.g. an AI-generated-content notice) already present on a page
   unless the change specifically concerns them.
 
+## Step 4b — Document the user interface (repositories with a UI only)
+
+Read `reference/ui-docs.md` (next to this file) — it defines when a repository counts as having a UI, the
+`ui/` page and `images/ui/` layout, what each page contains, which screenshots each page uses, and how screenshots
+are synchronised. If the repository has no UI, skip this step. Otherwise:
+
+- **No `ui/` section yet** (first run on a UI repository): build it for the whole UI, not only the diff — inventory
+  every screen and component from the code and its doc comments, and every flow from the app's navigation
+  definition, then write `ui/index.adoc`, `ui/navigation.adoc` and one page per screen/component, and add the
+  **User interface** section to `nav.adoc`.
+- **`ui/` section exists**: from Step 3's findings, regenerate the pages of every screen/component whose source
+  changed, add pages for new ones, remove pages of deleted ones, and refresh `ui/index.adoc` and
+  `ui/navigation.adoc` when the inventory or navigation changed. Leave untouched pages alone.
+- Then run the screenshot synchronisation in `reference/ui-docs.md` §5 exactly once: fresh captures (offer to run
+  the UI test gate when `.ui-screenshots/` is missing or stale), copy only referenced screenshots whose bytes
+  changed, replace a changed component's old images, delete images and pages of removed components and any
+  unreferenced image under `images/ui/`, then delete `.ui-screenshots/`.
+
+If `reference/ui-docs.md` is missing (the skill was copied without it), document screens and components as
+ordinary pages and leave screenshots out, and say so in Step 7's report.
+
 ## Step 5 — Update external documentation via a documentation MCP, if connected
 
 Search for connected documentation/knowledge-base MCP tools (e.g. Confluence, Notion — `ToolSearch` with queries
@@ -157,7 +178,7 @@ updated but not locally verified against a real build.
 
 Summarize, per page touched: what changed in the source that drove the edit, and what was updated in the docs.
 Explicitly call out pages you considered but left unchanged because the diff didn't affect their content, and
-any doc gaps you noticed but didn't fix because they were outside the scope of the diff being documented. If
+any doc gaps you noticed but didn't fix because they were outside the scope of the diff being documented. For a UI repository, also report Step 4b's screenshot synchronisation: images added, replaced, unchanged and deleted, pages added/removed under `ui/`, and every state left "screenshot pending". If
 Step 5 found a connected documentation MCP, also report what was sent (page, link), what was proposed but
 declined/skipped by the user, and if none was connected, say so briefly.
 

@@ -185,6 +185,29 @@ grouping need to be explicit and unambiguous in the plan — don't leave either 
 - Order groups themselves so each is buildable/testable on top of the previous one, same as task ordering already
   required below.
 
+**User-interface work** (a design, mockup or functional description of screens/pages/activities/windows, or of
+components/fragments/views/controls — on any web, mobile, desktop or terminal UI stack):
+
+- **Decompose before planning tasks**, top-down: screens and the flows connecting them → regions of each screen →
+  components, each with its inputs (UI state), events and visual states (default, loading, empty, error,
+  disabled, selected, long content, …). Reuse an existing component the exploration found before planning a new
+  one. Every data-driven or long collection (list, grid, carousel, pop-up list, many tabs) becomes a collection
+  component on the platform's virtualizing/recycling container (e.g. Android `RecyclerView`/`LazyColumn`, SwiftUI
+  `List`, `UICollectionView`, `FlatList`, a web virtualizer, WPF virtualizing `ListView`) whose view model holds
+  the whole list data, plus one reusable item component. Write the tree into the plan's "Current code state" as
+  `Screen › Region › Component (in: …; out: …)` lines, marking each node new/changed/reused.
+- **One task per component or screen**, named after its type, stating its inputs, events and visual states, and
+  including its own UI tests: component/screen tests over every state with minimal/typical/many-items data,
+  events fired, left-to-right and right-to-left × light and dark, screenshot captures under `.ui-screenshots/`
+  and the automated accessibility check at the repository's `.ui-quality.yml` level (the coding skill's
+  `reference/ui-contract.md` holds the details — name it, don't restate it).
+- **Group bottom-up**: leaf components first (independent leaves together, `Parallelizable: yes`), then the
+  components composing them, then screens, then navigation/flow tests — a composite depends on its children
+  having landed.
+- **End with a documentation task** (untagged) to run `/iru-update-docs`, which builds or refreshes the
+  repository's User interface pages — navigation flows, one page per screen and component — from the UI tests'
+  screenshots, replacing images of changed components and discarding unused screenshots.
+
 ## Step 6 — Draft `implementation_plan.md`
 
 Write the plan to a file named `implementation_plan.md` at the repository root (per Step 2: overwrite it if the

@@ -1,12 +1,14 @@
 = Setup React Web
-:description: Scaffolds a React + Vite + TypeScript web app, then layers on Vitest, ESLint or Oxlint, Prettier, Stylelint, Playwright e2e tests, and optional Storybook.
-:keywords: iru-setup-react-web, claude code skill, react, vite, typescript, vitest, eslint, playwright, stylelint, storybook
+:description: Scaffolds a React + Vite + TypeScript web app with Vitest, ESLint or Oxlint, Prettier, Stylelint, Playwright e2e, UI-contract screenshot and axe tests, and optional Storybook.
+:keywords: iru-setup-react-web, claude code skill, react, vite, typescript, vitest, eslint, playwright, stylelint, storybook, ui-contract, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Scaffold a React + TypeScript web application with Vite, then layer on this catalog's standard
 test/coverage/lint/format/e2e toolchain — Vitest, Testing Library, ESLint or Oxlint, Prettier, Stylelint,
-Playwright, an optional Storybook setup, and `sonar-project.properties` when Sonar is enabled.
+Playwright, an optional Storybook setup, and `sonar-project.properties` when Sonar is enabled. It also makes the
+scaffold ready for the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]):
+a Playwright component-testing project with a component gallery, axe accessibility checks, and a `.ui-quality.yml`.
 
 == Purpose
 
@@ -19,6 +21,13 @@ enabled — `sonar-project.properties`. There is no `publish`/`distribution` que
 web app isn't published to a package registry or an app store. Every step was proven against the actual
 current tooling (Vite 8, ESLint 10, Vitest 5, Playwright 1.63, Stylelint 17, Storybook 10) in a throwaway
 scaffold, so the gotchas called out along the way are observed behavior, not speculation.
+
+A dedicated UI-contract step (Step 6b, with `reference/ui-screenshots.ts`) adds Playwright's built-in `mount()`
+component testing driven by a Vite-served gallery (`playwright/gallery/`), `@axe-core/playwright`, a shared
+`e2e/support/ui-screenshots.ts` helper, and a sample screen spec that captures `.ui-screenshots/screen/App/`
+across left-to-right/right-to-left x light/dark with an accessibility check in every cell. It also switches the
+template's CSS to logical properties (so right-to-left captures mirror) and fixes the template's low-contrast accent
+colour, then writes `.ui-quality.yml` at the repository root with the chosen accessibility level.
 
 == Purpose group
 
@@ -102,6 +111,11 @@ config when enabled.
 |`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all; consulted only by the `sonar` question. With `ci: no`, `none` is recommended for Sonar since no CI would send reports (`sonar-project.properties` is still written if the user picks `cloud`/`self-hosted`, and the report says so).
 |`yes` implied
 
+|`accessibility`
+|No
+|`enforce`, `report`, or `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` in Step 6b. `enforce` makes axe violations fail the tests; `report` lists them without failing; `off` does not run them.
+|Asked with `AskUserQuestion` (recommended: `enforce`; `enforce` when run via `args` without it)
+
 |`on-existing`
 |No
 |`ask`/`keep`/`update`/`replace` — how Step 1 treats each pre-existing artifact. `keep`/`update`/`replace` is applied to every one without asking (the warning is still printed); meant for scripted runs.
@@ -122,6 +136,11 @@ config when enabled.
   `.stylelintrc.json`.
 * `playwright.config.ts` and `e2e/smoke.spec.ts` for end-to-end testing, with the Chromium browser binary
   installed locally.
+* `.ui-quality.yml` at the repository root (`accessibility`, `directions: [ltr, rtl]`, `themes: [light, dark]`).
+* The UI-contract test scaffold: `e2e/support/ui-screenshots.ts` (from `reference/ui-screenshots.ts`),
+  `playwright/gallery/index.html` + `main.tsx`, `src/App.story.tsx`, `e2e/components/App.spec.ts`, a `components`
+  Playwright project, the `@axe-core/playwright` dev dependency, and logical-property CSS fixes; running the specs
+  produces the `.ui-screenshots/` captures (kept out of version control).
 * `.storybook/` and its scripts, only if `storybook: yes`.
 * `sonar-project.properties` at the repository root, only if `sonar` resolved to `cloud` or `self-hosted`.
 * `tsconfig.e2e.json` and an updated `tsconfig.json` reference list, so `tsc -b` type-checks `e2e/` too.
@@ -140,7 +159,7 @@ flowchart TD
     A[Start /iru-setup-react-web] --> B{"Step 0: args supplied?"}
     B -- yes --> C[Parse key: value pairs from args]
     B -- no --> D[Treat every field as unset]
-    C --> E["Step 1: Survey every owned artifact\n(package.json, Vitest/Jest, linter, Prettier,\nStylelint, Playwright, Storybook, Sonar)"]
+    C --> E["Step 1: Survey every owned artifact\n(package.json, Vitest/Jest, linter, Prettier,\nStylelint, Playwright, UI-contract files, Storybook, Sonar)"]
     D --> E
     E -- "nothing exists" --> F[Announce: scaffolding from scratch]
     E -- "anything exists or mode: existing" --> G[Announce: updating an existing setup; warn]
@@ -151,12 +170,13 @@ flowchart TD
     J -- other --> L
     I --> L["Placement check (only if create-vite will run):\nempty root or subdirectory"]
     F --> L
-    L --> M["Step 2: Collect app-name, description, developer info,\nlicense, open-source, visibility, sonar, keep-oxlint, storybook"]
+    L --> M["Step 2: Collect app-name, description, developer info,\nlicense, open-source, visibility, sonar, keep-oxlint, storybook, accessibility"]
     M --> N["Step 3: npm create vite@latest --template react-ts;\nnpm install (only if no package.json or Replace)"]
     N --> O["Step 4: Add Vitest + Testing Library + jsdom;\nwrite App.test.tsx (skipped if Jest is kept)"]
     O --> P["Step 5: Add ESLint or keep Oxlint;\nPrettier; Stylelint (auto-fix CSS)"]
     P --> Q["Step 6: Add Playwright e2e;\nrename tests/ to e2e/; install Chromium"]
-    Q --> R{"Step 7: storybook: yes?"}
+    Q --> Q2["Step 6b: .ui-quality.yml, axe, component gallery,\nUI screenshot helper, sample screen spec"]
+    Q2 --> R{"Step 7: storybook: yes?"}
     R -- yes --> S["Run storybook init;\nreconcile vitest.config.ts project split"]
     R -- no --> T
     S --> T{"Step 8: sonar cloud/self-hosted?"}

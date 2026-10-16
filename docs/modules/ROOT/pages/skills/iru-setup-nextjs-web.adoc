@@ -1,5 +1,5 @@
 = Setup Next.js Web
-:description: Scaffolds a Next.js app with create-next-app flags plus Vitest, ESLint, Prettier, Playwright, TypeDoc, Sonar, static export or Docker, and a tested sample feature.
+:description: Scaffolds a Next.js app with Vitest, ESLint, Playwright UI tests with axe checks, TypeDoc, Sonar, static export or Docker, and a sample feature.
 :keywords: iru-setup-nextjs-web, claude code skill, nextjs, create-next-app, vitest, playwright, typedoc, app router, static export, scaffold
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -22,6 +22,12 @@ example of the `iru-nextjs-code-one-task` references, adapted to static export o
 Templates are kept in `reference/` next to the skill (`config-templates.md`, `app-router-samples.md`,
 `pages-router-samples.md`) and were verified in five router/output combinations. The `cache-components` choice
 determines the `16-prev` or `16-cc` coding profile later tasks apply.
+
+Following the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]) it also
+writes a root `.ui-quality.yml` (even with `e2e: none`, because the coding skills read it) and, with
+`e2e: playwright`, a Playwright component-testing project against a standalone Vite component gallery, the shared
+`e2e/support/ui-screenshots.ts` helper and axe-core checks, so the sample `LikeButton` and the `Home` screen are
+captured into `.ui-screenshots/` across left-to-right/right-to-left × light/dark.
 
 == Purpose group
 
@@ -109,6 +115,11 @@ xref:skills/iru-setup-typescript-repository.adoc[], which passes resolved values
 |Node major, used as the `Dockerfile`'s `NODE_VERSION`.
 |`24`
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the UI tests' automated (axe) accessibility level, written to `.ui-quality.yml`.
+|Asked with `e2e: playwright` (Enforce recommended), else `enforce`
+
 |`visibility`, `ci`
 |No
 |Only used to key the Sonar recommendation (`internal` behaves like `private`; `ci: no` recommends `none`).
@@ -136,11 +147,18 @@ Contradictions are resolved rather than obeyed and reported: `output: static` fo
   ESLint flat config, Prettier config, and the shared npm scripts listed in Purpose.
 * The sample feature with colocated unit tests (scaffold-from-scratch runs only), plus `playwright.config.ts` and
   `e2e/` specs when `e2e: playwright`.
+* `.ui-quality.yml` at the repository root (`accessibility`, `directions`, `themes`), always written. With
+  `e2e: playwright` also the UI-contract files: `e2e/support/ui-screenshots.ts`, the component gallery under
+  `playwright/` (Vite config, `next/link`/`next/navigation`/`next/image` stand-ins), the `components` Playwright project
+  with its gallery `webServer`, `src/components/like-button.story.tsx`, `e2e/components/like-button.spec.ts` and
+  `e2e/home.spec.ts`, plus the `@axe-core/playwright` and `vite` dev dependencies. Their captures go to the
+  gitignored `.ui-screenshots/component/LikeButton/` and `.ui-screenshots/screen/Home/`.
 * `typedoc.json` when `docs-tool: typedoc`; `sonar-project.properties` when `sonar` is not `none`; `Dockerfile` and
   `.dockerignore` when `distribution: internal`.
-* `.gitignore` additions for Playwright, TypeDoc and the integration-test lock.
+* `.gitignore` additions for Playwright, `.ui-screenshots/`, TypeDoc and the integration-test lock.
 * A final report with the mode, per-artifact action (created / updated / replaced / kept as is / removed),
-  resolved options and their sources, every verification result, and explicit warnings (auth stub, in-memory store,
+  resolved options and their sources, every verification result (including the screenshot count under
+  `.ui-screenshots/` and any accessibility violation rule ids), the `.ui-quality.yml` action and `accessibility` level, and explicit warnings (auth stub, in-memory store,
   static-export limits, secrets).
 
 == Execution flow
@@ -161,13 +179,13 @@ flowchart TD
     F -- no --> F2{"Ask per artifact:\nUpdate / Keep / Replace / Stop"}
     F2 -- Stop --> Z["Report untouched; end"]
     F2 -- other --> G
-    F1 --> G["Step 2: collect identity and options"]
+    F1 --> G["Step 2: collect identity and options\n(incl. accessibility)"]
     E1 --> G
     G --> H["Step 3: npx create-next-app with explicit flags"]
     H --> I["Step 4: identity, version, next.config.ts, starter cleanup"]
     I --> J["Step 5: Vitest + React Testing Library"]
     J --> K["Step 6: ESLint and Prettier"]
-    K --> L["Step 7: sample feature and Playwright"]
+    K --> L["Step 7: sample feature, Playwright\nand UI contract tests"]
     L --> M["Step 8: TypeDoc, Sonar, Dockerfile"]
     M --> N["Step 9: scripts and verification\nlint, format, typecheck, test, coverage, build"]
     N --> O["Route table, Playwright, Docker health, TypeDoc checks"]

@@ -9,7 +9,13 @@ description: >-
   project can't build), reporting the rest as "unverified (needs Windows)" instead of letting the whole solution run
   abort; excludes `[TestCategory("UI")]` desktop UI-automation tests from ordinary runs by default, and runs only them
   with the `ui` selector — on Windows only, serialized repository-wide behind the shared `.integration-test.lock` (or
-  `lock: held` when the caller already holds it). Detects the test runner (VSTest, or Microsoft.Testing.Platform via
+  `lock: held` when the caller already holds it) — and a .NET command-line tool's Terminal.Gui view tests (also
+  `[TestCategory("UI")]`, but portable: any host, no lock). A `ui` run follows the catalog's UI contract: it sets
+  `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears it only on a full UI run, validates every
+  capture name against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` (`.txt` for terminal captures),
+  and reports screenshot counts per kind, malformed names, accessibility violations (Axe.Windows for desktop apps,
+  the asserted `tui-*` checks for terminal UIs — count + rule ids, from `[a11y]` test failures and the
+  `a11y-report.txt` the helpers append to) and the `.ui-quality.yml` level applied. Detects the test runner (VSTest, or Microsoft.Testing.Platform via
   `global.json`) and adapts the command shape. Invoke as `/iru-dotnet-test` to run the full suite (auto-detecting the
   solution/project in the working directory), or `/iru-dotnet-test <selector>` where `<selector>` names a class
   (`FooTests`), a class+method (`FooTests.TestSomething`), a wildcard/namespace pattern, a trait/category expression,
@@ -41,6 +47,9 @@ skill only runs tests and reports results — it does not fix failures unless as
   - *Portable test project*: any other test project (e.g. `tests/<App>.Core.Tests` on `net10.0`).
   - *UI tests present*: `grep -rln 'TestCategory("UI")' --include=*.cs <test dirs>` (xUnit: `[Trait("Category",
     "UI")]`; NUnit: `[Category("UI")]`).
+  - *Terminal UI tests*: UI-category tests in a **portable** test project whose build graph references
+    `Terminal.Gui` (a `iru-setup-dotnet-cli` `ui: tui` tool's `tests/<Tool>.Cli.Tests/Tui/`) — they render through
+    Terminal.Gui's ANSI driver in-process, so `ui` runs them on any host, without the lock or an app build.
   No UI app and no Windows test project → a plain .NET repository: skip everything Windows-specific below and behave
   exactly as Steps 1–3 describe.
 - **Test runner**: Microsoft.Testing.Platform (MTP) when `global.json` has `"test": { "runner":
@@ -126,8 +135,18 @@ Windows-desktop additions:
 - **Non-Windows host**: append `-p:EnableWindowsTargeting=true` whenever a project in the build graph uses WPF or
   Windows Forms (harmless if `Directory.Build.props` already sets it; without it the build fails with `NETSDK1100`).
 - **Microsoft.Testing.Platform**: `dotnet test --project <path> --filter "<expression>"` (or `--solution <path>`).
-- **`ui` selector** — only on a Windows host with an interactive desktop session; otherwise don't run anything and
-  report **unverified (needs Windows)**. Then:
+- **`ui` selector, terminal UI tests** (Step 0) — on any host, no lock, no app build:
+  `dotnet test <portable test project> --filter "TestCategory=UI"`, with the screenshot-directory handling of step 0
+  and the collection/report of step 4 below (terminal captures are `.txt` with theme `no-color`; accessibility is the
+  asserted `tui-color-only`/`tui-help-line`/`tui-keyboard` checks, not an automated audit — say so).
+- **`ui` selector, desktop UI tests** — only on a Windows host with an interactive desktop session; otherwise don't
+  run anything and report **unverified (needs Windows)** (the captures and the accessibility check with it). Then:
+  0. **Screenshot directory** — resolve `UI_SCREENSHOTS_DIR` (an absolute path from the environment, else
+     `<repo root>/.ui-screenshots`) and export it for the run. On a **full** UI run (no narrower selector) delete and
+     recreate that directory first so it holds exactly this run; on a scoped run leave other captures alone. Read
+     `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, `directions`, `themes`; a missing
+     file means `enforce`, `[ltr, rtl]`, `[light, dark]`) — the tests read it themselves; this skill only reports the
+     level applied.
   1. **Lock** — unless `lock: held` was passed, take the repository-wide lock from the repository root
      (`git rev-parse --show-toplevel`) before building: `mkdir .integration-test.lock 2>/dev/null && echo ACQUIRED ||
      echo HELD`. `ACQUIRED` → write `.integration-test.lock/owner` with "iru-dotnet-test ui", the project, and
@@ -177,6 +196,16 @@ Windows-desktop additions:
        tests without it.
   3. `dotnet test tests/<App>.UITests --filter "TestCategory=UI"` (plus any narrower selector the caller passed,
      parenthesized and `&`-joined). Run it in the foreground — never in parallel with another test run.
+  4. **Collect and validate captures** — FlaUI captures are written by the tests' `UiScreenshots` helper straight
+     into the directory, so normally nothing needs collecting; any `*.png` a test wrote under `TestResults/` or the
+     test project's `bin/` (a test that bypassed the helper) is moved into the directory only when its name already
+     fits the contract, and reported otherwise. Validate every file under the directory against
+     `^(component|screen|flow)/([A-Z][A-Za-z0-9]*|[a-z0-9]+(-[a-z0-9]+)*)/[a-z0-9]+(-[a-z0-9]+)*--(ltr|rtl)--(light|dark|high-contrast|no-color)(--[a-z0-9]+(-[a-z0-9]+)*)*\.(png|txt)$`
+     (relative path; `a11y-report.txt` at the root is the accessibility report, not a capture), count per kind and per
+     `<kind>/<Id>`, and list malformed names. Accessibility: under `enforce` the violations are test failures whose
+     message starts with `[a11y]`; under `report` they are the `<context>\t<rule-id>: <message>` lines of
+     `<screenshots dir>/a11y-report.txt`. Summarize either as violation count + rule ids per context — never the raw
+     scan output.
 
 Run it with the Bash tool. Do not add unrelated flags (e.g. `--no-build`, `-v`, `--logger`) unless the user asks
 for them or a prior step in this conversation already established they're needed.
@@ -195,6 +224,11 @@ Summarize the `dotnet test` output concisely:
   `TestCategory!=UI` exclusion was applied, and — for `ui` — whether the run was an environment failure (the app
   didn't launch, no desktop session, no `APP_AUMID` for WinUI, tests reported **skipped**) rather than an assertion
   failure. Skipped or not-run UI tests are never "passed". Report how the lock behaved when this skill took it.
+- `ui` runs (desktop and terminal): the screenshot directory used and whether it was cleared (full run) or kept
+  (scoped run); screenshot count per kind (`component`/`screen`/`flow`) and per `<kind>/<Id>`; malformed names; the
+  `.ui-quality.yml` level applied (`enforce`/`report`/`off`, or "missing — defaults"); accessibility violations as
+  count + rule ids per context (Axe.Windows for desktop, asserted `tui-*` checks for terminal UIs); and "captures
+  unverified (needs Windows)" whenever the desktop stage couldn't run.
 - Do not attempt to fix failing tests or modify source/test code unless the user asks for that as a next step.
 
 ## Known quirks
@@ -215,5 +249,8 @@ Verified in `$TMPDIR/iru-verify/windows/gates/` on macOS 27 (arm64), .NET SDK 10
   `[DataRow]` counts as a separate test in the totals.
 - Building a WPF project on macOS without `EnableWindowsTargeting` fails with `NETSDK1100`; with it, WPF and the
   `net10.0-windows` test project compile (so a UI test still gets a compile check off Windows).
-- **Unverified locally (needs Windows)**: actually running FlaUI UI tests (and whether hosted `windows-latest` runners
+- UI contract (2026-10-16): the `UiScreenshots`/`AccessibilityCheck` helpers the `ui` step relies on compiled
+  against FlaUI.UIA3 5.0.0 + Axe.Windows 2.4.2 on macOS; the Terminal.Gui 2.5.0 view tests of a `ui: tui` CLI ran on
+  macOS through the ANSI driver and wrote `screen/BrowseView/<state>--<dir>--no-color.txt` captures.
+- **Unverified locally (needs Windows)**: actually running FlaUI UI tests (captures and Axe.Windows scans included) (and whether hosted `windows-latest` runners
   give them an interactive session), building/running a WinUI project, and the lock-protected `ui` flow end to end.

@@ -1,6 +1,6 @@
 ---
 name: iru-android-code-one-task-group
-description: Implement one bucket of Android/Kotlin tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-android-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, KDoc (via `iru-android-dokka`), scoped unit tests (via `iru-android-test`), an 80% unit-test line-coverage check (via `iru-android-coverage` — `testDebugUnitTest` only; instrumented coverage is reported for information when a device/emulator already produced it, and never blocks), a full-suite `./gradlew test` run, and a code-quality regression check (via `iru-android-code-quality`) against that one baseline, scoped per Gradle module (`lib`/`app`) the bucket actually touched. `iru-android-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when several tasks finish at nearly the same moment — and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-android-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to `iru-java-code-one-task-group`/`iru-typescript-code-one-task-group` for Gradle/Kotlin Android projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its `android`-tagged tasks.
+description: Implement one bucket of Android/Kotlin tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-android-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, KDoc (via `iru-android-dokka`), scoped unit tests (via `iru-android-test`), an 80% unit-test line-coverage check (via `iru-android-coverage` — `testDebugUnitTest` only; instrumented coverage is reported for information when a device/emulator already produced it, and never blocks), a full-suite `./gradlew test` run, a code-quality regression check (via `iru-android-code-quality`) against that one baseline, and — when the bucket touched UI — a UI stage per the catalog's UI contract (Robolectric/Roborazzi UI tests via `iru-android-test`'s `ui` selector, a check that every added/changed screen and component has captures for each visual state × `.ui-quality.yml` direction × theme in `.ui-screenshots/`, and the Accessibility Test Framework results at the configured `enforce`/`report`/`off` level; on-device flow tests run only when a device/emulator is attached, otherwise reported unverified), scoped per Gradle module (`lib`/`app`) the bucket actually touched. `iru-android-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when several tasks finish at nearly the same moment — and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-android-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to `iru-java-code-one-task-group`/`iru-typescript-code-one-task-group` for Gradle/Kotlin Android projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its `android`-tagged tasks.
 model: sonnet
 allowed-tools: Read Edit Write Bash(./gradlew *) Bash(gradle *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent
 ---
@@ -139,6 +139,23 @@ not once per task, but once per touched module (Step 1) where a gate is module-s
    new issue in place only if fixing it is genuinely unavoidable (e.g. it would contradict what its task explicitly
    specifies) — record that, and why, for Step 4. Skip this item if `iru-android-code-quality` is unavailable in
    this repository.
+7. **UI** — only when the bucket added or changed a screen, component, list or other UI (a `@Composable`, a
+   `View`/`Fragment`/`Activity`, a layout or a `RecyclerView` adapter). Read `.ui-quality.yml` at the repository
+   root (missing file = `accessibility: enforce`, `directions: [ltr, rtl]`, `themes: [light, dark]`). Then, once per
+   touched module, by delegating to `iru-gate-runner`: `Agent({description: "Run UI tests for task group",
+   subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-android-test\", args: \"module:
+   <module>\\nui: jvm\\n<test classes covering every screen/component this bucket touched>\"}) — and, only when this
+   bucket added or changed a flow test under src/androidTest, a second run with `ui: device`. Report back only:
+   pass/fail with failing test names, the screenshot count per kind, any malformed screenshot names, the
+   accessibility violations (count + check ids) and the level applied, and whether the device stage was
+   unverified and why."})`. The Robolectric/Roborazzi JVM stage always runs (no emulator needed); a device stage
+   with no attached device/emulator is **unverified** — say so, never count it as passed. Then check, for every
+   screen/component the bucket added or changed (the `Screen › Region › Component` trees the tasks reported),
+   that `.ui-screenshots/<kind>/<Id>/` holds a capture for each of its visual states × the configured directions ×
+   themes; a missing capture is a gap to fix in that task's UI test (via the task that owns it), then re-run this
+   item. Apply the accessibility level: `enforce` — a failing check fails the group, fix it in the owning task and
+   re-run Steps 3.3 and 3.7; `report` — list the violations in Step 4/5's summary without failing; `off` — note that
+   the checks were not run.
 
 ## Step 4 — Finalize progress notes and notify the user
 
@@ -146,7 +163,8 @@ Once Step 3 passes clean for the bucket (or leaves only explicitly-accepted unav
 task's note in `implementation_plan.md` — replacing the "group validation pending" placeholder from Step 2 — with
 the final outcome: unit-test line coverage achieved and code-quality result for that task's own class(es), e.g.
 `- [x] Task 2. **Implement `CameraOrientationResolver`** — tests in CameraOrientationResolverTest (94% unit-test
-line coverage), no new Lint/Detekt issues.` Save the file, then notify the user that group validation completed
+line coverage), no new Lint/Detekt issues.` For a UI task, append the UI outcome, e.g. `UI: 12 captures (OrderRow, OrdersScreen), accessibility
+enforce — 0 violations; device stage unverified (no emulator).` Save the file, then notify the user that group validation completed
 and summarize the bucket-wide result (tests, coverage, quality, doc/license outcome), per module if the bucket
 spanned both `lib` and `app`.
 
@@ -159,7 +177,8 @@ Hand control back to the caller (`iru-code-one-task-group`) with a summary cover
 module it lives in, the files touched, tests added/updated, unit-test coverage achieved, and code-quality outcome
 — including whether a new issue was left in place as unavoidable and why, whether license-header generation was
 skipped by the user, whether instrumented coverage was available and reported for information on any class, which
-of `./gradlew test`/`testDebugUnitTest` Step 3.5 actually ran, and which task(s), if any, stopped on a blocker
+of `./gradlew test`/`testDebugUnitTest` Step 3.5 actually ran, the UI stage's outcome when it ran (Step 3.7 — screenshot counts per kind, missing
+captures, accessibility violations and the level applied, and any device stage reported unverified), and which task(s), if any, stopped on a blocker
 (with enough detail for the caller to surface it further up). `implementation_plan.md`'s checkboxes are already
 checked (by `iru-android-code-one-task` itself, backfilled here in Step 2 if needed) and finalized with their
 validation outcome (Step 4), and the user-facing progress notifications have already gone out (Steps 2 and 4) —

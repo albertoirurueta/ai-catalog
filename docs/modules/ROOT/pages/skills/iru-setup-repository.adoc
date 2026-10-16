@@ -8,6 +8,8 @@ The catalog's single entry point for bootstrapping any repository. It does not s
 detects or asks which of the supported project types applies (Java, Spring Boot, Quarkus, TypeScript, web, NestJS, PHP, Python (FastAPI and Django), Android, Swift/Apple (Swift libraries, and iOS/iPadOS/macOS/watchOS/visionOS apps in SwiftUI or UIKit, MVVM or MVC), cross-platform mobile — React Native, Ionic or Kotlin Multiplatform — and macOS/Windows desktop apps, and agent-friendly command-line tools in Rust, Go, Swift or C#/.NET), announces whether the run is a from-scratch setup
 or an update of an existing repository, collects the handful of questions genuinely shared across every stack, and
 hands off to exactly one of twelve existing stack orchestrators.
+For project types with a user interface it also asks how strictly automated accessibility checks gate the UI tests
+(the `accessibility` input), part of the catalog's xref:guides/building-user-interfaces.adoc[UI contract].
 
 == Purpose
 
@@ -151,6 +153,11 @@ self-hosted SonarQube as the second option
 |Self-hosted SonarQube host URL, collected only when `sonar: self-hosted`.
 |None
 
+|`accessibility`
+|No
+|`enforce`, `report`, or `off` — UI project types only: how strictly the UI tests' automated accessibility checks gate (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility audit, Axe.Windows). Asked once in Step 3 with Enforce recommended, forwarded to every orchestrator that recognizes it, and recorded by the UI scaffold in `.ui-quality.yml` at the repository root. For Spring Boot without Hilla and for command-line tools the orchestrator asks (or applies it only for a terminal UI / Hilla frontend).
+|Asked for UI types (`enforce` recommended); not asked or forwarded for types without a UI
+
 |`flavor`
 |No
 |The delegated orchestrator's own flavor value (for example `library`/`react`/`nextjs`/`angular`/`nestjs`/
@@ -249,11 +256,12 @@ Step 0 recognizes the key; dropped keys are listed in the final report.
 * No files are written directly by this skill — every artifact (source scaffold, Antora docs, `.gitignore`,
   CI workflows, `CHANGELOG.md`, `README.md`) is produced by whichever single stack orchestrator Step 4 delegates
   to, exactly as that orchestrator's own page describes.
+* No `.ui-quality.yml` is written here either — the delegated UI scaffold writes it from the forwarded `accessibility` value.
 * An up-front announcement (Step 1): "from scratch" or "updating an existing repository", the latter with the
   absent / present / partial component inventory.
 * A final report (Step 5): the resolved `project-type` (with, for the app types, the platforms/framework/toolchain/UI
   approach that came with it, and the MVVM/MVC architecture the desktop orchestrators reported), the setup mode and where it came from, and every shared
-  input as actually applied (`visibility` and how it was resolved, `ci`, `ci-tests`, `pages`, and so on); a
+  input as actually applied (`visibility` and how it was resolved, `ci`, `ci-tests`, `pages`, `accessibility` for a UI type, and so on); a
   per-component table of what the delegated orchestrator did (created / updated / replaced / kept as is / skipped
   (`ci: no`)) with every mismatch it flagged between a kept file and this run's choices; cost notes tied to the
   visibility; a `ci: no` note when workflows and the security block were skipped; any key that could not be
@@ -280,7 +288,7 @@ flowchart TD
     H --> I
     D1 --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 6 AskUserQuestion rounds of 3 types\n+ 'Something in the next group':\nJVM, Web and Node, PHP, Python, Mobile and Apple,\nDesktop and command line\n(macOS app / Windows app / CLI tool)\n(bounded follow-ups for bundled options)"]
     F -- "'None of these'\nin round 6" --> G
-    F -- "resolved" --> I["Step 3: Ask shared inputs once, in order:\nopen-source, visibility (args, gh, or ask),\nci, sonar, ci-tests, pages,\npublish/distribution, conditional questions\n(Apple platforms incl. visionOS, Ionic framework,\nReact Native toolchain; cost notes per visibility)"]
+    F -- "resolved" --> I["Step 3: Ask shared inputs once, in order:\nopen-source, visibility (args, gh, or ask),\nci, sonar, ci-tests, pages,\npublish/distribution, conditional questions,\naccessibility (UI types only)\n(Apple platforms incl. visionOS, Ionic framework,\nReact Native toolchain; cost notes per visibility)"]
     I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of twelve\nstack orchestrators\n(each component warns and asks\nkeep / update / replace)"]
     J --> K["Step 5: Report mode, resolved inputs,\nper-component actions and mismatches,\ncost notes, secrets table, warnings"]
 ....

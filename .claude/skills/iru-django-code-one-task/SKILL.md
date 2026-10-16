@@ -14,8 +14,10 @@ description: >-
   PostgreSQL) — then loads only the matching guidance from this skill's own `reference/` directory (Python code
   style for Django, testing with pytest-django/factory_boy/query-count assertions, models and the ORM with
   `makemigrations`-generated migrations, `select_related`/`prefetch_related` and `transaction.atomic`/`on_commit`,
-  views/URLs/templates, forms and validation, DRF, Ninja, admin, settings, background tasks/Celery/commands,
-  authentication and authorization, and security). Re-checks the current code state, implements exactly what the
+  views/URLs/templates, server-rendered UI per the catalog's UI contract — screens/regions/components decomposed
+  first, inclusion-tag/partial components, paginated lists with one item partial per row, pytest-playwright UI
+  tests with an LTR/RTL × light/dark screenshot matrix and axe accessibility checks —, forms and validation, DRF,
+  Ninja, admin, settings, background tasks/Celery/commands, authentication and authorization, and security). Re-checks the current code state, implements exactly what the
   task specifies, generates (never hand-writes or edits an applied) migration with `manage.py makemigrations` when
   the task changes a model, writes the tests, runs only the fast test files it touched, then checks off this task's
   checkbox in `implementation_plan.md` with a "group validation pending" note and hands back a short summary. Never
@@ -90,6 +92,10 @@ predate it.
    or `black`).
 9. **Background work** — a `TASKS` setting / `from django.tasks import task` (`django.tasks`), or Celery
    (`config/celery.py`, `celery` in the dependencies, `@shared_task`). Only matters if the task enqueues work.
+10. **UI test wiring** — only when the task touches server-rendered UI: `pytest-playwright` and
+    `axe-playwright-python` in the dev dependencies, a registered `ui` marker, `tests/ui/ui_screenshots.py`,
+    `.ui-quality.yml` at the repository root, `LocaleMiddleware` with an RTL language in `LANGUAGES`, and whether
+    HTMX (`django-htmx`, `hx-` attributes), Stimulus/Alpine, or `django-components`/`django-cotton` are in use.
 
 Then read `reference/README.md` first — it is short and routes you to the rest — then read only what it points at:
 
@@ -99,6 +105,7 @@ Then read `reference/README.md` first — it is short and routes you to the rest
 | `reference/testing.md` | **Always** — writing the tests is part of the task. |
 | `reference/models-and-orm.md` | The task adds/changes a model, field, relation, constraint, index, manager/QuerySet, migration, query, transaction, signal, or service function. |
 | `reference/views-urls-templates.md` | The task adds/changes a view (FBV/CBV/async), URL pattern, template, template tag, middleware, or htmx fragment. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a screen, component, list or other UI — a page template, a partial/inclusion tag, a paginated list, or an htmx fragment users see. |
 | `reference/forms-and-validation.md` | The task adds/changes a `Form`/`ModelForm`/formset, a validator, or model `clean()`. |
 | `reference/drf.md` | API style is DRF and the task touches a serializer, viewset/view, router, permission, throttle, pagination, filter, or the OpenAPI schema. |
 | `reference/ninja.md` | API style is Ninja and the task touches a router, operation, or schema. |
@@ -178,6 +185,12 @@ Format only the files you touched with the project's formatter when one is confi
 or `<run> black <files>`) and, if Ruff is configured, look at `<run> ruff check <files>` and fix what it reports by
 hand — never `--fix` across the project, never the whole tree.
 
+**UI** — when the task adds or changes a screen, component or list: decompose it first (`ui-contract.md` §2 —
+screens, regions, components, each component's inputs/events/states, existing partials reused) and keep the
+`Screen › Region › Component` tree for Step 8; build leaves first (inclusion tags/partials), then the page template,
+then the URL; lists are paginated with one item partial per row (`ui-implementation.md` §4), never an unbounded
+loop over a queryset.
+
 Don't add anything the task didn't ask for — no speculative abstraction, no repository layer over the ORM, no
 unrelated cleanup, no restyling of code the task doesn't touch.
 
@@ -211,6 +224,14 @@ Follow `reference/testing.md` and the existing tests next to the touched code �
 deferred with `on_commit` are asserted with `django_capture_on_commit_callbacks(execute=True)` /
 `self.captureOnCommitCallbacks(execute=True)`.
 
+**UI tests** — for a screen, component or list the task added or changed, also write the browser UI tests of
+`ui-implementation.md` §5–§7 in `tests/ui/` (`ui` marker, `live_server`): every applicable visual state with the
+minimal/typical/many-items data sets, events and HTMX swaps asserted once (ltr, light), and a capture per state ×
+`.ui-quality.yml` direction × theme through `tests/ui/ui_screenshots.py` (`capture_ui_state`), with
+`check_accessibility(page)` after each capture. Create the helper from `ui-implementation.md` §6 if the project has
+pytest-playwright but no helper yet; if pytest-playwright/axe-playwright-python aren't dependencies, write the
+template-rendering unit tests only and report the missing UI-test wiring (Step 4 — a dependency change).
+
 Put each test in the tier that matches what it needs: anything that needs PostgreSQL-only behavior
 (`select_for_update` semantics, `contrib.postgres` fields, full-text search, real constraint races), Redis, Celery,
 a live server, or a browser carries the project's integration marker/tag and goes where the project keeps those
@@ -236,7 +257,8 @@ Run the fast test files you wrote or changed, scoped by path — nothing more:
 the files that need no database, and leave the rest to the group — say so in Step 8.
 
 **Never run, by any means:** the integration marker/tag, anything that starts Docker or testcontainers or connects
-to PostgreSQL/MySQL/Redis, a live-server or Playwright/Selenium test, coverage (`--cov` reports, `coverage run`),
+to PostgreSQL/MySQL/Redis, a live-server or Playwright/Selenium test (the `ui` marker — add `and not ui` to the
+`-m` expression when the project has it), coverage (`--cov` reports, `coverage run`),
 `-n`/`--parallel`, the whole suite (a bare `pytest` or `manage.py test` with no labels), `mypy`/`pyright`, or the
 Django system checks. Several of these agents run concurrently; the integration tier is serialized behind the
 group's lock, and everything else is validated once per bucket.
@@ -277,6 +299,9 @@ Hand control back to the caller with a short summary:
   a three-step non-null addition).
 - **The tests added/updated**, split into fast tests (with Step 6's result, or why they weren't run) and
   integration tests (written, not run — the group runs them).
+- **For UI work**: the `Screen › Region › Component` tree from Step 3, and the UI tests written (not run — the group
+  runs `ui` behind the lock) with the screenshot `<kind>/<Id>` entries and states they will capture, or why none
+  could be written (missing pytest-playwright/axe-playwright-python, no RTL language configured).
 - **Whether this task stopped on a blocker** per Step 4, with enough detail for the caller to surface it.
 - **Any deliberate deviation from `reference/`** (a `TestCase` class to match the app, a fat model method the app
   already uses, no type annotations in an untyped codebase), and any **insecure or N+1 neighbouring code** noticed

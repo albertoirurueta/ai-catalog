@@ -204,6 +204,12 @@ tm.Send(tea.KeyPressMsg{Code: tea.KeyEnter})
 final := tm.FinalModel(t, teatest.WithFinalTimeout(3*time.Second))
 ```
 
+For a screen or component the task added or changed, the UI tests of `ui-implementation.md` §4–§6 come on top:
+every visual state with minimal/typical/many-items/long-content and right-to-left fixtures, each view captured
+through `internal/tui/ui_screenshots_test.go` as `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt`
+(styles stripped; evidence, gitignored, cleared by `iru-go-test` at the start of a full run — never compared), and the
+asserted accessibility checks at the `.ui-quality.yml` level.
+
 `teatest.RequireEqualOutput(t, out)` compares against `testdata/<TestName>.golden` and is refreshed with
 `go test -update` — teatest registers that flag itself, so a package using teatest must not declare its own
 `-update` flag (duplicate flag panic); reuse teatest's or keep golden helpers in another package.

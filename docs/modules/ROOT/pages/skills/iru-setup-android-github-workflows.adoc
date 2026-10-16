@@ -27,7 +27,10 @@ an emulator step with `ci-tests: unit`, or a Pages deploy with `pages: no`), and
 (Stop on the first question), preserving any step/job this skill doesn't own on Update. Standalone, it also
 resolves `visibility`, `sonar`, `ci-tests` and `pages` with cost-aware recommendations for private repositories
 (GitHub Actions minutes, SonarCloud pricing, GitHub Pages availability). There is no `ci` key: invoking the skill
-means CI is wanted.
+means CI is wanted. Every `build` job also ends with an `Upload UI screenshots` step (`actions/upload-artifact`,
+`if: always()`, 7-day retention) that attaches the `.ui-screenshots/` captures of the catalog's UI contract as a
+`ui-screenshots` workflow artifact — evidence only, nothing is published (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]).
 
 == Purpose group
 
@@ -96,6 +99,9 @@ Maven Central publish)
   preserving any step/job this skill doesn't own), replaced with the template, or left as is, per the user's answer
   or `on-existing` (Step 1); choosing Stop writes nothing. Per file, the report states the action taken
   (created / updated / replaced / kept as is) and, for a kept file, each mismatch with this run's choices.
+* In every workflow's `build` job, an `Upload UI screenshots` step (`ui-screenshots` artifact, 7-day retention,
+  `if-no-files-found: ignore`) covering the repository-root `.ui-screenshots/` and, with instrumented tests, each
+  module's `connected_android_test_additional_output` captures; no extra job or runner is added.
 * With `pages: no` the library `build` job uploads the built Dokka + Antora site as a `docs-site` workflow artifact
   (`actions/upload-artifact`) instead of the Pages artifact, and no `deploy-docs` job or Pages permissions are
   generated. With `ci-tests: unit` the emulator and KVM steps are omitted.

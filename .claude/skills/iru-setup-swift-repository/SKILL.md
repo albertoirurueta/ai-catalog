@@ -18,7 +18,8 @@ description: End-to-end bootstrap for a Swift repository of either flavor — co
   accept. Invoke as `/iru-setup-swift-repository`, optionally with `args` (`key: value` lines) to pre-resolve
   `flavor`, `branching`, `mode` (`new`/`existing`), `platforms`, `generator`, `signing`, `ui`, `architecture`,
   `open-source`, `publish`,
-  `distribution`, `visibility`, `ci`, `ci-tests`, `pages`, `on-existing`, `sonar` (+ `sonar-organization`/
+  `distribution`, `visibility`, `ci`, `ci-tests`, `pages`, `accessibility` (`app` only — the UI tests' automated
+  accessibility level the scaffold writes to `.ui-quality.yml`), `on-existing`, `sonar` (+ `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`), `integration-branch`,
   `stable-branch`, `runner`, `xcode-version`, `release-please`, `formatter`, `min-deployment-targets`/
   `min-deployment-target`, `package-resolved`, and every identity field, skipping the matching question. Announces
@@ -87,7 +88,8 @@ Recognized keys:
   whether GitHub Actions workflows are generated/updated at all), `ci-tests` (`unit`/`full` — only meaningful when
   `ci: yes`), `pages` (`yes`/`no` — only meaningful when `ci: yes`), `on-existing` (`ask`/`keep`/`update`/
   `replace` — how every component sub-skill treats prior setup it finds; never asked, and forwarded only when it
-  arrived here via `args`).
+  arrived here via `args`), `accessibility` (`enforce`/`report`/`off` — `app` only: the level of the UI tests'
+  automated accessibility checks, written by `iru-setup-apple-app` to `.ui-quality.yml`; ignored for `library`).
 - **Flavor-specific inputs** named in Step 3: `platforms`, `min-deployment-targets` (`library`),
   `min-deployment-target` (`app`), `generator` (`xcodegen`/`tuist` — `app` only), `signing`
   (`fastlane-match`/`api-key`/`none` — `app` only), `ui` (`swiftui`/`uikit` — `app` only, the iOS/iPadOS target's UI
@@ -163,6 +165,7 @@ Right after `mode` is resolved — before Step 2's questions — print a short *
   | Scaffold manifest | `Package.swift` (library) / `project.yml` or `Project.swift` + `Tuist.swift` (app) |
   | Source layout | `Sources/<Name>/` + `Tests/<Name>Tests/` (library) / `Packages/Core/` + `Targets/<Platform>/` (app) |
   | Lint/format config | `.swiftlint.yml`, `.swift-format`/`.swiftformat` |
+  | UI quality settings (`app`) | `.ui-quality.yml` |
   | Sonar config | `sonar-project.properties` |
   | Publishing/distribution config | `.spi.yml` (library) / `fastlane/Fastfile` (app) |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
@@ -376,6 +379,11 @@ already resolved):
   integration-test target stay local" (recommended for private/internal) / **Unit + UI tests** — "unit tests plus
   XCUITest UI tests on every selected simulator/platform destination (complete verification, uses considerably more
   macOS minutes — each UI-test run boots a simulator and launches the app)" (recommended for public).
+- **accessibility** (`app` only; skip for `library`) — "Automated accessibility checks in UI tests?" —
+  **Enforce (Recommended)** (`enforce`: every `performAccessibilityAudit()` issue fails the UI tests) / **Report
+  only** (`report`: issues listed, never failing) / **Off** (`off`: the audit isn't run; labels, contrast and Dynamic
+  Type are still coded). Written by the scaffold to `.ui-quality.yml`, read by the UI tests and the Swift coding/test
+  skills.
 - **pages** (only when `ci: yes`; the DocC + Antora site) — public: **`yes`** without asking (state it in Step
   11). Private/internal: ask — **No (Recommended)** — "CI still builds the docs and uploads them as a workflow
   artifact; nothing is published" / **Yes** — "requires GitHub Pro, Team, or Enterprise Cloud (not GitHub Free);
@@ -430,11 +438,11 @@ Agent({
     license: <license display name, or 'none'>\\ndeveloper-name: <developer-name>\\n
     developer-email: <developer-email>\\norganization-url: <organization-url>\\nopen-source: <open-source>\\n
     sonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
-    sonar-host-url: <..., if set>\\nvisibility: <visibility>\\nci: <ci>\\non-existing: <..., only if supplied>\\n
-    mode: <mode>\"}).
+    sonar-host-url: <..., if set>\\nvisibility: <visibility>\\nci: <ci>\\naccessibility: <accessibility>\\n
+    on-existing: <..., only if supplied>\\nmode: <mode>\"}).
     Report back: whether it ran from scratch or as an update, and for each of the generator manifest (project.yml,
     or Project.swift + Tuist.swift), Packages/Core, the per-platform Targets/, .swiftlint.yml, .swift-format,
-    fastlane/Fastfile and sonar-project.properties whether it was created, updated, replaced or kept as is (with
+    .ui-quality.yml, fastlane/Fastfile and sonar-project.properties whether it was created, updated, replaced or kept as is (with
     any mismatch it listed for a kept file), or whether the user chose to stop or to adopt a generator over a
     hand-maintained .xcodeproj, the bundle id and min-deployment-target it resolved, which
     Fastfile lanes it wrote as a result of distribution/signing, which generator/tool versions came from a live
@@ -449,7 +457,8 @@ accepts `branching`, `integration-branch`, `stable-branch`, `runner`, `xcode-ver
 `package-resolved`, `ci-tests` or `pages` — those are Steps 7–8's alone, so never send them here. `visibility` and
 `ci` are always sent (both scaffolds use them only to shape the Sonar recommendation and the `ci: no` Sonar note);
 `on-existing` only when it arrived via this skill's own `args`. `publish` and `formatter` are sent
-only for `library`; `generator`, `signing`, `distribution` and `min-deployment-target` only for `app`.
+only for `library`; `generator`, `signing`, `distribution`, `min-deployment-target` and `accessibility` only for
+`app`.
 
 Each scaffold skill parses these itself (its own Step 0) and only asks the user about anything genuinely left
 out — `AskUserQuestion` surfaces to the user the same way whether invoked directly or from inside this
@@ -596,7 +605,8 @@ Step 11 so the user reconciles one of the two before the first release.
 
 Summarize the outcome of all six delegated skills together. Start by repeating the **setup mode** announced in
 Step 1 (from scratch, or updating an existing repository) and give a per-component table — scaffold manifest,
-source layout, lint/format config, Sonar config, `.spi.yml`/`fastlane/Fastfile`, Antora docs, `.gitignore`, each
+source layout, lint/format config, `.ui-quality.yml` (`app`), Sonar config, `.spi.yml`/`fastlane/Fastfile`, Antora
+docs, `.gitignore`, each
 workflow file, `.github/dependabot.yml`, `CHANGELOG.md`, `README.md` — with the action actually taken: **created /
 updated / replaced / kept as is / skipped (ci: no)**, plus every mismatch a sub-skill listed for a component kept
 as is. Then the resolved `flavor`, `branching` and `mode`, the project identity and license, the flavor-specific inputs (`platforms`, `min-deployment-targets`/
@@ -617,6 +627,9 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   roughly 10× against it.
 - **`ci-tests`** (`ci: yes` only): `unit` (UI-test bundles skipped via `-skip-testing:` for an app; any library
   integration-test target skipped) or `full`.
+- **`accessibility`** (`app`): the level written to `.ui-quality.yml` (`enforce`/`report`/`off`) and whether it came
+  from `args` or the user; the scaffold's UI tests capture the sample screen into `.ui-screenshots/` (gitignored) and
+  CI uploads those captures as a 7-day artifact.
 - **`pages`** (`ci: yes` only): `yes` (deployed to GitHub Pages — defaulted without asking for a public
   repository) or `no` (docs built and uploaded as a workflow artifact; the README links no github.io site).
 - **`publish`** (`library`): whether `.spi.yml` was written — and restate that SwiftPM has no registry publish

@@ -70,10 +70,14 @@ deliberate migration rather than part of this scaffold:
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@testing-library/react-native": "<testing-library-react-native-version>"
+    "@testing-library/react-native": "<testing-library-react-native-version>",
+    "eslint-plugin-react-native-a11y": "<eslint-plugin-react-native-a11y-version>"
   }
 }
 ```
+
+`eslint-plugin-react-native-a11y` (UI contract §8) installs cleanly next to the template's ESLint 8 — its peer range
+stops at `^8`, so no `overrides` entry is needed here (unlike expo's ESLint 9).
 
 Also set `package.json`'s `version` to `0.1.0-dev.0` (the template starts on the plain `0.0.1`): this catalog's npm
 pre-release convention, so the first `iru-release` run has a development version to turn into `0.1.0`. The native
@@ -152,12 +156,44 @@ test('renders the root screen', async () => {
 ## `.eslintrc.js` — the template's file plus ignores
 
 ```js
+const fs = require('fs');
+const path = require('path');
+
+// UI contract §8: the accessibility level lives in .ui-quality.yml at the repository root (missing file → enforce).
+function accessibilitySeverity() {
+  for (let dir = __dirname; ; dir = path.dirname(dir)) {
+    const file = path.join(dir, '.ui-quality.yml');
+    if (fs.existsSync(file)) {
+      const match = /^accessibility:\s*(enforce|report|off)\b/m.exec(
+        fs.readFileSync(file, 'utf8'),
+      );
+      const level = match ? match[1] : 'enforce';
+      return { report: 'warn', off: 'off' }[level] || 'error';
+    }
+    if (fs.existsSync(path.join(dir, '.git')) || path.dirname(dir) === dir) {
+      return 'error';
+    }
+  }
+}
+const a11ySeverity = accessibilitySeverity();
+const a11yRules = require('eslint-plugin-react-native-a11y').configs.all.rules;
+
 module.exports = {
   root: true,
   extends: '@react-native',
+  plugins: ['react-native-a11y'],
+  // The plugin's `all` preset minus has-accessibility-hint, which demands a hint on every labelled element.
+  rules: Object.fromEntries(
+    Object.keys(a11yRules)
+      .filter(rule => rule !== 'react-native-a11y/has-accessibility-hint')
+      .map(rule => [rule, a11ySeverity]),
+  ),
   ignorePatterns: ['coverage/', 'vendor/', 'android/', 'ios/'],
 };
 ```
+
+The accessibility block reads the level from `.ui-quality.yml` (`enforce` → error, `report` → warning, `off` → rules
+off); confirmed `npm run lint` passes on the scaffold plus the UI gallery files with it.
 
 Kept in the template's own legacy eslintrc format (ESLint 8). `coverage/` is required: Jest's HTML report ships
 `coverage/lcov-report/*.js` files ESLint would otherwise lint. `vendor/` (the Bundler gem path), `android/` and
@@ -176,6 +212,7 @@ coverage/
 vendor/
 android/
 ios/
+.ui-quality.yml
 ```
 
 Required — confirmed: without it, `prettier --check .` already fails on the pristine scaffold
@@ -183,6 +220,65 @@ Required — confirmed: without it, `prettier --check .` already fails on the pr
 a build it would also walk Gradle/Xcode/CocoaPods output and Jest's HTML report. With it, `npm run format` (scoped to
 `**/*.{js,jsx,ts,tsx}`) passes on the scaffold plus every file above; the ignore file still matters for an ad hoc
 `npx prettier --check .` and for editor integrations.
+
+## UI contract wiring — `index.js`, the deep-link scheme, and the shared UI templates
+
+Write the shared files from `ui-templates.md` (`.ui-quality.yml` at the repository root, `src/dev/ui-gallery/**`,
+`.maestro/config.yaml`, `.maestro/subflows/ui-capture.yaml`, `.maestro/ui/App.yaml`), then `npx prettier --write
+src/dev index.js .eslintrc.js` once (those blocks are in the expo Prettier style), and:
+
+- **`index.js`** (new scaffolds only; on an existing app print the change instead):
+
+  ```js
+  /**
+   * @format
+   */
+
+  import { AppRegistry } from 'react-native';
+  import App from './App';
+  import { name as appName } from './app.json';
+
+  // In development builds the root is wrapped with the UI gallery (a `<scheme>://ui-gallery?…` deep link renders one
+  // component/screen state for the Maestro screenshot flows); `__DEV__` is false in release builds, so the `require`
+  // is folded away and the gallery never ships.
+  AppRegistry.registerComponent(appName, () =>
+    __DEV__ ? require('./src/dev/ui-gallery').withUiGallery(App) : App,
+  );
+  ```
+
+  Confirmed: `npx react-native bundle --platform android --dev false` contains no gallery code; `--dev true` does.
+- **The deep-link scheme** `<app-slug>` on both native projects (React Native "Linking" docs) — the React Native
+  0.88 template's `ios/<AppName>/SceneDelegate.swift` already forwards `openURLContexts` to `RCTLinkingManager` and
+  passes the launch `connectionOptions`, so only the scheme itself is missing (an older template whose
+  `AppDelegate` lacks the `RCTLinkingManager` forwarding needs it added — report that rather than editing it):
+  - `android/app/src/main/AndroidManifest.xml` — a second `<intent-filter>` inside the `.MainActivity` activity:
+
+    ```xml
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="<app-slug>" />
+            </intent-filter>
+    ```
+  - `ios/<AppName>/Info.plist` — a top-level `CFBundleURLTypes` entry:
+
+    ```xml
+    	<key>CFBundleURLTypes</key>
+    	<array>
+    		<dict>
+    			<key>CFBundleURLSchemes</key>
+    			<array>
+    				<string><app-slug></string>
+    			</array>
+    		</dict>
+    	</array>
+    ```
+
+  Verified on the React Native 0.88 template: `plutil -lint` accepts the edited `Info.plist` and
+  `./gradlew :app:processDebugMainManifest` merges the `intent-filter` (the scheme appears in the merged manifest).
+  The full `assembleDebug`/`xcodebuild` and opening the link on a device were not re-run with them — Step 7's native
+  builds exercise them.
 
 ## `.maestro/smoke.yaml`
 

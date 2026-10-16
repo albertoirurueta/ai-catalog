@@ -1,6 +1,6 @@
 = Go Code One Task
-:description: Implements a Go task from an implementation plan in any Go module or Cobra CLI, writes its tests, compile-checks with go build and vet, and checks it off.
-:keywords: iru-go-code-one-task, claude code skill, go, golang, cobra cli, bubble tea, testscript, go vet compile check, implement plan task, golang tests
+:description: Implements a Go task from a plan in any module or Cobra CLI, incl. Bubble Tea screens per the UI contract, writes tests, compile-checks, checks it off.
+:keywords: iru-go-code-one-task, claude code skill, go, golang, cobra cli, bubble tea, ui contract, testscript, go vet, implement plan task
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -28,6 +28,7 @@ Two things shape how a Go task is done here:
 * **Logic lives in `internal/` packages, `main` stays thin.** `cmd/<bin>/main.go` only builds a context and calls
   `cli.Main`; commands are small Cobra constructors over plain, unit-testable functions, which keeps the group's
   80%-per-file coverage gate reachable without a TTY, a network or a container.
+* **Terminal UI work follows the catalog's UI contract.** When a task adds or changes a Bubble Tea screen, component or list (see xref:guides/building-user-interfaces.adoc[Building user interfaces]), the skill first writes the `Screen › Region › Component` tree (inputs, intent messages, visual states, what is reused), builds leaves first with composed sub-models and typed intent messages, keeps raw key messages inside the owning component, and renders collections through Bubbles or a windowed slice. It also writes the UI tests: every visual state with minimal/typical/many-items/long-content and right-to-left fixtures, captured as `.txt` into `.ui-screenshots/` for every `.ui-quality.yml` direction × theme (plus `no-color`) through `internal/tui/ui_screenshots_test.go`, with the asserted accessibility checks at the file's level. The tests are written but not run here.
 * **A CLI's observable behaviour is its API.** Exit codes, stdout vs stderr, JSON shapes and the error envelope follow
   `reference/cli-contract.md`; a task changes them only as it says, never renumbers an exit code, and pins every
   change with a test.
@@ -78,6 +79,9 @@ to the rest, `code-style.md` is always read, and the others only when the task's
 |`bubbletea.md`
 |The Bubble Tea model or the command that starts it.
 
+|`ui-contract.md` + `ui-implementation.md`
+|The task adds or changes a TUI screen, component, list or other UI -- decomposition, inputs/intents, the windowed-collection rule, UI tests, the capture matrix and accessibility checks.
+
 |`godoc.md`
 |A new/changed exported identifier or a new package.
 
@@ -120,7 +124,7 @@ time.
 |`reference/`
 |No
 |The skill's own bundled reference directory (`README.md`, `code-style.md`, `errors.md`, `testing.md`,
-`cli-contract.md`, `cobra.md`, `output-and-terminal.md`, `bubbletea.md`, `godoc.md`, `security.md`,
+`cli-contract.md`, `cobra.md`, `output-and-terminal.md`, `bubbletea.md`, `ui-contract.md`, `ui-implementation.md`, `godoc.md`, `security.md`,
 `concurrency.md`). If missing, the skill falls back to `CLAUDE.md` and the surrounding code's style, and says so in its
 report.
 |Bundled with the skill
@@ -133,7 +137,7 @@ report.
   alphabetically ordered JSON fields with `schemaVersion`, doc comments on every exported identifier, `ctx` first and
   argv-only `exec.CommandContext` — plus the repository's own `CLAUDE.md` conventions where more specific.
 * Tests added/updated next to the code (table tests, in-process command tests, golden files, testscript `.txtar`
-  scripts, pure `Update` and teatest tests for a TUI, `integration`-tagged container tests) — not run by this skill;
+  scripts, pure `Update` and teatest tests for a TUI, UI tests and `.txt` captures for TUI screens/components, `integration`-tagged container tests) — not run by this skill;
   the caller runs the suite once for the whole bucket. A new golden file is hand-written from the exact output the
   code produces and flagged for confirmation by the group's run.
 * Touched files formatted (`gofmt`, plus `goimports` or `golangci-lint fmt` when available) and compile-checked with
@@ -144,7 +148,7 @@ report.
 * A short summary handed back to the caller: shape detected (module path, `go` directive, workspace, CLI framework,
   TUI library, test harness), packages touched, reference files read, files touched, tests added/updated, compile-check
   result, interface changes (commands, flags, exit codes, JSON fields, whether generated CLI docs need regenerating),
-  dependency changes, whether the run stopped on a blocker, and any deliberate deviation from `reference/`.
+  dependency changes, for terminal UI work the `Screen › Region › Component` decomposition and the UI tests and captures added (kind/Id, states × directions × themes, accessibility checks; not run), whether the run stopped on a blocker, and any deliberate deviation from `reference/`.
 
 == Execution flow
 
@@ -157,8 +161,8 @@ flowchart TD
     C -- "reference/ missing" --> C2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
     C2 --> D
     C --> D["Step 2: re-check current code state\nof every file the task touches"]
-    D --> E["Step 3: implement exactly what the task specifies"]
-    E --> F["Step 4: write/update tests\n(not run here)"]
+    D --> E["Step 3: implement exactly what the task specifies\n(TUI work: write the Screen > Region > Component\ntree first, leaves first)"]
+    E --> F["Step 4: write/update tests\n(TUI work: UI tests + .txt captures; not run here)"]
     F --> G["Step 5: gofmt/goimports, go build ./...,\ngo vet on touched packages"]
     G -- "fails on this task's own code" --> G2["Fix it"]
     G2 --> H

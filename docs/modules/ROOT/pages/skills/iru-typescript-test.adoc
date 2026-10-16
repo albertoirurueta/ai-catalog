@@ -1,6 +1,6 @@
 = TypeScript Test
-:description: Runs TypeScript unit tests via Vitest, Jest or ng test, plus opt-in NestJS, Next.js and React Native e2e suites, scoped by selector, and reports results.
-:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, nestjs, nextjs, react native, maestro, detox, playwright, e2e tests
+:description: Runs TypeScript unit tests via Vitest, Jest or ng test, plus opt-in e2e and UI suites (Playwright, Maestro, Detox) with screenshots and accessibility.
+:keywords: iru-typescript-test, claude code skill, typescript, vitest, jest, angular, nestjs, nextjs, react native, maestro, detox, playwright, e2e tests, ui tests, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -29,6 +29,7 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 /iru-typescript-test
 /iru-typescript-test <selector>
 /iru-typescript-test e2e [<selector>]
+/iru-typescript-test ui [<selector>]
 /iru-typescript-test e2e
 lock: held
 configuration: <detox-configuration>
@@ -46,10 +47,10 @@ configuration: <detox-configuration>
 pattern. Mapped to the matching runner's scoping flags per the table below.
 |None — omitting it runs the whole unit suite.
 
-|`e2e` / `unit` keyword
+|`e2e` / `ui` / `unit` keyword
 |No
-|Leading keyword (NestJS, Next.js and React Native only) that picks the suite. `e2e` runs the end-to-end suite instead of the
-unit suite and scopes it with the rest of the selector; `unit` means the same as no keyword.
+|Leading keyword (NestJS, Next.js, React Native and Playwright-wired web UIs only) that picks the suite. `e2e` runs the end-to-end suite instead of the
+unit suite and scopes it with the rest of the selector; `ui` means exactly the same as `e2e` (so callers can say "the UI tests" for a web or React Native app); `unit` means the same as no keyword.
 |`unit`
 
 |`lock: held`
@@ -153,6 +154,30 @@ started and later stopped by the skill when it wasn't running) and any miss is r
 as a pass. Unlike NestJS/Next.js, whose callers take `.integration-test.lock`, React Native `e2e` acquires and
 releases that lock itself unless `lock: held` is passed.
 
+*Web UI* (React/Vite, Angular CLI, Ionic) — `@playwright/test` plus a `playwright.config.*` makes the project a web-ui one:
+unit/component tests stay on the unit runner (jsdom/happy-dom runs never produce screenshots) and the browser UI tests
+are Playwright, resolved through the `e2e` selector's Playwright column and every config the project's own scripts name
+(for example a separate Playwright component-testing config). Cypress is reported as "present, not run".
+
+=== UI runs
+
+Every Playwright, Maestro or Detox `e2e`/`ui` run is also a UI run, wrapping the command with the catalog's UI contract
+(see xref:guides/building-user-interfaces.adoc[Building user interfaces]):
+
+* The settings are resolved at the repository root: `UI_SCREENSHOTS_DIR` (absolute, from the environment) or
+  `.ui-screenshots/`, and the `accessibility` (`enforce`/`report`/`off`), `directions` and `themes` keys of
+  `.ui-quality.yml` (missing file or key means `enforce`, left-to-right and right-to-left, light and dark).
+* A full UI run (no file, directory, name or tag) clears the screenshot directory's contents first, only when the path
+  is `.ui-screenshots` or came from `UI_SCREENSHOTS_DIR`; a scoped run adds to it. A missing `.gitignore` entry is
+  reported, never edited.
+* The directory is exported to the runner. Playwright's helper writes straight into it and the axe results come from
+  `accessibility-scan-results` attachments in the JSON report; Maestro gets `UI_SCREENSHOTS_DIR` and `UI_THEME`, with the
+  device appearance recorded, switched through each theme for `ui-flow` flows and restored on every exit path; Detox's
+  helper copies its screenshots in. Stray PNGs are moved into the `<kind>/<Id>/` layout.
+* Every file name is validated against the contract's naming pattern (malformed names and captures outside the
+  configured matrix are listed), React Native accessibility is checked through `eslint-plugin-react-native-a11y` lint
+  counts, and the level is applied: `enforce` makes violations a failed run, `report` only lists them, `off` skips the check.
+
 An `e2e` selector on any other project is reported as unsupported and the skill stops. A failure caused by a missing
 database, Docker/Testcontainers daemon, Playwright browsers, or a failed `next build` is reported as an environment
 failure ("e2e not run/aborted: cause"), never as failing tests; the skill checks `docker info` first when the project
@@ -169,6 +194,11 @@ uses Testcontainers.
 * A selector that matched no files is reported plainly as "matched no test files", distinct from a genuinely
   clean 0-failure run; a name pattern that matched no individual tests is reported plainly as "0 of N tests
   matched the filter", distinct from "all passed".
+* For every UI run: the screenshot directory used (cleared or added to), screenshot counts per kind (`component`/`screen`/
+  `flow`) and distinct ids, strays collected, malformed names, captures outside the configured matrix, the
+  `.ui-quality.yml` level applied, accessibility violations as a count plus rule ids, and for Maestro the themes
+  switched through and confirmation that the original appearance was restored; a run that could not start is "UI run
+  unverified" with the reason.
 * For NestJS, Next.js and React Native, the report states which suite ran (unit or e2e), so a green unit run is never read as e2e
   coverage. Playwright runs are parsed from its own JSON reporter shape (`stats` and nested `suites[].specs[]`).
 * No source or test code is ever modified.
@@ -214,7 +244,7 @@ output, it does not call any other skill in this catalog.
 
 * xref:skills/iru-typescript-code-one-task-group.adoc[] — Step 3.3, to run the scoped tests for the task
   group's changes, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
-* xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 7, to run the full suite after generating tests,
+* xref:skills/iru-typescript-generate-all-tests.adoc[] — Step 6b (the `ui` selector over generated UI specs) and Step 7, to run the full suite after generating tests,
   via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-nestjs-code-one-task-group.adoc[] — Step 3.4, 3.6 and 3.9, unit tests, full unit suite and e2e run, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-nextjs-code-one-task-group.adoc[] — Step 3.3, 3.5 and 3.8, unit suites and Playwright via the e2e selector, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.

@@ -1,6 +1,6 @@
 ---
 name: iru-setup-android-github-workflows
-description: Create or update the `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only) GitHub Actions workflows plus `.github/dependabot.yml` and `security.yml` for an Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-android-app` — build, unit test, optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, lint with SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-`jacococli.jar` fallback), an optional SonarQube/SonarCloud scan (`:lib:sonar`/`:app:sonar`), a Dokka + Antora documentation build published to GitHub Pages (or, with `pages: no`, still built and uploaded as a workflow artifact instead), and — for the `library` flavor — an optional Maven Central publish, or — for the `app` flavor — a signed release build uploaded to Google Play or Firebase App Distribution. Invoke as `/iru-setup-android-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `branching` (`gitflow`/`main-only`, default `gitflow`), `integration-branch` (default `develop`), `stable-branch` (default `main`), `java-version` (default `17`), `run-instrumented-tests` (`yes`/`no`), `api-level` (default `35`), plus this catalog's shared workflow-args vocabulary — `open-source`, `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`, mapped onto `run-instrumented-tests` unless that key is given explicitly), `pages` (`yes`/`no`), `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar` (`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`), and the four `security-*` opt-outs plus two security opt-ins — so an orchestrating skill can supply them without re-prompting; when run standalone it resolves `visibility` itself (`gh repo view`) and asks `sonar`/`ci-tests`/`pages` with the GitHub Actions-minutes, SonarCloud and Pages cost facts for that visibility. Ships with generic example templates (genericized, no real repo/org/person names) derived from a real Android library repository's actual `main.yml`/`publish.yml` (linked in Step 3) — see Step 6 for how they were adapted into the `gitflow` variant's `develop.yml`/`main.yml`/`sync.yml`. Announces whether it is creating the workflows from scratch or updating an existing pipeline; for every workflow/script/Dependabot file that already exists it warns and asks Update (merge, preserving any step/job this skill doesn't own) / Keep as is / Replace (regenerate from the template) / Stop, naming any concrete mismatch with this run's choices, unless `on-existing` decides. Use whenever an Android/Gradle repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only) GitHub Actions workflows plus `.github/dependabot.yml` and `security.yml` for an Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-android-app` — build, unit test, optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, the UI tests' `.ui-screenshots/` captures (plus any device captures) uploaded as a 7-day `ui-screenshots` artifact from the same job, lint with SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-`jacococli.jar` fallback), an optional SonarQube/SonarCloud scan (`:lib:sonar`/`:app:sonar`), a Dokka + Antora documentation build published to GitHub Pages (or, with `pages: no`, still built and uploaded as a workflow artifact instead), and — for the `library` flavor — an optional Maven Central publish, or — for the `app` flavor — a signed release build uploaded to Google Play or Firebase App Distribution. Invoke as `/iru-setup-android-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `branching` (`gitflow`/`main-only`, default `gitflow`), `integration-branch` (default `develop`), `stable-branch` (default `main`), `java-version` (default `17`), `run-instrumented-tests` (`yes`/`no`), `api-level` (default `35`), plus this catalog's shared workflow-args vocabulary — `open-source`, `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`, mapped onto `run-instrumented-tests` unless that key is given explicitly), `pages` (`yes`/`no`), `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar` (`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`), and the four `security-*` opt-outs plus two security opt-ins — so an orchestrating skill can supply them without re-prompting; when run standalone it resolves `visibility` itself (`gh repo view`) and asks `sonar`/`ci-tests`/`pages` with the GitHub Actions-minutes, SonarCloud and Pages cost facts for that visibility. Ships with generic example templates (genericized, no real repo/org/person names) derived from a real Android library repository's actual `main.yml`/`publish.yml` (linked in Step 3) — see Step 6 for how they were adapted into the `gitflow` variant's `develop.yml`/`main.yml`/`sync.yml`. Announces whether it is creating the workflows from scratch or updating an existing pipeline; for every workflow/script/Dependabot file that already exists it warns and asks Update (merge, preserving any step/job this skill doesn't own) / Keep as is / Replace (regenerate from the template) / Stop, naming any concrete mismatch with this run's choices, unless `on-existing` decides. Use whenever an Android/Gradle repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -282,7 +282,7 @@ verification pass — see Step 12 for the two that don't have a floating major t
 | `github/codeql-action` (`init`/`analyze`/`upload-sarif`) | `v4` | yes | resolve via `.../tags`, not `.../releases/latest` — that endpoint returns the unrelated `codeql-bundle-*` tag |
 | `actions/upload-pages-artifact` | `v5` | yes | only when `pages: yes` |
 | `actions/deploy-pages` | `v5` | yes | only when `pages: yes` |
-| `actions/upload-artifact` | `v7` | yes | only when `pages: no` (replaces the Pages upload/deploy); fallback matches the TypeScript/Swift siblings' — not part of this skill's own September 2026 `git ls-remote` pass, so resolve it live |
+| `actions/upload-artifact` | `v7` | yes | always for the `Upload UI screenshots` step, and also for `Upload docs artifact` when `pages: no` (replaces the Pages upload/deploy); fallback matches the TypeScript/Swift siblings' — not part of this skill's own September 2026 `git ls-remote` pass, so resolve it live |
 | `actions/setup-node` | `v7` | yes | used only for the Antora build step |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
 | `actions/dependency-review-action` | **`v5.0.0`** | **no** | this action has never published a floating `v5` tag — only exact-version tags (`v5.0.0`, `v4.9.0`, …); pin the exact version and re-check at generation time whether a floating major now exists |
@@ -388,6 +388,21 @@ jobs:
             <app-module>/build/outputs/androidTest-results/**/*.xml
             <lib-module>/build/test-results/**/*.xml
             <lib-module>/build/outputs/androidTest-results/**/*.xml
+
+      # UI screenshots (catalog UI contract): the Robolectric/Roborazzi UI tests `test` runs write
+      # .ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png at the repository root; with
+      # run-instrumented-tests: yes, device captures written through AndroidX Test Storage land under each
+      # module's connected_android_test_additional_output. Evidence only — nothing is published.
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: |
+            .ui-screenshots/
+            */build/outputs/connected_android_test_additional_output/**/ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # Preferred path — confirmed working against the AGP version iru-setup-android-library/-app resolved:
       # createDebugUnitTestCoverageReport emits build/reports/coverage/test/debug/report.xml directly, no
@@ -1273,6 +1288,7 @@ comment itself) when the matching value doesn't apply.
 | `Upload Pages artifact` step + `deploy-docs` job (with its `pages: write`/`id-token: write`) | a `lib/` module exists and `pages: yes` |
 | `Upload docs artifact` (`actions/upload-artifact`) step, no `deploy-docs` job | a `lib/` module exists and `pages: no` |
 | `<app-module>/**` test-result/SARIF globs, `:<app-module>:sonar` | an `app/` module exists |
+| `Upload UI screenshots` (`actions/upload-artifact`, `if: always()`, 7-day retention, `if-no-files-found: ignore`) | always — in the same `build` job that runs the tests, no extra job or runner; it simply uploads nothing when no UI test captured anything |
 | AGP-path coverage-conversion step targeting `<lib-module>` (`flavor: library`) or `<app-module>` (`flavor: app`) | default — no vendored `jacococli.jar` found (Step 1); targets only the module with `enableUnitTestCoverage = true` (Step 1 survey) — never both |
 | Vendored-`jacococli.jar` fallback conversion step | a `jacoco-*/lib/jacococli.jar` was found, or the user asked for it |
 | `Run SonarCloud analysis` step (`:<lib-module>:sonar` or `:<app-module>:sonar`) | `sonar` is `cloud` or `self-hosted` |
@@ -1396,6 +1412,13 @@ change was warranted:
   the copy succeeds and lands `index.html` where expected) — a full `cd docs && npx antora
   antora-playbook.yml` run was **not** repeated here (the scaffold's own `docs/` setup and Antora build are
   `iru-setup-antora`'s/the scaffold skills' responsibility to verify, not this skill's).
+- **`Upload UI screenshots` (UI contract), October 2026**: the `develop.yml` template still parses as YAML with the
+  step added (`yaml.safe_load`, step present with `if: always()`, `retention-days: 7`, `if-no-files-found:
+  ignore`), `actions/upload-artifact@v7` resolves (`git ls-remote --tags`), and the scaffolds' Robolectric UI tests
+  were confirmed to write `.ui-screenshots/` at the repository root during a plain `./gradlew test`
+  (`iru-setup-android-app`'s verification) — so the step needs no extra Gradle invocation. The upload itself only
+  runs on GitHub; the device-capture path under `connected_android_test_additional_output/` is unverified (no
+  emulator).
 - **Unverified locally, never a blocker**: the emulator-based `Run tests` step (`reactivecircus/android-
   emulator-runner`, needs real KVM-backed hardware acceleration this environment doesn't reliably provide for
   a full `connectedAndroidTest` run), the `Run SonarCloud analysis` step (needs a real `SONAR_TOKEN` and

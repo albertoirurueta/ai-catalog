@@ -15,7 +15,8 @@ The skill merges this catalog's two mobile gitignore skills (`iru-setup-android-
 `iru-setup-swift-gitignore`) into one template trimmed to what a KMP app produces. The unconditional root base covers
 Gradle and Kotlin noise (including the root `.kotlin/` cache), `local.properties`, IDE files, APK/AAB/IPA outputs,
 signing material (`*.jks`, `*.keystore`, `*.p8`, `*.p12`, `*.mobileprovision`, `*.cer`), Firebase/Google service
-files, Xcode output, the Antora `docs/build/` output and the transient `.integration-test.lock/` directory.
+files, Xcode output, the Antora `docs/build/` output, the transient `.integration-test.lock/` directory and the UI tests' regenerated
+`.ui-screenshots/` capture directory (`.ui-quality.yml` stays tracked: it is committed configuration).
 Conditional sections are added only when detected: the XcodeGen-generated `iosApp/iosApp.xcodeproj/` (only when a
 `project.yml` exists, so a hand-maintained `.xcodeproj` stays tracked), CocoaPods `Pods/` and Fastlane output.
 
@@ -65,7 +66,7 @@ still shown. Meant for scripted runs.
 == Outputs
 
 * A root `.gitignore` — created, or when it already existed, updated (merged), replaced with the bare template, or
-  kept as is.
+  kept as is; it now ignores `.ui-screenshots/` but never `.ui-quality.yml`.
 * A `<module>/.gitignore` containing `/build` for each resolved module, handled the same way; skipped when its
   content already matches.
 * A closing report with the setup mode, the per-file action (created / updated / replaced / kept as is, and whether

@@ -188,7 +188,10 @@ AppKit and SwiftUI views, view controllers, view models and Core controllers are
 UI tests (`testing.md`) query by identifier: give every control a test touches an `.accessibilityIdentifier(_:)`
 (SwiftUI) or `setAccessibilityIdentifier(_:)` (AppKit). The app honors a `--uitesting` launch argument
 (`ProcessInfo.processInfo.arguments.contains("--uitesting")`) to start from an in-memory/empty store and skip
-first-run sheets — add that branch in the composition root, never inside Core logic.
+first-run sheets — add that branch in the composition root, never inside Core logic. A `--fixture <data-set>`
+argument selects fake repositories there for the UI contract's screen tests and captures; right-to-left and dark
+captures relaunch with `-AppleLanguages (ar) -AppleTextDirection YES -NSForceRightToLeftWritingDirection YES` and
+`-AppleInterfaceStyle Dark` (`ui-implementation.md`).
 
 ## What must not be done
 

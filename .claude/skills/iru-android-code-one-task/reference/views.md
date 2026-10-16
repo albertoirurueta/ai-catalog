@@ -4,7 +4,26 @@ Conventions specific to classic `View`-based UI: a custom `View`/`ViewGroup` sub
 `lib` module — a library that ships a reusable view, like the reference sample's `GLTextureView`), or
 ViewBinding-backed screens in the `app` module. Everything in `code-style.md`, `kdoc.md`, and `testing.md` still
 applies. Read `compose.md` instead for a task that touches a `@Composable` — a screen/component is classic Views
-or Compose, not both.
+or Compose, not both. For anything that is a screen, component or list, also read `ui-contract.md` and
+`ui-implementation.md` — decomposition, single-Activity navigation, recycling collections, UI tests, screenshots and
+accessibility checks live there.
+
+## Screens are thin Fragments; lists are `RecyclerView`s
+
+- One `Activity` hosts a `NavHostFragment`; each screen is a `Fragment` destination of the navigation graph that
+  only inflates its binding, collects the view model's state (`repeatOnLifecycle(Lifecycle.State.STARTED)`),
+  calls `render(state)` on its components and forwards their events — navigation calls stay in the Fragment, never
+  in a component, adapter or `ViewHolder`.
+- Reusable UI is a custom or compound `View` (a `<merge>` layout inflated with ViewBinding) exposing
+  `render(state)` and typed listener properties — not a `Fragment`, and not a subclass of another screen.
+- Every data-driven or long list/grid is a `RecyclerView` + `ListAdapter` + `DiffUtil.ItemCallback` (stable ids,
+  one `ViewHolder` per item type, `ConcatAdapter` to combine); Paging 3 `PagingDataAdapter` for paged data;
+  `ViewPager2` + `TabLayoutMediator` for pages and many tabs. Never a `LinearLayout` filled with `addView` in a
+  loop, and never a `wrap_content` `RecyclerView` inside a `NestedScrollView`. A `ViewHolder` keeps no selection
+  or expansion state of its own — that lives in the view model, keyed by id. See `ui-implementation.md` for the
+  adapter sketch.
+- Layouts use `start`/`end` (`paddingStart`, `layout_constraintStart_toStartOf`, `textAlignment="viewStart"`), text
+  comes from string resources, and directional vector drawables set `android:autoMirrored="true"`.
 
 ## Custom `View` subclasses: the `AttributeSet` constructor triplet
 

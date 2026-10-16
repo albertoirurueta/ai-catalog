@@ -1,7 +1,7 @@
 ---
 name: iru-typescript-test
 description: >-
-  Run a TypeScript/npm project's unit test suite through whichever runner the project actually has wired — Vitest (`vitest run`), Jest (`jest`), or the Angular CLI's Vitest-backed unit-test builder (`ng test --watch=false`) — optionally scoped to a file, directory, or test-name pattern. Also recognizes NestJS (`@nestjs/core` — ESM/Vitest with `vitest.config.ts` + `vitest.config.e2e.ts`, or CommonJS/Jest with `jest.config.ts` + `test/jest-e2e.json`; unit `*.spec.ts` by default, the `test/*.e2e-spec.ts` suite only on an explicit `e2e` selector, reporting a missing database/Docker/Testcontainers runtime as an environment failure rather than a test failure) and Next.js (`next` — Vitest via `vitest.config.mts` or Jest via `next/jest`; Playwright end-to-end tests, which build and start the app, only on an explicit `e2e` selector, never by default) and React Native for both toolchains (`expo` — Jest with the `jest-expo` preset; `metro`, a bare React Native CLI app — Jest with `@react-native/jest-preset`, or the legacy `react-native` preset on older templates; untranspiled-package `transformIgnorePatterns` failures, missing native-module mocks, and un-awaited React Native Testing Library 14 calls are named as such; device end-to-end tests — Maestro `.maestro/` flows by default, Detox when `.detoxrc.js` is present — only on an explicit `e2e` selector, needing a booted simulator/emulator and Metro on port 8081, serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path; a caller that already holds it passes `lock: held`), and reported "unverified" — never silently skipped — when no device is available). Invoke as `/iru-typescript-test` to run every unit test, or `/iru-typescript-test <selector>` where `<selector>` is a file path, a directory, or a `-t "<name pattern>"` filter (combinable with a file/directory), optionally prefixed with `e2e` (NestJS/Next.js/React Native only) to run the end-to-end suite instead. Report-only — never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down TypeScript/JavaScript unit (or, on request, NestJS/Next.js/React Native end-to-end) tests instead of invoking the runner by hand.
+  Run a TypeScript/npm project's unit test suite through whichever runner the project actually has wired — Vitest (`vitest run`), Jest (`jest`), or the Angular CLI's Vitest-backed unit-test builder (`ng test --watch=false`) — optionally scoped to a file, directory, or test-name pattern. Also recognizes NestJS (`@nestjs/core` — ESM/Vitest with `vitest.config.ts` + `vitest.config.e2e.ts`, or CommonJS/Jest with `jest.config.ts` + `test/jest-e2e.json`; unit `*.spec.ts` by default, the `test/*.e2e-spec.ts` suite only on an explicit `e2e` selector, reporting a missing database/Docker/Testcontainers runtime as an environment failure rather than a test failure) and Next.js (`next` — Vitest via `vitest.config.mts` or Jest via `next/jest`; Playwright end-to-end tests, which build and start the app, only on an explicit `e2e` selector, never by default) and React Native for both toolchains (`expo` — Jest with the `jest-expo` preset; `metro`, a bare React Native CLI app — Jest with `@react-native/jest-preset`, or the legacy `react-native` preset on older templates; untranspiled-package `transformIgnorePatterns` failures, missing native-module mocks, and un-awaited React Native Testing Library 14 calls are named as such; device end-to-end tests — Maestro `.maestro/` flows by default, Detox when `.detoxrc.js` is present — only on an explicit `e2e` selector, needing a booted simulator/emulator and Metro on port 8081, serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path; a caller that already holds it passes `lock: held`), and reported "unverified" — never silently skipped — when no device is available) and web UIs with Playwright wired (React/Vite, Angular, Ionic, Next.js — `@playwright/test` + `playwright.config.*`). Every Playwright or Maestro/Detox run is a **UI run** under the catalog's UI contract: it sets `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears that directory at the start of a full (unscoped) UI run, lets Playwright tests write captures there through the project's helper, passes it to Maestro (`-e UI_SCREENSHOTS_DIR`, re-running `ui-flow`-tagged flows once per `.ui-quality.yml` theme with the simulator/emulator switched to light/dark) or to Detox's `e2e/support/ui-screenshots.ts`, collects captures the tools left elsewhere into the contract layout `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`, validates every file name, and reports screenshot counts per kind, malformed names, accessibility violations (axe rule ids from Playwright's `accessibility-scan-results` attachments, `react-native-a11y/*` ESLint rule ids on React Native — never raw dumps) and the `.ui-quality.yml` level applied. Invoke as `/iru-typescript-test` to run every unit test, or `/iru-typescript-test <selector>` where `<selector>` is a file path, a directory, or a `-t "<name pattern>"` filter (combinable with a file/directory), optionally prefixed with `e2e` or its alias `ui` (NestJS/Next.js/React Native/Playwright-wired web apps only; `ui` is not accepted for NestJS, which has no UI) to run the end-to-end/UI suite instead. Report-only — never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down TypeScript/JavaScript unit (or, on request, NestJS/Next.js/React Native end-to-end) tests instead of invoking the runner by hand.
 model: haiku
 ---
 
@@ -22,6 +22,9 @@ The argument string is a selector (Step 2) plus optional `key: value` lines from
 - **`configuration: <name>`** — React Native `e2e` with Detox only: the `.detoxrc.js` configuration to run
   (`ios.sim.debug`, `android.emu.debug`, …). Asked/derived in Step 2 when absent.
 
+A leading `ui` keyword in the selector means exactly the same as `e2e` (Step 2) — it exists so callers can say "the
+UI tests" for a web app or a React Native app without caring which runner drives them.
+
 ## Step 1 — Detect the runner, the package manager, and confirm it is actually wired
 
 Never assume a runner from the framework alone — read `package.json` (and `angular.json` when present) first:
@@ -41,8 +44,10 @@ Never assume a runner from the framework alone — read `package.json` (and `ang
 
 **Framework detection** (shared with `iru-typescript-coverage`/`-code-quality`/`-tsdoc`): `@nestjs/core` in
 `dependencies` → **nestjs**; `next` in `dependencies` → **nextjs**; `react-native` or `expo` in `dependencies` →
-**react-native**. All three still run on Vitest or Jest, detected exactly as above — the framework only changes
-which suite counts as "unit", how failures are explained, and how the opt-in `e2e` selector (Step 2) is resolved:
+**react-native**; otherwise, `@playwright/test` in `devDependencies` plus a `playwright.config.{ts,js,mjs}` in a
+web app (React/Vite, Angular CLI, Ionic) → **web-ui**. All of them still run on Vitest or Jest (or `ng test`),
+detected exactly as above — the framework only changes which suite counts as "unit", how failures are explained, and
+how the opt-in `e2e`/`ui` selector (Step 2) is resolved:
 
 - **NestJS** — two flavors, both with unit tests as `*.spec.ts` next to the source and end-to-end tests as
   `test/*.e2e-spec.ts`, kept apart by two separate configs so the default run never picks up e2e files:
@@ -66,6 +71,12 @@ which suite counts as "unit", how failures are explained, and how the opt-in `e2
   executes, so an e2e run is slow (minutes) and can fail on a build error unrelated to the tests — never run it
   unless the `e2e` selector asks for it. Cypress (`cypress.config.*`) is out of scope for this skill — report it as
   "Cypress e2e present, not run" if the user asks for e2e and only Cypress is wired.
+- **Web UI (React/Vite, Angular, Ionic)** — unit/component tests stay on the unit runner (a jsdom/happy-dom run is
+  behaviour only and never produces screenshots); the browser UI tests are **Playwright** (`playwright test`, the
+  project's own `e2e`/`test:e2e`/`test:ui` script names the config — run every Playwright config those scripts name,
+  e.g. a separate `playwright-ct.config.ts` for Playwright component testing). Same environment-failure rules as
+  Next.js below (browsers missing, `webServer` not starting). Cypress is out of scope here (report "Cypress present,
+  not run").
 - **React Native** — two toolchains, both unit-tested with **Jest** (never Vitest — the React Native runtime and its
   Flow-typed sources need Babel through `babel-jest`). Resolve the **toolchain** first (same rule every React Native
   skill in this catalog uses): `expo` in `dependencies` → **expo**, even when `android/`/`ios/` exist (they're
@@ -161,7 +172,7 @@ built-in Vitest 4.0.8 runner) in `$TMPDIR/iru-verify/typescript/test/{vitest-pro
   behavior; it is not required for the `vitest run` / `jest` / `ng test --watch=false` forms themselves, since
   each already runs once and exits by explicit flag/subcommand rather than by CI auto-detection.
 
-### The `e2e` selector (NestJS, Next.js, and React Native only)
+### The `e2e` selector (NestJS, Next.js, React Native, and Playwright-wired web UIs only)
 
 Without a leading `e2e` keyword, every row above runs the **unit** suite only — for NestJS that is the default
 `vitest.config.ts`/`jest.config.ts`, which matches `*.spec.ts` and never `*.e2e-spec.ts`; for Next.js it is the
@@ -171,13 +182,15 @@ A leading `e2e` keyword switches to the end-to-end suite, with the rest of the s
 
 | What the user wants | NestJS, Vitest (ESM) | NestJS, Jest (CommonJS) | Next.js, Playwright |
 |---|---|---|---|
-| Whole e2e suite | `vitest run --config ./vitest.config.e2e.ts` | `jest --config ./test/jest-e2e.json` | `playwright test` |
+| Whole e2e suite | `vitest run --config ./vitest.config.e2e.ts` | `jest --config ./test/jest-e2e.json` | `playwright test` (also the web-ui form) |
 | One file | `vitest run --config ./vitest.config.e2e.ts test/books.e2e-spec.ts` | `jest --config ./test/jest-e2e.json test/books.e2e-spec.ts` | `playwright test e2e/books.spec.ts` |
 | Name pattern | `... -t "<pattern>"` | `... -t "<pattern>"` | `playwright test -g "<pattern>"` |
 
 (Use the config path the project's own `test:e2e` script names, per Step 1, in place of the scaffold defaults
-shown.) React Native's e2e forms are in their own subsection below. `e2e` on a project that is none of NestJS,
-Next.js, or React Native is not supported — say so and stop rather than guessing at a runner.
+shown.) Web-ui projects use the Playwright column unchanged. React Native's e2e forms are in their own subsection
+below. `e2e` on a project that is none of NestJS, Next.js, React Native, or web-ui is not supported — say so and stop
+rather than guessing at a runner. Every Playwright and React Native e2e run is also a **UI run** — see "UI runs"
+below, which wraps the command with the screenshot directory and the accessibility summary.
 
 E2E runs depend on things unit tests don't, and a failure caused by them is an **environment failure**, not a test
 failure — report it as such, naming the cause, and never as failing tests:
@@ -277,6 +290,56 @@ None of the Maestro/Detox commands above were run locally (no simulator/emulator
 installed here) — they follow the tools' documented CLIs and are **unverified locally**; the Metro start/status
 probe and the lock commands are the verified parts.
 
+### UI runs — screenshots and accessibility (Playwright, Maestro, Detox)
+
+The catalog's UI contract (each UI coding skill's `reference/ui-contract.md` §6–§8) makes every UI test capture its
+states as PNGs under one directory and run an automated accessibility check at the level the repository chose. This
+skill owns the run-level half of that; the tests themselves own the captures.
+
+1. **Resolve the settings** at the repository root (`git rev-parse --show-toplevel`, else the current directory):
+   - `UI_SCREENSHOTS_DIR` from the environment (must be absolute) or `<repo root>/.ui-screenshots`.
+   - `.ui-quality.yml`: `accessibility` (`enforce`/`report`/`off`), `directions`, `themes` — a missing file or key
+     means `enforce`, `[ltr, rtl]`, `[light, dark]`. Read the three keys with a line match
+     (`^accessibility:\s*(\w+)`, `^directions:\s*\[(.*)\]`, `^themes:\s*\[(.*)\]`); anything else is reported
+     as "unparsed `.ui-quality.yml`, defaults applied".
+2. **Clear the directory only for a full UI run** — the `e2e`/`ui` selector with no file, directory, name pattern or
+   tag. A scoped run adds to what is there. Clear its *contents*, and only when the resolved path's last segment
+   is `.ui-screenshots` or it came from `UI_SCREENSHOTS_DIR` (never `/`, the repository root or `$HOME`):
+   `mkdir -p "$DIR" && find "$DIR" -mindepth 1 -delete`. If `.ui-screenshots/` isn't in the root `.gitignore`, say so
+   in the report (this skill doesn't edit `.gitignore`).
+3. **Run with the directory exported** — `UI_SCREENSHOTS_DIR="$DIR"` in the runner's environment for every form:
+   - **Playwright** — the project's helper (e.g. `e2e/support/ui-screenshots.ts`) writes straight into it; nothing to
+     collect. The accessibility results come from the JSON report (Step 3): attachments named
+     `accessibility-scan-results` (the name Playwright's accessibility-testing guide attaches `@axe-core/playwright`
+     results under) whose JSON body has axe's `violations[]` — count them and their `id`s; failed tests whose first
+     error line names axe violations count too (the `enforce` level).
+   - **Maestro** — add `-e UI_SCREENSHOTS_DIR="$DIR" -e UI_THEME=<theme>` to the `maestro test` command (the
+     project's `.maestro/subflows/ui-capture.yaml` builds the file name; gallery flows in `.maestro/ui/` iterate
+     directions and themes themselves through the gallery link). Record the device's current appearance first
+     (`xcrun simctl ui <udid> appearance` / `adb -s <serial> shell cmd uimode night`), run the suite with the device in
+     the first theme of `themes`, then — only when flows tagged `ui-flow` exist — switch the device to each further
+     light/dark theme (`xcrun simctl ui <udid> appearance dark` / `adb -s <serial> shell cmd uimode night yes`) and
+     re-run `maestro test --include-tags=ui-flow` with that `UI_THEME`; restore the recorded appearance afterwards on
+     every exit path. `high-contrast` is never switched here (a test-level variant).
+   - **Detox** — the project's `e2e/support/ui-screenshots.ts` copies `device.takeScreenshot()` output into `$DIR`.
+4. **Collect strays** into the contract layout: PNGs whose path ends in
+   `<component|screen|flow>/<Id>/<name>.png` but landed elsewhere — Maestro's `--test-output-dir`/
+   `~/.maestro/tests/<latest run>/` or the app directory (a flow run without `-e UI_SCREENSHOTS_DIR` writes
+   `undefined/<kind>/…` relative to it), Detox's `artifacts/` — are moved under `$DIR/<kind>/<Id>/`. Never touch
+   Playwright's own `test-results/`/`playwright-report/` (pixel baselines and traces stay in the tool's location).
+5. **Validate every file name** under `$DIR` against
+   `^(component|screen|flow)/[A-Za-z0-9][A-Za-z0-9-]*/[a-z0-9]+(-[a-z0-9]+)*--(ltr|rtl)--(light|dark|high-contrast|no-color)(--[a-z0-9]+(-[a-z0-9]+)*)*\.(png|txt)$`
+   (relative path). Report each malformed path (first 10, then a count), plus captures whose direction/theme is
+   outside `.ui-quality.yml`'s lists (kept, listed as "outside the configured matrix").
+6. **Accessibility on React Native** — Maestro/Detox have no audit, so the automated check is the
+   `eslint-plugin-react-native-a11y` lint: when the plugin is in `devDependencies` and `accessibility` isn't `off`,
+   run `npx eslint . --format json --output-file <scratch>.json` (respecting the project's ignores) and count the
+   messages whose `ruleId` starts with `react-native-a11y/` (count + rule ids only). State that native audits
+   (contrast, touch-target size) are not automated on React Native.
+7. **Apply the level** — `enforce`: any violation makes the UI run **failed** (named as an accessibility failure,
+   separate from assertion failures); `report`: violations listed, the run's pass/fail unaffected; `off`: say the
+   automated check is off and don't count.
+
 ## Step 3 — Run with a JSON reporter and parse it
 
 Always keep the runner's normal console reporter for a human glancing at the log, and add a JSON reporter written
@@ -299,12 +362,15 @@ wrote the same shape too, resolving the `@/*` alias without a plugin. React Nati
 Native CLI 20.2 / React Native 0.87.1 app (Jest 29.7, `@react-native/jest-preset`) and on a `create-expo-app`
 blank-typescript SDK 57 app with `jest-expo` 57 + `@testing-library/react-native` 14.1 wrote the same shape.
 
-**Playwright** (Next.js `e2e` only) has its own JSON shape: `npx playwright test [scope] --reporter=list,json` with
+**Playwright** (Next.js and web-ui `e2e`/`ui` only) has its own JSON shape: `npx playwright test [scope] --reporter=list,json` with
 `PLAYWRIGHT_JSON_OUTPUT_NAME=<path>.json` set in the environment (the `json` reporter otherwise writes to stdout,
 interleaved with `list`). Parse `stats.expected` (passed), `stats.unexpected` (failed), `stats.flaky`, and
 `stats.skipped` for the headline counts, then walk `suites[]` recursively (suites nest under `suites[].suites[]`)
 to each `specs[].tests[]` whose `status` is `"unexpected"`: its name is the enclosing suite titles plus
-`specs[].title`, its message the first line of `results[-1].error.message` (strip ANSI color codes). **Unverified
+`specs[].title`, its message the first line of `results[-1].error.message` (strip ANSI color codes). Accessibility
+results (UI runs) are in `results[].attachments[]` entries named `accessibility-scan-results` with
+`contentType: "application/json"` — the JSON is inline in `body` (base64) or in the file at `path`; read only
+`violations[].id` and `violations[].nodes.length`. **Unverified
 locally** — the Playwright browsers weren't installed on this machine; confirm the field names against the first
 real report before relying on them.
 
@@ -384,6 +450,12 @@ doesn't get committed as build noise.
   device/tool is "e2e unverified: <reason>".
 - Name each React Native–specific failure by its cause (Step 1): untranspiled package (`transformIgnorePatterns`),
   native module not mocked, RNTL 14 call not awaited.
+- For every UI run (Playwright, Maestro, Detox — Step 2 "UI runs"): the screenshot directory used and whether it was
+  cleared (full run) or added to (scoped run); the screenshot count per kind (`component`/`screen`/`flow`) and the
+  number of distinct `<Id>`s; strays collected; malformed names; captures outside the configured matrix; the
+  `.ui-quality.yml` level applied (or "missing file — defaults"); accessibility violations as a count plus rule ids
+  (never raw axe/ESLint output); for Maestro, the themes the device was switched through and confirmation the
+  original appearance was restored. A UI run that couldn't start is "UI run unverified: <reason>".
 - On failures, list each failing test's name (`fullName`) and the first line of its assertion message
   (`failureMessages[0]`'s first line) — nothing more per failure, and no noise about the passing tests.
 - Do not attempt to fix failing tests or modify source/test code unless the user asks for that as a next step.

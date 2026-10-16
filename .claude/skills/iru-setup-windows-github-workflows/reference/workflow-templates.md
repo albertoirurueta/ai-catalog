@@ -202,10 +202,12 @@ jobs:
       # Hosted Windows runners have an interactive desktop session, which FlaUI needs. Each runner is a fresh VM,
       # so the repository-wide .integration-test.lock used for local runs is not needed here.
       - name: Desktop UI tests (FlaUI)
-        # >>> ui: wpf|winforms
         env:
+          # >>> ui: wpf|winforms
           APP_EXE: ${{ github.workspace }}\src\<AppName>\bin\Release\net10.0-windows\<AppName>.exe
-        # <<< ui: wpf|winforms
+          # <<< ui: wpf|winforms
+          # The UI tests capture every state × direction × theme here (the catalog's UI contract).
+          UI_SCREENSHOTS_DIR: ${{ github.workspace }}\.ui-screenshots
         run: >-
           dotnet test tests/<AppName>.UITests -c Release --no-build --filter "TestCategory=UI"
           --results-directory TestResults --logger "trx;LogFileName=ui-tests.trx"
@@ -217,6 +219,15 @@ jobs:
           name: ui-test-results
           path: TestResults/
           retention-days: 14
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
       # <<< ci-tests: full, flaui
   # >>> sonar
 

@@ -19,7 +19,9 @@ when it runs is an explicit choice (`ios-ci`: `all`, `stable` or `none`).
 `build.yml` has a Linux `android` job (detekt, ktlint, Android Lint with SARIF upload, JVM/Android host tests, root
 Kover report and an 80% `koverVerify`, `assembleDebug`, optional `./gradlew sonar`), a cost-gated macOS `ios` job
 (Kotlin/Native `iosSimulatorArm64Test`, `xcodegen generate`, SwiftLint, and `xcodebuild build` or, with
-`ci-tests: full`, `xcodebuild test` of the `iosApp` scheme on the newest iOS simulator), and an Antora + Dokka docs
+`ci-tests: full`, `xcodebuild test` of the `iosApp` scheme on the newest iOS simulator) — each test job also uploads the UI tests'
+`.ui-screenshots/` captures as a 7-day `ui-screenshots-android` / `ui-screenshots-ios` artifact (`if: always()`,
+no extra job or runner) — and an Antora + Dokka docs
 job deployed to GitHub Pages (`pages: yes`) or uploaded as a workflow artifact (`pages: no`). `release.yml` depends
 on `distribution` (`internal`: Firebase App Distribution + TestFlight; `store`: Google Play + TestFlight). `sync.yml`
 with `.github/scripts/sync_versions.py` (gitflow only) merges the release back into the integration branch and bumps
@@ -132,7 +134,7 @@ without asking, with the warning still printed.
 |File |Written when
 
 |`.github/workflows/build.yml`
-|Always
+|Always (the test jobs include the UI screenshot artifact uploads)
 
 |`.github/workflows/release.yml`
 |`distribution` is not `none`

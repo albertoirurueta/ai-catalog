@@ -123,7 +123,8 @@ mode: new
 | `on-existing` | `ask` / `keep` / `update` / `replace` | `ask` |
 | `security-dependency-review` / `security-osv` / `security-gitleaks` | gate one `security.yml` job each | `yes` |
 | `security-codeql` | the CodeQL job | `yes`; **Swift on a private/internal repository: `no`** (macOS ~10×) unless the user opts in — say which |
-| `ci`, `ui`, `description`, `license`, `developer-*`, `organization-url`, `owner`, identity keys | shared vocabulary | accepted; `description`/`license` feed the Homebrew formula (else read from the manifest / `LICENSE`), the rest is ignored and named in the report |
+| `ui` | `none` / `tui` | detected from disk when absent (`ui: tui` marker in `reference/shared-templates.md`): with a terminal UI the Linux test job uploads `.ui-screenshots/` (the UI tests' text captures) as a 7-day `ui-screenshots` artifact (`if: always()`, `if-no-files-found: ignore`) — no new job |
+| `ci`, `description`, `license`, `developer-*`, `organization-url`, `owner`, identity keys | shared vocabulary | accepted; `description`/`license` feed the Homebrew formula (else read from the manifest / `LICENSE`), the rest is ignored and named in the report |
 
 ### Standalone resolution of `visibility`, `cross-os-ci`, `ci-tests`, `pages`, `sonar`, `distribution`, `channels`
 
@@ -176,7 +177,8 @@ Swift (no Windows binary); a channel without `distribution: store`.
   `none`); Swift — `Sources/<Bin>/`, `Sources/<Bin>Kit/Version.swift`, `scripts/generate-docs.sh`, `swift-docc-plugin`;
   .NET — `<Tool>.slnx`, `global.json`, `Directory.Build.props` `<Version>`, `src/<Tool>`, `src/<Tool>.Core`,
   `tests/<Tool>.Core.Tests`, `tests/<Tool>.Cli.Tests`, `docfx.json`, `PackAsTool` + `ToolPackageRuntimeIdentifiers` for
-  `nuget`. Resolve the markers from disk: `xtask`, `deny`, `docc`, `container-tests`, and `<cli-docs-command>` (Rust
+  `nuget`. Resolve the markers from disk: `xtask`, `deny`, `docc`, `container-tests`, `ui: tui` (a Ratatui / Bubble Tea /
+  Terminal.Gui dependency, unless `args` gave `ui`), and `<cli-docs-command>` (Rust
   `cargo xtask docs`; Go `go run ./tools/gendocs` (or `./internal/tools/gendocs`); Swift `scripts/generate-docs.sh
   build/gendocs`; .NET `dotnet run --project src/<Tool> -c Release -- gen-docs --output-dir .` (the scaffold's hidden
   command); none found → drop the `cli-docs` blocks and report the gap). If the layout differs (no lib/Core/Kit unit, a
@@ -383,6 +385,10 @@ from `iru-setup-go-cli`/`iru-setup-swift-cli` and the templates aligned):
   Rust GA with `build-mode: none` (github/docs), `crates-io-auth-action` and `NuGet/login` inputs/outputs, the Static
   Linux SDK URL (HTTP 200, 285 MB) and checksum (swift.org API), Sonar's `sonar.rust.lcov.reportPaths` /
   `sonar.rust.clippyReport.reportPaths` / `sonar.go.coverage.reportPaths`.
+- The `ui: tui` block (the `.ui-screenshots/` upload, added for the catalog's UI contract) was checked by rendering
+  each language's `build.yml` with the markers dropped and parsing it with PyYAML 6.0.3 (the step keeps `if:
+  always()`, `retention-days: 7`, `if-no-files-found: ignore`); actionlint wasn't installed for that pass, and the
+  upload itself only runs on GitHub.
 - **Unverified locally, never a blocker**: every job on GitHub's runners (Linux, `ubuntu-24.04-arm`, Windows,
   `windows-11-arm`, macOS images, the `swift` containers); the Static Linux SDK build (the local Docker VM's disk was
   full pulling `swift:6.4.1-noble`; nothing was pruned); musl and MSVC builds; Linux/Windows Native AOT; Developer ID

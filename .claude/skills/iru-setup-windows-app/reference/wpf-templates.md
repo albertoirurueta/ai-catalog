@@ -92,7 +92,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
         _host.Start();
-        _host.Services.GetRequiredService<MainWindow>().Show();
+        ApplyUiTestTheme();
+        var window = _host.Services.GetRequiredService<MainWindow>();
+        window.FlowDirection = UiTestOptions.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+        window.Show();
     }
 
     /// <inheritdoc/>
@@ -106,6 +109,19 @@ public partial class App : Application
         }
 
         base.OnExit(e);
+    }
+
+    private void ApplyUiTestTheme()
+    {
+        // Setting ThemeMode from code is experimental (WPF0001); it runs only when the UI tests pass --ui-theme.
+#pragma warning disable WPF0001
+        ThemeMode = UiTestOptions.Theme switch
+        {
+            "light" => ThemeMode.Light,
+            "dark" => ThemeMode.Dark,
+            _ => ThemeMode,
+        };
+#pragma warning restore WPF0001
     }
 }
 ```

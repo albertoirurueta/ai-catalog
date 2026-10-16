@@ -241,6 +241,20 @@ and the codebase's own architecture and conventions (from Step 5). Look for:
      `params`/`cookies()` on 15+/16, one-argument `revalidateTag` on 16, runtime data read inside `'use cache'`);
      secrets exposed through `NEXT_PUBLIC_*` env vars.
 
+   - **User interfaces (any stack — web, Android, Apple, React Native, KMP, Windows, terminal UIs)**: a screen or
+     component built as one monolith instead of composed components; subclassing a screen/component to tweak it
+     instead of composing; presentational components that fetch data, navigate or read global state; events
+     leaking raw framework event objects, or two-way binding on collections/domain objects; a data-driven or long
+     list, grid, carousel, pop-up list or tab strip built eagerly instead of on the platform's virtualizing/
+     recycling container (`RecyclerView`/`ListAdapter`+`DiffUtil`, `LazyColumn` with `key`, SwiftUI `List`,
+     `UICollectionView` diffable data source, `FlatList` with `keyExtractor`, a web virtualizer, a WPF virtualizing
+     `ListView`), index keys, or selection state kept in recycled item views; hard-coded user-visible strings or
+     left/right instead of start/end; missing accessible names/alt text, contrast or touch-target problems; a new
+     or changed screen/component without UI tests covering its states, events, left-to-right and right-to-left,
+     light and dark, its `.ui-screenshots/` captures and the accessibility check at the repository's
+     `.ui-quality.yml` level; a UI change that leaves the Antora `ui/` pages and `images/ui/` screenshots stale
+     (suggest `/iru-update-docs`).
+
 If Step 6 didn't run, also look for, using general best practices for the language in use:
 
 4. **Correctness bugs** — logic errors, edge cases the code doesn't handle, incorrect assumptions, concurrency

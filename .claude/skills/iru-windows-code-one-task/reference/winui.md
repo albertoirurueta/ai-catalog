@@ -31,6 +31,11 @@ anywhere, which is why the logic goes there.
 - In a `DataTemplate`, set `x:DataType="models:Book"` so `x:Bind` knows the item type.
 - Function bindings (`{x:Bind local:Format.Date(ViewModel.Due), Mode=OneWay}`) instead of converters where it reads
   better; `x:Load` for deferred UI.
+- Components are `UserControl`s with dependency-property inputs (`x:Bind State.Title, Mode=OneWay` inside) and
+  `ICommand`/event outputs; lists are `ListView`/`GridView`/`ItemsView` (virtualizing) with an `x:DataType` item
+  template over a keyed `ObservableCollection` — never an `ItemsRepeater` inside a `StackPanel`. RTL
+  (`FlowDirection` on the root, `MirroredWhenRightToLeft` icons), `RequestedTheme` for test captures and the
+  incremental-loading pattern: `ui-implementation.md`.
 - `{Binding}` still exists but is reflection-based; use it only where `x:Bind` can't (rare).
 
 ## Threading
@@ -69,7 +74,9 @@ anywhere, which is why the logic goes there.
 
 View models are in Core and tested like any other (`testing.md`). The WinUI-specific "Unit Test App (WinUI)" project
 is for code that needs the WinUI runtime — the catalog avoids needing it by keeping logic in Core. UI automation
-(FlaUI) targets the packaged app by AUMID or the built exe; Windows only.
+(FlaUI) targets the packaged app by AUMID (`Application.LaunchStoreApp(aumid, "--ui-direction=rtl --ui-theme=dark")`)
+or the built exe; Windows only. Screens and components get FlaUI UI tests with screenshots and the Axe.Windows check
+per `ui-implementation.md`.
 
 ## Publishing
 

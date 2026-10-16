@@ -9,8 +9,9 @@ description: >-
   `*.coverage`), MSIX/App Installer build output (`AppPackages/`, `BundleArtifacts/`, `*.msix`, `*.msixbundle`,
   `*.appxbundle`, `*.msixupload`, `*.appxupload`), signing material (`*.pfx`, `*.p12`, `*.cer`, `*.snk` is
   deliberately NOT ignored), DocFX output (`_site/` and the `docfx.json` metadata `dest`, only when a `docfx.json`
-  exists), the Antora docs build output, `publish/` folders, and the repository-wide `.integration-test.lock/` that
-  serializes desktop UI-test runs. Invoke as `/iru-setup-windows-gitignore`, optionally with `args`:
+  exists), the Antora docs build output, `publish/` folders, the repository-wide `.integration-test.lock/` that
+  serializes desktop UI-test runs, and the UI tests' screenshot directory `.ui-screenshots/` (never `.ui-quality.yml`,
+  which is committed). Invoke as `/iru-setup-windows-gitignore`, optionally with `args`:
   `mode: new|existing` (default: detected from whether a root `.gitignore` already exists) and
   `on-existing: ask|keep|update|replace` (default `ask`). Announces whether it is creating from scratch or updating;
   an existing `.gitignore` is never overwritten silently — it warns, shows a diff, and asks Update (merge in what's
@@ -122,6 +123,9 @@ Desktop.ini
 
 # Repository-wide lock serializing desktop UI-test runs (iru-dotnet-test ui, iru-windows-code-one-task-group)
 .integration-test.lock/
+
+# UI-test screenshots (state × direction × theme), regenerated on every full UI run; docs copy what they use
+.ui-screenshots/
 ```
 
 Notes on specific lines:
@@ -139,6 +143,10 @@ Notes on specific lines:
   GitHub's `VisualStudio.gitignore` ignores `*.pubxml`). Never add `*.pubxml` here.
 - `.integration-test.lock/` is the atomic-`mkdir` lock directory (with its owner file) that the Windows UI-test stages
   create — always transient, never committed.
+- `.ui-screenshots/` holds the PNGs the FlaUI UI tests capture (`<kind>/<Id>/<state>--<direction>--<theme>.png`); the
+  test gate clears it at the start of every full UI run, and the documentation skills copy the images they use into
+  the Antora module's `images/ui/` — the only committed copies. `.ui-quality.yml` (the accessibility level and the
+  screenshot matrix) is configuration and stays tracked; never ignore it.
 
 ## Step 3 — Detect project-specific additions
 
@@ -249,6 +257,8 @@ below. Git's own matching was exercised; no Windows tooling was needed for this 
 | `build/docfx/index.html`, `docfx/api/App.Core.MainViewModel.yml`, `docfx/api/toc.yml`, `docfx/api/.manifest` | ignored | ignored |
 | `docfx/index.md`, `docfx/toc.yml` | **tracked** | **not ignored** |
 | `docs/build/site/index.html`, `.integration-test.lock/owner`, `Thumbs.db`, `.DS_Store` | ignored | ignored |
+| `.ui-screenshots/screen/MainWindow/default--rtl--dark.png` | ignored | ignored (re-verified 2026-10-16 for the UI contract) |
+| `.ui-quality.yml` | **tracked** | **not ignored** |
 | `Directory.Build.props`, `Directory.Packages.props`, `global.json`, `App.slnx`, `docfx.json`, `tests/coverlet.runsettings` | **tracked** | **not ignored** |
 | `src/App/Properties/PublishProfiles/win-x64.pubxml`, `src/App/Package.appxmanifest`, `src/App/Assets/Square44x44Logo.png` | **tracked** | **not ignored** |
 | `packaging/AppxManifest.xml`, `packaging/Assets/StoreLogo.png`, `packaging/build-msix.ps1`, `keys/App.snk` | **tracked** | **not ignored** |

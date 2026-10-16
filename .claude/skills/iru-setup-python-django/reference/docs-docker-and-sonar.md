@@ -204,6 +204,8 @@ docs/
 .ruff_cache/
 .coverage
 .coverage.*
+.ui-screenshots/
+test-results/
 compose*.yaml
 Dockerfile
 .dockerignore

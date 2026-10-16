@@ -109,6 +109,12 @@ questions.
 |`none`, `internal` (Firebase + TestFlight) or `store` (Google Play + TestFlight).
 |`store` when open source; otherwise asked, `internal` recommended
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the UI tests' automated accessibility level, written by the scaffold to
+`.ui-quality.yml`. Always applies (both `ui` values render UI); asked once here, never again by the scaffold.
+|Asked (Enforce recommended)
+
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No
 |`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
@@ -127,15 +133,17 @@ questions.
 
 == Outputs
 
-* The Gradle/Xcode scaffold — `shared/` KMP module, `androidApp/`, XcodeGen `iosApp/`, quality and Sonar wiring
-  (via `iru-setup-kmp-app`), created or updated per file group according to the user's answers.
+* The Gradle/Xcode scaffold — `shared/` KMP module, `androidApp/`, XcodeGen `iosApp/`, quality and Sonar wiring,
+  plus `.ui-quality.yml` and the UI tests that capture `.ui-screenshots/` (via `iru-setup-kmp-app`; see
+  xref:guides/building-user-interfaces.adoc[Building user interfaces]), created or updated per file group according to the user's answers.
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
-* Root and per-module `.gitignore` files (via `iru-setup-kmp-gitignore`).
+* Root and per-module `.gitignore` files (via `iru-setup-kmp-gitignore`; `.ui-screenshots/` is ignored).
 * CI/CD workflows — `build.yml`, `release.yml`, `sync.yml` + `sync_versions.py` (gitflow), `security.yml` and
   `.github/dependabot.yml` (via `iru-setup-kmp-github-workflows`); none when `ci: no`.
 * A root `CHANGELOG.md` (via `iru-setup-changelog`) and a root `README.md` (via `iru-setup-readme`).
 * A final report: setup mode, resolved `ui`/`branching`/`mode`, identity, license and pipeline parameters, a
   per-component table with the action taken (created / updated / replaced / kept as is / skipped (`ci: no`)), the
+  `.ui-quality.yml` with the `accessibility` level it holds (CI uploads the captures as a 7-day artifact), the
   consolidated required-secrets table (omitted when no workflows were generated), toolchain versions from live
   lookup versus fallback, decisions made on the user's behalf, and an explicit warning block.
 
@@ -147,7 +155,7 @@ flowchart TD
     A[Start /iru-setup-kmp-repository] --> B["Step 0: Parse args\n(ui, branching, mode, visibility, ci, ios-ci,\nci-tests, pages, identity, pipeline params)"]
     B --> C["Step 1: Resolve ui, branching, mode\nand print Setup mode\n(from scratch, or inventory of prior setup)"]
     C --> D["Step 2: Collect app identity\n(skipped when settings.gradle.kts exists)"]
-    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, ios-ci, sonar,\nci-tests, pages, distribution)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, ios-ci, sonar,\nci-tests, pages, accessibility, distribution)"]
     E --> G["Step 4: Run iru-setup-kmp-app\n(via sub-agent)\nasks Update / Keep / Replace / Stop"]
     G -- user chose stop --> STOP[Stop entire pipeline; report]
     G -- ok --> H["Step 5: Run iru-setup-antora"]

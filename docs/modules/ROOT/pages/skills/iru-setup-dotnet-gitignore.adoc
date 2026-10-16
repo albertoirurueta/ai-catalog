@@ -16,7 +16,11 @@ Native AOT publish output, NuGet tool packages, man page and completions, and `p
 user state, test and coverage output (`TestResults/`, `*.trx`, `coverage*.xml`, `coveragereport/`), analyzer SARIF
 logs, NuGet packages, signing material (`*.pfx`, `*.p12`, `*.key` — but not `*.snk`), the Antora build output, OS files
 and the repository-wide `.integration-test.lock/`. A DocFX section covering the `docfx.json` metadata `dest` and site
-`output` folders is added only when a `docfx.json` exists.
+`output` folders is added only when a `docfx.json` exists. For a command-line tool with a Terminal.Gui terminal UI
+(a `*.csproj` references `Terminal.Gui`, or a root `.ui-quality.yml` exists) a terminal-UI section ignores
+`.ui-screenshots/`, the directory the UI tests write their text captures to (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]); `.ui-quality.yml` itself is configuration and is
+never ignored.
 
 It never ignores the generated-but-committed `docs/modules/ROOT/pages/cli-reference.adoc`, and checks the draft with
 `git check-ignore` against build props, solution, `.editorconfig`, DocFX sources and project files. It stops and points
@@ -58,7 +62,7 @@ Any other key forwarded by xref:skills/iru-setup-cli-repository.adoc[] (such as 
 == Outputs
 
 * A root `.gitignore` — created, updated (merged, keeping hand-added lines), replaced with the template, or left untouched when kept as is.
-* A report stating whether the run was from scratch or an update, the action taken (created / updated / replaced / kept as is, and its source), which conditional sections were included or skipped, the result of the `git check-ignore` safety check, and any tracked file under a newly ignored path with the `git rm -r --cached` it needs.
+* A report stating whether the run was from scratch or an update, the action taken (created / updated / replaced / kept as is, and its source), which conditional sections (DocFX, terminal-UI captures) were included or skipped, the result of the `git check-ignore` safety check, and any tracked file under a newly ignored path with the `git rm -r --cached` it needs.
 * Explicit warnings: review the file before committing; writing `.gitignore` never untracks committed files (rotate any committed certificate or key); never commit `*.pfx` or NuGet API keys.
 
 == Execution flow

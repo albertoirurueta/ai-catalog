@@ -313,6 +313,27 @@ jobs:
           npm ci
           npx vitest run --coverage
 
+      # Only when frontend: hilla, ci.tests: full, and the web module has a playwright.config.ts (written by
+      # iru-setup-java-springboot-hilla). Runs the Playwright component tests against the standalone Vite gallery
+      # in the same job (no extra runner); captures land in .ui-screenshots/ per the catalog's UI contract.
+      - name: Frontend UI tests
+        working-directory: <web-module>
+        env:
+          CI: "true"
+          UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Static analysis and site report
         run: mvn -B -ntp site -DskipTests -Djacoco.skip
 
@@ -500,6 +521,10 @@ doc generator build) but:
 If the manifest's `sonar.mode` is `none`, drop the entire `Run SonarCloud analysis` step from `build.yml` rather
 than leaving it in with a permanently-false condition — dead YAML that can never run is worse than no YAML.
 
+The `Frontend UI tests` and `Upload UI screenshots` steps (both templates) exist only when `frontend: hilla`,
+`ci.tests: full`, and `<web-module>/playwright.config.ts` exists — drop both otherwise (with `ci.tests: unit` the UI
+tests stay a local/group-validation stage, so no Chromium download is paid on every run).
+
 If the manifest's `frontend` isn't `hilla`, drop the `Set up Node` and `Frontend unit tests and coverage` steps,
 the `-Pproduction -Dvaadin.ci.build=true` flags on the Maven build step, and the `<web-module>/coverage/**`
 artifact-upload path entirely — same reasoning as the Sonar step above, and there's no web module for any of it
@@ -659,6 +684,27 @@ jobs:
         run: |
           npm ci
           npx vitest run --coverage
+
+      # Only when frontend: hilla, ci.tests: full, and the web module has a playwright.config.ts (written by
+      # iru-setup-java-springboot-hilla). Runs the Playwright component tests against the standalone Vite gallery
+      # in the same job (no extra runner); captures land in .ui-screenshots/ per the catalog's UI contract.
+      - name: Frontend UI tests
+        working-directory: <web-module>
+        env:
+          CI: "true"
+          UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Static analysis (detekt + ktlint)
         # Already part of `check` (hence of `build` above); run explicitly with --continue so one tool's failure

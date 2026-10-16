@@ -179,6 +179,20 @@ dotnet_diagnostic.CA1707.severity = none
 </Project>
 ```
 
+### `.ui-quality.yml` (ui: tui)
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: __Accessibility__      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
+The catalog's UI contract settings, exactly the contract's shape. For a terminal UI the `accessibility` level applies
+to the asserted terminal checks (`tui-color-only`, `tui-help-line`, `tui-keyboard`) — no automated audit exists for
+terminals —, `directions` drives the text captures (a `rtl` capture is right-to-left content in the normal layout),
+and `themes` is kept for the shared shape (text captures are `no-color`).
+
 ### `docfx.json`
 
 ```json

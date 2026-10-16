@@ -7,7 +7,9 @@ description: End-to-end bootstrap for an Android/Gradle repository of either fla
   branch `develop`, stable branch `main`, Java `17`, min SDK `26`, emulator API level `35`, `open-source`, the
   repository `visibility` (detected via `gh repo view` or asked), `ci` (GitHub Actions wanted at all), `sonar`
   plus its detail keys, `ci-tests` (`unit`, or `full` = unit + emulator instrumented tests), `pages` (GitHub
-  Pages vs. a workflow artifact for the docs), `publish` for libraries, `distribution` for apps — each question
+  Pages vs. a workflow artifact for the docs), `publish` for libraries, `distribution` for apps, `accessibility` (`enforce`/`report`/`off` — the automated
+  accessibility level of the UI tests, written by the scaffold to `.ui-quality.yml`; both flavors render UI, the
+  library through its `app/` sample) — each question
   stating the Actions-minutes / SonarCloud / Pages cost facts for that visibility) once, prints a setup-mode
   statement (from scratch, or an inventory of the prior setup it found), then
   orchestrates the flavor's scaffold skill (`iru-setup-android-library` / `iru-setup-android-app`) →
@@ -16,7 +18,7 @@ description: End-to-end bootstrap for an Android/Gradle repository of either fla
   workflows step entirely (security block included) when `ci: no`. Invoke as `/iru-setup-android-repository`,
   optionally with `args` (`key: value` lines) to pre-resolve `flavor`, `branching`, `mode` (`new`/`existing`),
   `open-source`, `visibility`, `ci`, `ci-tests`, `pages`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded
-  only when supplied), `publish`, `distribution`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
+  only when supplied), `publish`, `distribution`, `accessibility`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `integration-branch`, `stable-branch`, `java-version`, `min-sdk`, `compile-sdk`, `api-level`,
   `run-instrumented-tests`, and every identity field, skipping the matching question. On an existing repository
   every component sub-skill warns about the prior setup it owns and asks Update / Keep as is / Replace per file
@@ -62,6 +64,7 @@ ci: yes
 ci-tests: full
 pages: yes
 publish: yes
+accessibility: enforce
 sonar: cloud
 sonar-organization: example-org-github
 sonar-project-key: example-org_my-android-library
@@ -80,7 +83,8 @@ Recognized keys:
   (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/`replace` —
   never asked; forwarded to the component sub-skills only when it arrived here via `args`), `publish` (`yes`/`no` —
   `library` only),
-  `distribution` (`none`/`internal`/`store` — `app` only), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when
+  `distribution` (`none`/`internal`/`store` — `app` only), `accessibility` (`enforce`/`report`/`off` — both
+  flavors; forwarded to the scaffold skill, which writes it to `.ui-quality.yml`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when
   set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`,
   `java-version`, `min-sdk`, `compile-sdk`, `api-level`, `run-instrumented-tests` (`yes`/`no` — the workflows
   skill's own key; when supplied it wins over the `ci-tests` mapping in Step 3).
@@ -145,6 +149,7 @@ Before asking anything else (right after resolving `mode`), print a short **Setu
   | Gradle build | `settings.gradle.kts`, root `build.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, the wrapper |
   | Modules | `lib/build.gradle.kts` + `lib/src/`, `app/build.gradle.kts` + `app/src/` |
   | Sonar config | a `sonar {` block in `lib/build.gradle.kts`/`app/build.gradle.kts` |
+  | `.ui-quality.yml` | root `.ui-quality.yml` (UI-test accessibility level and screenshot matrix, owned by the scaffold skill) |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | `.gitignore` | root `.gitignore`, `lib/.gitignore`, `app/.gitignore` |
   | Workflows | each of `.github/workflows/develop.yml`/`main.yml`/`sync.yml`/`publish.yml`/`security.yml`, `.github/scripts/sync_versions.py` |
@@ -287,10 +292,16 @@ October 2026 against docs.github.com) and tell the user to double-check their ow
   `r0adkll/upload-google-play` action versus the Gradle Play Publisher plugin — is deliberately left to
   `iru-setup-android-app` to ask (it isn't an `args` key), and `iru-setup-android-github-workflows` detects the
   outcome from `app/build.gradle.kts` afterward.
+- **accessibility** — both flavors (the library's `app/` sample has a UI test too): "Automated accessibility
+  checks in UI tests?" — **Enforce (Recommended)** ("Accessibility Test Framework violations fail the UI tests"),
+  **Report only** ("listed in test output, never failing"), **Off** ("not run; the coding defaults still apply").
+  Asked once here, alongside the other shared inputs, and forwarded to the scaffold skill (Step 4), which writes it
+  to `.ui-quality.yml`.
+
 Resolve the effective `run-instrumented-tests` for Step 7: the explicit `args` value if one was supplied,
 otherwise `yes` for `ci-tests: full` and `no` for `ci-tests: unit`.
 
-These values (`open-source`, `visibility`, `publish`/`distribution`, `sonar` + detail keys, plus `ci` for the
+These values (`open-source`, `visibility`, `publish`/`distribution`, `sonar` + detail keys, plus `ci` and `accessibility` for the
 scaffold and `ci-tests`/`pages` for the workflows) are passed through unchanged to Step 4 (the scaffold skill) and
 Step 7 (`iru-setup-android-github-workflows`) so neither sub-skill re-asks them —
 and so the workflows never contain a Maven Central publish job for a `lib/build.gradle.kts` with no
@@ -318,9 +329,9 @@ Agent({
     publish: <publish>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\nsonar-project-key: <..., if set>\\n
     sonar-host-url: <..., if set>\\nbuilt-in-kotlin: <..., only if supplied>\\njunit: <..., only if supplied>\\n
     coverage-tool: <..., only if supplied>\\nstatic-analysis: <..., only if supplied>\\nvisibility: <visibility>\\n
-    ci: <ci>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}).
+    accessibility: <accessibility>\\nci: <ci>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}).
     Report back: whether it scaffolded from scratch or updated an existing project, the action taken per file group
-    (created / updated / replaced / kept as is, or that the user chose to stop), which toolchain versions came from a live
+    (created / updated / replaced / kept as is, or that the user chose to stop) including `.ui-quality.yml`, which toolchain versions came from a live
     lookup versus the recorded fallback, the compile-sdk it resolved, whether its Gradle verification build
     passed, and any value it resolved on its own (repository URL, inception year).",
   run_in_background: false
@@ -342,9 +353,9 @@ Agent({
     sonar-host-url: <..., if set>\\ndistribution: <distribution>\\nui: <..., only if supplied>\\n
     built-in-kotlin: <..., only if supplied>\\njunit: <..., only if supplied>\\n
     coverage-tool: <..., only if supplied>\\nstatic-analysis: <..., only if supplied>\\nvisibility: <visibility>\\n
-    ci: <ci>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}).
+    accessibility: <accessibility>\\nci: <ci>\\nmode: <mode>\\non-existing: <..., only if supplied via args>\"}).
     Report back: whether it scaffolded from scratch or updated an existing project, the action taken per file group
-    (created / updated / replaced / kept as is, or that the user chose to stop), which toolchain versions came from a live lookup
+    (created / updated / replaced / kept as is, or that the user chose to stop) including `.ui-quality.yml`, which toolchain versions came from a live lookup
     versus the recorded fallback, the compile-sdk/target-sdk it resolved, whether the release signing config and
     the distribution plugin (Firebase App Distribution / Gradle Play Publisher / none) were written, whether its
     Gradle verification build passed, and any value it resolved on its own.",
@@ -491,7 +502,7 @@ Summarize the outcome of all six delegated skills together: repeat the **Setup m
 an existing repository), the resolved `flavor`, `branching` and `mode`, the project identity and license, and the
 pipeline parameters used (the Step 3 table with the values actually applied). Then a per-component table — the
 scaffold's own files (`settings.gradle.kts`, root `build.gradle.kts`, `gradle/libs.versions.toml`, the wrapper,
-`lib/`/`app/`), the Antora docs site, the root and per-module `.gitignore` files, each workflow file
+`lib/`/`app/`, `.ui-quality.yml`), the Antora docs site, the root and per-module `.gitignore` files, each workflow file
 (`develop.yml`/`main.yml`/`sync.yml` + `sync_versions.py`, or `main.yml`/`publish.yml`, plus `security.yml`) and
 `.github/dependabot.yml`, `CHANGELOG.md`, and `README.md` — with the action actually taken for each: **created /
 updated / replaced / kept as is / skipped (ci: no)** (or not reached, after a Stop in Step 4 or 7), and, for
@@ -518,6 +529,9 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   source, private/internal, or `ci: no`) or a direct user choice; if configured with `ci: no`, that no CI step
   sends reports.
 - **`run-instrumented-tests`**: yes/no — whether the emulator (KVM) job was generated.
+- **`accessibility`**: `enforce`/`report`/`off` as written to `.ui-quality.yml` (and the file's action), the sample
+  UI test's capture count the scaffold reported, and that every CI run uploads `.ui-screenshots/` as a 7-day
+  `ui-screenshots` artifact (ci: yes only).
 - **Toolchain versions**: which came from a live lookup versus the recorded fallback, as reported by the scaffold
   (Gradle/AGP/Kotlin/Compose BOM…) and the workflows skill (action tags).
 

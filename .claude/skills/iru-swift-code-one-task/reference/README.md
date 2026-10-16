@@ -26,6 +26,8 @@ then read:
 | `cli.md` | The package is a command-line tool (an `.executableTarget` depending on `ArgumentParser`) and the task adds or changes a command, flag, output, error/exit code, prompt, signal/cleanup, child process or the CLI tests — where code goes (`<Bin>Kit` vs the thin commands), swift-argument-parser patterns, implementing the contract, testing the executable, Linux portability. |
 | `cli-contract.md` | Together with `cli.md`, whenever a CLI task changes anything a caller observes: stdout/stderr, exit codes, `--format`/JSON, colour, prompts, `--dry-run`/`--yes`, `schema`/help text. |
 | `visionos.md` | The task touches a visionOS target or destination: windows, volumes, immersive spaces, ornaments, hover effects, `RealityView`/`Model3D`, or visionOS-unavailable APIs. |
+| `ui-contract.md` | The task adds or changes a screen, component, list or other UI — the catalog-wide UI contract (copied verbatim into every coding skill that builds UI): decomposition, composition over inheritance, inputs/events, virtualized collections, UI tests, the `.ui-screenshots/` layout, `.ui-quality.yml` accessibility levels. |
+| `ui-implementation.md` | Always together with `ui-contract.md` — the contract on SwiftUI/UIKit/AppKit: what a screen and a component are, value-type state + closures, `List`/`Lazy*`/diffable `UICollectionView`/`NSTableView` collections, `ImageRenderer` component captures and XCUITest screen/flow captures through `UIScreenshots.swift`, RTL/dark switches, `performAccessibilityAudit()`. |
 
 A task that only changes logic inside one existing function, with no signature change and no UI involved, needs
 `code-style.md` plus `testing.md`, and nothing else. Don't read the rest speculatively. Read at most one of
@@ -34,7 +36,9 @@ the app's own target wiring, rarely both. Read at most one of `swiftui.md`/`appk
 hosts one framework inside the other — and likewise at most one of `uikit.md`/`appkit.md`. Read at most the platform
 file(s) of the target(s) the task touches: `macos.md`, `ios.md`, `visionos.md`. A command-line tool task reads
 `cli.md` (+ `cli-contract.md` when observable behaviour changes) and never the app files; it reads `package-api.md`
-only if the Kit is also published as a library product.
+only if the Kit is also published as a library product. A task that adds or changes a screen, component or list
+reads `ui-contract.md` + `ui-implementation.md` on top of its framework file (`swiftui.md`/`uikit.md`/`appkit.md`);
+a command-line tool never does (no UI).
 
 ## The three rules that override everything else
 
@@ -50,6 +54,12 @@ only if the Kit is also published as a library product.
    those gates; don't run them here.
 
 ## Sources
+
+UI guidance (`ui-implementation.md`; `ui-contract.md` is the catalog's shared, platform-agnostic contract, copied
+verbatim) cites its own Apple documentation list; its screenshot helper was run with Swift 6.4 / Xcode 27.1 under
+`swift test` on macOS and `xcodebuild test` on an iOS 27 simulator (captures written directly and recovered from the
+`.xcresult` with `xcrun xcresulttool export attachments`), and its collection and XCUITest snippets were type-checked
+for iOS 18, macOS 15, watchOS 11 and visionOS 2, in a throwaway directory outside this repository.
 
 Command-line tool guidance (`cli.md`; `cli-contract.md` is the catalog's shared, language-agnostic contract, copied
 verbatim) is grounded in irurueta docs: ai/cli-for-agents/ (frameworks-swift-and-dotnet.adoc,

@@ -7,17 +7,20 @@ description: >-
   `php-wordpress-plugin`, `php-wordpress-theme`, `php-prestashop-module`) or the same on-disk markers, or asks; then
   collects the project's identity (name, slug, Composer vendor, PHP namespace, description, license, developer
   name/email/organization URL) and the shared pipeline parameters (`open-source`, `visibility`, `ci`, `ci-tests`,
-  `pages`, `distribution` with its flavor-specific meaning, `sonar` plus its detail keys, `php-version`,
-  `integration-branch`, `stable-branch`) once, each with visibility-aware cost guidance, and orchestrates the
-  flavor's scaffold skill (`iru-setup-php-laravel` / `iru-setup-php-wordpress` with `flavor: plugin|theme` /
-  `iru-setup-php-prestashop`) → `iru-setup-antora` → `iru-setup-php-gitignore` → `iru-setup-php-github-workflows`
-  → `iru-setup-changelog` → `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is
-  asked twice (the workflows step is skipped entirely when `ci` is `no`). Invoke as `/iru-setup-php-repository`,
+  `pages`, `distribution` with its flavor-specific meaning, `sonar` plus its detail keys, `accessibility` — the
+  automated accessibility level of the browser UI tests every flavor's scaffold writes to `.ui-quality.yml` —,
+  `php-version`, `integration-branch`, `stable-branch`) once, each with visibility-aware cost guidance, and
+  orchestrates the flavor's scaffold skill (`iru-setup-php-laravel` / `iru-setup-php-wordpress` with
+  `flavor: plugin|theme` / `iru-setup-php-prestashop`) → `iru-setup-antora` → `iru-setup-php-gitignore` →
+  `iru-setup-php-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
+  `iru-isolated-skill-executor`, so nothing is asked twice (the workflows step is skipped entirely when `ci` is
+  `no`). Invoke as `/iru-setup-php-repository`,
   optionally with `args` (`key: value` lines) pre-resolving `flavor`, `mode` (`new`/`existing`), `open-source`,
   `visibility` (`public`/`private`/`internal`, detected via `gh` when absent), `ci` (`yes`/`no`), `ci-tests`
   (`unit`/`full`), `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar`
-  (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `php-version`,
-  `integration-branch` (default `develop`), `stable-branch` (default `main`), `on-existing`
+  (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `accessibility`
+  (`enforce`/`report`/`off`, default `enforce`), `php-version`, `integration-branch` (default `develop`),
+  `stable-branch` (default `main`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), and every identity key, skipping the matching
   question. Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
   inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
@@ -68,6 +71,7 @@ sonar: cloud
 sonar-organization: example-github
 sonar-project-key: example_acme-loans
 sonar-host-url: https://sonarcloud.io
+accessibility: enforce
 php-version: 8.4
 integration-branch: develop
 stable-branch: main
@@ -77,7 +81,10 @@ Recognized keys: `flavor` (`laravel`/`wordpress-plugin`/`wordpress-theme`/`prest
 (`new`/`existing`), `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`),
 `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar`
 (`cloud`/`self-hosted`/`none`) and — only when not `none` — `sonar-organization`, `sonar-project-key`,
-`sonar-host-url`; `php-version` (the minimum supported PHP, e.g. `8.3`), `integration-branch`, `stable-branch`; the
+`sonar-host-url`; `accessibility` (`enforce`/`report`/`off` — the level of the automated accessibility checks in the
+browser UI tests, written by the scaffold to `.ui-quality.yml`; every flavor here renders UI — Laravel pages, the
+WordPress plugin's/theme's front end and editor, the PrestaShop module's views — so it is always forwarded);
+`php-version` (the minimum supported PHP, e.g. `8.3`), `integration-branch`, `stable-branch`; the
 identity keys `name`, `slug`, `vendor`, `namespace`, `description`, `license`, `developer-name`, `developer-email`,
 `organization-url`; and `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every
 file-writing sub-skill **only** when it arrived here). Every key found is resolved — skip its question below. Ignore
@@ -147,6 +154,7 @@ Right after resolving `mode`, before asking anything else, survey the components
   | CI workflows | each of `.github/workflows/build.yml`, `release.yml`, `sync.yml` (+ its sync script under `.github/scripts/`; partial if only one of the pair), `security.yml` |
   | Dependabot | `.github/dependabot.yml` |
   | Sonar config | `sonar-project.properties` |
+  | UI quality config | `.ui-quality.yml` (+ the browser UI test setup: `playwright.config.*`, `tests/e2e/support/ui-screenshots.ts`; partial if only some) |
   | Changelog | `CHANGELOG.md` |
   | README | `README.md` (WordPress also: `readme.txt`, owned by the scaffold) |
   | License | `LICENSE` / `LICENSE.md` / `LICENSE.txt` / `COPYING` (not written by this run — listed so a mismatch with the chosen license shows) |
@@ -279,10 +287,17 @@ Then, **only when `ci: yes`**:
   artifact; nothing is published" — vs **Yes** — "requires GitHub Pro, Team, or Enterprise Cloud; the site will be
   PUBLIC on the internet unless the organization is on Enterprise Cloud with private Pages access control".
 
+Then, whatever `ci` is:
+
+- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** — "axe-core
+  violations fail the browser UI tests" / **Report only** — "violations are listed in the test output, never
+  failing" / **Off** — "not run; the accessibility coding defaults still apply to new UI". In `mode: existing` with a
+  `.ui-quality.yml` on disk, pre-select its `accessibility` value.
+
 These values are forwarded only to the sub-skills that accept them: identity + `php-version` + `open-source`/
-`visibility`/`ci`/`distribution`/`sonar` (+ keys) to Step 5; the same pipeline keys + `ci-tests`/`pages`/
-`integration-branch`/`stable-branch`/`php-version` to Step 8; `sonar`/`ci`/`pages` to Step 10; `on-existing` — only
-when it came via `args` — to every file-writing sub-skill (Steps 5–10).
+`visibility`/`ci`/`distribution`/`sonar` (+ keys)/`accessibility` to Step 5; the same pipeline keys +
+`ci-tests`/`pages`/`integration-branch`/`stable-branch`/`php-version` to Step 8; `sonar`/`ci`/`pages` to Step 10;
+`on-existing` — only when it came via `args` — to every file-writing sub-skill (Steps 5–10).
 
 ## Step 5 — Run the flavor's scaffold skill
 
@@ -302,22 +317,25 @@ Agent({
     developer-name: <developer-name>\\ndeveloper-email: <developer-email>\\norganization-url: <organization-url>\\n
     php-version: <php-version>\\nopen-source: <open-source>\\nvisibility: <visibility>\\nci: <ci>\\n
     distribution: <distribution>\\nsonar: <sonar>\\nsonar-organization: <..., if set>\\n
-    sonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\nmode: <mode>\\n
-    on-existing: <on-existing, only if supplied via args>\"}). Let every AskUserQuestion it raises through to the
-    user. Report back: scratch or update; per component it owns (composer.json/lock, sources, tests config, quality
-    configs, readme.txt/.distignore where applicable, sonar-project.properties) whether it was created, updated,
-    replaced, kept as is (with mismatches), or the user stopped; the resolved framework/tool versions and whether
-    they came from a live lookup or a fallback; and each verification gate's result (tests, coverage, static
-    analysis, style), including anything unverified and why.",
+    sonar-project-key: <..., if set>\\nsonar-host-url: <..., if set>\\naccessibility: <accessibility>\\n
+    mode: <mode>\\non-existing: <on-existing, only if supplied via args>\"}). Let every AskUserQuestion it raises
+    through to the user. Report back: scratch or update; per component it owns (composer.json/lock, sources, tests
+    config, quality configs, readme.txt/.distignore where applicable, sonar-project.properties, .ui-quality.yml and
+    the browser UI test setup) whether it was created, updated, replaced, kept as is (with mismatches), or the user
+    stopped; the resolved framework/tool versions and whether they came from a live lookup or a fallback; and each
+    verification gate's result (tests, coverage, static analysis, style, browser UI tests), including anything
+    unverified and why.",
   run_in_background: false
 })
 ```
 
 The other flavors follow the same shape with the skill name changed — `iru-setup-php-laravel` (no `flavor` key, no
 `namespace`) and `iru-setup-php-prestashop` (no `flavor` key; `slug` is the module's technical name) — each still
-filtered against its own Step 0. Flavor-specific details this orchestrator doesn't pre-ask (Laravel starter kit and
-database, the WordPress function/constant prefix and whether blocks are built with `@wordpress/scripts`, the
-PrestaShop module `tab` and hooks) are asked inside the scaffold skill.
+filtered against its own Step 0 (`accessibility` goes to all three — each writes `.ui-quality.yml`; if a
+scaffold's Step 0 doesn't list it yet, drop it and note in Step 11 that its default `enforce` applied).
+Flavor-specific details this orchestrator doesn't pre-ask (Laravel starter kit and database, the WordPress
+function/constant prefix and whether blocks are built with `@wordpress/scripts`, the PrestaShop module `tab` and
+hooks) are asked inside the scaffold skill.
 
 If the sub-skill reports that the user **stopped** before a usable project existed (or the manifest exists but is
 unusable), stop this skill too — there's no project identity to build docs or CI around. A **Keep as is** on an
@@ -417,11 +435,12 @@ Summarize all six delegated skills together: repeat Step 1's **Setup mode** stat
 existing repository); the resolved `flavor` and `mode`; the identity and license (or "taken from the existing
 files"); `php-version` and where it came from (php.net active support, the Laravel skeleton's floor, PrestaShop's
 system requirements, or `args`); the branches. Then a per-component table — Composer manifest, flavor sources, tests
-config, quality configs, Sonar config, Antora docs, `.gitignore`, each workflow file (`build.yml`/`release.yml`/
-`sync.yml` + script/`security.yml`), `.github/dependabot.yml`, `CHANGELOG.md`, `README.md` — with the action actually
-taken as each sub-skill reported it: **created / updated / replaced / kept as is / skipped (ci: no) / not written
-(distribution: none)** (or stopped), plus every mismatch a sub-skill listed for a kept file. Include Step 5's
-verification results (tests, coverage, static analysis, style; anything unverified, e.g. no Docker for wp-env).
+config, quality configs, Sonar config, UI quality config (`.ui-quality.yml`), Antora docs, `.gitignore`, each
+workflow file (`build.yml`/`release.yml`/`sync.yml` + script/`security.yml`), `.github/dependabot.yml`,
+`CHANGELOG.md`, `README.md` — with the action actually taken as each sub-skill reported it: **created / updated /
+replaced / kept as is / skipped (ci: no) / not written (distribution: none)** (or stopped), plus every mismatch a
+sub-skill listed for a kept file. Include Step 5's verification results (tests, coverage, static analysis, style,
+browser UI tests; anything unverified, e.g. no Docker for wp-env, no shop for PrestaShop).
 
 State explicitly what was wired or deliberately omitted, and why:
 
@@ -439,6 +458,10 @@ State explicitly what was wired or deliberately omitted, and why:
 - **`sonar`** — `cloud`/`self-hosted`/`none`; whether `sonar-project.properties` and the CI analysis step were
   included; for `none`, whether that's the expected default (not open source, not public, or `ci: no`) or a direct
   choice; for cloud/self-hosted with `ci: no`, that no CI step sends reports.
+- **`accessibility`** — `enforce`/`report`/`off` as written to `.ui-quality.yml`, and where the browser UI tests
+  (Playwright + axe-core, screenshots under `.ui-screenshots/`) run: locally behind `.integration-test.lock`, and in
+  CI only where the workflows step wired them (each flavor's `ci-tests: full` integration job, against the server,
+  wp-env test instance or shop it already starts; with `ci-tests: unit`, nowhere).
 - The four `security-*` jobs left at their `yes` default (Step 8), and the per-flavor license ordering (Step 2) —
   both decided on the user's behalf.
 

@@ -23,7 +23,10 @@ Jetpack Compose on Android and SwiftUI on iOS).
 
 It also configures detekt, ktlint, Android Lint, Kover (aggregated at the root with an 80% `koverVerify` bound),
 Dokka 2, SwiftLint and an optional `sonar {}` block, with sample code and tests in every source set so coverage
-starts at 100%. It announces whether it is scaffolding from scratch or updating an existing project, asks
+starts at 100%. Following the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user
+interfaces]) it also writes a root `.ui-quality.yml` and UI test wiring: a `GreetingScreenTest` that captures
+`.ui-screenshots/screen/GreetingScreen/` across states, left-to-right/right-to-left and light/dark on Android and iOS,
+with an accessibility check at the configured level. It announces whether it is scaffolding from scratch or updating an existing project, asks
 Update / Keep as is / Replace / Stop for each existing file group (unless `on-existing` decides), never overwrites
 hand-written source, and treats the JetBrains wizard's single `composeApp/` layout as foreign. Every toolchain
 version is looked up at run time, with a verified fallback table. Like `iru-setup-android-app`, it writes no
@@ -114,6 +117,12 @@ in `androidApp`, SwiftUI in `iosApp`).
 |`cloud`, `self-hosted` or `none`; `none` omits the plugin and the `sonar {}` block.
 |Recommended from `open-source`/`visibility`/`ci`; coordinates default from the git remote.
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`. Never
+asked stand-alone, just defaulted.
+|`enforce`
+
 |`distribution`
 |No
 |`none`, `internal` or `store`; informational only (release jobs come from `iru-setup-kmp-github-workflows`).
@@ -136,17 +145,24 @@ Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, ...) a
 
 * Gradle build files: wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper/*` with `distributionSha256Sum`),
   `settings.gradle.kts`, root `build.gradle.kts` (Kover aggregation, optional `sonar {}`), `gradle.properties`,
-  `gradle/libs.versions.toml`, `detekt.yml`, `.editorconfig`.
+  `gradle/libs.versions.toml`, `detekt.yml`, `.editorconfig`, `.ui-quality.yml` (`accessibility`, `directions`,
+  `themes`).
 * `shared/` module: `build.gradle.kts` and sample sources and tests in `commonMain`, `commonTest`, `androidMain`,
-  `androidHostTest`, `iosMain` and `iosTest` (plus `App.kt` and `MainViewController.kt` for `ui: compose`).
-* `androidApp/` module: build file, ProGuard rules, manifest, resources, `MainActivity.kt` and a Robolectric test.
+  `androidHostTest`, `iosMain` and `iosTest` (plus `App.kt` and `MainViewController.kt` for `ui: compose`). For `ui: compose` the UI test wiring too:
+  `commonTest` `uitest/UiScreenshots.kt`, `GreetingScreenTest.kt`, and a Robolectric `UiTest` base class on the
+  Android host.
+* `androidApp/` module: build file, ProGuard rules, manifest, resources, `MainActivity.kt` and a Robolectric test
+  (for `ui: native` also a `GreetingScreenTest` with `createComposeRule()` and a `uitest/UiScreenshots.kt` helper).
 * `iosApp/`: `project.yml`, `Configuration/Config.xcconfig`, `.swiftlint.yml`, Swift sources, `Info.plist` and
-  `iosAppTests` (plus `GreetingModel.swift` for `ui: native`). The generated `.xcodeproj` and `local.properties`
+  `iosAppTests` (plus `GreetingModel.swift`, `GreetingScreenTests.swift` and an `ImageRenderer`-based
+  `UIScreenshots.swift` helper for `ui: native`). The generated `.xcodeproj` and `local.properties`
   are never written.
 * A verification run (Step 7) of the build, the gate tasks and, on macOS, the iOS framework, XcodeGen and
-  `xcodebuild test` steps; anything not runnable is reported as unverified.
+  `xcodebuild test` steps, plus a UI-captures check that `.ui-screenshots/screen/GreetingScreen/` holds one PNG per
+  state × direction × theme per platform; anything not runnable (for example iOS captures on a non-macOS host) is
+  reported as unverified.
 * A closing report with the resolved inputs, the setup mode, the per-group action (created / updated / replaced /
-  kept as is), what was included or omitted and why, live versus fallback toolchain versions, and ignored keys.
+  kept as is, with `.ui-quality.yml` and its `accessibility` level listed), what was included or omitted and why, live versus fallback toolchain versions, and ignored keys.
 
 == Execution flow
 
@@ -169,7 +185,7 @@ flowchart TD
     J --> K["Step 4: Look up toolchain versions\n(fallback table if lookup fails)"]
     K --> L["Step 5: Read four reference files,\nfill placeholders"]
     L --> M["Step 6: Scaffold wrapper, Gradle files,\nshared/, androidApp/, iosApp/"]
-    M --> N["Step 7: Verify via iru-gate-runner\n./gradlew build, gate tasks,\nmacOS: framework, xcodegen, xcodebuild test"]
+    M --> N["Step 7: Verify via iru-gate-runner\n./gradlew build, gate tasks,\nmacOS: framework, xcodegen, xcodebuild test,\nUI captures check"]
     N --> O["Step 8: Report"]
 ....
 

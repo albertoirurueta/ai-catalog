@@ -1,6 +1,6 @@
 ---
 name: iru-setup-android-library
-description: Generate the standard Gradle/Kotlin toolchain for a new Android library at the repository root — the Gradle wrapper (`gradle/wrapper/gradle-wrapper.properties` pinned to the current Gradle version plus its `distributionSha256Sum`, `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, a `lib/` library module (`build.gradle.kts`, `proguard-rules.pro`, manifests, `robolectric.properties`, `.gitignore`, one placeholder source + unit test + instrumented test), and an `app/` Jetpack Compose sample module (`build.gradle.kts`, manifest, `.gitignore`, `MainActivity.kt`, launcher/theme resources) that depends on `lib` — asks for `group-id`, `artifact-id`, `namespace`, `description`, `min-sdk` (default `26`), `compile-sdk` (default the current stable API level), license, developer name/email/organization URL, whether the project is open source, whether it publishes to Maven Central (`publish`, gating the `mavenPublishing`/vanniktech block), whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), `built-in-kotlin` (`no`/`yes`, gating `android.builtInKotlin`/`android.newDsl` in `gradle.properties`), `junit` (`4`/`5`, gating the `de.mannodermaus.android-junit` plugin), `coverage-tool` (`jacoco`/`kover`, gating AGP's own unit-test-coverage flags vs. the Kover plugin), and `static-analysis` (`lint`/`lint+detekt+ktlint`, gating Detekt + Spotless(ktlint + licenseHeader)). Invoke as `/iru-setup-android-library`. Ships with explicit example templates embedded in this skill file, genericized (no real repository/organization/person names, `<placeholder>` markers with a resolution table) from a real Android library's actual project files — https://github.com/albertoirurueta/irurueta-android-glutils — including its `lib/` module shape (JUnit 4 + MockK + Robolectric + AndroidX Espresso, AGP JaCoCo, inline `sonar { properties {…} } ` block run as `./gradlew :lib:sonar`, `mavenPublishing { AndroidSingleVariantLibrary(...) }`) and its Compose `app/` sample module, which is part of this scaffold, not a separate skill. Every toolchain version (Gradle, AGP, Kotlin, Dokka, the `sonarqube`/`com.vanniktech.maven.publish`/Detekt/Spotless/Kover/`de.mannodermaus.android-junit` Gradle plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK, Robolectric, `com.irurueta:irurueta-android-test-utils`) is looked up at run time (Google Maven, Maven Central, the Gradle Plugin Portal, `services.gradle.org`), with this skill's own September 2026 findings as the fallback. Announces whether it is scaffolding from scratch or updating an existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/tasks) / Keep as is / Replace (regenerate, losing customizations) / Stop, even under `mode: existing`, unless `on-existing` (`ask`/`keep`/`update`/`replace`) decides; accepts every input pre-resolved via `args` (`key: value` lines) — including `visibility` (`public`/`private`/`internal`, so SonarCloud is recommended only for a public open-source repository) and `ci` (`yes`/`no`, recommending `sonar: none` when no CI would send reports) — so an orchestrating skill can supply them without re-prompting. Verifies with `./gradlew --offline help` then `./gradlew :lib:assembleDebug` through the `iru-gate-runner` agent, warning up front that the first run downloads Gradle itself, Android SDK components, and every dependency. Use whenever a new Android/Kotlin library repository (with its Compose sample app) needs its Gradle build scaffolded from this house template, instead of hand-writing each Gradle/manifest/properties file.
+description: Generate the standard Gradle/Kotlin toolchain for a new Android library at the repository root — the Gradle wrapper (`gradle/wrapper/gradle-wrapper.properties` pinned to the current Gradle version plus its `distributionSha256Sum`, `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, a `lib/` library module (`build.gradle.kts`, `proguard-rules.pro`, manifests, `robolectric.properties`, `.gitignore`, one placeholder source + unit test + instrumented test), and an `app/` Jetpack Compose sample module (`build.gradle.kts`, manifest, `.gitignore`, `MainActivity.kt`, launcher/theme resources) that depends on `lib` — asks for `group-id`, `artifact-id`, `namespace`, `description`, `min-sdk` (default `26`), `compile-sdk` (default the current stable API level), license, developer name/email/organization URL, whether the project is open source, whether it publishes to Maven Central (`publish`, gating the `mavenPublishing`/vanniktech block), whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), `built-in-kotlin` (`no`/`yes`, gating `android.builtInKotlin`/`android.newDsl` in `gradle.properties`), `junit` (`4`/`5`, gating the `de.mannodermaus.android-junit` plugin), `coverage-tool` (`jacoco`/`kover`, gating AGP's own unit-test-coverage flags vs. the Kover plugin), and `static-analysis` (`lint`/`lint+detekt+ktlint`, gating Detekt + Spotless(ktlint + licenseHeader)), and `accessibility` (`enforce`/`report`/`off`, default `enforce` — written to a `.ui-quality.yml` at the repository root that the `app/` sample's UI test reads: per the catalog's UI contract the sample gets Roborazzi + Accessibility Test Framework checks on Robolectric, the shared `app/src/test/java/<namespace-path>/app/testing/UiScreenshots.kt` helper, and a `GreetingTest` capturing `.ui-screenshots/component/Greeting/` across left-to-right/right-to-left × light/dark). Invoke as `/iru-setup-android-library`. Ships with explicit example templates embedded in this skill file, genericized (no real repository/organization/person names, `<placeholder>` markers with a resolution table) from a real Android library's actual project files — https://github.com/albertoirurueta/irurueta-android-glutils — including its `lib/` module shape (JUnit 4 + MockK + Robolectric + AndroidX Espresso, AGP JaCoCo, inline `sonar { properties {…} } ` block run as `./gradlew :lib:sonar`, `mavenPublishing { AndroidSingleVariantLibrary(...) }`) and its Compose `app/` sample module, which is part of this scaffold, not a separate skill. Every toolchain version (Gradle, AGP, Kotlin, Dokka, the `sonarqube`/`com.vanniktech.maven.publish`/Detekt/Spotless/Kover/`de.mannodermaus.android-junit` Gradle plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK, Robolectric, `com.irurueta:irurueta-android-test-utils`) is looked up at run time (Google Maven, Maven Central, the Gradle Plugin Portal, `services.gradle.org`), with this skill's own September 2026 findings as the fallback. Announces whether it is scaffolding from scratch or updating an existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/tasks) / Keep as is / Replace (regenerate, losing customizations) / Stop, even under `mode: existing`, unless `on-existing` (`ask`/`keep`/`update`/`replace`) decides; accepts every input pre-resolved via `args` (`key: value` lines) — including `visibility` (`public`/`private`/`internal`, so SonarCloud is recommended only for a public open-source repository) and `ci` (`yes`/`no`, recommending `sonar: none` when no CI would send reports) — so an orchestrating skill can supply them without re-prompting. Verifies with `./gradlew --offline help` then `./gradlew :lib:assembleDebug` through the `iru-gate-runner` agent, warning up front that the first run downloads Gradle itself, Android SDK components, and every dependency. Use whenever a new Android/Kotlin library repository (with its Compose sample app) needs its Gradle build scaffolded from this house template, instead of hand-writing each Gradle/manifest/properties file.
 model: haiku
 ---
 
@@ -42,6 +42,7 @@ built-in-kotlin: no
 junit: 4
 coverage-tool: jacoco
 static-analysis: lint
+accessibility: enforce
 version: 1.0.0-SNAPSHOT
 visibility: public
 ci: yes
@@ -60,7 +61,9 @@ Recognized keys: `group-id`, `artifact-id`, `namespace` (the Android `namespace`
 (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `built-in-kotlin` (`no`/`yes`, default `no`), `junit`
 (`4`/`5`, default `4`), `coverage-tool` (`jacoco`/`kover`, default `jacoco`), `static-analysis`
-(`lint`/`lint+detekt+ktlint`, default `lint`), `version` (default `1.0.0-SNAPSHOT`), `visibility`
+(`lint`/`lint+detekt+ktlint`, default `lint`), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the
+automated accessibility level of the sample app's UI tests, written to `.ui-quality.yml`), `version` (default
+`1.0.0-SNAPSHOT`), `visibility`
 (`public`/`private`/`internal` — GitHub repository visibility, only used to pick the `sonar` recommendation in
 Step 2), `ci` (`yes`/`no` — whether CI workflows will exist to send Sonar reports; only used by Step 2's `sonar`
 question), `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`).
@@ -80,8 +83,8 @@ Check, at the repository root, which of this skill's files already exist: `build
 `lib/proguard-rules.pro`, `lib/.gitignore`, `lib/src/main/AndroidManifest.xml`,
 `lib/src/androidTest/AndroidManifest.xml`, the placeholder source/tests under `lib/src/{main,test,androidTest}`,
 `detekt.yml` (only relevant once `static-analysis` is resolved in Step 2), `app/build.gradle.kts`, `app/.gitignore`,
-`app/src/main/AndroidManifest.xml`, `app/src/main/java/.../MainActivity.kt`, and the `app/src/main/res/` files from
-Step 7.
+`app/src/main/AndroidManifest.xml`, `app/src/main/java/.../MainActivity.kt`, the `app/src/main/res/` files and
+`app/src/test/` UI-test files from Step 7, and `.ui-quality.yml`.
 
 Then tell the user which of the two this run is doing:
 
@@ -95,7 +98,8 @@ Group the existing files into these artifacts (only those with at least one file
 (`gradle-wrapper.properties` + `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), **`lib/build.gradle.kts`**, **the
 `lib/` skeleton** (manifests, `proguard-rules.pro`, `robolectric.properties`, `lib/.gitignore`, placeholder
 source/tests), **`app/build.gradle.kts`**, **the `app/` skeleton** (manifest, `.gitignore`, `MainActivity.kt`,
-`res/` files), and **`detekt.yml`** (only once Step 2 resolves `static-analysis: lint+detekt+ktlint` — ask about
+`res/` files, `robolectric.properties`, `testing/UiScreenshots.kt`, `GreetingTest.kt`), **`.ui-quality.yml`** (Keep as
+is recommended; name a conflict when its `accessibility` differs from this run's), and **`detekt.yml`** (only once Step 2 resolves `static-analysis: lint+detekt+ktlint` — ask about
 it after Step 2 in that case). `local.properties` is never part of this — it is per-machine and never
 overwritten (Step 9).
 
@@ -202,7 +206,7 @@ derive the recommended defaults for the other two from that answer, per this cat
   - `none` — omit the whole `sonar { properties {...} } ` block (and the `sonarqube` alias/plugin) from Step 6's
     template entirely, in both `lib/build.gradle.kts` and `app/build.gradle.kts`.
 
-Finally, resolve the four toolchain toggles (skip any Step 0 already resolved):
+Finally, resolve the four toolchain toggles and the UI-test accessibility level (skip any Step 0 already resolved):
 
 - **built-in-kotlin** (`no`/`yes`, default `no`) — whether to opt into AGP's newer built-in Kotlin compilation path
   (`android.builtInKotlin=true`/`android.newDsl=true` in `gradle.properties`, Step 5) instead of the
@@ -221,6 +225,10 @@ Finally, resolve the four toolchain toggles (skip any Step 0 already resolved):
 - **static-analysis** (`lint`/`lint+detekt+ktlint`, default `lint`) — Android Lint is always wired (it ships with
   AGP; no opt-in needed). `lint+detekt+ktlint` additionally applies Detekt (with a `detekt.yml` at the repository
   root) and Spotless configured for ktlint + a license-header check — **unverified locally**.
+- **accessibility** (`enforce`/`report`/`off`, default `enforce`) — "Automated accessibility checks in UI tests?":
+  **Enforce (Recommended)** — Accessibility Test Framework violations fail the sample app's UI tests; **Report
+  only** — listed, never failing; **Off** — not run (the coding defaults still apply). Written to `.ui-quality.yml`
+  (Step 7).
 
 ## Step 3 — Infer repository information
 
@@ -263,6 +271,7 @@ lookup, and whenever a resolved version differs meaningfully from what this tabl
 | `androidx.activity:activity-compose` (needed to make the `app/` sample a real Compose app — see Step 7) | `https://dl.google.com/dl/android/maven2/androidx/activity/activity-compose/maven-metadata.xml`, highest stable | `1.13.0` |
 | `com.google.android.material:material` | `https://dl.google.com/dl/android/maven2/com/google/android/material/material/maven-metadata.xml` `<release>` | `1.14.0` |
 | `io.mockk:mockk-android` | Maven Central search `g:io.mockk AND a:mockk-android` | `1.14.9` (the reference repository's own `libs.versions.toml`; Maven Central's search index returned a stale `1.14.3` while verifying this skill — prefer the reference's observed value if the two disagree) |
+| Roborazzi (`io.github.takahirom.roborazzi:roborazzi`, `-compose`, `-accessibility-check`; test scope, `app/` only) | `https://repo1.maven.org/maven2/io/github/takahirom/roborazzi/roborazzi/maven-metadata.xml` `<release>` | `1.76.0` |
 | `org.robolectric:robolectric` | `https://repo1.maven.org/maven2/org/robolectric/robolectric/maven-metadata.xml` `<release>` | `4.17` — but see Step 6's Robolectric/`compileSdk` quirk before trusting this blindly |
 | `com.irurueta:irurueta-android-test-utils` | `https://repo1.maven.org/maven2/com/irurueta/irurueta-android-test-utils/maven-metadata.xml` `<release>` | `1.3.2` |
 | `de.mannodermaus.android-junit` (only `junit: 5`) | `https://plugins.gradle.org/m2/de/mannodermaus/android-junit/de.mannodermaus.android-junit.gradle.plugin/maven-metadata.xml` `<release>` — note the plugin id dropped its trailing `5` when the `mannodermaus/android-junit5` project was renamed `android-junit-framework` | `2.0.1` |
@@ -424,6 +433,7 @@ robolectric = "<robolectric-version>"
 kotlinReflect = "<kotlin-version>"
 iruruetaTestUtils = "<irurueta-test-utils-version>"
 activityCompose = "<activity-compose-version>"
+roborazzi = "<roborazzi-version>"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -441,6 +451,12 @@ irurueta-test-utils = { group = "com.irurueta", name = "irurueta-android-test-ut
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-ui-test-junit4-accessibility = { group = "androidx.compose.ui", name = "ui-test-junit4-accessibility" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-accessibility-check = { group = "io.github.takahirom.roborazzi", name = "roborazzi-accessibility-check", version.ref = "roborazzi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -455,7 +471,9 @@ publish = { id = "com.vanniktech.maven.publish", version.ref = "publish" }
 Every `[versions]`/`[libraries]`/`[plugins]` alias up to `androidx-activity-compose` is copied verbatim from the
 reference repository (minus its two project-specific dependencies, `geometry`/`khronos`, which are that library's
 own OpenGL/geometry dependencies and have no place in a generic template) — do not rename, reorder, or drop any of
-them. `androidx-activity-compose`, `androidx-ui-tooling-preview`, and `androidx-ui-tooling` are the three additions
+them. The `androidx-ui-test-*` and `roborazzi*` aliases (and the `roborazzi` version) are this catalog's UI-contract
+additions for the `app/` sample's UI test (Step 7) — the Compose UI test artifacts take their version from the BOM
+(`ui-test-junit4-accessibility` needs Compose 1.8+). `androidx-activity-compose`, `androidx-ui-tooling-preview`, and `androidx-ui-tooling` are the three additions
 beyond the reference's own file: the reference's `app/` module declares the Compose BOM/Material3 dependencies but
 its actual `MainActivity` never calls `setContent {}` (it's a legacy View-based activity), so it never needed
 `activity-compose`, and it never uses `@Preview`, so it never needed `ui-tooling-preview`/`ui-tooling` either. All
@@ -1033,6 +1051,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 
 class MainActivity : ComponentActivity() {
@@ -1042,23 +1061,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    Greeting()
+                    Greeting(stringResource(R.string.app_name))
                 }
             }
         }
     }
 }
 
+/**
+ * Greets [name] — the sample component of the UI contract (state: `name`; events: none; visual states: `default`).
+ *
+ * @param name the name shown inside the localized greeting.
+ * @param modifier modifier applied to the text.
+ */
 @Composable
-fun Greeting() {
-    Text(text = "Hello, <artifact-id>!")
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(text = stringResource(R.string.greeting, name), modifier = modifier)
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     MaterialTheme {
-        Greeting()
+        Greeting("<artifact-id>")
     }
 }
 ```
@@ -1125,6 +1150,12 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            // Robolectric UI tests need the merged resources (strings, themes) and render with them.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 kotlin {
     compilerOptions {
@@ -1181,9 +1212,19 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)
+    // UI tests (catalog UI contract): Compose rule + Roborazzi captures + ATF checks on Robolectric.
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.accessibility.check)
+    debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.ui.test.junit4.accessibility)
 }
 ```
 
@@ -1203,6 +1244,7 @@ without `ui-tooling-preview`, `:app:compileDebugKotlin` fails with `Unresolved r
 ```xml
 <resources>
     <string name="app_name"><artifact-id></string>
+    <string name="greeting">Hello, %1$s!</string>
 </resources>
 ```
 
@@ -1289,6 +1331,222 @@ targets, so the vector-only adaptive icon covers every device this template supp
 fallbacks for older APIs. If a future `min-sdk` below `26` is ever chosen, regenerate raster mipmaps (e.g. via
 Android Studio's Image Asset tool) before relying on the launcher icon rendering correctly.
 
+### `.ui-quality.yml` — UI test settings at the repository root
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
+Exactly the catalog's UI contract §8 shape; `<accessibility>` is Step 2's answer (default `enforce`).
+
+### `app/src/test/resources/<namespace-path>/app/robolectric.properties`
+
+```properties
+sdk=<robolectric-sdk>
+```
+
+Same value as `lib`'s (Step 6) — without it Robolectric runs the sample's UI test at `targetSdk`, and SDK 36 on
+JDK 21 fails Robolectric's `FileDescriptor` interceptor (`IllegalAccessException … jdk.internal.access`).
+
+### `app/src/test/java/<namespace-path>/app/testing/UiScreenshots.kt` — shared UI-test helper
+
+Resolves `UI_SCREENSHOTS_DIR` (else `<repository root>/.ui-screenshots`), reads `.ui-quality.yml`, builds the
+capture matrix and the contract's file names, forces Roborazzi to record (its captures are no-ops otherwise), and
+maps the accessibility level onto Roborazzi's ATF options:
+
+```kotlin
+package <namespace>.app.testing
+
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.RoborazziATFAccessibilityCheckOptions
+import com.github.takahirom.roborazzi.RoborazziATFAccessibilityChecker
+import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.RoborazziTaskType
+import java.io.File
+
+/**
+ * Shared UI-test helper: screenshot paths, the `.ui-quality.yml` settings and the capture matrix.
+ *
+ * Screenshots go to `UI_SCREENSHOTS_DIR` when set, otherwise to `<repository root>/.ui-screenshots`, as
+ * `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`.
+ */
+object UiScreenshots {
+    /** What a capture shows. */
+    enum class Kind { COMPONENT, SCREEN, FLOW }
+
+    /** Layout direction of a capture. */
+    enum class Direction { LTR, RTL }
+
+    /** Theme of a capture. */
+    enum class Theme { LIGHT, DARK, HIGH_CONTRAST }
+
+    /** Level of the automated accessibility checks. */
+    enum class Accessibility { ENFORCE, REPORT, OFF }
+
+    /** One cell of the capture matrix. */
+    data class Variant(val direction: Direction, val theme: Theme) {
+        /** Whether this cell renders right-to-left. */
+        val isRtl: Boolean get() = direction == Direction.RTL
+
+        /** Whether this cell renders the dark theme. */
+        val isDark: Boolean get() = theme == Theme.DARK
+    }
+
+    private val segment = Regex("[a-z0-9]+(-[a-z0-9]+)*")
+    private val setting = Regex("""^\s*(accessibility|directions|themes)\s*:\s*([^#]*)""")
+
+    /** Repository root: the nearest ancestor holding `.git`, else `settings.gradle(.kts)`, else the working dir. */
+    val repositoryRoot: File by lazy {
+        val start = File(System.getProperty("user.dir") ?: ".").absoluteFile
+        generateSequence(start) { it.parentFile }.firstOrNull { File(it, ".git").exists() }
+            ?: generateSequence(start) { it.parentFile }.firstOrNull {
+                File(it, "settings.gradle.kts").exists() || File(it, "settings.gradle").exists()
+            }
+            ?: start
+    }
+
+    /** Directory every capture is written under. */
+    val rootDir: File by lazy {
+        System.getenv("UI_SCREENSHOTS_DIR")?.takeIf { it.isNotBlank() }?.let(::File)
+            ?: File(repositoryRoot, ".ui-screenshots")
+    }
+
+    private val settings: Map<String, String> by lazy {
+        val file = File(repositoryRoot, ".ui-quality.yml")
+        if (!file.isFile) emptyMap()
+        else file.readLines().mapNotNull { setting.find(it) }.associate { it.groupValues[1] to it.groupValues[2].trim() }
+    }
+
+    private fun list(key: String): List<String>? =
+        settings[key]?.trim('[', ']', ' ')?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+
+    /** Accessibility level from `.ui-quality.yml` (default `enforce`). */
+    val accessibility: Accessibility by lazy {
+        settings["accessibility"]?.let { Accessibility.valueOf(it.uppercase()) } ?: Accessibility.ENFORCE
+    }
+
+    /** Directions × themes to capture, from `.ui-quality.yml` (default `[ltr, rtl]` × `[light, dark]`). */
+    val matrix: List<Variant> by lazy {
+        val directions = list("directions")?.map { Direction.valueOf(it.uppercase()) } ?: Direction.entries
+        val themes = list("themes")?.map { Theme.valueOf(it.uppercase().replace('-', '_')) }
+            ?: listOf(Theme.LIGHT, Theme.DARK)
+        directions.flatMap { d -> themes.map { t -> Variant(d, t) } }
+    }
+
+    /**
+     * Returns (and creates the parent of) the PNG file for one capture.
+     *
+     * @param kind component, screen or flow.
+     * @param id type name exactly as in code (`OrderRow`), or a kebab-case flow name.
+     * @param state kebab-case visual state (`default`, `loading`, `01-cart`, …).
+     * @param variant direction and theme of the capture.
+     * @param extra optional further variants (`phone`, `large-text`, …).
+     * @return the file to write.
+     * @throws IllegalArgumentException if a segment is not kebab-case.
+     */
+    fun file(kind: Kind, id: String, state: String, variant: Variant, vararg extra: String): File {
+        require(id.isNotBlank() && !id.contains('/')) { "Invalid id '$id'" }
+        (listOf(state) + extra).forEach { require(segment.matches(it)) { "'$it' is not kebab-case" } }
+        val name = (listOf(state, variant.direction.slug(), variant.theme.slug()) + extra).joinToString("--")
+        return File(rootDir, "${kind.slug()}/$id/$name.png").also { it.parentFile?.mkdirs() }
+    }
+
+    /** Roborazzi options that always write the capture, whatever the `roborazzi.test.*` properties say. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    val recordOptions: RoborazziOptions = RoborazziOptions(taskType = RoborazziTaskType.Record)
+
+    /** Roborazzi ATF options for the configured level, or `null` when the checks are `off`. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    val accessibilityOptions: RoborazziATFAccessibilityCheckOptions? by lazy {
+        when (accessibility) {
+            Accessibility.ENFORCE -> RoborazziATFAccessibilityCheckOptions(
+                failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.Error,
+            )
+            Accessibility.REPORT -> RoborazziATFAccessibilityCheckOptions(
+                failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.LogOnly,
+            )
+            Accessibility.OFF -> null
+        }
+    }
+
+    private fun Enum<*>.slug(): String = name.lowercase().replace('_', '-')
+}
+```
+
+### `app/src/test/java/<namespace-path>/app/GreetingTest.kt` — sample UI test
+
+```kotlin
+package <namespace>.app
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.LayoutDirection
+import <namespace>.app.testing.UiScreenshots
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.checkRoboAccessibility
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w360dp-h640dp-xxhdpi")
+class GreetingTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun greeting_showsLocalizedName() {
+        composeRule.setContent { MaterialTheme { Greeting("Ada") } }
+
+        composeRule.onNodeWithText("Hello, Ada!").assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun greeting_capturesEveryDirectionAndTheme() {
+        var cell by mutableStateOf(UiScreenshots.matrix.first())
+        composeRule.setContent {
+            val direction = if (cell.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+            CompositionLocalProvider(LocalLayoutDirection provides direction) {
+                MaterialTheme(colorScheme = if (cell.isDark) darkColorScheme() else lightColorScheme()) {
+                    Surface { Greeting(if (cell.isRtl) "عائشة" else "Ada") }
+                }
+            }
+        }
+        for (variant in UiScreenshots.matrix) {
+            cell = variant
+            composeRule.waitForIdle()
+            val file = UiScreenshots.file(UiScreenshots.Kind.COMPONENT, "Greeting", "default", variant)
+            composeRule.onRoot().captureRoboImage(file.path, roborazziOptions = UiScreenshots.recordOptions)
+            UiScreenshots.accessibilityOptions?.let { composeRule.onRoot().checkRoboAccessibility(it) }
+        }
+    }
+}
+```
+
+With a Compose BOM whose UI test artifacts are 1.11 or newer, `createComposeRule` is deprecated in favour of
+`androidx.compose.ui.test.junit4.v2.createComposeRule` (same use) — switch the import then. Prepend the same
+license-header comment block as the other source files to both Kotlin files (omit if "No license").
+
 ## Step 8 — Resolve every placeholder
 
 One consolidated resolution table for every `<placeholder>` used across Steps 5–7 — cross-reference this when
@@ -1305,6 +1563,8 @@ filling any template above:
 | `<namespace-path>` | `<namespace>` with `.` → `/` |
 | `<robolectric-sdk>` | Step 6's Robolectric/`compileSdk` note — not always equal to `<compile-sdk>` |
 | `<theme-name>` | Step 7's PascalCase derivation from `<artifact-id>` |
+| `<accessibility>` | Step 2's `accessibility` answer (default `enforce`) — only in `.ui-quality.yml` |
+| `<roborazzi-version>` | Step 4 |
 | `<copyright-year>` | The current year |
 
 `publish: no` removes the whole `mavenPublishing {...}` block from `lib/build.gradle.kts` and the `publish`
@@ -1365,7 +1625,9 @@ Bash, so the caller gets a compact pass/fail summary instead of raw Gradle outpu
    invocation as a failure.
 2. `./gradlew :lib:assembleDebug` — compiles the library module (and transitively the `app/` module's dependency on
    it isn't exercised by this task alone; a full check should also try `:app:assembleDebug` and `:lib:testDebugUnitTest`,
-   which `iru-android-test`/`iru-android-coverage` cover separately). **Note explicitly to the user**: this first
+   which `iru-android-test`/`iru-android-coverage` cover separately).
+3. `./gradlew :app:testDebugUnitTest` — the sample's UI test; then confirm `.ui-screenshots/component/Greeting/`
+   holds one `default--<ltr|rtl>--<light|dark>.png` per `.ui-quality.yml` cell (four by default). **Note explicitly to the user**: this first
    real build also downloads every Android SDK component (`platforms;android-<compile-sdk>`, build-tools) and every
    Gradle dependency declared in Steps 5–6 that AGP/Gradle don't already have cached — also potentially several
    minutes, and requires `ANDROID_HOME`/`ANDROID_SDK_ROOT` (or `local.properties`'s `sdk.dir`, from Step 9) to point
@@ -1376,6 +1638,14 @@ component, an unaccepted SDK license, or a network-blocked plugin/dependency dow
 causes and are not, by themselves, defects in this skill's templates.
 
 ### Known quirks / verification notes (from building and verifying this skill, September 2026)
+
+- **UI-contract additions (`.ui-quality.yml`, `UiScreenshots.kt`, `GreetingTest`), verified October 2026** outside
+  this repository (`$TMPDIR/iru-verify/android/app-ui/`): the helper (byte-identical to `iru-setup-android-app`'s)
+  and this `GreetingTest` compiled and ran on Robolectric `4.16.1` (`sdk=35`) with AGP `9.0.1`, Kotlin `2.3.10`,
+  Compose BOM `2026.02.01` and Roborazzi `1.76.0` on JDK 21, writing
+  `.ui-screenshots/component/Greeting/default--{ltr,rtl}--{light,dark}.png` with the ATF check passing at
+  `enforce`. The full library scaffold (`lib` + `app` with `implementation(project(":lib"))`) was not regenerated
+  for this pass — the `app/` additions are self-contained test-scope dependencies plus one `testOptions` block.
 
 - **`./gradlew --offline help` genuinely fails on a cold machine**, not just slowly: with nothing cached yet,
   resolving the `com.android.application`/`com.android.library` plugins themselves needs the network, and
@@ -1494,6 +1764,9 @@ State explicitly what was included versus omitted, and why:
   sends reports — the scan only runs when invoked manually.
 - **`built-in-kotlin`**/**`junit`**/**`coverage-tool`**/**`static-analysis`**: the resolved value for each, and
   which of them fall into Step 11's "unverified locally" list.
+- **`accessibility`** and the UI-contract files: `.ui-quality.yml` with its action (**created / updated / replaced /
+  kept as is**) and level, the `app/` sample's `testing/UiScreenshots.kt` helper and `GreetingTest`, and how many
+  captures Step 11 found under `.ui-screenshots/` (gitignored by `iru-setup-android-gitignore`).
 - Which toolchain versions (Step 4) came from a live lookup versus this skill's recorded fallback, and any version
   drift worth flagging (e.g. the `com.vanniktech.maven.publish` metadata quirk).
 

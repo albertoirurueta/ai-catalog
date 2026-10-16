@@ -176,6 +176,9 @@ jobs:
       # CoreTests + <AppName>Tests + <AppName>UITests. Ad-hoc signing: CODE_SIGNING_ALLOWED=NO would kill the
       # UI-test runner on arm64 before it connects.
       - name: App tests (unit + UI)
+        env:
+          # UI contract: the test processes write captures here (xcodebuild strips the TEST_RUNNER_ prefix).
+          TEST_RUNNER_UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
         run: |
           xcodebuild test -project <AppName>.xcodeproj -scheme <AppName> -destination 'platform=macOS' \
             -derivedDataPath build/dd -resultBundlePath build/<AppName>.xcresult \
@@ -185,6 +188,8 @@ jobs:
 
       # CoreTests + <AppName>Tests; the XCUITest bundle stays local (ci-tests: unit).
       - name: App tests (unit)
+        env:
+          TEST_RUNNER_UI_SCREENSHOTS_DIR: ${{ github.workspace }}/.ui-screenshots
         run: |
           xcodebuild test -project <AppName>.xcodeproj -scheme <AppName> -destination 'platform=macOS' \
             -skip-testing:<AppName>UITests \
@@ -203,6 +208,36 @@ jobs:
           name: <AppName>-xcresult
           path: build/<AppName>.xcresult
           retention-days: 14
+
+      # UI contract: the sandboxed app can't write the workspace, so the captures its tests attached to the
+      # .xcresult (<kind>~<Id>~<file>) are rebuilt into .ui-screenshots/<kind>/<Id>/<file>.png here.
+      - name: Collect UI screenshots from the xcresult
+        if: (!cancelled()) && hashFiles('build/<AppName>.xcresult/Info.plist') != ''
+        run: |
+          set -eo pipefail
+          export_dir="$RUNNER_TEMP/attachments"
+          xcrun xcresulttool export attachments --path build/<AppName>.xcresult --output-path "$export_dir" > /dev/null
+          python3 - "$export_dir" .ui-screenshots <<'PY'
+          import json, os, re, shutil, sys
+          export, out = sys.argv[1], sys.argv[2]
+          for test in json.load(open(os.path.join(export, "manifest.json"))):
+              for a in test["attachments"]:
+                  name = re.sub(r"_\d+_[0-9A-Fa-f-]{36}(\.\w+)?$", "", a["suggestedHumanReadableName"])
+                  name = re.sub(r"\.png$", "", name)
+                  if re.match(r"^(component|screen|flow)~", name):
+                      path = os.path.join(out, name.replace("~", "/") + ".png")
+                      os.makedirs(os.path.dirname(path), exist_ok=True)
+                      shutil.copyfile(os.path.join(export, a["exportedFileName"]), path)
+          PY
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # --warnings-as-errors is the documentation gate; the archive is merged under the Antora site's api/ by the
       # site job, so DocC bakes /<repo>/api into its links.

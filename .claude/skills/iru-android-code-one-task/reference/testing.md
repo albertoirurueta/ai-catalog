@@ -93,9 +93,19 @@ this skill's own compile-check or `iru-android-code-one-task-group`'s unit-cover
 - **`createComposeRule()`/`createAndroidComposeRule<Activity>()`** for a Compose screen — see `compose.md`.
 - **`AndroidJUnitRunner`** as the `testInstrumentationRunner`, `androidx.test.ext:junit`/`junit-ktx` for
   `@RunWith(AndroidJUnit4::class)`.
-- Write the `androidTest` when the task explicitly asks for instrumented coverage, or when a behavior genuinely
-  can't be verified any other way (real touch/gesture handling, real `SurfaceTexture` lifecycle). Don't write one
+- Write the `androidTest` when the task explicitly asks for instrumented coverage, adds or changes a user flow
+  (see "UI tests" below), or when a behavior genuinely can't be verified any other way (real touch/gesture
+  handling, real `SurfaceTexture` lifecycle). Don't write one
   merely because a unit test would be harder — Robolectric usually covers the same ground faster.
+
+## UI tests
+
+A task that adds or changes a screen, component or list also writes UI tests per `ui-contract.md` §6–§8, mapped
+in `ui-implementation.md`: component and screen tests on Robolectric in `src/test` (every visual state, minimal/
+typical/many-items and right-to-left fixture data, a Roborazzi capture of each state across the `.ui-quality.yml`
+directions × themes through the module's `testing/UiScreenshots.kt` helper, and the Accessibility Test Framework
+check at the configured level), plus an instrumented flow test only when the task adds or changes a flow. These
+JVM UI tests count toward the unit-test coverage gate like any other `src/test` test.
 
 ## `com.irurueta:irurueta-android-test-utils`
 

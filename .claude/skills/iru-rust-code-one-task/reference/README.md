@@ -20,13 +20,15 @@ edition/MSRV, clap/ratatui/tokio, the test crates, and whether the project follo
 | `clap.md` | The task adds or changes a subcommand, argument, flag, value enum, env-backed flag, help text, completions, man page/CLI reference generation, or config precedence. |
 | `output-and-terminal.md` | The task writes to stdout/stderr, prints JSON/JSONL or the error envelope, decides colour, prompts, shows progress, handles SIGINT/SIGTERM, or could hit a broken pipe. |
 | `ratatui.md` | `ratatui` is a dependency and the task touches the terminal UI (state, key handling, rendering, the event loop, its TTY gate). |
+| `ui-contract.md` | `ratatui` is a dependency and the task adds or changes a screen, component, list or other UI. Verbatim copy of the catalog-wide UI contract (decomposition, composition, inputs/events, collections, UI tests, screenshots, accessibility). |
+| `ui-implementation.md` | Together with `ui-contract.md`: the contract on Ratatui — `Widget`/`StatefulWidget` components, `Action` events, lists/tables that render only the visible window, `TestBackend` component/screen/flow tests, the `src/tui/ui_screenshots.rs` text-capture helper, the asserted accessibility checks and `.ui-quality.yml`. |
 | `security.md` | The task spawns a process, resolves a path from an argument or config, parses untrusted input (files, stdin, network), handles a token/secret, writes files, or is tempted to use `unsafe`/`env::set_var`. |
 | `async.md` | `tokio` is **already** a dependency and the task touches async code, cancellation, timeouts, or async tests. Never a reason to add tokio. |
 
 A task that only changes logic inside one existing function, with no signature change and no output change, needs
 `code-style.md` plus `testing.md`, and nothing else. Don't read the rest speculatively. For a Rust crate that is not a
-CLI (a library, a service), `cli-contract.md`, `clap.md`, `output-and-terminal.md` and `ratatui.md` are simply never
-routed. Read `cli-contract.md` before `clap.md`/`output-and-terminal.md` when both apply — they implement it.
+CLI (a library, a service), `cli-contract.md`, `clap.md`, `output-and-terminal.md`, `ratatui.md` and the two `ui-*.md` files are
+simply never routed. Read `cli-contract.md` before `clap.md`/`output-and-terminal.md` when both apply — they implement it.
 
 ## The three rules that override everything else
 

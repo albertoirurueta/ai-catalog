@@ -23,9 +23,11 @@ Step 1 detects toolchain, React Native/Expo SDK/React versions, routing, Jest pr
 state/native libraries, native layout, package manager, and any project `AGENTS.md`/`CLAUDE.md`, then reads
 `reference/README.md` and only what it routes to: always `mandatory-rules.md` and `code-style.md`, exactly one of
 `expo.md`/`metro.md`, and as needed `native-modules.md`, `state-and-data.md`, `ui-and-platform.md`, `testing.md`,
-`security.md`, and `tsdoc.md`. Steps 2-4 re-check current code, implement exactly what the task says, and write
+`security.md`, `tsdoc.md`, and `ui-contract.md` plus `ui-implementation.md` for UI work. Steps 2-4 re-check current code, implement exactly what the task says, and write
 tests. Step 6 checks off the task's own checkbox with a "group validation pending" note, and Step 7 reports the
-detected profile, files touched, native impact, blockers, and deviations from `reference/`. It runs on a medium
+detected profile, files touched, native impact, blockers, and deviations from `reference/`. For a task that adds or changes a screen, component or list it also applies the catalog's UI contract and its React Native mapping (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it writes the `Screen › Region › Component` tree first, builds presentational components with typed state props and `on…` callbacks, uses `FlatList`/`SectionList` with a memoized item component for collections, and writes RNTL tests, UI gallery registry entries and Maestro capture flows (`.maestro/ui/`) for each state × left-to-right/right-to-left × light/dark, plus code that passes `eslint-plugin-react-native-a11y` at the `.ui-quality.yml` level.
+
+It runs on a medium
 model on purpose, since the plan carries the hard reasoning.
 
 == Purpose group
@@ -60,9 +62,10 @@ and any relevant "Current code state" context.
 * Tests for the new/changed behaviour (Jest with the detected preset and RNTL API shape, JS facade tests for native
   code, native JUnit/XCTest where the project has such targets, and Maestro/Detox flows only when the project already
   uses that framework) — written, never run.
+* For UI work: RNTL component/screen tests over every fixture state, UI gallery registry entries (`src/dev/ui-gallery/registry.tsx`), `.maestro/ui/<Id>.yaml` capture flows using the `ui-capture` subflow (or `e2e/support/ui-screenshots.ts` for Detox) and `takeScreenshot` steps in new flows — written, never run; missing capture infrastructure is reported, not invented.
 * `implementation_plan.md` with this task's checkbox (and its completed sub-tasks') checked and a "group validation
   pending" note, unless the task stopped on a blocker.
-* A report: detected profile and reference files read, files touched and tests added, native impact (which platform
+* A report: detected profile and reference files read, files touched and tests added, for UI work the decomposition tree and the screenshot names the tests will produce, native impact (which platform
   changed and what it needs — `pod install`, Gradle build, development build, prebuild check — and whether it is
   OTA-compatible), any blocker, and any deliberate deviation from `reference/`.
 * No baseline capture, no quality gates, no commits.
@@ -77,7 +80,7 @@ flowchart TD
     C -- no --> D["Stop: task was mis-routed\nto another key"]
     C -- yes --> E["Read reference/README.md,\nmandatory-rules, code-style,\none toolchain file, plus task-relevant files"]
     E --> F["Step 2: re-check current code state\nof files the task touches"]
-    F --> G["Step 3: implement exactly what\nthe task specifies"]
+    F --> G["Step 3: implement exactly what\nthe task specifies;\nUI work: decompose first"]
     G --> H["Step 4: write/update tests\n(nothing is run)"]
     H --> I{Blocker or ambiguity\nthat needs the user?}
     I -- yes --> J["Step 5: ask the user\nor report task blocked"]

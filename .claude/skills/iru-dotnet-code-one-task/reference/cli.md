@@ -13,7 +13,7 @@ trim and AOT analyzers), run (`--json`, a validator error → exit 2) and Native
 | `src/<Tool>/<Tool>.csproj`: `Exe`, `AssemblyName <bin>`, `PublishAot`, `PackAsTool`, a `System.CommandLine` reference | a CLI project (the `iru-setup-dotnet-cli` layout) |
 | `src/<Tool>.Core/` with `ExitCode.cs`, `CliException.cs`, `Output/CliJsonContext.cs`, `Terminal/ColorPolicy.cs` | the contract lives in Core: logic and policies, no System.CommandLine/Spectre dependency |
 | `tests/<Tool>.Core.Tests` and `tests/<Tool>.Cli.Tests` (`CliRunner`, `[TestCategory("PublishedBinary")]`) | the two test layers |
-| `src/<Tool>/Commands/BrowseCommand.cs` + a `Terminal.Gui` reference | the optional full-screen TUI (`ui: tui`) |
+| `src/<Tool>/Commands/BrowseCommand.cs` + `src/<Tool>/Tui/BrowseView.cs` + a `Terminal.Gui` reference | the optional full-screen TUI (`ui: tui`) — read `ui-contract.md` + `ui-implementation.md` for any task touching it |
 | `System.CommandLine` `2.0.0-beta*`, `SetHandler`, `InvocationContext`, `CommandLineBuilder` | the **old beta API** — removed in 2.0 GA; follow the project's version, don't mix APIs, and report it |
 | `Spectre.Console.Cli` (`CommandApp`, `Command<TSettings>`) | a different framework: follow it; map its usage-error exit code to 2 in one place if it isn't already |
 
@@ -167,8 +167,11 @@ every `dotnet build`, and `dotnet publish -r <rid>` checks the rest.
 
 ## Terminal UI (`ui: tui`, Terminal.Gui v2)
 
-- State and transitions live in Core (`Browse/BrowseState` style) and are unit-tested; the view in
-  `Commands/BrowseCommand.cs` only renders and forwards events.
+- State and transitions live in Core (`Browse/BrowseState` style) and are unit-tested; the view, composed in
+  `Tui/BrowseView.cs` (a `Create(state, title)` factory the tests can render without the command), only renders and
+  forwards events; `Commands/BrowseCommand.cs` owns the TTY gate, the cancellation timer and `app.Run`. Lists use
+  `ListView`/`TableView` over the state's data, and every view change brings `[TestCategory("UI")]` view tests with
+  `.ui-screenshots/` text captures — all in `ui-implementation.md`.
 - The command starts only when `streams.Terminal.StdinIsTerminal && StdoutIsTerminal` and not in machine mode;
   otherwise it throws a `CliException(ExitCode.Usage, …)` whose hint names the non-interactive `--json` command that
   gives the same data. Every function the TUI offers must exist as such a command.

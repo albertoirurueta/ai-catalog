@@ -13,7 +13,9 @@ description: >-
   `context.Context` first — and errors — `%w` wrapping, `errors.Is`/`As`/`AsType`, sentinel vs typed errors, exit-code
   mapping in one place; as needed: testing — table tests, `t.Parallel` caveats, golden files with `-update`,
   testscript, Cobra in-process tests, teatest —, the shared CLI contract, Cobra, output/TTY/colour/signals/EPIPE,
-  Bubble Tea v2, doc comments, security — argv-only `exec.CommandContext`, `--` before operands, `os.Root` —, and
+  Bubble Tea v2, the catalog's UI contract on Bubble Tea when a task touches the terminal UI — composed sub-models,
+  typed intent messages, Bubbles lists/tables rendering only what fits, state × direction × theme UI tests captured as
+  `.txt` into `.ui-screenshots/`, asserted accessibility checks at the `.ui-quality.yml` level —, doc comments, security — argv-only `exec.CommandContext`, `--` before operands, `os.Root` —, and
   concurrency — errgroup, cancellation, no leaks). Re-checks the current code state, implements exactly what the task
   specifies, writes/updates the tests next to the code, formats the touched files (`gofmt`/`goimports`) and
   compile-checks with `go build ./...` plus `go vet` on the touched packages (test files included), then — if the
@@ -98,6 +100,7 @@ you to the rest — then read only what it points at. The routing, restated:
 | `reference/cobra.md` | A Cobra command, flag, `Args` validator, flag group, completion, or the generated reference/man pages. |
 | `reference/output-and-terminal.md` | stdout/stderr writes, `--format`/JSON payloads, Lip Gloss styling, prompts, TTY detection, signals, broken pipes, file writes. |
 | `reference/bubbletea.md` | The Bubble Tea model or the command that starts it. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a TUI screen, component, list or other UI. |
 | `reference/godoc.md` | A new/changed exported identifier or a new package. |
 | `reference/security.md` | Child processes, paths from arguments/env/config, secrets/tokens, network I/O, or a `gosec` finding. |
 | `reference/concurrency.md` | Goroutines, channels, `sync`, `errgroup`, timeouts/cancellation, signal handling. |
@@ -139,6 +142,11 @@ Non-negotiable, because a gate or a caller enforces them:
 - **Never hand-edit generated code.** If the task changes a `//go:generate` input, run that package's
   `go generate ./<pkg>` and keep the regenerated output.
 
+- **Terminal UI work decomposes first** (`reference/ui-contract.md` §2): write the `Screen › Region › Component` tree
+  (inputs, intent messages, visual states, what is reused) before coding, build leaves first, keep raw key messages
+  inside the component that owns them, render collections through Bubbles or a windowed slice
+  (`reference/ui-implementation.md`), and include the tree in the Step 8 report.
+
 Don't add anything the task didn't ask for — no speculative interfaces, no unrelated cleanup, no restyling.
 
 ## Step 4 — Write or update the tests
@@ -148,7 +156,12 @@ Follow `reference/testing.md` and the neighbouring test style: table tests next 
 `runCLI`-style helper asserting exit code, stdout, stderr, and the envelope; a new or updated golden file for any
 changed JSON output (created/refreshed only through the test's `-update` flag, then read); a `.txtar` script under the
 testscript `Dir` when the task adds a command or changes end-to-end behaviour (help, exit code, no-TTY output); pure
-`Update` tests (plus a teatest program test when the task asks for one) for the TUI. Produce every new exit code on
+`Update` tests (plus a teatest program test when the task asks for one) for the TUI — and, for a screen/component
+the task added or changed, the UI tests of `reference/ui-implementation.md` §4–§6: every visual state with
+minimal/typical/many-items/long-content and right-to-left fixtures, each captured through
+`internal/tui/ui_screenshots_test.go` as `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt` for every
+`.ui-quality.yml` direction × theme the TUI has (plus `no-color`), and the asserted accessibility checks at the file's
+level. Produce every new exit code on
 purpose in the exit-code table. Container-backed tests go in `//go:build integration` files only. Aim the new tests
 at ≥ 80% statement coverage of every file you changed — the group gates on it per file.
 
@@ -225,6 +238,8 @@ Hand back a short summary:
   files (and whether a golden file was hand-written pending the group's run).
 - **The compile-check result**: `go build ./...` and `go vet` per package — passed, failed on this task's code and
   fixed, failed outside this task's scope, or unavailable (and why); which files were formatted and with which tool.
+- **For terminal UI work**: the `Screen › Region › Component` decomposition, and the UI tests and captures added
+  (component/screen/flow, states × directions × themes, accessibility rule ids checked; not run).
 - **Interface changes**: new/changed commands, flags, exit codes used, JSON fields/`schemaVersion`, and whether the
   generated CLI reference/man pages need regenerating.
 - **Dependency changes** (`go.mod`/`go.sum`), only when the task allowed them, with the resolved versions.
@@ -270,6 +285,10 @@ Fallback if a lookup fails: those versions.
 - The verification CLI used the generic `classify`/`started` error mapping; the `iru-setup-go-cli` templates' `App` /
   `wrapRunE` / `exitCode` structure that `reference/` also describes was read from that skill (written concurrently)
   but not built here — its own verification covers it.
+- `reference/ui-contract.md` (verbatim catalog copy) and `reference/ui-implementation.md` were added later for the UI
+  contract without a Go toolchain on the authoring machine: the APIs they use (`tea.View.Content`,
+  `tea.RequestBackgroundColor`/`BackgroundColorMsg.IsDark`, `lipgloss.LightDark`, Bubbles v2 `list.New`/
+  `ItemDelegate`, `ansi.Strip`) were checked against pkg.go.dev, the code sketches were not compiled.
 - **Not verified**: Windows and Linux hosts (only macOS arm64), a TTY-attached run of `browse` (teatest drives the
   model without a real terminal), urfave/cli and kong projects (detection only), and the per-task skill's own
   end-to-end run inside the `iru-code` pipeline.

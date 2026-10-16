@@ -5,7 +5,7 @@ Two test projects, two very different jobs:
 | Project | Target | Runs on | Counts toward the 80% bar | Contains |
 |---|---|---|---|---|
 | `tests/<App>.Core.Tests` | `net10.0` | Linux, macOS, Windows | yes (Core's line coverage) | models, services, view models / controllers — everything with logic |
-| `tests/<App>.UITests` | `net10.0-windows` | Windows only, interactive desktop | never | a few FlaUI smoke/flow tests, every one `[TestCategory("UI")]` |
+| `tests/<App>.UITests` | `net10.0-windows` | Windows only, interactive desktop | never | FlaUI screen/component/flow tests with `.ui-screenshots/` captures and the Axe.Windows check, every one `[TestCategory("UI")]` |
 
 Follow whichever framework the project references (MSTest by default in this catalog; xUnit/NUnit if that's what's
 there — same rules, their own attributes). Write tests; don't run them (the group skill does).
@@ -109,8 +109,11 @@ was told; dispose the controller and assert that raising the event again does no
 ## UI automation tests (FlaUI — third-party, Windows only)
 
 Microsoft currently recommends no desktop UI-automation tool (WinAppDriver has had no release since 2020); the
-catalog uses **FlaUI** (`FlaUI.UIA3`), a third-party UI Automation wrapper. Write one only when the task asks for UI
-coverage of a flow.
+catalog uses **FlaUI** (`FlaUI.UIA3`), a third-party UI Automation wrapper. A task that adds or changes a screen or
+component writes its UI tests per `ui-contract.md` §6–8: every visual state, the direction × theme matrix from
+`.ui-quality.yml` (`[DynamicData(nameof(Matrix))]` over `UiQuality.Matrix`, launching with
+`--ui-direction=… --ui-theme=…`), a `UiScreenshots.Save(…)` capture per state, and `AccessibilityCheck.Run(…)` after
+each capture — helpers and the component-host pattern in `ui-implementation.md`.
 
 The scaffold (`iru-setup-windows-app`, `ui-tests: flaui`) already provides the project shape — reuse it, never
 re-invent it: `[assembly: DoNotParallelize]` in `MSTestSettings.cs` (UI automation drives the one desktop session),
@@ -182,4 +185,6 @@ public sealed class GreetingUITests
   the ids of the views the task touches, and add a missing id to the view in the same task).
 - Bounded waits (`Retry.WhileNull`/`Retry.WhileFalse`, the `GetMainWindow` timeout), never fixed sleeps; always close
   the app (`app.Close()` in `finally`, plus `using`).
+- Captures go only through `UiScreenshots.Save` (resolves `UI_SCREENSHOTS_DIR`, else `<repo root>/.ui-screenshots`,
+  and validates the `<kind>/<Id>/<state>--<dir>--<theme>.png` name) — never a hardcoded path.
 - UI tests never count toward coverage and are never the only test of a piece of logic.

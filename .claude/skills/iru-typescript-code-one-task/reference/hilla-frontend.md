@@ -47,7 +47,10 @@ file adds what's specific to Hilla's file routing, generated clients, and its Va
 - **`<Grid>` bound to a generated endpoint's list method** via Hilla's own data-provider pattern
   (`GridDataProviderCallback`/the `@vaadin/hilla-react-crud` `useGridDataProvider` or the equivalent the project
   already uses) rather than fetching a full list into component state and paginating it client-side — Hilla's
-  grid integration is built around lazy, server-paginated loading.
+  grid integration is built around lazy, server-paginated loading. Non-tabular lists use `<VirtualList>` with one
+  item component (UI contract §5) — never a plain `map` over endpoint data.
+- Views stay thin screens; reusable presentational components live in `components/` with props in and
+  `on<Intent>` callbacks out, so they can be rendered from stories (`ui-implementation.md`, Hilla section).
 - Form binding: prefer Hilla's `useForm`/`Binder` integration (`@vaadin/hilla-react-form`) bound to the endpoint's
   generated DTO model for a form backed by an endpoint call, so client-side validation stays in sync with the
   backend's Java Bean Validation annotations, instead of hand-rolling field-by-field `useState` + manual
@@ -70,3 +73,6 @@ file adds what's specific to Hilla's file routing, generated clients, and its Va
   matching `testing.md`'s "mock what you don't own" rule — never point a unit test at a live Spring Boot backend.
 - A genuinely end-to-end Hilla test (real backend, real generated client) belongs to the project's integration/E2E
   suite, not this skill's unit tests — writing one is out of scope unless the task explicitly asks for it.
+- **UI tests with screenshots** are Playwright component tests against a standalone Vite gallery (stories under
+  `src/main/frontend/stories/`, never under `views/`), capturing the `.ui-screenshots/` matrix with axe checks —
+  `ui-implementation.md`. Vitest browser mode stays for behaviour tests.

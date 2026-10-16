@@ -8,7 +8,8 @@ description: >-
   (SwiftLint `--strict` + `swift format lint --strict`) on every change, a cost-gated macOS job (`macos-ci: all|stable`
   — macOS minutes cost ~10× Linux on private repositories; `needs: lint`) running the Core `swift test` with
   `llvm-cov` coverage and an 80% line bar, `xcodegen generate`, `xcodebuild test` with ad-hoc signing (`ci-tests: unit`
-  skips `<AppName>UITests`; `full` also runs the XCUITest UI tests after an Automation Mode check), the xcresult
+  skips `<AppName>UITests`; `full` also runs the XCUITest UI tests after an Automation Mode check), the UI tests'
+  `.ui-screenshots/` captures recovered from the `.xcresult` and uploaded as a 7-day artifact, the xcresult
   artifact and DocC (`--warnings-as-errors`, static hosting under `api/`), an optional Linux SonarQube job fed by the
   converted lcov and the SwiftLint report, and an Antora docs job merged with the DocC archive and deployed to GitHub
   Pages (`pages: yes`) or uploaded as an artifact (`pages: no`); `release.yml` per `distribution` (`internal`: import
@@ -239,7 +240,12 @@ matter when adapting them:
   tests; a self-hosted Mac needs `sudo automationmodetool enable-automationmode-without-authentication` once, run by an
   administrator — never by this skill) so a misconfigured runner fails fast instead of timing out. Runners are fresh
   VMs, so the local `.simulator-test.lock` isn't needed in CI. DocC runs on every macOS run (`--warnings-as-errors` is
-  the documentation gate) with `--transform-for-static-hosting --hosting-base-path <repo>/api`.
+  the documentation gate) with `--transform-for-static-hosting --hosting-base-path <repo>/api`. UI contract: the app-test step passes
+  `TEST_RUNNER_UI_SCREENSHOTS_DIR=${{ github.workspace }}/.ui-screenshots`; because the sandboxed host app can't write
+  the workspace, the next step rebuilds `.ui-screenshots/<kind>/<Id>/<file>.png` from the captures the tests attached
+  to the `.xcresult` (`xcrun xcresulttool export attachments` + its `manifest.json`), and the job uploads
+  `.ui-screenshots/` as a 7-day `ui-screenshots` artifact (`if: always()`, `if-no-files-found: ignore`) — inside the
+  existing macOS job, no extra runner or job.
 - **`sonar` job (Linux)** — `needs: [lint, macos]`, so it runs only when the macOS job ran and passed; downloads
   `core-coverage` (`sonarqube-generic-coverage.xml`, converted from `coverage.lcov` by `lcov_to_sonar_generic.py`
   from the repository root so paths read `Packages/Core/Sources/…`) and `swiftlint-report`, and passes

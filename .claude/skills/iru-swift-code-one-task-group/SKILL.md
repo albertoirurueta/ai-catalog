@@ -1,6 +1,6 @@
 ---
 name: iru-swift-code-one-task-group
-description: Implement one bucket of Swift tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-swift-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, DocC completeness via `iru-swift-docc`, a scoped test run via `iru-swift-test`, an 80% unit-test line-coverage check via `iru-swift-coverage` (branch coverage is unavailable for Swift and is never part of the bar), a full-suite run (`swift test` for a Swift Package, `xcodebuild test -scheme <scheme> -destination <destination>` for an Xcode app target), and a code-quality regression check via `iru-swift-code-quality` against that one baseline. Because an app-target test/coverage/full-suite run boots and drives an iOS/tvOS/watchOS Simulator, and only one such run can safely use a given simulator destination at a time, every `xcodebuild test` invocation this skill makes is serialized behind a repository-wide `mkdir`-based lock (`.simulator-test.lock`) so two parallel task groups' simulator runs never overlap; a Swift Package's `swift test` needs no simulator and never takes this lock. `iru-swift-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-swift-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to `iru-java-code-one-task-group`/`iru-typescript-code-one-task-group`/`iru-android-code-one-task-group` for Swift Package Manager / Apple app projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its `swift`-tagged tasks.
+description: Implement one bucket of Swift tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-swift-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, DocC completeness via `iru-swift-docc`, a scoped test run via `iru-swift-test`, an 80% unit-test line-coverage check via `iru-swift-coverage` (branch coverage is unavailable for Swift and is never part of the bar), a full-suite run (`swift test` for a Swift Package, `xcodebuild test -scheme <scheme> -destination <destination>` for an Xcode app target), a code-quality regression check via `iru-swift-code-quality` against that one baseline, and — when the bucket touched UI — a UI stage per the catalog's UI contract (`iru-swift-test`'s `ui` selector under the same simulator lock: component captures and XCUITest screen/flow captures in `.ui-screenshots/`, a check that every added/changed screen and component has a capture for each visual state × `.ui-quality.yml` direction × theme, and `performAccessibilityAudit()` results at the configured `enforce`/`report`/`off` level; no simulator runtime, no macOS desktop session or a non-macOS host makes it unverified, never passed). Because an app-target test/coverage/full-suite run boots and drives an iOS/tvOS/watchOS Simulator, and only one such run can safely use a given simulator destination at a time, every `xcodebuild test` invocation this skill makes is serialized behind a repository-wide `mkdir`-based lock (`.simulator-test.lock`) so two parallel task groups' simulator runs never overlap; a Swift Package's `swift test` needs no simulator and never takes this lock. `iru-swift-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-swift-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to `iru-java-code-one-task-group`/`iru-typescript-code-one-task-group`/`iru-android-code-one-task-group` for Swift Package Manager / Apple app projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its `swift`-tagged tasks.
 model: sonnet
 allowed-tools: Read Edit Write Bash(swift *) Bash(xcodebuild *) Bash(xcrun *) Bash(xcodegen *) Bash(tuist *) Bash(mkdir *) Bash(rmdir *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent
 ---
@@ -133,8 +133,8 @@ Once every task that didn't block has been implemented, run the following once f
      the user what the owner file says, break it (`rm -f .simulator-test.lock/owner && rmdir .simulator-test.lock`),
      and acquire fresh. Say so in Step 5.
    - **Wait timeout**: still held after roughly 45 minutes of polling and not yet stale — stop waiting, report
-     Steps 3.4/3.5/3.6's app-kind stages as **unverified — blocked by a concurrent simulator run**, and continue to
-     Step 3.8 (quality needs no simulator; Step 3.7's lock release is a no-op when the lock was never acquired). Name it in Step 5.
+     Steps 3.4/3.5/3.6/3.7's app-kind stages as **unverified — blocked by a concurrent simulator run**, and continue to
+     Step 3.9 (quality needs no simulator; Step 3.8's lock release is a no-op when the lock was never acquired). Name it in Step 5.
 4. **Scoped tests**, for every test affected across the bucket, via `iru-gate-runner`: `Agent({description: "Run
    tests for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-swift-test\", args:
    \"<selector covering every test affected by this bucket>\\nkind: <package|app>\\nscheme: <scheme>\\ndestination:
@@ -185,16 +185,34 @@ Once every task that didn't block has been implemented, run the following once f
      destination and result bundle); a scheme without a runtime is reported "unverified (no visionOS simulator
      runtime installed)" after its `build-for-testing` compile check.
    Fix any regression, then re-invoke until it reports all tests passed.
-7. **Release the simulator lock** — app-kind buckets only, as soon as Step 3.6 (or the last fix-and-re-run of
-   3.4–3.6) has finished: `rm -f .simulator-test.lock/owner && rmdir .simulator-test.lock`. Release on every exit
+7. **UI stage** — only when the bucket added or changed a screen, component or list (SwiftUI/UIKit/AppKit views, view
+   controllers, their UI tests; never for a command-line tool, which has no UI), still under the lock from 3.3 for an
+   app. Read `.ui-quality.yml` at the repository root (missing = `accessibility: enforce`, `directions: [ltr, rtl]`,
+   `themes: [light, dark]`), then via `iru-gate-runner`: `Agent({description: "Run UI tests for task group",
+   subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill: \"iru-swift-test\", args: \"ui <the bucket's
+   component-test suites and UI-test classes>\\nkind: <package|app>\\nscheme: <scheme>\\ndestination:
+   <destination>\\nlock: held\"}). Report back only pass/fail with failing test names, the screenshot count per
+   kind, malformed screenshot names, the accessibility issues (count + audit-type rule ids) and the `.ui-quality.yml`
+   level applied."})` — a scoped run, so it never clears `.ui-screenshots/`. Then check the captures yourself
+   (`find .ui-screenshots/<kind>/<Id> -name '*.png'`): every screen/component the bucket added or changed has a file for
+   each of its visual states (the decomposition each task reported) × every configured direction × theme (watchOS:
+   `dark` only; a `--<platform>` variant per platform in a multiplatform app). A missing cell is a gap in that task's
+   UI tests — add the test (via the owning task) and re-run this stage. Accessibility: `enforce` → every audit issue
+   fails the group like a test failure (fix the view, re-run); `report` → list the issues in Step 5, never failing;
+   `off` → note that the audit didn't run. No bootable simulator runtime for a scheme, a macOS UI run without the
+   Automation/Accessibility permission or a logged-in desktop session, a lock wait timeout, or a non-macOS host →
+   this stage is **unverified** with the reason (never skipped silently, never passed); component captures from a
+   package's `swift test` still run on any macOS host.
+8. **Release the simulator lock** — app-kind buckets only, as soon as Step 3.7 (or the last fix-and-re-run of
+   3.4–3.7) has finished: `rm -f .simulator-test.lock/owner && rmdir .simulator-test.lock`. Release on every exit
    path — tests passed, they failed, a task turned out blocked, or this skill is about to report a hard stop. A
    lock left behind blocks every other app-kind bucket for a full hour until Step 3.3's staleness escape fires.
-8. **Code quality**, for the same file/type set as Step 1, via `iru-gate-runner`: `Agent({description: "Check for
+9. **Code quality**, for the same file/type set as Step 1, via `iru-gate-runner`: `Agent({description: "Check for
    new quality issues in task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
    \"iru-swift-code-quality\", args: \"<file1,file2,...>\\nbaseline: <baseline from Step 1>\"}). Report back only the
    issues that are newly appearing (not present in the baseline), broken down by tool (SwiftLint/formatter/
    Periphery)."})`. Any issue reported is a regression introduced by this bucket — trace it to the task that owns
-   the affected file, fix it (then re-run 3.4–3.6 to confirm the fix broke nothing), and re-check until none
+   the affected file, fix it (then re-run 3.4–3.7 to confirm the fix broke nothing), and re-check until none
    remain. Leave a new issue in place only if fixing it would contradict what its task explicitly specifies —
    record that, and why, for Step 5. Skip if `iru-swift-code-quality` isn't installed.
 
@@ -202,11 +220,14 @@ Once every task that didn't block has been implemented, run the following once f
 
 Once Step 3 passes clean for the bucket (or leaves only explicitly-accepted issues), update each task's note in
 `implementation_plan.md` — replacing the "group validation pending" placeholder — with the final outcome: line
-coverage achieved and code-quality result for that task's own file(s), e.g. `- [x] Task 2. **Implement
-`RouteValidator`** — tests in RouteValidatorTests (94% line coverage), no new SwiftLint/format issues.` If any
+coverage achieved and code-quality result for that task's own file(s) — plus, for a UI task, the Step 3.7 outcome
+(captures per state × direction × theme, the accessibility result at the configured level, or "UI stage unverified:
+<reason>") — e.g. `- [x] Task 2. **Implement `RouteValidator`** — tests in RouteValidatorTests (94% line coverage),
+no new SwiftLint/format issues.` or `… — OrderRow: 12 captures (3 states × ltr/rtl × light/dark), accessibility audit
+clean (enforce).` If any
 stage was unverified (Command-Line-Tools-only machine, lock wait timeout, no visionOS simulator runtime installed),
 say so in the note rather than implying it passed. Save the file, then notify the user that group validation completed and summarize the bucket-wide
-result. Before writing these notes, confirm the simulator lock is released (Step 3.7) if it was ever taken.
+result. Before writing these notes, confirm the simulator lock is released (Step 3.8) if it was ever taken.
 
 If any task was recorded as blocked in Step 2, leave its checkbox unchecked and its blocker note in place.
 
@@ -218,7 +239,9 @@ including whether a new issue was left in place as unavoidable and why, whether 
 was needed, whether any stage was reported unverified (and why — no full Xcode install, lock wait timeout, a
 platform scheme with no simulator runtime such as visionOS), how the
 simulator lock behaved whenever it was anything other than an immediate uncontended acquire (wait time, a stale
-lock broken, confirmation it was released), and which task(s), if any, stopped on a blocker.
+lock broken, confirmation it was released), the UI stage outcome when it ran (screenshot counts per kind, missing
+matrix cells, accessibility issues by rule id at the `.ui-quality.yml` level, or why it was unverified), and which
+task(s), if any, stopped on a blocker.
 `implementation_plan.md`'s checkboxes are already checked and finalized (Steps 2 and 4) and the user-facing
 notifications have already gone out — the caller does not need to redo that bookkeeping for this bucket.
 
@@ -229,7 +252,7 @@ UI tests need the test runner's Accessibility/automation permission and an unloc
 without them the UI-test stage is reported unverified, not passed; on a non-macOS host every app stage is
 "unverified (needs macOS)"); SwiftLint/the third-party SwiftFormat/Periphery may
 be entirely absent on a machine with no Homebrew/Mint, in which case `iru-swift-code-quality` reports them as not
-wired rather than clean, and this skill's own quality diff in Step 3.8 reflects only whichever tools actually ran.
+wired rather than clean, and this skill's own quality diff in Step 3.9 reflects only whichever tools actually ran.
 This skill's own author did not run any of the `swift`/`xcodebuild` commands above against a real scaffold — no
 verification sub-task was assigned for writing this skill itself — so every gate command and report path named
 above is **unverified locally by this skill's author**; each is exercised instead by the underlying gate skill's

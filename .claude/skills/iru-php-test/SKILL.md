@@ -1,9 +1,9 @@
 ---
 name: iru-php-test
 description: >-
-  Run a PHP project's test suite through whichever runner the project actually has wired — Pest (`vendor/bin/pest`), PHPUnit (`vendor/bin/phpunit`), Laravel's `php artisan test`, or the commands behind a composer `test` script — and through whichever environment the project actually runs PHP in (host `php`, Laravel Sail, ddev, or `@wordpress/env` for WordPress integration suites). Optionally scoped to a file, a directory, a `--filter <pattern>`, a testsuite, or a group, and aware of the unit-vs-integration split (e.g. Brain Monkey/WP_Mock unit tests vs. `WP_UnitTestCase` integration tests that need a WordPress test install and MySQL, or PrestaShop module tests that need a shop install). Invoke as `/iru-php-test` to run everything, or `/iru-php-test <selector>` where `<selector>` is a file path, a directory, `--filter <pattern>`, `--testsuite <name>`, or `--group <name>` (combinable). Reports a missing environment (Docker not running, WordPress test library not installed, database unreachable, `vendor/` missing) plainly instead of failing obscurely. Report-only: never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down PHP tests instead of invoking the runner by hand.
+  Run a PHP project's test suite through whichever runner the project actually has wired — Pest (`vendor/bin/pest`), PHPUnit (`vendor/bin/phpunit`), Laravel's `php artisan test`, or the commands behind a composer `test` script — and through whichever environment the project actually runs PHP in (host `php`, Laravel Sail, ddev, or `@wordpress/env` for WordPress integration suites). Optionally scoped to a file, a directory, a `--filter <pattern>`, a testsuite, or a group, and aware of the unit-vs-integration split (e.g. Brain Monkey/WP_Mock unit tests vs. `WP_UnitTestCase` integration tests that need a WordPress test install and MySQL, or PrestaShop module tests that need a shop install). Invoke as `/iru-php-test` to run everything, or `/iru-php-test <selector>` where `<selector>` is a file path, a directory, `--filter <pattern>`, `--testsuite <name>`, or `--group <name>` (combinable), or `ui [<spec paths>]` for the browser UI tests — Playwright (`npx playwright test` / `npm run test:e2e`; `wp-scripts test-playwright` for WordPress against the wp-env tests instance) with `@axe-core/playwright`, or Dusk / the Pest browser plugin where the project already uses them — which sets `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears it only on a full UI run, collects stray captures into the UI contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` layout, validates the names, and reports screenshot counts per kind, malformed names, accessibility violations (count + rule ids) and the `.ui-quality.yml` level applied; the `ui` run is serialized behind the repository-wide atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path; `lock: held` when the caller already holds it), and no browser, Docker, wp-env or shop makes it "unverified", never failed tests. Reports a missing environment (Docker not running, WordPress test library not installed, database unreachable, `vendor/` missing) plainly instead of failing obscurely. Report-only: never fixes a failing test or modifies source/test code. Use whenever the user wants to run, re-run, or narrow down PHP tests instead of invoking the runner by hand.
 model: haiku
-allowed-tools: Read Bash(php *) Bash(vendor/bin/*) Bash(./vendor/bin/*) Bash(composer *) Bash(./vendor/bin/sail *) Bash(npx wp-env *) Bash(ddev *) Bash(docker info *) Bash(docker ps *) Bash(command -v *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(mkdir -p build*) Bash(rm -f build/iru-php-test-*)
+allowed-tools: Read Bash(php *) Bash(vendor/bin/*) Bash(./vendor/bin/*) Bash(composer *) Bash(./vendor/bin/sail *) Bash(npx wp-env *) Bash(ddev *) Bash(docker info *) Bash(docker ps *) Bash(command -v *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(mkdir -p build*) Bash(rm -f build/iru-php-test-*) Bash(npx playwright *) Bash(npm run test:e2e*) Bash(npx wp-scripts test-playwright*) Bash(UI_SCREENSHOTS_DIR=*) Bash(node -e *) Bash(curl -sf*) Bash(date *) Bash(mkdir -p .ui-screenshots*) Bash(rm -rf .ui-screenshots) Bash(cp *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Write
 ---
 
 # PHP Test
@@ -144,6 +144,8 @@ Notes:
   JUnit log (Step 5): 0 tests run is "selector `<x>` matched nothing", never "all passed".
 - Exit code **255** means a PHP fatal error (usually during bootstrap: missing test library, missing extension,
   autoload failure) — report the first `PHP Fatal error`/`Error:` line, not a test count.
+- **`ui`** as the first word selects the browser UI tests instead of PHPUnit/Pest — Step 7; any following paths
+  narrow it to those specs (a *scoped* UI run).
 - Don't add `--parallel` (artisan/Pest/ParaTest) unless the user asks — parallel runs need per-process databases
   and obscure failure output.
 
@@ -211,6 +213,79 @@ doesn't get committed as build noise.
 - Do not attempt to fix failing tests, modify source/test code, install dependencies, or provision databases unless
   the user asks for that as a next step.
 
+## Step 7 — The `ui` selector: browser UI tests
+
+Browser UI tests render the real pages, so they need a browser plus a running server (Laravel `php artisan serve`
+started by Playwright's `webServer`), the wp-env **tests** instance (WordPress, `WP_BASE_URL`, default
+`http://localhost:8889`), or a running shop (`PS_BASE_URL`). Steps 1–6 don't apply; do this instead:
+
+1. **Detect the runner.** A root `playwright.config.{ts,js,mjs}` → Playwright: the project's `test:e2e` script if
+   `package.json` has one (WordPress: `wp-scripts test-playwright`), else `npx playwright test`. `laravel/dusk`
+   in `require-dev` with `tests/Browser/` → `php artisan dusk`; the Pest browser plugin
+   (`pestphp/pest-plugin-browser`) → `vendor/bin/pest tests/Browser` — only where the project already uses them.
+   None → stop and report **"no UI test setup"** (never "0 tests"). `node_modules/` missing → "dependencies not
+   installed — run `npm ci`" (ask first).
+2. **Preflight — unverified, not failed, when something is missing**: a Chromium for this Playwright version
+   (`npx playwright install --list` shows it; otherwise report "no browser — run `npx playwright install
+   chromium`" and ask before installing); WordPress — Docker (`docker info`) and the tests instance answering
+   (`npx wp-env run cli --config=.wp-env.test.json wp core version`, or `curl -sfI "$WP_BASE_URL"`) — never start
+   the development environment; PrestaShop — `PS_BASE_URL` set and reachable (`curl -sfI "$PS_BASE_URL"`),
+   otherwise **unverified (no shop)**; Laravel — `vendor/` present (the `webServer` starts `php artisan serve`).
+   Report each as **unverified** with the reason and the command that provisions it.
+3. **Lock.** Unless the arguments say `lock: held`, acquire the repository-wide lock first:
+   `mkdir .integration-test.lock 2>/dev/null && echo ACQUIRED || echo HELD`. On `ACQUIRED`, write
+   `.integration-test.lock/owner` (via `Write`: "iru-php-test ui", the selection, `date -u
+   +'%Y-%m-%dT%H:%M:%SZ'`); on `HELD`, report who holds it (`cat .integration-test.lock/owner`) and retry roughly
+   every 30 seconds — a lock older than 60 minutes (`find .integration-test.lock -maxdepth 0 -mmin +60`) is stale:
+   say so, `rm -f .integration-test.lock/owner && rmdir .integration-test.lock`, and acquire; still held after ~45
+   minutes → **unverified (lock held by another run)**. Release with `rm -f .integration-test.lock/owner && rmdir
+   .integration-test.lock` on **every** exit path once the run below finishes.
+4. **Screenshots directory.** `UI_SCREENSHOTS_DIR` = the caller's value, else `<repository root>/.ui-screenshots`
+   (absolute). On a **full** UI run (no spec paths) clear it first (`rm -rf .ui-screenshots` for the default) so it
+   holds exactly this run; on a scoped run leave it as is. Read `.ui-quality.yml` at the repository root
+   (`accessibility`, `directions`, `themes`; missing file → `enforce`, `[ltr, rtl]`, `[light, dark]`) and record
+   the level.
+5. **Run** with a JSON report next to the console output (inside the project, like Step 5's JUnit log):
+   ```bash
+   mkdir -p build
+   UI_SCREENSHOTS_DIR="$PWD/.ui-screenshots" PLAYWRIGHT_JSON_OUTPUT_FILE=build/iru-php-test-ui.json \
+     npx playwright test [spec paths] --reporter=line,json
+   # npm script / WordPress: UI_SCREENSHOTS_DIR=… PLAYWRIGHT_JSON_OUTPUT_FILE=… npm run test:e2e -- [spec paths] --reporter=line,json
+   ```
+   WordPress: add `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` when Chromium is already installed (`wp-scripts
+   test-playwright` otherwise runs `playwright install` for every browser first). Dusk/Pest browser: run them the
+   same way with `--log-junit` and parse Step 5's JUnit log.
+6. **Parse** counts, failures and the axe results the shared helper attaches (`accessibility-scan-results`):
+   ```bash
+   node -e 'const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")), s = r.stats, rules = {}, fails = [];
+     const walk = (su) => { for (const sp of su.specs ?? []) for (const t of sp.tests) for (const res of t.results) {
+       if (t.status === "unexpected" && res.status !== "passed") fails.push(`${sp.file} › ${sp.title} — ${(res.error?.message ?? "").replace(/\x1b\[[0-9;]*m/g, "").split("\n")[0]}`);
+       for (const a of res.attachments ?? []) if (a.name === "accessibility-scan-results" && a.body)
+         for (const v of JSON.parse(Buffer.from(a.body, "base64").toString()).violations) rules[v.id] = (rules[v.id] ?? 0) + v.nodes.length; }
+       (su.suites ?? []).forEach(walk); };
+     r.suites.forEach(walk);
+     console.log(`passed=${s.expected} failed=${s.unexpected} flaky=${s.flaky} skipped=${s.skipped}`);
+     console.log(`a11y: ${Object.entries(rules).map(([k, n]) => `${k} × ${n}`).join(", ") || "none"}`); fails.forEach((f) => console.log(`FAIL ${f}`));' build/iru-php-test-ui.json
+   ```
+   A failure whose first line is a connection error (`net::ERR_CONNECTION_REFUSED`, `webServer` timeout,
+   `Executable doesn't exist`) is an environment problem — **unverified**, not a failing test. Skipped specs with
+   reason "no shop" mean **unverified (no shop)**. Delete the JSON afterwards (`rm -f build/iru-php-test-ui.json`).
+7. **Collect, then validate the screenshots.** Captures a tool left elsewhere — Dusk's `tests/Browser/screenshots/`,
+   the Pest browser plugin's screenshot directory — are copied (`cp`) into `$UI_SCREENSHOTS_DIR` when their relative
+   path already follows `<kind>/<Id>/<file>.png`; Playwright's own failure screenshots under `test-results/`/
+   `artifacts/` are not captures and are ignored. Then count per kind and list malformed names:
+   ```bash
+   find .ui-screenshots -type f -name '*.png' | sed 's#^\.ui-screenshots/##' | cut -d/ -f1 | sort | uniq -c
+   find .ui-screenshots -type f | sed 's#^\.ui-screenshots/##' | grep -Ev \
+     '^((component|screen)/[A-Za-z][A-Za-z0-9]*|flow/[a-z0-9]+(-[a-z0-9]+)*)/[a-z0-9]+(-[a-z0-9]+)*--(ltr|rtl)--(light|dark|high-contrast)(--[a-z0-9]+(-[a-z0-9]+)*)*\.png$'
+   ```
+8. **Report**: runner and target ("Playwright via `npm run test:e2e` against `php artisan serve`", "wp-scripts
+   test-playwright against the wp-env tests instance"), full or scoped, passed/failed/flaky/skipped counts and each
+   failure's first line, screenshot count per kind (`screen 8, component 24, flow 4`), malformed names (or
+   "none"), accessibility violations as **count + rule ids only** (`color-contrast × 3, button-name × 1`) with the
+   `.ui-quality.yml` level applied (under `enforce` they are also the failing specs; under `report` they never
+   fail; `off` → "accessibility checks off"), and how the lock behaved. Never paste the JSON report or axe output.
+
 ## Verification notes
 
 Verified in Docker (`php:8.4-cli` + PCOV, `composer:2`) against PHPUnit 12 and Pest 4 suites with one passing and
@@ -224,3 +299,12 @@ The wp-env path was verified with `iru-setup-php-wordpress`'s scaffold (wp-env 1
 suite (plugin and block theme); wp-env 11's `run` accepts `mysql`/`wordpress`/`cli`/`composer`/`phpmyadmin`, and
 `tests-cli` exists only while the deprecated `testsEnvironment` is on (it still defaults to `true`). Still
 unverified: `php artisan test` and Sail, ddev, and a PrestaShop integration suite.
+
+Step 7 was exercised with `@playwright/test` 1.64.1 and `@axe-core/playwright` 4.14 (Chromium) against a small
+server that renders `dir` from a cookie/`Accept-Language`, using the shared `tests/e2e/support/ui-screenshots.ts`
+helper from `iru-php-code-one-task`'s `ui-implementation.md`: `PLAYWRIGHT_JSON_OUTPUT_FILE` + `--reporter=line,json`
+writes the report, the parser above prints the counts, failing specs and axe rule ids from the attached results
+(`enforce` failed the spec, `report` only annotated it), and `UI_SCREENSHOTS_DIR` receives the
+`screen/<Id>/<state>--<dir>--<theme>.png` files. Still unverified: `wp-scripts test-playwright` against a live
+wp-env tests instance, a PrestaShop shop, `php artisan serve` as the `webServer`, and Dusk/Pest browser capture
+collection.

@@ -18,7 +18,12 @@ cost-aware choices made up front:
   static analysis and coding style, and fast tests with Clover/JUnit coverage across a PHP matrix from the floor to
   the newest supported release. With `ci-tests: full` it adds an integration job per flavor: Laravel against a
   MySQL or PostgreSQL service container, WordPress inside the `@wordpress/env` test environment across a WordPress
-  matrix, PrestaShop inside the Docker shop of `tests/Integration/docker-compose.yml`. It also adds an optional
+  matrix, PrestaShop inside the Docker shop of `tests/Integration/docker-compose.yml`. Each integration job also runs
+  the scaffold's Playwright browser UI tests (`npm run test:e2e`, guarded on a `playwright.config.*`) against the
+  environment it already starts (Laravel's `php artisan serve`, `wp-env` on the latest-WordPress entry, the running
+  PrestaShop shop) and uploads `.ui-screenshots/` as a 7-day artifact, with no extra job or runner. With
+  `ci-tests: unit` the browser tests stay local behind `.integration-test.lock` (see
+  xref:guides/building-user-interfaces.adoc[Building user interfaces]). It also adds an optional
   SonarCloud/SonarQube job (skipped on fork pull requests) and a docs job (Antora, plus phpDocumentor only when
   `phpdoc.dist.xml` exists) deployed to GitHub Pages or uploaded as an artifact.
 * `release.yml` per `distribution` — a WordPress or PrestaShop zip attached to the GitHub Release (with `store`, also
@@ -120,13 +125,15 @@ Any other key (including `ci`) is ignored — invoking the skill means CI is wan
 
 == Outputs
 
-* `.github/workflows/build.yml`, and `release.yml` unless `distribution: none`.
+* `.github/workflows/build.yml` (with `ci-tests: full`, the integration jobs include the browser UI test steps and the
+  `ui-screenshots-integration*` artifact uploads), and `release.yml` unless `distribution: none`.
 * `.github/workflows/sync.yml` with `.github/scripts/php_version.py` and `.github/scripts/sync_versions.py`
   (made executable).
 * `.github/workflows/security.yml`, `.github/psalm/` configuration, and `.github/dependabot.yml`.
 * A report with the required secrets (`SONAR_TOKEN`, WordPress.org `SVN_USERNAME`/`SVN_PASSWORD`), repository
   settings to check, the choices made, per-unit created / updated / replaced / kept as is, and every open gap
-  (missing composer scripts, no Antora setup, unverified integration jobs).
+  (missing composer scripts, no Antora setup, unverified integration jobs and browser UI test steps), including whether
+  the integration jobs run the browser UI tests and upload `.ui-screenshots/`.
 
 == Execution flow
 

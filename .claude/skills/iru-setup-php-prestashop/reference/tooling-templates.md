@@ -1,7 +1,8 @@
 # Tooling templates — `iru-setup-php-prestashop`
 
 Composer manifest and scripts, PHPUnit, the unit and integration tests, PHPStan (stub-based unit config + the
-`prestashop/php-dev-tools` shop config), PHP-CS-Fixer, the Docker dev shop, packaging, and Sonar. Same placeholders
+`prestashop/php-dev-tools` shop config), PHP-CS-Fixer, the Docker dev shop, the browser UI tests (Playwright +
+axe-core, the catalog's UI contract), packaging, and Sonar. Same placeholders
 as `module-templates.md`, plus `<php-version>` (the PHP floor, `major.minor`), `<license-spdx>` (`AFL-3.0`,
 `OSL-3.0`, `MIT`, ..., or `proprietary`), `<organization-url>`, `<sonar-organization>`, `<sonar-project-key>`.
 Every command below ran against the generated module (SKILL.md "Verification notes").
@@ -380,6 +381,371 @@ publishes a back office at `http://localhost:<PS_PORT>/admin-dev/` with the imag
 (`ADMIN_MAIL`/`ADMIN_PASSWD` environment variables of the container) — local throwaway credentials, never a real
 shop's. Pick a free `PS_PORT` when 8080 is taken.
 
+## Browser UI tests (`package.json`, `playwright.config.ts`, `.ui-quality.yml`, `tests/e2e/`)
+
+The catalog's UI contract for the storefront output: each component the module renders is opened in a real browser
+(Playwright, Chromium) on a **running shop with the module installed** — the Docker shop above (`composer shop:up`,
+`composer shop:install`) or any test shop — captured per state × direction × theme into
+`<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png` (`UI_SCREENSHOTS_DIR` overrides;
+gitignored by `iru-setup-php-gitignore`) and checked with axe-core at the `.ui-quality.yml` level. There is no
+`webServer`: the specs read the storefront URL from `PS_BASE_URL` and **skip themselves when it is unset**, so a
+plain `npm run test:e2e` on a machine without a shop reports "skipped", which the gate reports as unverified (no
+shop) — never as passed. Node is only test tooling here; nothing of it ships (`.distignore`).
+
+```text
+package.json                         # Playwright + axe-core only, private, never packaged
+playwright.config.ts                 # baseURL = PS_BASE_URL, specs in tests/e2e/specs
+.ui-quality.yml                      # accessibility level + screenshot matrix (repository root)
+tests/e2e/support/ui-screenshots.ts  # the one shared helper every spec uses
+tests/e2e/specs/<Id>.spec.ts         # one spec per component/screen, named after its Id
+```
+
+### `package.json`
+
+```json
+{
+    "name": "<module>",
+    "private": true,
+    "description": "Browser UI tests for <display-name> (Playwright + axe-core); never shipped in the module zip.",
+    "license": "<license-spdx>",
+    "scripts": {
+        "test:e2e": "playwright test"
+    },
+    "devDependencies": {
+        "@axe-core/playwright": "^4.14.0",
+        "@playwright/test": "^1.64.0",
+        "@types/node": "^24.0.0"
+    }
+}
+```
+
+- `"private": true` and no `version` (the module's version lives in `<module>.php`/`config.xml`; nothing is published
+  to npm). `license: proprietary` → `"UNLICENSED"` (npm's spelling).
+- Versions: `@playwright/test` `^1.64.0` (1.64.1 resolved), `@axe-core/playwright` `^4.14.0` (4.14.0), `@types/node`
+  `^24.0.0` (Node 24 LTS; only for `tsc`/editors — Playwright runs without it). Resolve the newest with
+  `npm view <package> version` when writing it, then `npm install` (commits `package-lock.json`) and
+  `npx playwright install chromium` (CI adds `--with-deps`).
+
+### `playwright.config.ts`
+
+```ts
+/**
+ * Browser UI tests (`npm run test:e2e`) against an already running shop with this module installed — the Docker
+ * shop of tests/Integration/docker-compose.yml (`composer shop:up && composer shop:install`) or any test shop.
+ * PS_BASE_URL is its storefront URL (e.g. http://localhost:8080); unset, every spec skips itself.
+ */
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig( {
+	testDir: './tests/e2e/specs',
+	outputDir: './test-results',
+	forbidOnly: !! process.env.CI,
+	workers: 1,
+	reporter: process.env.CI ? [ [ 'github' ], [ 'list' ] ] : 'list',
+	use: {
+		baseURL: process.env.PS_BASE_URL,
+		locale: 'en-US',
+		timezoneId: 'UTC',
+		contextOptions: { reducedMotion: 'reduce' },
+		trace: 'retain-on-failure',
+		screenshot: 'only-on-failure',
+	},
+	projects: [
+		{
+			name: 'chromium',
+			use: { ...devices[ 'Desktop Chrome' ], viewport: { width: 1280, height: 800 } },
+		},
+	],
+} );
+```
+
+One worker (one shop, one database), fixed viewport/locale/time zone and reduced motion for deterministic captures.
+
+### `.ui-quality.yml`
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
+
+Exactly the contract's shape: write `enforce` as shown, or replace that one word with Step 0/2's `accessibility`
+(`report` / `off`). A missing file means these defaults; `off` disables only the automated axe check.
+
+### `tests/e2e/support/ui-screenshots.ts`
+
+```ts
+/**
+ * Shared UI-test helper (catalog UI contract): reads `.ui-quality.yml`, switches direction and theme, captures
+ * `<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` and runs axe-core.
+ * Every spec goes through this file — never hard-code screenshot paths in a spec.
+ */
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
+
+export type Direction = 'ltr' | 'rtl';
+export type Theme = 'light' | 'dark' | 'high-contrast';
+export type AccessibilityLevel = 'enforce' | 'report' | 'off';
+export type UiKind = 'component' | 'screen' | 'flow';
+
+export interface UiQuality {
+	accessibility: AccessibilityLevel;
+	directions: Direction[];
+	themes: Theme[];
+}
+
+export interface UiCapture {
+	kind: UiKind;
+	/** Component/screen type name exactly as in code (`ContentNotice`), or a kebab-case flow name. */
+	id: string;
+	/** Kebab-case visual state (`default`, `empty`, `long-content`, …); `NN-<step>` for a flow. */
+	state: string;
+	direction: Direction;
+	theme: Theme;
+	/** Optional extra segments: platform, then form factor/size (`web`, `desktop`, `large-text`). */
+	variants?: string[];
+	/** Capture only this element (a component) instead of the full page (a screen or flow step). */
+	locator?: Locator;
+}
+
+const DEFAULTS: UiQuality = { accessibility: 'enforce', directions: [ 'ltr', 'rtl' ], themes: [ 'light', 'dark' ] };
+const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const TYPE_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
+const WCAG_TAGS = [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa' ];
+
+/** Repository root: the closest ancestor of the working directory holding `.git`, else the working directory. */
+export function repoRoot(): string {
+	let dir = resolve( process.cwd() );
+	for ( ;; ) {
+		if ( existsSync( join( dir, '.git' ) ) ) {
+			return dir;
+		}
+		const parent = dirname( dir );
+		if ( parent === dir ) {
+			return resolve( process.cwd() );
+		}
+		dir = parent;
+	}
+}
+
+function listValue( value: string ): string[] {
+	return value
+		.replace( /^\[|\]$/g, '' )
+		.split( ',' )
+		.map( ( item ) => item.trim().replace( /^['"]|['"]$/g, '' ) )
+		.filter( ( item ) => item !== '' );
+}
+
+/** `.ui-quality.yml` at the repository root (tiny line parser, no YAML dependency); a missing file means defaults. */
+export function uiQuality(): UiQuality {
+	const file = join( repoRoot(), '.ui-quality.yml' );
+	const quality: UiQuality = { ...DEFAULTS };
+	if ( ! existsSync( file ) ) {
+		return quality;
+	}
+	for ( const raw of readFileSync( file, 'utf8' ).split( /\r?\n/ ) ) {
+		const line = raw.replace( /(^|\s)#.*$/, '' ).trim();
+		const match = /^(accessibility|directions|themes)\s*:\s*(.+)$/.exec( line );
+		if ( ! match ) {
+			continue;
+		}
+		const [ , key, value ] = match;
+		if ( key === 'accessibility' && [ 'enforce', 'report', 'off' ].includes( value ) ) {
+			quality.accessibility = value as AccessibilityLevel;
+		} else if ( key === 'directions' ) {
+			quality.directions = listValue( value ).filter( ( d ): d is Direction => d === 'ltr' || d === 'rtl' );
+		} else if ( key === 'themes' ) {
+			quality.themes = listValue( value ).filter( ( t ): t is Theme =>
+				[ 'light', 'dark', 'high-contrast' ].includes( t )
+			);
+		}
+	}
+	return quality;
+}
+
+/** `UI_SCREENSHOTS_DIR` (absolute path) when set, else `<repo root>/.ui-screenshots`. */
+export function screenshotsDir(): string {
+	return process.env.UI_SCREENSHOTS_DIR || join( repoRoot(), '.ui-screenshots' );
+}
+
+/**
+ * Switches colour scheme / forced colours. Call it before `gotoInDirection()`, which applies the direction: a
+ * PrestaShop storefront is right-to-left when it is served in a right-to-left shop language.
+ */
+export async function applyDirectionAndTheme( page: Page, direction: Direction, theme: Theme ): Promise< void > {
+	await page.emulateMedia( {
+		colorScheme: theme === 'dark' ? 'dark' : 'light',
+		forcedColors: theme === 'high-contrast' ? 'active' : 'none',
+	} );
+	void direction; // Direction is a shop language, chosen by the URL in gotoInDirection().
+}
+
+/**
+ * Opens a storefront path in the requested direction. With `PS_RTL_LANG` (the ISO code of a right-to-left language
+ * installed in the test shop, e.g. `ar` or `he`) the right-to-left page is the shop's own (`/<iso>/<path>`, RTL
+ * stylesheets, `body.lang-rtl`); without it the documented fallback sets `<html dir="rtl">` client-side and
+ * annotates the test, since no RTL stylesheet is loaded then.
+ */
+export async function gotoInDirection(
+	page: Page,
+	path: string,
+	direction: Direction,
+	testInfo?: TestInfo
+): Promise< void > {
+	const rtlLanguage = process.env.PS_RTL_LANG;
+	const relative = path.replace( /^\/+/, '' );
+	await page.goto( direction === 'rtl' && rtlLanguage ? `/${ rtlLanguage }/${ relative }` : `/${ relative }` );
+	if ( direction === 'rtl' && ! rtlLanguage ) {
+		await page.evaluate( () => document.documentElement.setAttribute( 'dir', 'rtl' ) );
+		testInfo?.annotations.push( {
+			type: 'direction',
+			description: 'PS_RTL_LANG unset: dir="rtl" set client-side, no RTL stylesheet loaded',
+		} );
+	}
+}
+
+/** Asserts the page is in the requested direction (`<html dir="rtl">` or PrestaShop's `body.lang-rtl`). */
+export async function expectDirection( page: Page, direction: Direction ): Promise< void > {
+	const rtl = page.locator( 'html[dir="rtl"], body.lang-rtl' );
+	if ( direction === 'rtl' ) {
+		await expect( rtl.first() ).toBeAttached();
+	} else {
+		await expect( rtl ).toHaveCount( 0 );
+	}
+}
+
+/** Writes one PNG of the contract's matrix and returns its path. */
+export async function captureUiState( page: Page, capture: UiCapture ): Promise< string > {
+	const { kind, id, state, direction, theme, variants = [], locator } = capture;
+	if ( ! [ 'component', 'screen', 'flow' ].includes( kind ) ) {
+		throw new Error( `Unknown UI kind "${ kind }"` );
+	}
+	if ( ! ( kind === 'flow' ? KEBAB : TYPE_NAME ).test( id ) ) {
+		throw new Error( `Invalid ${ kind } id "${ id }"` );
+	}
+	for ( const segment of [ state, ...variants ] ) {
+		if ( ! KEBAB.test( segment ) ) {
+			throw new Error( `"${ segment }" is not kebab-case` );
+		}
+	}
+	if ( ! [ 'ltr', 'rtl' ].includes( direction ) || ! [ 'light', 'dark', 'high-contrast' ].includes( theme ) ) {
+		throw new Error( `Invalid direction/theme "${ direction }"/"${ theme }"` );
+	}
+	const name = [ state, direction, theme, ...variants ].join( '--' ) + '.png';
+	const path = join( screenshotsDir(), kind, id, name );
+	mkdirSync( dirname( path ), { recursive: true } );
+	const options = { path, animations: 'disabled' as const, caret: 'hide' as const };
+	if ( locator ) {
+		await locator.screenshot( options );
+	} else {
+		await page.screenshot( { ...options, fullPage: true } );
+	}
+	return path;
+}
+
+/**
+ * Runs axe-core (WCAG 2.0/2.1/2.2 A and AA) at the `.ui-quality.yml` level: `enforce` fails on any violation,
+ * `report` lists `rule id × nodes` as an annotation, `off` skips. `include` scopes the scan to a component.
+ */
+export async function checkAccessibility(
+	page: Page,
+	testInfo: TestInfo,
+	options: { include?: string | string[] } = {}
+): Promise< void > {
+	const level = uiQuality().accessibility;
+	if ( level === 'off' ) {
+		return;
+	}
+	let builder = new AxeBuilder( { page } ).withTags( WCAG_TAGS );
+	for ( const selector of ( [] as string[] ).concat( options.include ?? [] ) ) {
+		builder = builder.include( selector );
+	}
+	const results = await builder.analyze();
+	await testInfo.attach( 'axe-results.json', {
+		body: JSON.stringify( results.violations, null, 2 ),
+		contentType: 'application/json',
+	} );
+	const summary = results.violations.map( ( violation ) => `${ violation.id } × ${ violation.nodes.length }` );
+	if ( level === 'enforce' ) {
+		expect( summary, 'axe-core accessibility violations' ).toEqual( [] );
+	} else if ( summary.length > 0 ) {
+		testInfo.annotations.push( { type: 'accessibility', description: summary.join( ', ' ) } );
+		console.warn( `[accessibility:report] ${ testInfo.title }: ${ summary.join( ', ' ) }` );
+	}
+}
+```
+
+- The same helper as every PHP flavor of this catalog (`uiQuality()`, `screenshotsDir()`, `applyDirectionAndTheme()`,
+  `expectDirection()`, `captureUiState()` with an optional component `locator`, `checkAccessibility()` with an
+  optional `include` scope), plus PrestaShop's direction switch `gotoInDirection()`.
+- **Direction**: a storefront is right-to-left when served in a right-to-left shop language. Install one in the test
+  shop (International → Localization → Languages, e.g. Arabic `ar` or Hebrew `he`; the Docker shop has only the
+  install language) and export `PS_RTL_LANG=<iso>`: the right-to-left captures are then the shop's real
+  `/<iso>/…` pages with the theme's RTL stylesheet (`body.lang-rtl`). Without it the documented fallback sets
+  `<html dir="rtl">` client-side and annotates the test — layout direction only, no RTL stylesheet.
+- **Dark**: `emulateMedia( { colorScheme: 'dark' } )`; the classic theme has no dark styles, so dark captures match
+  light ones until the module's CSS (or the shop's theme) adds a `prefers-color-scheme: dark` block.
+
+### `tests/e2e/specs/FooterMessage.spec.ts`
+
+```ts
+/**
+ * Component UI test of FooterMessage — the greeting the displayFooter hook renders from
+ * views/templates/hook/footer.tpl (variables from FooterMessagePresenter) on every storefront page. Behaviour is
+ * asserted once; the state is captured across `.ui-quality.yml` directions × themes.
+ */
+import { expect, test } from '@playwright/test';
+import {
+	applyDirectionAndTheme,
+	captureUiState,
+	checkAccessibility,
+	expectDirection,
+	gotoInDirection,
+	uiQuality,
+} from '../support/ui-screenshots';
+
+test.skip( ! process.env.PS_BASE_URL, 'PS_BASE_URL is not set: start a shop with the module installed first' );
+
+test.describe( 'FooterMessage', () => {
+	test( 'renders the default state', async ( { page }, testInfo ) => {
+		const { directions, themes } = uiQuality();
+		for ( const direction of directions ) {
+			for ( const theme of themes ) {
+				await applyDirectionAndTheme( page, direction, theme );
+				await gotoInDirection( page, '/', direction, testInfo );
+				const message = page.locator( '.<module>-message' );
+				await expect( message ).toBeVisible();
+				await expect( message ).not.toHaveText( '' );
+				await expectDirection( page, direction );
+				await captureUiState( page, {
+					kind: 'component',
+					id: 'FooterMessage',
+					state: 'default',
+					direction,
+					theme,
+					locator: message,
+				} );
+				if ( direction === directions[ 0 ] && theme === themes[ 0 ] ) {
+					await checkAccessibility( page, testInfo, { include: '.<module>-message' } );
+				}
+			}
+		}
+	} );
+} );
+```
+
+- Component Id `FooterMessage`: the greeting block `views/templates/hook/footer.tpl` renders (variables from
+  `FooterMessagePresenter`) through `hookDisplayFooter`. It appears on every storefront page, so the spec opens the
+  home page; the element screenshot and the `include`-scoped axe check keep the theme's own markup out of the
+  component's result. State `default` = the install defaults (`composer shop:install`); add a state per variation
+  the template renders (e.g. `long-content` with a long message saved in the configuration page).
+- Run: `composer shop:up && composer shop:install`, then
+  `PS_BASE_URL=http://localhost:${PS_PORT:-8080} npm run test:e2e` (optionally `PS_RTL_LANG=ar`). Verified against a
+  static stand-in page (all 4 captures written, axe clean) and skipped without `PS_BASE_URL`; not run against a shop.
+
 ### `phpstan.dist.neon`
 
 ```yaml
@@ -755,6 +1121,14 @@ without `PHP_CS_FIXER_IGNORE_ENV`.
 /node_modules
 /tests
 /vendor
+/test-results
+/playwright-report
+/blob-report
+/.ui-screenshots
+/.ui-quality.yml
+/package.json
+/package-lock.json
+/playwright.config.ts
 /phpstan.dist.neon
 /phpunit.xml.dist
 /sonar-project.properties
@@ -811,7 +1185,9 @@ echo "Built $ZIP"
 Verified (in `composer:2` with `rsync` added): produces `build/<module>-<version>.zip` containing `<module>/` with
 the main file, `config.xml`, `logo.png`, `composer.json`/`composer.lock`, `config/`, `src/`, `views/`, `upgrade/`
 (without its README), `translations/`, and a `--no-dev` `vendor/`, an `index.php` in every directory — and none of
-the tests, tooling configs, `docs/`, or `bin/`. That zip, unzipped into `modules/` of a clean 9.x shop and installed
+the tests, tooling configs, `docs/`, or `bin/` — nor, since the browser UI tests, `package.json`/`package-lock.json`,
+`node_modules/`, `playwright.config.ts`, `tests/e2e/`, Playwright output or `.ui-screenshots/` (verified with
+`rsync -a --exclude-from=.distignore`). That zip, unzipped into `modules/` of a clean 9.x shop and installed
 with `bin/console`, passed the same back-office and storefront checks as the development copy. `chmod +x
 bin/package.sh` after writing it.
 

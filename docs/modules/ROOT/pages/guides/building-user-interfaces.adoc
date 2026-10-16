@@ -1,0 +1,104 @@
+= Building user interfaces
+:description: How this catalog's skills decompose designs into composed components, build virtualized lists, test UIs across states, directions and themes, check accessibility, and turn the tests' screenshots into Antora documentation.
+:keywords: claude code, ui components, composition, recyclerview, virtualized lists, ui tests, screenshots, rtl, dark mode, accessibility, antora
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Every skill in this catalog that builds, tests, scaffolds or documents a user interface follows one shared **UI
+contract** — whatever the platform: web pages and web components, server-rendered templates (Laravel, WordPress,
+PrestaShop, Django), Android (Views or Compose), Apple platforms (SwiftUI, UIKit, AppKit), React Native, Kotlin
+Multiplatform, Windows desktop (WPF, WinUI 3, Windows Forms) and terminal UIs (Ratatui, Bubble Tea, Terminal.Gui).
+The contract lives verbatim in each UI coding skill as `reference/ui-contract.md`, next to a
+`reference/ui-implementation.md` that maps it onto that stack's real APIs and test tools.
+
+[mermaid]
+....
+flowchart LR
+    D["Design or\nfunctional description"] --> P["iru-plan:\nscreens › regions › components"]
+    P --> C["iru-code:\ncomposed components,\nvirtualized lists"]
+    C --> T["UI tests:\nstates × LTR/RTL × light/dark\n+ accessibility checks"]
+    T --> S[(".ui-screenshots/")]
+    S --> U["iru-update-docs:\nflows, screens, components"]
+    U --> I[("docs images/ui/\n(committed)")]
+....
+
+== Decompose, then compose
+
+`iru-plan` decomposes a design (a Figma frame, mockup or screenshot) or a plain functional description top-down —
+screens and the flows connecting them, the regions of each screen, then components — and writes the tree into the
+plan as `Screen › Region › Component (in: …; out: …)` lines. Each component becomes its own task, with its inputs,
+events, visual states and UI tests; groups run bottom-up: leaf components (in parallel), then the components that
+compose them, then screens, then navigation.
+
+The coding skills then build each piece by **composition**: bigger UI nests smaller components and passes content
+in (children, slots, `@ViewBuilder`, `content: @Composable () -> Unit`, `DataTemplate`), never by subclassing a
+screen to tweak it. Presentational components render an immutable UI state and emit typed events named after the
+user's intent; screens own the view model, talk to services and handle navigation, which lives in one place per
+app. Two-way binding is reserved for form-field controls.
+
+== Collections reuse item components
+
+Whenever a design shows a data-driven or long list — vertical or horizontal lists, grids, carousels, paged or
+infinite lists, pop-up lists, menus, many tabs — the skills build a collection component on the platform's
+virtualizing, recycling container plus one reusable item component, with the collection's view model holding the
+whole list data under stable ids:
+
+[cols="1,3",options="header"]
+|===
+| Platform | Container
+
+| Android Views | `RecyclerView` + `ListAdapter` + `DiffUtil` (Paging 3, `ViewPager2` for pages and tabs)
+| Compose / Compose Multiplatform | `LazyColumn`, `LazyRow`, lazy grids, `HorizontalPager` with `key` and `contentType`
+| SwiftUI / UIKit / AppKit | `List` and lazy stacks/grids; `UICollectionView` with a diffable data source; view-based `NSTableView`/`NSCollectionView`
+| React / Angular / Ionic / Hilla | a virtualizer (`@tanstack/react-virtual`), CDK virtual scroll, `ion-infinite-scroll`, `<VirtualList>`/`<Grid>`
+| React Native | `FlatList`/`SectionList` with `keyExtractor` and memoized items
+| WPF / WinUI / Windows Forms | virtualizing, recycling `ListView`; `ItemsView`/`ItemsRepeater`; `VirtualMode`
+| Server-rendered web | server-side or cursor pagination returning item partials
+| Terminal UIs | Ratatui `List`/`Table` with state, Bubbles `list`/`table`/`viewport`, Terminal.Gui `ListView`
+|===
+
+== UI tests and screenshots
+
+On top of unit tests for view models, every component and screen gets UI tests that render for real — on the local
+desktop or JVM (Robolectric, desktop apps), in a simulator or emulator, or in a real browser (Playwright; Cypress
+where a repository already uses it) — covering every visual state (default, loading, empty, error, disabled,
+selected, long content, …), minimal/typical/many-items data including right-to-left text, and every event. Flow
+tests drive the real app through each navigation flow.
+
+Each captured state is saved across **left-to-right and right-to-left** layouts and **light and dark** themes:
+
+[source,text]
+----
+.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png
+.ui-screenshots/component/OrderRow/selected--rtl--dark.png
+----
+
+`<kind>` is `component`, `screen` or `flow`; `UI_SCREENSHOTS_DIR` overrides the location. The directory is
+gitignored and cleared by the test gate at the start of a full UI run, and the CI workflows upload it as a
+short-lived artifact for review. A stage that needs a browser, device, simulator or host OS that isn't available is
+reported **unverified**, never silently skipped.
+
+== Accessibility
+
+Accessible coding defaults always apply — accessible names and roles, alternative text, contrast in both themes,
+touch-target sizes, keyboard and focus order, font scaling and reduced motion. On top of that, the UI tests run the
+platform's automated checks (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility
+audit, Axe.Windows, accessibility lint rules) at the level the repository chose when it was set up —
+`/iru-setup-repository` asks it for every UI project type and the scaffold records it:
+
+[source,yaml]
+----
+# .ui-quality.yml
+accessibility: enforce      # enforce | report | off
+directions: [ltr, rtl]
+themes: [light, dark]
+----
+
+== Screenshots become documentation
+
+For a repository with a UI, `iru-setup-antora` adds a **User interface** section skeleton and `iru-update-docs`
+maintains it: a navigation-flows page drawn from the app's navigation definition, one page per screen and one per
+component (purpose, inputs, events, composed components, states), each illustrated with the screenshots the UI
+tests captured. Only the screenshots a page references are copied into the Antora module's `images/ui/` tree —
+the only committed copies — and only when their bytes changed; images of a changed component are replaced,
+images and pages of removed components deleted, and the rest of `.ui-screenshots/` discarded.

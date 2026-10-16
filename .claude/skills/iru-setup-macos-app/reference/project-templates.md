@@ -91,6 +91,8 @@ targets:
     platform: macOS
     sources:
       - path: App/UITests
+      # The UI contract's screenshot helper lives in the unit-test target and is compiled here too (one file).
+      - path: App/Tests/Support/UIScreenshots.swift
     dependencies:
       - target: <AppName>
     settings:
@@ -394,6 +396,19 @@ Run as `swiftlint lint --strict` from the repository root (warnings fail too). `
 
 Run as `swift format lint --strict --recursive App Packages/Core/Sources Packages/Core/Tests`. Without this file the
 toolchain formatter defaults to 2-space indentation and fails every template.
+
+### `.ui-quality.yml`
+
+The UI contract's quality settings (`iru-swift-code-one-task`'s `reference/ui-contract.md` §8), read by the
+`UIScreenshots.swift` helper in the UI tests and by `iru-swift-test`/`iru-swift-code-one-task-group`. Committed —
+only `.ui-screenshots/` is gitignored. `<accessibility>` is Step 0/2's `accessibility` (default `enforce`).
+
+```yaml
+# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+directions: [ltr, rtl]      # screenshot matrix directions
+themes: [light, dark]       # screenshot matrix themes
+```
 
 ### `sonar-project.properties` (sonar)
 

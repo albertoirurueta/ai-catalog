@@ -18,12 +18,16 @@ description: >-
   `Argument<T>`/`SetAction`, `ParserConfiguration` with response files off, usage errors → exit 2, default exception
   handler and its signal handling off) and Spectre.Console for styled output that obeys the colour policy, with the
   commands `greet [NAME]`, `completion <shell>`, `schema`, `--version`, a hidden `gen-docs`, and with `ui: tui` a
-  TTY-gated full-screen Terminal.Gui v2 `browse` command; MSTest 4 + coverlet `tests/<ToolName>.Core.Tests` (~99% Core
+  TTY-gated full-screen Terminal.Gui v2 `browse` command whose view (`Tui/BrowseView`) gets UI tests per the catalog's
+  UI contract — rendered on Terminal.Gui's ANSI driver, every state × `.ui-quality.yml` direction captured as
+  `.ui-screenshots/screen/BrowseView/<state>--<direction>--no-color.txt`, with the asserted terminal accessibility
+  checks at the level of a root `.ui-quality.yml`; MSTest 4 + coverlet `tests/<ToolName>.Core.Tests` (~99% Core
   line/branch coverage) and `tests/<ToolName>.Cli.Tests` running the command tree in-process with captured
   stdout/stderr (every exit code, JSON goldens, no-TTY/`NO_COLOR` behaviour) plus opt-in published-binary smoke tests;
   `tests/coverlet.runsettings` and a DocFX `docfx.json` for the Core API. Invoke as `/iru-setup-dotnet-cli`. Accepts
   pre-resolved inputs via `args` (`key: value` lines) — `tool-name` (PascalCase solution/project name), `bin-name`
-  (the command), `package-id`, `description`, `ui` (`none`/`tui`), `version`, `branching`, `license`,
+  (the command), `package-id`, `description`, `ui` (`none`/`tui`), `accessibility` (`enforce`/`report`/`off`, only
+  with `ui: tui`), `version`, `branching`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `owner`, `open-source`, `visibility`, `ci`, `sonar`
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
   `channels`, `mode` (`new`/`existing`) and `on-existing` (`ask`/`keep`/`update`/`replace`) — so
@@ -122,7 +126,9 @@ namespace; default: `bin-name` PascalCased), `bin-name` (the command users type 
 `^[a-z][a-z0-9-]*$`; default: the repository directory name lower-cased), `package-id` (NuGet package id of the .NET
 tool, `[A-Za-z0-9._-]`; default `bin-name` — check `https://api.nuget.org/v3-flatcontainer/<id>/index.json` returns
 404, else warn that the id is taken), `description` (one line: what the tool does and when to use it), `ui`
-(`none`/`tui`, default `none`), `version` (default `0.1.0-dev` for `branching: gitflow`, `0.1.0` for `main-only`),
+(`none`/`tui`, default `none`), `accessibility` (`enforce`/`report`/`off`, default `enforce`; only meaningful with
+`ui: tui` — the level written to `.ui-quality.yml` for the terminal UI's asserted accessibility checks; ignored and
+named in the report with `ui: none`), `version` (default `0.1.0-dev` for `branching: gitflow`, `0.1.0` for `main-only`),
 `branching` (`gitflow`/`main-only`, default `gitflow`), `license`, `developer-name`, `developer-email`,
 `organization-url`, `owner`, `open-source` (`yes`/`no`), `visibility`, `ci`, `sonar` (+ `sonar-organization`/
 `sonar-project-key`/`sonar-host-url` — recorded for the report only: no file carries them), `distribution`
@@ -141,8 +147,8 @@ received it.
 ## Step 1 — Survey the repository
 
 Check for every file Step 6 would write: `global.json`, `Directory.Build.props`, `Directory.Packages.props`,
-`.editorconfig`, `stylecop.json`, any `*.slnx`/`*.sln`, `src/*/*.csproj`, `src/**` sources, `tests/*/*.csproj`,
-`tests/**`, `tests/coverlet.runsettings`, `docfx.json`, `docfx/`. Then tell the user which of the two this run is
+`.editorconfig`, `stylecop.json`, `.ui-quality.yml` (`ui: tui`), any `*.slnx`/`*.sln`, `src/*/*.csproj`, `src/**`
+sources, `tests/*/*.csproj`, `tests/**`, `tests/coverlet.runsettings`, `docfx.json`, `docfx/`. Then tell the user which of the two this run is
 doing:
 
 - **Scaffolding from scratch** — none exist: go to Step 2.
@@ -151,16 +157,17 @@ doing:
   that each existing file group below will be decided individually (missing files are still created). Groups (only
   those with a file present): **`global.json`**, **`Directory.Build.props`**, **`Directory.Packages.props`**,
   **quality config** (`.editorconfig`, `stylecop.json`), **the solution file**, **project files** (every `*.csproj`),
-  **`tests/coverlet.runsettings`**, **DocFX config** (`docfx.json`, `docfx/`), and **the source skeleton** (every
-  `*.cs`). Unless `on-existing` decides, ask with `AskUserQuestion`, one question per group (batch up to 4 per call),
+  **`tests/coverlet.runsettings`**, **UI quality config** (`.ui-quality.yml`, `ui: tui` only), **DocFX config**
+  (`docfx.json`, `docfx/`), and **the source skeleton** (every `*.cs`). Unless `on-existing` decides, ask with `AskUserQuestion`, one question per group (batch up to 4 per call),
   naming each concrete conflict with this run's choices (e.g. "`src/Greetly/Greetly.csproj` has no `PublishAot`",
   "`Directory.Packages.props` pins System.CommandLine `2.0.0-beta4` — the beta API differs", "`ui: tui` chosen but
   no Terminal.Gui reference", "`Directory.Build.props` has no `<Version>`"):
   - **Update (Recommended for build files, quality config, solution, run settings and DocFX config)** — "Merge: add
     what's missing and correct outdated parts using this skill's template as reference — analyzer/warnings-as-errors
     properties, `InvariantGlobalization`, AOT/tool properties, central package versions bumped to Step 4's lookup,
-    the SARIF `ErrorLog`, the runsettings `Include`; keep every project, package, property and setting this skill
-    doesn't own. You review a diff; customizations survive, but a customized part this skill owns may be rewritten."
+    the SARIF `ErrorLog`, the runsettings `Include`, the missing keys of `.ui-quality.yml` (existing values kept unless
+    `accessibility` came from `args`, which then wins and is reported); keep every project, package, property and
+    setting this skill doesn't own. You review a diff; customizations survive, but a customized part this skill owns may be rewritten."
     For the source skeleton, Update only creates its missing files.
   - **Keep as is (Recommended for the source skeleton)** — "Leave the file(s) untouched. Nothing you customized
     changes, but they may stay out of date or disagree with this run's choices — the report lists each mismatch."
@@ -197,6 +204,11 @@ Then, with `AskUserQuestion` (skip any resolved):
   stdin and stdout are terminals, and every function it offers stays available as a non-interactive `--json`
   command). If Step 4 finds no stable (non-prerelease) Terminal.Gui 2.x at all, say so and do not offer `tui` — the
   templates for it target the v2 API.
+- **accessibility** — only with `ui: tui`, stand-alone (an orchestrator resolves it; otherwise default `enforce`):
+  "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report
+  only** (listed in `.ui-screenshots/a11y-report.txt`, never failing) / **Off** (not run; the coding defaults still
+  apply). Say that for a terminal UI these are asserted checks — the selection readable without colour, the key help
+  on screen, every action on a key — since no automated accessibility audit exists for terminals.
 - **license** — MIT License (recommended for an open-source tool) / Apache License 2.0 / No license (proprietary) /
   Other (ask its SPDX id). If one is chosen, remind the user in Step 8 to add a root `LICENSE` (`iru-check-license`
   can backfill headers).
@@ -245,12 +257,13 @@ Read the four reference files. Placeholders:
 | `__PackageLicenseExpression__` | SPDX id of `license` (`MIT`, `Apache-2.0`, …; block omitted for "No license") |
 | `__RepositoryUrl__` | Step 3 |
 | `__DotnetSdkVersion__` and every `__…Version__` package token | Step 4 |
+| `__Accessibility__` | Step 0/2 `accessibility` (default `enforce`; `ui: tui` only) |
 
 Directory layout produced (`[tui]` marks `ui: tui`-only files):
 
 ```
 global.json  Directory.Build.props  Directory.Packages.props  .editorconfig  stylecop.json  <ToolName>.slnx
-docfx.json  docfx/index.md  docfx/toc.yml  tests/coverlet.runsettings
+docfx.json  docfx/index.md  docfx/toc.yml  tests/coverlet.runsettings  .ui-quality.yml[tui]
 src/<ToolName>.Core/<ToolName>.Core.csproj
 src/<ToolName>.Core/{ExitCode,ExitCodes,CliException,ToolInfo}.cs
 src/<ToolName>.Core/Output/{OutputFormat,LogFormat,GlobalSettings,ErrorEnvelope,ErrorBody,SummaryLine,LogLine,CliJsonContext,JsonOutput,ErrorReporter,DiagnosticLog}.cs
@@ -262,9 +275,9 @@ src/<ToolName>.Core/Docs/{ReferenceGenerator,AtomicFile}.cs
 src/<ToolName>.Core/Browse/BrowseState.cs                                        [tui]
 src/<ToolName>/<ToolName>.csproj  src/<ToolName>/{Program,CliApp,CliStreams,GlobalOptions,ToolCommand,CommandTreeReader,ConsoleFactory}.cs
 src/<ToolName>/Commands/{GreetCommand,CompletionCommand,SchemaCommand,GenDocsCommand}.cs
-src/<ToolName>/Commands/BrowseCommand.cs                                         [tui]
+src/<ToolName>/Commands/BrowseCommand.cs  src/<ToolName>/Tui/BrowseView.cs        [tui]
 tests/<ToolName>.Core.Tests/{<ToolName>.Core.Tests.csproj,MSTestSettings.cs,*Tests.cs,Output/,Terminal/,Greeting/,Schema/,Completion/,Docs/,Browse/[tui]}
-tests/<ToolName>.Cli.Tests/{<ToolName>.Cli.Tests.csproj,MSTestSettings.cs,CliRunner.cs,CliResult.cs,ContractTests.cs,SchemaAndCompletionTests.cs,PublishedBinaryTests.cs,BrowseTests.cs[tui]}
+tests/<ToolName>.Cli.Tests/{<ToolName>.Cli.Tests.csproj,MSTestSettings.cs,CliRunner.cs,CliResult.cs,ContractTests.cs,SchemaAndCompletionTests.cs,PublishedBinaryTests.cs,BrowseTests.cs[tui],UiScreenshots.cs[tui],AccessibilityCheck.cs[tui],Tui/BrowseViewTests.cs[tui]}
 ```
 
 Design decisions the templates encode (keep them when editing):
@@ -342,7 +355,9 @@ whether the run scaffolded from scratch, updated an existing project, or stopped
 taken — **created / updated / replaced / kept as is** — and whether it came from the user or `on-existing`, listing
 each mismatch of a kept group and, for a replaced one, what customizations could have been lost (check `git diff`).
 
-State what was included versus omitted and why: `ui` (Terminal.Gui `browse` or not); config files (documented
+State what was included versus omitted and why: `ui` (Terminal.Gui `browse` or not — with `tui`, the action on
+`.ui-quality.yml` (**created / updated / replaced / kept as is**), its `accessibility` level, and that the
+`[TestCategory("UI")]` view tests write `.ui-screenshots/` text captures that must be gitignored); config files (documented
 extension point, not implemented); `sonar` (no file — the keys go to `iru-setup-cli-github-workflows`);
 `distribution`/`channels` (recorded only — the tool package settings are always present); which Step 4 versions were
 live versus fallback; and any ignored `args` keys. List the Antora pages worth adding once `iru-setup-antora` has run
@@ -356,7 +371,8 @@ live versus fallback; and any ignored `args` keys. List the Antora pages worth a
 | Solution | `<ToolName>.slnx` — folders `/src/`, `/tests/`, `/Solution Items/`; `dotnet sln <ToolName>.slnx list` works |
 | Projects | `src/<ToolName>.Core/<ToolName>.Core.csproj` (`net10.0`, assembly `<ToolName>.Core`, `IsAotCompatible`, `IsPackable=false`); `src/<ToolName>/<ToolName>.csproj` (`Exe`, assembly `<bin>`, `PublishAot`, `InvariantGlobalization`, `PackAsTool`, `ToolCommandName <bin>`, `PackageId <package-id>`); `tests/<ToolName>.Core.Tests` and `tests/<ToolName>.Cli.Tests` (`net10.0`, MSTest 4 on VSTest + coverlet.collector) |
 | CLI detection | the `Exe` csproj references `System.CommandLine` and sets `PackAsTool`/`PublishAot`; no `UseWPF`/`UseWinUI`/`UseWindowsForms` |
-| TUI detection | `src/<ToolName>/<ToolName>.csproj` references `Terminal.Gui`; `src/<ToolName>/Commands/BrowseCommand.cs` |
+| TUI detection | `src/<ToolName>/<ToolName>.csproj` references `Terminal.Gui`; `src/<ToolName>/Commands/BrowseCommand.cs` + the view `src/<ToolName>/Tui/BrowseView.cs` (`Create(state, toolName)`) |
+| TUI UI tests (`ui: tui`) | `dotnet test tests/<ToolName>.Cli.Tests -c Release --filter "TestCategory=UI"` (any host, no lock; also part of the ordinary solution run) — `Tui/BrowseViewTests` renders `BrowseView` on Terminal.Gui's ANSI driver at 60×12 and writes `<UI_SCREENSHOTS_DIR or .ui-screenshots>/screen/BrowseView/{default,many-items,long-content}--{ltr,rtl}--no-color.txt` (`UiScreenshots.SaveText`); `AccessibilityCheck.Apply` applies `.ui-quality.yml`'s level to the `tui-color-only`/`tui-help-line` checks (`enforce` → `[a11y]` failure, `report` → `.ui-screenshots/a11y-report.txt`) |
 | Build | `dotnet build <ToolName>.slnx -c Release` (any host; trim/AOT analyzers on) |
 | Tests | `dotnet test <ToolName>.slnx -c Release` — Core unit tests + in-process CLI tests; `--filter "TestCategory!=PublishedBinary"` excludes the binary smoke tests (they are inconclusive/skipped unless `__BinEnvPrefix___BINARY` is set) |
 | Coverage | `dotnet test tests/<ToolName>.Core.Tests -c Release --settings tests/coverlet.runsettings --collect "XPlat Code Coverage" --results-directory TestResults` → `TestResults/<guid>/coverage.cobertura.xml` + `coverage.opencover.xml`, `[<ToolName>.Core]*` only; the `<bin>` assembly is "not measured" |
@@ -390,6 +406,14 @@ live versus fallback; and any ignored `args` keys. List the Antora pages worth a
   osx-arm64 AOT and the `any` packages; `dotnet tool install --tool-path … --add-source artifacts/nupkg --prerelease`
   installed the native osx-arm64 binary, and `dnx <package-id>@0.1.0-dev --yes --add-source …` ran it with exit codes
   propagated and a clean stdout. `gen-docs` wrote the AsciiDoc page, man page and four completion scripts.
+- **UI contract (2026-10-16, `$TMPDIR/iru-verify/cli/dotnet-tui-ui/`)**: the reference files were round-tripped into
+  `ui: tui` and `ui: none` trees again: both built with 0 unsuppressed SARIF results and `dotnet format` clean; `tui`
+  87 + 40 tests passed (the 7 new `[TestCategory("UI")]` view tests among them, writing the 6 `.txt` captures),
+  `none` 84 + 31 unchanged; `dotnet publish -r osx-arm64` of `tui` still 0 warnings (9.9 MB) and non-TTY `browse`
+  still exits 2. All three accessibility levels were exercised with the key help removed (`enforce` → 6 `[a11y]`
+  failures, `report` → `a11y-report.txt` lines and a pass). Terminal.Gui 2.5.0's public test surface used:
+  `Application.Create()`, `Init(DriverRegistry.Names.ANSI)`, `Driver.SetScreenSize`, `Begin`/`LayoutAndDraw`/`End`,
+  `Driver.ToString()`, `Terminal.Gui.Testing`'s `InjectKey`.
 - **Linux arm64** (`mcr.microsoft.com/dotnet/sdk:10.0-noble-aot` under Docker on the same Mac, `ui: tui` render):
   build, 87 + 35 tests, `dotnet publish -r linux-arm64` 0 warnings (10.5 MB, links only libc/libm), the
   `PublishedBinary` tests and `gen-docs` against that binary, 21 smoke checks (those needing jq/python3/zsh were not
@@ -413,7 +437,7 @@ Finish with a **Warn explicitly** block:
 - Review every generated file before building, committing or distributing; replace the `greet` sample with real
   commands (keep the contract plumbing) and keep `CliJsonContext` registering every output type.
 - Run `iru-setup-dotnet-gitignore` — `bin/`, `obj/`, `TestResults/`, `artifacts/` (publish output, packages, man page,
-  completions), `build/`, `docfx/api/` must never be committed; `docs/modules/ROOT/pages/cli-reference.adoc` is
+  completions), `build/`, `docfx/api/` and (`ui: tui`) `.ui-screenshots/` must never be committed; `docs/modules/ROOT/pages/cli-reference.adoc` is
   generated but committed (re-run `gen-docs` after any command change).
 - The `package-id` must be free on nuget.org before the first `store` release, and every RID package must be pushed
   before the pointer package.

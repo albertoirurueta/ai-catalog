@@ -13,7 +13,7 @@ from a trimmed house template rather than GitHub's 400-line `VisualStudio.gitign
 also works standalone against any `*.sln`/`*.slnx` desktop solution. The base template covers .NET build output
 (`[Bb]in/`, `[Oo]bj/`, `artifacts/`, `publish/`), Visual Studio, Rider and VS Code user state, test and coverage output,
 analyzer SARIF logs, NuGet packages, signing material (`*.pfx`, `*.p12`, `*.cer`), the Antora build output, OS files and
-the repository-wide `.integration-test.lock/` that serializes desktop UI-test runs. It adds an MSIX section (`AppPackages/`,
+the repository-wide `.integration-test.lock/` that serializes desktop UI-test runs, and the UI tests' screenshot directory `.ui-screenshots/` (regenerated on every full UI run; the documentation skills copy the images they use into the Antora module's `images/ui/`). The root `.ui-quality.yml` (accessibility level and screenshot matrix) is configuration and is never ignored. It adds an MSIX section (`AppPackages/`,
 `*.msix`, `*.appinstaller`, `packaging/layout/`) and a DocFX section (the `docfx.json` metadata and site folders) only
 when those are detected.
 
@@ -57,7 +57,7 @@ Any other key from a full shared-args set is ignored and named in the report.
 
 == Outputs
 
-* The root `.gitignore`: created, updated (merged), replaced or kept as is.
+* The root `.gitignore`: created, updated (merged), replaced or kept as is, including the `.ui-screenshots/` entry (and with `.ui-quality.yml` verified as tracked).
 * A report naming which conditional sections (MSIX, DocFX) were included or skipped and why, the result of the
   `git check-ignore` safety check, any already-tracked file under a newly ignored path, and warnings to review the file,
   untrack committed artifacts and rotate any certificate that was ever committed.

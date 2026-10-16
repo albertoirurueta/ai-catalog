@@ -102,6 +102,14 @@ Pages versus a workflow artifact.
 |`none`, `internal` or `store`.
 |`internal` when open source; otherwise asked
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the UI tests' automated accessibility level (`performAccessibilityAudit()`), written by
+the scaffold to `.ui-quality.yml`; the UI tests also capture the main window across left-to-right/right-to-left ×
+light/dark into the gitignored `.ui-screenshots/`, which CI uploads as a 7-day artifact (see
+xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+|Asked (Enforce recommended)
+
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No
 |`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
@@ -116,7 +124,7 @@ Pages versus a workflow artifact.
 == Outputs
 
 * The Xcode project scaffold -- XcodeGen `project.yml`, UI-free `Packages/Core`, the SwiftUI or AppKit `App/` layer,
-  unit and UI tests, quality configs and packaging helpers (via `iru-setup-macos-app`).
+  unit and UI tests, quality configs (including `.ui-quality.yml`) and packaging helpers (via `iru-setup-macos-app`).
 * A scaffolded Antora documentation site under `docs/` (via `iru-setup-antora`).
 * A root `.gitignore` (via `iru-setup-swift-gitignore`).
 * CI/CD workflows -- `build.yml`, `release.yml`, `sync.yml` + `sync_versions.py` (gitflow), `security.yml` and
@@ -124,7 +132,7 @@ Pages versus a workflow artifact.
 * A root `CHANGELOG.md` (via `iru-setup-changelog`) and a root `README.md` (via `iru-setup-readme`).
 * A final report: setup mode, resolved `ui`/`architecture`/`branching`/`mode`, identity, license and pipeline
   parameters, a per-component table with the action taken (created / updated / replaced / kept as is / skipped
-  (`ci: no`)), the consolidated required-secrets table, decisions made on the user's behalf and an explicit warning
+  (`ci: no`)), the `accessibility` level written to `.ui-quality.yml`, the consolidated required-secrets table, decisions made on the user's behalf and an explicit warning
   block.
 
 == Execution flow
@@ -135,7 +143,7 @@ flowchart TD
     A[Start /iru-setup-macos-repository] --> B["Step 0: Parse args\n(ui, architecture, branching, mode, visibility,\nci, macos-ci, ci-tests, pages, identity)"]
     B --> C["Step 1: Resolve ui, architecture, branching, mode\nand print Setup mode\n(stop if multi-platform: use swift-repository)"]
     C --> D["Step 2: Collect app identity\n(skipped when a project exists)"]
-    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, macos-ci, sonar,\nci-tests, pages, distribution)"]
+    D --> E["Step 3: Collect pipeline parameters\n(open-source, visibility, ci, macos-ci, sonar,\nci-tests, pages, accessibility, distribution)"]
     E --> G["Step 4: Run iru-setup-macos-app\n(via sub-agent)\nasks Update / Keep / Replace / Stop"]
     G -- user chose stop --> STOP[Stop entire pipeline; report]
     G -- ok --> H["Step 5: Run iru-setup-antora"]

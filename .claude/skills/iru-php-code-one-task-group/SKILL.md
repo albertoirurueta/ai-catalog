@@ -17,7 +17,13 @@ description: >-
   integration stage is serialized repository-wide behind the same atomic `mkdir`-based `.integration-test.lock` as
   the other `*-code-one-task-group` skills (owner file, stale after 60 minutes, bounded ~45-minute wait, released
   on every exit path); if Docker is unavailable, the environment isn't running, or the wait times out, the stage
-  is reported **unverified**, never silently skipped, and the coverage verdict never depends on it.
+  is reported **unverified**, never silently skipped, and the coverage verdict never depends on it. Buckets that
+  touched UI (Blade/Livewire views and components, blocks, patterns, template parts, `.tpl`/`.twig` templates,
+  their CSS/JS assets) also get a browser UI stage — `iru-php-test` with the `ui` selector (Playwright +
+  `@axe-core/playwright`, or `wp-scripts test-playwright` for WordPress) behind the same lock — followed by a check
+  that `.ui-screenshots/` holds every added/changed screen and component's states × `.ui-quality.yml` directions ×
+  themes, with the accessibility level applied (`enforce` fails the bucket on violations, `report` lists them); no
+  browser, Docker, wp-env or shop makes it **unverified**, never skipped.
   `iru-php-code-one-task` checks off each task's box itself with a "group validation pending" note; this skill
   backfills any that didn't land and replaces each note with the final outcome. Invoke as
   `/iru-php-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
@@ -64,7 +70,7 @@ right data behind, and both outcomes look like real results. This holds:
 
 1. **Across buckets/groups** — enforced by the lock in Step 3.8a, regardless of what the caller does.
 2. **Within this bucket** — Step 2's per-task agents never run integration tests (`iru-php-code-one-task` forbids
-   it), so Step 3.8 is the only container-backed run.
+   it, and never runs browser UI tests), so Steps 3.8–3.9 are the only container- or server-backed runs.
 3. **Within the run itself** — never `--parallel` (ParaTest, `artisan test --parallel`, Pest `--parallel`) for the
    integration suite.
 
@@ -91,6 +97,12 @@ Detect once — and reuse in every gate prompt below rather than letting each ga
   | prestashop-module | `tests/Unit` with mocked collaborators | bootstraps requiring `config/config.inc.php`/`_PS_ROOT_DIR_` — need a shop |
 
   A suite that can't be classified with confidence is treated as integration (it gets the lock) — say so in Step 5.
+- **The browser UI stage** (only matters if the bucket touches UI): a root `playwright.config.*` (WordPress: also
+  `@wordpress/scripts` + `@wordpress/e2e-test-utils-playwright` in `package.json`), or Dusk (`laravel/dusk`) / the
+  Pest browser plugin (`pestphp/pest-plugin-browser`) where the project already uses them; the server it targets
+  (`webServer` running `php artisan serve`, the wp-env tests instance, or `PS_BASE_URL` for a shop); and
+  `.ui-quality.yml` at the repository root (missing → `accessibility: enforce`, `[ltr, rtl]`, `[light, dark]`).
+  No browser-test setup → Step 3.9 reports "no UI test setup" for a UI-touching bucket rather than scaffolding one.
 - **Whether the integration stage exists at all and can run**: `docker info` (record availability now), and for
   wp-env whether `.wp-env.json`/`@wordpress/env` is present. No integration suite → Step 3.8 is skipped, and
   Step 5 says so rather than reporting a stage that never existed.
@@ -130,7 +142,8 @@ writes its tests, runs only the fast tests it touched, and checks off its own ch
       implementation_plan.md checkbox line(s) for itself and its sub-tasks, its sub-tasks' own text, and any
       relevant Current code state context>\"}). Report back: the files touched, the fast tests added/updated and
       their result, the integration tests written but not run, any deviation from the skill's reference/
-      guidance, any insecure neighbouring code noticed, and whether the task stopped on a blocker. Fast tests
+      guidance, any insecure neighbouring code noticed, for UI work the Screen › Region › Component tree and the
+      UI specs written (screens/components and states, unrun), and whether the task stopped on a blocker. Fast tests
       only, scoped to the files you touched — no coverage, no full suite, no wp-env, no WP_UnitTestCase, nothing
       needing MySQL/PostgreSQL/Redis or a PrestaShop shop, no --parallel: sibling agents run concurrently and
       the integration stack is serialized by the group.",
@@ -155,9 +168,14 @@ First derive the scope: the union of the files each agent reported, cross-checke
 --name-only`, and `git diff --name-only --cached` run now (a task can change a file as a side effect — a service
 provider, a hook registration, `composer.json`). Production files and test files are listed separately: gates 1, 2
 and 7 take production files (plus test files for 1), gates 4 and 5 take test selectors and target classes/files.
+The bucket **touched UI** when the scope includes `*.blade.php`, `resources/views/**`, `app/Livewire/**`,
+`app/View/Components/**`, `resources/css|js/**`, a block directory (`block.json`, `edit.js`, `render.php`, block
+`*.scss`/`*.css`), `patterns/**`, `parts/**`, `templates/**`, `theme.json`, `*.tpl`, `*.twig`, `views/css|js/**`, or
+`tests/e2e/**` — record the added/changed screens and components from the per-task decomposition trees for 3.9.
 
-Run the following once for the whole bucket, in this order. **Steps 3.1–3.7 are the gates; 3.3 and 3.8 add
-information** (3.8 also fails the bucket on a genuine assertion failure, but its absence never does). A bucket can be
+Run the following once for the whole bucket, in this order. **Steps 3.1–3.7 are the gates; 3.3, 3.8 and 3.9 add
+information** (3.8 and 3.9 also fail the bucket on a genuine assertion failure — 3.9 also on an `enforce`
+accessibility violation or a missing screenshot — but their absence never does). A bucket can be
 fully gated on a machine with no Docker; only the integration result is lost.
 
 1. **License headers**, via `iru-gate-runner`: `Agent({description: "Add license headers for task group",
@@ -335,6 +353,36 @@ fully gated on a machine with no Docker; only the integration result is lost.
 
    On **every** exit path — passed, failed, environment failure, user declined, blocked task, interruption, hard
    stop. A lock left behind blocks every later group for an hour. If you took it, you release it before returning.
+   When 3.9 will run, keep the lock through it instead and release here once 3.9 finishes.
+
+9. **Browser UI tests, screenshot matrix, accessibility** — only when the bucket touched UI (scope above); skip
+   otherwise and say "no UI changes" in Step 5. No browser-test setup (Step 1) → report **no UI test setup** for
+   the UI the bucket changed, never a pass. The run starts a server, needs wp-env's tests instance or a shop, so it
+   holds `.integration-test.lock` exactly like 3.8 — still held from 3.8, or acquired now with 3.8a's procedure,
+   released with 3.8b's on every exit path. Preflight as 3.8 does (wp-env tests instance up, `PS_BASE_URL`
+   reachable, Docker for wp-env); missing → **unverified** with the reason. Then:
+   ```
+   Agent({
+     description: "Run browser UI tests for task group",
+     subagent_type: "iru-gate-runner",
+     prompt: "Invoke Skill({skill: \"iru-php-test\", args: \"ui <spec paths for the bucket's screens/components, or
+       nothing for the full UI run>\"}). Flavor: <flavor>; target: <php artisan serve webServer | wp-env tests
+       instance | PS_BASE_URL>. The lock is already held by the caller (lock: held). Report back only: passed/failed
+       counts with the failing spec names and first failure line; screenshot count per kind and any malformed
+       names; accessibility violations as count + rule ids and the .ui-quality.yml level applied; and whether any
+       failure was environmental (no browser, server/wp-env/shop unreachable) rather than an assertion.",
+     run_in_background: false
+   })
+   ```
+   - **Assertion failure** → trace to its task, fix, re-run (as in 3.8). **Environment failure** → **unverified**
+     with the cause (`no Chromium`, `wp-env tests instance not running`, `no shop at PS_BASE_URL`).
+   - **Screenshot matrix**: read `.ui-quality.yml` (`directions`, `themes`; defaults when missing). For every
+     screen and component the bucket added or changed, and every visual state its decomposition lists,
+     `.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` must exist for each configured
+     direction × theme (`ls .ui-screenshots/<kind>/<Id>/`). A missing capture is a defect — the owning task adds
+     it, then re-run this stage.
+   - **Accessibility**: `enforce` → any violation fails the specs; fix the markup/contrast (trace to its task) and
+     re-run. `report` → list rule ids × count in Step 5, never failing. `off` → note "accessibility checks off".
 
 Integration-test coverage is never measured or reported as a gate figure here; the only coverage number this skill
 quotes is 3.5's fast-test figure.
@@ -351,7 +399,8 @@ note in `implementation_plan.md` with the final outcome — fast-test coverage, 
 
 If the integration stage was unverified, say so with the reason (`integration tests unverified (Docker
 unavailable)`, `… (wp-env not started — user declined)`, `… (lock held by another group)`) — silence reads as a
-pass. Same for an unverified coverage gate (`coverage unverified (no PCOV/Xdebug)`). Then notify the user that group
+pass. For a bucket that touched UI, add the UI outcome the same way (`UI tests passed, 12 screenshots (screen 4,
+component 8), axe enforce clean`, `UI tests unverified (no shop at PS_BASE_URL)`, `no UI test setup`). Same for an unverified coverage gate (`coverage unverified (no PCOV/Xdebug)`). Then notify the user that group
 validation completed, summarizing the bucket-wide result.
 
 Before writing these notes, confirm the lock is released (3.8b); if a failure path skipped it, release it now.
@@ -377,6 +426,9 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
 - **The integration-test result** — passed, failed-and-fixed, **unverified** with the reason, or "no integration
   suite" — and how the lock behaved whenever it wasn't an immediate uncontended acquire (wait time, stale lock
   broken and what its owner file said, timeout), plus confirmation it was released.
+- **The UI stage** (3.9): passed/failed-and-fixed/**unverified** with the reason/"no UI test setup"/"no UI
+  changes"; screenshot count per kind and any missing or malformed captures; accessibility violations (count + rule
+  ids) and the `.ui-quality.yml` level applied; the decomposition trees the tasks reported.
 - Whether a new quality issue was left in place as unavoidable and why; whether license-header generation was
   skipped by the user; any sequential-ordering deviation applied in Step 2; and which task(s), if any, stopped on a
   blocker, with enough detail for the caller to surface it further up.

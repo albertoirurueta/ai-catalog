@@ -17,7 +17,7 @@ handle per task. It explores the whole codebase to build an inventory of testabl
 `iru-swift-coverage` for the exact, measured percentage per type (never an estimate), and only writes or extends
 test code — defaulting to Swift Testing (`@Suite`, `@Test`, `#expect`, `#require`) for unit tests and falling
 back to XCTest only for `XCUITest` and performance (`measure`) cases, following the project's own test framework
-and style. It does not add license headers, DocC comments, or run a code-quality pass, and it only touches
+and style. For apps it also closes the UI-test gap under the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): screens and components with no UI tests get component-capture tests and XCUITests that capture every `.ui-quality.yml` direction x theme and run an accessibility audit, then one full `iru-swift-test` `ui` run rebuilds `.ui-screenshots/`. It does not add license headers, DocC comments, or run a code-quality pass, and it only touches
 production source code when a type is genuinely untestable as written, which it reports explicitly rather than
 silently redesigning the type.
 
@@ -57,6 +57,7 @@ within it. Accepted as a bare positional argument or as an `args` `scope: <targe
   were detected/used, how many types already met the bar, before/after coverage per type touched, any type still
   below 80% after two extension attempts (with its exact remaining uncovered lines), and the full-suite test
   result.
+* For screens and components that had no UI tests: contract UI tests (component suites using `UIScreenshots.render`/`capture`, XCUITests with `--fixture` data and one `performAccessibilityAudit()` test), the shared `UIScreenshots.swift` helper when missing, and a report of screenshot counts per kind, malformed names, accessibility issues at the configured level, screens left uncovered (e.g. no UI-test target) and anything unverified.
 * No license headers, DocC comments, or code-quality fixes — those remain `iru-check-license`, `iru-swift-docc`,
   and `iru-swift-code-quality`'s jobs.
 
@@ -76,7 +77,8 @@ flowchart TD
     E -- yes --> F["gate-runner: single swift-coverage run\nover every candidate type\n(batched if the list is large)"]
     F --> G["Classify: missing tests /\nbelow 80% / already sufficient"]
     G --> H["One agent per type (parallel batches):\nwrite/extend Swift Testing tests\n(XCTest only for XCUITest/measure)"]
-    H --> I["Re-measure via swift-coverage,\nscoped to touched types"]
+    H --> H2["Step 5b: UI tests for screens and components\nwithout them (contract captures + accessibility\naudit; full iru-swift-test ui run)"]
+    H2 --> I["Re-measure via swift-coverage,\nscoped to touched types"]
     I --> J{"Still below 80%?"}
     J -- yes, attempts left --> H
     J -- yes, 2 attempts used --> K["Report as residual gap\nwith exact uncovered lines"]
@@ -95,8 +97,8 @@ flowchart TD
 * xref:skills/iru-swift-coverage.adoc[] — Step 3, and again in Step 6 to re-measure after generation: delegated
   through the `iru-gate-runner` agent so a large `.profdata`/`llvm-cov`/`xccov` report never lands directly in
   this conversation, and so the whole suite runs once per batch rather than once per type.
-* xref:skills/iru-swift-test.adoc[] — Step 7, once, to confirm the full suite still passes after every type's
-  tests have been written or extended; also delegated through `iru-gate-runner`.
+* xref:skills/iru-swift-test.adoc[] — Step 5b (`ui` run) and Step 7, once, to confirm the full suite still passes after every type's
+  tests have been written or extended; also delegated through `iru-gate-runner`. Step 5b also runs it with the `ui` selector (a full UI run that clears and rebuilds `.ui-screenshots/`).
 
 === Invoked by
 
@@ -111,7 +113,7 @@ per-task test-writing via `iru-swift-code-one-task`).
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Steps 3, 6, and 7, to run `iru-swift-coverage`/`iru-swift-test`
   and report back only a compact summary instead of a raw coverage/test log.
 * xref:agents/overview.adoc[`general-purpose`] (default, no `subagent_type` named) — Step 5, one per type needing
-  new/extended tests, dispatched concurrently since each only touches its own test file.
+  new/extended tests, dispatched concurrently since each only touches its own test file; Step 5b reuses this for one agent per screen or component needing UI tests.
 
 == Source
 

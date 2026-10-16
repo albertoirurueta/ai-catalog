@@ -16,7 +16,13 @@ description: >-
   [scope]`, where `[scope]` names one module (`:shared`, `androidApp`) or a comma-separated class list within it; also
   accepts `args` as `key: value` lines (`scope:`, `ios: yes|no`, default `no`). Stops immediately, without attempting
   anything, if the repository isn't a Kotlin Multiplatform Gradle project (no module applying
-  `org.jetbrains.kotlin.multiplatform`, no Gradle wrapper). Equivalent to
+  `org.jetbrains.kotlin.multiplatform`, no Gradle wrapper). When the module renders UI and its tests are wired for it
+  (a `commonTest` `uitest/UiScreenshots.kt` helper with the Robolectric `UiTest` base for `ui: compose`, or
+  `androidApp/src/test/…/uitest/UiScreenshots.kt` / `iosApp/iosAppTests/UIScreenshots.swift` for `ui: native`), it
+  also generates UI tests per the catalog's UI contract for every existing screen and component that has none —
+  every visual state × the `.ui-quality.yml` directions × themes captured into `.ui-screenshots/` with the
+  `--android`/`--ios` platform segment and the accessibility check — and runs them through `iru-kmp-test`'s `ui`
+  selector (iOS parts unverified without macOS/a simulator). Equivalent to
   `iru-android-generate-all-tests`/`iru-swift-generate-all-tests` for the Kotlin Multiplatform stack. Use whenever the
   user wants comprehensive unit test coverage brought up across a KMP module in one pass, instead of writing tests one
   class or task at a time.
@@ -154,6 +160,30 @@ Collect every report before moving on. After the batch, compile-check the touche
 `:<module>:compileTestKotlinIosSimulatorArm64`) — a `commonTest` file that compiles for JVM but uses a JVM-only API
 fails only on the iOS compile. Fix compile errors in the generated tests before measuring.
 
+## Step 5a — UI tests for existing screens and components
+
+Only when the module renders UI (`@Composable` functions in `commonMain` for `ui: compose`, in `androidApp` or
+SwiftUI views in `iosApp` for `ui: native`) **and** the screenshot helper the UI contract needs is already wired (see
+the description; `iru-kmp-code-one-task/reference/ui-implementation.md` when installed). Without the wiring, list the
+screens/components that lack UI tests in the report as "needs the UI test wiring (Robolectric `UiTest` base +
+screenshot helper)" — never add Robolectric, a dependency or a test target here.
+
+1. Inventory every screen (navigation destination / stateless `…Screen`) and component (other public stateless
+   composables or SwiftUI views taking state + callbacks) and find the ones with no test that captures them
+   (`grep -rl "captureUiScreenshot(.*\"<Id>\"" ` in the test trees, `"<Id>"` in `UIScreenshots.capture` calls).
+2. Per missing one, dispatch a Step 5-style agent: read the component, its state class and its KDoc'd visual
+   states, then write one test class (in `commonTest` extending `UiTest` for shared Compose UI; `androidApp/src/test`
+   with Robolectric + `createComposeRule()` for native Android; `iosApp/iosAppTests` for SwiftUI) that asserts each
+   event fires once (left-to-right, light), captures every applicable visual state with `minimal-data`,
+   `typical-data`, `many-items`/`long-content` and right-to-left text fixtures across the `.ui-quality.yml` matrix
+   (`<kind>` `screen`/`component`, `<Id>` = the type name exactly), and calls the accessibility check. One
+   `setContent` per test, state driven through a `mutableStateOf`, `waitForIdle()` before each capture.
+3. Run them via `iru-gate-runner`: `Skill({skill: "iru-kmp-test", args: "ui <the new UI test classes>\nmodule:
+   <:module>"})` — report screenshots per kind and platform, malformed names, accessibility violations (count + rule
+   ids) and the `.ui-quality.yml` level; iOS parts are unverified when the host can't run them. Fix failures in the
+   generated tests; an `enforce` accessibility failure in production UI is reported (with the rule id and
+   component), not fixed here.
+
 ## Step 6 — Re-measure and iterate on shortfalls
 
 Re-run Step 3's delegated pass scoped to the classes touched in Step 5. For any class still below 80%: dispatch one
@@ -185,10 +215,13 @@ green; a pre-existing failure unrelated to any class touched is out of scope —
 - Any class that needed a minimal testability change, named explicitly.
 - Any class still below 80% after two attempts, with its uncovered lines and why.
 - The full-suite result per target from Step 7, including any unverified iOS stage and its reason.
+- UI (Step 5a): screens/components that got UI tests, captures per kind and platform, accessibility violations and
+  the level applied, unverified parts, and UI left uncovered because the module lacks the UI test wiring.
 
 Do not run a code-quality, license-header, or KDoc pass. Do not generate on-device Android tests
 (`androidInstrumentedTest`/`androidDeviceTest`) or `iosApp` XCTest tests unless the invocation explicitly asks for
-them — the default scope is unit tests in the KMP module's own test source sets.
+them — the default scope is unit tests in the KMP module's own test source sets, plus Step 5a's UI tests where the
+module is wired for them (`iosApp` `ImageRenderer` tests for `ui: native` count as those).
 
 ## Known quirks / verification notes
 

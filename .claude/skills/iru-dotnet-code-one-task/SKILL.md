@@ -1,6 +1,6 @@
 ---
 name: iru-dotnet-code-one-task
-description: Implement a single task from a .NET `implementation_plan.md`-style task list — just the implementation and its tests. Re-checks the current code state, implements exactly what the task specifies, writes/updates test-framework tests (xUnit/NUnit/MSTest, whichever the project uses), then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update doc comments, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-dotnet-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-dotnet-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for .NET/C# projects (libraries, services, console apps); Windows desktop app repositories (WPF, WinUI 3, Windows Forms — plan key `windows`) use `iru-windows-code-one-task` instead. Detects a command-line tool shape (an `Exe` project on System.CommandLine, e.g. the `iru-setup-dotnet-cli` layout with a framework-free `src/<Tool>.Core`, Native AOT and `PackAsTool`) and only then loads this skill's `reference/cli.md` (System.CommandLine 2.0 patterns, Spectre.Console under the colour policy, Native AOT/trimming rules — source-generated JSON, no reflection —, testing commands in-process) and `reference/cli-contract.md` (the shared CLI contract: streams, exit codes, TTY/colour/prompts, JSON envelope, safety), and compile-checks the touched projects so trim/AOT analyzer errors surface immediately.
+description: Implement a single task from a .NET `implementation_plan.md`-style task list — just the implementation and its tests. Re-checks the current code state, implements exactly what the task specifies, writes/updates test-framework tests (xUnit/NUnit/MSTest, whichever the project uses), then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update doc comments, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-dotnet-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-dotnet-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for .NET/C# projects (libraries, services, console apps); Windows desktop app repositories (WPF, WinUI 3, Windows Forms — plan key `windows`) use `iru-windows-code-one-task` instead. Detects a command-line tool shape (an `Exe` project on System.CommandLine, e.g. the `iru-setup-dotnet-cli` layout with a framework-free `src/<Tool>.Core`, Native AOT and `PackAsTool`) and only then loads this skill's `reference/cli.md` (System.CommandLine 2.0 patterns, Spectre.Console under the colour policy, Native AOT/trimming rules — source-generated JSON, no reflection —, testing commands in-process) and `reference/cli-contract.md` (the shared CLI contract: streams, exit codes, TTY/colour/prompts, JSON envelope, safety), plus — only when the task touches the optional Terminal.Gui terminal UI — `reference/ui-contract.md` (the catalog's UI contract) and `reference/ui-implementation.md` (composed `View` screens and components over Core state, `ListView`/`TableView` data sources, `[TestCategory("UI")]` view tests on the ANSI driver capturing `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt`), and compile-checks the touched projects so trim/AOT analyzer errors surface immediately.
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
 ---
@@ -31,7 +31,9 @@ framework-free `src/<Tool>.Core/` (logic, exit codes, output, terminal policy) w
 `tests/<Tool>.Cli.Tests/`.
 
 - **CLI-shaped**: read `reference/README.md`, then `reference/cli.md`, and `reference/cli-contract.md` whenever the task
-  adds or changes a command, flag, output, error or exit path. Their rules apply on top of Steps 2–3 below.
+  adds or changes a command, flag, output, error or exit path. When the task adds or changes the terminal UI (a
+  `Terminal.Gui` reference, `src/<Tool>/Tui/`, a `browse`-style command), also read `reference/ui-contract.md` and
+  `reference/ui-implementation.md`. Their rules apply on top of Steps 2–3 below.
 - **Anything else** (library, service, plain console app): read nothing from `reference/` — Steps 1–6 are the whole
   guidance.
 
@@ -59,6 +61,11 @@ analyzers run in the build, so fix any IL2xxx/IL3xxx, StyleCop or CA error befor
 changed, regenerate the CLI reference (`dotnet run --project src/<Tool> -c Release -- gen-docs --output-dir .`) or
 note in Step 6 that it still needs regenerating.
 
+For a terminal-UI task, **decompose first** (`reference/ui-contract.md` §2): write the `Screen › Region › Component`
+tree with each view's inputs (the Core state it renders), intents and visual states, reuse existing views, keep state
+and transitions in Core, and build the views as composed `View`s in `src/<Tool>/Tui/` per
+`reference/ui-implementation.md`. Keep the tree for Step 6.
+
 ## Step 3 — Write or update the tests
 
 Follow the existing test style in the same project/namespace — whichever test framework this repository already
@@ -66,7 +73,11 @@ uses (xUnit, NUnit, or MSTest), and Moq/NSubstitute only where already used. Cov
 including edge cases implied by the XML doc `<exception>` contracts (e.g. null/invalid-argument cases). For a
 CLI-shaped project, unit-test Core logic in `tests/<Tool>.Core.Tests` and test each new or changed command in
 `tests/<Tool>.Cli.Tests` through the in-process `CliRunner` — exit code, stdout and stderr for success, `--json`
-golden output, and every exit code the command can emit (see `reference/cli.md` "Testing"). Do not
+golden output, and every exit code the command can emit (see `reference/cli.md` "Testing"). A terminal-UI task also
+adds `[TestCategory("UI")]` view tests in `tests/<Tool>.Cli.Tests/Tui/` per `reference/ui-implementation.md`: every
+visual state × each `.ui-quality.yml` direction rendered on the ANSI driver at a fixed size, keyboard behaviour
+asserted once, a `UiScreenshots.SaveText` capture per state and direction, and `AccessibilityCheck.Apply` with the
+asserted `tui-*` checks after each capture (add the helpers if they are missing). Do not
 run the test suite yourself — `iru-dotnet-code-one-task-group` runs it once for the whole bucket in its own
 consolidated validation pass.
 
@@ -106,7 +117,8 @@ If this task stopped on a blocker instead, leave its checkbox untouched — ther
 ## Step 6 — Report the outcome
 
 Hand control back to the caller with a short summary: the file(s) touched, the tests added/updated, and whether
-this task stopped on a blocker per Step 4. This is what `iru-dotnet-code-one-task-group` records for this task before
+this task stopped on a blocker per Step 4. For a terminal-UI task, add the `Screen › Region › Component`
+decomposition and the UI tests added with the captures they produce (`screen/<View>/<state>--<dir>--no-color.txt`). This is what `iru-dotnet-code-one-task-group` records for this task before
 running its own consolidated license/doc/test/coverage/quality validation across the whole bucket; this skill
 has already checked off this task's own checkbox with a pending-validation note (Step 5) — the caller only needs
 to replace that note with the final validation outcome once the whole bucket passes, not create the checkbox

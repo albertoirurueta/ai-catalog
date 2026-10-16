@@ -9,19 +9,24 @@ description: Scaffold a new Angular web application with `npx -p @angular/cli@la
   (auto-pins its major to the installed Angular major) plus `eslint-config-prettier`; normalizes the CLI's own
   scaffold with the `.prettierrc` it already ships (adding a `.prettierignore`); Stylelint 17 for SCSS
   (`stylelint-config-standard-scss`); Playwright via `ng add playwright-ng-schematics` (and fixes the schematic's
-  own hardcoded `/MyApp/` title assertion); Compodoc (`@compodoc/compodoc`, a `docs` script into `docs/api`);
+  own hardcoded `/MyApp/` title assertion) — plus, per the catalog's UI contract, a Playwright component-testing
+  project driven by Playwright's built-in `mount()` fixture against a component gallery served by a `gallery`
+  configuration in `angular.json`, `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts` helper, a
+  sample screen spec capturing `.ui-screenshots/screen/App/` across left-to-right/right-to-left × light/dark with an
+  accessibility check, and a `.ui-quality.yml` at the repository root; Compodoc (`@compodoc/compodoc`, a `docs` script into `docs/api`);
   optional Storybook (`@storybook/angular-vite`, asked); and, when `sonar` ≠ `none`, `sonar-project.properties`
   (`sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts`,
   `sonar.javascript.lcov.reportPaths=coverage/<project>/lcov.info`). Invoke as `/iru-setup-angular-web`. Accepts
   pre-resolved inputs via `args` (`key: value` lines) — `name`, `directory`, `license`, `developer-name`,
   `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `storybook`, `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
-  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar), `on-existing`
+  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar),
+  `accessibility` (`enforce`/`report`/`off`, default `enforce` — written to `.ui-quality.yml`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, default `ask`), `mode` (`new`/`existing`) — so an orchestrating skill can supply
   them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `sonar` question's
   default from that answer. Announces whether it is scaffolding from scratch or updating an existing workspace; for
   every artifact it owns that already exists (`angular.json` test options, ESLint, Prettier, Stylelint, Playwright,
-  Compodoc script, Storybook, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep
+  the component gallery and UI-test helper, `.ui-quality.yml`, Compodoc script, Storybook, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep
   as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a new Angular web application needs its scaffold, test/coverage
   config, lint/format/style tooling, e2e tests, API docs, and Sonar wiring bootstrapped from this house template,
   instead of hand-running each `ng add`/`npm install` separately.
@@ -58,6 +63,7 @@ sonar-host-url: https://sonarcloud.io
 storybook: no
 visibility: public
 ci: yes
+accessibility: enforce
 on-existing: ask
 mode: new
 ```
@@ -73,7 +79,9 @@ repository root — see Step 3), `license`, `developer-name`, `developer-email`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `storybook` (`yes`/`no`), `visibility`
 (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
 recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
-only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
+only consulted by Step 2's Sonar question), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the UI
+tests' automated accessibility level, written to `.ui-quality.yml` in Step 10b), `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask` — how
 Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode` (`new`/`existing`).
 
 `mode: existing` is this catalog's shared signal (set by a front door or orchestrator that already knows this is an
@@ -101,7 +109,10 @@ Announce the mode before asking anything else:
   first. Survey the artifacts Steps 5–13 own: `angular.json`'s `test` options (`runner`/`coverageReporters`/
   `coverageThresholds`) and the `coverage`/`typecheck`/`format`/`stylelint`/`docs` scripts, `@vitest/coverage-v8`,
   `eslint.config.js` (angular-eslint + `eslint-config-prettier`), `.prettierrc`/`.prettierignore`,
-  `.stylelintrc.json`, `playwright.config.ts`/`e2e/`, `.storybook/`, and `sonar-project.properties`. Warn that each
+  `.stylelintrc.json`, `playwright.config.ts`/`e2e/`, the UI-contract files (`e2e/support/ui-screenshots.ts`,
+  `playwright/gallery/`, `tsconfig.gallery.json`, the `gallery` configurations in `angular.json`,
+  `src/app/app.story.ts`, `e2e/components/`), `.ui-quality.yml` at the repository root, `.storybook/`, and
+  `sonar-project.properties`. Warn that each
   existing one will be handled individually, then resolve one action per artifact:
   - **`on-existing` is `keep`/`update`/`replace`**: apply it to every artifact without asking (still print the
     warning).
@@ -178,7 +189,10 @@ Then resolve `open-source` and `sonar` — skip either one Step 0 already resolv
 
 Then, unless Step 0 already resolved it, ask **storybook** (`AskUserQuestion`, default **No**): whether to also
 scaffold Storybook (`@storybook/angular-vite`) for isolated component development/visual review. Most Angular apps
-don't need it; recommend Yes only if the user mentions a component library or design-system use case.
+don't need it; recommend Yes only if the user mentions a component library or design-system use case. In the same
+`AskUserQuestion` call, unless Step 0 resolved it, ask **accessibility**: "Automated accessibility checks in UI
+tests?" — **Enforce (Recommended)** (axe violations fail the UI tests) / **Report only** (listed, never failing) /
+**Off** (not run; the coding defaults still apply).
 
 ## Step 3 — Look up tool versions
 
@@ -435,6 +449,207 @@ Browser binaries are not installed by `ng add` itself — run `npx playwright in
 will succeed. Verified end-to-end after both the title fix and installing the `chromium` binary: `ng e2e` builds,
 serves, and runs the (corrected) smoke test successfully against Chromium.
 
+## Step 10b — UI contract: component gallery, screenshots and accessibility
+
+The catalog's UI contract (repeated in `iru-typescript-code-one-task/reference/ui-contract.md`) makes every
+component and screen test capture its states into `<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png`
+and run axe at the level `.ui-quality.yml` sets. Component tests use Playwright's built-in `mount()` fixture
+(`@playwright/test` ≥ 1.62): a `components` Playwright project whose `baseURL` is a **gallery** page that boots the
+app's providers with `createApplication` and renders one *story* component at a time. Playwright documents React
+and Vue galleries only; this is the same gallery contract (`window.mount`/`window.unmount`, `#root`) implemented
+with Angular's public `createApplication`/`createComponent` APIs, chosen over the old `@sand4rt/experimental-ct-angular`
+community package (built on the frozen experimental component-testing runtime). `TestBed` tests stay as the
+behaviour tests. Verified on Angular CLI 22.2 / Playwright 1.64.1 / `@axe-core/playwright` 4.14.0 with `ng e2e`:
+the specs below pass, `ng build` (production) and `ng build --configuration gallery` both succeed, and
+`ng lint` stays clean (angular-eslint's `ng add` already enables `angular.configs.templateAccessibility` for
+templates — keep it; it is the static half of the accessibility check).
+
+1. **`.ui-quality.yml`** at the repository root, exactly this shape, with `accessibility` from Step 0/2:
+
+   ```yaml
+   # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+   directions: [ltr, rtl]      # screenshot matrix directions
+   themes: [light, dark]       # screenshot matrix themes
+   ```
+
+   An existing file follows Step 1's decision (**Update** sets only `accessibility` when `args` supplied it and adds
+   missing keys; **Keep as is** reports a mismatch; **Replace** rewrites it).
+
+2. **Dependencies** — look up current versions (fallbacks `4.14.0`, and the Node major in use for `@types/node`, e.g.
+   `24`): `npm install -D @axe-core/playwright@<version> @types/node@<major>`. Then give `e2e/tsconfig.json` (written
+   by the schematic) `"compilerOptions": { "types": ["node"] }` — without it the helper's `node:fs`/`process` fail
+   to type-check (`TS2591`, verified).
+
+3. **The shared helper** — write `e2e/support/ui-screenshots.ts` with exactly the content of this skill's
+   `reference/ui-screenshots.ts`, then `npx prettier --write e2e/support/ui-screenshots.ts` (the workspace's
+   `.prettierrc` uses semicolons).
+
+4. **The gallery** — `playwright/gallery/index.html`:
+
+   ```html
+   <!doctype html>
+   <html lang="en">
+     <head>
+       <meta charset="utf-8" />
+       <title>Component gallery</title>
+       <meta name="viewport" content="width=device-width, initial-scale=1" />
+     </head>
+     <body>
+       <main id="root"></main>
+     </body>
+   </html>
+   ```
+
+   `playwright/gallery/stories.ts` — the Angular builder has no `import.meta.glob`, so stories are registered here,
+   one line per `*.story.ts` file (ids are the path under `src/` without `.story.ts`, plus the export name):
+
+   ```ts
+   // Story registry for the component gallery — one line per `*.story.ts` file.
+   import type { Type } from '@angular/core';
+   import * as app from '../../src/app/app.story';
+
+   const storiesOf = (prefix: string, module: Readonly<Record<string, Type<unknown>>>) =>
+     Object.fromEntries(Object.entries(module).map(([name, story]) => [`${prefix}/${name}`, story]));
+
+   export const STORIES: Readonly<Record<string, Type<unknown>>> = {
+     ...storiesOf('app/app', app),
+   };
+   ```
+
+   `playwright/gallery/main.ts`:
+
+   ```ts
+   // Component gallery for Playwright's built-in `mount()` fixture: renders one story component into #root.
+   import { type ApplicationRef, type ComponentRef, createComponent } from '@angular/core';
+   import { createApplication } from '@angular/platform-browser';
+   import { appConfig } from '../../src/app/app.config';
+   import { STORIES } from './stories';
+
+   interface MountParams {
+     readonly story: string;
+     readonly props?: Readonly<Record<string, unknown>>;
+   }
+
+   const app: Promise<ApplicationRef> = createApplication(appConfig);
+   const root = document.getElementById('root') as HTMLElement;
+   let current: { readonly story: string; readonly ref: ComponentRef<unknown> } | undefined;
+
+   Object.assign(window, {
+     mount: async ({ story, props }: MountParams): Promise<void> => {
+       const id = Object.keys(STORIES).find((key) => key === story || key.endsWith(`/${story}`));
+       if (!id) throw new Error(`Unknown story: ${story}`);
+       const appRef = await app;
+       if (current?.story !== id) {
+         current?.ref.destroy();
+         root.replaceChildren();
+         const hostElement = root.appendChild(document.createElement('div'));
+         const ref = createComponent(STORIES[id], { environmentInjector: appRef.injector, hostElement });
+         appRef.attachView(ref.hostView);
+         current = { story: id, ref }; // reused while the story is unchanged, so update() keeps state
+       }
+       for (const [name, value] of Object.entries(props ?? {})) current.ref.setInput(name, value);
+       await appRef.whenStable();
+     },
+     unmount: async (): Promise<void> => {
+       current?.ref.destroy();
+       current = undefined;
+       root.replaceChildren();
+     },
+   });
+   ```
+
+   `tsconfig.gallery.json`:
+
+   ```json
+   {
+     "extends": "./tsconfig.json",
+     "compilerOptions": { "types": [] },
+     "include": ["src/**/*.ts", "playwright/gallery/**/*.ts"],
+     "exclude": ["src/**/*.spec.ts", "src/main.ts"]
+   }
+   ```
+
+   In `tsconfig.app.json`, add `"src/**/*.story.ts"` to `exclude`. In `angular.json`, add a `gallery`
+   configuration to the project's `build` target and one to its `serve` target (`<name>` is the project name):
+
+   ```jsonc
+   // architect.build.configurations
+   "gallery": {
+     "browser": "playwright/gallery/main.ts",
+     "index": "playwright/gallery/index.html",
+     "tsConfig": "tsconfig.gallery.json",
+     "optimization": false,
+     "extractLicenses": false,
+     "sourceMap": true
+   }
+   // architect.serve.configurations
+   "gallery": { "buildTarget": "<name>:build:gallery" }
+   ```
+
+5. **A story for the sample screen** — `src/app/app.story.ts` (`ng new` names the root component class `App` in
+   `app.ts`; read the actual file and adjust):
+
+   ```ts
+   import { Component } from '@angular/core';
+   import { App } from './app';
+
+   /** The app shell as first rendered. */
+   @Component({ imports: [App], template: '<app-root />' })
+   export class Default {}
+   ```
+
+6. **`playwright.config.ts`** — add the `components` project first, give every existing project
+   `testIgnore: 'components/**'`, and add a `webServer` for the gallery (`ng e2e` keeps serving the app itself
+   through the schematic's `devServerTarget`):
+
+   ```ts
+   {
+     name: 'components',
+     testDir: './e2e/components',
+     use: {
+       ...devices['Desktop Chrome'],
+       baseURL: 'http://localhost:4300/',
+       serviceWorkers: 'block',
+       reuseContext: true,
+     },
+   },
+   // …and at the top level of defineConfig:
+   webServer: {
+     command: 'npx ng serve --configuration gallery --port 4300',
+     url: 'http://localhost:4300/',
+     reuseExistingServer: !process.env['CI'],
+     timeout: 180_000,
+   },
+   ```
+
+7. **The sample screen spec** — `e2e/components/app.spec.ts`:
+
+   ```ts
+   import { expect, test } from '@playwright/test';
+   import { captureUiMatrix } from '../support/ui-screenshots';
+
+   test('App renders its heading', async ({ mount }) => {
+     const app = await mount('app/Default');
+     await expect(app.getByRole('heading', { level: 1 })).toBeVisible();
+   });
+
+   test('App default state across the matrix', async ({ page, mount }, testInfo) => {
+     await captureUiMatrix(page, { kind: 'screen', id: 'App', state: 'default' }, () => mount('app/Default'), {
+       accessibility: { testInfo, include: '#root' },
+     });
+   });
+   ```
+
+8. **Make the placeholder pass its own check** — verified: the CLI's placeholder `src/app/app.html` fails axe's
+   `color-contrast` on its three red "pills" (`--hot-red: oklch(61.42% 0.238 15.34)` on a 5% tint, 3.88:1). Change
+   that declaration to `--hot-red: oklch(50% 0.238 15.34);` — the spec then passes with `accessibility: enforce`.
+   The placeholder uses no physical `left`/`right` properties, so nothing else needs mirroring.
+
+Run `npm run e2e` (`ng e2e`) — every project must pass and `.ui-screenshots/screen/App/` must hold the four
+`default--{ltr,rtl}--{light,dark}.png` captures. `.ui-screenshots/` belongs in `.gitignore`
+(`iru-setup-typescript-gitignore` adds it; standalone, append it with a one-line comment yourself).
+
 ## Step 11 — Add Compodoc
 
 ```bash
@@ -515,6 +730,9 @@ State explicitly what was included versus omitted, and why:
   Sonar was still configured, say no CI step sends reports.
 - **`storybook`**: yes/no — if yes, note that Step 12 was not verified end-to-end in this skill's own
   verification pass (see that step) and should be spot-checked the first time it actually runs.
+- **UI contract** (Step 10b): `.ui-quality.yml` with its action (**created / updated / replaced / kept as is**) and
+  the `accessibility` level written; the gallery, story, helper and spec files and the `angular.json` `gallery`
+  configurations written; the placeholder contrast fix; and the screenshot count of the verification run.
 
 Report the real coverage output path confirmed in Step 6 (`coverage/<name>/lcov.info`) and the zoneless/Vitest/
 standalone defaults confirmed in Step 4, since both are easy to get wrong from memory of older Angular versions.

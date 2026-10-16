@@ -15,15 +15,20 @@ description: >-
   `BindingSource` + `Button.Command`) — all composed with the Generic Host, an `app.manifest` (`asInvoker`, Windows
   10/11, PerMonitorV2 for WPF/WinUI), an MSTest 4 + coverlet `tests/<AppName>.Core.Tests` project at 100% Core line
   coverage, `tests/coverlet.runsettings` (cobertura + opencover, UI assembly excluded = "not measured"), an optional
-  FlaUI `tests/<AppName>.UITests` project (`[TestCategory("UI")]`, Windows only), a DocFX `docfx.json` for the Core
+  FlaUI `tests/<AppName>.UITests` project (`[TestCategory("UI")]`, Windows only) that — per the catalog's UI
+  contract — renders the main screen in every left-to-right/right-to-left × light/dark combination (launch arguments
+  `--ui-direction`/`--ui-theme` applied by the app's `UiTestOptions`), captures it into `.ui-screenshots/` through the
+  shared `UiScreenshots` helper and runs an Axe.Windows accessibility scan at the level of a root `.ui-quality.yml`
+  (written for every `ui`), a DocFX `docfx.json` for the Core
   API, generated placeholder icon/tile PNGs, and for WPF/WinForms with `msix: yes` a `packaging/` folder
   (`AppxManifest.xml` with an `x.y.z.0` identity version + `build-msix.ps1`: publish per RID → makeappx → signtool).
   Invoke as `/iru-setup-windows-app`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `ui`
   (`wpf`/`winui`/`winforms`), `architecture` (`mvvm`/`mvc`; WPF and WinUI are `mvvm` only), `app-name` (PascalCase,
   also solution/project/assembly name), `display-name`, `root-namespace`, `publisher` (`CN=…`), `publisher-display-name`,
   `package-name`, `version`, `rids` (default `win-x64;win-arm64`), `msix` (`yes`/`no`), `ui-tests` (`flaui`/`none`),
-  `branching` (`gitflow`/`main-only`), `license`, `developer-name`, `developer-email`, `organization-url`,
-  `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`),
+  `branching` (`gitflow`/`main-only`), `accessibility` (`enforce`/`report`/`off`, default `enforce`), `license`,
+  `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `sonar` (+
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`),
   `distribution` (`none`/`internal`/`store`), `mode` (`new`/`existing`) and `on-existing` (`ask`/`keep`/`update`/
   `replace`) — so `iru-setup-windows-repository` can supply them without re-prompting. Announces whether it is
   scaffolding from scratch or updating; for every file group it owns that already exists it warns and asks Update /
@@ -81,7 +86,7 @@ unsupported for WPF/WinForms.
 | `reference/winui-templates.md` | `ui: winui` only. |
 | `reference/winforms-templates.md` | `ui: winforms` only (both architectures). |
 | `reference/packaging-templates.md` | **Always** — the `generate-assets.py` helper (app icon for every `ui`, WinUI tiles), plus `packaging/` for `ui: wpf\|winforms` with `msix: yes`. |
-| `reference/uitest-templates.md` | `ui-tests: flaui` only. |
+| `reference/uitest-templates.md` | `ui-tests: flaui` only — the FlaUI project plus the UI-contract helpers (`UiQuality`, `UiScreenshots`, `AccessibilityCheck`) and the matrix capture test. |
 
 **Conditional-marker convention used in every reference file**: a line `// >>> <condition>` (or `# >>> <condition>`,
 or `<!-- >>> <condition> -->` in XML/XAML) opens a block that is written only when the condition holds, and the
@@ -140,7 +145,9 @@ the Partner Center value for the Store; default `CN=<developer-name>`), `publish
 gitflow`, `1.0.0` for `main-only`), `rids` (default `win-x64;win-arm64` — WinUI `RuntimeIdentifiers`/`Platforms` and
 the packaging script's default), `msix` (`yes`/`no`; `ui: winui` is always packaged → `yes`; WPF/WinForms default
 `yes` when `distribution` ≠ `none`, else `no`), `ui-tests` (`flaui`/`none`, default `flaui`), `branching`
-(`gitflow`/`main-only`, default `gitflow`), `license`, `developer-name`, `developer-email`, `organization-url`,
+(`gitflow`/`main-only`, default `gitflow`), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the
+automated accessibility level written to `.ui-quality.yml`: `enforce` makes Axe.Windows violations fail the UI tests,
+`report` lists them, `off` skips the scan), `license`, `developer-name`, `developer-email`, `organization-url`,
 `open-source` (`yes`/`no`), `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`
 — recorded for the report only: no file carries them), `distribution` (`none`/`internal`/`store` — only keys the
 `msix` default), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key
@@ -155,7 +162,7 @@ received it.
 ## Step 1 — Survey the repository
 
 Check for every file Step 6 would write: `global.json`, `Directory.Build.props`, `Directory.Packages.props`,
-`.editorconfig`, `stylecop.json`, any `*.slnx`/`*.sln`, `src/*/*.csproj`, `src/**` sources, `tests/*/*.csproj`,
+`.editorconfig`, `stylecop.json`, `.ui-quality.yml`, any `*.slnx`/`*.sln`, `src/*/*.csproj`, `src/**` sources, `tests/*/*.csproj`,
 `tests/**`, `tests/coverlet.runsettings`, `docfx.json`, `docfx/`, `packaging/`, and any `*.wapproj`. Then tell the user
 which of the two this run is doing:
 
@@ -164,7 +171,8 @@ which of the two this run is doing:
   warn, listing every file found by path, that each existing file group below will be decided individually (missing
   files are still created). Groups (only those with a file present): **`global.json`**, **`Directory.Build.props`**,
   **`Directory.Packages.props`**, **quality config** (`.editorconfig`, `stylecop.json`), **the solution file**,
-  **project files** (every `*.csproj`), **`tests/coverlet.runsettings`**, **DocFX config** (`docfx.json`, `docfx/`),
+  **project files** (every `*.csproj`), **`tests/coverlet.runsettings`**, **UI quality config** (`.ui-quality.yml`),
+  **DocFX config** (`docfx.json`, `docfx/`),
   **packaging** (`packaging/`, `Package.appxmanifest`, publish profiles), and **the source skeleton** (every `*.cs`,
   `*.xaml`, `app.manifest`, `Assets/`). Unless `on-existing` decides, ask with `AskUserQuestion`, one question per
   group (batch up to 4 per call), naming each concrete conflict with this run's choices (e.g. "`src/Bookshelf.Core`
@@ -174,7 +182,9 @@ which of the two this run is doing:
   - **Update (Recommended for build files, quality config, solution, run settings and DocFX config)** — "Merge: add
     what's missing and correct outdated parts using this skill's template as reference — analyzer/warnings-as-errors
     properties, central package versions bumped to Step 4's lookup, `EnableWindowsTargeting`, the SARIF `ErrorLog`,
-    the runsettings formats/exclusions; keep every project, package, property and setting this skill doesn't own.
+    the runsettings formats/exclusions, the missing keys of `.ui-quality.yml` (its existing `directions`/`themes` and
+    `accessibility` are kept unless `accessibility` came from `args`, which then wins and is reported); keep every
+    project, package, property and setting this skill doesn't own.
     You review a diff; customizations survive, but a customized part this skill owns may be rewritten." For the
     source skeleton, Update only creates its missing files.
   - **Keep as is (Recommended for the source skeleton and packaging)** — "Leave the file(s) untouched. Nothing you
@@ -217,6 +227,10 @@ Then, with `AskUserQuestion` (skip any resolved):
   Releases/App Installer or the Store) / **No** (zip/xcopy distribution only).
 - **ui-tests** — **FlaUI UI tests (Recommended)** — say plainly it is third-party, runs only on Windows with an
   interactive desktop, and that Microsoft has no current desktop UI-test recommendation — / **None**.
+- **accessibility** — only when `ui-tests: flaui` and stand-alone (an orchestrator resolves it; otherwise default
+  `enforce`): "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (Axe.Windows violations fail
+  the UI tests) / **Report only** (listed in `.ui-screenshots/a11y-report.txt`, never failing) / **Off** (not run;
+  the coding defaults still apply).
 - **license** — MIT License (recommended for an app) / Apache License 2.0 / No license (proprietary) / Other. If one is
   chosen, remind the user in Step 8 to add a root `LICENSE` (`iru-check-license` can backfill headers).
 - **open-source**, **sonar** and **distribution** — asked stand-alone only (an orchestrator resolves them): ask
@@ -248,6 +262,7 @@ Step 7 before trusting it.
 | `MSTest` (metapackage) | flat container | `4.5.1` (brings `Microsoft.NET.Test.Sdk` 18.10.1, MSTest analyzers) |
 | `coverlet.collector` | flat container | `10.1.0` |
 | `FlaUI.UIA3` (`ui-tests: flaui`) | flat container | `5.0.0` |
+| `Axe.Windows` (`ui-tests: flaui`) | flat container (Microsoft's automated accessibility rules for Windows UI; `netstandard2.0`) | `2.4.2` |
 | `StyleCop.Analyzers` | **not** "highest stable": `1.1.118` (2019) predates modern C# syntax. Take the newest `1.2.0-beta.*`; adopt a newer prerelease line (e.g. `1.3.x-beta`) only when its first release is at least two weeks old and Step 7 passes with it (`https://api.nuget.org/v3/registration5-semver1/stylecop.analyzers/index.json` has publish dates) | `1.2.0-beta.556` (the `1.3.x-beta` dailies first appeared 2026-10-12) |
 | DocFX (verification tool, never added to the repo) | flat container `docfx` | `2.81.0` |
 
@@ -265,24 +280,25 @@ Read the reference files this run needs (table above). Placeholders:
 | `__Year__` | current year |
 | `__Rids__` | `rids` (`win-x64;win-arm64`) |
 | `__DotnetSdkVersion__` and every `__…Version__` package token | Step 4 |
+| `__Accessibility__` | Step 0/2 `accessibility` (default `enforce`) |
 
 Directory layout produced (`[ui]`/`[arch]` mark variant-only files):
 
 ```
-global.json  Directory.Build.props  Directory.Packages.props  .editorconfig  stylecop.json  <AppName>.slnx
+global.json  Directory.Build.props  Directory.Packages.props  .editorconfig  stylecop.json  .ui-quality.yml  <AppName>.slnx
 docfx.json  docfx/index.md  docfx/toc.yml
 src/<AppName>.Core/<AppName>.Core.csproj
 src/<AppName>.Core/Services/{IGreetingService,GreetingService}.cs
 src/<AppName>.Core/ViewModels/MainViewModel.cs                                  [mvvm]
 src/<AppName>.Core/{Models/GreetingModel,Views/IMainView,Controllers/MainController}.cs   [mvc]
-src/<AppName>/<AppName>.csproj  src/<AppName>/app.manifest  src/<AppName>/Assets/AppIcon.ico
+src/<AppName>/<AppName>.csproj  src/<AppName>/app.manifest  src/<AppName>/UiTestOptions.cs  src/<AppName>/Assets/AppIcon.ico
 src/<AppName>/{App.xaml,App.xaml.cs,MainWindow.xaml,MainWindow.xaml.cs,AssemblyInfo.cs}  [wpf]
 src/<AppName>/{App.xaml,App.xaml.cs,MainWindow.xaml,MainWindow.xaml.cs,Package.appxmanifest}  [winui]
 src/<AppName>/Assets/*.scale-200.png …  src/<AppName>/Properties/{launchSettings.json,PublishProfiles/win-{x64,arm64}.pubxml}  [winui]
 src/<AppName>/{Program.cs,MainForm.cs,MainForm.Designer.cs}                     [winforms]
 packaging/{AppxManifest.xml,build-msix.ps1,Assets/*.png}                        [wpf|winforms + msix]
 tests/<AppName>.Core.Tests/{<AppName>.Core.Tests.csproj,MSTestSettings.cs,Fakes/,Services/,ViewModels/|Models/+Controllers/}
-tests/<AppName>.UITests/{<AppName>.UITests.csproj,MSTestSettings.cs,AppLauncher.cs,MainWindowTests.cs}   [flaui]
+tests/<AppName>.UITests/{<AppName>.UITests.csproj,MSTestSettings.cs,AppLauncher.cs,UiQuality.cs,UiScreenshots.cs,AccessibilityCheck.cs,MainWindowTests.cs}   [flaui]
 tests/coverlet.runsettings
 ```
 
@@ -325,7 +341,9 @@ packs. On any host, with the SDK from `global.json`:
    (`dotnet run --project src/<AppName>` for WPF/WinForms; WinUI through Visual Studio's package deploy or the
    `(Package)` launch profile); `ui: winui` `dotnet build src/<AppName> -c Release -p:Platform=x64`; with `msix: yes`
    `pwsh packaging/build-msix.ps1 -RuntimeIdentifier win-x64` (unsigned unless a test PFX is passed); with
-   `ui-tests: flaui` `dotnet test tests/<AppName>.UITests -c Release --filter "TestCategory=UI"` behind the
+   `ui-tests: flaui` `dotnet test tests/<AppName>.UITests -c Release --filter "TestCategory=UI"` (expect
+   `.ui-screenshots/screen/<MainWindow|MainForm>/{default,typical-data}--{ltr,rtl}--{light,dark}.png` — 8 captures —
+   and no Axe.Windows violation under `enforce`) behind the
    repository-wide `.integration-test.lock` (atomic `mkdir`, `owner` file, stale after 60 min, released on every
    exit path); for WinUI first build a self-signed MSIX, `Add-AppxPackage` it and export `APP_AUMID` from
    `Get-AppxPackage` exactly as `iru-dotnet-test`'s `ui` step 2 does (mirroring the CI `build.yml` UI step — itself
@@ -337,9 +355,10 @@ Report pass/fail per command; quote error output verbatim for a failure only.
 ## Step 8 — Report
 
 Summarize: resolved `ui`, `architecture`, `app-name`, `display-name`, `root-namespace`, version and MSIX identity
-(`package-name`, `publisher`, `__MsixVersion__`), `msix`, `ui-tests`, `rids`, license (or none), and whether the run
+(`package-name`, `publisher`, `__MsixVersion__`), `msix`, `ui-tests`, `accessibility`, `rids`, license (or none), and whether the run
 scaffolded from scratch, updated an existing project, or stopped. Then, per Step 1 group, the action taken —
-**created / updated / replaced / kept as is** — and whether it came from the user or `on-existing`, listing each
+**created / updated / replaced / kept as is** (including **`.ui-quality.yml`**) — and whether it came from the user
+or `on-existing`, listing each
 mismatch of a kept group and, for a replaced one, what customizations could have been lost (check `git diff`).
 
 State what was included versus omitted and why: the architecture choice (and, for WPF/WinUI, that MVC is not
@@ -359,6 +378,7 @@ versus fallback; and any ignored `args` keys.
 | Unit tests | `dotnet test tests/<AppName>.Core.Tests -c Release` (VSTest runner; MSTest 4). `dotnet test <AppName>.slnx` also works on Linux/macOS for wpf/winforms (the UI-test project is not a test project there) |
 | Coverage | `dotnet test tests/<AppName>.Core.Tests -c Release --settings tests/coverlet.runsettings --collect "XPlat Code Coverage" --results-directory TestResults` → `TestResults/<guid>/coverage.cobertura.xml` + `coverage.opencover.xml` (Sonar reads opencover); the `<AppName>` UI assembly is excluded ("not measured"); 100% line + branch for every variant |
 | UI tests | `dotnet test tests/<AppName>.UITests -c Release --filter "TestCategory=UI"` — Windows + interactive desktop only, behind `.integration-test.lock`; app from `APP_AUMID` (WinUI: required), `APP_EXE`, or the newest `src/<AppName>/bin/**/<AppName>.exe`; automation ids `nameTextBox`, `greetButton`, `messageLabel`; ordinary runs exclude them with `--filter "TestCategory!=UI"` |
+| UI contract | `.ui-quality.yml` at the root (`accessibility`, `directions: [ltr, rtl]`, `themes: [light, dark]`); app launch arguments `--ui-direction=ltr\|rtl --ui-theme=light\|dark` (`src/<AppName>/UiTestOptions.cs`); captures `<UI_SCREENSHOTS_DIR or .ui-screenshots>/screen/<MainWindow\|MainForm>/<state>--<dir>--<theme>.png` via `tests/<AppName>.UITests/UiScreenshots.cs`; Axe.Windows via `AccessibilityCheck.cs` (`enforce` fails with `[a11y] …`, `report` appends to `.ui-screenshots/a11y-report.txt`) |
 | Analyzer SARIF | one SARIF 2.1 log per project at `<project dir>/obj/<ProjectName>.sarif` (e.g. `src/<AppName>.Core/obj/<AppName>.Core.sarif`), written by every build via `Directory.Build.props` `ErrorLog`; a command-line `-p:ErrorLog=…` overrides it; count only results without `suppressions` |
 | Format check | `dotnet format <AppName>.slnx --verify-no-changes --no-restore` |
 | DocFX | `docfx docfx.json` (repo root) → metadata `docfx/api/*.yml` (generated — gitignore it) → site `build/docfx/` (`index.html`, `api/<Namespace>.<Type>.html`); Core API only |
@@ -420,6 +440,15 @@ versus fallback; and any ignored `args` keys.
   template (`Microsoft.WindowsAppSDK.WinUI.CSharp.Templates`, `winui.mvvmapp`, still alpha on NuGet); x86, the
   phone identity, the `systemAIModels` capability and the `Microsoft.Windows.SDK.BuildTools.WinApp` `dotnet run`
   helper are left out.
+- **UI contract (2026-10-16)**: the templates were round-tripped (extracted, markers applied) into the `wpf`,
+  `winforms-mvc` and `winforms-mvvm` renders under `$TMPDIR/iru-verify/windows/ui-contract/`, which then built with 0
+  unsuppressed SARIF results, `dotnet format --verify-no-changes` clean, Core tests unchanged (9/13/9 passed);
+  `UiTestOptions` + the WinUI `App.xaml.cs` hook compiled in the WinUI C# probe (stopping at `MakePri.exe` as
+  before). Findings baked in: the WPF `ThemeMode` assignment needs the scoped `#pragma warning disable WPF0001`; an
+  unqualified `Capture` is ambiguous with `System.Text.RegularExpressions.Capture` (CS0104); FlaUI's
+  `Launch(exe, arguments)` takes a non-nullable `string` (CS8604 with `null`); SA1515 wants a blank line before the
+  WinForms comment. **Unverified (needs Windows)**: the RTL/theme rendering itself, the captures and the Axe.Windows
+  scans.
 - **Unverified locally, never a blocker**: running any of the apps, the FlaUI tests, `makeappx`/`signtool`, MSIX
   install/sideload, the WinUI build and package, Store/WinGet/App Installer — all need Windows (and certificates or
   Partner Center for signing/submission).

@@ -25,7 +25,7 @@ detected: Kotlin + Spring Boot (all-open/no-arg plugins, `data class` JPA entiti
 Quarkus (build-time CDI rules, transaction placement, blocking calls on the event loop, native reflection), PHP
 (strict types, mass assignment, N+1 queries, plus WordPress nonce/capability/escaping and PrestaShop hook/SQL/token
 checks), NestJS (`import type` DTOs, global providers, request scope) Next.js (server/client boundary, Server
-Action auth, caching semantics, `NEXT_PUBLIC_*` secrets), FastAPI (blocking I/O in `async def`, raw `dict` bodies and leaky `response_model`, shared `AsyncSession`, `@app.on_event` instead of `lifespan`, missing Alembic migration) and Django (N+1 queries, missing or hand-edited migrations, missing `transaction.atomic`/`on_commit`, logic in signals/views, raw SQL, DRF permissions/`fields = "__all__"`, insecure `SECRET_KEY`/`DEBUG`, `auth.User` instead of `AUTH_USER_MODEL`). For a command-line tool it also checks that the change keeps the stdout/stderr, `--json` schema and exit-code contract intact. Where the external
+Action auth, caching semantics, `NEXT_PUBLIC_*` secrets), FastAPI (blocking I/O in `async def`, raw `dict` bodies and leaky `response_model`, shared `AsyncSession`, `@app.on_event` instead of `lifespan`, missing Alembic migration) and Django (N+1 queries, missing or hand-edited migrations, missing `transaction.atomic`/`on_commit`, logic in signals/views, raw SQL, DRF permissions/`fields = "__all__"`, insecure `SECRET_KEY`/`DEBUG`, `auth.User` instead of `AUTH_USER_MODEL`). For any UI stack (web, Android, Apple, React Native, KMP, Windows, terminal UIs) it checks the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): monolithic screens instead of composed components, presentational components that fetch data or navigate, eagerly built long or data-driven collections instead of the platform's virtualizing container, hard-coded strings and left/right instead of start/end, missing accessible names, contrast or touch-target problems, new or changed UI without state, left-to-right/right-to-left, light/dark and accessibility tests with `.ui-screenshots/` captures at the `.ui-quality.yml` level, and stale Antora `ui/` pages (suggesting `/iru-update-docs`). For a command-line tool it also checks that the change keeps the stdout/stderr, `--json` schema and exit-code contract intact. Where the external
 `code-review` skill happens to be available in the current session, `iru-pr-review` prefers delegating
 correctness/reuse/simplification/efficiency analysis to it — checking out the PR locally and invoking it with
 `--comment` — rather than reimplementing that logic, and focuses its own review on what `code-review` has no way
@@ -93,7 +93,7 @@ flowchart TD
     H --> I{code-review skill\navailable this session?}
     I -- yes --> J["Step 6: Confirm, checkout PR locally,\ninvoke code-review --comment,\nrestore original branch"]
     I -- no --> K["Step 7: Cover correctness, security,\ntest coverage, simplification\nyourself, plus ticket-intent,\nconvention and stack-pitfall checks"]
-    J --> L["Step 7: Review for ticket-intent\nmismatch, convention drift and\nstack-specific pitfalls"]
+    J --> L["Step 7: Review for ticket-intent\nmismatch, convention drift, stack-specific\npitfalls and UI-contract checks"]
     K --> M["Step 8: Present findings,\nask to post via AskUserQuestion"]
     L --> M
     M -- decline --> N[Stop - draft is the deliverable]

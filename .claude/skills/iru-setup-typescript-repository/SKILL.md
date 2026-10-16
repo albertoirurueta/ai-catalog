@@ -23,7 +23,10 @@ description: >-
   `framework` (ionic's own Angular/React choice), `module-system`/`orm`/`database`/`http` (nestjs), `router`/`output`/`cache-components`/`styling`/`e2e`
   (nextjs), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default
   `24`), `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when
-  absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/
+  absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `accessibility`
+  (`enforce`/`report`/`off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` by the
+  UI flavors' scaffolds — react, nextjs, angular, react-native, ionic; asked once with Enforce recommended when
+  absent, never for library/nestjs), `on-existing` (`ask`/`keep`/
   `update`/`replace`, forwarded only when supplied), and every identity field, skipping the matching question.
   Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
   inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
@@ -71,6 +74,7 @@ visibility: public
 ci: yes
 ci-tests: full
 pages: yes
+accessibility: enforce
 integration-branch: develop
 stable-branch: main
 node-version: 24
@@ -87,7 +91,8 @@ Recognized keys: `flavor` (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-
 (`app`/`pages`), `output` (`server`/`static`), `cache-components` (`yes`/`no`), `styling`
 (`tailwind`/`css-modules`), `e2e` (`playwright`/`none`), `integration-branch`, `stable-branch`, `node-version`,
 `package-manager`, `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`),
-`pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every
+`pages` (`yes`/`no`), `accessibility` (`enforce`/`report`/`off` — UI flavors only: `react`/`nextjs`/`angular`/
+`react-native`/`ionic`; ignored with a one-line note for `library`/`nestjs`), `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every
 file-writing sub-skill only when it arrived here via `args`), and every identity field named in Steps 2–3 below (`name`, `scope`, `app-id`, `description`,
 `license`, `developer-name`, `developer-email`, `organization-url`, `directory`, `storybook`). Every key found here
 is resolved — skip the matching question in Steps 1–4. Only keys genuinely missing from `args` still need asking.
@@ -179,6 +184,7 @@ toolchain (detected: committed `android/`/`ios/`, no `expo` dependency)").
   | E2E test config | nextjs: `playwright.config.*` (+ `e2e/`); nestjs: `vitest.config.e2e.ts` or `test/jest-e2e.json` (+ `test/*.e2e-spec.ts`) — row only for these two flavors |
   | Container image | `Dockerfile`, `.dockerignore` — row only for nestjs, and nextjs with `output: server` |
   | ORM schema | nestjs with `orm` ≠ `none`: `prisma/schema.prisma` + `prisma.config.ts` (prisma), `drizzle.config.ts`, TypeORM data source / `src/**/migrations/` — row only when applicable |
+  | UI quality config | `.ui-quality.yml` at the repository root — row only for the UI flavors (react, nextjs, angular, react-native, ionic) |
   | Antora docs | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | `.gitignore` | `.gitignore` |
   | CI workflows | each of `.github/workflows/build.yml`, `release.yml`, `sync.yml` (+ `.github/scripts/sync_versions.py`), `security.yml` |
@@ -338,6 +344,16 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
   get-url origin`; self-hosted: ask for `sonar.host.url` directly, plus `sonar.organization` only if that server has
   organizations enabled, and `sonar.projectKey`).
 
+Then, **only for a UI flavor** (`react`/`nextjs`/`angular`/`react-native`/`ionic` — never `library`/`nestjs`) and
+only when `args` didn't supply it:
+
+- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** ("violations fail
+  the UI tests — axe-core in the Playwright tests on the web, `eslint-plugin-react-native-a11y` plus role queries on
+  React Native") / **Report only** ("violations are listed in test and group reports but never fail anything") /
+  **Off** ("the automated checks don't run; the accessible-by-default coding rules still apply"). The scaffold
+  writes it to `.ui-quality.yml` at the repository root, which the coding, test and documentation skills read. It
+  costs no CI minutes either way. Asked regardless of `ci` — local UI test runs read it too.
+
 Then, **only when `ci: yes`**:
 
 - **ci-tests** — "Which tests should CI run?" Only asked for `react`/`angular`/`ionic`, the flavors whose
@@ -366,7 +382,7 @@ Then, **only when `ci: yes`**:
   user's follow-up.
 
 These values (`open-source`, `visibility`, `ci`, `publish`/`distribution`, `sonar` + detail keys, `ci-tests`,
-`pages`, plus Step 3's flavor-specific keys) are passed through unchanged to the sub-skills that accept them — Step 5 (the scaffold skill), Step 8
+`pages`, `accessibility`, plus Step 3's flavor-specific keys) are passed through unchanged to the sub-skills that accept them — Step 5 (the scaffold skill), Step 8
 (`iru-setup-typescript-github-workflows`), and Step 10 (`iru-setup-readme`) — so no sub-skill re-asks them.
 
 ## Step 5 — Run the flavor's scaffold skill
@@ -403,16 +419,17 @@ Agent({
 `integration-branch` (Step 4's answer, default `develop`) is forwarded **only** to the `library` flavor: it's the
 `baseBranch` `iru-setup-typescript-library` writes into `.changeset/config.json` when `publish: yes`, and without
 it that file silently defaults to `main` while Step 8's workflows run on `develop`. The other six scaffold skills
-have no such key — never send it to them.
+have no such key — never send it to them. `accessibility` is the opposite: never sent to the library (or nestjs)
+scaffold — they have no UI.
 
 The other six flavors follow the same shape, with only the `args` keys and skill name changed:
 
 - **`react`**: `iru-setup-react-web` — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `accessibility`, `visibility`, `ci`, `mode` (+ `on-existing` if
   supplied). No `publish`/`distribution` key exists for this skill — never send one. `keep-oxlint` is deliberately omitted (Step 3) so the sub-skill asks it.
 - **`nextjs`**: `iru-setup-nextjs-web` — `app-name`, `description`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `open-source`, `sonar` (+ detail keys), `output`, `e2e`, `distribution`, `package-manager`,
-  `node-version`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied), and `router`/`cache-components`/
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `output`, `e2e`, `distribution`, `accessibility`,
+  `package-manager`, `node-version`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied), and `router`/`cache-components`/
   `styling` **only if they arrived via Step 0's `args`** (otherwise the sub-skill asks them — Step 3).
   `node-version` is the `Dockerfile` base image's Node major for `output: server`. `pages` is deliberately not
   sent: a static export's GitHub Pages project-site `basePath` comes from the `PAGES_BASE_PATH` environment variable
@@ -425,17 +442,17 @@ The other six flavors follow the same shape, with only the `args` keys and skill
   `node-version` is the `Dockerfile` base image's Node major. No `publish`/`storybook`/`pages` key exists for this
   skill — never send one.
 - **`angular`**: `iru-setup-angular-web` — `name`, `directory`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `visibility`, `ci`, `mode` (+ `on-existing` if
+  `organization-url`, `open-source`, `sonar` (+ detail keys), `storybook`, `accessibility`, `visibility`, `ci`, `mode` (+ `on-existing` if
   supplied). No `description` key exists for this skill — never send one.
 - **`react-native`**: `iru-setup-react-native-app` — `app-name`, `app-slug`, `app-directory`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ detail keys), `toolchain`,
   `app-id` (always for `metro`, where it is required; for `expo` only when the user gave one),
-  `native-builds` (**`toolchain: expo` only** — never sent for metro), `distribution`, `visibility`, `ci`, `mode`
+  `native-builds` (**`toolchain: expo` only** — never sent for metro), `distribution`, `accessibility`, `visibility`, `ci`, `mode`
   (+ `on-existing` if supplied). No `description` key exists for this
   skill — never send one.
 - **`ionic`**: `iru-setup-ionic-app` — `framework`, `app-name`, `app-id`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `distribution`, `sonar` (+ detail keys),
-  `visibility`, `ci`, `mode` (+ `on-existing` if supplied). `add-android`/`add-ios` are deliberately omitted (Step 3)
+  `accessibility`, `visibility`, `ci`, `mode` (+ `on-existing` if supplied). `add-android`/`add-ios` are deliberately omitted (Step 3)
   so the sub-skill asks them.
 
 Each sub-skill parses these itself (its own Step 0) and only asks the user about anything genuinely left out —
@@ -564,7 +581,7 @@ Summarize the outcome of all six delegated skills together: repeat the **Setup m
 (from scratch vs updating an existing repository), the resolved `flavor` and `mode`, the project identity and
 license, and the pipeline parameters used. Then give a per-component table — the scaffold's own files
 (`package.json` and toolchain config, source skeleton, and for react-native `metro` the committed `android/`/`ios/`
-native projects), the Antora docs site, the `.gitignore`, each workflow file
+native projects; for the UI flavors `.ui-quality.yml`, as the scaffold reported it), the Antora docs site, the `.gitignore`, each workflow file
 (`build.yml`/`release.yml`/`sync.yml` where applicable/`security.yml`), `.github/dependabot.yml`,
 `sonar-project.properties`, `CHANGELOG.md`, and `README.md` — with the action actually taken, as each sub-skill
 reported it: **created / updated / replaced / kept as is / skipped (ci: no)** (or "stopped" per a stop choice in
@@ -599,6 +616,9 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   not public, or `ci: no`) or a direct user choice; if cloud/self-hosted with `ci: no`, note that no CI step sends
   reports.
 - **`docs-tool`**: the value derived in Step 8 and why (flavor, plus the `storybook` answer for `react`).
+- **`accessibility`** (UI flavors): `enforce`/`report`/`off`, where it came from (`args` or the question), and the
+  `.ui-quality.yml` action (created / updated / replaced / kept as is — with any mismatch when kept). For
+  `library`/`nestjs`: "not applicable — no UI".
 
 Unless Step 8 was skipped (`ci: no`), reproduce the **consolidated required-secrets/settings table**
 `iru-setup-typescript-github-workflows` reported in Step 8 verbatim (it's already scoped to exactly this flavor/options — don't re-derive or expand it), plus its

@@ -114,6 +114,11 @@ function upgrade_module_1_3_0(Module $module): bool
 - **Configuration pages**: Symfony forms (`FormType` + data provider/handler services, PS 8+) where the module
   already uses them; otherwise `getContent()` + `HelperForm`. Either way: validate every field, show
   `displayConfirmation()`/`displayError()`, and keep HTML out of PHP.
+- **Templates as components** (`ui-contract.md`, mapped in `ui-implementation.md`): screens assign prepared,
+  immutable data and include Smarty partials with explicit parameters (`{include file='module:…' order=$order}`)
+  or Twig partials with `{% include … with { … } only %}`/`{% embed %}`; lists come from a bounded page (the
+  Grid component in the back office, `ProductListingFrontController` or a `LIMIT`ed `DbQuery` in the front) —
+  never an unbounded `executeS()` looped in a template.
 - **Translations**: new system — `$this->trans('Loan saved.', [], 'Modules.Acmeloans.Admin')` (domain
   `Modules.<Modulename>.Admin|Shop`, module name with only the first letter capitalized); Smarty
   `{l s='Loan saved.' d='Modules.Acmeloans.Shop'}`; Twig `'Loan saved.'|trans({}, 'Modules.Acmeloans.Admin')`.
@@ -131,5 +136,7 @@ function upgrade_module_1_3_0(Module $module): bool
   bootstrap requiring `config/config.inc.php`) — those are integration tests, run by the group skill under its
   lock, or not at all if the project has no shop-backed suite. Don't fake PrestaShop's static classes with
   stub definitions inside unit tests unless the project already has that harness.
+- **Browser UI tests** (Playwright + axe, screenshot matrix) run against an already running shop at
+  `PS_BASE_URL` and skip without one (`ui-implementation.md`); write them, never run them here.
 - Static analysis is the main safety net for code you can't unit-test: write code PHPStan (with
   `_PS_ROOT_DIR_` set) can type-check.

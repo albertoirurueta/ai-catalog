@@ -102,6 +102,15 @@ class BookController extends Controller
 - Events for side effects others react to, not to hide the main flow. Scheduled tasks: `onOneServer()`,
   `withoutOverlapping()`.
 
+## Views and UI
+
+Blade components, Livewire, and paginated lists follow `ui-contract.md` as mapped in `ui-implementation.md`: decompose
+the screen first, compose `<x-…>` components with `@props`/slots, keep queries and authorization out of views (the
+controller passes immutable view data), `wire:model` only on form fields, and every list a `paginate()`/
+`cursorPaginate()` query rendered through one item component with `wire:key` — never `Model::all()` into a view.
+Browser UI tests (Playwright + axe, screenshot matrix) are described there; this skill writes them but never runs
+them.
+
 ## Security specifics
 
 Blade `{{ }}` escapes; `{!! !!}` only for HTML the app built. CSRF middleware stays on (`@csrf` in forms;
@@ -124,6 +133,8 @@ every outgoing call. `DB::raw`/`whereRaw` only with bindings.
 - `$this->mock(Foo::class)`/`spy()` (Mockery, bound into the container) only for classes you own and only
   where no framework fake exists.
 - Unit tests in `tests/Unit` extend `PHPUnit\Framework\TestCase` — no container there.
+- Views: `$this->blade(...)`/`$this->component(...)` and `Livewire::test(...)` for fast behaviour tests; screenshots
+  and accessibility checks come from the browser UI tests in `ui-implementation.md`.
 
 ```php
 <?php

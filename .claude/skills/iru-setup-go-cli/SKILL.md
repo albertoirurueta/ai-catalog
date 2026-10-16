@@ -12,7 +12,9 @@ description: >-
   `schema` (the command tree as JSON with exit codes and per-command safety annotations), `version` and Cobra's
   `completion`, `internal/version` (version/commit/date via ldflags, `0.1.0-dev` in-tree), with `ui: tui` a Bubble Tea
   v2 + Lip Gloss v2 `browse` command (TTY-gated, exit 2 otherwise) in `internal/tui` tested with unit tests and teatest
-  v2; unit tests plus testscript end-to-end scripts (`testdata/script/*.txtar`, run in-process from `TestMain` so they
+  v2, rendering only the names that fit the window, and — per the catalog's UI contract — a `.ui-quality.yml` at the
+  repository root, an `internal/tui/ui_screenshots_test.go` helper and UI tests capturing every list state in each
+  direction as `.ui-screenshots/screen/Model/<state>--<direction>--no-color.txt` with the asserted accessibility checks; unit tests plus testscript end-to-end scripts (`testdata/script/*.txtar`, run in-process from `TestMain` so they
   count toward coverage, asserting exact exit codes and JSON golden output); a golangci-lint v2 `.golangci.yml`
   (revive `exported`/`package-comments`, gosec, godot, misspell, gofmt + goimports); a GoReleaser v2
   `.goreleaser.yaml` (CGO-free linux/darwin/windows × amd64/arm64, `tar.gz`/`zip` archives named
@@ -22,7 +24,8 @@ description: >-
   `args` (`key: value` lines) — `bin-name`, `module-path`, `description`, `ui` (`none`/`tui`), `go-version`, `owner`,
   `version`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`,
   `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
-  `channels` (`homebrew,scoop,winget`), `homebrew-tap`, `scoop-bucket`, `mode` (`new`/`existing`) and `on-existing`
+  `channels` (`homebrew,scoop,winget`), `homebrew-tap`, `scoop-bucket`, `accessibility` (`enforce`/`report`/`off`, `ui: tui`
+  only), `mode` (`new`/`existing`) and `on-existing`
   (`ask`/`keep`/`update`/`replace`) — so `iru-setup-cli-repository` can drive it without re-prompting. Announces
   whether it is scaffolding from scratch or updating; for every file group it owns that already exists it warns and
   asks Update / Keep as is / Replace / Stop (unless `on-existing` decides) and never overwrites hand-written code.
@@ -75,7 +78,7 @@ official docs above.
 | `reference/module-templates.md` | **Always.** The `go mod`/`go get` command sequence, `cmd/<bin>/main.go`, the testscript driver `cmd/<bin>/main_test.go` (custom `status CODE exec …` command), `internal/version`. |
 | `reference/cli-templates.md` | **Always.** `internal/cli`: `doc.go`, `exitcode.go`, `errors.go`, `output.go`, `term.go`, `config.go`, `signals.go`, `root.go`, `greet.go`, `schema.go`, `version.go`. |
 | `reference/test-templates.md` | **Always.** The `internal/cli` unit tests and `testdata/script/*.txtar`. |
-| `reference/tui-templates.md` | `ui: tui` only. `internal/tui`, `internal/cli/browse.go` (+ tests), `testdata/script/browse.txtar`. |
+| `reference/tui-templates.md` | `ui: tui` only. `internal/tui` (incl. `ui_screenshots_test.go`), `internal/cli/browse.go` (+ tests), `testdata/script/browse.txtar`, `.ui-quality.yml`. |
 | `reference/tooling-templates.md` | **Always.** `.golangci.yml`, `tools/gendocs` (+ test); `.goreleaser.yaml` only when `distribution` ≠ `none`. |
 
 **Conditional-marker convention used in every reference file**: a line `// >>> <condition>` (or `# >>> <condition>`)
@@ -119,6 +122,7 @@ Recognized keys (every key found is resolved — skip its question in Step 2):
 | `module-path` | default `github.com/<owner>/<repo>` (Step 3; `<repo>` = the `origin` repository name, else `bin-name`). A major version ≥ 2 needs a `/vN` suffix — warn, never add one silently |
 | `description` | one sentence (root `Short`/`Long`, package comment, GoReleaser descriptions); a trailing period is added if missing |
 | `ui` | `none` (default) / `tui` (adds the Bubble Tea `browse` command) |
+| `accessibility` | `enforce` (default) / `report` / `off` — only with `ui: tui`: the level written to `.ui-quality.yml`, which the TUI's UI tests read |
 | `go-version` | `go` directive minor, e.g. `1.27` → `go 1.27.0`; default the latest stable minor (Step 4). The `toolchain` line is always the latest patch of that minor |
 | `owner` | GitHub owner (user or organization) for `module-path`, release URLs and the package-channel repositories; default from `origin` |
 | `version` | in-tree version, default `0.1.0-dev` (`iru-go-bump-version` owns it afterwards) |
@@ -142,7 +146,7 @@ received it.
 Check for every file Step 6 would write: `go.mod`, `go.sum`, `go.work`, `cmd/*/main.go`, a root `main.go`,
 `internal/cli/**`, `internal/tui/**`, `internal/version/**`, `tools/gendocs/**`, `testdata/script/**`, `.golangci.yml`
 (also `.golangci.yaml`/`.golangci.toml`/`.golangci.json`), `.goreleaser.yaml` (also `.goreleaser.yml`), and
-`docs/modules/ROOT/pages/cli-reference.adoc`. Then announce which of these this run is:
+`docs/modules/ROOT/pages/cli-reference.adoc`, and (`ui: tui`) `.ui-quality.yml`. Then announce which of these this run is:
 
 - **Scaffolding from scratch** — none exist: go to Step 2.
 - **Updating an existing Go CLI** — a `go.mod` with this skill's layout (`cmd/<bin>/main.go` + `internal/cli`): warn,
@@ -150,8 +154,11 @@ Check for every file Step 6 would write: `go.mod`, `go.sum`, `go.work`, `cmd/*/m
   created). Read `module-path`, the `go`/`toolchain` lines, `bin-name` (the `cmd/<bin>` directory), the in-tree
   version, `ui` (`internal/tui` present) and the GoReleaser channels first and offer them as Step 2's defaults. Groups
   (only those with a file present): **`go.mod`/`go.sum`**, **`.golangci.yml`**, **`.goreleaser.yaml`**, **docs
-  generator** (`tools/gendocs/`), **end-to-end scripts** (`testdata/script/`, `cmd/<bin>/main_test.go`), and **the
-  source skeleton** (`cmd/<bin>/main.go`, `internal/**`). Unless `on-existing` decides, ask with `AskUserQuestion`, one
+  generator** (`tools/gendocs/`), **end-to-end scripts** (`testdata/script/`, `cmd/<bin>/main_test.go`), **the
+  source skeleton** (`cmd/<bin>/main.go`, `internal/**`), and — `ui: tui` only — **UI quality config**
+  (`.ui-quality.yml`; Update keeps its `directions`/`themes` and any `accessibility` value unless `args` set one,
+  adding missing keys; Keep as is reports a level that differs from this run's; Replace rewrites it from the
+  template). Unless `on-existing` decides, ask with `AskUserQuestion`, one
   question per group (batch up to 4 per call), naming each concrete conflict with this run's choices (e.g.
   "`.golangci.yml` is a v1 config — golangci-lint 2.x rejects it", "`.goreleaser.yaml` has `version: 1`", "no
   `internal/tui` but you chose `ui: tui`", "`go.mod` says `go 1.22` — older than the dependencies need",
@@ -186,6 +193,10 @@ Then, with `AskUserQuestion` (skip any resolved):
 - **ui** — **None (Recommended)** (`none`: a plain command tool; styled, TTY-aware text output is still there) /
   **Terminal UI** (`tui`: adds `browse`, a full-screen Bubble Tea v2 list for people — TTY-gated, every function stays
   available non-interactively with `--json`).
+- **accessibility** — only with `ui: tui` and stand-alone (an orchestrator resolves it): "Automated accessibility
+  checks in UI tests?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report only** (listed, never
+  failing) / **Off** (not run). For a terminal UI these are the asserted checks (selection visible without color, key
+  help on screen), not an automated audit.
 - **license** — MIT (Recommended for a tool) / Apache 2.0 / No license (proprietary) / Other. Remind in Step 8 to add
   a root `LICENSE` (`iru-check-license` can backfill headers).
 - **open-source**, then **distribution** — asked stand-alone only (an orchestrator resolves them): **Store
@@ -244,6 +255,7 @@ Read the reference files this run needs (table above). Placeholders:
 | `__COBRA_VERSION__`, `__PFLAG_VERSION__`, `__XTERM_VERSION__`, `__GOTOML_VERSION__`, `__GOINTERNAL_VERSION__`, `__BUBBLETEA_VERSION__`, `__LIPGLOSS_VERSION__`, `__TEATEST_VERSION__` | Step 4 (without the leading `v` except `__TEATEST_VERSION__`, which is the full pseudo-version) |
 | `__HOMEPAGE__`, `__OWNER__`, `__WINGET_ID__` | Step 3 |
 | `__LICENSE_SPDX__` | `license` as an SPDX id |
+| `__ACCESSIBILITY__` | `accessibility` (`enforce` by default; `ui: tui` only) |
 | `__PUBLISHER__` | `developer-name` (else `<owner>`) |
 | `__TAP_OWNER__` / `__TAP_REPO__` / `__TAP_SHORT__` | `homebrew-tap` split; `__TAP_SHORT__` = repo without its `homebrew-` prefix (what `brew tap owner/short` takes) |
 | `__SCOOP_OWNER__` / `__SCOOP_REPO__` | `scoop-bucket` split |
@@ -256,7 +268,8 @@ cmd/<bin>/main.go  cmd/<bin>/main_test.go
 internal/cli/{doc,exitcode,errors,output,term,config,signals,root,greet,schema,version}.go
 internal/cli/{helpers,root,signals,config,exitcode,errors,output,term,greet,schema,version}_test.go
 internal/cli/browse.go  internal/cli/browse_test.go                                 [tui]
-internal/tui/model.go  internal/tui/model_test.go                                   [tui]
+internal/tui/model.go  internal/tui/model_test.go  internal/tui/ui_screenshots_test.go [tui]
+.ui-quality.yml                                                                     [tui]
 internal/version/version.go  internal/version/version_test.go
 tools/gendocs/main.go  tools/gendocs/main_test.go
 testdata/script/{greet,exit_codes,config,help,completion,schema}.txtar  (+ browse.txtar [tui])
@@ -277,8 +290,9 @@ are always written.
    files tab-indented as in the templates.
 3. `gofmt -w cmd internal tools` (only on the files this skill wrote when updating) — placeholder substitution
    changes alignment.
-4. `go mod tidy` — turns the `// indirect` requirements into direct ones and drops unused ones; `go.sum` is
-   committed.
+4. `go mod tidy` — turns the `// indirect` requirements into direct ones and drops unused ones (with `ui: tui` it
+   also makes `github.com/charmbracelet/x/ansi`, already required through Lip Gloss, a direct requirement of the
+   capture helper); `go.sum` is committed.
 5. Never create `docs/antora.yml`, `docs/antora-playbook.yml` or `nav.adoc`. The CLI reference page is generated in
    Step 7 only if `docs/modules/ROOT/` already exists (`iru-setup-antora` runs after this skill in the orchestrator;
    the workflows' docs job regenerates it).
@@ -332,7 +346,8 @@ Report pass/fail per command; quote error output verbatim for a failure only.
 
 Summarize: resolved `bin-name`, `module-path`, env prefix, `description`, `ui`, `go`/`toolchain` lines, in-tree
 version, license (or none), `distribution` and `channels`, and whether the run scaffolded from scratch, updated an
-existing project, or stopped. Then, per Step 1 group, the action taken — **created / updated / replaced / kept as is**
+existing project, or stopped. Then, per Step 1 group, the action taken (including `.ui-quality.yml` for `ui: tui`, with
+the `accessibility` level written) — **created / updated / replaced / kept as is**
 — and whether it came from the user or `on-existing`, listing each mismatch of a kept group. State which Step 4
 versions were live versus fallback, the ignored `args` keys, and every Step 7 result (unverified items with the
 reason). List the Antora pages worth adding next (usage, exit codes, JSON output schema, using the tool from an agent)
@@ -355,6 +370,7 @@ and the `nav.adoc` entry for `cli-reference.adoc` — this skill writes neither.
 | E2E tests | `cmd/<bin>/main_test.go` (`TestMain` → `testscript.Main`, `TestScripts`), scripts in `testdata/script/*.txtar`; exact exit codes via `status CODE exec <bin> …`; refresh goldens with `go test ./cmd/<bin> -run TestScripts -update` |
 | Coverage | `go test -covermode=atomic -coverpkg=./... -coverprofile=build/coverage/cover.out ./...` — testscript children write to `GOCOVERDIR`, so e2e runs count; statement coverage only |
 | Lint | `.golangci.yml` (v2): `golangci-lint run ./...`; formatters `golangci-lint fmt ./...` (gofmt + goimports, local prefix = module path) |
+| UI contract (`ui: tui`) | `.ui-quality.yml` at the root; `internal/tui/ui_screenshots_test.go` (`captureView`, `checkAccessibility`, `tuiViolations`, `loadUIQuality`) writes `$UI_SCREENSHOTS_DIR` or `.ui-screenshots/screen/Model/<state>--<ltr\|rtl>--no-color.txt` |
 | Docs | `go run ./tools/gendocs [-out build/gendocs] [-adoc docs/modules/ROOT/pages/cli-reference.adoc\|""]` → `build/gendocs/{man,markdown,completions}/`; API docs via `go doc ./internal/...` |
 | Release | `.goreleaser.yaml` (v2): before-hook runs gendocs; `dist/<bin>-<version>-<os>-<arch>.{tar.gz,zip}`, `dist/SHA256SUMS`; `release.mode: keep-existing` (the workflow runs on an existing GitHub Release); secrets `HOMEBREW_TAP_GITHUB_TOKEN`, `SCOOP_BUCKET_GITHUB_TOKEN`, `WINGET_GITHUB_TOKEN` per channel (plus `GITHUB_TOKEN`) |
 | CI toolchain | `actions/setup-go` ≥ v6 with `go-version-file: go.mod` (reads the `toolchain` line) |
@@ -400,6 +416,12 @@ and the `nav.adoc` entry for `cli-reference.adoc` — this skill writes neither.
 - **GoReleaser**: the before-hook output in `build/gendocs` survives `--clean` (only `dist/` is cleaned); casks have no
   `license` stanza (the field is left out); `manpages` must name a file that exists (`man/<bin>.1`, not `.1.gz`) or
   the cask silently omits it; `goreleaser check` fails without a git remote.
+- **UI-contract additions unverified**: `.ui-quality.yml`, `Model.window` (+ `tea.WindowSizeMsg` handling),
+  `internal/tui/ui_screenshots_test.go` and the matrix/window tests were added later without a Go toolchain on the
+  authoring machine — written against the Bubble Tea v2 API (`View.Content`, `WindowSizeMsg`) and
+  `github.com/charmbracelet/x/ansi.Strip`, never compiled here; the first `ui: tui` run's Step 7 is their
+  verification. A run leaves 8 captures under `.ui-screenshots/screen/Model/` (4 states × `ltr`/`rtl` × `no-color`);
+  `iru-setup-go-gitignore` ignores the directory.
 - **Unverified locally, never a blocker**: running the Linux/Windows binaries (only cross-compiled and vetted), the
   Windows console behaviour of colour/TTY detection, a real (non-snapshot) release, pushing to a tap/bucket/WinGet, and
   the Antora build of the generated page (`iru-setup-antora`/the workflows own it).

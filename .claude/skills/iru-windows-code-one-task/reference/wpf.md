@@ -49,10 +49,19 @@ a misspelled `{Binding Nmae}` builds fine and silently shows nothing. WPF has **
   resources; formatting that is a business rule belongs in the view model instead.
 - Validation shows through `INotifyDataErrorInfo` (the toolkit's `ObservableValidator`) and
   `Validation.ErrorTemplate`; `ValidatesOnNotifyDataErrors` is on by default for `{Binding}`.
-- Lists: `ItemsSource="{Binding Books}"` over an `ObservableCollection<T>`; `ItemTemplate` / implicit
-  `DataTemplate`s; keep virtualization on (`VirtualizingStackPanel.IsVirtualizing`, don't wrap a `ListBox` in a
-  `ScrollViewer`).
+- Lists: `ItemsSource="{Binding Books}"` over an `ObservableCollection<T>` of immutable item records with stable
+  ids; one item `UserControl`/`DataTemplate`; keep virtualization on **with recycling** —
+  `VirtualizingPanel.IsVirtualizing="True"`, `VirtualizationMode="Recycling"`, `ScrollUnit="Pixel"` — and never wrap
+  a `ListBox` in a `ScrollViewer` or an auto-sized `StackPanel`; never an `ItemsControl` with a plain `StackPanel`
+  for data-driven lists (it builds every item). Full pattern, keyed diffing and paging: `ui-implementation.md`.
 - After renaming a view-model property, `grep -rn "Binding.*<OldName>" --include=*.xaml` — nothing else will find it.
+
+## Components (`UserControl`s)
+
+Reusable pieces are `UserControl`s whose inputs are dependency properties (ideally one `State` record from Core) and
+whose events are `ICommand` dependency properties; they bind to their own properties through `ElementName` on a named
+root and **never set their own `DataContext`**. Screens (windows/pages) own the view model. Shape, RTL
+(`FlowDirection`), theme switching for tests and the FlaUI capture/Axe.Windows pattern: `ui-implementation.md`.
 
 ## Resources, styles, theme
 
@@ -62,7 +71,9 @@ a misspelled `{Binding Nmae}` builds fine and silently shows nothing. WPF has **
   extend; `ControlTemplate` only when restyling isn't enough.
 - **Fluent theme** (.NET 9+): `ThemeMode="System"` (or `Light`/`Dark`) on `<Application>` in XAML. Setting
   `ThemeMode` **from code** is experimental and fails the build with `WPF0001` under `TreatWarningsAsErrors`
-  (verified) — don't, unless the task asks and the suppression is scoped and justified.
+  (verified) — don't, unless the task asks and the suppression is scoped and justified. The one sanctioned case is
+  the UI-test theme hook in `App.OnStartup` (`--ui-theme=light|dark`, `#pragma warning disable WPF0001` around the
+  single assignment — verified to build), scaffolded by `iru-setup-windows-app`.
 
 ## Threading
 

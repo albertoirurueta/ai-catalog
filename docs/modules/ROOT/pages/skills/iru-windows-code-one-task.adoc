@@ -1,6 +1,6 @@
 = Windows Code One Task
-:description: Implements one plan task in a Windows desktop app on .NET 10 (WPF, WinUI 3, WinForms): Core-first code, MSTest tests, per-project compile-check, checkbox.
-:keywords: iru-windows-code-one-task, claude code skill, windows desktop, wpf, winui, winforms, mvvm, mvc, implementation plan, dotnet, task implementation
+:description: Implements one plan task in a Windows desktop app on .NET 10 (WPF, WinUI 3, WinForms): Core-first code, UI components, tests, compile-check, checkbox.
+:keywords: iru-windows-code-one-task, claude code skill, windows desktop, wpf, winui, winforms, mvvm, mvc, implementation plan, dotnet, task implementation, ui contract, flaui, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -15,7 +15,7 @@ Windows desktop counterpart of `iru-dotnet-code-one-task`. It detects the UI sta
 `UseWinUI`, `UseWindowsForms`), the architecture from the UI-free Core project (`ViewModels/` for MVVM with
 CommunityToolkit.Mvvm, `Controllers/` plus `Views/I<X>View.cs` for MVC), the test framework and runner, packaging files
 and the host OS, then reads `reference/README.md` and only the files the task needs (code style and architecture
-always; testing, XML docs, MVVM Toolkit or MVC, one of WPF/WinUI/WinForms, packaging, security as relevant).
+always; the UI contract pair for UI work; testing, XML docs, MVVM Toolkit or MVC, one of WPF/WinUI/WinForms, packaging, security as relevant).
 
 Two things set it apart from the plain .NET skill. Logic lives in `src/<App>.Core` (plain `net10.0`), where the 80%
 coverage bar is measured, so deciding where code goes comes first and UI types never enter Core. And part of the solution
@@ -24,6 +24,16 @@ cannot, and "unavailable" is never reported as "passed". It writes or updates te
 each touched project, then checks off its own checkbox with a "group validation pending" note. It does not capture a
 quality baseline, add license headers, run tests, coverage or analyzers, launch the app or package anything; the group
 skill does those once per bucket.
+
+For tasks that add or change UI it follows the catalog's UI contract (`reference/ui-contract.md` and
+`reference/ui-implementation.md`; see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it first writes
+the `Screen > Region > Component` decomposition with each component's inputs, events and visual states and searches for
+existing `UserControl`s or templates to reuse, then builds leaves, composed components, screens and navigation -- UI-state
+records in Core, `UserControl`s with dependency-property inputs and command or `EventHandler<T>` outputs, and
+collections in a virtualizing recycling container over a keyed `ObservableCollection`. Its tests include FlaUI
+screen/component/flow tests that capture `.ui-screenshots/` PNGs per state across left-to-right/right-to-left x light/dark
+and run an Axe.Windows accessibility check at the `.ui-quality.yml` level (`UiQuality`, `UiScreenshots` and
+`AccessibilityCheck` helpers, added if missing; the `Axe.Windows` package only when the plan names it, otherwise reported).
 
 == Purpose group
 
@@ -54,13 +64,16 @@ relevant "Current code state" context.
 * Production code in the right project: Core models, services, view models or controllers first, then app-project
   service implementations, XAML or forms and DI registration, with XML doc comments on every public/protected member.
 * New or updated tests: `tests/<App>.Core.Tests` for Core logic and, only when the task asks, a `[TestCategory("UI")]`
-  FlaUI test in `tests/<App>.UITests` -- written but not run.
+  FlaUI test in `tests/<App>.UITests` -- written but not run. A task that adds or changes a screen or component always
+  adds its UI tests: every visual state, a screenshot capture per state x direction x theme, and an accessibility check.
+* For a UI task, the component tree in the report and the screenshot names the new tests will produce
+  (`<kind>/<Id>/<state>--<dir>--<theme>.png`).
 * A per-project compile-check (`dotnet build`, with `-p:EnableWindowsTargeting=true` off Windows; a WinUI app project is
   reported "compile-check unavailable (needs Windows)").
 * `implementation_plan.md` with this task's checkbox (and its sub-tasks') checked and a "group validation pending" note;
   left untouched if the task stopped on a blocker.
 * A short summary: shape detected (`ui`, architecture, Core project, test runner, host), projects and files touched,
-  tests added, compile-check result per project, bindings or DI registrations only a run can verify, blockers and any
+  tests added (for a UI task: the decomposition and the UI tests with their capture names), compile-check result per project, bindings or DI registrations only a run can verify, blockers and any
   deviation from `reference/`.
 
 == Execution flow

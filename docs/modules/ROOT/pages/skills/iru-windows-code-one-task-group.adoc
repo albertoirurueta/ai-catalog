@@ -1,6 +1,6 @@
 = Windows Code One Task Group
-:description: Implements one bucket of Windows desktop app tasks, then validates once: license, XML docs, Core tests, 80% Core coverage, quality diff, FlaUI UI tests.
-:keywords: iru-windows-code-one-task-group, claude code skill, windows desktop, wpf, winui, winforms, flaui, coverlet, dotnet, implementation plan, ui tests
+:description: Implements one bucket of Windows desktop app tasks, then validates once: license, docs, Core tests, 80% coverage, quality diff, FlaUI UI tests, UI contract
+:keywords: iru-windows-code-one-task-group, claude code skill, windows desktop, wpf, winui, winforms, flaui, coverlet, dotnet, implementation plan, ui tests, screenshots, accessibility
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -25,7 +25,11 @@ runs once, every check delegated to an `iru-gate-runner` agent: license headers,
 `iru-dotnet-coverage` (the UI layer is reported "not measured", never 0%), the full non-UI suite, and a quality diff
 against the baseline. Only then does the FlaUI UI stage run (`iru-dotnet-test` with the `ui` selector) behind the shared
 atomic-`mkdir` `.integration-test.lock` (stale after 60 minutes, bounded wait of about 45 minutes, released on every exit
-path) and passed to the gate as `lock: held`. A UI stage, WinUI build or packaging step that cannot run (not Windows, no
+path) and passed to the gate as `lock: held`. Right after the UI stage comes the UI-contract check (Step 3.7c; see xref:guides/building-user-interfaces.adoc[Building user interfaces]):
+from the bucket's UI inventory (the `Screen > Region > Component` trees the tasks reported, plus `.ui-quality.yml`) it
+verifies that every screen and component the bucket added or changed has a `.ui-screenshots/<kind>/<Id>/` PNG for each
+visual state x configured direction x theme, with no malformed names. Axe.Windows violations fail the bucket at
+`accessibility: enforce` and are only listed at `report`. A UI stage, WinUI build or packaging step that cannot run (not Windows, no
 interactive desktop, lock wait timeout) is reported "unverified", never skipped silently or reported as passed.
 
 == Purpose group
@@ -61,6 +65,9 @@ and any relevant "Current code state" context.
   coverlet report; app-project types reported as not measured, with any real logic in them flagged as belonging in Core.
 * A green non-UI suite and, on a capable Windows host, a green FlaUI UI stage -- or an explicit "unverified" with the
   reason.
+* The UI-contract result: screenshots per kind and per screen/component, missing state x direction x theme combinations
+  (fixed through the owning task, or why not), malformed names, and the accessibility level with its violations, or
+  "unverified (needs Windows)" off Windows -- never "passed" for lack of captures.
 * `.integration-test.lock/` taken and released around the UI stage only (and `.gitignore` extended with it if missing).
 * `implementation_plan.md` with each task's checkbox checked and a "group validation pending" note first, replaced with
   the final outcome quoting Core coverage and the UI result separately; blocked tasks left unchecked with their note.
@@ -93,7 +100,9 @@ flowchart TD
     O -- acquired --> P["Step 3.7: dotnet-test ui\nlock: held (one gate call)"]
     P -- assertion failure --> Q["Fix; re-run (re-run 3.3-3.6\nif Core changed)"]
     Q --> P
-    P --> R["Step 3.7b: release lock"]
+    P --> P2["Step 3.7c: UI-contract check:\ncaptures per state x direction x theme,\nAxe.Windows at the .ui-quality.yml level"]
+    P2 -- gap or violation --> Q
+    P2 --> R["Step 3.7b: release lock"]
     R --> S
     N --> S["Step 4: finalize each task's note;\nnotify user"]
     S --> T["Step 5: report the bucket's\noutcome to the caller"]
@@ -131,7 +140,7 @@ directly, so verbose report output stays out of this skill's own context:
   (Step 2), potentially many at once when the group is parallelizable, so each task's own implementation transcript
   doesn't accumulate in this skill's context.
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- spawned for the baseline capture (Step 1) and every
-  validation check (Step 3), including the single UI-stage call, keeping full reports out of this skill's context.
+  validation check (Step 3), including the single UI-stage call (whose summary feeds the Step 3.7c UI-contract check), keeping full reports out of this skill's context.
 
 == Source
 

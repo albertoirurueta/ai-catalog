@@ -1,7 +1,10 @@
 # UI and platform
 
 Read when the task adds or changes a screen or component's layout, styling, lists, images, animations,
-accessibility, or platform-specific behaviour.
+accessibility, or platform-specific behaviour. For how a screen or component is *structured* (decomposition,
+container vs presentational view, state props and `on…` events, fixtures), how collections are built, and how UI is
+tested, captured and accessibility-checked, `ui-contract.md` + `ui-implementation.md` are the rule; this file covers
+styling and platform detail.
 
 ## Styling
 
@@ -12,7 +15,10 @@ accessibility, or platform-specific behaviour.
   Tamagui, restyle, a theme hook such as the Expo template's `useTheme()`); never add a second one.
 - Colors, spacing, and typography from the project's theme/constants (`constants/theme.ts` in the Expo template),
   not literals. Support dark mode the way the project does (`useColorScheme()`, theme provider) — a new hardcoded
-  `#fff` background is a dark-mode bug.
+  `#fff` background is a dark-mode bug. Contrast ≥ 4.5:1 (text) / 3:1 (large text, control borders) in **both**
+  themes (`ui-contract.md` §8).
+- Logical edges only — `marginStart`/`paddingEnd`/`start`/`end`, never `left`/`right` or `marginLeft` — so layouts
+  mirror in right-to-left (`ui-implementation.md`, "Composition, inputs and events").
 - Flexbox defaults differ from the web: `flexDirection: "column"`, `alignContent: "flex-start"`, `flexShrink: 0`
   — don't port web CSS assumptions. Dimensions are density-independent pixels; use `useWindowDimensions()` (reacts to
   rotation/split-screen), not `Dimensions.get` captured once at module load.
@@ -45,6 +51,8 @@ accessibility, or platform-specific behaviour.
 
 ## Accessibility
 
+- Automated checks: `eslint-plugin-react-native-a11y` at the `.ui-quality.yml` level plus RNTL role queries; native
+  audits are limited (`ui-implementation.md`, "Accessibility checks"). The rules below apply whatever the level.
 - Every interactive element has an **accessible role and name**: `accessibilityRole="button"` (or the `role` prop)
   and visible text or `accessibilityLabel`. Icon-only buttons always need a label. This is also what makes
   `getByRole(..., { name })` queries work in tests.
@@ -58,6 +66,10 @@ accessibility, or platform-specific behaviour.
   and respect reduced motion (`AccessibilityInfo.isReduceMotionEnabled()`, Reanimated's `useReducedMotion()`).
 
 ## Lists and performance
+
+The collection pattern (view model holding the whole list with stable ids, `FlatList` + memoized item component,
+paging, selection keyed by id) and its code sketch are in `ui-implementation.md`, "Collections"; the tuning notes
+below complement it.
 
 - Long or unbounded data → **`FlatList`/`SectionList`** (or `@shopify/flash-list` / `LegendList` if the project
   already uses one) — never `ScrollView` + `.map()` over a list that can grow.

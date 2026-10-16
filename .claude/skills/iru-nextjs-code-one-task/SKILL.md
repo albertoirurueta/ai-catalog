@@ -12,7 +12,12 @@ description: >-
   fetching and caching organized by version/model (applying only the detected profile's rules), Server Actions,
   Route Handlers and the proxy, routing and rendering (special files, dynamic segments, `generateStaticParams`,
   SSG/SSR/ISR/PPR and route segment config per model, static-export constraints), metadata and SEO, the Pages
-  Router, testing, and security. Re-checks the current code state, implements exactly what the task specifies
+  Router, testing, security, and — for a task that adds or changes a page, component or list — the catalog's UI
+  contract mapped onto Next.js (`Screen › Region › Component` decomposition; interactive Client Components fed
+  serializable props by Server Components; lists through server pagination or a client `@tanstack/react-virtual`
+  virtualizer; Playwright component tests against a standalone Vite gallery plus screen/flow tests against the
+  production build, capturing `.ui-screenshots/` across left-to-right/right-to-left × light/dark with axe checks at
+  the `.ui-quality.yml` level). Re-checks the current code state, implements exactly what the task specifies
   without changing any route's rendering mode the task didn't ask to change, writes/updates tests (does not run
   them), then — unless it stopped on a blocker — checks off this task's own checkbox in `implementation_plan.md`
   with a "group validation pending" note and reports the files touched, tests written, the expected `next build`
@@ -87,6 +92,7 @@ task. The routing, restated:
 | `reference/pages-router.md` | The touched code lives under `pages/` — replaces the Server/Client Components file for those files. |
 | `reference/testing.md` | The task writes or updates tests — nearly always. |
 | `reference/security.md` | Actions, handlers, proxy, sessions/auth, env vars, server data passed to Client Components, headers/CSP, user input. |
+| `reference/ui-contract.md` + `reference/ui-implementation.md` | The task adds or changes a page, layout, component, list or other UI. `reference/ui-screenshots.ts` is the shared Playwright helper to copy into the e2e directory's `support/` when the project has none. |
 
 A one-line change inside an existing Client Component is `code-style.md` + `server-and-client-components.md` +
 `testing.md`. Don't read the rest speculatively.
@@ -130,6 +136,12 @@ them or because getting them wrong is a security defect:
 - **No new runtime dependency and no `next.config` change** unless the task explicitly calls for it — otherwise
   that's a blocker to report (Step 5). Never flip `cacheComponents`, never upgrade Next.
 
+For a task that adds or changes UI, also **decompose first** (`ui-contract.md` §2): write the `Screen › Region ›
+Component` tree for what the task touches — inputs, events, visual states, reuse, and for each component whether it
+is a Server or a Client Component — and keep it for Step 7. Pages own data and pass DTO props down; interactive
+leaves are Client Components emitting typed callbacks; collections are server-paginated or client-virtualized
+(`ui-implementation.md`), never an unbounded `map`; styles use logical properties.
+
 Don't add anything the task didn't ask for — no speculative abstractions, no unrelated cleanup, no restyling.
 
 ## Step 4 — Write or update the tests
@@ -141,6 +153,13 @@ anonymous, wrong-owner, and invalid-input cases, asserting no side effects**. Ad
 for a user-visible flow the task adds (a form submit, a redirect, an auth gate) and only if the project already has
 Playwright. Keep async Server Components thin so their logic is unit-testable — a page with branching logic and no
 unit test is a coverage gap the group skill will send back.
+
+For UI, also write UI tests per `ui-contract.md` §6–§8 and `ui-implementation.md`, if the project has Playwright:
+stories for each visual state of every added/changed Client Component (rendered by the gallery), a screen spec for
+a changed page against the production build with upstreams faked, and a flow spec for a new flow — all capturing
+the `.ui-quality.yml` matrix through the project's `ui-screenshots.ts` helper (created from
+`reference/ui-screenshots.ts` if missing, with `@axe-core/playwright` as the one permitted new dev dependency) with
+the accessibility check. A project without Playwright: behaviour tests only, and report the gap.
 
 Do not run the tests, the type-checker, or `next build` — `iru-nextjs-code-one-task-group` does, once for the whole
 bucket.
@@ -179,6 +198,8 @@ Hand control back with a short summary:
   middleware, `output` mode, unit runner and whether Playwright exists — and the reference files actually read
   (plus any bundled `node_modules/next/dist/docs` page consulted).
 - **The files touched** and **the tests added/updated** (not run).
+- **For UI work**: the `Screen › Region › Component` decomposition (with Server/Client per component), the stories
+  and UI specs added, and the screenshot states they will capture (`<kind>/<Id>/<state>`).
 - **Expected route classification** for every route the task added or whose tree it touched, in `next build` terms
   — e.g. `/todos ƒ (reads the session cookie)`, `/posts/[slug] ● (generateStaticParams)`, `/shop ◐ (cookie read
   under Suspense)`, `/api/todos/[id] ƒ`, `/ unchanged ○` — and whether any of them changed mode, and why. Name the

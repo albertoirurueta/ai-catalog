@@ -16,15 +16,19 @@ description: >-
   `minimum_wp_version`, text domain and prefixes), `phpstan.neon.dist` (phpstan-wordpress, level 6), a Brain Monkey
   `unit` suite (`phpunit.xml.dist`) and a `WP_UnitTestCase` `integration` suite (`phpunit-integration.xml.dist`) run
   inside a dedicated `@wordpress/env` environment (`.wp-env.json` + `.wp-env.test.json`, `package.json` used only
-  for wp-env/`@wordpress/scripts`), sample tests, Clover/JUnit under `build/logs/`, and `sonar-project.properties`
-  when `sonar` is not `none`. Resolves every dependency, the PHP floor, and the WordPress floor/tested-up-to
-  versions live (Packagist, npm, php.net, api.wordpress.org), installs, and verifies the scaffold with its own
-  gates. Invoke as `/iru-setup-php-wordpress`, or with `args` (`key: value` lines) — `flavor` (`plugin`/`theme`,
+  for wp-env/`@wordpress/scripts`), sample tests, Clover/JUnit under `build/logs/`, browser UI tests per the
+  catalog's UI contract (`.ui-quality.yml`, `playwright.config.ts` extending `wp-scripts test-playwright` against the
+  wp-env tests instance, `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper, a test-only
+  RTL mu-plugin, and a sample spec — the plugin's `ContentNotice` component or the theme's `Index` screen — captured
+  into `.ui-screenshots/` across left-to-right/right-to-left × light/dark with an accessibility check), and
+  `sonar-project.properties` when `sonar` is not `none`. Resolves every dependency, the PHP floor, and the
+  WordPress floor/tested-up-to versions live (Packagist, npm, php.net, api.wordpress.org), installs, and verifies
+  the scaffold with its own gates. Invoke as `/iru-setup-php-wordpress`, or with `args` (`key: value` lines) — `flavor` (`plugin`/`theme`,
   asked when missing), `name`, `slug`, `vendor`, `namespace`, `prefix`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `php-version`, `wp-version`, `blocks`, `open-source`,
   `visibility`, `ci`, `distribution` (`none`/`internal`/`store`), `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`)
-  — as `iru-setup-php-repository` passes them. Announces whether it creates from scratch or updates; for every
+  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`), `mode` (`new`/`existing`),
+  `on-existing` (`ask`/`keep`/`update`/`replace`) — as `iru-setup-php-repository` passes them. Announces whether it creates from scratch or updates; for every
   owned file that already exists it warns and asks Update / Keep as is / Replace. Use whenever a WordPress plugin or
   block theme repository needs its code skeleton, tests, and quality tooling bootstrapped from this house template.
 model: sonnet
@@ -39,7 +43,7 @@ Generate the house WordPress toolchain and a small, real code skeleton at the re
 
 | File | Read when |
 |---|---|
-| `reference/tooling.md` | always — `composer.json`, `phpcs.xml.dist`, `phpstan.neon.dist`, both PHPUnit configs, the unit `TestCase`, wp-env configs, `package.json`, `sonar-project.properties` |
+| `reference/tooling.md` | always — `composer.json`, `phpcs.xml.dist`, `phpstan.neon.dist`, both PHPUnit configs, the unit `TestCase`, wp-env configs, `package.json`, the browser UI test setup (`.ui-quality.yml`, `playwright.config.ts`, the screenshot/accessibility helper, the RTL mu-plugin), `sonar-project.properties` |
 | `reference/plugin.md` | `flavor: plugin` (including the optional "Blocks" section for `blocks: yes`) |
 | `reference/theme.md` | `flavor: theme` |
 
@@ -72,6 +76,7 @@ sonar: cloud
 sonar-organization: example-org-github
 sonar-project-key: example-org_acme-loans
 sonar-host-url: https://sonarcloud.io
+accessibility: enforce
 mode: new
 ```
 
@@ -81,9 +86,10 @@ as synonyms), `name`, `slug`, `vendor`, `namespace`, `prefix` (function/option/h
 `php-version` (PHP floor, `major.minor`), `wp-version` (WordPress floor, `major.minor`), `blocks` (`yes`/`no`,
 plugin only), `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no` — only
 consulted for the Sonar recommendation), `distribution` (`none`/`internal`/`store`), `sonar`
-(`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `mode`
-(`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Ignore unknown keys. Everything
-resolved here is never asked again.
+(`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility`
+(`enforce`/`report`/`off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`;
+default `enforce`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`).
+Ignore unknown keys. Everything resolved here is never asked again.
 
 `mode: existing` means "this is an established repository": Step 1 announces an update and still asks per
 pre-existing file unless `on-existing` says otherwise — `mode: existing` alone never means "update silently".
@@ -99,9 +105,12 @@ markers on disk contradict `args`, say so and ask which is right.
 **Owned files.** Both flavors: `composer.json`, `phpcs.xml.dist`, `phpstan.neon.dist`, `phpunit.xml.dist`,
 `phpunit-integration.xml.dist`, `tests/Unit/bootstrap.php`, `tests/Unit/TestCase.php`, `tests/Integration/bootstrap.php`,
 `.wp-env.json`, `.wp-env.test.json`, `package.json`, `readme.txt`, `.distignore`, `languages/`,
-`sonar-project.properties`. Plugin: `<slug>.php`, `uninstall.php`, `src/**`, the sample tests, and with
-`blocks: yes` `blocks/**`. Theme: `style.css`, `theme.json`, `templates/index.html`, `parts/header.html`,
-`parts/footer.html`, `patterns/*.php`, `functions.php`, `src/Theme.php`, the sample tests.
+`sonar-project.properties`, `.ui-quality.yml`, `playwright.config.ts`, `tests/e2e/support/ui-screenshots.ts`,
+`tests/e2e/mu-plugins/iru-ui-test-direction.php`. Plugin: `<slug>.php`, `uninstall.php`, `src/**`, the sample tests
+(including `tests/e2e/specs/ContentNotice.spec.ts`), and with `blocks: yes` `blocks/**` and
+`tests/e2e/specs/<BlockName>.spec.ts`. Theme: `style.css`, `theme.json`, `templates/index.html`, `parts/header.html`,
+`parts/footer.html`, `patterns/*.php`, `functions.php`, `src/Theme.php`, the sample tests (including
+`tests/e2e/specs/Index.spec.ts`).
 
 Announce one of the two situations before asking anything else:
 
@@ -122,6 +131,12 @@ Announce one of the two situations before asking anything else:
     recommended option instead (add missing header lines, the `<PREFIX>_VERSION` constant, the `ABSPATH` guard).
   - Ask about `sonar-project.properties` only after Step 2 resolved `sonar` (with `sonar: none`, Update/Replace mean
     removing it).
+  - `.ui-quality.yml`: **Update** adds any missing key (`accessibility`, `directions`, `themes`) and sets
+    `accessibility` to this run's value only when `accessibility` came from `args` or Step 2 — an existing level and
+    narrowed `directions`/`themes` are otherwise kept; **Keep** leaves it (Step 9 names a level that differs from
+    this run's); **Replace** writes the contract defaults with this run's level. For an existing
+    `playwright.config.*` or `tests/e2e/` recommend **Keep as is** (real tests) and only add the helper and the
+    mu-plugin when they are missing.
 
   When updating, read the existing header / `style.css` / `composer.json` first and use their name, slug (directory
   name and `Text Domain`), namespace (PSR-4 map), prefix (existing constants/options), floors (`Requires PHP`,
@@ -150,8 +165,11 @@ Ask only what Steps 0–1 left open, in plain conversation unless noted, confirm
   WordPress.org plugin/theme directory (default when open source; needs a GPL-compatible license and an approved
   slug) / **internal** — release zip attached to GitHub Releases / **none** — no packaging (default when not open
   source). For `store`, also ask for the WordPress.org username(s) for `readme.txt`'s `Contributors:`.
-- **blocks** (plugin only, `AskUserQuestion`): **No (Recommended for a start)** / **Yes** — "adds
-  `@wordpress/scripts`, a `blocks/` source directory and a first dynamic block".
+- **blocks** (plugin only, `AskUserQuestion`): **No (Recommended for a start)** / **Yes** — "adds a `blocks/`
+  source directory built by `@wordpress/scripts` and a first dynamic block".
+- **accessibility** (`AskUserQuestion`, header `Accessibility`, "Automated accessibility checks in UI tests?"):
+  **Enforce (Recommended)** — "axe-core violations fail the browser UI tests" / **Report only** — "listed in the
+  test output, never failing" / **Off** — "not run; the coding rules still apply". Written to `.ui-quality.yml`.
 - **sonar** — recommend **cloud** only for a public, open-source repository (resolve `visibility` from `args`, else
   `gh repo view --json visibility -q .visibility`, else ask; `internal` counts as private; open source + private is
   contradictory — ask which is right). Otherwise recommend **none** (SonarCloud is free only for public open-source
@@ -196,7 +214,11 @@ to the table (observed October 2026 while verifying this skill) when a lookup fa
 | `yoast/phpunit-polyfills` | 4.0.0 | must support PHPUnit 9 |
 | `phpunit/phpunit` | 9.6.38 | **`^9.6`, never latest** — caveat below |
 | `@wordpress/env` | 11.17.0 | |
-| `@wordpress/scripts` / `@wordpress/create-block` | 36.1.0 / 4.100.0 | `blocks: yes` only |
+| `@wordpress/scripts` | 36.1.0 | always — `wp-scripts test-playwright` runs the browser UI tests |
+| `@wordpress/create-block` | 4.100.0 | `blocks: yes` only |
+| `@playwright/test` | 1.64.1 | browser UI tests; `^1.64.0` |
+| `@axe-core/playwright` | 4.14.0 | accessibility check; `^4.14.0` |
+| `@wordpress/e2e-test-utils-playwright` | 3.0.0 | `requestUtils`/`admin`/`editor` fixtures; `^3.0.0` (the version `@wordpress/scripts` 36 itself depends on) |
 
 **PHPUnit caveat:** the WordPress PHPUnit test library still targets PHPUnit 9 — its `abstract-testcase.php` calls
 `PHPUnit\Util\Test::parseTestMethodAnnotations()` (removed in PHPUnit 10) and core's own `composer.json` requires
@@ -229,7 +251,8 @@ copy; don't add that machinery before there is something to prefix.
 Per Step 1's decision: absent → create from the template; Update → merge and show the diff; Keep → untouched,
 mismatches noted; Replace → overwrite. Write the shared files from `tooling.md`, then the flavor's files from
 `plugin.md` or `theme.md` (plus `plugin.md` "Blocks" for `blocks: yes`). `sonar-project.properties` only when
-`sonar` ≠ `none`. Don't write `.gitignore`, `README.md`, `CHANGELOG.md`, `LICENSE`, workflows, or `docs/` — other
+`sonar` ≠ `none`. `.ui-quality.yml` always (Step 0/2's `accessibility`, `directions: [ltr, rtl]`,
+`themes: [light, dark]`, exactly the shape in `tooling.md`). Don't write `.gitignore`, `README.md`, `CHANGELOG.md`, `LICENSE`, workflows, or `docs/` — other
 skills own them.
 
 ## Step 7 — Install
@@ -240,6 +263,8 @@ skills own them.
    that dependencies are not installed (nothing below can run). Then `composer validate --no-check-publish`.
 2. **npm** — `npm install` (writes `package-lock.json`). With `blocks: yes`, also run the block generation and
    `npm run build` from `plugin.md` "Blocks".
+3. **Browser** — `npx playwright install chromium` (CI adds `--with-deps`). Failure → the browser UI tests are
+   unverified in Step 8, nothing else is affected.
 
 ## Step 8 — Verify the scaffold
 
@@ -275,7 +300,12 @@ concurrent integration run:
    `.integration-test.lock/owner` (`iru-setup-php-wordpress scaffold verification` + `date -u`). HELD → show
    `cat .integration-test.lock/owner` and retry about every 30 s; break it if `find .integration-test.lock -maxdepth
    0 -mmin +60` returns it (stale); give up after ~45 min → unverified.
-2. `npm run test:env:start`, then `npm run test:integration`, then `npm run test:env:stop`.
+2. `npm run test:env:start`, then `npm run test:integration`, then the browser UI tests
+   `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e` (same environment, so inside the same lock), then
+   `npm run test:env:stop`. For the UI tests, check that `.ui-screenshots/` holds exactly the sample's matrix
+   (`component/ContentNotice/` or `screen/Index/`: each state × `.ui-quality.yml` direction × theme, named
+   `<state>--<direction>--<theme>.png`) and report the axe result at the configured level. No Chromium → UI tests
+   unverified (no browser), integration still reported.
 3. Release on every exit path: `rm -f .integration-test.lock/owner && rmdir .integration-test.lock`.
 
 Never run the integration suite against `.wp-env.json` (the development site — the test installer drops its
@@ -294,8 +324,10 @@ Start with the mode (**created from scratch** / **updated an existing <plugin|th
   `args`), and any floor raised for `theme.json` v3 or blocks.
 - Versions: which came from live lookups vs. Step 4's fallback; the PHPUnit 9 decision and why.
 - Per file: created / updated / replaced / kept as is (with mismatches) / removed / skipped.
-- Gates: unit tests, coverage % (or not measured), PHPStan, PHPCS — each pass/fail; integration: passed / failed /
-  unverified with the reason.
+- Gates: unit tests, coverage % (or not measured), PHPStan, PHPCS — each pass/fail; integration and browser UI tests:
+  passed / failed / unverified with the reason (UI: screenshot count, malformed names, axe violations as rule id ×
+  count).
+- `.ui-quality.yml` (created / updated / replaced / kept as is) and the accessibility level it holds.
 - `distribution`, `open-source`, `sonar` (and visibility source) as resolved.
 
 **Warn explicitly:**
@@ -309,6 +341,10 @@ Start with the mode (**created from scratch** / **updated an existing <plugin|th
 - With Sonar configured, a `SONAR_TOKEN` secret and the Sonar project still have to exist.
 - The integration suite uses the dedicated `.wp-env.test.json` environment: start it with `npm run test:env:start`
   (not `npx wp-env start`, which starts the development site) before `composer test:integration`.
+- Browser UI tests: `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm run test:e2e` after `npx playwright install chromium`
+  (without the variable `wp-scripts test-playwright` downloads every browser on each run). `.ui-screenshots/`,
+  `artifacts/`, `test-results/` and `playwright-report/` belong in `.gitignore` (`iru-setup-php-gitignore`); the
+  plugin's dark captures equal the light ones until the active theme or the plugin's CSS has dark styles.
 
 ## Verification notes
 
@@ -335,6 +371,19 @@ Verified October 2026 in `$TMPDIR/iru-verify/php-setup/wordpress/` with the exac
   security/prefix/filesystem/doc sniffs for `/tests/` only, the literal `'GET'` instead of `WP_REST_Server::READABLE`
   (unavailable in unit tests), `testsEnvironment: false` + a separate `--config` environment (wp-env 11 deprecates
   the built-in `tests-cli` environment but still creates it by default).
+- **Browser UI tests (issue 16, October 2026)** in `$TMPDIR/iru-verify/php/iru-setup-php-wordpress/`, plugin
+  generated from these templates: `npm install` resolved `@playwright/test` 1.64.1, `@axe-core/playwright` 4.14.0,
+  `@wordpress/e2e-test-utils-playwright` 3.0.0, `@wordpress/scripts` 36.1.0, `@wordpress/env` 11.17.0;
+  `tsc --noEmit` (strict) clean on `playwright.config.ts`, the helper, `ContentNotice.spec.ts` and `Index.spec.ts`
+  (the theme generated separately: its PHP gates, mu-plugin included, also pass);
+  `playwright test --list` loads the config and lists both specs; the helper itself ran in Chromium on a static
+  page (captures named `component/ContentNotice/default--{ltr,rtl}--{light,dark}.png` and `screen/Index/…`, the
+  `report` level annotated `rule id × nodes`, a non-PascalCase component Id rejected); `php -l`, PHPCS (0 issues on
+  the whole plugin, mu-plugin included) and PHPStan level 6 (0 errors) in `php:8.4-cli`. The mu-plugin's hook choice was checked
+  against WordPress 7.1.3's `wp-settings.php` (`setup_theme` precedes `new WP_Locale()`, `after_setup_theme`
+  follows it). **Not run:** the specs themselves against wp-env — the Docker VM ran out of disk space (MariaDB
+  `Errcode: 28`) and wasn't pruned, so the mu-plugin mapping, the RTL rendering, the captures and the axe results
+  on the scaffold are unverified; run Step 8 once to confirm them.
 - Not verified: Xdebug as the coverage driver, the Playground runtime, a WordPress.org SVN deploy, and the Windows
   shells for composer scripts.
 
@@ -352,3 +401,11 @@ Verified October 2026 in `$TMPDIR/iru-verify/php-setup/wordpress/` with the exac
   https://github.com/szepeviktor/phpstan-wordpress
 - WordPress core test library: https://github.com/WordPress/wordpress-develop/tree/trunk/tests/phpunit/includes
 - Catalog conventions: `iru-php-code-one-task/reference/wordpress.md`, `testing.md`, `code-style.md`, `security.md`.
+- Browser UI tests: `wp-scripts test-playwright`
+  (https://developer.wordpress.org/block-editor/reference-guides/packages/packages-scripts/),
+  `@wordpress/e2e-test-utils-playwright` (https://github.com/WordPress/gutenberg/tree/trunk/packages/e2e-test-utils-playwright),
+  Playwright (https://playwright.dev/docs/test-configuration, https://playwright.dev/docs/screenshots,
+  https://playwright.dev/docs/accessibility-testing), `@axe-core/playwright`
+  (https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright), `is_rtl()` / `WP_Locale`
+  (https://developer.wordpress.org/reference/functions/is_rtl/), must-use plugins
+  (https://developer.wordpress.org/advanced-administration/plugins/mu-plugins/).

@@ -1,9 +1,9 @@
 ---
 name: iru-python-test
 description: >-
-  Run a Python project's pytest suite — any Python project: a FastAPI service, a Django project (pytest-django, `DJANGO_SETTINGS_MODULE` from the pytest config), or a plain library — through whichever environment runner the project actually uses (`uv run --frozen`, `poetry run`, `pdm run`, `pipenv run`, `.venv/bin/python -m`, or plain `python -m` with a warning), aware of async test plugins (anyio's pytest plugin, pytest-asyncio) and of the fast-vs-integration split (an `integration` marker declared in the pytest config, or a `tests/integration/` directory, for tests that need Docker/testcontainers or a real database). Writes a JUnit XML log (`build/test-results/pytest.xml`, or `pytest-integration.xml` for the integration selection) and parses it into a compact pass/fail/skip summary with one line per failure. Invoke as `/iru-python-test` to run the fast (container-free) tests, or `/iru-python-test <selector>` where `<selector>` is any combination of a path, a node id (`tests/test_x.py::TestClass::test_name`), `-k "<expression>"`, and one leading keyword — `fast` (the default), `integration` (only the integration selection), or `all` (fast + integration). Container-backed selections are serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path); a caller that already holds that lock passes a `lock: held` line in its args. Docker unavailable makes the integration selection "unverified", never silently skipped or reported as failed tests. Reports "no test runner wired" / "selector matched nothing" plainly instead of a misleading "0 tests". Report-only: never fixes a failing test or modifies source/test code. Use whenever the user (or a `iru-fastapi-*`/`iru-django-*` coding skill via `iru-gate-runner`) wants to run, re-run, or narrow down Python tests instead of invoking pytest by hand.
+  Run a Python project's pytest suite — any Python project: a FastAPI service, a Django project (pytest-django, `DJANGO_SETTINGS_MODULE` from the pytest config), or a plain library — through whichever environment runner the project actually uses (`uv run --frozen`, `poetry run`, `pdm run`, `pipenv run`, `.venv/bin/python -m`, or plain `python -m` with a warning), aware of async test plugins (anyio's pytest plugin, pytest-asyncio) and of the fast-vs-integration split (an `integration` marker declared in the pytest config, or a `tests/integration/` directory, for tests that need Docker/testcontainers or a real database). Writes a JUnit XML log (`build/test-results/pytest.xml`, or `pytest-integration.xml` for the integration selection) and parses it into a compact pass/fail/skip summary with one line per failure. Invoke as `/iru-python-test` to run the fast (container-free) tests, or `/iru-python-test <selector>` where `<selector>` is any combination of a path, a node id (`tests/test_x.py::TestClass::test_name`), `-k "<expression>"`, and one leading keyword — `fast` (the default), `integration` (only the integration selection), `all` (fast + integration), or `ui` (a Django project's browser UI tests — pytest-playwright + pytest-django's `live_server`, `-m ui` — which sets `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears it only on a full UI run, collects stray captures from pytest-playwright's output directory into the UI contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` layout, validates the names, and reports screenshot counts per kind, malformed names, axe accessibility violations (count + rule ids) and the `.ui-quality.yml` level applied; a missing Playwright browser makes it "unverified"). Container-backed and UI selections are serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, released on every exit path); a caller that already holds that lock passes a `lock: held` line in its args. Docker unavailable makes the integration selection "unverified", never silently skipped or reported as failed tests. Reports "no test runner wired" / "selector matched nothing" plainly instead of a misleading "0 tests". Report-only: never fixes a failing test or modifies source/test code. Use whenever the user (or a `iru-fastapi-*`/`iru-django-*` coding skill via `iru-gate-runner`) wants to run, re-run, or narrow down Python tests instead of invoking pytest by hand.
 model: haiku
-allowed-tools: Read Write Bash(uv *) Bash(poetry *) Bash(pdm *) Bash(pipenv *) Bash(.venv/bin/*) Bash(python *) Bash(python3 *) Bash(DJANGO_SETTINGS_MODULE=* *) Bash(docker info *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(date *) Bash(mkdir -p build*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(rm -f build/test-results/*)
+allowed-tools: Read Write Bash(uv *) Bash(poetry *) Bash(pdm *) Bash(pipenv *) Bash(.venv/bin/*) Bash(python *) Bash(python3 *) Bash(DJANGO_SETTINGS_MODULE=* *) Bash(UI_SCREENSHOTS_DIR=* *) Bash(docker info *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(test *) Bash(date *) Bash(mkdir -p build*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(rm -f build/test-results/*)
 ---
 
 # Python Test
@@ -17,15 +17,19 @@ unless asked to as a follow-up.
 
 The argument string is a selector plus optional `key: value` lines from a calling skill:
 
-- **Leading keyword** (optional, at most one): `fast` (default when absent), `integration`, or `all`. `unit` is
-  accepted as a synonym of `fast`.
+- **Leading keyword** (optional, at most one): `fast` (default when absent), `integration`, `all`, or `ui`. `unit` is
+  accepted as a synonym of `fast`. `ui` is valid only for a **Django project with pytest-django and
+  pytest-playwright** whose config declares a `ui` marker; anywhere else (FastAPI, a plain package, no
+  pytest-playwright) stop and report "no `ui` selection in this project" — never fall back to another selection.
+  `all` never includes `ui`; a caller asks for it explicitly.
 - **Path / node id** (zero or more): `tests/test_books.py`, `tests/services/`,
   `tests/test_books.py::TestCreate::test_rejects_duplicate`, `apps/catalog/tests/test_views.py::test_list`.
 - **`-k "<expression>"`** (optional): pytest's keyword expression (`-k "create and not slow"`).
 - **`lock: held`** — the caller (e.g. a `*-code-one-task-group` skill) already holds `.integration-test.lock`;
   don't acquire or release it here (Step 4).
 
-Everything combines: `integration tests/integration/test_repo.py -k upsert` runs only matching integration tests.
+Everything combines: `integration tests/integration/test_repo.py -k upsert` runs only matching integration tests. A
+`ui` run with no path, node id or `-k` is a **full UI run**; with any of them it is a **scoped UI run** (Step 5b).
 
 ## Step 1 — Detect the environment runner (never `pip install` anything)
 
@@ -83,7 +87,8 @@ or `<prefix> python -c "import importlib.util as u; print([n for n in ('pytest_d
 
 1. An `integration` marker declared in the config's `markers` (or registered in a `conftest.py` via
    `config.addinivalue_line("markers", "integration…")`; `<pytest> --markers | grep -i integration` confirms it) →
-   fast = `-m "not integration"`, integration = `-m integration`. If the project also declares other heavyweight
+   fast = `-m "not integration"`, integration = `-m integration`. A declared `ui` marker is always excluded from fast
+   (`-m "not integration and not ui"`) and is the `ui` selection (`-m ui`). If the project also declares other heavyweight
    markers it excludes from its everyday run (e.g. Django's `browser` for Playwright tests, `e2e`, `slow`), mirror
    the CI/`addopts` exclusion for `fast` (`-m "not integration and not browser"`) and list what was excluded.
 2. No marker but a `tests/integration/` (or `*/tests/integration/`) directory → fast = `--ignore=<dir>`,
@@ -103,20 +108,32 @@ mkdir -p build/test-results
 <pytest> -m integration [paths] [-k "<expr>"] -p no:cacheprovider --junitxml=build/test-results/pytest-integration.xml
 # all = run the fast command, then the integration one (two logs, two summaries) — never one combined run, so the
 # fast result stands on its own when the integration stage is unverified
+# ui (Django + pytest-playwright only; <shots> = absolute UI_SCREENSHOTS_DIR, default <repo root>/.ui-screenshots)
+UI_SCREENSHOTS_DIR=<shots> <pytest> -m ui [paths] [-k "<expr>"] -p no:cacheprovider --junitxml=build/test-results/pytest-ui.xml
 ```
+
+For `ui`, keep the project's own pytest-playwright options (`--browser`, `--headed`, `--screenshot`, `--output`) from
+`addopts`; never add `--headed`. Record the output directory (`--output`, default `test-results/` under the
+rootdir) — Step 5b collects from it.
 
 Don't add `--cov` here (that's `iru-python-coverage`'s job); if the project's `addopts` already includes `--cov`,
 add `--no-cov` so a coverage `fail_under` can't turn a green test run red — say so in the report.
 
 ## Step 4 — Serialize container-backed selections behind the repository lock
 
-Applies to the `integration` selection, the integration half of `all`, and a `fast` run Step 3 classified as
-container-backed. Skip it for pure fast runs.
+Applies to the `integration` selection, the integration half of `all`, the `ui` selection (it starts a live server
+and a browser), and a `fast` run Step 3 classified as container-backed. Skip it for pure fast runs.
 
 1. **Docker first**: `docker info >/dev/null 2>&1`. If it fails, **don't run the selection**: report it as
    **unverified (Docker unavailable)** — never as passed, never as N failed tests — and for `all` still report the
    fast half. (A test that only needs an already-running database service, e.g. CI's `services: postgres`, is still
    "integration"; if its host is unreachable, report "test database unreachable at `<host>`".)
+   **For `ui`, probe the browser instead** (unless the UI tests also start containers):
+   `<prefix> python -c "from playwright.sync_api import sync_playwright
+   with sync_playwright() as p: p.chromium.launch().close()"` (the browser the project's `--browser` names). If it
+   fails with `BrowserType.launch: Executable doesn't exist` (verified), **don't run the selection**: report
+   **unverified (Playwright browser not installed — run `<prefix> playwright install chromium`)**; never install it
+   here.
 2. **`lock: held`** → the caller holds the lock; skip to the run.
 3. Otherwise acquire the lock at the **repository root** (`git rev-parse --show-toplevel`, else the current
    directory) — a directory, because `mkdir` either creates it or fails, atomically; a lock *file* written with
@@ -154,7 +171,7 @@ tests/nope.py`, an unknown option such as `--cov` without pytest-cov), `5` **no 
 node id, or marker selection). Exit `4`/`5` still write a JUnit file with `tests="0"` — so `0 tests` is "selector
 `<x>` matched nothing" (exit 5) or "bad invocation: <first `ERROR:` line>" (exit 4), never "all passed".
 
-Parse the log with the project's own interpreter (stdlib only):
+Parse the log with the project's own interpreter (stdlib only; for `ui` the log is `pytest-ui.xml`):
 
 ```bash
 <prefix> python - build/test-results/pytest.xml <<'PY'
@@ -190,11 +207,76 @@ started (missing interpreter, broken `conftest.py` import at startup) — report
 the Docker socket is missing), `Could not connect to Ryuk`, `psycopg.OperationalError: connection … refused`,
 `asyncpg … ConnectionRefusedError`, `django.db.utils.OperationalError: could not connect to server`,
 `django.core.exceptions.ImproperlyConfigured` (settings not found) → report "integration not run/aborted:
-<cause>" (or "Django settings not configured") rather than N failed tests. `django.db.utils.OperationalError: no such
+<cause>" (or "Django settings not configured") rather than N failed tests. For `ui`:
+`BrowserType.launch: Executable doesn't exist` on setup → **unverified (browser not installed)**;
+`SynchronousOnlyOperation` → the UI conftest lacks `DJANGO_ALLOW_ASYNC_UNSAFE` (a wiring problem); a failure whose
+first line starts `accessibility violations:` is an enforced accessibility failure — report its rule ids (Step 5b). `django.db.utils.OperationalError: no such
 table` is different: a missing migration or `--reuse-db` with a stale schema — report it as such.
 
-The JUnit files under `build/test-results/` are the paths CI and `sonar.python.xunit.reportPath` use; leave them in
+The JUnit files under `build/test-results/` (`pytest.xml`, `pytest-integration.xml`, `pytest-ui.xml`) are the paths CI and `sonar.python.xunit.reportPath` use; leave them in
 place when `build/` is gitignored, otherwise delete them after parsing (`rm -f build/test-results/pytest*.xml`).
+
+## Step 5b — `ui` only: screenshots and accessibility
+
+The UI contract keeps every capture under one directory,
+`<shots>/<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`, written by the project's
+`tests/ui/ui_screenshots.py` helper, which also appends one JSON line per axe scan to `<shots>/a11y-report.jsonl`.
+
+- **Before the run** (inside the lock): on a **full** UI run clear the directory —
+  `find <shots> -mindepth 1 -delete` when it exists — so it holds exactly this run; on a **scoped** run never clear
+  it, and record the current line count of `<shots>/a11y-report.jsonl` (`0` when absent) so only this run's scans
+  are counted.
+- **After the run**, collect, validate and summarize with the project's interpreter (pytest-playwright cleans its
+  output directory at session start, so whatever is there came from this run):
+
+```bash
+<prefix> python - <shots> <output dir> <a11y lines before> <<'PY'
+import json, re, shutil, sys
+from pathlib import Path
+
+shots, output, a11y_from = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
+NAME = re.compile(r"^(component|screen|flow)/[A-Za-z0-9][A-Za-z0-9-]*/(\d{2}-)?[a-z0-9]+(-[a-z0-9]+)*"
+                  r"--(ltr|rtl)--(light|dark|high-contrast|no-color)(--[a-z0-9]+(-[a-z0-9]+)*)*\.(png|txt)$")
+moved, evidence = 0, 0
+for f in sorted(output.rglob("*.png")) if output.is_dir() else []:
+    rel = f.relative_to(output).as_posix()
+    if NAME.match(rel):                      # a contract-named capture written under the wrong root
+        (shots / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(f, shots / rel)
+        moved += 1
+    else:                                    # --screenshot failure evidence (test-failed-N.png), not a state
+        evidence += 1
+counts, bad = {}, []
+for f in sorted(shots.rglob("*")) if shots.is_dir() else []:
+    if f.is_dir() or f.name == "a11y-report.jsonl":
+        continue
+    rel = f.relative_to(shots).as_posix()
+    if NAME.match(rel):
+        counts[rel.split("/")[0]] = counts.get(rel.split("/")[0], 0) + 1
+    else:
+        bad.append(rel)
+print(f"screenshots={counts} moved_from_output={moved} failure_screenshots={evidence}")
+for rel in bad:
+    print(f"MALFORMED {rel}")
+rules, levels, scans = {}, set(), 0
+report = shots / "a11y-report.jsonl"
+for line in report.read_text(encoding="utf-8").splitlines()[a11y_from:] if report.is_file() else []:
+    entry = json.loads(line)
+    scans += 1
+    levels.add(entry["level"])
+    for v in entry["violations"]:
+        rules[v["id"]] = rules.get(v["id"], 0) + v["nodes"]
+print(f"a11y_scans={scans} levels={sorted(levels)} violations={sum(rules.values())} rules={rules}")
+PY
+```
+
+- **The level applied** comes from `.ui-quality.yml` at the repository root (`grep -E '^(accessibility|directions|themes):'`;
+  missing file = `enforce`, `[ltr, rtl]`, `[light, dark]`). With `enforce`, violations already failed their tests
+  (first line `accessibility violations: <rule>×<nodes>, …`); with `report` they are listed, never failures; with
+  `off`, `a11y_scans=0` is expected. Scans present but no `a11y-report.jsonl` lines at all with a level other than
+  `off` means the tests don't call the helper's `check_accessibility` — say so.
+- Failure screenshots under the output directory are reported by count and path only, never copied into
+  `<shots>` (they are not contract states).
 
 ## Step 6 — Report results
 
@@ -205,6 +287,10 @@ place when `build/` is gitignored, otherwise delete them after parsing (`rm -f b
   caller. An integration stage that didn't run is **unverified (<reason>)** — Docker unavailable, blocked by a
   concurrent run, database unreachable.
 - A selector that matched nothing (exit 5) or a bad invocation (exit 4) is said plainly — not as 0 passed.
+- For `ui`: the full-vs-scoped run (and whether `<shots>` was cleared), the screenshot count per kind, every
+  malformed name, captures moved in from the output directory, failure screenshots left there, the accessibility
+  level applied with the violation count and rule ids (`image-alt×3, color-contrast×1` — never the raw axe JSON),
+  and **unverified (<reason>)** when the browser was missing or the lock timed out.
 - On failures, list each failing test (`classname::name`) with the first line of its message — nothing more per
   failure — and count `<error>`s separately from assertion failures. Name wiring problems (no async plugin, no
   pytest-django settings) as such.
@@ -234,6 +320,15 @@ Verified with uv 0.12.8, CPython 3.13, pytest 9.1.1, pytest-cov 7.1.0, anyio 4.1
 - pytest-django picked up `DJANGO_SETTINGS_MODULE = "config.settings.test"` from `[tool.pytest.ini_options]`
   (SQLite in-memory); a missing migration surfaced as `OperationalError: no such table: books_book`, and `--ds=…`
   overrode the config.
+- `ui` (in `$TMPDIR/iru-verify/django/iru-django-code-one-task`, Django 6.1.2, pytest-playwright 0.10.0, playwright
+  1.64.0 + Chromium headless shell, axe-playwright-python 0.1.8): `UI_SCREENSHOTS_DIR=… uv run --frozen pytest -m ui
+  -p no:cacheprovider --junitxml=build/test-results/pytest-ui.xml` captured the ltr/rtl × light/dark matrix through
+  the helper; an enforced violation failed with `AssertionError: accessibility violations: button-name×1, image-alt×1`;
+  the Step 5b script counted `screenshots={'component': 12, 'screen': 1}`, moved one contract-named PNG in from
+  `test-results/`, counted one `--screenshot only-on-failure` capture as failure evidence, flagged `Default_LTR.png`
+  as malformed, and summed the rule ids. With `PLAYWRIGHT_BROWSERS_PATH` pointing at an empty directory the probe and
+  every test failed on setup with `BrowserType.launch: Executable doesn't exist`; pytest-playwright removed a
+  pre-existing `test-results/` at session start. `-m "not integration and not ui"` deselected every UI test.
 - Still unverified: the Poetry, PDM and Pipenv prefixes (not installed locally), pytest-asyncio's `asyncio_mode`
   handling, pytest-xdist under the integration selection, and Windows paths.
 
@@ -246,3 +341,5 @@ Verified with uv 0.12.8, CPython 3.13, pytest 9.1.1, pytest-cov 7.1.0, anyio 4.1
 - irurueta docs: web/django/pytest-factories-and-browser-tests.adoc (pytest-django settings resolution,
   `--reuse-db`/`--create-db`, `browser` marker excluded from everyday runs)
 - irurueta docs: web/django/testing.adoc (test database behavior, run against the production engine)
+- pytest-playwright CLI options (`--browser`, `--output`, `--screenshot`): https://playwright.dev/python/docs/test-runners
+- axe-playwright-python: https://github.com/pamelafox/axe-playwright-python

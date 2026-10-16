@@ -157,20 +157,32 @@ struct ContentView: View {
 ### `iosApp/iosApp/ContentView.swift` (ui: native)
 
 ```swift
+import Shared
 import SwiftUI
 
-/// Native SwiftUI screen over the shared `GreetingUiState`.
+/// Owns the screen's model and passes its state down to the stateless `GreetingScreen`.
 struct ContentView: View {
     @StateObject private var model = GreetingModel()
 
     var body: some View {
+        GreetingScreen(state: model.state, onTap: model.tap)
+    }
+}
+
+/// Stateless greeting screen over the shared `GreetingUiState`.
+///
+/// Inputs: `state`. Events: `onTap` when the counter button is tapped. Visual states: `default`, `long-content`.
+struct GreetingScreen: View {
+    let state: GreetingUiState
+    let onTap: () -> Void
+
+    var body: some View {
         VStack(spacing: 16) {
-            Text(model.state.message)
+            Text(state.message)
                 .font(.title2)
-            Button(model.state.buttonLabel) {
-                model.tap()
-            }
-            .buttonStyle(.borderedProminent)
+                .multilineTextAlignment(.center)
+            Button(state.buttonLabel, action: onTap)
+                .buttonStyle(.borderedProminent)
         }
         .padding()
     }
@@ -263,6 +275,136 @@ struct MainApp: App {
         WindowGroup {
             ContentView()
         }
+    }
+}
+```
+
+### `iosApp/iosAppTests/GreetingScreenTests.swift` (ui: native)
+
+```swift
+@testable import iosApp
+import Shared
+import SwiftUI
+import XCTest
+
+final class GreetingScreenTests: XCTestCase {
+    private let longMessage = "Hello, " + String(repeating: "a very long platform name ", count: 6)
+
+    @MainActor
+    func testEveryStateIsCapturedInEveryDirectionAndTheme() throws {
+        let states: [(String, GreetingUiState)] = [
+            ("default", GreetingUiState(message: "Hello, Test!", clicks: 0)),
+            ("long-content", GreetingUiState(message: longMessage, clicks: 12)),
+            ("rtl-content", GreetingUiState(message: "مرحبا بالعالم", clicks: 0))
+        ]
+        for (name, state) in states {
+            for variant in UIScreenshots.matrix {
+                try UIScreenshots.capture(
+                    GreetingScreen(state: state, onTap: {}),
+                    kind: "screen",
+                    id: "GreetingScreen",
+                    state: name,
+                    variant: variant
+                )
+            }
+        }
+    }
+}
+```
+
+### `iosApp/iosAppTests/UIScreenshots.swift` (ui: native)
+
+The UI contract's screenshot helper for SwiftUI (`ImageRenderer`). `xcodebuild test` forwards `UI_SCREENSHOTS_DIR` when it is
+passed as `TEST_RUNNER_UI_SCREENSHOTS_DIR`; otherwise the repository root is derived from `#filePath`.
+
+```swift
+import SwiftUI
+import XCTest
+
+/// One cell of the direction × theme screenshot matrix.
+struct UIVariant {
+    let direction: LayoutDirection
+    let scheme: ColorScheme
+
+    var segments: String {
+        (direction == .rightToLeft ? "rtl" : "ltr") + "--" + (scheme == .dark ? "dark" : "light")
+    }
+}
+
+/// Writes UI-contract screenshots:
+/// `<UI_SCREENSHOTS_DIR | <repo>/.ui-screenshots>/<kind>/<Id>/<state>--<dir>--<theme>--ios.png`
+/// (`ios` because the same screen also renders natively on Android).
+enum UIScreenshots {
+    /// The repository root, derived from this file's location (`<repo>/iosApp/iosAppTests/UIScreenshots.swift`).
+    static let repositoryRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+
+    /// `UI_SCREENSHOTS_DIR` (passed to `xcodebuild test` as `TEST_RUNNER_UI_SCREENSHOTS_DIR`),
+    /// else `<repo>/.ui-screenshots`.
+    static var directory: URL {
+        if let path = ProcessInfo.processInfo.environment["UI_SCREENSHOTS_DIR"], !path.isEmpty {
+            return URL(fileURLWithPath: path)
+        }
+        return repositoryRoot.appendingPathComponent(".ui-screenshots")
+    }
+
+    /// The `.ui-quality.yml` matrix (defaults: ltr + rtl × light + dark).
+    static var matrix: [UIVariant] {
+        let directions = list("directions") ?? ["ltr", "rtl"]
+        let themes = (list("themes") ?? ["light", "dark"]).filter { $0 == "light" || $0 == "dark" }
+        return directions.flatMap { direction in
+            themes.map { theme in
+                UIVariant(
+                    direction: direction == "rtl" ? .rightToLeft : .leftToRight,
+                    scheme: theme == "dark" ? .dark : .light
+                )
+            }
+        }
+    }
+
+    /// Renders `view` at `size` in `variant` and writes the PNG.
+    @MainActor
+    static func capture(
+        _ view: some View,
+        kind: String,
+        id: String,
+        state: String,
+        variant: UIVariant,
+        size: CGSize = CGSize(width: 360, height: 640)
+    ) throws {
+        let content = view
+            .frame(width: size.width, height: size.height)
+            .background(Color(uiColor: .systemBackground))
+            .environment(\.layoutDirection, variant.direction)
+            .environment(\.colorScheme, variant.scheme)
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = 2
+        let png = try XCTUnwrap(renderer.uiImage?.pngData(), "ImageRenderer produced no image for \(id)/\(state)")
+        let file = directory
+            .appendingPathComponent(kind)
+            .appendingPathComponent(id)
+            .appendingPathComponent([state, variant.segments, "ios"].joined(separator: "--") + ".png")
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try png.write(to: file)
+    }
+
+    private static func list(_ key: String) -> [String]? {
+        let url = repositoryRoot.appendingPathComponent(".ui-quality.yml")
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            return nil
+        }
+        for line in text.split(separator: "\n") {
+            let content = line.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+            let trimmed = content.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("\(key):") else {
+                continue
+            }
+            let value = trimmed.dropFirst(key.count + 1).trimmingCharacters(in: CharacterSet(charactersIn: " []"))
+            return value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        }
+        return nil
     }
 }
 ```

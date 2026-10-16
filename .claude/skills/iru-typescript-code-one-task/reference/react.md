@@ -34,6 +34,11 @@ Conventions specific to a React (Vite + React 19, `iru-setup-react-web`) project
 - Destructure props in the function signature; don't pass around a `props` object.
 - **Keys**: a stable, unique id from the data (never the array index, unless the list is static and never
   reordered/filtered).
+- **Presentational vs. screen** (UI contract §3–§4): a presentational component's props are its UI state plus
+  `on<Intent>` callbacks carrying typed payloads (`onCheckout(orderId)`, never the raw click event); data fetching
+  and navigation stay in the route/screen component. A data-driven or long list is a collection component over a
+  virtualizer plus one memoized item component — never a bare `items.map` over unbounded data. See
+  `ui-implementation.md` (React section) for the virtualized list, stories and component tests.
 
 ## Rules of hooks
 
@@ -110,3 +115,7 @@ src/
   second one for a single task.
 - Every interactive element has an accessible name (visible text, `aria-label`, or `aria-labelledby`) — this is
   also what makes `testing.md`'s `getByRole` query priority possible in the first place.
+- **CSS logical properties** (`margin-inline-start`, `padding-inline`, `inset-inline-end`, `text-align: start`) — never
+  `left`/`right` — and colours from tokens redefined for dark mode, so the right-to-left × light/dark screenshot
+  matrix of `ui-implementation.md` renders correctly. `eslint-plugin-jsx-a11y` flags the static accessibility
+  mistakes when the project has it.

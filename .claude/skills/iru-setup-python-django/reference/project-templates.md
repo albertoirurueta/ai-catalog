@@ -68,6 +68,11 @@ exclude = ['(^|/)migrations/', '^build/', '^docs/']
 module = ["factory", "factory.*"]
 implicit_reexport = true
 
+# axe-playwright-python (UI tier) ships no type information.
+[[tool.mypy.overrides]]
+module = ["axe_playwright_python", "axe_playwright_python.*"]
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_calls = false
@@ -80,7 +85,10 @@ DJANGO_SETTINGS_MODULE = "config.settings.test"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-ra --strict-markers --strict-config"
-markers = ["integration: needs Docker (testcontainers)"]
+markers = [
+    "integration: needs Docker (testcontainers)",
+    "ui: browser UI tests (Playwright + live server); run with -m ui",
+]
 filterwarnings = ["error::DeprecationWarning"]
 
 [tool.coverage.run]

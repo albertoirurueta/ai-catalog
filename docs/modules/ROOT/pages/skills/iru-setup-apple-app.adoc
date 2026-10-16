@@ -10,7 +10,7 @@ per selected platform (iOS/iPadOS, macOS, watchOS, visionOS), a UI-framework-fre
 package (`Models/`, `Services/`, plus `ViewModels/` for MVVM or `Controllers/` + a passive-view protocol for MVC)
 whose Swift Testing suite covers 100% of its lines, the per-platform UI layer (SwiftUI everywhere, or programmatic
 UIKit for the iOS/iPadOS target), per-platform Swift Testing unit-test and XCUITest UI-test targets, lint/format
-config, an optional gated `fastlane/Fastfile`, and `sonar-project.properties` — from the templates in the skill's
+config, a `.ui-quality.yml`, an optional gated `fastlane/Fastfile`, and `sonar-project.properties` — from the templates in the skill's
 `reference/` files. It announces whether it
 is scaffolding from scratch or updating an existing app, and warns and asks Update / Keep as is / Replace / Stop for
 each of its files that already exists.
@@ -22,6 +22,10 @@ manifest per repository, one application target per selected platform with `SWIF
 the app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` and a pinned unit-test host, a shared `Packages/Core` package
 (Foundation + Observation only) that holds all testable logic outside any UI framework, and per-platform Swift
 Testing/XCUITest targets driven by a `--uitesting` launch argument and accessibility identifiers on every control.
+Following the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]), the
+UI tests also capture the sample screen in every left-to-right/right-to-left × light/dark cell into
+`.ui-screenshots/` through a shared `Tests/Support/UIScreenshots.swift` helper, and run
+`performAccessibilityAudit()` at the level configured in `.ui-quality.yml`.
 With `ui: uikit` the iOS/iPadOS target becomes a programmatic UIKit app — `AppDelegate` + `UIWindowSceneDelegate`
 with a scene manifest (mandatory with the 27 SDK), a `UINavigationController` root and a code-laid-out
 `UIViewController`, no storyboards — backed by an MVC controller core (recommended) or an MVVM view model rendered
@@ -153,6 +157,13 @@ that nothing will send analysis automatically; if Sonar is still chosen, Step 8 
 reports.
 |Unset
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` -- the automated accessibility level of the UI tests, written to `.ui-quality.yml`:
+`enforce` fails the UI tests on any `performAccessibilityAudit()` issue, `report` attaches and lists issues without
+failing, `off` skips the audit test.
+|`enforce` (asked when unset)
+
 |`on-existing`
 |No
 |`ask`, `keep`, `update` or `replace` -- answers Step 1's per-file question for every existing owned file at once
@@ -180,7 +191,12 @@ or updated. Hand-written app/test source is never overwritten either way.
   `GreetingLayout.swift` — plus `LaunchOptions.swift`; `Tests/` (Swift Testing: `LaunchOptionsTests` and
   `<AppName>Tests`, or `GreetingViewControllerTests`/`AppShellTests` for UIKit); and `UITests/<AppName>UITests.swift`
   (XCUITest).
-* `.swiftlint.yml` and `.swift-format` at the repository root.
+* `.swiftlint.yml`, `.swift-format` and `.ui-quality.yml` (UI contract settings: accessibility level, directions,
+  themes) at the repository root.
+* Per platform test target, `Tests/Support/UIScreenshots.swift` (the UI contract capture helper, also compiled into
+  the UI-test target); the UI test writes the sample screen's captures to
+  `.ui-screenshots/screen/<ScreenType>/default--<ltr|rtl>--<light|dark>--<platform-variant>.png` (gitignored) and
+  attaches accessibility-audit issues to the `.xcresult`.
 * `fastlane/Fastfile`, with only the lanes `distribution`/`signing` back — never a lane this skill can't support. The
   `platform :ios` lanes (`test`, `build`, `beta`, `release`) are written only when an iOS/iPadOS target was selected.
 * `sonar-project.properties`, only when `sonar` != `none` — its SwiftLint input is
@@ -201,7 +217,7 @@ flowchart TD
     A[Start /iru-setup-apple-app] --> B{"Step 0: args supplied?"}
     B -- yes --> C[Parse key: value pairs from args]
     B -- no --> D[Treat every field as unset]
-    C --> E["Step 1: Survey repository for owned files\n(manifest, Packages/Core, lint/format,\nFastfile, sonar, .xcodeproj)"]
+    C --> E["Step 1: Survey repository for owned files\n(manifest, Packages/Core, lint/format,\n.ui-quality.yml, Fastfile, sonar, .xcodeproj)"]
     D --> E
     E --> F{"What already exists?"}
     F -- nothing --> F1["Announce: scaffolding\nfrom scratch"]
@@ -219,10 +235,10 @@ flowchart TD
     G2 -- other --> G4["Record per-file decision;\nread existing manifest as\ndefaults if replaced"]
     F1 --> H
     G1 --> H
-    G4 --> H["Step 2: Collect inputs\n(app-name, bundle-id-prefix,\nplatforms incl. visionOS,\nui swiftui/uikit, architecture\nmvvm/mvc, generator,\nmin-deployment-target,\ndeveloper info, license,\nopen-source, sonar,\ndistribution, signing)"]
+    G4 --> H["Step 2: Collect inputs\n(app-name, bundle-id-prefix,\nplatforms incl. visionOS,\nui swiftui/uikit, architecture\nmvvm/mvc, generator,\nmin-deployment-target,\ndeveloper info, license,\nopen-source, sonar,\ndistribution, signing,\naccessibility)"]
     H --> I["Step 3: Infer repository info\n(owner/repo/host)"]
     I --> J["Step 4: Look up XcodeGen/Tuist/\nSwiftLint/Fastlane versions"]
-    J --> K["Step 5: Resolve reference templates\n(manifest, Packages/Core per\narchitecture, SwiftUI or UIKit\ntargets, tests, swiftlint,\nFastfile, sonar)"]
+    J --> K["Step 5: Resolve reference templates\n(manifest, Packages/Core per\narchitecture, SwiftUI or UIKit\ntargets, tests, UI-test capture\nhelper, swiftlint, .ui-quality.yml,\nFastfile, sonar)"]
     K --> L["Step 6: Apply each file's decision:\ncreate / update (diff first) /\nkeep as is / replace;\nnever overwrite hand-written source"]
     L --> M["Step 7: Verify via iru-gate-runner\n(swift test Core at 100% lines,\nxcodegen generate, xcodebuild test\nper platform, swiftlint, swift format;\nmissing runtime = unverified)"]
     M --> N["Step 8: Report mode, per-file action,\nscaffold contract, mismatches\nand warnings"]

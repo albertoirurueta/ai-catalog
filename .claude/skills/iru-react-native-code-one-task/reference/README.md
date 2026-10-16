@@ -30,6 +30,7 @@ committed `android/` + `ios/` / `@react-native-community/cli` → `metro`), then
 | `native-modules.md` | The task adds or changes native (Kotlin/Java, Swift/Obj-C++) code, a Turbo Module / Fabric component spec, an Expo module, or a config plugin. |
 | `state-and-data.md` | The task adds or changes state, a hook, context, server data fetching, persistence (AsyncStorage/MMKV/SQLite), or offline behaviour. |
 | `ui-and-platform.md` | The task adds or changes a screen/component's layout, styling, lists, images, animations, accessibility, or platform-specific behaviour. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI. `ui-contract.md` is the catalog-wide UI contract (repeated verbatim in every UI coding skill — never edit it here alone); `ui-implementation.md` maps it onto React Native: screen = container + presentational view, typed state props and `on…` events, `FlatList`/`SectionList` + memoized item component, RNTL component/screen tests, the dev-only UI gallery and the Maestro `ui-capture` screenshot subflow (or Detox `e2e/support/ui-screenshots.ts`), theme/RTL switching, and the `eslint-plugin-react-native-a11y` level read from `.ui-quality.yml`. |
 | `testing.md` | The task writes or updates tests — nearly every task. |
 | `security.md` | The task touches auth/tokens, secrets or config values, storage of anything sensitive, deep links/intents, WebViews, networking/TLS, logging, or permissions. |
 | `tsdoc.md` | The task adds or changes an exported function, component, hook, type, or a native-module spec. |
@@ -87,10 +88,14 @@ TypeScript agreements (`iru-typescript-code-one-task/reference/`) taking precede
   <https://callstack.github.io/react-native-testing-library/docs/api/events/user-event>
 - Jest docs (React Native preset, timers, mocks): <https://jestjs.io/docs/tutorial-react-native>,
   <https://jestjs.io/docs/timer-mocks>
-- Maestro docs: <https://docs.maestro.dev/>; Detox docs: <https://wix.github.io/Detox/docs/introduction/getting-started>
+- Maestro docs: <https://docs.maestro.dev/> (`openLink`, `takeScreenshot`, `runFlow`, workspace `config.yaml`); Detox docs: <https://wix.github.io/Detox/docs/introduction/getting-started>
 - Reanimated docs: <https://docs.swmansion.com/react-native-reanimated/>; Gesture Handler:
   <https://docs.swmansion.com/react-native-gesture-handler/>
 - TSDoc specification: <https://tsdoc.org/>; TypeDoc: <https://typedoc.org/>
+- `eslint-plugin-react-native-a11y`: <https://github.com/FormidableLabs/eslint-plugin-react-native-a11y>;
+  React Native Appearance/I18nManager/Linking: <https://reactnative.dev/docs/appearance>,
+  <https://reactnative.dev/docs/i18nmanager>, <https://reactnative.dev/docs/linking> (full list in
+  `ui-implementation.md`)
 - OWASP Mobile Application Security (MASVS): <https://mas.owasp.org/MASVS/>
 - This catalog's TypeScript agreements: `iru-typescript-code-one-task/reference/code-style.md`, `testing.md`,
   `tsdoc.md`, `react.md`.

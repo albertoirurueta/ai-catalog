@@ -17,6 +17,7 @@ Detect the framework first (`iru-typescript-code-one-task` Step 1 — inspect `p
 | `tsdoc.md` | The task adds or changes an exported function, class, interface, type alias, or enum. |
 | `testing.md` | The task writes or updates tests — which is nearly every task, since writing the tests is part of implementing it. |
 | exactly one framework file below | Matching the framework Step 1 detected — never more than one, and none when the project is a plain library. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI. The contract is the catalog-wide rule set (verbatim in every UI coding skill); `ui-implementation.md` maps it onto React, Angular, Ionic and Hilla — read its shared part plus your framework's section. `ui-screenshots.ts` is the shared Playwright helper to copy into `e2e/support/` when the project has none. |
 
 | Framework key | Detected by | Framework file |
 |---|---|---|
@@ -60,3 +61,5 @@ published style guides leave to project taste).
   `iru-react-native-code-one-task/reference/README.md`)
 - Ionic Framework component docs: <https://ionicframework.com/docs/components>, Capacitor docs: <https://capacitorjs.com/docs>
 - Vaadin Hilla docs (frontend views, generated endpoints, React components): <https://vaadin.com/docs/latest/hilla>
+- UI contract sources (Playwright component testing and accessibility testing, TanStack Virtual, Angular CDK scrolling,
+  Ionic infinite scroll, Vaadin `VirtualList`/`Grid`, axe-core): listed in `ui-implementation.md`

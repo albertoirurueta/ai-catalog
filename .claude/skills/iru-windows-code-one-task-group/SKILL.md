@@ -14,7 +14,10 @@ description: >-
   full suite excluding `[TestCategory("UI")]` tests, an analyzer regression check against the baseline, and — last —
   the FlaUI UI tests (`iru-dotnet-test` selector `ui`) only on a Windows host, serialized repository-wide behind the
   shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes, bounded ~45-minute wait,
-  released on every exit path) and passed to the gate as `lock: held`; on a non-Windows host the UI stage, the WinUI
+  released on every exit path) and passed to the gate as `lock: held`, followed by the UI-contract check — every
+  screen/component the bucket added or changed must have its `.ui-screenshots/` captures for each visual state ×
+  `.ui-quality.yml` direction × theme, and Axe.Windows violations fail the bucket at `accessibility: enforce` or are
+  listed at `report`; on a non-Windows host the UI stage, the WinUI
   app build, app launch and packaging are reported "unverified (needs Windows)" — never silently skipped and never
   "passed" — while the Core tests and the `EnableWindowsTargeting` compile of WPF/WinForms still run.
   `iru-windows-code-one-task` checks off each task's box itself with a "group validation pending" note; this skill
@@ -79,13 +82,17 @@ Detect once and reuse for every gate call below (the same facts `iru-windows-cod
 
   | Bucket touched | Core gates (tests, coverage, quality) | UI stage (Windows only) |
   |---|---|---|
-  | Core (`src/<App>.Core`, `tests/<App>.Core.Tests`) | yes — coverage gate on the changed Core classes | only if a view binds to a changed view-model member (WPF `{Binding}` paths aren't compile-checked) or the task added a UI test |
+  | Core (`src/<App>.Core`, `tests/<App>.Core.Tests`) | yes — coverage gate on the changed Core classes | only if a view binds to a changed view-model member (WPF `{Binding}` paths aren't compile-checked), a UI-state record a component renders changed, or the task added a UI test |
   | WPF/WinForms app project (XAML, code-behind, forms, app services) | quality + compile (`EnableWindowsTargeting` off Windows); coverage: "not measured" | yes |
   | WinUI app project | quality + compile on Windows only, else **unverified (needs Windows)**; coverage: "not measured" | yes |
   | `tests/<App>.UITests` | compile only | yes |
   | `Package.appxmanifest` / `packaging/` / publish profiles | — (packaging is verified by `release.yml` on Windows; report "packaging unverified" off Windows) | — |
 
-Record this once as the bucket's **validation scope** and reuse it.
+Record this once as the bucket's **validation scope** and reuse it. When the UI stage is in scope, also record the
+bucket's **UI inventory** from the tasks' reported `Screen › Region › Component` trees (and, failing that, the
+windows/pages/forms/`UserControl`s the diff added or changed): each screen/component `Id` with its visual states, plus
+`.ui-quality.yml` at the repository root (`accessibility`, `directions`, `themes`; missing file → `enforce`,
+`[ltr, rtl]`, `[light, dark]`). Step 3.7c checks captures against it.
 
 Then collect the files every task is expected to touch and capture a single pre-change baseline via `iru-gate-runner`:
 
@@ -242,8 +249,10 @@ Derive the file scope first: the union of the files each agent reported, cross-c
        whether all UI tests passed; for each failure the test name, reason, and first message line; separately any
        environment problem (app failed to launch, no interactive desktop, WinUI APP_AUMID not produced — cert trust
        needing elevation, MSIX build or Add-AppxPackage failure — tests reported skipped) as opposed to an assertion
-       failure; what the WinUI step left installed (package, self-signed cert); and whether the filter matched no
-       tests.",
+       failure; what the WinUI step left installed (package, self-signed cert); whether the filter matched no
+       tests; and the gate's UI-contract summary — screenshot count per kind and per <kind>/<Id> directory, malformed
+       capture names, Axe.Windows violations (count + rule ids per context, never raw dumps) and the .ui-quality.yml
+       level applied.",
      run_in_background: false
    })
    ```
@@ -257,6 +266,21 @@ Derive the file scope first: the union of the files each agent reported, cross-c
      registration missing for a new view model/window, a missing `AutomationId`. Keep the lock across a quick
      fix-and-re-run; for a long debugging session release it (3.7b), fix, and re-acquire before re-running. If the
      fix touched Core, re-run 3.3–3.6 afterwards.
+
+7c. **UI-contract check** — from 3.7's summary and a listing of `.ui-screenshots/` (`find .ui-screenshots -name
+   '*.png'`, or `$UI_SCREENSHOTS_DIR` when set), while still holding the lock so a fix-and-re-run stays serialized:
+
+   - **Captures**: for every screen/component in the UI inventory, `<kind>/<Id>/` must hold a PNG for each of its
+     visual states × each `directions` × each `themes` entry (`<state>--<dir>--<theme>.png`). A missing combination,
+     an `Id` with no directory, or a malformed name is a gap in that task's UI tests — add the missing tests/captures
+     through the task that owns the view and re-run 3.7. A UI-test project with no capture helper at all (older
+     repository) is reported as "captures not produced — the UI tests predate the UI contract", not as a pass.
+   - **Accessibility**, at the `.ui-quality.yml` level: `enforce` — Axe.Windows violations already failed their
+     tests in 3.7; fix them (accessible names, automation ids, labels, keyboard access) and re-run. `report` — list
+     the violations (rule ids and counts per context) in Step 5 and the plan notes; they never fail the bucket.
+     `off` — say "accessibility checks off (.ui-quality.yml)".
+   - Off Windows (or whenever 3.7 was unverified) this check is **unverified (needs Windows)** as well — never
+     "passed" because no captures exist.
 
 7b. **Release the lock** as soon as 3.7's agent has reported back and any fix-and-re-run cycle is over:
 
@@ -277,6 +301,8 @@ coverage and the UI result separately:
 ```
 - [x] Task 3. **Add `BookDetailsViewModel` with save validation** — tests in BookDetailsViewModelTests (Core 94%
   lines; UI layer not measured); UI tests unverified (needs Windows); no new StyleCop/CA issues.
+- [x] Task 4. **Add `OrderRow` component and virtualized `OrderList`** — UI tests passed; captures
+  component/OrderRow 4 states × ltr,rtl × light,dark (16) complete; Axe.Windows (enforce) 0 violations.
 ```
 
 If the UI stage (or a WinUI build) was unverified, say so with the reason — `UI tests unverified (needs Windows)` or
@@ -292,6 +318,9 @@ Hand control back to `iru-code-one-task-group` with a summary covering the whole
   types), and the analyzer outcome.
 - **The Core results** (3.3, 3.5) and **the UI result** (3.7): passed, failed-and-fixed, **unverified** with the
   reason, or not in scope — plus the WinUI build/packaging status when the bucket touched them.
+- **The UI-contract result** (3.7c): screenshots per kind and per screen/component, missing state × direction ×
+  theme combinations (fixed or why not), malformed names, the accessibility level applied and its violations (fixed
+  under `enforce`, listed under `report`), or "unverified (needs Windows)".
 - **Coverage exceptions accepted**, with reasoning; UI-layer logic that should move to Core.
 - **How the lock behaved** whenever it wasn't an immediate uncontended acquire (wait time, a broken stale lock and its
   owner text, a timeout) and confirmation it was released.

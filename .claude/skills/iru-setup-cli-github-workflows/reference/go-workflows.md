@@ -124,6 +124,19 @@ jobs:
           if percent < 80:
               sys.exit(f"::error::Statement coverage {percent:.2f}% is below the 80% bar")
           PY
+      # >>> ui: tui
+
+      # The terminal-UI tests leave their text captures (the catalog's UI contract) in .ui-screenshots/ — review
+      # evidence, kept 7 days; nothing is uploaded when the run produced none.
+      - name: Upload UI captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+      # <<< ui: tui
       # >>> sonar
 
       - name: Upload the coverage profile

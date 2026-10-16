@@ -1,6 +1,6 @@
 ---
 name: iru-setup-ionic-app
-description: Scaffold a new Ionic (Angular or React) hybrid mobile app at the repository root using the Ionic CLI's own `start` schematic, then layer on this catalog's house conventions on top of it — Vitest with v8 coverage (the Angular flavor's `@angular/build:unit-test` runner, or Vite's own runner for React), ESLint (the flat config the starter already ships) plus Prettier, Playwright for a web-build smoke test, a Maestro flow skeleton for on-device smoke tests, and `sonar-project.properties` when opted in. Invoke as `/iru-setup-ionic-app`. Ships on an Ionic 9 + Capacitor 8 baseline — no Cordova, no Ionic Appflow — and recommends Capgo or Capawesome for over-the-air updates if the user asks about live updates later. Asks for the framework (`framework`: `angular`/`react`), the app name and reverse-DNS app id, license, whether the project is open source, whether/how it's distributed (`distribution`: `none`/`internal`/`store` — recorded for a later `iru-setup-typescript-github-workflows` run, this skill itself never touches store/signing config), and whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), then asks separately whether to add the Android platform and whether to add the iOS platform (iOS only offered on macOS). Accepts every one of these pre-resolved via `args` (`key: value` lines, plus `visibility`: `public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository; `ci`: `yes`/`no` — with `ci: no`, `none` is recommended for Sonar; `on-existing`: `ask`/`keep`/`update`/`replace`, default `ask`; and `mode`: `new`/`existing`) so an orchestrating skill can supply them without re-prompting. Announces whether it is scaffolding from scratch or updating an existing Ionic project; when one already exists (`ionic.config.json`, `capacitor.config.ts`, or a `package.json` with an `@ionic/*` dependency) it never re-runs `ionic start` over it, and for every tooling artifact it owns that already exists (coverage config, ESLint ignores, Prettier, Playwright, Maestro flow, `sonar-project.properties`) warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a new Ionic hybrid app scaffolded with this catalog's full test/lint/e2e/Sonar toolchain wired in from the start, instead of running `ionic start` by hand and bolting each tool on afterward.
+description: Scaffold a new Ionic (Angular or React) hybrid mobile app at the repository root using the Ionic CLI's own `start` schematic, then layer on this catalog's house conventions on top of it — Vitest with v8 coverage (the Angular flavor's `@angular/build:unit-test` runner, or Vite's own runner for React), ESLint (the flat config the starter already ships) plus Prettier, Playwright for a web-build smoke test (per the catalog's UI contract also a screen spec capturing `.ui-screenshots/screen/HomePage/` across left-to-right/right-to-left × light/dark with an `@axe-core/playwright` check through the shared `e2e/support/ui-screenshots.ts` helper, the starter's accessibility failures fixed, and a `.ui-quality.yml` at the repository root), a Maestro flow skeleton for on-device smoke tests, and `sonar-project.properties` when opted in. Invoke as `/iru-setup-ionic-app`. Ships on an Ionic 9 + Capacitor 8 baseline — no Cordova, no Ionic Appflow — and recommends Capgo or Capawesome for over-the-air updates if the user asks about live updates later. Asks for the framework (`framework`: `angular`/`react`), the app name and reverse-DNS app id, license, whether the project is open source, whether/how it's distributed (`distribution`: `none`/`internal`/`store` — recorded for a later `iru-setup-typescript-github-workflows` run, this skill itself never touches store/signing config), and whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), then asks separately whether to add the Android platform and whether to add the iOS platform (iOS only offered on macOS). Accepts every one of these pre-resolved via `args` (`key: value` lines, plus `visibility`: `public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository; `ci`: `yes`/`no` — with `ci: no`, `none` is recommended for Sonar; `accessibility`: `enforce`/`report`/`off`, default `enforce`, written to `.ui-quality.yml`; `on-existing`: `ask`/`keep`/`update`/`replace`, default `ask`; and `mode`: `new`/`existing`) so an orchestrating skill can supply them without re-prompting. Announces whether it is scaffolding from scratch or updating an existing Ionic project; when one already exists (`ionic.config.json`, `capacitor.config.ts`, or a `package.json` with an `@ionic/*` dependency) it never re-runs `ionic start` over it, and for every tooling artifact it owns that already exists (coverage config, ESLint ignores, Prettier, Playwright, the UI-test helper, `.ui-quality.yml`, Maestro flow, `sonar-project.properties`) warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a new Ionic hybrid app scaffolded with this catalog's full test/lint/e2e/Sonar toolchain wired in from the start, instead of running `ionic start` by hand and bolting each tool on afterward.
 model: haiku
 ---
 
@@ -39,6 +39,7 @@ add-android: yes
 add-ios: yes
 visibility: public
 ci: yes
+accessibility: enforce
 on-existing: ask
 mode: new
 ```
@@ -55,8 +56,10 @@ one's), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `add-android` (`yes`/`no`), `add-ios` (`yes`/`no`),
 `visibility` (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
 recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
-only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
-Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode` (`new`/`existing`).
+only consulted by Step 2's Sonar question), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the UI
+tests' automated accessibility level, written to `.ui-quality.yml` in Step 8), `on-existing`
+(`ask`/`keep`/`update`/`replace`, default `ask` — how Step 1 treats each pre-existing artifact; meant for scripted
+runs), and `mode` (`new`/`existing`).
 
 `mode: existing` is this catalog's shared signal that this run is an **update**: Step 1 announces it as such, but
 still warns and asks per pre-existing artifact unless `on-existing` says otherwise — it never means "update
@@ -80,7 +83,8 @@ Check, at the repository root, whether `ionic.config.json`, `capacitor.config.ts
   it. Steps 4–5 are skipped for an existing project. Then survey the tooling artifacts Steps 6–10 own — the
   coverage config (`angular.json`'s `test` options or `vite.config.ts`'s `test.coverage`) and the
   `test`/`coverage`/`typecheck`/`format`/`e2e` scripts, `eslint.config.js`'s `ignores` and
-  `eslint-config-prettier` entry, `.prettierrc.json`, `playwright.config.ts`/`e2e/`, `.maestro/smoke.yaml`,
+  `eslint-config-prettier` entry, `.prettierrc.json`, `playwright.config.ts`/`e2e/` (including
+  `e2e/support/ui-screenshots.ts`), `.ui-quality.yml` at the repository root, `.maestro/smoke.yaml`,
   `sonar-project.properties` — and resolve one action per artifact that already exists:
   - **`on-existing` is `keep`/`update`/`replace`**: apply it to every artifact without asking (still print the
     warning).
@@ -176,6 +180,10 @@ Finally, ask two independent Yes/No questions with `AskUserQuestion` (unless Ste
 - **add-ios** — add the iOS native platform now (`npx cap add ios`, Step 5)? **Only offer this question on
   macOS** (`uname -s` = `Darwin`) — on any other OS, skip it silently and note in Step 11 that iOS can only be
   added from a Mac.
+
+In the same `AskUserQuestion` call, unless Step 0 resolved it, ask **accessibility**: "Automated accessibility
+checks in UI tests?" — **Enforce (Recommended)** (axe violations fail the UI tests) / **Report only** (listed, never
+failing) / **Off** (not run; the coding defaults still apply).
 
 ## Step 3 — Look up dependency versions
 
@@ -466,7 +474,66 @@ test('home page loads', async ({ page }) => {
 ```
 
 Add a `package.json` script: `"e2e": "npm run build && playwright test"`. Confirmed this exact config/test passes
-against both flavors' built output. Note in Step 11 that `npx playwright install --with-deps chromium` downloads
+against both flavors' built output.
+
+**UI contract.** The catalog's UI contract (repeated in `iru-typescript-code-one-task/reference/ui-contract.md`)
+makes every screen and component test capture its states into
+`<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png` and run axe at the level
+`.ui-quality.yml` sets. Verified on the Angular flavor (Ionic 9 blank starter, Playwright 1.64.1,
+`@axe-core/playwright` 4.14.0); the React flavor follows the same steps, unverified.
+
+1. Write `.ui-quality.yml` at the repository root, with `accessibility` from Step 0/2 (an existing file follows
+   Step 1's decision — **Update** sets only `accessibility` when `args` supplied it and adds missing keys):
+
+   ```yaml
+   # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+   directions: [ltr, rtl]      # screenshot matrix directions
+   themes: [light, dark]       # screenshot matrix themes
+   ```
+
+2. `npm install -D @axe-core/playwright` (version from `npm view`, fallback `4.14.0`), and write
+   `e2e/support/ui-screenshots.ts` with exactly the content of this skill's `reference/ui-screenshots.ts` (then run
+   the project's Prettier on it).
+
+3. Extend `e2e/smoke.spec.ts` with the screen matrix (keep the title test):
+
+   ```ts
+   import { captureUiMatrix } from './support/ui-screenshots';
+
+   test('HomePage across the matrix', async ({ page }, testInfo) => {
+     await captureUiMatrix(
+       page,
+       { kind: 'screen', id: 'HomePage', state: 'default' },
+       async () => {
+         await page.goto('/');
+         await expect(page.locator('ion-title').first()).toBeVisible();
+         return page;
+       },
+       { accessibility: { testInfo } },
+     );
+   });
+   ```
+
+   Dark mode needs no extra code: the starter's global stylesheet already imports Ionic's
+   `palettes/dark.system.css`, which follows `prefers-color-scheme` (keep it — don't switch to `dark.class.css`
+   without adding an `onVariant` hook that toggles the class).
+
+4. **Make the starter pass its own check.** Verified: the blank starter fails axe with `meta-viewport`
+   (`src/index.html`'s viewport has `minimum-scale=1.0, maximum-scale=1.0, user-scalable=no`),
+   `link-in-text-block` (the "UI Components" link has `text-decoration: none`) and, in light theme,
+   `color-contrast` (`#8c8c8c` paragraph text). Fix all three, in the starter's container stylesheet (Angular:
+   `src/app/home/home.page.scss`; React: `src/components/ExploreContainer.css`) and `index.html`:
+   - viewport → `content="viewport-fit=cover, width=device-width, initial-scale=1.0"` (zoom must stay possible);
+   - `#container a { text-decoration: underline; }`;
+   - `#container p { color: #666666; }` plus `@media (prefers-color-scheme: dark) { #container p { color: #a6a6a6; } }`;
+   - and for right-to-left, `left: 0; right: 0;` in `#container` → `inset-inline: 0;`.
+   With these, the spec passes at `accessibility: enforce` and writes the four
+   `screen/HomePage/default--{ltr,rtl}--{light,dark}.png` captures.
+
+Components added later get Playwright component tests through a gallery page (Playwright's built-in `mount()`
+fixture) as described in `iru-typescript-code-one-task/reference/ui-implementation.md` — the coding skill adds that
+when the first component task needs it; the scaffold keeps to the screen spec. Note in Step 11 that `npx playwright install --with-deps chromium` downloads
 real browser binaries — skip it (and note why) if run offline, without sudo for the `--with-deps` system package
 step, or in a sandboxed environment without network access.
 
@@ -545,6 +612,10 @@ Then report, explicitly:
 - The React flavor's Cypress-vs-Playwright decision from Step 8, and that Playwright's browser binaries
   (`npx playwright install --with-deps chromium`) were or weren't actually downloaded.
 - That the Maestro flow (Step 9) is an unverified skeleton, not a confirmed-passing on-device test.
+- The UI contract (Step 8): `.ui-quality.yml` with its action (**created / updated / replaced / kept as is**) and
+  the `accessibility` level written, the helper and screen spec written, the starter accessibility fixes applied,
+  and the screenshots the verification run produced (or why it couldn't run). `.ui-screenshots/` must be
+  gitignored (`iru-setup-typescript-gitignore` adds it).
 
 Finish with an explicit **Warn explicitly** block:
 

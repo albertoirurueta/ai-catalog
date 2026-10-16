@@ -1,6 +1,6 @@
 ---
 name: iru-setup-react-web
-description: Scaffold a new React web application with `npm create vite@latest <name> -- --template react-ts`, then add Vitest + `@vitest/coverage-v8` + `@testing-library/react` + `jsdom` for unit tests, ESLint (flat config, with `eslint-plugin-react-hooks`) or the template's own Oxlint (asked once), Prettier, Stylelint 17 for CSS, Playwright for end-to-end smoke tests under `e2e/`, an optional Storybook setup, and — when Sonar is enabled — `sonar-project.properties`. Invoke as `/iru-setup-react-web`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `keep-oxlint` (`yes`/`no`), `storybook` (`yes`/`no`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar since no CI would send reports), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — one answer for every pre-existing file in scripted runs), `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it asks whatever `args` didn't resolve. There is no `publish`/`distribution` question for this skill — a web app isn't published to a package registry or an app store. Announces whether it is scaffolding from scratch or updating an existing app; for every artifact it owns that already exists (`package.json`, Vitest/Jest config, ESLint/Oxlint, Prettier, Stylelint, Playwright, Storybook, `tsconfig` references, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a React + Vite + TypeScript web app bootstrapped with its full test/lint/e2e toolchain from this house template, instead of running `npm create vite` and wiring the rest by hand.
+description: Scaffold a new React web application with `npm create vite@latest <name> -- --template react-ts`, then add Vitest + `@vitest/coverage-v8` + `@testing-library/react` + `jsdom` for unit tests, ESLint (flat config, with `eslint-plugin-react-hooks`) or the template's own Oxlint (asked once), Prettier, Stylelint 17 for CSS, Playwright for end-to-end smoke tests under `e2e/` — plus, per the catalog's UI contract, a Playwright component-testing project with a component gallery (`playwright/gallery/`, driven by Playwright's built-in `mount()` fixture), `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts` helper, a sample screen spec capturing `.ui-screenshots/screen/App/` across left-to-right/right-to-left × light/dark with an accessibility check, the template's CSS switched to logical properties, and a `.ui-quality.yml` at the repository root —, an optional Storybook setup, and — when Sonar is enabled — `sonar-project.properties`. Invoke as `/iru-setup-react-web`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `keep-oxlint` (`yes`/`no`), `storybook` (`yes`/`no`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar since no CI would send reports), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the level written to `.ui-quality.yml`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — one answer for every pre-existing file in scripted runs), `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it asks whatever `args` didn't resolve. There is no `publish`/`distribution` question for this skill — a web app isn't published to a package registry or an app store. Announces whether it is scaffolding from scratch or updating an existing app; for every artifact it owns that already exists (`package.json`, Vitest/Jest config, ESLint/Oxlint, Prettier, Stylelint, Playwright, the component gallery and UI-test helper, `.ui-quality.yml`, Storybook, `tsconfig` references, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a React + Vite + TypeScript web app bootstrapped with its full test/lint/e2e toolchain from this house template, instead of running `npm create vite` and wiring the rest by hand.
 model: haiku
 ---
 
@@ -37,6 +37,7 @@ keep-oxlint: no
 storybook: no
 visibility: public
 ci: yes
+accessibility: enforce
 on-existing: ask
 mode: new
 ```
@@ -51,7 +52,9 @@ Recognized keys: `app-name`, `description`, `license`, `developer-name`, `develo
 `keep-oxlint` (`yes` keeps the Vite template's Oxlint script alongside ESLint, `no` replaces it), `storybook`
 (`yes`/`no`), `visibility` (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key
 Step 2's Sonar recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions
-workflows at all; only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`,
+workflows at all; only consulted by Step 2's Sonar question), `accessibility` (`enforce`/`report`/`off`, default
+`enforce` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` in Step 6b),
+`on-existing` (`ask`/`keep`/`update`/`replace`,
 default `ask` — how Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode`
 (`new`/`existing`). There is no `publish`/`distribution` key for this skill.
 
@@ -65,8 +68,9 @@ silently": Step 1 still warns and asks per pre-existing artifact unless `on-exis
 - Survey every artifact this skill owns: `package.json` (the Vite scaffold), `vitest.config.ts` (or a
   `jest.config.*` — another unit-test setup), `src/test/setup.ts`/`src/App.test.tsx`, an ESLint or Oxlint config
   (`eslint.config.js`, `.oxlintrc.json`), `.prettierrc`/`.prettierignore` (or a `prettier` key), a Stylelint config,
-  `playwright.config.ts`/`e2e/`, `.storybook/`, `tsconfig.e2e.json` (and its reference in `tsconfig.json`), and
-  `sonar-project.properties`.
+  `playwright.config.ts`/`e2e/`, the UI-contract files (`e2e/support/ui-screenshots.ts`, `playwright/gallery/`,
+  `src/App.story.tsx`, `e2e/components/`), `.ui-quality.yml` at the repository root, `.storybook/`,
+  `tsconfig.e2e.json` (and its reference in `tsconfig.json`), and `sonar-project.properties`.
 - Announce the mode before asking anything else:
   - **Nothing owned exists**: "Scaffolding the React web app **from scratch**." Continue with the placement check
     below.
@@ -168,7 +172,9 @@ generates `.oxlintrc.json` and a `"lint": "oxlint"` script, not ESLint):
   (`iru-typescript-code-quality` already expects this combination when both are configured).
 
 Finally, ask **storybook** (`yes`/`no`, default **No** — it's a heavier, optional add-on) unless Step 0
-already resolved it.
+already resolved it, and — in the same `AskUserQuestion` call — **accessibility** unless Step 0 resolved it:
+"Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (axe violations fail the UI tests) /
+**Report only** (listed, never failing) / **Off** (not run; the coding defaults still apply).
 
 ## Step 3 — Scaffold the Vite React app
 
@@ -313,7 +319,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'e2e/**', 'playwright-report', 'storybook-static'] },
+  { ignores: ['dist', 'coverage', 'e2e/**', 'playwright/**', 'playwright-report', 'storybook-static'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -369,6 +375,7 @@ Write `.prettierignore`:
 coverage
 dist
 e2e/**
+playwright/**
 playwright-report
 storybook-static
 ```
@@ -492,6 +499,196 @@ Playwright's own installer appends `/test-results/`, `/playwright-report/`, `/bl
 `/playwright/.cache/`, `/playwright/.auth/` to `.gitignore` automatically — no extra `.gitignore` edit
 needed here.
 
+## Step 6b — UI contract: component gallery, screenshots and accessibility
+
+The catalog's UI contract (repeated in `iru-typescript-code-one-task/reference/ui-contract.md`) makes every
+component and screen test capture its states into `<repo root>/.ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png`
+and run an automated accessibility check at the level `.ui-quality.yml` sets. This step makes the scaffold ready for
+it. Component tests use Playwright's built-in `mount()` fixture (since `@playwright/test` 1.62 — the old
+`@playwright/experimental-ct-react` package is frozen at 1.62 and no longer updated): a `components` project whose
+`baseURL` is a gallery page served by Vite's own dev server. Verified on Vite 8 / React 19 / Playwright 1.64.1 /
+`@axe-core/playwright` 4.14.0: both specs below pass and produce the eight captures.
+
+1. **`.ui-quality.yml`** at the repository root (not the app subdirectory), exactly this shape, with `accessibility`
+   from Step 0/2:
+
+   ```yaml
+   # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
+   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+   directions: [ltr, rtl]      # screenshot matrix directions
+   themes: [light, dark]       # screenshot matrix themes
+   ```
+
+   An existing file follows Step 1's decision: **Update** sets only `accessibility` (when `args` supplied it) and adds
+   missing keys, keeping the user's `directions`/`themes`; **Keep as is** leaves it (report a mismatch with this
+   run's `accessibility`); **Replace** rewrites it.
+
+2. **Dependency** — look up the current version (fallback `4.14.0`): `npm install -D @axe-core/playwright@<version>`.
+   Confirm `@playwright/test` is ≥ 1.62 (Step 6's install); otherwise `mount()` doesn't exist.
+
+3. **The shared helper** — write `e2e/support/ui-screenshots.ts` with exactly the content of this skill's
+   `reference/ui-screenshots.ts` (screenshot directory from `UI_SCREENSHOTS_DIR` else `<repo root>/.ui-screenshots`,
+   `.ui-quality.yml` reader, contract file names, `captureUiMatrix`, `checkAccessibility`). `e2e/**` is already
+   excluded from ESLint/Prettier/Vitest (Steps 4–5).
+
+4. **The gallery** — `playwright/gallery/index.html`:
+
+   ```html
+   <!doctype html>
+   <html lang="en">
+     <head>
+       <meta charset="UTF-8" />
+       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+       <title>Component gallery</title>
+     </head>
+     <body>
+       <main id="root"></main>
+       <script type="module" src="./main.tsx"></script>
+     </body>
+   </html>
+   ```
+
+   and `playwright/gallery/main.tsx`:
+
+   ```tsx
+   // Component gallery for Playwright's built-in `mount()` fixture: renders one `*.story.tsx` export into #root.
+   import { StrictMode, type ComponentType } from 'react'
+   import { flushSync } from 'react-dom'
+   import { createRoot, type Root } from 'react-dom/client'
+   import '../../src/index.css'
+
+   type StoryModule = Record<string, ComponentType<Record<string, unknown>>>
+   const stories = import.meta.glob<StoryModule>('../../src/**/*.story.tsx')
+   const idOf = (file: string): string => file.replace(/^(\.\.\/)+src\//, '').replace(/\.story\.tsx$/, '')
+
+   async function resolve(storyId: string): Promise<ComponentType<Record<string, unknown>> | undefined> {
+     const sep = storyId.lastIndexOf('/')
+     const [storyPath, exportName] = [storyId.slice(0, sep), storyId.slice(sep + 1)]
+     const file = Object.keys(stories).find((f) => idOf(f) === storyPath || idOf(f).endsWith(`/${storyPath}`))
+     return file ? (await stories[file]())[exportName] : undefined
+   }
+
+   const rootElement = document.getElementById('root') as HTMLElement
+   let root: Root | undefined
+
+   interface MountParams {
+     readonly story: string
+     readonly props?: Record<string, unknown>
+   }
+
+   Object.assign(window, {
+     mount: async ({ story, props }: MountParams): Promise<void> => {
+       const Story = await resolve(story)
+       if (!Story) throw new Error(`Unknown story: ${story}`)
+       root ??= createRoot(rootElement) // reused, so update() reconciles and keeps state
+       flushSync(() =>
+         root?.render(
+           <StrictMode>
+             <Story {...props} />
+           </StrictMode>,
+         ),
+       )
+     },
+     unmount: async (): Promise<void> => {
+       root?.unmount()
+       root = undefined
+     },
+   })
+   ```
+
+   `vite build` ignores it (it only builds `index.html`'s graph). ESLint and Prettier ignore `playwright/**` (Step 5's
+   templates); it is type-checked by `tsconfig.e2e.json` (Step 9).
+
+5. **A story for the sample screen** — `src/App.story.tsx` (Vite's template exports `App` as default):
+
+   ```tsx
+   import App from './App'
+
+   /** The app shell as first rendered. */
+   export const Default = () => <App />
+   ```
+
+   and `react-refresh/only-export-components` is fine with it (a story file has no fast-refresh boundary to keep).
+
+6. **`playwright.config.ts`** — add the `components` project in front of the Chromium one, give the Chromium
+   project `testIgnore: 'components/**'` and its own `baseURL`, and turn `webServer` into an array (the gallery's
+   dev server, then the existing preview server):
+
+   ```ts
+   projects: [
+     {
+       name: 'components',
+       testDir: './e2e/components',
+       use: {
+         ...devices['Desktop Chrome'],
+         baseURL: 'http://localhost:5173/playwright/gallery/index.html',
+         serviceWorkers: 'block',
+         reuseContext: true,
+       },
+     },
+     {
+       name: 'chromium',
+       testIgnore: 'components/**',
+       use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:4173' },
+     },
+   ],
+   webServer: [
+     {
+       command: 'npm run dev -- --port 5173 --strictPort',
+       url: 'http://localhost:5173/playwright/gallery/index.html',
+       reuseExistingServer: !process.env.CI,
+     },
+     {
+       command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+       url: 'http://localhost:4173',
+       reuseExistingServer: !process.env.CI,
+     },
+   ],
+   ```
+
+7. **The sample screen spec** — `e2e/components/App.spec.ts` (behaviour once, then the matrix with axe in every
+   cell):
+
+   ```ts
+   import { expect, test } from '@playwright/test'
+   import { captureUiMatrix } from '../support/ui-screenshots'
+
+   test('App counts clicks', async ({ mount }) => {
+     const app = await mount('App/Default')
+     await app.getByRole('button', { name: /count is 0/i }).click()
+     await expect(app.getByRole('button', { name: /count is 1/i })).toBeVisible()
+   })
+
+   test('App default state across the matrix', async ({ page, mount }, testInfo) => {
+     await captureUiMatrix(page, { kind: 'screen', id: 'App', state: 'default' }, () => mount('App/Default'), {
+       accessibility: { testInfo, include: '#root' },
+     })
+   })
+   ```
+
+   Keep `e2e/smoke.spec.ts` (Step 6) as the flow-level smoke test against the built app.
+
+8. **Make the template pass its own checks.** Verified on `create-vite` 9.2.1:
+   - **Contrast** — the template's light-theme `--accent: #aa3bff` on its counter button fails axe's
+     `color-contrast` (3.82:1, needs 4.5:1). In `src/index.css` change the light value to `--accent: #7e22ce` (the
+     dark-theme `#c084fc` passes). With `accessibility: enforce` the spec fails until this is done.
+   - **Logical properties** — `src/App.css` uses physical edges, so right-to-left captures don't mirror. Replace
+     `text-align: left` → `text-align: start`, `border-right` → `border-inline-end` (both occurrences),
+     `left: 0` → `inset-inline-start: 0`, `right: 0` → `inset-inline-end: 0`, `border-left-color` →
+     `border-inline-start-color`, `border-right-color` → `border-inline-end-color`; then
+     `grep -nE '(^|[ :;-])(left|right)\b' src/*.css` should list nothing, and re-run Stylelint/Prettier (Step 5).
+
+9. **`eslint-plugin-jsx-a11y` is not added**: its latest release (6.10.2) declares `eslint` peers only up to `^9`,
+   so it can't install next to this skill's ESLint 10 without `--legacy-peer-deps`. Axe in the UI tests is the
+   automated check; say so in Step 10. If the user later pins ESLint 9, `jsxA11y.flatConfigs.recommended` is the
+   flat config to add.
+
+Run `npm run e2e` again — both projects (`components` and `chromium`) must pass, and
+`.ui-screenshots/screen/App/` must hold `default--ltr--light.png`, `default--ltr--dark.png`,
+`default--rtl--light.png` and `default--rtl--dark.png`. `.ui-screenshots/` belongs in `.gitignore` —
+`iru-setup-typescript-gitignore` adds it; when this skill runs standalone, append it (with the comment
+`# UI test screenshots (.ui-screenshots/), regenerated on every UI test run`) yourself.
+
 ## Step 7 — Optional Storybook
 
 Only run this step if `storybook: yes` was resolved in Step 2.
@@ -601,21 +798,28 @@ type-checking them too. Add a third referenced project. Write `tsconfig.e2e.json
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
     "target": "es2023",
-    "lib": ["ES2023"],
-    "types": ["node"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
     "skipLibCheck": true,
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["e2e", "playwright.config.ts"]
+  "include": ["e2e", "playwright.config.ts", "playwright/gallery"]
 }
 ```
+
+`DOM`, `vite/client`, `jsx` and `bundler` resolution are there for Step 6b's files: the gallery is browser code
+using `import.meta.glob`, specs import story types from `src/`, and with `nodenext` every relative import in a spec
+would need an explicit `.js` extension (verified: `TS2835` on `'./support/ui-screenshots'`). Verified with `tsc -b` on TypeScript 6.0 — the e2e project, gallery and stories all
+type-check.
 
 And add it as a third reference in `tsconfig.json`:
 
@@ -663,6 +867,10 @@ State explicitly what was included versus omitted, and why:
   if `ci: no` was supplied and Sonar was still configured, say no CI step sends reports.
 - **`storybook`**: yes/no — if yes, call out the `vitest.config.ts` project-split from Step 7 and which
   script-scoping option (combined vs. `--project=unit`/`--project=storybook`) was applied.
+- **UI contract** (Step 6b): `.ui-quality.yml` with its action (**created / updated / replaced / kept as is**) and
+  the `accessibility` level written; the helper, gallery, story and spec files written; the screenshot count
+  produced by the verification run; the template contrast/logical-property fixes applied; and that
+  `eslint-plugin-jsx-a11y` was deliberately not added (ESLint 10 peer range).
 
 Then report each verification command actually run and its result (typecheck, lint, format, unit test,
 coverage — including the `coverage/lcov.info` path — build, e2e), and explicitly flag the two `tsconfig`

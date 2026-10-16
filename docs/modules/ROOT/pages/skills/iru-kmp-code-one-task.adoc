@@ -1,6 +1,6 @@
 = KMP Code One Task
-:description: Implements one Kotlin Multiplatform task from an implementation plan in the right source set, with tests and compile checks for every target it feeds.
-:keywords: iru-kmp-code-one-task, claude code skill, kotlin multiplatform, kmp, expect actual, compose multiplatform, ios interop, implementation plan, task implementation
+:description: Implements one Kotlin Multiplatform task in the right source set, with tests, UI tests and screenshots for UI work, and compile checks for every target.
+:keywords: iru-kmp-code-one-task, claude code skill, kotlin multiplatform, kmp, expect actual, compose multiplatform, ui contract, ios interop, task implementation
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -24,7 +24,8 @@ public declaration), implements exactly what the task specifies, writes or updat
 source set, and compile-checks every target the touched source sets feed. Two things set it apart from the
 Android and Swift equivalents: a `commonMain` change must compile for both Android and iOS, and Swift is a
 first-class consumer of the shared module's public API. If the task did not stop on a blocker it immediately checks
-off its own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note. It
+off its own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note. For a task
+that adds or changes a screen, component or list it applies the catalog's UI contract mapped onto KMP (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): it first writes the `Screen › Region › Component` tree (inputs, events, visual states, reuse) and reports it back, builds leaves first with stateless components over the shared view model's immutable state, uses `Lazy*` containers with `key`/`contentType` (and SwiftUI `List`/lazy stacks) for every collection, and keeps navigation in the one graph. It also writes the UI tests: `runComposeUiTest` tests on the Android host (Robolectric) and the iOS simulator for shared Compose UI, or Robolectric Compose / `ImageRenderer` tests for native UI, capturing `.ui-screenshots/` across the `.ui-quality.yml` directions × themes with an `--android`/`--ios` variant through the module's screenshot helper, plus the accessibility check. It never adds Robolectric, a test dependency or a test target to make a UI test fit; missing wiring is a blocker to report. It
 does not capture a quality baseline, add license headers, run tests, coverage or linters, run Dokka, link the iOS
 framework, or boot a simulator — all of that happens once per bucket in `iru-kmp-code-one-task-group`.
 
@@ -59,6 +60,7 @@ any relevant "Current code state" context.
   public/internal declaration, and updated Swift callers when a public signature they use changed.
 * New or updated tests in the matching source set: `commonTest`, the Android host-test set, `iosTest`,
   `androidApp/src/test`, or `iosApp` XCTest — written but not run.
+* For a UI task: UI tests and screenshot-capture calls (component/screen/flow, states, platforms) in `commonTest`, `androidApp/src/test` or `iosApp/iosAppTests`, written but not run, and the `Screen › Region › Component` decomposition.
 * A regenerated Xcode project (`xcodegen generate`) when `iosApp/project.yml` changed; the generated framework,
   header, and `.xcodeproj` are never edited by hand.
 * `implementation_plan.md` with this task's checkbox (and its sub-tasks') checked and a "group validation pending"
@@ -66,7 +68,7 @@ any relevant "Current code state" context.
 * A short summary back to the caller: layout, Android plugin and UI mode detected; module(s)/source sets touched and
   reference files read; files touched and tests added/updated per source set; compile-check result per target
   (passed, failed and fixed, failed outside scope, or unavailable); public API changes visible to Swift; any
-  deviation from `reference/` and pre-existing mandatory-rule violations noticed; and whether the task stopped on a
+  deviation from `reference/` and pre-existing mandatory-rule violations noticed; for a UI task, the decomposition and the UI tests and captures added; and whether the task stopped on a
   blocker.
 
 == Execution flow
@@ -79,8 +81,8 @@ flowchart TD
     C -- no --> C1[Report blocker: task mis-tagged]
     C -- yes --> D["Step 1: decide module + source sets;\nread reference/README.md and only\nthe files the task needs"]
     D --> E["Step 2: re-read current code;\nall actuals of an expect;\nSwift callers of public API"]
-    E --> F["Step 3: implement exactly the task\n(commonMain first, then actuals,\nthen app/Swift callers)"]
-    F --> G["Step 4: write/update tests in the\nmatching source set (not run)"]
+    E --> F["Step 3: implement exactly the task\n(commonMain first, then actuals,\nthen app/Swift callers;\nUI tasks: decompose first)"]
+    F --> G["Step 4: write/update tests in the\nmatching source set; UI tasks: UI tests +\nscreenshot captures (not run)"]
     G --> H["Step 5: one Gradle invocation to\ncompile-check every target fed;\nxcodegen + build-for-testing if Swift changed"]
     H --> I{"Compile failure?"}
     I -- in this task's code --> F

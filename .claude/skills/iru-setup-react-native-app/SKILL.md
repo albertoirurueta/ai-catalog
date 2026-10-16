@@ -16,10 +16,16 @@ description: >-
   `@react-native/jest-preset`/`.eslintrc.js`/`.prettierrc.js`, and layers React Native Testing Library, Jest lcov
   coverage with a safe-area mock, the shared `test`/`coverage`/`lint`/`format`/`typecheck` scripts, ESLint/Prettier
   ignores for native build output, then runs `npm install`, `./gradlew assembleDebug` and, on macOS, `bundle exec
-  pod install` + a simulator `xcodebuild`. Both toolchains get a Maestro smoke flow (`.maestro/smoke.yaml`) and,
-  when opted in, `sonar-project.properties` (TypeScript only — native `android/`/`ios/` excluded). Asks for the app
+  pod install` + a simulator `xcodebuild`. Both toolchains get a Maestro smoke flow (`.maestro/smoke.yaml`), the
+  catalog's UI contract wiring — `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`,
+  directions, themes), `eslint-plugin-react-native-a11y` in the ESLint config at that level, a dev-only UI gallery
+  (`src/dev/ui-gallery/`, reached by a `<app-slug>://ui-gallery?…` deep link, stripped from production bundles by
+  `__DEV__`) with its Jest test, and the Maestro screenshot helper (`.maestro/subflows/ui-capture.yaml`) plus a
+  capture flow for the root screen writing `.ui-screenshots/screen/App/default--<ltr|rtl>--<light|dark>--<platform>.png`
+  — and, when opted in, `sonar-project.properties` (TypeScript only — native `android/`/`ios/` excluded). Asks for the app
   name/slug/directory, the bundle id / application id (`app-id`, required for `metro`), license, developer
-  name/email/organization URL, whether the project is open source, whether to wire up a SonarQube/SonarCloud scan
+  name/email/organization URL, whether the project is open source, the automated accessibility level of the UI
+  tests (`accessibility`), whether to wire up a SonarQube/SonarCloud scan
   (`sonar`: `cloud`/`self-hosted`/`none`), and the distribution target (`distribution`: `none`/`internal`/`store`
   — gates `eas.json`'s `submit` block on expo, and names the signing/store secrets the workflows skill will need).
   Invoke as `/iru-setup-react-native-app`. Templates live in `reference/expo-templates.md` and
@@ -31,7 +37,7 @@ description: >-
   still stops. Accepts pre-resolved inputs via `args` (`key: value` lines) — `toolchain`, `app-name`, `app-slug`,
   `app-directory`, `app-id`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`,
   `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (expo only),
-  `distribution`, `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public
+  `distribution`, `accessibility` (`enforce`/`report`/`off`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public
   open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar), `on-existing`
   (`ask`/`keep`/`update`/`replace`, default `ask`), and `mode` (`new`/`existing`) — so an orchestrating skill can
   supply them without re-prompting; invoked stand-alone, it asks `toolchain` and `open-source` first and derives the
@@ -86,6 +92,7 @@ sonar-project-key: example-org_my-app
 sonar-host-url: https://sonarcloud.io
 native-builds: eas
 distribution: store
+accessibility: enforce
 visibility: public
 ci: yes
 on-existing: ask
@@ -102,7 +109,9 @@ reverse-DNS bundle identifier / Android application id, e.g. `com.example.myapp`
 for `expo`), `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`),
 `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local` — **expo only**; ignored
-with a one-line note for `metro`), `distribution` (`none`/`internal`/`store`), `visibility`
+with a one-line note for `metro`), `distribution` (`none`/`internal`/`store`), `accessibility`
+(`enforce`/`report`/`off` — the UI contract's automated accessibility level, written to `.ui-quality.yml`; default
+`enforce`), `visibility`
 (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
 recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
 only consulted by Step 2's Sonar question), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — how
@@ -148,8 +157,10 @@ committed `android/` + `ios/` projects, or `@react-native-community/cli` in `dev
   the `tsconfig.json` `types` merge, `__tests__/App.test.tsx`, `eslint.config.js`, `.prettierrc`/`.prettierignore`,
   `eas.json`, `.maestro/smoke.yaml`, `sonar-project.properties`; metro: the `package.json` scripts/devDependencies
   merge, `jest.config.js`, `jest.setup.js`, `__tests__/App.test.tsx`, `.eslintrc.js` (or `eslint.config.js`),
-  `.prettierignore`, `.maestro/smoke.yaml`, `sonar-project.properties` — and resolve one action per file that
-  already exists:
+  `.prettierignore`, `.maestro/smoke.yaml`, `sonar-project.properties`; both: the UI contract files —
+  `.ui-quality.yml` at the **repository root**, `src/dev/ui-gallery/**` (the gallery and its test),
+  `.maestro/config.yaml`, `.maestro/subflows/ui-capture.yaml`, `.maestro/ui/App.yaml` — and resolve one action per
+  file that already exists:
   - **`on-existing` is `keep`/`update`/`replace`** (from Step 0): apply it to every existing file without asking
     (still print the warning).
   - **Otherwise**: ask with `AskUserQuestion`, batching up to 4 files per call (one question each), naming any
@@ -165,13 +176,18 @@ committed `android/` + `ios/` projects, or `@react-native-community/cli` in `dev
       disagree with this run's choices — Step 8 lists each mismatch.
     - **Replace** — regenerate from the reference template; every customization in the file is lost
       (recoverable only from git history). For `__tests__/App.test.tsx` recommend **Keep** instead — once the app
-      has real tests, Replace would overwrite them with the placeholder test.
+      has real tests, Replace would overwrite them with the placeholder test — and likewise for
+      `src/dev/ui-gallery/registry.tsx` and `.maestro/ui/*.yaml` once they list the app's real components. For
+      `.ui-quality.yml`, name any contradiction with this run's `accessibility` value (e.g. "`.ui-quality.yml` says
+      `report` but you chose `enforce`"); Update rewrites only the `accessibility` line and keeps narrowed
+      `directions`/`themes`.
     - **Stop** (first batch only) — leave `app-directory` untouched entirely; report this and end here.
   - Defer the `sonar-project.properties` and `eas.json` questions until Step 2 resolves `sonar`/`distribution`, so
     they can name any contradiction; with `sonar: none`, Update/Replace of `sonar-project.properties` mean
     removing it and Keep leaves it as a reported mismatch.
   - Pre-fill Step 2's defaults from the existing project — expo: `app.json`/`package.json` (name, slug, license,
-    author, `expo.ios.bundleIdentifier`/`expo.android.package` as `app-id`); metro: `app.json` `displayName`,
+    author, `expo.ios.bundleIdentifier`/`expo.android.package` as `app-id`, `expo.scheme` as the gallery's deep-link
+    scheme); `accessibility` from an existing `.ui-quality.yml`; metro: `app.json` `displayName`,
     `package.json`, `android/app/build.gradle`'s `applicationId` and `PRODUCT_BUNDLE_IDENTIFIER` in
     `ios/<AppName>.xcodeproj/project.pbxproj` as `app-id` (if the two differ, report it — don't rewrite either).
 - **Exists but has no `react-native` dependency at all** (an unrelated Node project already living at that path):
@@ -282,6 +298,12 @@ shared convention:
     edits to a prebuilt `ios/`/`android/` folder are lost on the next `prebuild` run).
   - This answer doesn't change anything this skill writes to disk beyond `eas.json`'s `cli` block — it's recorded
     here so `iru-setup-typescript-github-workflows` can wire the matching CI job later without asking again.
+- **accessibility** (stand-alone runs only, when `args` didn't supply it; `AskUserQuestion`) — "Automated
+  accessibility checks in UI tests?" **Enforce (Recommended)** — `eslint-plugin-react-native-a11y` errors fail lint
+  (and the group skills' UI stage); **Report only** — reported as warnings, never failing; **Off** — the plugin's rules
+  are off (the accessible-by-default coding rules still apply). Say that React Native has no automated native audit
+  (contrast, touch-target size): the check is the lint plugin plus the tests' role/label queries. Written to
+  `.ui-quality.yml`.
 - **distribution** — `none`/`internal`/`store`:
   - `none` — builds are for local install/manual QA only. Expo: `eas.json`'s `submit` block is omitted; metro:
     release builds stay signed with the template's debug keystore / unsigned for iOS. No store credentials are
@@ -337,8 +359,9 @@ a live lookup.
 | `eslint-config-expo` | expo | `npm view eslint-config-expo version` | `57.0.2` — keep in lockstep with the scaffolded `expo` SDK's major |
 | `prettier` | expo | `npm view prettier version` | `3.9.10` (`3.9.7`) |
 | `eas-cli` | expo | `npm view eas-cli version` | `24.14.0` (`24.6.0`) — never installed as a dependency, always invoked via `npx eas-cli@latest`; only for `eas.json`'s `cli.version` constraint |
+| `eslint-plugin-react-native-a11y` | both | `npm view eslint-plugin-react-native-a11y version` | `3.5.1` (unchanged since November 2024; peer range `eslint` ≤ 8, hence expo's `overrides` entry) |
 
-**Metro installs only `@testing-library/react-native`.** Everything else (`jest`, `@types/jest`, `eslint`,
+**Metro installs only `@testing-library/react-native` and `eslint-plugin-react-native-a11y`.** Everything else (`jest`, `@types/jest`, `eslint`,
 `prettier`, `typescript`, the `@react-native/*` presets/configs) stays at the versions the CLI template pins —
 confirmed in October 2026: `eslint ^8.19.0`, `prettier 2.8.8`, `jest ^29.6.3`, `@types/jest ^29.5.13`,
 `typescript ^6.0.3`. Upgrading ESLint to 9/10 or Prettier to 3 there is a migration (eslintrc → flat config,
@@ -364,12 +387,13 @@ this skill. Resolve the `eslint` version to install like this instead of trustin
 
 ## Step 5 — Reference templates
 
-Read exactly one file now, for the resolved toolchain:
+Read exactly one toolchain file now, plus `reference/ui-templates.md` for both toolchains:
 
 | Toolchain | File | Contents |
 |---|---|---|
 | `expo` | `reference/expo-templates.md` | `package.json` scripts/devDependencies merge, `jest.config.js`, the `tsconfig.json` `types` merge, `__tests__/App.test.tsx`, the `npx expo lint`-generated `eslint.config.js`, `.prettierrc`, `.prettierignore`, `eas.json` (+ the version-ownership rule for EAS), `.maestro/smoke.yaml`, `sonar-project.properties` |
 | `metro` | `reference/metro-templates.md` | the exact file list the CLI template ships, the identity fix-ups, `package.json` merge, `jest.config.js`, `jest.setup.js`, `__tests__/App.test.tsx`, `.eslintrc.js` ignores, `.prettierignore`, `.maestro/smoke.yaml`, `sonar-project.properties` (and why native sources are excluded), native build and signing notes |
+| both | `reference/ui-templates.md` | `.ui-quality.yml` (repository root), the dev-only UI gallery `src/dev/ui-gallery/{index.ts,registry.tsx,UiGalleryHost.tsx,__tests__/UiGalleryHost.test.tsx}`, `.maestro/config.yaml`, the screenshot helper `.maestro/subflows/ui-capture.yaml`, the sample capture flow `.maestro/ui/App.yaml` |
 
 Only substitute `<placeholder>` values using Steps 2–4; every other line, script, and option is copied as shown.
 
@@ -427,6 +451,12 @@ Then, at `<app-directory>`:
   `reference/expo-templates.md`. For a file that already existed, apply Step 1's decision: **Update** merges and
   shows the diff, **Keep as is** leaves it untouched, **Replace** overwrites it (with `sonar: none`,
   Update/Replace remove an existing `sonar-project.properties`).
+- UI contract wiring: write `.ui-quality.yml` at the repository root (with `<accessibility>`), the
+  `src/dev/ui-gallery/**` files and the three Maestro files from `reference/ui-templates.md`; on a new scaffold also
+  replace `index.ts` with the gallery-wrapping registration and add `expo.scheme: "<app-slug>"` to `app.json` (both
+  in `reference/expo-templates.md`). On an existing app, `index.ts` and `app.json` are application source/config this
+  skill doesn't own: print the two changes for the user and report "UI gallery not wired into the entry" until
+  they're applied.
 
 ### `toolchain: metro`
 
@@ -471,6 +501,9 @@ Then, at `<app-directory>`, following `reference/metro-templates.md`:
   `.eslintrc.js`, write `.prettierignore` (keep `.prettierrc.js` as shipped), create `.maestro/smoke.yaml`, and
   write `sonar-project.properties` (only when `sonar` ≠ `none`). For a file that already existed, apply Step 1's
   decision exactly as for Expo.
+- UI contract wiring: the same shared files as expo from `reference/ui-templates.md`, then on a new scaffold the
+  gallery-wrapping `index.js` and the `<app-slug>` deep-link scheme (Android `intent-filter`, iOS
+  `CFBundleURLTypes`) from `reference/metro-templates.md`; on an existing app print those three edits instead.
 
 ## Step 7 — Install dependencies and verify
 
@@ -492,7 +525,9 @@ From `<app-directory>`:
 4. `npx expo lint` — generates `eslint.config.js` since none exists yet (`No ESLint config found. Configuring
    automatically.`), and reports `0` problems against the scaffold's own `App.tsx`/`index.ts`. Add `"coverage/*"`
    to the generated file's `ignores` array afterward, per `reference/expo-templates.md`.
-5. `npm i -D prettier@<version>` (Step 4's version).
+5. `npm i -D prettier@<version> eslint-plugin-react-native-a11y@<version>` (Step 4's versions) — after the
+   `overrides` entry is in `package.json` (`reference/expo-templates.md`), otherwise npm fails with `ERESOLVE`; then
+   write the final `eslint.config.js` with the accessibility block.
 6. `npx expo install react-dom react-native-web @expo/metro-runtime` — required for `npx expo export --platform
    web` (confirmed: without these three, that command fails outright with `CommandError: It looks like you're
    trying to use web support but don't have the required dependencies installed`, naming exactly these packages).
@@ -500,15 +535,17 @@ From `<app-directory>`:
    compatible with the scaffolded Expo SDK, rather than each package's own independent `latest` tag. This
    `--platform web` export is the fast, native-toolchain-free build-sanity check this catalog's
    `iru-setup-typescript-github-workflows` CI uses for this toolchain instead of a full native build.
-7. Verify: `npm test -- --coverage && npm run lint && npm run typecheck && npx expo export --platform web`, and
+7. Verify: `npm test -- --coverage && npm run lint && npm run typecheck && npx expo export --platform web` (then
+   `grep -rl ui-gallery-ready dist` must print nothing — the gallery is not in the production bundle), and
    `npm run format` (expect only the scaffold's own un-reformatted files — offer a one-off `npx prettier --write .`).
 
 ### `toolchain: metro` — install, then build both native projects
 
 From `<app-directory>`:
 
-1. `npm install`, then `npm i -D @testing-library/react-native@<version>` (Step 4) and `npm uninstall
-   react-test-renderer @types/react-test-renderer` (new scaffolds only — see the reference file).
+1. `npm install`, then `npm i -D @testing-library/react-native@<version> eslint-plugin-react-native-a11y@<version>`
+   (Step 4) and `npm uninstall react-test-renderer @types/react-test-renderer` (new scaffolds only — see the
+   reference file). Then `npx prettier --write src/dev index.js .eslintrc.js` once (`reference/ui-templates.md`).
 2. Verify the JS side: `npm test -- --coverage && npm run lint && npm run typecheck && npm run format` (`format`
    is `prettier --check "**/*.{js,jsx,ts,tsx}"` on metro) — all four pass on the fresh scaffold with the reference
    templates (if `format` flags a file this skill wrote, run
@@ -531,7 +568,7 @@ From `<app-directory>`:
    `pod install` creates `ios/<AppName>.xcworkspace`, `ios/Podfile.lock` and `Gemfile.lock` — commit all three
    (the metro CI jobs hash the lockfiles). If Ruby/Bundler/CocoaPods isn't usable, stop at that sub-step, report
    it, and leave the rest for the user.
-5. Neither native build needs a device; the Maestro flow (which does) stays unverified unless a simulator or
+5. Neither native build needs a device; the Maestro flows (smoke and the `ui-gallery` capture flow — which do) stay unverified unless a simulator or
    emulator is already booted — and then only behind the repository-wide `.integration-test.lock`, with Metro
    (`npx react-native start`) on port 8081, as `iru-typescript-test`'s `e2e` selector does it.
 
@@ -555,6 +592,11 @@ State explicitly what was included versus omitted, and why:
 - **`native-builds`** (expo): `eas`/`local` — restate the EAS free-tier cap (15 builds/platform/month) if `eas` was
   chosen, or the native-toolchain requirement if `local` was chosen. For metro: "not applicable — native builds
   run with Gradle/`xcodebuild`".
+- **`accessibility`**: `enforce`/`report`/`off`, where it came from (`args`, an existing `.ui-quality.yml`, or the
+  question), the `.ui-quality.yml` action (created / updated / replaced / kept as is, with any mismatch), and that
+  React Native's automated check is the `eslint-plugin-react-native-a11y` lint plus role queries — no native
+  contrast/touch-target audit. Also whether the UI gallery is wired into the entry (`index.ts`/`index.js`) and the
+  `<app-slug>` scheme registered, or printed for the user (existing app).
 - **`distribution`**: `none`/`internal`/`store` — expo `store`: list the exact secrets (`EXPO_TOKEN`/
   `APP_STORE_CONNECT_API_KEY_ID`+`_ISSUER_ID`+`_KEY_BASE64`/`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`) that will still
   need to exist before a CI-driven `eas submit` succeeds; expo `none`/`internal`: note that `eas.json`'s `submit`
@@ -598,7 +640,9 @@ Finish with an explicit **Warn explicitly** block:
 - **Unverified locally, and never a blocker**: expo — `eas build`/`eas submit` (need an Expo account and project
   linking) and any `native-builds: local` native compile (`eas build --local`/`npx expo prebuild` +
   `xcodebuild`/`./gradlew`); both toolchains — the Maestro flow (needs the Maestro CLI plus a booted
-  simulator/emulator or device, and for a metro debug build a running Metro server), and any store upload; metro —
+  simulator/emulator or device, and for a metro debug build a running Metro server) and the `.maestro/ui/App.yaml`
+  gallery capture flow with its `.ui-screenshots/` output (same needs, plus a debug/development build — the gallery
+  is stripped from release builds), and any store upload; metro —
   whichever native step Step 7 could not run on this machine. Everything else (expo: `npm install`, `npm test --
   --coverage`, `npx expo lint`, `npm run typecheck`, `npx expo export --platform web`; metro: `npm install`, the
   four JS checks, `./gradlew assembleDebug`, `pod install`, the simulator `xcodebuild`) was run for real while

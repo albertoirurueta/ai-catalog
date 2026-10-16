@@ -116,6 +116,19 @@ jobs:
       # The command tree in-process (exit codes, JSON, stderr) and the published-binary tests.
       - name: CLI end-to-end tests
         run: dotnet test tests/<Tool>.Cli.Tests -c Release --no-build --results-directory TestResults --logger "trx;LogFileName=cli-tests.trx"
+      # >>> ui: tui
+
+      # The terminal-UI tests leave their text captures (the catalog's UI contract) in .ui-screenshots/ — review
+      # evidence, kept 7 days; nothing is uploaded when the run produced none.
+      - name: Upload UI captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: .ui-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+      # <<< ui: tui
 
       - name: Upload test results and coverage
         if: (!cancelled())

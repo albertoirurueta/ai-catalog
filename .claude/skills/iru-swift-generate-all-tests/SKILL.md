@@ -1,6 +1,6 @@
 ---
 name: iru-swift-generate-all-tests
-description: For a Swift package or Xcode app/library project only, explore the whole codebase to find every production type (struct, class, enum, actor) that has no corresponding test at all, or whose measured line coverage falls below 80%, using the `iru-swift-coverage` skill to get the exact percentage per type — then generate new tests (or extend existing ones) until each reaches that bar, defaulting to Swift Testing (`@Suite`, `@Test`, `#expect`, `#require`) for unit tests and falling back to XCTest only for UI automation (`XCUITest`) and performance (`measure`), following this project's own test framework and style. Invoke as `/iru-swift-generate-all-tests [scope]`, where `[scope]` names one Swift package target/Xcode app target (default: the project's primary library/app target) or a comma-separated type list within it; also accepts `args` as `key: value` lines, currently just `scope: <target-or-type-list>`. Stops immediately, without attempting anything, if the repository isn't a Swift project (no `Package.swift` and no `.xcodeproj`/`.xcworkspace` found). Equivalent to `iru-java-generate-all-tests`/`iru-typescript-generate-all-tests`/`iru-android-generate-all-tests` for the Swift/Apple-platform stack. Use whenever the user wants comprehensive unit test coverage brought up across an entire Swift codebase in one pass, instead of writing tests for one type or task at a time.
+description: For a Swift package or Xcode app/library project only, explore the whole codebase to find every production type (struct, class, enum, actor) that has no corresponding test at all, or whose measured line coverage falls below 80%, using the `iru-swift-coverage` skill to get the exact percentage per type — then generate new tests (or extend existing ones) until each reaches that bar, defaulting to Swift Testing (`@Suite`, `@Test`, `#expect`, `#require`) for unit tests and falling back to XCTest only for UI automation (`XCUITest`) and performance (`measure`), following this project's own test framework and style. When the target renders UI (SwiftUI, UIKit or AppKit) it also generates UI tests per the catalog's UI contract for every existing screen and component that has none — `ImageRenderer`/native component captures and XCUITest screen captures across the `.ui-quality.yml` directions × themes into `.ui-screenshots/` through the shared `UIScreenshots.swift` helper, with a `performAccessibilityAudit()` test at the configured level — and runs them through `iru-swift-test`'s `ui` selector (unverified without a simulator runtime or macOS desktop session). Invoke as `/iru-swift-generate-all-tests [scope]`, where `[scope]` names one Swift package target/Xcode app target (default: the project's primary library/app target) or a comma-separated type list within it; also accepts `args` as `key: value` lines, currently just `scope: <target-or-type-list>`. Stops immediately, without attempting anything, if the repository isn't a Swift project (no `Package.swift` and no `.xcodeproj`/`.xcworkspace` found). Equivalent to `iru-java-generate-all-tests`/`iru-typescript-generate-all-tests`/`iru-android-generate-all-tests` for the Swift/Apple-platform stack. Use whenever the user wants comprehensive unit test coverage brought up across an entire Swift codebase in one pass, instead of writing tests for one type or task at a time.
 model: sonnet
 allowed-tools: Read Edit Write Bash(swift *) Bash(xcodebuild *) Bash(xcrun *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -83,9 +83,14 @@ one, and this step needs a structural map, not a design review.
     unconventional before concluding there really are none.
 - For every candidate type, resolve whether a matching test file already exists by that convention, and its
   path if so. Note separately which candidates are UI-surface types (a `View`/`ViewController` primarily driving
-  user interaction) that this project already covers, if at all, with `XCUITest` rather than a unit test — this
-  skill's default scope (see Step 5) is unit tests; it only writes `XCUITest`/`measure` cases when the scope
-  argument or the project's own convention explicitly calls for them.
+  user interaction) that this project already covers, if at all, with `XCUITest` rather than a unit test — they
+  are not coverage candidates (the UI layer is "not measured"); instead they feed Step 5b's UI-test inventory.
+  `measure` cases are only written when the scope argument or the project's own convention explicitly calls for them.
+- **UI inventory** (for Step 5b), when the scoped target renders UI (SwiftUI `View`s, `UIViewController`/`UIView`,
+  `NSViewController`/`NSView` subclasses — never for a command-line tool): every screen and component, whether it
+  already has UI tests per the catalog's UI contract (a component-capture test calling `UIScreenshots.render`/
+  `capture`, or an XCUITest that captures it), and whether the project has a `UIScreenshots.swift` helper and a
+  UI-test target.
 
 Build a plain list: type name (with module) → source file path → matching test file path (or "none").
 
@@ -217,6 +222,31 @@ Agent({
 
 Collect every sub-agent's report before moving on.
 
+## Step 5b — Generate UI tests for screens and components that have none
+
+Only when Step 2's UI inventory found screens/components without UI tests. Follow `iru-swift-code-one-task`'s
+`reference/ui-contract.md` §6–§8 and `reference/ui-implementation.md` (read them from that installed skill; if it
+isn't installed, say so and skip this step):
+
+- Add the shared `Support/UIScreenshots.swift` helper to the unit-test target (and the UI-test target's sources) when
+  the project lacks it — copied from `iru-setup-apple-app`/`iru-setup-macos-app`'s test templates when installed,
+  else from `ui-implementation.md`.
+- Per **component** with no UI test: one Swift Testing suite in the app's unit-test target with a parameterized
+  `@Test(arguments: UIQuality.directions, UIQuality.themes)` per visual state the component supports (read its
+  `#Preview`s and state type), rendering fixture states — including `long-content` with Arabic/Hebrew text — with
+  `UIScreenshots.render` (SwiftUI-native leaves) or `UIScreenshots.capture` (UIKit/AppKit views), plus, for UIKit/
+  AppKit, event assertions by sending actions.
+- Per **screen** with no UI test, when a UI-test target exists: an XCUITest that launches with `--uitesting` (and a
+  `--fixture` the composition root already understands — never invent fixture plumbing in production code here;
+  report it as a gap instead), asserts the screen's states once, captures each `.ui-quality.yml` direction × theme
+  with `XCUIScreen.main.screenshot()`, and one `performAccessibilityAudit()` test at the configured level. No UI-test
+  target → report the screens as uncovered rather than creating a target.
+- One sub-agent per screen/component, the same way as Step 5. Then run them all through `iru-gate-runner`:
+  `Invoke Skill({skill: "iru-swift-test", args: "ui"})` — a full UI run, which clears and rebuilds
+  `.ui-screenshots/`, recovers captures from the `.xcresult`, and takes `.simulator-test.lock` itself. Fix failures in
+  the generated tests (not in production code); report accessibility issues at the configured level instead of
+  silencing them. No simulator runtime/macOS desktop session → the generated UI tests are reported **unverified**.
+
 ## Step 6 — Re-measure and iterate on shortfalls
 
 Re-run Step 3's delegated `iru-swift-coverage` pass, scoped to just the types touched in Step 5, to confirm each
@@ -242,9 +272,8 @@ whichever this project uses per Step 1). If everything passed, report back only 
 anything failed, report back only the failing test names, the failure reason, and relevant output for each."})`.
 Fix any regression this run's new/extended tests introduced (a genuine bug in a generated test, not a
 pre-existing failure), then re-invoke until it reports all tests passed. A pre-existing failure unrelated to any
-type this run touched is out of scope — note it in Step 8 rather than fixing it. Do not run `XCUITest`/simulator
-UI suites here unless Step 5 actually generated UI tests in this run — a plain unit-test pass is this skill's
-default scope.
+type this run touched is out of scope — note it in Step 8 rather than fixing it. UI suites already ran in Step 5b's
+`ui` run; don't re-run them here unless a fix touched them.
 
 ## Step 8 — Report
 
@@ -259,11 +288,14 @@ Summarize:
 - Any type still below 80% after Step 6's two attempts, with the exact lines still uncovered and, where
   apparent, why (e.g. an untestable defensive branch or concurrency-scheduling-dependent path).
 - The full-suite result from Step 7.
+- Step 5b: the screens/components that got UI tests (and which were left uncovered and why), the screenshot count
+  per kind from the `ui` run, malformed names, accessibility issues (count + rule ids) at the `.ui-quality.yml`
+  level, and anything reported unverified.
 
 Do not run a code-quality, license-header, or DocC pass — those are `iru-swift-code-quality`, `iru-check-license`,
-and `iru-swift-docc`'s jobs respectively, not this skill's. Do not generate `XCUITest`/`measure` cases beyond what
-Step 5 already scoped in — instrumented UI/performance coverage stays opt-in, since it needs a simulator/device
-this skill never launches on its own.
+and `iru-swift-docc`'s jobs respectively, not this skill's. Do not generate `measure` cases beyond what Step 5
+already scoped in; UI tests are limited to Step 5b's contract tests, and their simulator runs go through
+`iru-swift-test`'s `ui` selector, never launched by hand.
 
 ## Known quirks / verification notes
 

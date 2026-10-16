@@ -110,6 +110,16 @@ test("increments and reports the new value on press", async () => {
   calls `navigation.navigate`; for flows across screens, render the real navigator inside a
   `NavigationContainer` (React Navigation's testing guide), asserting on what the user sees, not on navigator state.
 
+## UI tests, the gallery and screenshots
+
+For a task that adds or changes a screen, component or list, `ui-contract.md` §6–§8 apply as mapped in
+`ui-implementation.md`: RNTL component tests driven by the component's `*.fixtures.ts` (every visual state, each
+event and its payload, disabled states silent), screen tests with fixture state or a mocked view model hook, a UI
+gallery registry entry and a `.maestro/ui/<Id>.yaml` capture flow per component/screen (state × direction × theme
+through `.maestro/subflows/ui-capture.yaml`), `takeScreenshot` steps in new flows, and role/label queries as the
+accessibility check. Jest renders no pixels — screenshots only ever come from the device flows, which this skill
+writes and never runs.
+
 ## Native tests and e2e — written here, run by the group skill
 
 - Native unit tests (metro: JUnit under `android/app/src/test/…`, XCTest in the iOS test target; Expo modules: their

@@ -8,7 +8,8 @@ description: >-
   `coverage.html`, a `/covdata/` GOCOVERDIR), the `build/` report/docs-generator directory (`build/coverage/cover.out`,
   `build/gendocs/`), GoReleaser's `dist/`, per-developer `go.work`/`go.work.sum` (unless the repository deliberately
   tracks a workspace), `/vendor/` only when dependencies are not vendored (asked), env files (keeping `.env.example`),
-  the Antora docs build output, editor/OS files, and the repository-wide `.integration-test.lock/`. Never ignores
+  the Antora docs build output, editor/OS files, the repository-wide `.integration-test.lock/`, and — for a Bubble Tea
+  terminal UI — the UI tests' capture directory `.ui-screenshots/` (never `.ui-quality.yml`). Never ignores
   `go.mod`, `go.sum`, `testdata/` or `.secrets.baseline`. Invoke as `/iru-setup-go-gitignore`, optionally with `args`
   (`key: value` lines): `bin-name` (default: every `cmd/<name>/` directory, else the module path's last element),
   `vendor: yes|no`, `mode: new|existing` (default: detected) and `on-existing: ask|keep|update|replace` (default
@@ -164,6 +165,14 @@ Only add a section when Step 1 found what it targets:
   The generated `docs/modules/ROOT/pages/cli-reference.adoc` stays **tracked** — it is a site page, regenerated and
   diffed like any other source.
 - **Node tooling at the root** (`package.json`): `node_modules/` and `npm-debug.log*`.
+- **Terminal UI** (`charm.land/bubbletea/v2` or `github.com/charmbracelet/bubbletea` in `go.mod`, or a root
+  `.ui-quality.yml`/`.ui-screenshots/`):
+  ```gitignore
+  # UI test captures (UI contract: .ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.txt), regenerated every run
+  .ui-screenshots/
+  ```
+  `.ui-quality.yml` (the accessibility level and capture matrix) stays **tracked**; the documentation skills copy the
+  captures they use into the Antora `images/ui/` tree, which is committed.
 - Don't invent entries beyond what was detected.
 
 ## Step 4 — Compose the proposed content
@@ -179,7 +188,8 @@ Before proposing, check the draft doesn't hide source the scaffold commits — w
 `git -c core.excludesFile=<draft> check-ignore --no-index` (or temporarily in a scratch copy) on whichever of these
 exist and refuse any line that matches one: `go.mod`, `go.sum`, `cmd/*/main.go`, `internal/**/*.go`,
 `tools/gendocs/main.go`, `testdata/script/*.txtar`, `.golangci.yml`, `.goreleaser.yaml`, `.env.example`,
-`docs/modules/ROOT/pages/cli-reference.adoc`.
+`docs/modules/ROOT/pages/cli-reference.adoc`, `.ui-quality.yml`, `internal/tui/ui_screenshots_test.go`,
+`docs/modules/ROOT/images/ui/**`.
 
 ## Step 5 — If a `.gitignore` already existed, warn and ask Update / Keep as is / Replace
 
@@ -211,6 +221,8 @@ paths that exist or with throwaway empty files in a scratch copy:
 git check-ignore go.mod go.sum cmd/<bin>/main.go internal/cli/root.go testdata/script/greet.txtar .golangci.yml .goreleaser.yaml .env.example
 # should list each generated path with the line that ignores it
 git check-ignore -v <bin> build/coverage/cover.out build/gendocs dist coverage.out cli.test .env .integration-test.lock 2>/dev/null
+# terminal UI only: the captures are ignored, the config and the helper are not
+git check-ignore -v .ui-screenshots/screen/Model/default--ltr--no-color.txt; git check-ignore .ui-quality.yml internal/tui/ui_screenshots_test.go
 ```
 
 Summarize: whether this run created from scratch or updated an existing file, the action taken — **created /
@@ -254,4 +266,6 @@ generated paths ignored — `hello-cli`, `hello-cli.exe`, `cli.test`, `cpu.pprof
 `docs/antora.yml`, `.secrets.baseline`) printed nothing and exited 1; `git status --porcelain -uall` listed exactly
 those 16 files plus `.gitignore`. In particular `cmd/hello-cli/main.go` is not hidden by `/hello-cli`. The paths
 match what `iru-setup-go-cli`'s verification actually produced (`build/coverage/cover.out`, `build/gendocs/`,
-`dist/` from `goreleaser release --snapshot --clean`).
+`dist/` from `goreleaser release --snapshot --clean`). The terminal-UI section (added for the UI contract) was checked
+the same way in a scratch repository: `.ui-screenshots/screen/Model/default--ltr--no-color.txt` ignored;
+`.ui-quality.yml`, `internal/tui/ui_screenshots_test.go` and `docs/modules/ROOT/images/ui/screen/Model/…` not.

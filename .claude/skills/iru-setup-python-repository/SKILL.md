@@ -8,7 +8,9 @@ description: >-
   identity (name, import package, description, license, developer name/email/organization URL), the flavor's shape
   (`database`, plus `orm` for FastAPI or `api` for Django) and the shared pipeline parameters (`open-source`,
   `visibility`, `ci`, `ci-tests`, `pages`, `distribution` as a GHCR container image, `sonar` plus its detail keys,
-  `python-version`, `integration-branch`, `stable-branch`) once, each with visibility-aware cost guidance, and
+  `python-version`, `integration-branch`, `stable-branch`, and — `django` only — `accessibility`, the automated
+  accessibility level of the browser UI tests the Django scaffold writes to `.ui-quality.yml`) once, each with
+  visibility-aware cost guidance, and
   orchestrates the flavor's scaffold skill (`iru-setup-python-fastapi` / `iru-setup-python-django`) →
   `iru-setup-antora` → `iru-setup-python-gitignore` → `iru-setup-python-github-workflows` → `iru-setup-changelog` →
   `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is asked twice (the workflows
@@ -18,7 +20,8 @@ description: >-
   `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`, +
   `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `python-version` (default `3.13`), `database`
   (`postgresql`/`sqlite`/`none`), `orm` (FastAPI: `sqlmodel`/`sqlalchemy`), `api` (Django: `drf`/`ninja`/`none`),
-  `integration-branch` (default `develop`), `stable-branch` (default `main`), `on-existing`
+  `integration-branch` (default `develop`), `stable-branch` (default `main`), `accessibility`
+  (`enforce`/`report`/`off`, Django only), `on-existing`
   (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), and every identity key, skipping the matching
   question. Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
   inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
@@ -75,6 +78,7 @@ database: postgresql
 orm: sqlmodel
 integration-branch: develop
 stable-branch: main
+accessibility: enforce
 ```
 
 Recognized keys: `flavor` (`fastapi`/`django`), `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `visibility`
@@ -82,12 +86,14 @@ Recognized keys: `flavor` (`fastapi`/`django`), `mode` (`new`/`existing`), `open
 `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) and — only when not `none` —
 `sonar-organization`, `sonar-project-key`, `sonar-host-url`; `python-version` (the runtime CI, Docker and
 `.python-version` use, e.g. `3.13`), `database` (`postgresql`/`sqlite`/`none`), `orm` (`sqlmodel`/`sqlalchemy` —
-`fastapi` only), `api` (`drf`/`ninja`/`none` — `django` only), `integration-branch`, `stable-branch`; the identity
+`fastapi` only), `api` (`drf`/`ninja`/`none` — `django` only), `accessibility` (`enforce`/`report`/`off` — `django`
+only: the level of the automated accessibility checks in the browser UI tests, written to `.ui-quality.yml`; the
+FastAPI flavor renders no UI), `integration-branch`, `stable-branch`; the identity
 keys `name`, `package`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`; and
 `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every file-writing sub-skill **only** when
 it arrived here). Every key found is resolved — skip its question below. Ignore unknown keys (e.g. `publish`, which
 applies to libraries of other stacks — there is no PyPI publishing for an application), and ignore `orm` when the
-flavor is `django` or `api` when it is `fastapi` (say so once). If `args` is absent or doesn't look like this format,
+flavor is `django` or `api`/`accessibility` when it is `fastapi` (say so once). If `args` is absent or doesn't look like this format,
 treat everything as unset.
 
 ## Step 1 — Resolve the flavor and mode
@@ -115,7 +121,7 @@ Map the resolved `flavor` to its scaffold skill for the rest of this run:
 | `flavor` | Scaffold skill | Flavor-only keys it gets |
 |---|---|---|
 | `fastapi` | `iru-setup-python-fastapi` | `orm` (only when `database` ≠ `none`) |
-| `django` | `iru-setup-python-django` | `api` |
+| `django` | `iru-setup-python-django` | `api`, `accessibility` |
 
 If `mode` wasn't supplied, don't ask it as an isolated question: if `pyproject.toml`, `requirements*.txt`,
 `manage.py`, or an `app/`/`config/` package from item 2 above exists at the repository root, default to `existing`
@@ -149,6 +155,7 @@ Right after resolving `mode`, before asking anything else, survey the components
   | CI workflows | each of `.github/workflows/build.yml`, `release.yml`, `sync.yml` (+ its two helper scripts under `.github/scripts/`; partial if any of them is missing), `security.yml` |
   | Dependabot | `.github/dependabot.yml` |
   | Sonar config | `sonar-project.properties` |
+  | UI quality (`django` only) | `.ui-quality.yml` (+ the UI tier: `tests/ui/ui_screenshots.py`, the `ui` marker); partial if `tests/ui/` exists without `.ui-quality.yml` or vice versa |
   | Changelog | `CHANGELOG.md` |
   | README | `README.md` |
   | License | `LICENSE` / `LICENSE.md` / `LICENSE.txt` / `COPYING` (not written by this run — listed so a mismatch with the chosen license shows) |
@@ -289,15 +296,25 @@ Then, **only when `ci: yes`**:
     `spectacular --validate`, Ninja `export_openapi_schema`), the fast pytest-django tier on SQLite in-memory with
     coverage, and `check --deploy` + `migrate` + `migrate --check` with the production settings against a
     PostgreSQL service container (or a SQLite file)"; full = "also the `integration` tier against PostgreSQL via
-    testcontainers". Same SQLite caveat.
+    testcontainers, followed in the same job by the browser UI tier (`pytest -m ui`, Chromium, `.ui-screenshots/`
+    uploaded as an artifact)". Same SQLite caveat — and with SQLite there is no integration job, so CI runs no UI
+    tier (it stays a local `uv run pytest -m ui`).
 - **pages** — the Antora docs site (Step 6) and the Sphinx API docs are always built. Public: default **yes**
   without asking (say so in Step 11). Private/internal: ask **No (Recommended)** — "CI still builds the docs and
   uploads them as a workflow artifact; nothing is published" — vs **Yes** — "requires GitHub Pro, Team, or
   Enterprise Cloud; the site will be PUBLIC on the internet unless the organization is on Enterprise Cloud with
   private Pages access control".
 
+Then, **only for `django`** (with the other shared inputs, whatever `ci` is):
+
+- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** — "axe-core violations
+  fail the browser UI tests" / **Report only** — "violations are listed, never failing" / **Off** — "not run; the
+  accessibility coding defaults still apply". Written to `.ui-quality.yml` by the scaffold and read by the coding and
+  test skills; with `ci-tests: full` on `database: postgresql` the integration job also runs the UI tier.
+
 These values are forwarded only to the sub-skills that accept them: identity + `python-version` + `database` +
-`orm`/`api` + `open-source`/`visibility`/`ci`/`distribution`/`sonar` (+ keys) to Step 5; the same pipeline keys +
+`orm`/`api` + `accessibility` (`django` only) + `open-source`/`visibility`/`ci`/`distribution`/`sonar` (+ keys) to
+Step 5; the same pipeline keys +
 `ci-tests`/`pages`/`integration-branch`/`stable-branch`/`python-version`/`database`/`api` to Step 8; `sonar`/`ci`/
 `pages` to Step 10; `on-existing` — only when it came via `args` — to every file-writing sub-skill (Steps 5–10).
 
@@ -333,8 +350,9 @@ Agent({
 })
 ```
 
-`django` follows the same shape with the skill name changed to `iru-setup-python-django`, `api: <api>` instead of
-`orm`, and the Django checks (`manage.py check`, `makemigrations --check --dry-run`, `check --deploy`, the schema
+`django` follows the same shape with the skill name changed to `iru-setup-python-django`, `api: <api>` and
+`accessibility: <accessibility>` instead of `orm`, `.ui-quality.yml` and the browser UI tier (`uv run pytest -m ui`:
+screenshots written, axe violations by rule id, or unverified without a browser) added to what it reports, and the Django checks (`manage.py check`, `makemigrations --check --dry-run`, `check --deploy`, the schema
 export — DRF `spectacular --validate`, Ninja `export_openapi_schema`) added to the gates it reports (no Alembic) — still filtered against its own Step 0. Flavor-specific details
 this orchestrator doesn't pre-ask (FastAPI auth sample (PyJWT + pwdlib), a background-task worker, Django
 `django.tasks` vs an existing Celery setup, the starter apps beyond `accounts`) are asked or defaulted inside the
@@ -443,13 +461,14 @@ Summarize all six delegated skills together: repeat Step 1's **Setup mode** stat
 existing repository); the resolved `flavor` and `mode`; the identity and license (or "taken from the existing
 files"); `python-version` and where it came from (devguide/endoflife lookup, the catalog default, or `args`); the
 flavor's shape (`database`, `orm` or `api`); the branches. Then a per-component table — project manifest, flavor
-sources, tests config, quality configs, API docs, container files, Sonar config, Antora docs, `.gitignore`, each
+sources, tests config, quality configs, API docs, container files, Sonar config, `.ui-quality.yml` (`django` only,
+with the `accessibility` level applied), Antora docs, `.gitignore`, each
 workflow file (`build.yml`/`release.yml`/`sync.yml` + scripts/`security.yml`), `.github/dependabot.yml`,
 `CHANGELOG.md`, `README.md` — with the action actually taken as each sub-skill reported it: **created / updated /
 replaced / kept as is / skipped (ci: no) / not written (distribution: none)** (or stopped), plus every mismatch a
 sub-skill listed for a kept file. Include Step 5's verification results (lint, format, types, fast tests, integration
-tests, coverage vs 80%, Sphinx build, Django checks, docker build; anything unverified, e.g. no Docker for
-testcontainers).
+tests, coverage vs 80%, Sphinx build, Django checks, the Django UI tier, docker build; anything unverified, e.g. no
+Docker for testcontainers, no browser for the UI tier).
 
 State explicitly what was wired or deliberately omitted, and why:
 

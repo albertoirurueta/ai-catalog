@@ -64,6 +64,13 @@ Offered only for WinForms (MVC is not a XAML pattern; WPF and WinUI are MVVM by 
 and contains no logic; the **model** raises change events; the controller subscribes to view and model events and
 pushes results back through the interface.
 
+## Screens and components
+
+A window/page/form is a **screen** — it owns its view model (or controller). Reusable UI is a **component** — a
+`UserControl` that renders the state it is given and raises events, with no services or navigation. UI-state records
+(`OrderRowState`) and collection state live in Core with the view models; `ui-contract.md` and `ui-implementation.md`
+cover decomposition, collections, UI tests and captures.
+
 ## What never changes between the two
 
 - The Core/app split and the "UI types never in Core" rule.

@@ -7,6 +7,7 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 Scaffolds a Hilla (Vaadin) React frontend into the module of a Spring Boot hexagonal reactor that runs the web
 server: the Vaadin BOM and starter dependencies, the `vaadin-maven-plugin` build-frontend execution, a file-based
 router with a sample view and test, a `vitest`/`@vitest/coverage-v8` toolchain, ESLint flat config plus Prettier,
+a Playwright component-testing setup and a root `.ui-quality.yml` (the catalog's UI contract),
 the `.gitignore` additions the frontend needs, and — only when Sonar analysis is enabled — the `sonar.sources`/
 `sonar.tests`/lcov properties on the root pom (Gradle: the `boot` project's `sonar {}` block). It reads the
 manifest's `project.language` (`java`/`kotlin`) and `project.buildTool` (`maven`/`gradle`) and adapts the build wiring
@@ -84,6 +85,11 @@ every file.
 `AskUserQuestion` whether to add a frontend anyway; proceeding updates the manifest's `frontend:` field to `hilla`.
 |None — read from the manifest
 
+|`accessibility`
+|No
+|`args` `key: value` line, `enforce`, `report` or `off`: the UI tests' automated accessibility level written to `.ui-quality.yml` (Step 4b). Resolved from `args`, else the manifest's top-level `accessibility` key (written by xref:skills/iru-setup-java-springboot.adoc[], meaningful only with `frontend: hilla`), else `enforce`; never asked.
+|`enforce`
+
 |`sonar.mode`
 |Yes (manifest field)
 |When not `none`, triggers Step 7's `sonar.sources`/`sonar.tests`/`sonar.javascript.lcov.reportPaths` merge into the
@@ -108,8 +114,15 @@ root pom's existing Sonar properties. Skipped entirely when `none`.
 * `<web-module>/package.json` `test`/`test:watch`/`coverage`/`lint`/`format` scripts and devDependencies (vitest,
   `@vitest/coverage-v8`, Testing Library, ESLint, Prettier and their plugins).
 * `<web-module>/eslint.config.js` (flat config), `.prettierrc.json`, `.prettierignore`.
-* `.gitignore` additions for `<web-module>/node_modules/`, `src/main/frontend/generated/`, and
-  `vite.generated.ts` — shown as a diff and confirmed before writing.
+* UI contract files (Step 4b; see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`
+  at the repository root (`accessibility`, `directions`, `themes`); in the web module a standalone Vite component
+  gallery (`playwright/vite.config.ts`, `playwright/gallery/index.html` and `main.tsx`, since Vaadin's own Vite config
+  needs `prepare-frontend`), `playwright.config.ts`, `e2e/support/ui-screenshots.ts` (copied from the skill's
+  `reference/ui-screenshots.ts`), a `stories/HomeView.story.tsx` story and `e2e/components/HomeView.spec.ts`, which
+  captures `.ui-screenshots/screen/HomeView/` across left-to-right/right-to-left × light/dark with an
+  `@axe-core/playwright` check; a `test:ui` script and the `@playwright/test`/`@axe-core/playwright` devDependencies.
+* `.gitignore` additions for `<web-module>/node_modules/`, `src/main/frontend/generated/`,
+  `vite.generated.ts`, the Playwright `test-results/` and `playwright-report/` directories and `.ui-screenshots/` — shown as a diff and confirmed before writing.
 * Kotlin `@BrowserCallable` conventions (Step 2a) — no sample service is scaffolded.
 * Root pom `sonar.sources`/`sonar.tests`/`sonar.test.inclusions`/`sonar.javascript.lcov.reportPaths` merged in, and
   `sonar.exclusions` extended with `**/frontend/generated/**`, only when `sonar.mode` isn't `none`. Kotlin + Maven uses
@@ -137,12 +150,13 @@ flowchart TD
     D --> D2["Step 2a: Kotlin BrowserCallable\nconventions (Kotlin only)"]
     D2 --> E["Step 3: src/main/frontend/\n@index.tsx, @layout.tsx, index.html"]
     E --> F["Step 4: vitest.config.ts,\ntest/setup.ts, sample @index.test.tsx"]
-    F --> G["Step 5: package.json scripts/deps,\neslint.config.js, Prettier config"]
+    F --> F2["Step 4b: UI contract: .ui-quality.yml,\nPlaywright gallery + config,\ncapture helper, HomeView story and spec"]
+    F2 --> G["Step 5: package.json scripts/deps,\neslint.config.js, Prettier config"]
     G --> H["Step 6: .gitignore additions\n(shown as diff, confirmed)"]
     H --> I{"Step 7: sonar.mode\nis none?"}
     I -- yes --> K
     I -- no --> J["Merge sonar.sources/tests/\nlcov.reportPaths, extend\nsonar.exclusions"]
-    J --> K["Step 8: Verify via iru-gate-runner —\nmvn or gradle prepare-frontend,\nthen npm ci + vitest --coverage"]
+    J --> K["Step 8: Verify via iru-gate-runner —\nmvn or gradle prepare-frontend,\nthen npm ci + vitest --coverage,\nthen Playwright UI tests"]
     K -- optional --> L["Optional: mvn package -Pproduction\n-DskipTests via iru-gate-runner"]
     K --> M["Step 9: Report versions, files created/\nupdated/replaced/kept, Sonar/Node\noutcome, warnings"]
     L --> M
@@ -165,7 +179,7 @@ xref:skills/iru-setup-java-springboot-modules.adoc[].
 
 * xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 8's `mvn vaadin:prepare-frontend` gate (Gradle:
   `./gradlew :boot:vaadinPrepareFrontend`), then
-  `npm ci` + `npx vitest run --coverage` in the web module, and an optional `-Pproduction` package build.
+  `npm ci` + `npx vitest run --coverage` in the web module, then `CI=1 npx playwright test` with `UI_SCREENSHOTS_DIR` set (a missing Chromium is reported as unverified, never downloaded), and an optional `-Pproduction` package build.
 
 == Source
 

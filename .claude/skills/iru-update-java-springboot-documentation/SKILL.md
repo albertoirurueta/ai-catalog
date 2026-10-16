@@ -16,7 +16,8 @@ description: >-
   `docs/antora.yml`; for Kotlin the overview also links the Dokka KDoc reference published under the same `api/` tree
   — `api/kdoc/` from `build/dokka/html` on Gradle or per module from `target/dokka` on Maven — instead of Javadoc), a
   configuration property table (default, dynamically-changeable, criticality flags), and a metrics table (type, tags,
-  meaning). For Kotlin, pages quote code as `[source,kotlin]`, say KDoc where Java says Javadoc, describe Gradle
+  meaning), and — with a Hilla frontend — a User interface section (navigation flows, one page per view and
+  component, illustrated with the UI tests' screenshots per `reference/ui-docs.md`). For Kotlin, pages quote code as `[source,kotlin]`, say KDoc where Java says Javadoc, describe Gradle
   module boundaries (ArchUnit plus `project(":…")` dependencies, no enforcer) and name `./gradlew` commands (`build`,
   `test`, `integrationTest`, `:boot:bootRun`) when the build is Gradle. Reads `springboot-stack.yml`, the module
   sources, the `apis/` contracts, and the `@ConfigurationProperties`/Micrometer code rather than inventing content,
@@ -186,6 +187,14 @@ metrics.adoc
 
 Omit a page whose subject doesn't exist (no gRPC server → no `apis/grpc.adoc`); note the omission in the report so
 its absence is a recorded decision.
+
+When the manifest's `frontend` is `hilla` (a Vaadin Hilla React frontend under `src/main/frontend/`), the service
+also has a user interface: add the **User interface** section — `ui/index.adoc`, `ui/navigation.adoc` (from the
+file-based routes under `src/main/frontend/views/`), one `ui/screens/<View>.adoc` per routed view and one
+`ui/components/<Component>.adoc` per reusable component — exactly as `reference/ui-docs.md` (next to this file)
+describes, including its screenshot synchronisation (§5) against the `.ui-screenshots/` the frontend's Playwright
+UI tests produce. Run that synchronisation once, after Step 11 and before Step 12's build. With `frontend: none`
+there is no UI section.
 
 Every page carries this immediately after its `= Title` heading, matching the rest of this catalog:
 
@@ -631,6 +640,8 @@ Summarize:
   undocumented error response, an endpoint whose spec security doesn't match its filter chain, a property that
   looks dynamic but isn't `@RefreshScope`d, a metric with unbounded tag cardinality, an index no query uses.
 - Whether hand-written prose was preserved or contradicted on a re-run.
+- With `frontend: hilla`: the `ui/` pages created/updated/removed and the screenshot synchronisation result (images
+  added, replaced, unchanged, deleted; states left "screenshot pending").
 - The build result and the path to `docs/build/site/index.html`.
 
 Warn explicitly:

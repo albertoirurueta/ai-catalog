@@ -8,9 +8,11 @@ Carry out one task from a PHP `implementation_plan.md` — the implementation, i
 
 == Purpose
 
-PHP projects vary more by flavor than by language: a WordPress hook callback, a Laravel controller and a PrestaShop hook method look nothing alike. `iru-php-code-one-task` first detects the flavor (Laravel, WordPress plugin, WordPress theme, PrestaShop module, or plain library), the PHP floor, the style tooling (Pint, PHP-CS-Fixer, PHPCS with WordPressCS) and the test runner with its fast-versus-integration suites. It then reads `reference/README.md` and only the reference files the task needs: `code-style.md` always, `testing.md` when writing tests, `security.md` for request input, output, SQL, files or auth, and exactly one flavor file (`laravel.md`, `wordpress.md`, `prestashop.md`; none for a library). It re-checks the current code, implements exactly what the task says, writes tests, runs only the fast test files it touched, and checks off its own checkbox with a "group validation pending" note.
+PHP projects vary more by flavor than by language: a WordPress hook callback, a Laravel controller and a PrestaShop hook method look nothing alike. `iru-php-code-one-task` first detects the flavor (Laravel, WordPress plugin, WordPress theme, PrestaShop module, or plain library), the PHP floor, the style tooling (Pint, PHP-CS-Fixer, PHPCS with WordPressCS) and the test runner with its fast-versus-integration suites. It then reads `reference/README.md` and only the reference files the task needs: `code-style.md` always, `testing.md` when writing tests, `security.md` for request input, output, SQL, files or auth, and exactly one flavor file (`laravel.md`, `wordpress.md`, `prestashop.md`; none for a library), plus `ui-contract.md` and `ui-implementation.md` when the task adds or changes UI. It re-checks the current code, implements exactly what the task says, writes tests, runs only the fast test files it touched, and checks off its own checkbox with a "group validation pending" note.
 
 Non-negotiables enforced while implementing: every input validated, every output escaped for its context, every SQL value bound, CSRF and authorization on every state-changing handler, native types, platform-required names (WordPress prefix and text domain, PrestaShop module-prefixed keys), no new dependency or migration unless asked, and no debugging leftovers. A task that would require insecure code is reported with a secure alternative rather than implemented.
+
+For UI work it also applies the catalog's UI contract and its server-rendered mapping (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `reference/ui-contract.md` and `reference/ui-implementation.md` are read, a `Screen › Region › Component` tree is written before touching any template, collections go through a bounded paginated query plus one item component, and Playwright UI specs (a left-to-right/right-to-left × light/dark screenshot matrix with axe checks) are written but never run here.
 
 == Purpose group
 
@@ -39,8 +41,9 @@ xref:index.adoc#group-php[PHP Development Tooling]
 
 * Source and test changes for the single task, following the detected flavor's conventions and the neighbouring code's style (security rules always win over an insecure neighbour).
 * New or updated tests placed in the right suite: fast tests (Pest or PHPUnit, framework fakes, Brain Monkey/WP_Mock) run and green; integration tests (`WP_UnitTestCase`, MySQL-backed, shop-backed) written but never run. No test scaffolding is created for projects with no test setup.
+* For UI work: browser UI specs (`tests/e2e/specs/<Name>.spec.ts` through the shared `ui-screenshots.ts` helper, or Dusk/Pest browser tests where already used) covering each visual state, the `.ui-quality.yml` screenshot matrix under `.ui-screenshots/` and the axe check — written, never run (they need a browser plus a server, wp-env or shop).
 * The task's own checkbox (and covered sub-tasks) flipped to `[x]` in `implementation_plan.md` with a note naming the files touched and "group validation pending".
-* A short report: detected flavor, PHP floor, runner and reference files read; files touched and tests added or run; any blocker; any deliberate deviation from `reference/` and any insecure neighbouring code left alone.
+* A short report: detected flavor, PHP floor, runner and reference files read; files touched and tests added or run; for UI work the `Screen › Region › Component` tree and the UI specs added; any blocker; any deliberate deviation from `reference/` and any insecure neighbouring code left alone.
 * It never captures a baseline, adds license headers, audits PHPDoc, runs coverage, quality tools, the full suite, `--parallel`, wp-env, or anything needing Docker, a database or a shop.
 
 == Execution flow
@@ -51,7 +54,7 @@ flowchart TD
     A["Start /iru-php-code-one-task\n(task text + checkbox line)"] --> B["Step 1: detect flavor, PHP floor,\nstyle tooling, runner, suites"]
     B --> C["Read reference README, code-style,\ntesting, security, one flavor file"]
     C --> D["Step 2: re-check current code\nand neighbouring conventions"]
-    D --> E["Step 3: implement exactly\nwhat the task specifies"]
+    D --> E["Step 3: implement exactly\nwhat the task specifies;\nUI work: decompose first"]
     E --> F{"Blocker or insecure\nrequirement?"}
     F -- yes --> G["Step 4: ask the user or\nreport blocked, leave checkbox"]
     F -- no --> H["Step 5: write or update tests\nfast and integration"]

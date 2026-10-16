@@ -1,6 +1,6 @@
 = PHP Test
-:description: Runs a PHP project's tests via Pest, PHPUnit or artisan test on host, Sail, ddev or wp-env, scoped by selector, and reports a compact pass/fail summary.
-:keywords: iru-php-test, claude code skill, php, pest, phpunit, laravel, wordpress, wp-env, junit, run tests
+:description: Runs PHP tests via Pest, PHPUnit or artisan test on host, Sail, ddev or wp-env, or browser UI tests with the ui selector, and reports a compact summary.
+:keywords: iru-php-test, claude code skill, php, pest, phpunit, laravel, wordpress, wp-env, playwright, ui tests, screenshots
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -9,6 +9,8 @@ Run a PHP project's test suite through whichever runner and execution environmen
 == Purpose
 
 PHP projects rarely run the same way twice: a library runs on host PHP, a Laravel app inside Sail, a WordPress plugin through `@wordpress/env`, a PrestaShop module only inside a shop. `iru-php-test` detects where PHP runs, which runner is wired (Pest, PHPUnit, `php artisan test`), and which suites are fast unit tests versus integration tests that need a real environment (a WordPress test library, a database, a shop). It then runs exactly the requested selection and reports counts and failures, or reports plainly what environment piece is missing instead of failing obscurely. A selector that matched nothing is reported as such, never as a clean run.
+
+With the `ui` selector it runs the project's browser UI tests instead (Playwright, `wp-scripts test-playwright`, or Dusk/Pest browser where already used), behind the repository-wide `.integration-test.lock`. It captures `.ui-screenshots/` (states × left-to-right/right-to-left × light/dark), validates the capture file names, and reports accessibility (axe) violations as counts and rule ids at the level set in `.ui-quality.yml`. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 
 == Purpose group
 
@@ -32,6 +34,11 @@ xref:index.adoc#group-php[PHP Development Tooling]
 |No
 |A file path, a directory, `--filter <pattern>`, `--testsuite <name>`, or `--group <name>`, combinable, optionally with `-c <config>` for a non-default PHPUnit config. All three runners share these options.
 |None — omitting it runs the whole suite.
+
+|`ui [<spec paths>]`
+|No
+|As the first word, selects the browser UI tests (Step 7) instead of PHPUnit/Pest; following spec paths scope the run, and no paths means a full UI run that clears `.ui-screenshots/` first. `lock: held` says the caller already holds the lock.
+|Off — PHPUnit/Pest tests run.
 |===
 
 Environment and runner resolution:
@@ -62,6 +69,7 @@ Unit versus integration is decided per project kind (plain library, Laravel with
 * A plain-text summary in the conversation: the environment and runner used, total/failed/error/skipped counts parsed from a JUnit XML log (written under `build/iru-php-test-junit.xml` and deleted afterwards), and for each failure the `Class::method` (or Pest description) with the first line of its assertion message. PHP errors are counted separately from assertion failures.
 * A selector that matched nothing (0 tests in the log, or `No tests executed!`) is reported as "selector matched nothing", since exit codes for an unmatched selector are unreliable across PHPUnit and Pest versions. Exit code 255 is reported as a PHP fatal error with its first line.
 * A missing environment is reported with the exact missing piece and the provisioning command, plus which tests could still run (for example the Brain Monkey `Unit` suite).
+* For a `ui` run: the runner and target, passed/failed/flaky/skipped counts with each failure's first line, the screenshot count per kind and any malformed capture names in `.ui-screenshots/`, accessibility violations as count plus rule ids at the `.ui-quality.yml` level, and lock behavior. A missing browser, wp-env tests instance, shop or `node_modules/` is reported as unverified with the provisioning command; no browser-test setup is reported as "no UI test setup".
 * No source or test code is ever modified.
 
 == Execution flow
@@ -69,7 +77,9 @@ Unit versus integration is decided per project kind (plain library, Laravel with
 [mermaid]
 ....
 flowchart TD
-    A["Start /iru-php-test\n(optional selector)"] --> B["Step 1: detect where PHP runs\nddev, Sail, wp-env, host php"]
+    A["Start /iru-php-test\n(optional selector)"] --> UIQ{"Selector starts with ui?"}
+    UIQ -- yes --> UI["Step 7: detect browser runner, preflight,\nacquire lock, run Playwright,\nparse results, validate screenshots,\nreport"]
+    UIQ -- no --> B["Step 1: detect where PHP runs\nddev, Sail, wp-env, host php"]
     B --> C{"Environment usable?\nDocker up if needed"}
     C -- no --> D["Stop: report missing\nenvironment"]
     C -- yes --> E["Step 2: detect runner\nartisan, Pest, PHPUnit,\ncomposer test script"]
@@ -93,7 +103,7 @@ None — `iru-php-test` is a leaf skill; it only runs PHP test commands and repo
 
 === Invoked by
 
-* xref:skills/iru-php-code-one-task-group.adoc[] — Step 3.4, 3.6 and 3.8, fast tests, full fast suite and integration run, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-php-code-one-task-group.adoc[] — Step 3.4, 3.6, 3.8 and 3.9, fast tests, full fast suite, integration run and the `ui` browser run, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 
 === Related agents
 

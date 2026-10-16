@@ -20,11 +20,12 @@ description), then read:
 | `compose.md` | The task adds or changes a `@Composable` function or other Jetpack Compose UI. |
 | `views.md` | The task adds or changes a custom `View` subclass, ViewBinding usage, or XML-layout-backed UI. |
 | `library-api.md` | The task changes a public or `internal` declaration in the `lib` module — binary compatibility, `@Jvm*` annotations, consumer ProGuard rules. |
+| `ui-contract.md` + `ui-implementation.md` | The task adds or changes a screen, component, list or other UI — the catalog-wide UI contract (verbatim) and its mapping onto Views/Compose: decomposition, inputs/events, `RecyclerView`/`Lazy*` collections, Robolectric/Roborazzi and instrumented UI tests, the screenshot helper, accessibility checks. |
 
 A task that only changes logic inside one existing function, with no signature change and no UI involved, needs
 `code-style.md` plus `testing.md`, and nothing else. Don't read the rest speculatively. Read at most one of
 `compose.md`/`views.md` — a project uses one UI toolkit or the other for a given screen/component, never both for
-the same piece of UI.
+the same piece of UI. Any UI task reads `ui-contract.md` and `ui-implementation.md` in addition to that one.
 
 ## The three rules that override everything else
 
@@ -62,5 +63,7 @@ leave to taste).
 - Keeping your Kotlin library binary-compatible (`@JvmStatic`/`@JvmOverloads`/explicit API mode):
   <https://kotlinlang.org/docs/whatsnew14.html#explicit-api-mode-for-library-authors>
 - ProGuard/R8 consumer rules: <https://developer.android.com/build/shrink-code#consumer-proguard-rules>
+- UI contract sources (Roborazzi, Accessibility Test Framework, Compose/Views lists, navigation): see
+  `ui-implementation.md`'s own Sources list.
 - Reference sample: <https://github.com/albertoirurueta/irurueta-android-glutils> (`lib/`, `lib/src/test`,
   `lib/build.gradle.kts`, `lib/proguard-rules.pro`)

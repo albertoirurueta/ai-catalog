@@ -17,7 +17,7 @@ asked), the project identity (name, import package, description, per-flavor lice
 version (checked live against devguide.python.org or endoflife.date, catalog default 3.13, never below 3.12), the
 flavor's shape (`database`, plus `orm` for FastAPI or `api` for Django), and the shared pipeline parameters
 (`open-source`, `visibility`, `ci`, `ci-tests`, `pages`, `distribution` as a GHCR container image, `sonar` and its
-detail keys, branches), each with visibility-aware cost guidance. It then runs, each through the
+detail keys, branches, and — Django only — `accessibility`, the level of the browser UI tests' automated accessibility checks written to `.ui-quality.yml`), each with visibility-aware cost guidance. It then runs, each through the
 `iru-isolated-skill-executor` agent so only a short summary returns: the scaffold skill, `iru-setup-antora`,
 `iru-setup-python-gitignore`, `iru-setup-python-github-workflows` (skipped entirely when `ci` is `no`),
 `iru-setup-changelog`, and `iru-setup-readme`.
@@ -96,6 +96,11 @@ xref:index.adoc#group-python-bootstrap[Python Bootstrap]
 |`drf`, `ninja` or `none`; Django only.
 |Asked; Django REST Framework recommended.
 
+|`accessibility`
+|No
+|`enforce`, `report` or `off` — the automated accessibility level of the Django scaffold's browser UI tests, written to `.ui-quality.yml` (see xref:guides/building-user-interfaces.adoc[Building user interfaces]); Django only, since the FastAPI flavor renders no UI.
+|`enforce` recommended; pre-selected from an existing `.ui-quality.yml`.
+
 |`integration-branch`, `stable-branch`
 |No
 |Branches used by the workflows.
@@ -112,17 +117,17 @@ xref:index.adoc#group-python-bootstrap[Python Bootstrap]
 |`ask` (inside each sub-skill).
 |===
 
-Unknown keys (for example `publish`) are ignored, as is `orm` for Django and `api` for FastAPI.
+Unknown keys (for example `publish`) are ignored, as is `orm` for Django and `api` and `accessibility` for FastAPI.
 
 == Outputs
 
 * A scaffolded FastAPI or Django project with tests, quality configuration, Sphinx API docs sources and container
-  files, via the scaffold skill.
+  files, via the scaffold skill — for Django also `.ui-quality.yml` and a Playwright UI tier (`tests/ui/`, `.ui-screenshots/` captures).
 * An Antora docs site, a root `.gitignore`, `CHANGELOG.md` and `README.md`, via the delegated skills.
 * Unless `ci: no`, GitHub Actions workflows (`build`, `release`, `sync`, `security`) and Dependabot.
 * A final report: the setup mode, resolved flavor and mode, identity and license, Python version and its source,
-  database/ORM/API shape, branches, a per-component action table (created / updated / replaced / kept as is /
-  skipped (ci: no) / not written), the verification results, what was wired or omitted and why, the required-secrets
+  database/ORM/API shape, branches, a per-component action table (including `.ui-quality.yml` for Django; created / updated / replaced / kept as is /
+  skipped (ci: no) / not written), the verification results (including the Django UI tier), what was wired or omitted and why, the required-secrets
   table, and explicit warnings.
 
 == Execution flow
