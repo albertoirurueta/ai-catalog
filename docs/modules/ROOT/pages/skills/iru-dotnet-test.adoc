@@ -1,6 +1,6 @@
 = .NET Test
-:description: Runs a .NET project's or solution's test suite via dotnet test, scoped to a class, method, namespace pattern, or trait, and reports pass/fail results.
-:keywords: iru-dotnet-test, claude code skill, dotnet, csharp, unit testing, xunit, nunit, mstest, run unit tests
+:description: Runs a .NET project or solution tests via dotnet test by selector, Windows-desktop aware, with a lock-serialized ui selector for FlaUI UI tests.
+:keywords: iru-dotnet-test, claude code skill, dotnet, csharp, unit testing, xunit, nunit, mstest, run unit tests, windows desktop, flaui ui tests
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -15,6 +15,23 @@ summarizes the outcome, it does not fix failures unless asked to as an explicit 
 correct `dotnet test --filter` invocation and a concise pass/fail summary. It exists so that running and
 narrowing down tests doesn't require hand-composing filter-expression syntax each time, and so that a calling
 skill (or a human) gets back a short report instead of a full raw test-run log.
+
+It is Windows-desktop aware. A new Step 0 parses the arguments, detects the host (Windows or not), classifies every
+`*.csproj` (portable, `net*-windows*`, WinUI, UI-test projects) and detects the test runner (VSTest or
+Microsoft.Testing.Platform, where `dotnet test` takes `--project`/`--solution`). On a Windows-desktop repository it
+adds `TestCategory!=UI` to every ordinary run so FlaUI UI tests never run by default, and appends
+`-p:EnableWindowsTargeting=true` on a non-Windows host. Off Windows it never runs the whole solution — a
+`net*-windows*` test project aborts the run even though the portable projects passed ("Microsoft.WindowsDesktop.App
+not found", exit 1 under VSTest, exit 150 under MTP) — but runs each portable test project separately and lists every
+Windows test project (or one referencing a WinUI project) as **unverified (needs Windows)**. Multiple solution files or
+test projects with no solution make it ask which to target. A "Known quirks" section records what was verified on
+macOS with the .NET 10 SDK.
+
+The new `ui` selector (also accepted with a `lock: held` line when the caller already owns the lock) runs
+`--filter "TestCategory=UI"` on the UI-test project only on a Windows host with an interactive desktop session:
+it takes the repository-wide `.integration-test.lock` (atomic `mkdir`, owner file, stale after 60 minutes, released on
+every exit path), builds the app the tests launch, runs them, and otherwise reports **unverified**. Skipped or not-run UI
+tests are never reported as passed.
 
 == Purpose group
 
@@ -38,7 +55,17 @@ xref:index.adoc#group-dotnet[.NET Development Tooling]
 |No
 |Names what to run: a test class, a class+method, several classes, a wildcard/namespace pattern, a trait/category
 expression, or a specific project/solution path. Mapped to the correct `--filter` expression per the table below.
-|None — omitting it runs the full suite (`dotnet test`).
+|None — omitting it runs the full suite (`dotnet test`; on a Windows-desktop repository UI-category tests are excluded and, off Windows, portable projects run one by one).
+
+|`ui` (selector)
+|No
+|Windows-desktop only: run the FlaUI desktop UI tests (`TestCategory=UI`) behind the shared `.integration-test.lock`. Not run on a non-Windows host or without an interactive desktop session — reported unverified.
+|Not applicable.
+
+|`lock: held`
+|No
+|A `key: value` line, only meaningful with `ui`: the caller already holds `.integration-test.lock`, so this skill neither takes nor releases it.
+|Lock is taken and released by this skill.
 |===
 
 The selector maps to `dotnet test` parameters as follows:
@@ -88,8 +115,16 @@ The selector maps to `dotnet test` parameters as follows:
 |`dotnet test --filter "Category!=slow"`
 
 |Trait/category boolean expression
-|`--filter` with `&`, `\|`, `!`
+|`--filter` with `&`, `\|`, `!`, parentheses
 |`dotnet test --filter "Category=fast&Priority=1"`
+
+|Windows desktop: ordinary run
+|the selector's filter AND `TestCategory!=UI`
+|`dotnet test tests/App.Core.Tests --filter "(FullyQualifiedName~FooTests\|FullyQualifiedName~BarTests)&TestCategory!=UI"`
+
+|Windows desktop: UI tests (`ui`)
+|`--filter "TestCategory=UI"` on the UI-test project (Windows only, lock)
+|`dotnet test tests/App.UITests --filter "TestCategory=UI"`
 |===
 
 Which trait/category property name applies depends on the test framework in use (MSTest: `TestCategory`/
@@ -105,6 +140,7 @@ Surefire does — called out explicitly in the report rather than treated as a p
 * If everything passed: a brief confirmation, without pasting the full log.
 * If there are failures: the failing test names and the relevant assertion/exception output (falling back to the
   `.trx` log under `TestResults/` if console output was truncated) — without unrelated passing-test noise.
+* For a Windows-desktop repository: which test projects ran, which were **unverified (needs Windows)** and why, whether the default UI exclusion applied, and — for `ui` — how the lock behaved.
 * No source or test code is ever modified.
 
 == Execution flow
@@ -112,16 +148,21 @@ Surefire does — called out explicitly in the report rather than treated as a p
 [mermaid]
 ....
 flowchart TD
-    A["Start /dotnet-test\n(optional selector)"] --> B{Selector given?}
+    A["Start /dotnet-test\n(optional selector)"] --> A2["Step 0: parse arguments; detect host,\nWindows-desktop projects, UI tests, runner"]
+    A2 --> A3{ui selector?}
+    A3 -- "yes, Windows + desktop session" --> U["Take .integration-test.lock; build app;\nrun TestCategory=UI; release lock"]
+    A3 -- "yes, otherwise" --> U2["Run nothing: report unverified"]
+    A3 -- no --> B{Selector given?}
     B -- no --> C["Run dotnet test\n(full suite)"]
     B -- yes --> D["Map selector to --filter expression\n(and/or project/solution path)"]
-    D --> E["Compose dotnet test command\nwith mapped parameters"]
+    D --> E["Compose dotnet test command: mapped filter\n+ TestCategory!=UI; EnableWindowsTargeting off Windows;\nportable projects one by one off Windows"]
     E --> F["Run via Bash tool"]
     C --> F
     F --> G["Summarize output:\nrun / passed / failed / skipped per project"]
     G --> H{Failures?}
     H -- yes --> I["Show failing test names +\nassertion/exception output\n(.trx log if truncated)"]
     H -- no --> J["Report: all passed, briefly"]
+    U --> G
 ....
 
 == Dependencies
@@ -136,7 +177,8 @@ other skill in this catalog.
 * xref:skills/iru-dotnet-code-one-task-group.adoc[] — Step 3, once per task group's bucket, via the
   xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent, to run the scoped tests for every type the bucket affected
   (falling back to `dotnet test --filter "FullyQualifiedName~<TestClass>"` directly if this skill is
-  unavailable), plus a full-suite run.
+  unavailable), plus a full-suite run (this skill with no selector, so UI tests are excluded and non-runnable projects skipped).
+* xref:skills/iru-windows-code-one-task-group.adoc[] — the scoped and full runs for Windows desktop app buckets, plus the `ui` selector on Windows (with `lock: held` when it already owns the lock), via `iru-gate-runner`.
 * xref:skills/iru-dotnet-generate-all-tests.adoc[] — Step 7, once, to confirm the full suite still passes after every class's tests have been written or extended; also delegated through `iru-gate-runner`.
 
 === Related agents

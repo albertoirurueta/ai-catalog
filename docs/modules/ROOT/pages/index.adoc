@@ -1,6 +1,6 @@
 = AI Catalog
-:description: 159 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, Python, .NET, TypeScript, React Native, Android, KMP and Swift.
-:keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development
+:description: 169 Claude Code Skills and 3 agents for Java, Kotlin, Spring Boot, Quarkus, PHP, Python, .NET, TypeScript, mobile, Windows and macOS desktop.
+:keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development, windows desktop apps, macos desktop apps, dotnet wpf winui winforms
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -227,6 +227,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-python[Python Development Tooling]
 |Implements one bucket of Django tasks, then validates the bucket once, with the PostgreSQL integration tier behind a repo-wide lock.
 |xref:skills/iru-django-code-one-task-group.adoc[]
+
+|`iru-dotnet-bump-version`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Sets a .NET project's version in Directory.Build.props/csproj and the MSIX package identity, for releases.
+|xref:skills/iru-dotnet-bump-version.adoc[]
 
 |`iru-dotnet-code-one-task`
 |xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -605,7 +610,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-apple-app`
 |xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
-|Scaffold a native Apple app: XcodeGen/Tuist manifest, shared SwiftPM Core, Swift Testing/XCUITest, Fastlane, Sonar.
+|Scaffold a native iOS/iPadOS/macOS/watchOS/visionOS app (SwiftUI or UIKit, MVVM or MVC): XcodeGen/Tuist, SwiftPM Core, tests, Fastlane.
 |xref:skills/iru-setup-apple-app.adoc[]
 
 |`iru-setup-changelog`
@@ -697,6 +702,21 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
 |Orchestrates a Kotlin Multiplatform app repository: scaffold, Antora, gitignore, workflows, changelog, and README.
 |xref:skills/iru-setup-kmp-repository.adoc[]
+
+|`iru-setup-macos-app`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Scaffolds a native macOS app: XcodeGen project, UI-free Core package, Swift Testing/XCUITest, entitlements, DMG script.
+|xref:skills/iru-setup-macos-app.adoc[]
+
+|`iru-setup-macos-github-workflows`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Creates build, release, sync, security and Dependabot GitHub workflows for a macOS app, with a cost-gated macOS job.
+|xref:skills/iru-setup-macos-github-workflows.adoc[]
+
+|`iru-setup-macos-repository`
+|xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+|Orchestrates a native macOS app repository: scaffold, Antora, gitignore, workflows, changelog, and README.
+|xref:skills/iru-setup-macos-repository.adoc[]
 
 |`iru-setup-nestjs-app`
 |xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
@@ -838,6 +858,26 @@ features, and where the underlying models genuinely differ.
 |Orchestrates scaffold, Antora, gitignore, CI workflows, changelog and README for a seven-flavor npm/TypeScript repository.
 |xref:skills/iru-setup-typescript-repository.adoc[]
 
+|`iru-setup-windows-app`
+|xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+|Scaffolds a .NET 10 Windows desktop app (WPF, WinUI 3 or WinForms): UI-free Core, MSTest, analyzers, DocFX, MSIX.
+|xref:skills/iru-setup-windows-app.adoc[]
+
+|`iru-setup-windows-github-workflows`
+|xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+|Creates build, release, sync, security and Dependabot GitHub workflows for a Windows desktop app, with FlaUI and MSIX jobs.
+|xref:skills/iru-setup-windows-github-workflows.adoc[]
+
+|`iru-setup-windows-gitignore`
+|xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+|Creates or updates the root .gitignore for a .NET Windows desktop app: build output, IDE state, MSIX, signing material.
+|xref:skills/iru-setup-windows-gitignore.adoc[]
+
+|`iru-setup-windows-repository`
+|xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+|Orchestrates a Windows desktop app repository: scaffold, Antora, gitignore, workflows, changelog, and README.
+|xref:skills/iru-setup-windows-repository.adoc[]
+
 |`iru-swift-bump-version`
 |xref:index.adoc#group-swift[Swift Development Tooling]
 |Sets a SwiftPM library's `version.txt`/CHANGELOG/README or an Apple app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`.
@@ -845,7 +885,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-swift-code-one-task`
 |xref:index.adoc#group-swift[Swift Development Tooling]
-|Implements a single Swift task from an implementation plan, detecting package-vs-app shape and target.
+|Implements a single Swift task from an implementation plan, detecting package-vs-app shape, target, platform, UI framework and architecture.
 |xref:skills/iru-swift-code-one-task.adoc[]
 
 |`iru-swift-code-one-task-group`
@@ -927,6 +967,17 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 |Creates and refreshes a Java/Kotlin Spring Boot service's Antora docs from code, marking underivable facts TODO.
 |xref:skills/iru-update-java-springboot-documentation.adoc[]
+
+|`iru-windows-code-one-task`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Implements a single Windows desktop app task (WPF, WinUI 3, WinForms; MVVM or MVC) with its tests.
+|xref:skills/iru-windows-code-one-task.adoc[]
+
+|`iru-windows-code-one-task-group`
+|xref:index.adoc#group-dotnet[.NET Development Tooling]
+|Implements one Windows desktop task bucket, then validates it once: license, XML docs, tests, coverage, quality diff.
+|xref:skills/iru-windows-code-one-task-group.adoc[]
+
 |===
 
 == Agents reference
@@ -965,8 +1016,8 @@ partial setup — so a new Java library starts out matching the same conventions
 Reach for this group when standing up a **brand-new repository**, or when bringing one with an older or partial
 setup in line with the house pattern. `iru-setup-repository` is the catalog-wide front door: it detects a
 non-empty repository (via `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the
-project type over up to five `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node,
-PHP, Python, Mobile & Apple — each with a "Something in the next group" escape hatch, the last ending in "None of these";
+project type over up to six `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node,
+PHP, Python, Mobile & Apple, Desktop — each with a "Something in the next group" escape hatch, the last ending in "None of these";
 .NET is detected but has no orchestrator to offer), asks the shared inputs once — `open-source`, the repository's `visibility` (detected via
 `gh` when possible), whether GitHub workflows are wanted at all (`ci`), Sonar, whether CI runs unit tests only or
 the full suite (`ci-tests`), GitHub Pages (`pages`), and `publish`-or-`distribution` — quoting the cost
@@ -978,8 +1029,10 @@ xref:index.adoc#group-typescript-bootstrap[`iru-setup-typescript-repository`],
 xref:index.adoc#group-php-bootstrap[`iru-setup-php-repository`],
 xref:index.adoc#group-python-bootstrap[`iru-setup-python-repository`],
 xref:index.adoc#group-android-bootstrap[`iru-setup-android-repository`],
-xref:index.adoc#group-kmp-bootstrap[`iru-setup-kmp-repository`], or
-xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`] — via `iru-isolated-skill-executor`. Every
+xref:index.adoc#group-kmp-bootstrap[`iru-setup-kmp-repository`],
+xref:index.adoc#group-swift-bootstrap[`iru-setup-swift-repository`],
+xref:index.adoc#group-swift-bootstrap[`iru-setup-macos-repository`] (native macOS desktop app), or
+xref:index.adoc#group-windows-bootstrap[`iru-setup-windows-repository`] (Windows desktop app on .NET) — via `iru-isolated-skill-executor`. Every
 run announces whether it is setting the repository up **from scratch** or **updating an existing one** (with an
 inventory of what already exists), and each component skill warns about every pre-existing artifact and asks
 **Update** (merge, keep customizations), **Keep as is**, or **Replace** (regenerate) — or applies `on-existing` in
@@ -990,7 +1043,7 @@ already has a `pom.xml`).
 ====
 
 * xref:skills/iru-setup-repository.adoc[`iru-setup-repository`] — catalog-wide front door: detects/asks a
-  repository's project type and delegates to one of nine stack orchestrators.
+  repository's project type and delegates to exactly one matching stack orchestrator.
 * xref:skills/iru-setup-java-library-repository.adoc[`iru-setup-java-library-repository`] — orchestrator: bootstraps
   or updates a Java library repository end to end in one pass.
 * xref:skills/iru-setup-java-library.adoc[`iru-setup-java-library`] — generates `pom.xml` and the standard Maven
@@ -1266,12 +1319,48 @@ existing repository to fill a single gap.
   Apple app repository end to end: scaffold, docs, gitignore, CI, changelog, README.
 * xref:skills/iru-setup-swift-library.adoc[`iru-setup-swift-library`] — scaffolds a SwiftPM library's
   `Package.swift`, source/test layout, SwiftLint, formatter, DocC, and Sonar config.
-* xref:skills/iru-setup-apple-app.adoc[`iru-setup-apple-app`] — scaffolds a native Apple app's XcodeGen/Tuist
-  manifest, SwiftPM Core package, test targets, and Fastlane/Sonar config.
+* xref:skills/iru-setup-apple-app.adoc[`iru-setup-apple-app`] — scaffolds a native iOS/iPadOS/macOS/watchOS/visionOS
+  app (SwiftUI, or UIKit on iOS/iPadOS; MVVM or MVC): XcodeGen/Tuist manifest, UI-free SwiftPM Core package, per-platform
+  test targets, and Fastlane/Sonar config.
 * xref:skills/iru-setup-swift-github-workflows.adoc[`iru-setup-swift-github-workflows`] — scaffolds
-  `build.yml`, `release.yml`, `sync.yml`, `security.yml`, and `dependabot.yml` for the CI/CD pipeline.
+  `build.yml`, `release.yml`, `sync.yml`, `security.yml`, and `dependabot.yml` for the CI/CD pipeline, with one
+  simulator matrix leg per app platform scheme (visionOS reported unverified when the runner lacks its runtime).
 * xref:skills/iru-setup-swift-gitignore.adoc[`iru-setup-swift-gitignore`] — creates or refreshes the root
   `.gitignore`, showing a diff before overwriting an existing one.
+* xref:skills/iru-setup-macos-repository.adoc[`iru-setup-macos-repository`] — orchestrator for a native macOS
+  desktop app (SwiftUI or AppKit, MVVM or MVC): scaffold, docs, gitignore, CI, changelog, README; reached via
+  `iru-setup-repository` or standalone.
+* xref:skills/iru-setup-macos-app.adoc[`iru-setup-macos-app`] — scaffolds the XcodeGen project, UI-free
+  `Packages/Core`, Swift Testing/XCUITest targets, entitlements, and the DMG script.
+* xref:skills/iru-setup-macos-github-workflows.adoc[`iru-setup-macos-github-workflows`] — build, release, sync,
+  security, and Dependabot workflows with a Linux lint job and a cost-gated macOS job. The macOS chain reuses
+  `iru-setup-swift-gitignore` instead of a macOS-specific gitignore skill.
+
+[[group-windows-bootstrap]]
+=== Windows Desktop Bootstrap
+
+Scaffolding (or updating) a Windows desktop app repository on .NET 10 end to end — WPF, WinUI 3, or Windows Forms
+over a UI-free Core project, with MVVM (WPF/WinUI) or MVC/MVVM (WinForms).
+
+[TIP]
+====
+`iru-setup-windows-repository` is the single entry point, reached either directly or via
+xref:index.adoc#group-bootstrap[`iru-setup-repository`]. It collects `ui`, `architecture`, `branching`, the app
+identity, and the shared pipeline inputs once, then chains the same six-step shape as the other `*-repository`
+orchestrators: `iru-setup-windows-app` → `iru-setup-antora` → `iru-setup-windows-gitignore` →
+`iru-setup-windows-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, each via
+`iru-isolated-skill-executor`. Each member also runs standalone. Work inside the resulting app is then implemented
+through the xref:index.adoc#group-dotnet[.NET Development Tooling].
+====
+
+* xref:skills/iru-setup-windows-repository.adoc[`iru-setup-windows-repository`] — orchestrator: bootstraps a
+  Windows desktop app repository end to end in one pass.
+* xref:skills/iru-setup-windows-app.adoc[`iru-setup-windows-app`] — scaffolds `global.json`, central package
+  management, the UI-free Core, the WPF/WinUI/WinForms app, MSTest tests, DocFX, and MSIX packaging.
+* xref:skills/iru-setup-windows-gitignore.adoc[`iru-setup-windows-gitignore`] — creates or updates the root
+  `.gitignore` covering .NET output, IDE state, coverage, MSIX output, and signing material.
+* xref:skills/iru-setup-windows-github-workflows.adoc[`iru-setup-windows-github-workflows`] — build, release,
+  sync, security, and Dependabot workflows with a Linux Core job and a Windows job (FlaUI UI tests, MSIX).
 
 [[group-intake]]
 === Ticket Intake
@@ -1315,7 +1404,7 @@ implement anything directly — it dispatches each of `iru-plan`'s dependency-aw
 `iru-code-one-task-group`, which resolves each task's language and delegates to whichever
 xref:index.adoc#group-java[Java], xref:index.adoc#group-springboot[Spring Boot] (Java or Kotlin),
 xref:index.adoc#group-quarkus[Quarkus], xref:index.adoc#group-php[PHP], xref:index.adoc#group-python[Python]
-(FastAPI and Django), xref:index.adoc#group-dotnet[.NET],
+(FastAPI and Django), xref:index.adoc#group-dotnet[.NET] (incl. Windows desktop apps),
 xref:index.adoc#group-typescript[TypeScript] (incl. NestJS, Next.js, and React Native), xref:index.adoc#group-android[Android],
 xref:index.adoc#group-kmp[Kotlin Multiplatform], xref:index.adoc#group-swift[Swift], or xref:index.adoc#group-database[Database] Development Tooling group skill
 matches, and brackets the whole run
@@ -1340,6 +1429,7 @@ with quality and security baselines (xref:index.adoc#group-maintenance[Repositor
   xref:skills/iru-quarkus-code-one-task-group.adoc[`iru-quarkus-code-one-task-group`],
   xref:skills/iru-php-code-one-task-group.adoc[`iru-php-code-one-task-group`],
   xref:skills/iru-dotnet-code-one-task-group.adoc[`iru-dotnet-code-one-task-group`],
+  xref:skills/iru-windows-code-one-task-group.adoc[`iru-windows-code-one-task-group`],
   xref:skills/iru-typescript-code-one-task-group.adoc[`iru-typescript-code-one-task-group`],
   xref:skills/iru-nestjs-code-one-task-group.adoc[`iru-nestjs-code-one-task-group`],
   xref:skills/iru-nextjs-code-one-task-group.adoc[`iru-nextjs-code-one-task-group`],
@@ -1571,7 +1661,8 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle].
   tasks and validates the whole bucket once: license headers, DocC, tests, coverage, and a quality regression
   check, with simulator-lock serialization.
 * xref:skills/iru-swift-code-one-task.adoc[`iru-swift-code-one-task`] — implements a single task's code and
-  tests only, detecting package-vs-app shape and target; called once per task by
+  tests only, detecting package-vs-app shape, target, platform (macOS/iOS-iPadOS/visionOS), UI framework
+  (SwiftUI/UIKit/AppKit) and MVVM-vs-MVC architecture; called once per task by
   `iru-swift-code-one-task-group`.
 * xref:skills/iru-swift-test.adoc[`iru-swift-test`] — runs the test suite via `swift test --filter` (package) or
   `xcodebuild -only-testing` (app), scoped to a selector.
@@ -1756,6 +1847,15 @@ rarely needs them invoked directly during the xref:index.adoc#group-cycle[Issue-
 * xref:skills/iru-dotnet-generate-all-tests.adoc[`iru-dotnet-generate-all-tests`] — finds every class with no test class
   or under 80% line coverage (via `iru-dotnet-coverage`) and generates/extends tests until it clears the bar, across
   the whole codebase in one pass.
+* xref:skills/iru-dotnet-bump-version.adoc[`iru-dotnet-bump-version`] — sets a .NET project's version in
+  `Directory.Build.props`/`*.csproj` and the MSIX package identity; called by `iru-release` when the detected
+  ecosystem is .NET.
+* xref:skills/iru-windows-code-one-task-group.adoc[`iru-windows-code-one-task-group`] — the Windows desktop
+  (WPF, WinUI 3, Windows Forms) variant of the group skill: dispatched for buckets tagged `windows`, it detects the UI
+  stack and MVVM/MVC shape once, runs `iru-windows-code-one-task` per task, and validates the bucket once through
+  the `iru-dotnet-*` gates and `iru-check-license`.
+* xref:skills/iru-windows-code-one-task.adoc[`iru-windows-code-one-task`] — implements a single Windows desktop
+  task's code and tests; called once per task by `iru-windows-code-one-task-group`.
 
 [[group-database]]
 === Database Development Tooling
@@ -1921,7 +2021,9 @@ how agents differ from skills in how they're triggered.
   xref:skills/iru-setup-python-repository.adoc[`iru-setup-python-repository`],
   xref:skills/iru-setup-android-repository.adoc[`iru-setup-android-repository`],
   xref:skills/iru-setup-kmp-repository.adoc[`iru-setup-kmp-repository`],
-  xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`]) to delegate each of the bootstrap
+  xref:skills/iru-setup-swift-repository.adoc[`iru-setup-swift-repository`],
+  xref:skills/iru-setup-macos-repository.adoc[`iru-setup-macos-repository`],
+  xref:skills/iru-setup-windows-repository.adoc[`iru-setup-windows-repository`]) to delegate each of the bootstrap
   skills it orchestrates.
 * xref:agents/iru-change-summarizer.adoc[`iru-change-summarizer`] — fans out over a git commit/tag range and returns
   only the user-facing changes. Used by xref:skills/iru-setup-changelog.adoc[`iru-setup-changelog`] to summarize one
@@ -2014,10 +2116,20 @@ flowchart LR
 
     subgraph GROUP_SWIFT_BOOTSTRAP["Swift/Apple Bootstrap"]
         SETUP_APPLE_APP["iru-setup-apple-app"]
+        SETUP_MACOS_APP["iru-setup-macos-app"]
+        SETUP_MACOS_GITHUB_WORKFLOWS["iru-setup-macos-github-workflows"]
+        SETUP_MACOS_REPOSITORY["iru-setup-macos-repository"]
         SETUP_SWIFT_GITHUB_WORKFLOWS["iru-setup-swift-github-workflows"]
         SETUP_SWIFT_GITIGNORE["iru-setup-swift-gitignore"]
         SETUP_SWIFT_LIBRARY["iru-setup-swift-library"]
         SETUP_SWIFT_REPOSITORY["iru-setup-swift-repository"]
+    end
+
+    subgraph GROUP_WINDOWS_BOOTSTRAP["Windows Desktop Bootstrap"]
+        SETUP_WINDOWS_APP["iru-setup-windows-app"]
+        SETUP_WINDOWS_GITHUB_WORKFLOWS["iru-setup-windows-github-workflows"]
+        SETUP_WINDOWS_GITIGNORE["iru-setup-windows-gitignore"]
+        SETUP_WINDOWS_REPOSITORY["iru-setup-windows-repository"]
     end
 
     subgraph GROUP_INTAKE["Ticket Intake"]
@@ -2137,6 +2249,9 @@ flowchart LR
     end
 
     subgraph GROUP_DOTNET[".NET Development Tooling"]
+        DOTNET_BUMP_VERSION["iru-dotnet-bump-version"]
+        WINDOWS_CODE_ONE_TASK["iru-windows-code-one-task"]
+        WINDOWS_CODE_ONE_TASK_GROUP["iru-windows-code-one-task-group"]
         DOTNET_CODE_ONE_TASK["iru-dotnet-code-one-task"]
         DOTNET_CODE_ONE_TASK_GROUP["iru-dotnet-code-one-task-group"]
         DOTNET_CODE_QUALITY["iru-dotnet-code-quality"]
@@ -2527,6 +2642,37 @@ flowchart LR
     KMP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     REACT_NATIVE_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     SETUP_KMP_REPOSITORY -.spawns.-> AGT_ISE
+    CODE_ONE_TASK_GROUP --> WINDOWS_CODE_ONE_TASK_GROUP
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> WINDOWS_CODE_ONE_TASK
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_QUALITY
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_COVERAGE
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_DOCFX
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_TEST
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    WINDOWS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
+    WINDOWS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
+    RELEASE --> DOTNET_BUMP_VERSION
+    SETUP_REPOSITORY -.-> SETUP_MACOS_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_WINDOWS_REPOSITORY
+    SETUP_MACOS_REPOSITORY -.-> SETUP_MACOS_APP
+    SETUP_MACOS_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_MACOS_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
+    SETUP_MACOS_REPOSITORY -.-> SETUP_MACOS_GITHUB_WORKFLOWS
+    SETUP_MACOS_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_MACOS_REPOSITORY -.-> SETUP_README
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_APP
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_GITIGNORE
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_GITHUB_WORKFLOWS
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_README
+    SETUP_MACOS_APP -.spawns.-> AGT_GATE
+    SETUP_MACOS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_WINDOWS_APP -.spawns.-> AGT_GATE
+    SETUP_WINDOWS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
+    SETUP_MACOS_REPOSITORY -.spawns.-> AGT_ISE
+    SETUP_WINDOWS_REPOSITORY -.spawns.-> AGT_ISE
+    WINDOWS_CODE_ONE_TASK -.spawns.-> AGT_ISE
     KMP_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
     KMP_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
 ....
@@ -2579,15 +2725,19 @@ flowchart TD
     FD --> A["iru-setup-android-repository"]
     FD --> K["iru-setup-kmp-repository"]
     FD --> SW["iru-setup-swift-repository"]
+    FD --> MAC["iru-setup-macos-repository"]
+    FD --> WIN["iru-setup-windows-repository"]
     Q --> Q1["iru-setup-quarkus-service → iru-setup-antora →\niru-setup-java-gitignore → iru-setup-quarkus-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     T --> T1["library / react / nextjs / angular / nestjs /\nreact-native (expo or metro) / ionic scaffold → iru-setup-antora →\niru-setup-typescript-gitignore → iru-setup-typescript-github-workflows →\niru-setup-changelog → iru-setup-readme"]
     PH --> P1["iru-setup-php-laravel / -wordpress / -prestashop →\niru-setup-antora → iru-setup-php-gitignore →\niru-setup-php-github-workflows → iru-setup-changelog → iru-setup-readme"]
     PY --> PY1["iru-setup-python-fastapi / -django →\niru-setup-antora → iru-setup-python-gitignore →\niru-setup-python-github-workflows → iru-setup-changelog → iru-setup-readme"]
     K --> K1["iru-setup-kmp-app (compose or native UI) →\niru-setup-antora → iru-setup-kmp-gitignore →\niru-setup-kmp-github-workflows → iru-setup-changelog → iru-setup-readme"]
+    MAC --> MAC1["iru-setup-macos-app (swiftui or appkit) →\niru-setup-antora → iru-setup-swift-gitignore →\niru-setup-macos-github-workflows → iru-setup-changelog → iru-setup-readme"]
+    WIN --> WIN1["iru-setup-windows-app (wpf, winui or winforms) →\niru-setup-antora → iru-setup-windows-gitignore →\niru-setup-windows-github-workflows → iru-setup-changelog → iru-setup-readme"]
 ....
 
 `iru-setup-repository` is the usual way in: it detects a non-empty repository's type via `iru-explore` (or asks
-over up to five rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple), collects the shared,
+over up to six rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple, Desktop), collects the shared,
 cost-aware inputs once, and delegates to exactly one orchestrator via `iru-isolated-skill-executor`, forwarding
 `mode: existing` when the repository already has content.
 
@@ -2693,12 +2843,12 @@ tickets, and any attached prior implementation plans for extra context.
 === Generating a release
 
 `iru-release` must be run from `develop`, is ecosystem-agnostic (Java/Kotlin on Maven or Gradle, TypeScript/npm,
-React Native (Expo or Metro), Android/Gradle, Kotlin Multiplatform, Swift/Apple, PHP/Composer, or
+React Native (Expo or Metro), Android/Gradle, Kotlin Multiplatform, Swift/Apple, .NET (incl. Windows desktop apps), PHP/Composer, or
 Python/FastAPI/Django), and delegates the actual version-file edit to that ecosystem's own installed
 xref:skills/iru-java-bump-version.adoc[`iru-java-bump-version`]/xref:skills/iru-typescript-bump-version.adoc[`iru-typescript-bump-version`]/
 xref:skills/iru-react-native-bump-version.adoc[`iru-react-native-bump-version`]/
 xref:skills/iru-android-bump-version.adoc[`iru-android-bump-version`]/xref:skills/iru-kmp-bump-version.adoc[`iru-kmp-bump-version`]/
-xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]/
+xref:skills/iru-swift-bump-version.adoc[`iru-swift-bump-version`]/xref:skills/iru-dotnet-bump-version.adoc[`iru-dotnet-bump-version`]/
 xref:skills/iru-php-bump-version.adoc[`iru-php-bump-version`]/xref:skills/iru-python-bump-version.adoc[`iru-python-bump-version`]
 skill (called with `sync-files: yes`, which folds in refreshing `README.md`/`docs/antora.yml`/Antora dependency
 snippets), keeping only the release notes and PR description as its own work. See

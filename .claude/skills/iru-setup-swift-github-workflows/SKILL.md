@@ -1,6 +1,6 @@
 ---
 name: iru-setup-swift-github-workflows
-description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, `xcodegen generate`/`tuist generate` plus one `xcodebuild test -enableCodeCoverage YES -resultBundlePath` per selected platform destination (piped through `xcbeautify`, `.xcresult` uploaded as a build artifact, coverage converted via SonarSource's `xccov-to-sonarqube-generic.sh`) for the app flavor, an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: `xcodebuild archive` + `-exportArchive`, signed via `fastlane match` or an App Store Connect API key, uploaded to TestFlight, and — for macOS — exported with Developer ID, notarized and stapled), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, the four `security-*` opt-outs, `visibility` (`public`/`private`/`internal` — drives the Actions-minutes, SonarCloud and Pages cost guidance), `ci-tests` (`unit` — unit-test targets only, the app flavor's XCUITest bundle skipped, every macOS minute costing ~10× Linux — or `full` — unit + UI tests on every selected destination), `pages` (`yes`/`no` — `no` keeps the DocC + Antora build but uploads it as a workflow artifact instead of deploying to GitHub Pages), and `on-existing` (`ask`/`keep`/`update`/`replace`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it resolves `visibility` itself (`gh repo view`, else asks) and asks `sonar`/`ci-tests`/`pages` with that visibility's cost facts (never `ci` — invoking it means CI is wanted). Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Announces whether it is creating the pipeline from scratch or updating an existing one; creates every workflow that doesn't exist, and for each one that already exists warns and asks Update (merge using the templates as reference, keeping foreign steps/jobs) / Keep as is (listing every mismatch with this run's choices) / Replace (regenerate, customizations lost) / Stop, explaining each consequence (`on-existing` answers for every file at once). Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: Create or update the `build.yml`, `release.yml`, `sync.yml` (gitflow), `security.yml`, and `.github/dependabot.yml` GitHub Actions workflows for a Swift repository produced by `iru-setup-swift-library` (a SwiftPM package) or `iru-setup-apple-app` (an XcodeGen/Tuist-generated Xcode app) — SwiftLint + `swift format lint --strict`, `swift test --enable-code-coverage --parallel` (with a `.build` cache keyed on `Package.resolved`) plus an `xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an `ubuntu-latest` matrix leg for the library flavor, for the app flavor (`iru-setup-apple-app`'s contract) a Linux SwiftLint/`swift format` job, a macOS `Packages/Core` job (`swift test --enable-code-coverage` + `llvm-cov`, 80% line bar, DocC) and one matrix leg per platform scheme (`<AppName>-iOS`/`-watchOS`/`-visionOS`/`-macOS`, each `xcodegen generate`/`tuist generate`, `xcodebuild build-for-testing` against `generic/platform=<P> Simulator`, then `test-without-building` on `platform=<P> Simulator,name=<device>,OS=<newest runtime>` resolved from `xcrun simctl` — visionOS tests reported unverified when the runner image has no visionOS runtime; `.xcresult` uploaded), an optional `SonarSource/sonarqube-scan-action` scan, a DocC + Antora documentation build published to GitHub Pages from the stable branch, a release workflow (library: verifies the release tag is valid semver and `swift package dump-package` succeeds, plus an optional `googleapis/release-please-action` job; app: plain `xcodebuild archive` + `-exportArchive` with `destination: upload` to App Store Connect via an API key for iOS (watch app embedded), visionOS and a standalone watchOS app, Developer ID export + notarization + stapling for macOS — the Fastfile's `match` + `beta`/`release` lane drives the iOS upload only when `fastlane/` exists and `signing: fastlane-match`; no job requires Fastlane), and a `dependabot.yml`/CodeQL(`swift`, macOS-only)/dependency-review/OSV-Scanner/gitleaks security block. Invoke as `/iru-setup-swift-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `platforms` (comma-separated, matching `iru-setup-swift-library`'s/`iru-setup-apple-app`'s own `platforms` vocabulary), `runner` (`macos-26`/`xcode-27` — a GitHub-hosted GA image label vs. the newer-Xcode preview image label, which some self-hosted/ARC macOS runner pools also adopt by convention; default `macos-26`, both looked up at run time against `actions/runner-images`), `xcode-version` (passed to `maxim-lobanov/setup-xcode`), `integration-branch`, `stable-branch`, `branching` (`gitflow`/`main-only`, default `gitflow`, as the Android sibling), `generator` (`xcodegen`/`tuist`, app only, matching whichever manifest `iru-setup-apple-app` wrote), `signing` (`fastlane-match`/`api-key`/`none`, app only), `release-please` (`yes`/`no`, library only, default `no`), plus this catalog's shared workflow-args vocabulary — `open-source`, `publish` (library only), `distribution` (app only), `sonar` (+ coordinates), `mode`, the four `security-*` opt-outs, `visibility` (`public`/`private`/`internal` — drives the Actions-minutes, SonarCloud and Pages cost guidance), `ci-tests` (`unit` — unit-test targets only, the app flavor's XCUITest bundle skipped, every macOS minute costing ~10× Linux — or `full` — unit + UI tests on every selected destination), `pages` (`yes`/`no` — `no` keeps the DocC + Antora build but uploads it as a workflow artifact instead of deploying to GitHub Pages), and `on-existing` (`ask`/`keep`/`update`/`replace`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it resolves `visibility` itself (`gh repo view`, else asks) and asks `sonar`/`ci-tests`/`pages` with that visibility's cost facts (never `ci` — invoking it means CI is wanted). Ships with explicit example templates embedded in this skill file (there is no single real reference repository to genericize from, unlike the Java/TypeScript/Android siblings — these templates are assembled from `iru-setup-swift-library`'s/`iru-setup-apple-app`'s/`iru-swift-coverage`'s/`iru-swift-bump-version`'s own verified commands plus this skill's own verification pass, Step 3). Announces whether it is creating the pipeline from scratch or updating an existing one; creates every workflow that doesn't exist, and for each one that already exists warns and asks Update (merge using the templates as reference, keeping foreign steps/jobs) / Keep as is (listing every mismatch with this run's choices) / Replace (regenerate, customizations lost) / Stop, explaining each consequence (`on-existing` answers for every file at once). Equivalent to `iru-setup-java-github-workflows`/`iru-setup-typescript-github-workflows`/`iru-setup-android-github-workflows` for the Swift/Apple-platform stack. Use whenever a Swift package or Apple app repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
 model: haiku
 ---
 
@@ -43,8 +43,8 @@ is never generated** — every template here assumes SwiftPM (for dependencies a
 `Packages/Core` package) exclusively, matching `iru-setup-swift-library`'s and `iru-setup-apple-app`'s own
 scaffolds. **macOS runner minutes cost roughly 10x Linux minutes** on GitHub-hosted runners — every job in
 `build.yml`/`release.yml` that needs Xcode runs on the chosen `<runner>` (macOS) for exactly that reason; the
-library flavor's `ubuntu-latest` matrix leg (Step 4) is the one job in this whole pipeline that deliberately
-avoids that cost where it safely can.
+library flavor's `ubuntu-latest` matrix leg (Step 4) and the app flavor's Linux `lint`/`sonar`/`docs`/`site`/
+`version` jobs (Steps 5 and 7) deliberately avoid that cost where they safely can.
 
 ## Step 0 — Resolve inputs
 
@@ -94,11 +94,11 @@ plain conversation.
 | `stable-branch` | Branch releases are published from, and Pages deploys from | `main` |
 | `branching` | `gitflow` or `main-only` | `gitflow` |
 | `generator` | `xcodegen` or `tuist` (app only) | Detect from Step 1 (`project.yml` vs. `Project.swift`); ask only if genuinely ambiguous |
-| `signing` | `fastlane-match`/`api-key`/`none` (app only) | Detect from `fastlane/Fastfile`'s existing lanes (Step 1) if `iru-setup-apple-app` already ran; otherwise ask, default `none` recommended unless `distribution` isn't `none` |
+| `signing` | `fastlane-match`/`api-key`/`none` (app only) | Detect from `fastlane/Fastfile`'s existing lanes (Step 1) if `iru-setup-apple-app` already ran; otherwise ask, default `none` recommended unless `distribution` isn't `none`. Only `fastlane-match` **with** a `fastlane/Fastfile` on disk switches the iOS release leg to Fastlane (Step 7); every other combination uses plain `xcodebuild` with the App Store Connect API key |
 | `release-please` | `yes`/`no` (library only) — an optional automated changelog/version-bump PR job in `release.yml` | `no` — this catalog already has a hand-driven release path (`iru-release`/`iru-swift-bump-version`); release-please is an alternative, automated path some teams prefer instead, not a required addition |
 | `open-source` | `yes`/`no` | `gh repo view --json isPrivate` if unresolved otherwise |
 | `publish` (library only) | `yes`/`no` — informational only for this skill (gates nothing here; a SwiftPM library "publishes" by existing at a tagged git URL, per `iru-setup-swift-library`) | Accepted so an orchestrator can pass its full shared-args set without error; noted in the final report if supplied |
-| `distribution` (app only) | `none`/`internal`/`store` — gates `release.yml`'s TestFlight/App Store steps | `store` only when `open-source: yes`; otherwise ask, `none` recommended |
+| `distribution` (app only) | `none`/`internal`/`store` — `release.yml` is written only when it isn't `none`; `internal`/`store` pick the Fastfile lane (`beta`/`release`) on the Fastlane path | `store` only when `open-source: yes`; otherwise ask, `none` recommended |
 | `sonar` | `cloud`/`self-hosted`/`none` | `cloud` when `open-source: yes` **and** `visibility: public`; otherwise ask (see "Standalone resolution" below), `none` recommended, with the paid-plan caveat stated |
 | `sonar-organization` / `sonar-project-key` / `sonar-host-url` | Sonar coordinates | Only asked when `sonar` isn't `none`; read from an existing `sonar-project.properties` first (Step 1) |
 | `mode` | `new`/`existing` | Informational: whether the caller considers this a first-time setup or a re-run. It no longer short-circuits anything — the workflow files actually on disk decide, per file, whether Step 1's warn-and-ask applies (`mode: existing` still asks per existing file unless `on-existing` says otherwise) |
@@ -120,13 +120,13 @@ either label verbatim whether it's satisfied by GitHub's own hosted fleet or by 
 Controller (ARC) pool an organization labels the same way by convention (e.g. pinning a self-managed macOS
 runner group to a specific Xcode and naming its label after that version) — the workflow YAML is identical
 either way, since `runs-on:` only ever matches a label string. Default to **`macos-26`**: it's the stable,
-generally-available image (fewer surprise outages than a public-preview image) and — confirmed in this skill's
-own verification — ships **SwiftLint 0.65.1 preinstalled**, unlike the `xcode-27` preview image, which has no
-`### Linters` section in its own published image manifest at all. Recommend `xcode-27` only when the project
-genuinely needs an Xcode 27 feature the `macos-26` image's own newest available Xcode doesn't have yet (per that
-image's own `### Xcode` table, `macos-26` currently tops out at `26.6`, not `27.x`) — and warn that a
-public-preview image can change or be pulled with less notice than a GA one, and that its SwiftLint step (Step
-4) then always needs the `brew install swiftlint` path since nothing is preinstalled there. **Look up the
+generally-available image (fewer surprise outages than a public-preview image). Neither `macos-26` (the arm64
+image) nor the `xcode-27` preview image ships SwiftLint preinstalled — only the Intel `macos-26-intel` image lists
+it (see the correction below) — so the library flavor's SwiftLint step (Step 4) keeps its `command -v swiftlint ||
+brew install swiftlint` guard on either label, and the app flavor lints on Linux instead. Recommend `xcode-27` only
+when the project genuinely needs an Xcode 27 feature the `macos-26` image's own newest available Xcode doesn't have
+yet (per that image's own `### Xcode` table, `macos-26` currently tops out at `26.6`, not `27.x`) — and warn that a
+public-preview image can change or be pulled with less notice than a GA one. **Look up the
 currently available labels at run time** rather than trusting this skill's own September 2026 snapshot: `gh api
 repos/actions/runner-images/contents/images/macos --jq '.[].name'` lists every `<label>-Readme.md`/
 `<label>-arm64-Readme.md` file (strip the suffix for the label itself), and `curl -sL
@@ -134,6 +134,18 @@ repos/actions/runner-images/contents/images/macos --jq '.[].name'` lists every `
 image's own `### Xcode` table (available versions, which one is `(default)`) and whether it lists SwiftLint
 under `### Linters` — resolve `xcode-version`'s default from whichever `(default)`-marked row applies to the
 chosen `<runner>`.
+
+**Correction (re-checked live on 2026-10-16), and what it means for the app flavor.** The README of
+`actions/runner-images` maps `macos-26`/`macos-latest` to the **arm64** image (`macos-26-arm64-Readme.md`) and only
+`macos-26-intel`/`macos-26-large` to the x64 `macos-26-Readme.md`; SwiftLint 0.65.1 is listed **only on the Intel
+image** — neither `macos-26` (arm64) nor `xcode-27` lists it, which is why the library flavor's `command -v swiftlint ||
+brew install swiftlint` guard stays, and why the app flavor (Step 5) lints on Linux with the SwiftLint release binary
+instead. The images' "Installed Simulators" tables decide the app flavor's visionOS leg: `macos-26` (arm64) ships
+visionOS 26.2/26.4/26.5 and `xcode-27` ships visionOS 27.0 (Apple Vision Pro), the Intel image none — Step 5's
+runner-image table has the full per-platform list. The app scaffold (`iru-setup-apple-app`) was verified with Xcode
+27.1 (`project.yml` `options.xcodeVersion`), which only `xcode-27` offers today: for `flavor: app` pick
+`xcode-version` the way `iru-setup-macos-github-workflows` does — the manifest's `xcodeVersion` when the chosen image
+has it, otherwise the image default with a warning, recommending `runner: xcode-27` + `xcode-version: 27.1`.
 
 **Standalone resolution of `visibility`, `sonar`, `ci-tests`, `pages`.** When an orchestrator
 (`iru-setup-swift-repository`, the `iru-setup-repository` front door) invoked this skill it has already resolved
@@ -191,7 +203,12 @@ update:
 - **Test targets** (for `ci-tests`): library — list `Package.swift`'s `.testTarget(...)` names and flag any
   integration-test target (name containing `IntegrationTests`, or one the user identifies as such); app — read
   each platform's UI-test target name from the manifest (`<AppName>UITests-<Platform>` in
-  `iru-setup-apple-app`'s scaffold) so `-skip-testing:` names the real target.
+  `iru-setup-apple-app`'s scaffold) so `-skip-testing:` names the real target, and confirm one scheme per platform
+  named `<AppName>-<Platform>` (`iOS` for `ios`/`ipados`, `watchOS`, `visionOS`, `macOS`) whose test action lists
+  `Core/CoreTests` + `<AppName>Tests-<Platform>` + `<AppName>UITests-<Platform>` — the matrix legs of Step 5. Note the
+  iOS target's `TARGETED_DEVICE_FAMILY` (`"2"` alone → `<ios-device-prefix>` `iPad`), whether the watch target is
+  embedded in the iOS app (`embed: true` → companion) or standalone (`WKWatchOnly`), and whether `fastlane/Fastfile`
+  exists at all (it is optional — `iru-setup-apple-app` never requires it).
 - **`signing`/`distribution`** (app only, skip whichever is supplied via `args`): grep `fastlane/Fastfile` for
   `sync_signing`/`match(` (→ `signing: fastlane-match`) or `connect_api_key`/`app_store_connect_api_key(` (→
   `signing: api-key`); for `distribution`, a `release`/`upload_to_app_store` lane implies `store`, a `beta`/
@@ -274,7 +291,8 @@ own verification):
 | `maxim-lobanov/setup-xcode` | `v1` | yes | |
 | `actions/setup-node` | `v7` | yes | used only for the Antora build step |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
-| `actions/upload-artifact` | `v7` | yes | uploads each `.xcresult` bundle (app flavor `build.yml`) and the notarized macOS `.zip` (app flavor `release.yml`) |
+| `actions/upload-artifact` | `v7` | yes | uploads each `.xcresult` bundle, the Core coverage/SwiftLint reports, the Antora site and DocC archive (app flavor `build.yml`) and the notarized macOS `.zip` (app flavor `release.yml`) |
+| `actions/download-artifact` | `v8` | yes | app flavor `build.yml` only — the `sonar` and `site` jobs (same as `iru-setup-macos-github-workflows`) |
 | `actions/cache` | `v6` | yes | caches `.build` keyed on `Package.resolved`/`Package.swift`, library flavor (macOS and Linux legs) |
 | `actions/upload-pages-artifact` | `v5` | yes | |
 | `actions/deploy-pages` | `v5` | yes | |
@@ -284,14 +302,13 @@ own verification):
 | `gitleaks/gitleaks-action` | `v3` | yes | |
 | `SonarSource/sonarqube-scan-action` | `v8` | yes | only when `sonar` isn't `none` |
 | `googleapis/release-please-action` | `v5` | yes | only when `release-please: yes` (library only) |
-| `apple-actions/upload-testflight-build` | `v5` | yes | app flavor, `distribution` isn't `none`, only when `signing != fastlane-match` (the Fastlane `pilot` path is used instead when `fastlane-match` is chosen — Step 7); its inputs are `issuer-id`/`api-key-id`/`api-private-key` |
-| `apple-actions/import-codesign-certs` | `v7` | yes | app flavor, `macos` selected, `signing: api-key` — imports the Developer ID Application `.p12` the `developer-id` export needs (Step 7) |
+| `apple-actions/import-codesign-certs` | `v7` | yes | app flavor, `macos` selected, `distribution` isn't `none` — imports the Developer ID Application `.p12` the `developer-id` export needs (Step 7). (`apple-actions/upload-testflight-build` is no longer used: `-exportArchive` with `destination: upload` uploads directly) |
 | `swift-actions/setup-swift` | `v2` | yes | library flavor's `ubuntu-latest` matrix leg — an alternative to the official `swift` Docker image (below) |
-| `swift` Docker image (`container: swift:<tag>`) | `6.3-noble` | n/a — not a `uses:` action | the **open-source Linux Swift toolchain lags the Apple-toolchain-bundled Swift version** — confirmed during this skill's own verification: this machine's Xcode 27/Swift 6.4 has no Linux `swift:6.4*` tag published yet on Docker Hub, only up to `6.3.3`; re-check `https://hub.docker.com/v2/repositories/library/swift/tags` at generation time rather than assuming the two track each other |
-| `swiftlint` (Homebrew formula, not a `uses:` action) | `0.65.1` | n/a | preinstalled on the `macos-26` runner image (Step 0's note); only `brew install`ed when missing |
+| `swift` Docker image (`container: swift:<tag>`) | `6.3-noble` | n/a — not a `uses:` action | the **open-source Linux Swift toolchain lags the Apple-toolchain-bundled Swift version** — confirmed during this skill's own verification: this machine's Xcode 27/Swift 6.4 has no Linux `swift:6.4*` tag published yet on Docker Hub, only up to `6.3.3`; re-check `https://hub.docker.com/v2/repositories/library/swift/tags` at generation time rather than assuming the two track each other. **Update 2026-10-16**: `6.4-noble`/`6.4.1-noble` are now published — the app flavor's Linux `lint` job uses `<linux-swift-tag>` = `6.4-noble` |
+| `swiftlint` (Homebrew formula, not a `uses:` action) | `0.65.1` | n/a | library flavor: preinstalled only on the Intel `macos-26-intel` image (Step 0's correction); `brew install`ed when missing. App flavor: the `swiftlint_linux_{amd64,arm64}.zip` release asset of `<swiftlint-version>` (`gh release view --repo realm/SwiftLint --json tagName`) in the Linux `lint` job |
 | `xcodegen` (Homebrew formula) | `2.46.0` | n/a | app flavor, `generator: xcodegen` |
 | `tuist` (Homebrew **cask**, not formula — `iru-setup-apple-app`'s own Step 4 finding) | `4.208.0` | n/a | app flavor, `generator: tuist` |
-| `xcbeautify` (Homebrew formula) | `3.2.1` | n/a | app flavor, pipes `xcodebuild test` output |
+| `xcbeautify` (Homebrew formula) | `3.2.1` | n/a | no longer used by the app flavor — `xcodebuild -quiet` keeps logs short and the `.xcresult` summary is printed with `xcresulttool` |
 
 `GITHUB_TOKEN`'s automatic scopes are sufficient for every job above except where a secret is explicitly named
 in Step 6/7/9's templates.
@@ -523,138 +540,518 @@ Notes specific to this template:
 
 ## Step 5 — `build.yml` (`flavor: app`)
 
-Same job name/trigger shape as Step 4's `build-test` job, replacing every step from `Install SwiftLint` onward
-(the checkout/`setup-xcode` steps are identical):
+A complete, separate template — the app flavor shares only the trigger and the security/sync files with Step 4. It
+follows `iru-setup-apple-app`'s **scaffold contract** (its Step 8 table) and the job layout
+`iru-setup-macos-github-workflows` verified for the macOS desktop app: **what can run on Linux runs on
+`ubuntu-latest`** (SwiftLint/`swift format` in a `swift` container, the Sonar scan, Antora, the docs merge/deploy),
+and only what needs Xcode uses the macOS `<runner>`. Jobs: `lint` (Linux) → `core` (macOS: `Packages/Core` tests +
+the 80% line bar + DocC) and `apps` (macOS, **one matrix leg per selected platform scheme** —
+`<AppName>-iOS`/`-watchOS`/`-visionOS`/`-macOS`, each running `Core/CoreTests` + `<AppName>Tests-<P>` +
+`<AppName>UITests-<P>`), then `sonar` (Linux), `docs` → `site` → `deploy-docs` (Linux). **No job needs Fastlane.**
+
+**Conditional markers** (app templates in Steps 5 and 7): a line `# >>> <condition>` opens a block written only when
+the condition holds and `# <<< <condition>` closes it; marker lines are never written, blocks nest, and a
+comma-separated condition must hold entirely. Markers also appear inside `run: |` scripts.
+
+| Condition | Holds when |
+|---|---|
+| `gitflow` / `main-only` | `branching` |
+| `generator: xcodegen` / `generator: tuist` | `generator` |
+| `platform: iOS` / `watchOS` / `visionOS` / `macOS` | that target exists (`ios` and/or `ipados` → the one `iOS` target) |
+| `watchos-standalone` | `watchOS` selected without `iOS` (otherwise the watch app is embedded in the iOS archive) |
+| `ci-tests: unit` / `ci-tests: full` | `ci-tests` |
+| `pages: yes` / `pages: no` | `pages` |
+| `sonar` | `sonar` ≠ `none` |
+| `distribution: internal` / `distribution: store` | `distribution` (`release.yml` is written only when it is not `none`) |
+| `fastlane` / `no-fastlane` | `fastlane` = `fastlane/Fastfile` exists **and** `signing: fastlane-match`; `no-fastlane` otherwise |
+| `app-store-job` | `release.yml` only: the `app-store` matrix has at least one leg — `platform: iOS` with `no-fastlane`, `platform: visionOS`, or `watchos-standalone` |
+
+Extra placeholders: `<ios-device-prefix>` (`iPhone`; `iPad` when only `ipados` was selected — `TARGETED_DEVICE_FAMILY`
+`"2"`), `<linux-swift-tag>` (the `swift` Docker image for the lint job — `<major.minor>-noble` of the scaffold's
+Swift, e.g. `6.4-noble`), `<swiftlint-version>` (`gh release view --repo realm/SwiftLint --json tagName`, e.g.
+`0.65.1`), `<repo>`.
 
 ```yaml
-      - name: Install SwiftLint
-        run: command -v swiftlint >/dev/null || brew install swiftlint
+name: Build
 
-      - name: Run SwiftLint
-        run: swiftlint lint --strict --reporter json > swiftlint.json
+on:
+  push:
+    # >>> gitflow
+    branches: [ <integration-branch>, <stable-branch> ]
+    # <<< gitflow
+    # >>> main-only
+    branches: [ <stable-branch> ]
+    # <<< main-only
+  pull_request:
+  workflow_dispatch:
 
-      - name: Run swift format lint
-        run: swift format lint --strict --recursive Packages/Core/Sources Packages/Core/Tests Targets
+permissions:
+  contents: read
 
-      # generator: xcodegen
-      - name: Generate Xcode project
+# A newer push to the same ref cancels the run in flight: macOS minutes are expensive.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Linux, every push and pull request — macOS minutes cost ~10x Linux minutes on private repositories.
+  lint:
+    name: Lint — SwiftLint, swift format
+    runs-on: ubuntu-latest
+    container: swift:<linux-swift-tag>
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # The dynamically linked Linux binary uses the container toolchain's SourceKit (libsourcekitdInProc.so).
+      - name: Install SwiftLint <swiftlint-version>
+        run: |
+          set -euo pipefail
+          if ! command -v curl >/dev/null || ! command -v unzip >/dev/null; then
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends ca-certificates curl unzip >/dev/null
+          fi
+          case "$(uname -m)" in
+            aarch64|arm64) arch=arm64 ;;
+            *) arch=amd64 ;;
+          esac
+          curl -fsSL -o /tmp/swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/<swiftlint-version>/swiftlint_linux_${arch}.zip"
+          unzip -q -o /tmp/swiftlint.zip swiftlint -d /usr/local/bin
+          swiftlint version
+
+      # .swiftlint.yml (iru-setup-apple-app) includes Targets, Packages/Core/Sources and Packages/Core/Tests.
+      - name: SwiftLint (strict)
+        run: swiftlint lint --strict --reporter github-actions-logging
+      # >>> sonar
+
+      # Generic external-issues JSON for the sonar job (SwiftLint's sonarqube reporter).
+      - name: SwiftLint report for Sonar
+        if: (!cancelled())
+        run: swiftlint lint --quiet --reporter sonarqube > swiftlint-sonar.json || true
+
+      - name: Upload the SwiftLint report
+        if: (!cancelled())
+        uses: actions/upload-artifact@v7
+        with:
+          name: swiftlint-report
+          path: swiftlint-sonar.json
+          retention-days: 7
+      # <<< sonar
+
+      - name: swift format lint
+        run: swift format lint --strict --recursive Targets Packages/Core/Sources Packages/Core/Tests
+
+  # The coverage bar. Packages/Core holds every model/service/view model/controller and is measured with swift test +
+  # llvm-cov on the macOS host: the app schemes' xccov report does not attribute the statically linked Core sources,
+  # and the UI layer (Targets/**) is "not measured" (also sonar.coverage.exclusions in sonar-project.properties).
+  core:
+    name: Core — tests, coverage (80% line bar), DocC
+    needs: lint
+    runs-on: <runner>
+    timeout-minutes: 30
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Select Xcode <xcode-version>
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '<xcode-version>'
+
+      - name: Core tests with coverage (80% line bar)
+        run: |
+          set -euo pipefail
+          swift test --package-path Packages/Core --enable-code-coverage
+          BIN="$(swift build --package-path Packages/Core --show-bin-path)"
+          TEST_BINARY="$BIN/CoreTests.xctest/Contents/MacOS/CoreTests"
+          PROFDATA="$BIN/codecov/default.profdata"
+          IGNORE='(Tests/|DerivedSources|\.build/)'
+          xcrun llvm-cov report "$TEST_BINARY" -instr-profile "$PROFDATA" --ignore-filename-regex="$IGNORE"
+          xcrun llvm-cov export "$TEST_BINARY" -instr-profile "$PROFDATA" --ignore-filename-regex="$IGNORE" \
+            -format=lcov > coverage.lcov
+          xcrun llvm-cov export "$TEST_BINARY" -instr-profile "$PROFDATA" --ignore-filename-regex="$IGNORE" \
+            -summary-only > coverage-summary.json
+          python3 - <<'PY'
+          import json
+          percent = json.load(open("coverage-summary.json"))["data"][0]["totals"]["lines"]["percent"]
+          print(f"Core line coverage: {percent:.2f}% (bar: 80%)")
+          if percent < 80:
+              raise SystemExit(f"::error::Core line coverage {percent:.2f}% is below the 80% bar")
+          PY
+      # >>> sonar
+
+      - name: Convert coverage to SonarQube generic XML
+        run: python3 .github/scripts/lcov_to_sonar_generic.py coverage.lcov > sonarqube-generic-coverage.xml
+
+      - name: Upload the coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: core-coverage
+          path: |
+            coverage.lcov
+            sonarqube-generic-coverage.xml
+          retention-days: 7
+      # <<< sonar
+
+      # --warnings-as-errors is the documentation gate; the site job merges the archive under the Antora site's api/,
+      # so DocC bakes /<repo>/api into its links.
+      - name: DocC (Packages/Core)
+        run: |
+          mkdir -p build/docc
+          swift package --package-path Packages/Core --allow-writing-to-directory build/docc \
+            generate-documentation --target Core --warnings-as-errors \
+            --transform-for-static-hosting --hosting-base-path <repo>/api --output-path build/docc
+
+      - name: Upload the DocC archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: docc-api
+          path: build/docc
+          retention-days: 7
+
+  # One leg per platform scheme. Each builds for testing against the generic simulator destination (always — this is
+  # also the compile check for a platform whose runtime is missing), then runs the tests on the newest simulator
+  # runtime the selected Xcode supports, with OS= pinned because device names repeat across runtimes.
+  apps:
+    name: ${{ matrix.scheme }} — build and test
+    needs: lint
+    runs-on: <runner>
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # >>> platform: iOS
+          - scheme: <AppName>-iOS
+            platform: iOS
+            device: <ios-device-prefix>
+            runtime-required: true
+          # <<< platform: iOS
+          # >>> platform: watchOS
+          # Its own leg even when the watch app is embedded in the iOS app: the iOS scheme never runs the
+          # <AppName>Tests-watchOS/<AppName>UITests-watchOS bundles.
+          - scheme: <AppName>-watchOS
+            platform: watchOS
+            device: Apple Watch
+            runtime-required: true
+          # <<< platform: watchOS
+          # >>> platform: visionOS
+          # The visionOS simulator runtime is not on every image (see Step 5's runner-image table): without it the leg
+          # builds for testing and reports the tests unverified instead of failing.
+          - scheme: <AppName>-visionOS
+            platform: visionOS
+            device: Apple Vision Pro
+            runtime-required: false
+          # <<< platform: visionOS
+          # >>> platform: macOS
+          - scheme: <AppName>-macOS
+            platform: macOS
+            device: ''
+            runtime-required: true
+          # <<< platform: macOS
+    env:
+      SCHEME: ${{ matrix.scheme }}
+      PLATFORM: ${{ matrix.platform }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Select Xcode <xcode-version>
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '<xcode-version>'
+      # >>> generator: xcodegen
+
+      - name: Generate the Xcode project
         run: |
           command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate
+      # <<< generator: xcodegen
+      # >>> generator: tuist
 
-      # generator: tuist
-      - name: Generate Xcode project
+      - name: Generate the Xcode project
         run: |
           command -v tuist >/dev/null || brew install --cask tuist
           tuist generate --no-open
+      # <<< generator: tuist
 
-      - name: Install xcbeautify
-        run: command -v xcbeautify >/dev/null || brew install xcbeautify
-
-      # One block per selected platform (Step 1's platforms survey) — shown here for iOS/iPadOS. Resolves the
-      # first available simulator the same way iru-swift-test/iru-setup-apple-app's own Fastfile does; macOS
-      # needs no destination resolution (`platform=macOS` is fixed).
-      # <skip-ui-tests-iOS>: for ci-tests: unit, `-skip-testing:<AppName>UITests-iOS` — only the unit-test
-      # bundle(s) run, the XCUITest bundle is neither built-and-launched nor counted; for ci-tests: full, empty
-      # (unit + UI tests both run). Same rule per platform (`<AppName>UITests-macOS`, `<AppName>UITests-watchOS`).
-      - name: Test <AppName>-iOS
+      # Newest available runtime of the platform whose major.minor does not exceed the selected Xcode's simulator SDK,
+      # first device whose name starts with matrix.device → platform=<P> Simulator,name=<device>,OS=<version>.
+      - name: Resolve the test destination
+        id: destination
+        env:
+          DEVICE: ${{ matrix.device }}
+          RUNTIME_REQUIRED: ${{ matrix.runtime-required }}
         run: |
-          set -o pipefail
-          DEVICE=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys
-          runtimes = json.load(sys.stdin)['devices']
-          for name, devices in runtimes.items():
-              if 'iOS' in name and devices:
-                  print(devices[0]['name']); break
-          ")
-          xcodebuild test -scheme <AppName>-iOS -destination "platform=iOS Simulator,name=$DEVICE" \
-            <skip-ui-tests-iOS> -enableCodeCoverage YES -resultBundlePath <AppName>-iOS.xcresult | xcbeautify
+          set -euo pipefail
+          if [[ "$PLATFORM" == "macOS" ]]; then
+            echo "build=generic/platform=macOS" >> "$GITHUB_OUTPUT"
+            echo "test=platform=macOS" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$PLATFORM" in
+            iOS) sdk=iphonesimulator ;;
+            watchOS) sdk=watchsimulator ;;
+            visionOS) sdk=xrsimulator ;;
+          esac
+          destination="$(SDK_VERSION="$(xcrun --sdk "$sdk" --show-sdk-version)" python3 - <<'PY'
+          import json, os, subprocess
 
-      # macOS platform variant
-      - name: Test <AppName>-macOS
+          def ver(v):
+              return tuple(int(x) for x in v.split(".")[:2])
+
+          platform, prefix, sdk = os.environ["PLATFORM"], os.environ["DEVICE"], ver(os.environ["SDK_VERSION"])
+          names = {platform, "xrOS"} if platform == "visionOS" else {platform}
+          simctl = ["xcrun", "simctl", "list"]
+          runtimes = json.loads(subprocess.check_output(simctl + ["runtimes", "available", "-j"]))["runtimes"]
+          devices = json.loads(subprocess.check_output(simctl + ["devices", "available", "-j"]))["devices"]
+          candidates = [r for r in runtimes if r["platform"] in names and ver(r["version"]) <= sdk]
+          for runtime in sorted(candidates, key=lambda r: ver(r["version"]), reverse=True):
+              for device in devices.get(runtime["identifier"], []):
+                  if device["name"].startswith(prefix):
+                      print(f"platform={platform} Simulator,name={device['name']},OS={runtime['version']}")
+                      raise SystemExit
+          PY
+          )"
+          echo "build=generic/platform=$PLATFORM Simulator" >> "$GITHUB_OUTPUT"
+          echo "test=$destination" >> "$GITHUB_OUTPUT"
+          if [[ -n "$destination" ]]; then
+            echo "Test destination: $destination"
+          elif [[ "$RUNTIME_REQUIRED" == "true" ]]; then
+            echo "::error::No $PLATFORM simulator runtime with a '$DEVICE' device on this runner image."
+            exit 1
+          else
+            echo "::warning::$SCHEME tests unverified (no $PLATFORM simulator runtime installed on this runner image) — built for testing only."
+          fi
+
+      # macOS: ad-hoc signing (CODE_SIGNING_ALLOWED=NO would kill the UI-test runner on arm64); simulators need none.
+      - name: Build for testing
+        env:
+          BUILD_DESTINATION: ${{ steps.destination.outputs.build }}
         run: |
-          set -o pipefail
-          xcodebuild test -scheme <AppName>-macOS -destination 'platform=macOS' <skip-ui-tests-macOS> \
-            -enableCodeCoverage YES -resultBundlePath <AppName>-macOS.xcresult | xcbeautify
+          set -eo pipefail
+          signing=()
+          if [[ "$PLATFORM" == "macOS" ]]; then
+            signing=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
+          fi
+          xcodebuild build-for-testing -project <AppName>.xcodeproj -scheme "$SCHEME" \
+            -destination "$BUILD_DESTINATION" -derivedDataPath build/dd "${signing[@]}" -quiet
+      # >>> platform: macOS, ci-tests: full
 
-      - name: Upload xcresult bundles
-        if: always()
+      # XCUITest on macOS drives the real desktop session and needs Automation Mode without an authentication prompt.
+      # GitHub's hosted macOS images enable it (runner-images configure-machine.sh); a self-hosted runner needs
+      # `sudo automationmodetool enable-automationmode-without-authentication` once, run by an administrator.
+      - name: Check Automation Mode (macOS UI tests)
+        if: matrix.platform == 'macOS'
+        run: |
+          status="$(automationmodetool)"
+          echo "$status"
+          if [[ "$status" != *"DOES NOT REQUIRE"* ]]; then
+            echo "::error::Automation Mode requires authentication on this runner; UI tests would time out."
+            exit 1
+          fi
+      # <<< platform: macOS, ci-tests: full
+
+      - name: Test
+        if: steps.destination.outputs.test != ''
+        env:
+          TEST_DESTINATION: ${{ steps.destination.outputs.test }}
+        run: |
+          set -eo pipefail
+          signing=()
+          if [[ "$PLATFORM" == "macOS" ]]; then
+            signing=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
+          fi
+          skip=()
+          # >>> ci-tests: unit
+          # CoreTests + <AppName>Tests-<P>; the XCUITest bundle stays local (ci-tests: unit).
+          skip=("-skip-testing:<AppName>UITests-$PLATFORM")
+          # <<< ci-tests: unit
+          xcodebuild test-without-building -project <AppName>.xcodeproj -scheme "$SCHEME" \
+            -destination "$TEST_DESTINATION" -derivedDataPath build/dd "${skip[@]}" \
+            -resultBundlePath "build/$SCHEME.xcresult" "${signing[@]}" -quiet
+
+      - name: Test summary
+        if: (!cancelled()) && hashFiles(format('build/{0}.xcresult/Info.plist', matrix.scheme)) != ''
+        run: xcrun xcresulttool get test-results summary --path "build/$SCHEME.xcresult" --compact
+
+      - name: Upload the xcresult bundle
+        if: (!cancelled()) && hashFiles(format('build/{0}.xcresult/Info.plist', matrix.scheme)) != ''
         uses: actions/upload-artifact@v7
         with:
-          name: xcresults
-          path: '*.xcresult'
+          name: ${{ matrix.scheme }}-xcresult
+          path: build/${{ matrix.scheme }}.xcresult
           retention-days: 14
+  # >>> sonar
 
-      # Omit this whole step if sonar: none. SonarSource's own xccov-to-sonarqube-generic.sh (unlike the
-      # library flavor's lcov path, Step 4) fits naturally here — it consumes an .xcresult bundle directly
-      # (`xcrun xccov view --archive <path>`), which xcodebuild test above already produced. Only the first
-      # selected platform's .xcresult is converted (Sonar merges one coverage report per scan; converting every
-      # platform's .xcresult and passing a comma-separated sonar.coverageReportPaths list is also valid if
-      # per-platform coverage genuinely differs and the user wants both counted).
-      - name: Convert coverage to SonarQube generic XML
-        if: <sonar != none>
-        run: |
-          curl -sSfL -o xccov-to-sonarqube-generic.sh \
-            https://raw.githubusercontent.com/SonarSource/sonar-scanning-examples/master/swift-coverage/swift-coverage-example/xccov-to-sonarqube-generic.sh
-          chmod +x xccov-to-sonarqube-generic.sh
-          ./xccov-to-sonarqube-generic.sh <AppName>-iOS.xcresult > sonarqube-generic-coverage.xml
+  # Linux: the scan itself needs no Xcode. Skipped on pull requests from forks (no SONAR_TOKEN).
+  sonar:
+    name: SonarQube analysis
+    needs: [ lint, core ]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
+      - name: Download the coverage report
+        uses: actions/download-artifact@v8
+        with:
+          name: core-coverage
+
+      - name: Download the SwiftLint report
+        uses: actions/download-artifact@v8
+        with:
+          name: swiftlint-report
+
+      # sonar-project.properties (iru-setup-apple-app) carries the coordinates and
+      # sonar.coverageReportPaths=sonarqube-generic-coverage.xml.
       - name: Run SonarQube analysis
-        if: <sonar != none>
         uses: SonarSource/sonarqube-scan-action@v8
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
             -Dsonar.host.url=<sonar-host-url>
+            -Dsonar.externalIssuesReportPaths=swiftlint-sonar.json
+  # <<< sonar
 
-      # DocC/Antora/Pages: identical shape to Step 4's library steps, but documents Packages/Core (the app's own
-      # testable business-logic package) rather than a top-level library target — only when that package
-      # actually declares a swift-docc-plugin dependency (iru-setup-apple-app's own scaffold does not add one by
-      # default; note this as an open gap in the final report if the DocC step is included but the dependency
-      # is missing from Packages/Core/Package.swift).
-      - name: Generate DocC documentation
-        if: github.ref == 'refs/heads/<stable-branch>'
+  docs:
+    name: Docs — Antora
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install Antora
         run: |
-          mkdir -p docc-output
-          swift package --package-path Packages/Core --allow-writing-to-directory docc-output \
-            generate-documentation --target Core --transform-for-static-hosting \
-            --hosting-base-path <repo>/api --output-path docc-output
-      # (--hosting-base-path is <repo>/api, not <repo>, for the same reason as Step 4: the archive is merged
-      # into the Pages site under api/, and DocC bakes the base path into its absolute asset links.)
-      # ... Set up Node / Install Antora / Build Antora docs / Merge DocC API docs / Upload Pages artifact
-      # (or, for pages: no, Upload docs artifact): identical to Step 4, copy verbatim.
+          mkdir -p docs-toolchain && cd docs-toolchain
+          npm i -D -E antora
+          npm i @antora/lunr-extension
+          npm i @sntke/antora-mermaid-extension
+          npm i @djencks/asciidoctor-mathjax
+
+      - name: Build Antora docs
+        run: cd docs && npx antora antora-playbook.yml
+
+      - name: Upload the Antora site
+        uses: actions/upload-artifact@v7
+        with:
+          name: antora-site
+          path: docs/build/site
+          retention-days: 7
+
+  # Merges the DocC archive (core job) under the Antora site's api/ — the layout every catalog stack uses.
+  site:
+    name: Docs — merge Antora + DocC
+    needs: [ docs, core ]
+    # >>> pages: yes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/<stable-branch>'
+    # <<< pages: yes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the Antora site
+        uses: actions/download-artifact@v8
+        with:
+          name: antora-site
+          path: site
+
+      - name: Download the DocC archive
+        uses: actions/download-artifact@v8
+        with:
+          name: docc-api
+          path: site/api
+
+      - name: Disable Jekyll
+        run: touch site/.nojekyll
+      # >>> pages: yes
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      # <<< pages: yes
+      # >>> pages: no
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: site
+          retention-days: 14
+      # <<< pages: no
+  # >>> pages: yes
+
+  deploy-docs:
+    name: Deploy docs to GitHub Pages
+    needs: site
+    if: github.event_name == 'push' && github.ref == 'refs/heads/<stable-branch>'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+  # <<< pages: yes
 ```
 
-`deploy-docs` (needs: `build-test`, gated the same way) is identical to Step 4's — copy it verbatim, including
-its own `if: github.ref == 'refs/heads/<stable-branch>'` job-level gate; omit it entirely when `pages: no`. There is no `ubuntu-latest` matrix leg
-for the app flavor — an Xcode app target has no meaningful Linux build.
+**Runner images vs. the per-platform legs** — looked up live on 2026-10-16 (`gh api
+repos/actions/runner-images/contents/images/macos --jq '.[].name'`, then each `<label>-Readme.md`'s `### Xcode` and
+"Installed Simulators" tables; the repository README maps the labels). Re-check at generation time and state the
+result in the report:
+
+| Label (image) | Xcode | Simulator runtimes (device names) | SwiftLint |
+|---|---|---|---|
+| `macos-26`, `macos-latest` (`macos-26-arm64`, macOS 26.6.2) | 26.0.1–**26.6 (default)** | iOS 26.2/26.4/26.5 (iPhone 17 family), watchOS 26.2/26.4/26.5 (Series 11, SE 3, Ultra 3), **visionOS 26.2/26.4/26.5 (Apple Vision Pro)** | not listed |
+| `xcode-27` (`xcode-27-arm64`, public preview, macOS 27.0.1) | **27.0 (default)**, 27.1, 27.2 beta | iOS 27.0 (iPhone 17/17e/18 Pro/Air), watchOS 27.0 (Series 12, SE 3, Ultra 4), **visionOS 27.0 (Apple Vision Pro)** | not listed |
+| `macos-26-intel`, `macos-26-large` (`macos-26`, x64) | 26.0.1–26.6 | iOS and watchOS 26.x — **no visionOS runtime** | 0.65.1 |
+
+So on both arm64 labels the visionOS leg **does run its tests**; on an Intel label (or a self-hosted Mac without the
+visionOS component) it builds for testing and emits the "unverified" warning. Fastlane (2.239–2.241) and xcbeautify
+3.2.1 are preinstalled everywhere but unused here; XcodeGen is not (the `brew install` guard). `xcode-version`
+follows `iru-setup-macos-github-workflows`' rule: `project.yml`'s `options.xcodeVersion` (the scaffold's `27.1`) when
+the chosen image offers it, otherwise the image default **with a warning** that the scaffold was verified with Xcode
+27.1 only — recommend `runner: xcode-27` + `xcode-version: 27.1` (and declare `xcode-27` in `actionlint.yaml`'s
+`self-hosted-runner.labels` when linting: actionlint 1.7.12 doesn't know the preview label).
 
 Notes specific to this template:
 
-- Only the platform-specific `Test <AppName>-<Platform>` steps for the platforms actually selected (Step 1) are
-  emitted — drop every other platform's block entirely, don't comment it out.
-- **`ci-tests` maps onto `-skip-testing:`.** `iru-setup-apple-app`'s schemes include both the
-  `<AppName>Tests-<Platform>` unit-test target and the `<AppName>UITests-<Platform>` XCUITest target in their test
-  action, so `ci-tests: full` needs no flag; `ci-tests: unit` adds `-skip-testing:<AppName>UITests-<Platform>` to
-  each `xcodebuild test`. UI tests are the slowest part of this job (simulator boot plus app launch per test), and
-  every one of those minutes is a macOS minute billed at roughly 10× Linux on a private repository. For an
-  existing project whose UI-test target is named differently, read the real name from the manifest (Step 1)
-  rather than assuming this convention. Coverage converted for Sonar then reflects unit tests only — say so in the
-  report.
-- `xcodebuild test`'s exit code must survive the `xcbeautify` pipe — `set -o pipefail` at the top of every such
-  `run:` block is required (bash's default `on error` behavior doesn't propagate a failing left-hand command
-  through a pipe otherwise, which would silently report a failed test run as a green step).
-- watchOS is deliberately **not** given its own `Test <AppName>-watchOS` block when `ios`/`ipados` is also
-  selected — per `iru-setup-apple-app`'s own single-target embed model, the watchOS companion app is embedded
-  into the iOS app's own build product and tested/archived alongside the iOS scheme, not as a separate scheme
-  (Step 7 restates this for `release.yml`'s archive step). A standalone watchOS app (no iOS companion selected)
-  does get its own `Test <AppName>-watchOS` block, following the same shape as the iOS one but with a
-  `watchOS`-runtime destination lookup.
-- The `Install SwiftLint`/`Install xcbeautify`/`xcodegen`/`tuist` `brew install` lines are each guarded by
-  `command -v ... >/dev/null ||` so this template works unmodified whether the chosen `<runner>` already
-  preinstalls the tool (Step 0's `macos-26` note) or not.
+- Only the matrix entries for the selected platforms are written. `ios` and `ipados` share the one `<AppName>-iOS`
+  leg (`<ios-device-prefix>` = `iPad` when only `ipados` was selected).
+- **watchOS always gets its own leg.** The companion watch app is embedded in the iOS app's *build product*, but the
+  `<AppName>-iOS` scheme's test action runs only `CoreTests` + `<AppName>Tests-iOS` + `<AppName>UITests-iOS`; the watch
+  targets' tests run only under `<AppName>-watchOS` (verified: 11/11 on a watchOS 27.0 simulator, see Step 13).
+- **Why build-for-testing + test-without-building**: the build against `generic/platform=<P> Simulator` is the compile
+  check for every platform (including visionOS when no runtime exists); the test step then reuses the same
+  `build/dd` products on the resolved simulator. `OS=` is required because the same device name exists under several
+  runtimes (`iPhone 17` on iOS 26.4 and 27.0), and the runtime is capped at the selected Xcode's simulator SDK
+  (`xcrun --sdk <iphonesimulator|watchsimulator|xrsimulator> --show-sdk-version`) so an older Xcode never picks a
+  runtime it can't drive.
+- **`ci-tests` maps onto `-skip-testing:<AppName>UITests-<P>`** in every leg (`unit`); `full` runs the UI tests too
+  (on macOS after the Automation Mode check). Each UI-test leg boots a simulator and launches the app — macOS
+  minutes billed at ~10× Linux on a private repository.
+- **The coverage bar is Core's**, measured by `swift test` + `llvm-cov` in the `core` job — exactly
+  `iru-setup-macos-github-workflows`' step. The app legs don't pass `-enableCodeCoverage`: the scheme's `xccov` report
+  can't see the statically linked `Packages/Core`, and the UI layer is "not measured" by design. Sonar therefore gets
+  Core's lcov (via the vendored `lcov_to_sonar_generic.py`, now written for the app flavor too), not an `.xcresult`.
+- `lint` needs no Xcode: `container: swift:<linux-swift-tag>` provides `swift format` and the SourceKit library the
+  dynamically linked Linux SwiftLint binary loads. `core` and every `apps` leg `needs: lint`, so a lint failure never
+  spends macOS minutes.
+- `site` needs `core` (the DocC archive): with `pages: no` it uploads the merged `docs-site` artifact on every run;
+  with `pages: yes` it and `deploy-docs` run only on a push to the stable branch.
 
 ## Step 6 — `release.yml` (`flavor: library`)
 
@@ -728,6 +1125,20 @@ intro note on macOS-minutes cost) — neither check needs Xcode.
 
 ## Step 7 — `release.yml` (`flavor: app`)
 
+Written only when `distribution` ≠ `none` (with `distribution: none` there is nothing to ship — say so in the report).
+Same markers as Step 5. **Plain `xcodebuild` by default — Fastlane is never required**: every App Store Connect
+platform (iOS with its embedded watch app, visionOS, a standalone watchOS app) is archived with automatic signing
+authenticated by the App Store Connect API key (`-allowProvisioningUpdates`, cloud-managed certificates), then
+`-exportArchive` with `method: app-store-connect` + `destination: upload` signs and uploads the build to App Store
+Connect (TestFlight) in the same step — the path the author's docs show (irurueta docs:
+apps/apple/ci-cd-xcode-cloud-and-command-line.adoc) and `iru-setup-macos-github-workflows`' `app-store` job uses. A
+selected macOS target ships outside the store with Developer ID + notarization, reusing that skill's `developer-id`
+steps without the DMG (this scaffold has no `scripts/make-dmg.sh`). **Only when `fastlane/Fastfile` exists and
+`signing: fastlane-match`** (`fastlane`) does the iOS leg run the Fastfile's own `match` + `beta`/`release` lane
+instead; visionOS/watchOS/macOS stay on the plain `xcodebuild` jobs either way (the Fastfile has no lanes for them).
+`signing: none` with `distribution` ≠ `none` gets the plain `xcodebuild` path (which needs the API key) — warn that
+`iru-setup-apple-app` recorded `none`.
+
 ```yaml
 name: Release
 
@@ -737,9 +1148,16 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to archive (e.g. v1.2.0) — a manual dry run has no release event to read it from"
+        description: "Release tag to build (e.g. v1.2.0) — a manual run has no release event to read it from"
         required: true
         type: string
+      # >>> platform: macOS
+      attach:
+        description: "Also attach the notarized macOS zip to that tag's GitHub Release (a published release always does)"
+        required: false
+        type: boolean
+        default: false
+      # <<< platform: macOS
 
 permissions:
   contents: read
@@ -748,12 +1166,73 @@ env:
   RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
-  archive-and-upload:
-    name: Archive, sign, and upload
-    runs-on: <runner>
+  # The tag must equal project.yml's MARKETING_VERSION and be a plain x.y.z — App Store Connect and notarization take
+  # no suffix — so cut the release with iru-release / iru-swift-bump-version first.
+  version:
+    name: Check the release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      # No fetch-depth: 0 — nothing in this job reads git history; a shallow checkout of the tagged commit is
-      # all xcodebuild needs.
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Read and check the release version
+        id: version
+        run: |
+          set -euo pipefail
+          # >>> generator: xcodegen
+          manifest=project.yml
+          version="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION:[[:space:]]*"?([^"[:space:]]+)"?.*$/\1/p' "$manifest" | head -n 1)"
+          # <<< generator: xcodegen
+          # >>> generator: tuist
+          manifest=Project.swift
+          version="$(sed -nE 's/^[[:space:]]*"MARKETING_VERSION":[[:space:]]*"([^"]+)".*$/\1/p' "$manifest" | head -n 1)"
+          # <<< generator: tuist
+          tag_version="${RELEASE_TAG#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$manifest MARKETING_VERSION '$version' is not a release version x.y.z."
+            exit 1
+          fi
+          if [[ "$version" != "$tag_version" ]]; then
+            echo "::error::$manifest MARKETING_VERSION '$version' does not match the tag '$RELEASE_TAG'."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # Archive with automatic signing + the API key, then export with destination=upload: one xcodebuild step signs for
+  # App Store Connect and uploads (TestFlight). distribution: store — submitting for App Review stays a manual step in
+  # App Store Connect. App Store Connect rejects a reused CURRENT_PROJECT_VERSION: a re-run after a successful upload
+  # needs a bump (iru-swift-bump-version).
+  # >>> app-store-job
+  app-store:
+    name: ${{ matrix.scheme }} — archive and upload to App Store Connect
+    needs: version
+    runs-on: <runner>
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # >>> platform: iOS, no-fastlane
+          # The companion watch app (embed: true) is archived inside the iOS app — no separate watchOS upload.
+          - scheme: <AppName>-iOS
+            platform: iOS
+          # <<< platform: iOS, no-fastlane
+          # >>> platform: visionOS
+          - scheme: <AppName>-visionOS
+            platform: visionOS
+          # <<< platform: visionOS
+          # >>> watchos-standalone
+          - scheme: <AppName>-watchOS
+            platform: watchOS
+          # <<< watchos-standalone
+    env:
+      SCHEME: ${{ matrix.scheme }}
+      PLATFORM: ${{ matrix.platform }}
+    steps:
       - name: Check out code
         uses: actions/checkout@v7
         with:
@@ -764,208 +1243,301 @@ jobs:
         with:
           xcode-version: '<xcode-version>'
 
-      - name: Generate Xcode project
+      # >>> generator: xcodegen
+      - name: Generate the Xcode project
         run: |
-          command -v xcodegen >/dev/null || brew install xcodegen   # generator: tuist — swap for tuist generate --no-open
+          command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate
-
-      # signing: fastlane-match only. MATCH_GIT_BASIC_AUTHORIZATION is what `match` uses to clone a *private*
-      # certificates repository over HTTPS (base64 of "<user>:<personal-access-token>"); without it the clone
-      # prompts for credentials and the job hangs. `developer_id` is only fetched when macos is selected —
-      # the developer-id export below needs a Developer ID Application certificate in the keychain.
-      - name: Fetch distribution signing certificates and profiles
-        if: <signing == fastlane-match>
-        env:
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      # <<< generator: xcodegen
+      # >>> generator: tuist
+      - name: Generate the Xcode project
         run: |
-          fastlane match appstore --readonly --git_url "$MATCH_GIT_URL"
-          <macos selected: fastlane match developer_id --readonly --git_url "$MATCH_GIT_URL">
+          command -v tuist >/dev/null || brew install --cask tuist
+          tuist generate --no-open
+      # <<< generator: tuist
 
-      # distribution != none, either signing mode — every upload/notarization path below authenticates with an
-      # App Store Connect API key (`fastlane pilot`, apple-actions/upload-testflight-build and notarytool all
-      # need one; `match` certificates alone never authenticate an upload). Decodes the base64 secret once into
-      # AuthKey.p8 for xcodebuild/notarytool, and into a multi-line env var for the TestFlight action's
-      # `api-private-key` input, which takes the raw .p8 content rather than a path.
+      # The base64 of AuthKey_<id>.p8 — the same secret iru-setup-apple-app's Fastfile reads. Written with umask 077
+      # and removed in the last step.
       - name: Write the App Store Connect API key
-        if: <distribution != none>
         env:
           API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
-          echo "$API_KEY_BASE64" | base64 -d > AuthKey.p8
-          {
-            echo "APP_STORE_CONNECT_API_PRIVATE_KEY<<EOF"
-            cat AuthKey.p8
-            echo "EOF"
-          } >> "$GITHUB_ENV"
+          umask 077
+          printf '%s' "$API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
 
-      - name: Archive <AppName>-iOS
+      - name: Archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
         run: |
-          xcodebuild archive -scheme <AppName>-iOS -archivePath build/<AppName>-iOS.xcarchive \
-            <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
+          xcodebuild archive -project <AppName>.xcodeproj -scheme "$SCHEME" \
+            -destination "generic/platform=$PLATFORM" -archivePath "build/$SCHEME.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" -quiet
 
-      - name: Write ExportOptions.plist
+      - name: Export and upload to App Store Connect
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
         run: |
-          cat > ExportOptions.plist <<'PLIST'
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
-            <key>teamID</key>
-            <string><team-id></string>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
             <key>signingStyle</key>
             <string>automatic</string>
+            <key>teamID</key>
+            <string></string>
           </dict>
           </plist>
           PLIST
+          plutil -replace teamID -string "$APPLE_TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive -archivePath "build/$SCHEME.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath build/export \
+            -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
-      - name: Export <AppName>-iOS.ipa
-        run: |
-          xcodebuild -exportArchive -archivePath build/<AppName>-iOS.xcarchive \
-            -exportPath build/export -exportOptionsPlist ExportOptions.plist \
-            <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
+      - name: Remove the App Store Connect API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+  # <<< app-store-job
+  # >>> platform: iOS, fastlane
 
-      # distribution: internal or store, signing: fastlane-match. `fastlane pilot upload` has no App Store
-      # Connect session of its own — it is given the API key through pilot's `api_key_path` option, a small JSON
-      # file with the key id, issuer id and the .p8 contents.
-      - name: Upload to TestFlight via fastlane pilot
-        if: <signing == fastlane-match && distribution != none>
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-        run: |
-          python3 - <<'PY'
-          import json, os
-          json.dump({
-              "key_id": os.environ["APP_STORE_CONNECT_API_KEY_ID"],
-              "issuer_id": os.environ["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
-              "key": open("AuthKey.p8").read(),
-              "in_house": False,
-          }, open("AuthKey.json", "w"))
-          PY
-          fastlane pilot upload --ipa build/export/<AppName>.ipa --api_key_path AuthKey.json \
-            --skip_waiting_for_build_processing
-
-      # distribution: internal or store, signing: api-key — the action's inputs are `issuer-id`, `api-key-id`
-      # and `api-private-key` (raw .p8 content, decoded into the env above), not a base64 blob or a path.
-      - name: Upload to TestFlight
-        if: <signing == api-key && distribution != none>
-        uses: apple-actions/upload-testflight-build@v5
+  # Only when fastlane/Fastfile exists and signing: fastlane-match — the Fastfile's own lanes (iru-setup-apple-app):
+  # `build` runs `match(type: "appstore", readonly: is_ci)` + build_app, `beta` uploads to TestFlight, `release`
+  # submits to the App Store. Fastlane is preinstalled on GitHub's macOS images; a committed Gemfile switches the
+  # command to `bundle install && bundle exec fastlane …`.
+  fastlane-ios:
+    name: <AppName>-iOS — fastlane match + <release-lane> lane
+    needs: version
+    runs-on: <runner>
+    timeout-minutes: 90
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
         with:
-          app-path: build/export/<AppName>.ipa
-          issuer-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          api-private-key: ${{ env.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          ref: ${{ env.RELEASE_TAG }}
 
-      # ---- macOS (macos selected, distribution != none) ----
-      # Default: Developer ID distribution (a directly downloadable, notarized .app) — an `app-store` export
-      # produces a .pkg for App Store Connect that is never notarized, so notarytool would have nothing valid to
-      # submit; see the notes below for swapping to the App Store .pkg path instead. A developer-id export needs
-      # a "Developer ID Application" certificate in the runner keychain: `match developer_id` above supplies it
-      # for fastlane-match; for api-key, cloud-managed signing cannot create Developer ID certificates, so the
-      # exported .p12 is imported explicitly here.
+      - name: Select Xcode <xcode-version>
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '<xcode-version>'
+
+      # >>> generator: xcodegen
+      - name: Generate the Xcode project
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      # <<< generator: xcodegen
+      # >>> generator: tuist
+      - name: Generate the Xcode project
+        run: |
+          command -v tuist >/dev/null || brew install --cask tuist
+          tuist generate --no-open
+      # <<< generator: tuist
+
+      # match only supplies certificates and profiles; pilot/deliver authenticate with the API key, given as the JSON
+      # file fastlane reads from APP_STORE_CONNECT_API_KEY_PATH (pilot's, deliver's and match's api_key_path env).
+      - name: Write the App Store Connect API key for fastlane
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          umask 077
+          python3 - <<'PY'
+          import base64, json, os
+          path = os.path.join(os.environ["RUNNER_TEMP"], "asc_api_key.json")
+          json.dump({
+              "key_id": os.environ["ASC_KEY_ID"],
+              "issuer_id": os.environ["ASC_ISSUER_ID"],
+              "key": base64.b64decode(os.environ["API_KEY_BASE64"]).decode(),
+              "in_house": False,
+          }, open(path, "w"))
+          PY
+          echo "APP_STORE_CONNECT_API_KEY_PATH=$RUNNER_TEMP/asc_api_key.json" >> "$GITHUB_ENV"
+
+      # MATCH_GIT_BASIC_AUTHORIZATION (base64 of "<user>:<personal-access-token>") lets match clone a private certs
+      # repository over HTTPS; without it the clone prompts for credentials and the job hangs.
+      - name: Run fastlane <release-lane>
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: fastlane ios <release-lane>
+
+      - name: Remove the App Store Connect API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc_api_key.json"
+  # <<< platform: iOS, fastlane
+  # >>> platform: macOS
+
+  # Developer ID + notarization (iru-setup-macos-github-workflows' developer-id job, minus the DMG): the scaffold's
+  # macOS target has ENABLE_HARDENED_RUNTIME. Developer ID certificates can't be created by -allowProvisioningUpdates
+  # (only the Account Holder can), so the exported .p12 is imported into a temporary keychain.
+  macos-developer-id:
+    name: <AppName>-macOS — Developer ID, notarize, staple
+    needs: version
+    runs-on: <runner>
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Select Xcode <xcode-version>
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '<xcode-version>'
+
+      # >>> generator: xcodegen
+      - name: Generate the Xcode project
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      # <<< generator: xcodegen
+      # >>> generator: tuist
+      - name: Generate the Xcode project
+        run: |
+          command -v tuist >/dev/null || brew install --cask tuist
+          tuist generate --no-open
+      # <<< generator: tuist
+
       - name: Import the Developer ID Application certificate
-        if: <macos selected && signing == api-key>
         uses: apple-actions/import-codesign-certs@v7
         with:
           p12-file-base64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
 
-      - name: Write ExportOptions-macos.plist
-        if: <macos selected>
+      - name: Write the App Store Connect API key
+        env:
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
-          cat > ExportOptions-macos.plist <<'PLIST'
+          umask 077
+          printf '%s' "$API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+
+      # Manual Developer ID signing: no development certificate or provisioning profile is needed on the runner.
+      - name: Archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive -project <AppName>.xcodeproj -scheme <AppName>-macOS \
+            -destination 'generic/platform=macOS' -archivePath build/<AppName>-macOS.xcarchive \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" -quiet
+
+      - name: Export with Developer ID
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions-macos.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
             <string>developer-id</string>
-            <key>teamID</key>
-            <string><team-id></string>
+            <key>destination</key>
+            <string>export</string>
             <key>signingStyle</key>
             <string>automatic</string>
+            <key>teamID</key>
+            <string></string>
           </dict>
           </plist>
           PLIST
-
-      - name: Archive and export <AppName>-macOS
-        if: <macos selected>
-        run: |
-          xcodebuild archive -scheme <AppName>-macOS -archivePath build/<AppName>-macOS.xcarchive \
-            <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
+          plutil -replace teamID -string "$APPLE_TEAM_ID" "$RUNNER_TEMP/ExportOptions-macos.plist"
           xcodebuild -exportArchive -archivePath build/<AppName>-macOS.xcarchive \
-            -exportPath build/export-macos -exportOptionsPlist ExportOptions-macos.plist \
-            <signing == api-key: -allowProvisioningUpdates -authenticationKeyPath AuthKey.p8 -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}>
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions-macos.plist" -exportPath build/export-macos \
+            -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          codesign --verify --deep --strict --verbose=2 build/export-macos/<AppName>.app
 
-      # notarytool only accepts a zip, dmg or pkg — never a bare .app directory. Zip with ditto (the only
-      # archiver that preserves the bundle's resource forks/symlinks the way Apple expects), submit the zip,
-      # staple the ticket onto the .app itself, then re-zip the stapled bundle as the artifact to ship.
-      - name: Notarize and staple <AppName>-macOS
-        if: <macos selected>
+      # notarytool takes a zip, dmg or pkg — never a bare .app — and a zip can't be stapled: notarize a ditto zip,
+      # staple the app, then re-zip the stapled app as the artifact to ship.
+      - name: Notarize and staple
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          ditto -c -k --keepParent build/export-macos/<AppName>.app build/export-macos/<AppName>.zip
-          xcrun notarytool submit build/export-macos/<AppName>.zip \
-            --key AuthKey.p8 --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            --issuer ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }} --wait
+          set -euo pipefail
+          ditto -c -k --keepParent build/export-macos/<AppName>.app build/<AppName>-notarize.zip
+          result="$(xcrun notarytool submit build/<AppName>-notarize.zip --key "$ASC_KEY_PATH" \
+            --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" --wait --timeout 30m --output-format json)"
+          echo "$result"
+          id="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])' <<< "$result")"
+          status="$(python3 -c 'import json, sys; print(json.load(sys.stdin).get("status", ""))' <<< "$result")"
+          if [[ "$status" != "Accepted" ]]; then
+            xcrun notarytool log "$id" --key "$ASC_KEY_PATH" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" || true
+            echo "::error::Notarization ended with status '$status'."
+            exit 1
+          fi
           xcrun stapler staple build/export-macos/<AppName>.app
-          rm build/export-macos/<AppName>.zip
-          ditto -c -k --keepParent build/export-macos/<AppName>.app build/export-macos/<AppName>.zip
+          xcrun stapler validate build/export-macos/<AppName>.app
+          ditto -c -k --keepParent build/export-macos/<AppName>.app "build/<AppName>-macOS-$VERSION.zip"
 
-      - name: Upload the notarized macOS app
-        if: <macos selected>
+      - name: Upload the notarized app as a workflow artifact
         uses: actions/upload-artifact@v7
         with:
           name: <AppName>-macOS
-          path: build/export-macos/<AppName>.zip
+          path: build/<AppName>-macOS-${{ needs.version.outputs.version }}.zip
+          retention-days: 30
+
+      - name: Attach the notarized app to the GitHub Release
+        if: github.event_name == 'release' || inputs.attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: gh release upload "$RELEASE_TAG" "build/<AppName>-macOS-$VERSION.zip" --clobber
+
+      - name: Remove the App Store Connect API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
+  # <<< platform: macOS
 ```
+
+`<release-lane>` is `beta` for `distribution: internal` and `release` for `distribution: store` (the Fastfile lanes
+`iru-setup-apple-app` gates in). The `app-store` job exists only under `app-store-job` — with `fastlane` and only the
+iOS target (plus an embedded watch app) its matrix would be empty, which GitHub Actions rejects.
 
 Notes specific to this template:
 
-- **watchOS rides along with the iOS archive, never gets its own archive step** — per `iru-setup-apple-app`'s
-  single-target embed model (`embed: true` on the iOS target's watchOS dependency), the watchOS companion binary
-  is already inside `<AppName>-iOS.xcarchive`'s product once `xcodebuild archive -scheme <AppName>-iOS` runs;
-  archiving `<AppName>-watchOS` as its own scheme instead would produce a standalone watch app bundle, not the
-  companion-embedded shape this catalog's scaffold assumes. Only a *standalone* watchOS app (no iOS companion at
-  all, `iru-setup-apple-app`'s own documented-as-unusual case) gets its own archive/export/notarize block,
-  mirroring the iOS one.
-- **The App Store Connect API key is required for every `distribution != none` pipeline, whichever `signing`
-  mode is chosen** — `fastlane match` only supplies certificates and profiles; it never authenticates an upload
-  or a notarization. `fastlane pilot upload` gets the key via `--api_key_path` (the JSON file the step writes),
-  `apple-actions/upload-testflight-build` via its `api-private-key` input (the decoded `.p8` content, not a
-  path and not base64), and `xcrun notarytool submit --key/--key-id/--issuer` via the `.p8` file directly.
-  Apple's notarization service has never accepted certificate-only auth; this catalog's `iru-setup-apple-app`
-  Fastfile comment already documents the same `xcrun notarytool submit --wait` + `xcrun stapler staple`
-  fallback for exactly this reason.
-- **macOS defaults to Developer ID + notarization, not an App Store `.pkg`.** `ExportOptions-macos.plist`'s
-  `method: developer-id` yields a signed `.app` that `notarytool` can stamp and that users download directly;
-  an `app-store` export instead produces a `.pkg` for App Store Connect that is *never* notarized (App Review
-  handles that), so pairing it with a notarize step is a contradiction. For a Mac App Store release swap the
-  method back to `app-store`, drop the whole `Notarize and staple` step, and upload the exported
-  `build/export-macos/<AppName>.pkg` with the same `fastlane pilot`/`upload-testflight-build` step used for
-  iOS (both accept a `.pkg`). State which of the two paths was generated in the final report.
-- The `developer-id` export needs a **Developer ID Application** certificate in the runner keychain — `match
-  developer_id --readonly` fetches it under `signing: fastlane-match`; under `signing: api-key`, `-allowProvisioningUpdates`
-  can create App Store certificates on demand but *not* Developer ID ones (only the Account Holder can), hence
-  the explicit `import-codesign-certs` step and its two extra secrets. Hardened runtime
-  (`ENABLE_HARDENED_RUNTIME`, which `iru-setup-apple-app` sets on the macOS target) is what makes the notarized
-  build pass Gatekeeper.
-- `MATCH_GIT_BASIC_AUTHORIZATION` (base64 of `<git-user>:<personal-access-token>`) is how `match` clones a
-  private certificates repository over HTTPS on a runner with no interactive git credentials; an SSH deploy key
-  loaded via `webfactory/ssh-agent` is the alternative if the certs repo URL is `git@…` — either way, one of
-  the two must exist or the `match` step hangs on a credential prompt.
-- `workflow_dispatch` carries a required `tag` input so a manual dry run archives the same tagged commit a real
-  Release would (`github.event.release.tag_name` is empty outside the `release` event); `RELEASE_TAG` resolves
-  to whichever is present.
-- `<team-id>` in `ExportOptions.plist` has no run-time lookup — ask the user for their Apple Developer Team ID
-  directly (Step 0/1 has no signal for it) and note it as a required manual input in the final report.
-- Every `<signing == api-key: ...>` inline marker means "append these flags only when `signing: api-key`" —
-  when `signing: fastlane-match`, `xcodebuild archive`/`-exportArchive` need no extra flags at all (the
-  certificates `fastlane match` already installed into the login keychain are picked up automatically by
-  `signingStyle: automatic`).
+- **The watch app rides inside the iOS archive** (`embed: true` in `project.yml`): `xcodebuild archive -scheme
+  <AppName>-iOS` builds `<AppName>-watchOS` as a dependency and places it under the iOS app's `Watch/` folder —
+  verified locally (Step 13). Only a *standalone* watchOS app (`watchos-standalone`) gets its own `app-store` leg.
+- **visionOS archives with `generic/platform=visionOS`** and uploads as its own App Store Connect platform build
+  (same bundle id as iOS, one app record) — its archive needs no simulator runtime.
+- **The App Store Connect API key is required for every `distribution` ≠ `none` pipeline, whichever `signing`
+  mode** — `match` only supplies certificates and profiles; it never authenticates an upload or a notarization.
+  Plain path: Admin or App Manager role for `-allowProvisioningUpdates` (cloud-managed certificates); notarization
+  works with the Developer role.
+- **macOS defaults to Developer ID + notarization**, not a Mac App Store `.pkg` (an `app-store-connect` export is never
+  notarized — App Review handles that). For a Mac App Store release, add `<AppName>-macOS` (`platform: macOS`) to the
+  `app-store` matrix instead and drop `macos-developer-id` — the same archive/export-with-upload steps apply. State
+  which path was generated in the report.
+- `teamID` is filled in at run time from the `APPLE_TEAM_ID` secret (`plutil -replace`), so no Team ID is committed or
+  asked for while generating.
+- `workflow_dispatch` takes a required `tag` so a dry run archives the same tagged commit a real Release would;
+  `RELEASE_TAG` resolves to whichever is present. The `version` job runs on Linux, so a tag/version mismatch fails
+  before any macOS minute is spent.
 
 ## Step 8 — `sync.yml` + `sync_versions.py` (`branching: gitflow` only)
 
@@ -1405,6 +1977,12 @@ Notes specific to this template:
 - If `github.com` public-repository default CodeQL setup is simpler for this repository than a workflow-based
   CodeQL job, note that as an alternative in the final report instead of writing the `codeql` job, same as every
   sibling.
+- **`flavor: app`**: the generated project holds one scheme per platform plus XcodeGen's `Core` package scheme, so
+  autobuild has to guess; prefer `build-mode: manual` with one explicit build between `init` and `analyze`, as
+  `iru-setup-macos-github-workflows` does — `xcodebuild build -project <AppName>.xcodeproj -scheme <AppName>-<first
+  platform> -destination 'generic/platform=<first platform> Simulator' -derivedDataPath build/dd-codeql
+  CODE_SIGNING_ALLOWED=NO -quiet` (`generic/platform=macOS` for a macOS-only selection). That scheme also compiles
+  `Packages/Core`, so every Swift source the app ships is extracted except other platforms' UI targets.
 
 ### `.github/dependabot.yml`
 
@@ -1433,7 +2011,9 @@ updates:
 Always generated (or updated) regardless of the `security-*` args — grouped weekly updates for the `swift`
 ecosystem (`Package.swift`'s own `dependencies:`, and, for an app, `Packages/Core/Package.swift`'s — Dependabot's
 `swift` ecosystem support scans every `Package.swift` it finds under `directory: /` recursively, no separate
-entry needed per nested package) and for the workflows this skill itself just wrote (`github-actions`). If
+entry needed per nested package) and for the workflows this skill itself just wrote (`github-actions`). For
+`flavor: app` there is **no root `Package.swift`** — point the `swift` entry at `directory: /Packages/Core`, the
+only manifest (as `iru-setup-macos-github-workflows` does), rather than relying on a recursive scan. If
 `.github/dependabot.yml` already exists with entries for other ecosystems, preserve them — only add or update
 the `swift` and `github-actions` entries above (see Step 1's per-file Update path).
 
@@ -1491,9 +2071,10 @@ if __name__ == "__main__":
     main()
 ```
 
-Written only when `flavor: library` **and** `sonar` isn't `none` — omit this file entirely otherwise (the app
-flavor uses SonarSource's own `xccov-to-sonarqube-generic.sh`, fetched at CI time rather than vendored, since it
-needs no adaptation for this catalog's use — see Step 5).
+Written whenever `sonar` isn't `none` — for `flavor: library` (Step 4) **and** `flavor: app`, whose `core` job (Step 5)
+converts `Packages/Core`'s lcov from the repository root so paths read `Packages/Core/Sources/…`. The app flavor no
+longer fetches SonarSource's `xccov-to-sonarqube-generic.sh`: the app schemes' `.xcresult` never attributes the
+statically linked Core, and the UI layer is excluded from coverage (`sonar.coverage.exclusions=Targets/**`).
 
 ## Step 10 — Placeholder resolution table
 
@@ -1502,19 +2083,23 @@ needs no adaptation for this catalog's use — see Step 5).
 | `<integration-branch>` / `<stable-branch>` | Step 1 branch survey / `args` |
 | `<runner>` | Step 0 (`args`, default `macos-26`) |
 | `<xcode-version>` | Step 0/2 |
-| `<linux-swift-tag>` | Step 2's live Docker Hub lookup, fallback `6.3-noble` |
+| `<linux-swift-tag>` | Step 2's live Docker Hub lookup, fallback `6.3-noble` (library); app flavor's `lint` job: `<major.minor>-noble` of the scaffold's Swift, `6.4-noble` on 2026-10-16 |
+| `<swiftlint-version>` | App flavor: `gh release view --repo realm/SwiftLint --json tagName -q .tagName`, fallback `0.65.1` |
+| `<ios-device-prefix>` | App flavor: `iPhone`, or `iPad` when the iOS target's `TARGETED_DEVICE_FAMILY` is `"2"` (only `ipados` selected) |
+| `<release-lane>` | App flavor, `fastlane` only: `beta` (`distribution: internal`) / `release` (`distribution: store`) |
 | `<Name>` | Library: `Package.swift`'s target/product name (Step 1). Not used for the app flavor. |
 | `<AppName>` / `<app-name>` | App: `project.yml`'s `name:` / `Project.swift`'s `Project(name:` (Step 1) |
 | `<repo>` | Parsed from `git remote get-url origin`, used only in DocC's `--hosting-base-path <repo>/api` — the `/api` suffix is fixed (it is where the Pages merge step copies the archive), only the `<repo>` segment is substituted |
-| `<team-id>` | Asked directly (Step 7) — no run-time signal for it |
+| `<team-id>` | No longer a placeholder for the app flavor — `release.yml` fills `teamID`/`DEVELOPMENT_TEAM` at run time from the `APPLE_TEAM_ID` secret |
 | `<sonar-host-url>` / `<sonar-organization>` / `<sonar-project-key>` | Step 0/1 Sonar survey / `args`; only needed when `sonar` isn't `none` |
 | `<generator>` | Step 1 (`project.yml` vs. `Project.swift`) |
-| `<skip-ui-tests-<Platform>>` | App: `-skip-testing:<AppName>UITests-<Platform>` when `ci-tests: unit`, empty when `full` (Step 0) |
+| UI-test skip (app) | No placeholder: Step 5's `ci-tests: unit` marker block adds `-skip-testing:<AppName>UITests-$PLATFORM` to each matrix leg |
 | `<skip-integration-tests>` | Library: `--skip <integration-test target>` only when `ci-tests: unit` **and** Step 1 finds an integration-test `testTarget` in `Package.swift` (e.g. `<Name>IntegrationTests`); empty otherwise. `swift test --skip` takes a test-identifier regex — confirm the flag against the target toolchain when first emitting it |
 
 Apply the `flavor`/`sonar`/`distribution`/`signing`/`release-please`/`branching`/`ci-tests`/`pages` gating resolved in Steps 0–1:
 drop every block the templates above mark with an "Omit this … if …" comment (and that comment itself) when the
-matching value doesn't apply.
+matching value doesn't apply. The app templates (Steps 5 and 7) use `# >>> <condition>` / `# <<< <condition>` markers
+instead — resolved per Step 5's condition table, marker lines never written.
 
 ## Step 11 — Conditional-blocks table
 
@@ -1525,17 +2110,16 @@ matching value doesn't apply.
 | `Upload Pages artifact` step + `deploy-docs` job | The above, and `pages: yes` |
 | `Upload docs artifact` step (`actions/upload-artifact`) | The above, and `pages: no` |
 | `-skip-testing:<AppName>UITests-<Platform>` flags | `flavor: app`, `ci-tests: unit` |
+| `apps` matrix legs `<AppName>-iOS`/`-watchOS`/`-visionOS`/`-macOS` | `flavor: app`, one per selected platform target (watchOS always its own leg; visionOS tests only when the runner has a visionOS runtime) |
+| `Check Automation Mode (macOS UI tests)` step | `flavor: app`, `macos` selected, `ci-tests: full` |
 | `--skip <integration-test target>` | `flavor: library`, `ci-tests: unit`, and an integration-test target exists |
 | `Run SonarQube analysis` step + its coverage-conversion step | `sonar` is `cloud` or `self-hosted` |
-| `lcov_to_sonar_generic.py` (vendored file) | `flavor: library`, `sonar` isn't `none` |
-| `xccov-to-sonarqube-generic.sh` (fetched at CI time) | `flavor: app`, `sonar` isn't `none` |
+| `lcov_to_sonar_generic.py` (vendored file) | `sonar` isn't `none` (both flavors) |
 | `release-please` job in `release.yml` | `flavor: library`, `release-please: yes` |
-| `Fetch distribution signing certificates` step | `flavor: app`, `signing: fastlane-match` (its `match developer_id` line only when `macos` is also selected) |
-| `Write the App Store Connect API key` step | `flavor: app`, `distribution` isn't `none` (both signing modes — `pilot`, the TestFlight action and `notarytool` all authenticate with it) |
-| Every `-authenticationKeyPath` flag | `flavor: app`, `signing: api-key` |
-| `Upload to TestFlight` steps | `flavor: app`, `distribution` isn't `none` (`fastlane pilot --api_key_path` for `fastlane-match`, the action for `api-key`) |
-| `Import the Developer ID Application certificate` step | `flavor: app`, `macos` selected, `distribution` isn't `none`, `signing: api-key` |
-| `Write ExportOptions-macos.plist` + `Archive and export <AppName>-macOS` + `Notarize and staple` + `Upload the notarized macOS app` steps | `flavor: app`, `macos` selected, `distribution` isn't `none` |
+| `release.yml` (app) | `flavor: app`, `distribution` isn't `none` |
+| `app-store` job (plain `xcodebuild` archive + export with `destination: upload`) | `flavor: app`, `app-store-job` — iOS without the Fastlane path, visionOS, or a standalone watchOS app |
+| `fastlane-ios` job (`fastlane ios <release-lane>`) | `flavor: app`, iOS selected, `fastlane/Fastfile` exists **and** `signing: fastlane-match` |
+| `macos-developer-id` job | `flavor: app`, `macos` selected, `distribution` isn't `none` |
 | `codeql` job | `security-codeql: yes` |
 | `codeql`'s `Generate Xcode project` step (before `codeql-action/init`) | `flavor: app` |
 | `dependency-review` / `osv-scanner` / `gitleaks` jobs | matching `security-*: yes` |
@@ -1547,7 +2131,7 @@ matching value doesn't apply.
 |---|---|
 | `library` / `gitflow` | `.github/workflows/build.yml`, `release.yml`, `sync.yml`, `.github/scripts/sync_versions.py`, `.github/scripts/lcov_to_sonar_generic.py` (only if `sonar` isn't `none`), `security.yml`, `.github/dependabot.yml` |
 | `library` / `main-only` | Same, minus `sync.yml`/`sync_versions.py` |
-| `app` / `gitflow` | `.github/workflows/build.yml`, `release.yml`, `sync.yml`, `.github/scripts/sync_versions.py`, `security.yml`, `.github/dependabot.yml` (no `lcov_to_sonar_generic.py` — the app flavor uses the fetched-at-CI-time `xccov-to-sonarqube-generic.sh` instead) |
+| `app` / `gitflow` | `.github/workflows/build.yml`, `release.yml` (only if `distribution` isn't `none`), `sync.yml`, `.github/scripts/sync_versions.py`, `.github/scripts/lcov_to_sonar_generic.py` (only if `sonar` isn't `none`), `security.yml`, `.github/dependabot.yml` |
 | `app` / `main-only` | Same, minus `sync.yml`/`sync_versions.py` |
 
 ## Step 13 — Write the files, then verify
@@ -1576,6 +2160,45 @@ Run through the `iru-gate-runner` agent where output could be long. Verification
    already reflects this skill's own such run).
 4. Run the library flavor's `build.yml` shell steps for real against `iru-setup-swift-library`'s existing generated scaffold, copied first
    (never mutate the original) — see "Known quirks / verification notes" below for exact commands and results.
+
+5. **App flavor** — render Steps 5/7 for at least two `iru-setup-apple-app` variants (copies, never the originals)
+   and run `actionlint` with `shellcheck` on `PATH` (declare `xcode-27` under `self-hosted-runner.labels` in an
+   `actionlint.yaml` passed with `-config-file`), then each job's commands locally: SwiftLint/`swift format`, the
+   `core` step verbatim, `xcodegen generate`, the destination step, `build-for-testing` + `test-without-building`
+   per scheme (shut the simulators down afterwards), the DocC step, the release `version` check and an unsigned
+   `xcodebuild archive … CODE_SIGNING_ALLOWED=NO` per uploaded platform.
+
+### Known quirks / verification notes — app flavor (2026-10-16, Xcode 27.1 / Swift 6.4)
+
+- **Verified for real** in `$TMPDIR/iru-verify/apple/iru-setup-swift-github-workflows/` on copies of
+  `iru-setup-apple-app`'s verified scaffolds (originals untouched): `ios-watchos-visionos` (SwiftUI MVVM, iOS +
+  companion watchOS + visionOS, assembled from the `ios+ipados+visionos-swiftui` and `ios-swiftui-mvvm` copies) rendered
+  gitflow / `ci-tests: full` / `pages: yes` / `sonar` / `distribution: store` / plain `xcodebuild` on `xcode-27`; and
+  `uikit-mvc-ios` (UIKit MVC, iOS only) rendered main-only / `ci-tests: unit` / `pages: no` / `distribution: internal`
+  / the `fastlane` path on `macos-26` (no `app-store` job); plus a marker-coverage render (standalone watchOS + macOS,
+  `generator: tuist`, `ci-tests: full`). **actionlint 1.7.12 + shellcheck: 0 findings** for every `build.yml`/
+  `release.yml`/`security.yml`, and a Ruby YAML parse of every file; `py_compile` of both scripts. The shared
+  `sync.yml` (Step 8, unchanged) reports one shellcheck *style* note (SC2129, repeated `>> "$GITHUB_OUTPUT"`) —
+  harmless.
+- **Executed locally** (XcodeGen 2.46.0 and SwiftLint 0.65.1 from temp downloads): `swiftlint lint --strict` and
+  `swift format lint --strict --recursive Targets Packages/Core/Sources Packages/Core/Tests` — clean on both; the `core`
+  step verbatim — 7 and 8 Core tests, **100.00%** lines, the 80% check passing; `lcov_to_sonar_generic.py` →
+  `Packages/Core/Sources/Core/…` paths; the DocC step (static hosting under `/my-app/api/`); the destination step →
+  `platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0`, `platform=watchOS Simulator,name=Apple Watch Series 12
+  (46mm),OS=27.0`, and for visionOS an empty destination + the "unverified" warning (exit 0), or exit 1 when the
+  runtime is marked required; `build-for-testing` on `generic/platform=<P> Simulator` + `test-without-building` —
+  `MyApp-iOS` **11/11** and `MyApp-watchOS` **11/11** (each incl. its XCUITest; the watch tests run only under the
+  watchOS scheme), `MyApp-visionOS` build-for-testing succeeded (tests unverified: no visionOS runtime installed
+  here), UIKit `MyApp-iOS` with `-skip-testing:MyAppUITests-iOS` **17/17** with only the `CoreTests` and
+  `MyAppTests-iOS` bundles run; the release `version` check (`v1.0.0`/`1.0.0` pass, `v1.0.1` fails); unsigned archives
+  — `MyApp-iOS.xcarchive` contains `MyApp.app/Watch/MyApp.app` (`com.example.myapp.watchkitapp`, `WKApplication`,
+  companion id) and `MyApp-visionOS.xcarchive` is an `xros` 27.0 build; both export plists rendered and `plutil
+  -lint`-clean with `teamID` replaced.
+- **Not verified**: the Linux `lint` container (Docker's VM disk filled while pulling `swift:6.4-noble`; nothing was
+  pruned) — the same SwiftLint version and `swift format` passed on macOS; signed archives, `-exportArchive` uploads,
+  the Developer ID export/notarization, `fastlane ios beta|release` (Fastlane isn't installed locally) and Xcode
+  26.6 on `macos-26` (the scaffold targets Xcode 27.1).
+- XcodeGen also generates a `Core` scheme for the local package — never pick it as an app leg.
 
 ### Known quirks / verification notes (September 2026, against Xcode 27.0 / Swift 6.4, no `brew` installed)
 
@@ -1650,11 +2273,12 @@ Run through the `iru-gate-runner` agent where output could be long. Verification
   `gh api repos/actions/runner-images/contents/images/macos --jq '.[].name'` returned
   `macos-14-Readme.md`/`macos-14-arm64-Readme.md`, `macos-15-Readme.md`/`macos-15-arm64-Readme.md`,
   `macos-26-Readme.md`/`macos-26-arm64-Readme.md`, and `xcode-27-arm64-Readme.md` (no non-arm64 `xcode-27`
-  variant published yet). Reading each `-arm64-Readme.md`'s own content: `macos-26`'s `### Xcode` table lists
-  `26.6 (default)` down to `26.0.1`, with a `### Linters` section listing `SwiftLint 0.65.1`; `xcode-27`'s table
-  lists only `27.0 (beta) (default)`, with **no** `### Linters` section at all. This directly confirms Step 0's
-  runner-choice guidance (default `macos-26` for its preinstalled SwiftLint and GA stability) and Step 4/5's
-  `command -v swiftlint >/dev/null ||` guard (required unconditionally, since the `xcode-27` image never has it).
+  variant published yet). `macos-26`'s `### Xcode` table lists `26.6 (default)` down to `26.0.1`; `xcode-27`'s
+  lists only `27.0 (beta) (default)`. SwiftLint 0.65.1 appears under `### Linters` only in the x64
+  `macos-26-Readme.md`, i.e. the `macos-26-intel` image (re-checked 2026-10-16, Step 0's correction) — not on the
+  arm64 `macos-26` nor on `xcode-27`. This confirms Step 0's runner-choice guidance (default `macos-26` for GA
+  stability, not for a preinstalled SwiftLint) and Step 4's `command -v swiftlint >/dev/null ||` guard (required
+  unconditionally on both labels).
 - **`actions/dependency-review-action` and `google/osv-scanner-action`'s reusable workflow still have no
   floating major tag** (re-confirmed via `git ls-remote --tags` returning zero matches for a bare `v5`/`v2`),
   same finding the Android sibling's own Step 13 already recorded for the Java/Kotlin ecosystem — this is an
@@ -1685,12 +2309,18 @@ the user chose Stop) — listing, for every file kept as is, each concrete misma
 still runs UI tests after `ci-tests: unit`, still deploys to Pages after `pages: no`, still runs Sonar after
 `sonar: none`); any open gaps noted along the way (missing `docs/antora.yml`, a `Packages/Core`
 with no `swift-docc-plugin` dependency for the app flavor's DocC step, README/version wording that didn't match
-`sync_versions.py`'s default regexes, a `<team-id>` the user still needs to supply).
+`sync_versions.py`'s default regexes, an `APPLE_TEAM_ID` secret the user still needs to add).
 
 State explicitly what was wired versus omitted, and why:
 
 - **`flavor`**: `library` or `app` — which pipeline shape (`ubuntu-latest` matrix leg + lcov-to-generic-XML vs.
-  per-platform `xcodebuild test` + `xccov-to-sonarqube-generic.sh` + archive/sign/upload) was generated.
+  Linux lint + Core coverage bar + one `apps` matrix leg per platform scheme + archive/sign/upload) was generated.
+- **Platforms** (app only): the matrix legs written (`<AppName>-iOS`/`-watchOS`/`-visionOS`/`-macOS`), that watchOS
+  has its own leg even when embedded in the iOS app, and — from Step 5's runner-image table re-checked for the chosen
+  `<runner>` — whether the visionOS leg will run its tests there or only build for testing ("unverified (no visionOS
+  simulator runtime installed)"); which release jobs exist (`app-store` legs, `fastlane-ios`, `macos-developer-id`)
+  and that no job requires Fastlane unless `fastlane/Fastfile` + `signing: fastlane-match` chose the `fastlane-ios`
+  job.
 - **`runner`**: `macos-26` or `xcode-27` — restate the GA-vs-preview tradeoff and whether the `brew install
   swiftlint` guard actually fires for this choice.
 - **`branching`**: `gitflow` (`sync.yml` included) or `main-only` (state this omission plainly).
@@ -1717,8 +2347,9 @@ generated:
 | `SONAR_TOKEN` | Auth token for the SonarQube/SonarCloud scan | `sonar` is `cloud` or `self-hosted` |
 | `MATCH_GIT_URL` / `MATCH_PASSWORD` | `fastlane match`'s certs-repo URL and its encryption passphrase | `flavor: app`, `signing: fastlane-match` |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | base64 of `<git-user>:<personal-access-token>` — how `match` clones a private certs repository over HTTPS on the runner (an SSH deploy key via `webfactory/ssh-agent` is the alternative for a `git@…` URL) | `flavor: app`, `signing: fastlane-match` |
-| `APP_STORE_CONNECT_API_KEY_ID` / `_ISSUER_ID` / `_KEY_BASE64` | App Store Connect API key — auth for `fastlane pilot upload` (`--api_key_path`), `apple-actions/upload-testflight-build` (`api-private-key`), `notarytool`, and (api-key only) `-allowProvisioningUpdates` | `flavor: app`, `distribution` isn't `none` — **both** signing modes, since `match` certificates never authenticate an upload or a notarization |
-| `DEVELOPER_ID_CERTIFICATE_P12_BASE64` / `DEVELOPER_ID_CERTIFICATE_PASSWORD` | Exported Developer ID Application certificate for the macOS `developer-id` export (automatic signing can't create one) | `flavor: app`, `macos` selected, `distribution` isn't `none`, `signing: api-key` (under `fastlane-match`, `match developer_id` supplies it instead) |
+| `APP_STORE_CONNECT_API_KEY_ID` / `_ISSUER_ID` / `_KEY_BASE64` | App Store Connect API key (`_KEY_BASE64` = base64 of `AuthKey_<id>.p8`, the same secrets `iru-setup-apple-app`'s Fastfile reads) — `-allowProvisioningUpdates` + `-exportArchive` upload (Admin or App Manager role), `notarytool`, and fastlane's `APP_STORE_CONNECT_API_KEY_PATH` JSON on the Fastlane path | `flavor: app`, `distribution` isn't `none` — **both** signing modes, since `match` certificates never authenticate an upload or a notarization |
+| `APPLE_TEAM_ID` | Apple Developer Team ID — `DEVELOPMENT_TEAM` for the archives and the export plists' `teamID` (`plutil -replace` at run time) | `flavor: app`, `distribution` isn't `none` (plain `xcodebuild` jobs) |
+| `DEVELOPER_ID_CERTIFICATE_P12_BASE64` / `DEVELOPER_ID_CERTIFICATE_PASSWORD` | Exported Developer ID Application certificate + key (`.p12`, base64) for the macOS `developer-id` archive/export (automatic signing can't create one — only the Account Holder can) | `flavor: app`, `macos` selected, `distribution` isn't `none` |
 | `GITHUB_TOKEN` | `sync.yml`'s `gh` calls, `security.yml`'s CodeQL/gitleaks jobs | Automatic — no setup needed |
 
 `sync.yml` also needs the repository setting under Settings → Actions → General → "Workflow permissions" set to
@@ -1747,8 +2378,9 @@ used). Call out whichever apply explicitly.
   library flavor's `lcov_to_sonar_generic.py` conversion is the one this skill actually generates and verified;
   don't substitute slather in without first confirming both problems don't apply to the target repository/CI
   runner.
-- **Unverified locally, and never a blocker** (Step 13): SwiftLint/`xcbeautify`/`xcodegen`/`tuist` themselves
-  (no `brew` in this skill's own environment), the entire app-flavor pipeline beyond its rendered YAML/
-  placeholder structure, the actual SonarQube scan, `release-please`, Fastlane's `match`/`pilot`, TestFlight/App
-  Store Connect uploads, notarization, and the security jobs' real scan behavior (only their `uses:` refs were
-  confirmed to resolve).
+- **Unverified locally, and never a blocker** (Step 13): for the library flavor SwiftLint/`xcodegen`/`tuist`
+  themselves (no `brew` in that run's environment); for the app flavor everything that needs GitHub's runners or
+  Apple accounts — the Linux `lint` container, `setup-xcode`, Homebrew `xcodegen`, `tuist`, signed archives,
+  `-exportArchive` uploads, Developer ID export, notarization/stapling, the Fastlane lane, `gh release upload`, and
+  visionOS **test** runs (no local visionOS runtime; GitHub's arm64 images have one); the actual SonarQube scan,
+  `release-please`, and the security jobs' real scan behavior (only their `uses:` refs were confirmed to resolve).

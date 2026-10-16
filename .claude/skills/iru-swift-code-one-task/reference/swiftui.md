@@ -107,6 +107,14 @@ For behavior that varies across more than a couple of platforms, prefer an exten
 cross-platform API (e.g. a `Color` initializer bridging `UIColor`/`NSColor`) over `#if os(...)` scattered through
 every call site — see `app-structure.md` for where such cross-platform shims belong in a multi-target app.
 
+## macOS scenes and view models
+
+Mac-only scene work — `WindowGroup`/`Window`/`UtilityWindow`/`Settings`/`MenuBarExtra`, `openWindow`, `Commands`
+and focused values, sandboxed file access — is in `macos.md`. Whether a screen gets a view model at all (and where
+it lives — `Packages/Core/Sources/Core/ViewModels/`) is decided by `architecture.md`: no pass-through view models.
+iOS/iPadOS scene concerns (`scenePhase`, multiple windows, size classes, `.sidebarAdaptable`, Dynamic Type) are in
+`ios.md`; visionOS windows, volumes, immersive spaces and ornaments in `visionos.md`.
+
 ## Testing
 
 See `testing.md`'s Swift Testing section for a `@MainActor`-marked `@Suite`/`@Test` exercising a view model

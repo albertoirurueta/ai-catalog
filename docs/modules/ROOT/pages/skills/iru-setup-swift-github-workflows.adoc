@@ -1,5 +1,5 @@
 = Setup Swift GitHub Workflows
-:description: Scaffolds or updates build.yml, release.yml, sync.yml, security.yml, and dependabot.yml GitHub Actions workflows for a Swift/Apple CI/CD pipeline.
+:description: Scaffolds or updates Swift/Apple GitHub Actions workflows: per-platform iOS, watchOS, visionOS and macOS test legs, releases, sync and security.
 :keywords: iru-setup-swift-github-workflows, claude code skill, swift, swiftpm, xcodebuild, docc, swiftlint, github actions, ci/cd, sonarqube
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -13,13 +13,19 @@ Scaffold (or update) the `build.yml`, `release.yml`, `sync.yml` (gitflow only), 
 `iru-setup-swift-github-workflows` wires up the house CI/CD pipeline for the Swift/Apple stack: SwiftLint +
 `swift format lint --strict`, a build/test step whose shape depends on `flavor` (library:
 `swift test --enable-code-coverage --parallel` with a `.build` cache keyed on `Package.resolved`, plus an
-`xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an optional `ubuntu-latest` Linux matrix leg; app: `xcodegen generate`/`tuist generate` plus one
-`xcodebuild test -enableCodeCoverage YES` run per selected platform destination, piped through `xcbeautify`,
-converted to Sonar's generic XML via SonarSource's `xccov-to-sonarqube-generic.sh`), an optional
-SonarQube/SonarCloud scan, a DocC + Antora documentation build published to GitHub Pages from the stable
+`xcrun llvm-cov`-to-SonarQube-generic-XML coverage conversion and an optional `ubuntu-latest` Linux matrix leg; app,
+following `iru-setup-apple-app`'s scaffold contract: a Linux `lint` job (SwiftLint release binary + `swift format`
+in a `swift` container), a macOS `core` job (`Packages/Core` `swift test --enable-code-coverage` + `llvm-cov` with an
+80% line bar, plus DocC), and an `apps` matrix with one leg per platform scheme (`<AppName>-iOS`/`-watchOS`/
+`-visionOS`/`-macOS`) that runs `xcodegen generate`/`tuist generate`, `xcodebuild build-for-testing` against
+`generic/platform=<P> Simulator`, then `test-without-building` on the newest simulator runtime resolved from
+`xcrun simctl` — visionOS tests reported unverified when the runner image has no visionOS runtime — and uploads
+each `.xcresult`), an optional SonarQube/SonarCloud scan (Linux for the app flavor, fed Core's lcov), a DocC + Antora documentation build published to GitHub Pages from the stable
 branch (or, with `pages: no`, built and uploaded as a `docs-site` workflow artifact without publishing), a release workflow (library: verifies the release tag is valid semver and the manifest still parses,
-plus an optional `release-please` job; app: archives, signs via `fastlane match` or an App Store Connect API
-key, exports, uploads to TestFlight, and — for macOS — exports with Developer ID, notarizes and staples), a gitflow-only `sync.yml` that merges a
+plus an optional `release-please` job; app: plain `xcodebuild archive` + `-exportArchive` with `destination: upload`
+to App Store Connect via the API key for iOS (watch app embedded), visionOS and a standalone watchOS app, and
+Developer ID export + notarization + stapling for macOS — the Fastfile's `match` + `beta`/`release` lane drives
+the iOS upload only when `fastlane/` exists and `signing: fastlane-match`, so no job requires Fastlane), a gitflow-only `sync.yml` that merges a
 released branch back into the integration branch and bumps the development version (reusing
 `iru-swift-bump-version`'s exact rewrite targets via a vendored `sync_versions.py`), and a
 `security.yml`/`dependabot.yml` block (dependency-review, CodeQL, OSV-Scanner, gitleaks). Unlike its
@@ -32,7 +38,13 @@ templates as reference, keeping foreign steps and jobs) / Keep as is (listing ev
 choices) / Replace (regenerate; customizations lost) / Stop, or applies `on-existing` from `args`. Because nearly
 every job runs on macOS runners (about 10x the cost of Linux minutes, billed against included minutes on private
 repositories), it resolves `visibility` and asks `sonar`, `ci-tests` and `pages` with those cost facts; `ci-tests:
-unit` skips the app's XCUITest bundles (or a library integration-test target) in CI.
+unit` skips the app's XCUITest bundles (`-skip-testing:<AppName>UITests-<Platform>`, or a library integration-test
+target) in CI. For the app flavor it recommends `runner: xcode-27` + `xcode-version: 27.1` (the Xcode the scaffold
+was verified with), since only that preview image offers it. Neither `macos-26` (arm64) nor `xcode-27` ships
+SwiftLint preinstalled (only `macos-26-intel` does), so the library flavor keeps a `brew install swiftlint` guard and
+the app flavor lints on Linux. Every generator-dependent step — the `apps` legs in `build.yml`, and in `release.yml`
+the version check (`project.yml` vs `Project.swift` `MARKETING_VERSION`) and each archive job's project generation —
+is written for exactly the detected `generator` (`xcodegen generate` or `tuist generate --no-open`).
 
 == Purpose group
 
@@ -76,7 +88,8 @@ and no longer short-circuits the per-file question.
 
 == Outputs
 
-* `.github/workflows/build.yml`, `release.yml`, and (gitflow only) `sync.yml` — created fresh, or updated, replaced or kept
+* `.github/workflows/build.yml`, `release.yml` (app flavor: only when `distribution` isn't `none`), and (gitflow
+  only) `sync.yml` — created fresh, or updated, replaced or kept
   as is per file when it already existed (the user's Update / Keep as is / Replace choice, or `on-existing`).
   `build.yml` honours `ci-tests` (UI-test bundles or integration targets skipped when `unit`) and `pages` (a
   `docs-site` artifact upload instead of the Pages deploy job when `no`).
@@ -84,15 +97,16 @@ and no longer short-circuits the per-file question.
   `flavor`/`branching`.
 * `.github/scripts/sync_versions.py`, always written together with `sync.yml` — never one without the other,
   and never for `main-only`.
-* `.github/scripts/lcov_to_sonar_generic.py` — only when `flavor: library` and `sonar` isn't `none` (the app
-  flavor instead fetches SonarSource's own `xccov-to-sonarqube-generic.sh` at CI time).
+* `.github/scripts/lcov_to_sonar_generic.py` — whenever `sonar` isn't `none`, for both flavors (the app flavor
+  converts `Packages/Core`'s lcov, not an `.xcresult`).
 * A report of the mode announced (from scratch or update), the action taken per file (created / updated /
   replaced / kept as is, with each mismatch listed for a kept file), how `visibility`, `ci-tests` and `pages` were
-  applied, open gaps (missing `docs/antora.yml`, a
-  `Packages/Core` with no `swift-docc-plugin` dependency, a `<team-id>` the user still needs to supply, version
-  wording that didn't match `sync_versions.py`'s regexes), the required-secrets table below, and warnings about
-  what this skill's own verification pass could not exercise locally (no `brew` — SwiftLint, `xcbeautify`,
-  `xcodegen`/`tuist`, and therefore the whole app-flavor pipeline beyond its rendered YAML).
+  applied, which `apps` matrix legs and release jobs (`app-store`, `fastlane-ios`, `macos-developer-id`) were
+  written and whether the visionOS leg runs its tests on the chosen runner, open gaps (missing `docs/antora.yml`, a
+  `Packages/Core` with no `swift-docc-plugin` dependency, an `APPLE_TEAM_ID` secret the user still needs to add,
+  version wording that didn't match `sync_versions.py`'s regexes), the required-secrets table below, and warnings
+  about what could not be exercised locally (the Linux `lint` container, signed archives, uploads, notarization,
+  the Fastlane lane, visionOS test runs).
 
 === File matrix
 
@@ -108,8 +122,8 @@ and no longer short-circuits the per-file question.
 |Same, minus `sync.yml`/`sync_versions.py`
 
 |`app` / `gitflow`
-|`build.yml`, `release.yml`, `sync.yml`, `sync_versions.py`, `security.yml`, `.github/dependabot.yml` (no
-`lcov_to_sonar_generic.py` — the app flavor uses the fetched-at-CI-time `xccov-to-sonarqube-generic.sh` instead)
+|`build.yml`, `release.yml` (only if `distribution` isn't `none`), `sync.yml`, `sync_versions.py`,
+`lcov_to_sonar_generic.py` (only if `sonar` isn't `none`), `security.yml`, `.github/dependabot.yml`
 
 |`app` / `main-only`
 |Same, minus `sync.yml`/`sync_versions.py`
@@ -135,14 +149,19 @@ the runner
 |`flavor: app`, `signing: fastlane-match`
 
 |`APP_STORE_CONNECT_API_KEY_ID` / `_ISSUER_ID` / `_KEY_BASE64`
-|App Store Connect API key — auth for `fastlane pilot upload`, `apple-actions/upload-testflight-build`,
-`notarytool`, and (api-key only) `-allowProvisioningUpdates`
+|App Store Connect API key — `-allowProvisioningUpdates` + `-exportArchive` upload (Admin or App Manager role),
+`notarytool`, and Fastlane's API-key JSON on the Fastlane path
 |`flavor: app`, `distribution` isn't `none` — both signing modes, since `match` certificates never
 authenticate an upload or a notarization
 
+|`APPLE_TEAM_ID`
+|Apple Developer Team ID — `DEVELOPMENT_TEAM` for the archives and the export plists' `teamID`, filled in at run
+time
+|`flavor: app`, `distribution` isn't `none`
+
 |`DEVELOPER_ID_CERTIFICATE_P12_BASE64` / `DEVELOPER_ID_CERTIFICATE_PASSWORD`
 |Exported Developer ID Application certificate for the macOS `developer-id` export
-|`flavor: app`, `macos` selected, `distribution` isn't `none`, `signing: api-key`
+|`flavor: app`, `macos` selected, `distribution` isn't `none`
 
 |`GITHUB_TOKEN`
 |`sync.yml`'s `gh` calls, `security.yml`'s CodeQL/gitleaks jobs
@@ -175,15 +194,15 @@ flowchart TD
     E3 --> F["Step 2: Look up action/tool\nversions at run time"]
     F --> G{"flavor?"}
     G -- library --> H["Step 4: Render build.yml\n(SwiftLint, cached swift test,\nci-tests skips, lcov coverage,\noptional Linux leg,\nDocC + Antora, Pages or artifact)"]
-    G -- app --> I["Step 5: Render build.yml\n(xcodegen/tuist generate,\nxcodebuild test per platform with\nci-tests skips, xccov coverage,\nDocC + Antora, Pages or artifact)"]
+    G -- app --> I["Step 5: Render build.yml\n(Linux lint, macOS core job with\n80% line bar + DocC, apps matrix\nper platform scheme: generate,\nbuild-for-testing, test-without-\nbuilding with ci-tests skips;\nvisionOS unverified if no runtime;\nLinux sonar, Antora, Pages or artifact)"]
     H --> J["Step 6: Render release.yml\n(verify semver tag + manifest,\noptional release-please)"]
-    I --> K["Step 7: Render release.yml\n(archive, sign, export,\nTestFlight, notarize macOS)"]
+    I --> K["Step 7: Render release.yml if distribution set\n(version check, xcodebuild archive +\nexport upload for iOS/visionOS/watchOS,\noptional fastlane-ios lane,\nDeveloper ID + notarize macOS)"]
     J --> L{"branching == gitflow?"}
     K --> L
     L -- yes --> M["Step 8: Render sync.yml\n+ sync_versions.py"]
     L -- no --> N["Step 9: Render security.yml\n+ dependabot.yml"]
     M --> N
-    N --> O["Steps 12-13: Write files per decision\nand flavor x branching matrix;\nverify (YAML lint, uses: refs,\nreal build/test run)"]
+    N --> O["Steps 12-13: Write files per decision\nand flavor x branching matrix;\nverify (YAML parse, actionlint,\nuses: refs, real build/test run)"]
     O --> P["Step 14: Report mode, per-file action,\nrequired secrets, open gaps,\nwarnings"]
 ....
 
@@ -202,9 +221,10 @@ None — `iru-setup-swift-github-workflows` is a leaf skill; it does not call an
 
 === Related agents
 
-xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 13's verification pass (YAML validation of every
-rendered file, resolving every `uses:` ref, and a real shell-step dry run against a copied scaffold) runs
-through this agent where output could be long.
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 13's verification pass (YAML validation and, for the
+app flavor, `actionlint` + `shellcheck` of every rendered file, resolving every `uses:` ref, and real shell-step
+runs against copied `iru-setup-swift-library`/`iru-setup-apple-app` scaffolds) runs through this agent where output
+could be long.
 
 == Source
 

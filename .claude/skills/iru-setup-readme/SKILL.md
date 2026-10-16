@@ -114,7 +114,8 @@ Look at the repository root for `README.md`.
 - **Primary language, framework, and build tool**: reuse `iru-explore`'s `- Project type:` line rather than
   re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
   React Native (Expo or bare CLI/Metro), Ionic/Capacitor, Kotlin Multiplatform app, Android library/app,
-  SwiftPM/XcodeGen/Tuist, plain TypeScript/npm library,
+  SwiftPM/XcodeGen/Tuist, macOS desktop app (SwiftUI/AppKit), Windows desktop app (WPF/WinUI 3/Windows Forms),
+  plain TypeScript/npm library,
   and so on), and duplicating it here would drift the first time it gains a signal:
   - If an `iru-explore` report with a `- Project type:` line is already available earlier in this conversation,
     use it — just confirm the manifest(s) it names are still present.
@@ -125,8 +126,9 @@ Look at the repository root for `README.md`.
     → Java/Maven, `build.gradle*` → Gradle (Android when a module applies `com.android.library`/
     `com.android.application`), `package.json` → npm/TypeScript, `composer.json` → PHP, `pyproject.toml` →
     Python (FastAPI when `fastapi` is a dependency, Django when `manage.py` exists), `Package.swift`/
-    `*.xcodeproj`/`project.yml`/`Project.swift` → Swift/Apple — and say in Step 11 that the framework flavor wasn't
-    detected.
+    `*.xcodeproj`/`project.yml`/`Project.swift` → Swift/Apple, `*.slnx`/`*.sln`/`*.csproj` → .NET (Windows desktop
+    when a `WinExe` project sets `UseWPF`/`UseWinUI`/`UseWindowsForms`) — and say in Step 11 that the framework
+    flavor wasn't detected.
   - The project types this skill tailors sections for beyond plain libraries/apps (Steps 3–7): `java-springboot`/
     `kotlin-springboot` (+ `-hilla`), `java-quarkus`/`kotlin-quarkus`, `php-laravel`, `php-wordpress-plugin`,
     `php-wordpress-theme`, `php-prestashop-module`, `php-library`, `nestjs`, `nextjs`, `python-fastapi`,
@@ -180,7 +182,14 @@ Look at the repository root for `README.md`.
   - Swift: the package name from `Package.swift`, with the version taken from git tags (SwiftPM has no in-file
     version field) — `git tag --sort=-v:refname | head -1`.
   - Xcode app: `MARKETING_VERSION` from the project's build settings (`project.pbxproj`, `project.yml`, or
-    `Project.swift`, depending on which of Xcode/XcodeGen/Tuist generates the project).
+    `Project.swift`, depending on which of Xcode/XcodeGen/Tuist generates the project). For a macOS desktop app
+    (`macos-app`) also the deployment target (`MACOSX_DEPLOYMENT_TARGET`/`deploymentTarget.macOS`), the UI framework
+    (SwiftUI/AppKit) and whether the App Sandbox entitlement is on — status-table rows.
+  - Windows desktop app (`windows-app`): `<Version>` in `Directory.Build.props` (else the app project's own;
+    pre-releases use `-dev`), the app name from the `*.slnx`/`*.sln`, the target framework (`net10.0-windows…`) and
+    UI stack (WPF/WinUI 3/Windows Forms) from the app `*.csproj`, the Windows App SDK version from
+    `Directory.Packages.props` (WinUI), and the MSIX identity (`Identity Name`/`Publisher`) from
+    `Package.appxmanifest` or `packaging/AppxManifest.xml` when present.
   - Also find the latest released version for any stack: `git tag --sort=-v:refname | head -1` (or `gh release
     list --limit 1` if on GitHub with `gh` available). If the current version has no `-SNAPSHOT`/prerelease
     suffix (`-SNAPSHOT`, `-dev`, `-dev.N`, `-rc.N`, Python's `.devN`/`rcN`, …) and matches the latest tag, there's only one version to show,
@@ -348,6 +357,11 @@ and skip the published API-docs links below.
     `dokkaGeneratePublicationHtml` (Gradle) or `dokka-maven-plugin` (`mvn dokka:dokka`) and merge the result into
     the Antora output — the Spring Boot workflows put it under `/api/kdoc/` (root-aggregated, or one
     `/api/kdoc/<module-path>/` per module when the root doesn't aggregate); read the workflow's copy step.
+  - **DocC** (Swift/macOS apps): an `xcodebuild docbuild`/`swift package generate-documentation` step whose
+    static-hosting output the workflow copies under the Antora site's `api/`, normally
+    `https://<owner>.github.io/<repo>/api/documentation/<module>/` — read the workflow's copy step.
+  - **DocFX** (.NET/Windows desktop apps): a `docfx docfx.json` step whose `_site` the workflow copies under the
+    Antora site's `api/`, normally `https://<owner>.github.io/<repo>/api` — only when `docfx.json` exists.
   - **phpDocumentor** (PHP): a `phpdoc run --config phpdoc.dist.xml` step merged into the Pages site, normally at
     `https://<owner>.github.io/<repo>/api` — only when `phpdoc.dist.xml` exists.
   - **Sphinx** (Python): a `sphinx-build … docs/api build/api-docs` step (sources `docs/api/conf.py` +
@@ -525,6 +539,19 @@ never copy a value from `.env`/`.env.example` that looks like a secret — list 
   (Kotlin Multiplatform), `xcodebuild -scheme <Scheme> -destination …` or "open in Xcode and run" (Apple
   platforms) — pick the one command that actually matches the project's own scripts/Gradle
   tasks/scheme rather than a generic default.
+- **Desktop apps** (`macos-app`, `windows-app`): no dependency snippet. When Step 5 found a release workflow,
+  an "Install" subsection matched to what it actually publishes — macOS: "download the notarized
+  `<AppName>-<version>.dmg` from the latest GitHub Release, open it and drag the app to Applications" (Developer ID
+  release) or `<Mac App Store URL>` (App Store upload); Windows: "download `<AppName>-<version>-win-x64.zip` (or
+  `-win-arm64`) from the latest GitHub Release and run `<AppName>.exe`", "install the MSIX / open the
+  `.appinstaller` link for automatic updates" (only when the workflow produces them), `winget install
+  <PackageIdentifier>` (only when a WinGet job exists — the identifier read from the workflow), or
+  `<Microsoft Store URL>` (Store submission) — store URLs always as placeholders. Then "Build and run locally":
+  macOS — `xcodegen generate` (when `project.yml` exists), `xcodebuild -scheme <AppName> -destination
+  'platform=macOS' build` or "open `<AppName>.xcodeproj` in Xcode and run", tests with `xcodebuild test -scheme
+  <AppName> -destination 'platform=macOS'` and `swift test --package-path Packages/Core`; Windows — `dotnet build`,
+  `dotnet run --project src/<AppName>` (Windows only), `dotnet test --filter "TestCategory!=UI"` (the Core tests
+  also run on macOS/Linux), and the .NET 10 SDK / Windows 10 1809+ (WinUI) prerequisites.
 - **Python library** (`python-library`) development, after the Installation snippet: `uv sync`, `uv run pytest`,
   `uv run ruff check .`, `uv run mypy .`, `uv build` (sdist + wheel in `dist/`) — only the tools actually
   configured in `pyproject.toml`.

@@ -96,7 +96,9 @@ a|
   xref:skills/iru-swift-code-one-task-group.adoc[`iru-swift-code-one-task-group`],
   xref:skills/iru-kmp-code-one-task-group.adoc[`iru-kmp-code-one-task-group`] (Kotlin Multiplatform),
   xref:skills/iru-react-native-code-one-task-group.adoc[`iru-react-native-code-one-task-group`] (React Native, Expo
-  or Metro), or (for database-tagged tasks)
+  or Metro),
+  xref:skills/iru-windows-code-one-task-group.adoc[`iru-windows-code-one-task-group`] (Windows desktop apps — WPF,
+  WinUI 3, Windows Forms), or (for database-tagged tasks)
   xref:skills/iru-database-code-one-task-group.adoc[`iru-database-code-one-task-group`] (or implements it directly if
   no matching skill applies), checking off boxes as it goes
 * Each task group's tasks are implemented in parallel when the plan allows it (database task groups are always
@@ -180,14 +182,16 @@ supports — it works the same way whether the repository is brand new or alread
 `AskUserQuestion` rounds rather than one long list. Each round offers three options plus a "Something in
 the next group" escape hatch that moves on to the next round: JVM services & libraries (Java library, Spring Boot
 service, Quarkus service), Web & Node (TypeScript/npm library, web app, NestJS backend service), PHP (Laravel
-application, WordPress plugin or block theme, PrestaShop module), Python (FastAPI service, Django project), and Mobile & Apple (Android, Apple,
-cross-platform mobile app); the last round's escape hatch is "None of these", which ends the run with a plain "no
-orchestrator for this stack" report. An option that bundles several types gets one short follow-up right away —
+application, WordPress plugin or block theme, PrestaShop module), Python (FastAPI service, Django project), Mobile & Apple (Android, Apple,
+cross-platform mobile app), and Desktop (macOS desktop app, Windows desktop app); the last round's escape hatch is
+"None of these", which ends the run with a plain "no orchestrator for this stack" report. An option that bundles several types gets one short follow-up right away —
 web app → React / Next.js / Angular, WordPress → plugin / block theme, Android → library / app, Apple → Swift
 library / Apple app, cross-platform → React Native / Kotlin Multiplatform / Ionic — while Spring Boot and Quarkus get none here: their
 language (Java or Kotlin), build tool (Maven or Gradle), Quarkus layout, and Hilla frontend are asked by their own
-orchestrators. .NET is recognised by `iru-explore` but never offered here, because the catalog has no
-.NET bootstrap orchestrator. Once the type is known, it announces that it is setting the repository up **from
+orchestrators, and the desktop apps' UI framework and MVVM/MVC architecture are asked by
+`iru-setup-macos-repository`/`iru-setup-windows-repository`. A plain .NET library or service is recognised by
+`iru-explore` but never offered here, because the catalog has no bootstrap orchestrator for it (Windows desktop apps
+are the exception). Once the type is known, it announces that it is setting the repository up **from
 scratch**, then asks only the inputs the stacks genuinely share, exactly once: `open-source`; `visibility`
 (`public`/`private`/`internal`, detected with `gh repo view` when the repository already has a GitHub remote,
 otherwise asked); `ci` — whether to generate GitHub Actions workflows at all; `sonar` — whether SonarCloud/SonarQube
@@ -284,8 +288,21 @@ because the stack is already known:
   framework: Expo Router, EAS or local prebuild builds) or `toolchain: metro` (bare React Native CLI: committed
   `android/`/`ios/` projects, CocoaPods, Gradle/Xcode CI jobs and store release).
 * **Swift/Apple** — `/iru-setup-swift-repository` with `args: flavor: library` for a SwiftPM package, or
-  `flavor: app` for an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS app (add `platforms` to scope the
+  `flavor: app` for an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS/visionOS app — SwiftUI or, for the
+  iOS/iPadOS target, programmatic UIKit (`ui`), with `architecture: mvvm|mvc` over a UI-free `Packages/Core` (add `platforms` to scope the
   targets when `app`).
+* **macOS desktop** — `/iru-setup-macos-repository` (scaffold via `iru-setup-macos-app`): a macOS-only XcodeGen
+  project with `ui: swiftui` (scenes, Settings, menu commands) or `ui: appkit` (programmatic
+  `NSWindowController`/`NSViewController`), `architecture: mvvm` (SwiftUI, or AppKit with Observation tracking) or
+  `mvc` (AppKit), a UI-free `Packages/Core` package carrying the 80% coverage bar, the App Sandbox and hardened
+  runtime, and CI/CD that tests on a macOS runner and releases a Developer ID–signed, notarized, stapled DMG
+  (`distribution: internal`) or an App Store Connect upload (`distribution: store`).
+* **Windows desktop** — `/iru-setup-windows-repository` (scaffold via `iru-setup-windows-app`): a .NET 10 solution with
+  `ui: wpf`, `winui` (WinUI 3 / Windows App SDK) or `winforms`, `architecture: mvvm` (CommunityToolkit.Mvvm; the only
+  option for WPF/WinUI) or `mvc` (Windows Forms), a UI-free `net10.0` Core project carrying the 80% coverage bar
+  (testable on Linux/macOS too), MSTest + coverlet, StyleCop + .NET analyzers, DocFX, optional FlaUI UI tests, and
+  CI/CD that keeps Core tests on Linux, builds/packages on a Windows runner, and releases zips + a signed MSIX +
+  `.appinstaller` (optionally WinGet) or a Microsoft Store submission.
 * **Spring Boot + Hilla** — `/iru-setup-java-springboot` itself already asks whether the service has a frontend;
   pass `args: frontend: hilla` to skip that question and have `iru-setup-java-springboot-hilla` scaffold the
   Vaadin/Hilla React frontend into the `boot` module right after the API layer is generated.
@@ -303,11 +320,12 @@ into a final, tagged release: it must be run from `develop` (this catalog follow
 if it isn't. It is not Maven-only — the version-bump step itself is delegated to whichever
 `iru-<key>-bump-version` skill (xref:guides/extending-the-catalog.adoc#_release_generation_for_other_ecosystems[]
 covers the registry) matches the project's detected ecosystem (`java` — Java or Kotlin, Maven or Gradle —,
-`typescript`, `react-native`, `android`, `kmp`, `swift`, `php`, `python` today), so the same `/iru-release` flow applies whether the version lives in
+`typescript`, `react-native`, `android`, `kmp`, `swift`, `php`, `python`, `dotnet` today), so the same `/iru-release` flow applies whether the version lives in
 `pom.xml`, a Gradle build or `gradle.properties`, `package.json` (plus a React Native app's `app.json` or native
 `versionName`/`MARKETING_VERSION`, or a KMP app's `iosApp` xcconfig), a Gradle version catalog, a Swift package
 manifest, or a PHP project's own version location (Laravel `config/app.php`, a WordPress plugin/theme header, a
-PrestaShop module class), or a Python project's `pyproject.toml` (PEP 440 `.devN` pre-releases).
+PrestaShop module class), a Python project's `pyproject.toml` (PEP 440 `.devN` pre-releases), or a .NET
+`Directory.Build.props` `<Version>` (`-dev` pre-releases, mirrored into a Windows app's four-part MSIX version).
 
 [mermaid]
 ....

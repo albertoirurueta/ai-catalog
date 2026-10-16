@@ -25,6 +25,14 @@ headers, XML doc comments, the affected test classes, coverage, the full suite, 
 against its one baseline. A failure traced to a specific task sends that task back for a fix and a re-run of the
 affected checks, rather than re-validating the whole bucket.
 
+Windows desktop app repositories (WPF, WinUI 3, Windows Forms; plan key `windows`) are out of scope: when a `WinExe`
+project sets `UseWPF`/`UseWinUI`/`UseWindowsForms`, this skill stops and hands the bucket to
+xref:skills/iru-windows-code-one-task-group.adoc[], which adds the Core-only coverage bar, host gating and the
+lock-serialized UI-test stage. The gate skills it calls are Windows-desktop aware on their own (UI-category tests
+are excluded by default and `net*-windows*` test projects are skipped off Windows), so a plain .NET repository with
+a small WinForms/WPF tool still validates here — its UI tests are just never run. The full-suite check calls
+`iru-dotnet-test` with no selector rather than a raw `dotnet test`.
+
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -70,7 +78,9 @@ verdict and any relevant "Current code state" context.
 [mermaid]
 ....
 flowchart TD
-    A[Start /iru-dotnet-code-one-task-group] --> B["Step 1: capture one pre-change\nquality baseline for the whole bucket\n(iru-dotnet-code-quality, via iru-gate-runner)"]
+    A[Start /iru-dotnet-code-one-task-group] --> W{"Windows desktop app\nsolution?"}
+    W -- yes --> W2["Stop: hand the bucket to\nwindows-code-one-task-group"]
+    W -- no --> B["Step 1: capture one pre-change\nquality baseline for the whole bucket\n(iru-dotnet-code-quality, via iru-gate-runner)"]
     B --> C{Bucket Parallelizable?}
     C -- yes --> D["Step 2: invoke dotnet-code-one-task\nfor every task concurrently"]
     C -- no --> E["Step 2: invoke dotnet-code-one-task\nfor each task, one at a time"]

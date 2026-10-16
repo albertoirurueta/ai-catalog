@@ -1,0 +1,164 @@
+= Setup Windows GitHub Workflows
+:description: Creates or updates GitHub Actions and Dependabot for a .NET Windows desktop app: Linux-first build, FlaUI tests, Sonar, docs, MSIX release, WinGet, Store.
+:keywords: iru-setup-windows-github-workflows, claude code skill, github actions, windows desktop, dotnet, msix, artifact signing, winget, microsoft store, dependabot
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold or update the CI/CD pipeline for a Windows desktop app built by `iru-setup-windows-app`, around one cost rule:
+everything that can run on Linux runs on `ubuntu-latest`, and only what needs Windows uses `windows-latest`, because
+Windows minutes cost about 1.7x Linux minutes on a private repository.
+
+== Purpose
+
+`iru-setup-windows-github-workflows` is the CI/CD step of the Windows chain run by `iru-setup-windows-repository`, and it
+also works standalone. It writes `build.yml` (a Linux `core` job with restore, warnings-as-errors build, format check,
+Core tests and an 80% line-coverage bar; a `windows-latest` job with the solution build, non-UI tests and, with
+`ci-tests: full`, the FlaUI desktop UI tests; an optional SonarScanner for .NET job; and an Antora + DocFX docs job
+deployed to GitHub Pages or uploaded as an artifact), `release.yml` per `distribution` (`internal`: per-architecture
+self-contained zips, an MSIX signed with Azure Artifact Signing or a `.pfx`, App Installer files and an optional WinGet
+pull request; `store`: an `.msixbundle` submitted with the Microsoft Store Developer CLI), `sync.yml` plus
+`.github/scripts/sync_versions.py` for gitflow (merge the release back and move `<Version>` to the next `-dev`), and the
+shared security block (`security.yml` with dependency-review, CodeQL `csharp`, OSV-Scanner and gitleaks; Dependabot for
+`nuget` and `github-actions`).
+
+The templates assume `iru-setup-windows-app`'s scaffold contract; on a different layout the skill warns and adapts.
+It announces whether it is creating or updating, asks Update / Keep as is / Replace / Stop per existing file naming each
+mismatch (unless `on-existing` decides), resolves action versions at run time with a fallback table, and ends with the
+required-secrets table. Standalone it resolves `visibility` and asks `sonar`, `ci-tests`, `pages`, `distribution`,
+`signing` and `winget` with the cost facts for that visibility; there is no `ci` key since invoking it means CI is wanted.
+
+== Purpose group
+
+xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-windows-github-workflows
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`branching`
+|No
+|`gitflow` or `main-only`. `main-only` writes no `sync.yml`/`sync_versions.py`.
+|`gitflow` when an integration branch exists or `<Version>` ends in `-dev`
+
+|`integration-branch`, `stable-branch`
+|No
+|Branch names, confirmed against `git branch -a`.
+|`develop`, `main`
+
+|`ci-tests`
+|No
+|`unit` or `full` (adds FlaUI UI tests on Windows). Forced to `unit` when there is no UI-test project.
+|`full` for public; asked for private (`unit` recommended)
+
+|`pages`
+|No
+|`yes` publishes Antora + DocFX to GitHub Pages; `no` uploads a workflow artifact.
+|`yes` for public; asked otherwise (`no` recommended)
+
+|`distribution`
+|No
+|`none`, `internal` (GitHub Releases) or `store` (Microsoft Store).
+|`internal` when open source; otherwise asked
+
+|`signing`
+|No
+|`artifact-signing`, `certificate` or `none`. Asked when `distribution` is not `none`.
+|Artifact Signing recommended
+
+|`winget`, `winget-package-id`
+|No
+|Whether to open a WinGet pull request per release (only `internal`, signed, public) and its package identifier.
+|`no` recommended; MSIX identity name
+
+|`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; `cloud` recommended only for public open-source repositories.
+|Asked
+
+|`open-source`, `visibility`
+|No
+|`visibility` is detected with `gh repo view` or asked; `internal` behaves like `private`.
+|Detected or asked
+
+|`java-version`
+|No
+|JDK for `actions/setup-java` when SonarScanner runs.
+|`21`
+
+|`mode`, `on-existing`
+|No
+|`mode` is informational; `on-existing` is `ask`, `keep`, `update` or `replace`.
+|`ask`
+
+|`security-dependency-review`, `security-codeql`, `security-osv`, `security-gitleaks`
+|No
+|Each gates one `security.yml` job.
+|`yes`
+|===
+
+Shared-vocabulary keys such as `ci`, `ui`, `architecture`, `msix`, `ui-tests`, `rids` and the identity keys are accepted
+and ignored (detected from disk instead) and named in the report.
+
+== Outputs
+
+* `.github/workflows/build.yml`, `release.yml` (when `distribution` is not `none`), `sync.yml` and
+  `.github/scripts/sync_versions.py` (gitflow), `security.yml` and `.github/dependabot.yml`, plus
+  `.github/scripts/make_appinstaller.py` for a signed `internal` MSIX release.
+* A verification pass: `actionlint` (or a YAML parse), `py_compile` of the scripts and, where the scaffold and `dotnet`
+  exist, a local run of the `core` job commands and DocFX through `iru-gate-runner`. Anything needing Windows runners,
+  GitHub, certificates or Partner Center is reported unverified.
+* A report with the action per file, the job and runner layout, the options applied and the required-secrets and
+  repository-settings table (Sonar token, Azure OIDC and Artifact Signing variables, `.pfx` secrets, `WINGET_TOKEN`,
+  Partner Center credentials, `release` environment, Pages and workflow-permission settings).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-windows-github-workflows] --> B["Step 0: Parse args; standalone: resolve visibility,\nsonar, ci-tests, pages, distribution, signing, winget"]
+    B --> C["Step 1: Survey repository (ui, MSIX, UI tests,\nRIDs, existing workflows); announce mode;\nUpdate / Keep / Replace / Stop per file"]
+    C -- user chose stop --> STOP[Stop and report]
+    C --> D["Step 2: Look up action and tool versions\n(fallback table)"]
+    D --> E["Step 3: Render templates\nbuild, release, sync, security, dependabot"]
+    E --> F["Step 4: Write files per decision"]
+    F --> G["Step 5: Verify (actionlint or YAML parse,\npy_compile, local core job commands)"]
+    G --> H["Step 6: Report per-file actions, job layout,\nrequired secrets and settings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-setup-windows-github-workflows` invokes no other catalog skill; it writes workflow files from its own
+`reference/workflow-templates.md` and runs `gh`, `git`, `actionlint`, `dotnet` and `python3` directly. The generated
+`sync.yml` follows the `x.y.z-dev` convention of xref:skills/iru-dotnet-bump-version.adoc[] and the layout contract of
+xref:skills/iru-setup-windows-app.adoc[], and the generated docs job builds the site created by
+xref:skills/iru-setup-antora.adoc[], but none of these is called.
+
+=== Invoked by
+
+* xref:skills/iru-setup-windows-repository.adoc[] -- Step 7 (skipped when `ci: no`), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing `branching`, branches,
+  `ci-tests`, `open-source`, `visibility`, `pages`, `distribution`, `signing`, `winget`, the Sonar keys, `mode` and
+  `on-existing` so nothing is asked twice.
+
+It can also be run directly by a person to add or refresh the pipeline later.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- runs the local verification of the commands the workflows
+  reference (Step 5).
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-windows-github-workflows/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

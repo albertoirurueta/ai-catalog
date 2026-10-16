@@ -1,6 +1,6 @@
 = Swift Coverage
 :description: Runs swift test or xcodebuild test with coverage enabled and parses llvm-cov/xccov output to report exact line and function coverage for Swift code.
-:keywords: iru-swift-coverage, claude code skill, swift, swiftpm, xcodebuild, llvm-cov, xccov, code coverage report, unit testing
+:keywords: iru-swift-coverage, claude code skill, swift, llvm-cov, xccov, ios simulator, visionos, local package coverage, code coverage report
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -18,6 +18,25 @@ instead of an eyeballed guess from `swift test`/`xcodebuild test` console output
 repository is a bare SwiftPM package or an Xcode app project, runs the matching coverage path, and — for scope
 under the bar — points to the exact uncovered line ranges so a follow-up can target them precisely. It is the
 Swift/Apple-platform equivalent of `iru-java-coverage`, `iru-typescript-coverage`, and `iru-android-coverage`.
+
+An app whose in-scope files live in a local SwiftPM package (e.g. `Packages/Core/Sources/...` in the layout
+`iru-setup-apple-app`/`iru-setup-macos-app` scaffold, or whenever `package-path:` is given) is measured through the
+**package** path run inside that directory, because the package is linked statically into the app and `xccov` on the
+app scheme attributes none of its sources (verified: `Packages/Core` measured 100% via `swift test` + `llvm-cov`, while
+the app scheme's `.xcresult` listed only the app target's files). A scope mixing package and app-target files takes both
+paths and reports each file from the path that measured it. The macOS desktop app scaffold's plain
+`xcodebuild test -destination 'platform=macOS' -enableCodeCoverage YES` needs no signing overrides (documented in the
+skill's Known quirks).
+
+For an `iru-setup-apple-app` multiplatform project, app-target files are measured per platform: each in-scope
+`Targets/<Platform>/` file uses that platform's scheme (`<AppName>-iOS`/`-macOS`/`-watchOS`/`-visionOS`), one run and
+one `.xcresult` per scheme, with the destination resolved by `iru-swift-test`'s `resolve_destination` — `platform=macOS`
+or the newest installed simulator runtime, always pinned with `OS=` since device names repeat across runtimes. A
+platform with no simulator runtime (typically visionOS) is never downloaded and never reported as 0%: its app-target
+files are reported "unverified (no visionOS simulator runtime installed)" after a `build-for-testing` against
+`generic/platform=visionOS Simulator` confirms they compile. That never affects the bar in this layout, since the
+`Targets/**` UI layer is "not measured" and `Packages/Core` is measured through the package path with no simulator
+(verified on Xcode 27.1: iOS and watchOS schemes ran 11/11, `Packages/Core` 100% lines).
 
 == Purpose group
 
@@ -49,6 +68,11 @@ xref:index.adoc#group-swift[Swift Development Tooling]
 Step 1 would otherwise infer.
 |Auto-detected.
 
+|`package-path: <dir>`
+|No
+|Run the package path inside that directory (e.g. `Packages/Core`) even though the repository is an app — how to measure an app's local SwiftPM package.
+|None — a scope entirely under a directory holding its own `Package.swift` selects this automatically.
+
 |`xcresult: <path>`
 |No
 |An already-produced `.xcresult` bundle to parse directly, skipping the `xcodebuild test` run entirely.
@@ -57,11 +81,13 @@ Step 1 would otherwise infer.
 |`scheme:` / `destination:` / `target:`/`module:`
 |No
 |Override what would otherwise be inferred the same way `iru-swift-test` infers them.
-|Inferred from `xcodebuild -list` / available simulators / `Package.swift` test targets.
+|Inferred from `xcodebuild -list` (per-platform schemes: the scheme of the platform whose `Targets/<Platform>/`
+files are in scope) / `resolve_destination` (`platform=macOS`, or an `OS=`-pinned simulator of the newest installed
+runtime) / `Package.swift` test targets.
 
 |`bar: <N>`
 |No
-|A coverage threshold (e.g. `bar: 80`) used only for Step 5's pass/fail wording.
+|A coverage threshold (e.g. `bar: 80`) used only for Step 4's pass/fail wording.
 |None — no pass/fail statement is made without one.
 |===
 
@@ -79,6 +105,8 @@ Step 1 would otherwise infer.
 * A scope file/type absent from the report is reported as 0% coverage, not as an error.
 * If coverage isn't wired (no test target in `Package.swift`, no test scheme in the Xcode project), that is
   reported explicitly, naming exactly what's missing, instead of a false 0%/100%.
+* App-target files of a platform with no simulator runtime (typically visionOS) reported "unverified (no visionOS
+  simulator runtime installed)" with the `build-for-testing` result — never 0%.
 * No source or test code is ever modified, and coverage is never re-run to try to raise a number.
 
 == Execution flow
@@ -87,13 +115,17 @@ Step 1 would otherwise infer.
 ....
 flowchart TD
     A["Start /iru-swift-coverage\n(optional scope, key: value overrides)"] --> B["Detect package vs. app\n(Package.swift vs. .xcodeproj/.xcworkspace/\nproject.yml/Project.swift), or use kind: override"]
-    B --> C{xcresult: given?}
+    B --> B2{"Scope entirely in a local package\n(own Package.swift) or package-path: given?"}
+    B2 -- yes --> G1
+    B2 -- no --> C{xcresult: given?}
     C -- yes --> H
     C -- no --> D{Path wired?}
     D -- "package, no test target" --> E["Stop: coverage not wired\n(no test target in Package.swift)"]
     D -- "app, no test scheme" --> F["Stop: coverage not wired\n(no test scheme found)"]
     D -- package, wired --> G1["swift test --enable-code-coverage\n(optionally --filter scope)"]
-    D -- app, wired --> G2["xcodebuild test -enableCodeCoverage YES\n-resultBundlePath &amp;lt;bundle&amp;gt;.xcresult"]
+    D -- app, wired --> G0{"Simulator runtime for the\nscheme's platform?"}
+    G0 -- "none (e.g. visionOS)" --> G3["build-for-testing against generic\nvisionOS Simulator; report its app files\nunverified, never 0%"]
+    G0 -- "yes, or macOS" --> G2["xcodebuild test -enableCodeCoverage YES\n-resultBundlePath &amp;lt;bundle&amp;gt;.xcresult\n(OS-pinned destination, once per\nin-scope platform scheme)"]
     G1 --> I1{Run succeeded?}
     G2 --> I2{Run succeeded?}
     I1 -- no --> J["Report failure, stop\n(don't parse a stale profile)"]

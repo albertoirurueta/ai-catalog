@@ -1,6 +1,6 @@
 = Release
 :description: Cuts a release branch from develop, delegates the version bump to the ecosystem's bump-version skill, drafts release notes, and opens a pull request.
-:keywords: iru-release, claude code skill, gitflow, java, kotlin, typescript, react native, android, kotlin multiplatform, swift, php, python, changelog, version bump, release pull request
+:keywords: iru-release, claude code skill, gitflow, java, kotlin, typescript, react native, android, kotlin multiplatform, swift, macos, dotnet, windows desktop, php, python, changelog, version bump, release pull request
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -14,10 +14,10 @@ PR into `main`) — it follows that gitflow convention rather than inventing its
 `iru-release` automates the mechanical parts of cutting a release so nothing gets missed or drifts out of sync,
 and it is ecosystem-agnostic: it detects whether the repository is Java/Kotlin JVM (Maven or Gradle, including Spring
 Boot and Quarkus), TypeScript/npm (including NestJS and Next.js), React Native (Expo or bare CLI/Metro), Android/Gradle, Kotlin
-Multiplatform (Android + iOS), Swift/Apple, PHP/Composer
+Multiplatform (Android + iOS), Swift/Apple (including macOS desktop apps), .NET (including Windows desktop apps), PHP/Composer
 (including WordPress and PrestaShop), or Python (FastAPI, Django, plain package), and delegates the actual version-file edit to that ecosystem's own installed `iru-<key>-bump-version`
 skill (`iru-java-bump-version`, `iru-typescript-bump-version`, `iru-react-native-bump-version`,
-`iru-android-bump-version`, `iru-kmp-bump-version`, `iru-swift-bump-version`, `iru-php-bump-version`,
+`iru-android-bump-version`, `iru-kmp-bump-version`, `iru-swift-bump-version`, `iru-dotnet-bump-version`, `iru-php-bump-version`,
 `iru-python-bump-version`) rather than editing build files directly. It still owns every other release step itself: the human-readable release
 notes (`whats-new.adoc` and `CHANGELOG.md`), and the pull request — opened against whichever host the repository
 actually uses (GitHub, Bitbucket, Azure DevOps, or TFS) — that carries the release branch into `main`/`master`. It
@@ -47,7 +47,7 @@ xref:index.adoc#group-maintenance[Repository Maintenance]
 stripped (per the detected ecosystem's convention), a patch bump on the latest tag, or a major bump on the latest
 tag — plus a free-text "Other" option.
 |Current pre-release value with its suffix stripped (e.g. Java/Android/KMP `1.4.0-SNAPSHOT` → `1.4.0`, npm and React Native
-`1.4.0-dev.0` → `1.4.0`, Python `1.4.0.dev0` → `1.4.0` (PEP 440; a VCS-derived version such as hatch-vcs/setuptools-scm is treated as the latest tag, with the release tag itself as the release); for a Swift library, the next semver bump from the latest tag).
+`1.4.0-dev.0` → `1.4.0`, PHP and .NET `1.4.0-dev` → `1.4.0`, Python `1.4.0.dev0` → `1.4.0` (PEP 440; a VCS-derived version such as hatch-vcs/setuptools-scm is treated as the latest tag, with the release tag itself as the release); for a Swift library, the next semver bump from the latest tag).
 
 |Upcoming pre-release version
 |Yes (asked interactively) — skipped for a Swift library, which has no in-tree pre-release marker
@@ -106,13 +106,13 @@ flowchart TD
 
 * xref:skills/iru-java-bump-version.adoc[], xref:skills/iru-typescript-bump-version.adoc[],
   xref:skills/iru-react-native-bump-version.adoc[], xref:skills/iru-android-bump-version.adoc[],
-  xref:skills/iru-kmp-bump-version.adoc[], xref:skills/iru-swift-bump-version.adoc[],
+  xref:skills/iru-kmp-bump-version.adoc[], xref:skills/iru-swift-bump-version.adoc[], xref:skills/iru-dotnet-bump-version.adoc[],
   xref:skills/iru-php-bump-version.adoc[], xref:skills/iru-python-bump-version.adoc[] — Step 6, whichever one matches the ecosystem detected in Step 2
   (Java/Kotlin JVM on Maven or Gradle, TypeScript/npm, React Native — `package.json` with a `react-native`/`expo`
   dependency, whose bump skill also owns the store-facing version (`app.json` `expo.version` for Expo,
   `android/app/build.gradle` plus the iOS `MARKETING_VERSION` for Metro) —, Android/Gradle, Kotlin Multiplatform
   (a Gradle build applying the multiplatform plugin with iOS targets; reads `VERSION_NAME` in the root
-  `gradle.properties`), Swift/Apple, PHP/Composer/WordPress/PrestaShop, or Python via `pyproject.toml`). When the
+  `gradle.properties`), Swift/Apple (a `macos-app` too), .NET (`windows-app` and `dotnet`, or a `*.slnx`/`*.sln`, `Directory.Build.props` or `*.csproj`; its bump skill owns `Directory.Build.props`' `<Version>` plus the four-part MSIX `Identity Version` in `Package.appxmanifest`/`packaging/AppxManifest.xml`), PHP/Composer/WordPress/PrestaShop, or Python via `pyproject.toml`). When the
   React Native or KMP bump skill isn't installed, detection falls back to `typescript` / `android` respectively
   and the final report warns that the store-facing or iOS `MARKETING_VERSION` must be updated by hand. The
   installed candidates are discovered with `find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"`

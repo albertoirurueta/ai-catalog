@@ -20,11 +20,19 @@ It uses a medium model on purpose: the plan already carries the hard reasoning; 
 Before implementing anything, detect the project shape once, the same way `iru-swift-code-one-task`'s own Step 1
 does: `Package.swift` alone (no `project.yml`/`Project.swift`/`*.xcodeproj`/`*.xcworkspace` nearby) → **package**;
 any of those found → **app**. For an app, also resolve, once, the same way `iru-swift-test`'s Step 3 does: the
-**scheme** (`xcodebuild -list`, preferring one that doesn't contain "Tests"/"UITests" in its name) and the
-**destination** (`platform=macOS` for a macOS-only target, or the first available simulator — `xcrun simctl list
-devices available -j`, run with a generous timeout since it can be slow — for an iOS/tvOS/watchOS target). Record
-project kind + scheme + destination once and reuse them for every gate below via `kind:`/`scheme:`/`destination:`
-lines, instead of re-deriving them per gate call. Also check now whether a full Xcode install is active
+**scheme(s)** (`xcodebuild -list`, preferring one that doesn't contain "Tests"/"UITests" in its name) and each
+scheme's **destination**. With `iru-setup-apple-app`'s per-platform schemes (`<AppName>-iOS`, `<AppName>-macOS`,
+`<AppName>-watchOS`, `<AppName>-visionOS`; ignore XcodeGen's `Core` package scheme) the bucket's schemes are those of
+the platforms whose `Targets/<Platform>/` files it touches — plus, for the full-suite run (Step 3.6), every platform
+scheme. Destinations come from `iru-swift-test`'s `resolve_destination`: `platform=macOS` for a macOS scheme, else
+`platform=<iOS|watchOS|visionOS> Simulator,name=<device>,OS=<runtime version>` — the newest installed runtime the
+selected Xcode supports, **always with `OS=`** because device names repeat across runtimes (`xcrun simctl list` can
+be slow; give it a generous timeout). A platform with no installed runtime — typically **visionOS**, whose runtime is
+a separate Xcode download (`xcrun simctl list runtimes` shows none) — gets no destination: record that scheme as
+**"unverified (no visionOS simulator runtime installed)"**, compile-check it with `xcodebuild build-for-testing
+-scheme <AppName>-visionOS -destination 'generic/platform=visionOS Simulator'`, and never download a runtime. Record
+project kind + the scheme→destination map once and reuse it for every gate below via `kind:`/`scheme:`/`destination:`
+lines (one gate call per scheme), instead of re-deriving them per gate call. Also check now whether a full Xcode install is active
 (`xcode-select -p` points at `.../Xcode.app/Contents/Developer`, not just the Command Line Tools) — an app-kind
 bucket on a Command-Line-Tools-only machine will need Step 3's test/coverage/full-suite stages reported as
 unverified rather than a false pass.
@@ -97,7 +105,10 @@ Once every task that didn't block has been implemented, run the following once f
    only one run may occupy at a time — two overlapping `xcodebuild test` runs against the same destination collide
    on boot state and produce results that are unreliable rather than merely slow, the same reasoning
    `iru-java-springboot-code-one-task-group`'s integration-test lock uses for its shared compose stack, applied
-   here to a shared simulator instead:
+   here to a shared simulator instead. A **macOS app** bucket (`platform=macOS` destination, e.g. a `macos-app`)
+   takes the same lock even though it boots no simulator: its XCUITest run drives the real desktop session —
+   keyboard focus, mouse and menu bar — so two overlapping runs (or a UI run racing a unit-test run that also
+   launches the app) steal each other's focus and fail unpredictably:
    ```bash
    mkdir .simulator-test.lock 2>/dev/null && echo ACQUIRED || echo HELD
    ```
@@ -124,11 +135,19 @@ Once every task that didn't block has been implemented, run the following once f
    reason, and the first message/stack-trace line for each."})` (omit `scheme:`/`destination:` for a package). If
    failures are reported, identify which task's code they trace back to, fix that task's implementation and/or
    tests, and re-invoke this same check — repeat until it reports all tests passed.
+   With several in-scope schemes, make one call per scheme (each with its own `scheme:`/`destination:`), all under
+   the same lock; a scheme recorded "unverified (no … simulator runtime installed)" in Step 1 is skipped here and
+   reported as such — never as passed.
 5. **Coverage**, for every changed/new file/type across the bucket, via `iru-gate-runner`: `Agent({description:
    "Check coverage for task group", subagent_type: "iru-gate-runner", prompt: "Invoke Skill({skill:
    \"iru-swift-coverage\", args: \"<File1.swift,Type2,...>\\nkind: <package|app>\\nscheme: <scheme>\\ndestination:
    <destination>\"}). Report back, per target file/type, its unit-test line coverage percentage and function
    coverage percentage; branch coverage is unavailable for Swift and must be reported as such, never as 0%."})`.
+   In an app project, files under a local package (`Packages/Core/...`) go in a **separate** call with
+   `package-path: Packages/Core` instead of `kind`/`scheme`/`destination` — the app scheme's `xccov` report can't
+   see a statically linked local package, so that call measures it with `swift test` + `llvm-cov` (no simulator, no
+   lock needed). For a macOS desktop app (`iru-setup-macos-app` layout) `Packages/Core` is where the 80% bar applies;
+   app-target UI code (views, view controllers, `App` scenes) is reported "not measured" — never 0%, and never part of the bar.
    The bar is **80% line coverage**; branch coverage is never part of it. For anything under 80%, add tests for its
    uncovered lines (via the task that owns it, from the ranges `iru-swift-coverage` reports), re-run Step 3.4 to
    confirm, then re-check coverage here.
@@ -141,7 +160,10 @@ Once every task that didn't block has been implemented, run the following once f
      <path>.xcresult && xcodebuild test -scheme '<scheme>' -destination '<destination>' -resultBundlePath
      <path>.xcresult`, then parse it via `xcrun xcresulttool get test-results summary --path <path>.xcresult`. If
      everything passes, report back only that all tests passed. If anything fails, report back only the failing
-     test names and the first line of each failure's message."})` — still under the lock acquired in 3.3.
+     test names and the first line of each failure's message."})` — still under the lock acquired in 3.3. With
+     per-platform schemes, run it once per platform scheme from Step 1's map (each with its own `OS=`-pinned
+     destination and result bundle); a scheme without a runtime is reported "unverified (no visionOS simulator
+     runtime installed)" after its `build-for-testing` compile check.
    Fix any regression, then re-invoke until it reports all tests passed.
 7. **Release the simulator lock** — app-kind buckets only, as soon as Step 3.6 (or the last fix-and-re-run of
    3.4–3.6) has finished: `rm -f .simulator-test.lock/owner && rmdir .simulator-test.lock`. Release on every exit
@@ -162,8 +184,8 @@ Once Step 3 passes clean for the bucket (or leaves only explicitly-accepted issu
 `implementation_plan.md` — replacing the "group validation pending" placeholder — with the final outcome: line
 coverage achieved and code-quality result for that task's own file(s), e.g. `- [x] Task 2. **Implement
 `RouteValidator`** — tests in RouteValidatorTests (94% line coverage), no new SwiftLint/format issues.` If any
-stage was unverified (Command-Line-Tools-only machine, lock wait timeout), say so in the note rather than implying
-it passed. Save the file, then notify the user that group validation completed and summarize the bucket-wide
+stage was unverified (Command-Line-Tools-only machine, lock wait timeout, no visionOS simulator runtime installed),
+say so in the note rather than implying it passed. Save the file, then notify the user that group validation completed and summarize the bucket-wide
 result. Before writing these notes, confirm the simulator lock is released (Step 3.7) if it was ever taken.
 
 If any task was recorded as blocked in Step 2, leave its checkbox unchecked and its blocker note in place.
@@ -173,7 +195,8 @@ If any task was recorded as blocked in Step 2, leave its checkbox unchecked and 
 Hand control back to the caller (`iru-code-one-task-group`) with a summary covering the whole bucket: per task, the
 target it lives in, the files touched, tests added/updated, line coverage achieved, and code-quality outcome —
 including whether a new issue was left in place as unavoidable and why, whether license-header/DocC-catalog work
-was needed, whether any stage was reported unverified (and why — no full Xcode install, lock wait timeout), how the
+was needed, whether any stage was reported unverified (and why — no full Xcode install, lock wait timeout, a
+platform scheme with no simulator runtime such as visionOS), how the
 simulator lock behaved whenever it was anything other than an immediate uncontended acquire (wait time, a stale
 lock broken, confirmation it was released), and which task(s), if any, stopped on a blocker.
 `implementation_plan.md`'s checkboxes are already checked and finalized (Steps 2 and 4) and the user-facing
@@ -181,7 +204,10 @@ notifications have already gone out — the caller does not need to redo that bo
 
 **Warn explicitly**: an app-kind bucket needs a full Xcode install (not just Command Line Tools) and, for a
 simulator destination, a matching runtime already downloaded — a missing one fails at destination resolution,
-before any test runs, and looks unrelated to the code itself; SwiftLint/the third-party SwiftFormat/Periphery may
+before any test runs, and looks unrelated to the code itself (a macOS app bucket needs no simulator runtime, but its
+UI tests need the test runner's Accessibility/automation permission and an unlocked, logged-in desktop session —
+without them the UI-test stage is reported unverified, not passed; on a non-macOS host every app stage is
+"unverified (needs macOS)"); SwiftLint/the third-party SwiftFormat/Periphery may
 be entirely absent on a machine with no Homebrew/Mint, in which case `iru-swift-code-quality` reports them as not
 wired rather than clean, and this skill's own quality diff in Step 3.8 reflects only whichever tools actually ran.
 This skill's own author did not run any of the `swift`/`xcodebuild` commands above against a real scaffold — no

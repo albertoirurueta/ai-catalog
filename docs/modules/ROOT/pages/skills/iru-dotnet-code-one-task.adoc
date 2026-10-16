@@ -24,6 +24,11 @@ moved to `iru-dotnet-code-one-task-group`, which validates them once for the who
 per task, cutting the redundant tool invocations that used to happen here for every single task. It hands back
 only a short summary; it never captures a quality baseline or runs any test/coverage/quality check itself.
 
+Windows desktop app repositories (a `WinExe` project with `UseWPF`, `UseWinUI` or `UseWindowsForms`; `iru-explore`'s
+`windows-app`, plan key `windows`) are out of scope: the skill stops and hands the request to
+xref:skills/iru-windows-code-one-task.adoc[] (which knows the UI-free Core project split, MVVM/MVC layouts and
+host-dependent compile checks), even for tasks that only touch that repository's `src/<App>.Core` project.
+
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -68,7 +73,9 @@ sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. No
 [mermaid]
 ....
 flowchart TD
-    A["Start /dotnet-code-one-task\n(task description)"] --> B["Step 1: re-check current\ncode state from disk"]
+    A["Start /dotnet-code-one-task\n(task description)"] --> W{"Windows desktop app\n(WinExe + UseWPF/UseWinUI/\nUseWindowsForms)?"}
+    W -- yes --> W2["Stop: hand the request to\nwindows-code-one-task"]
+    W -- no --> B["Step 1: re-check current\ncode state from disk"]
     B --> C["Step 2: implement exactly what\nthe task specifies"]
     C --> D["Step 3: write/update tests\n(xUnit/NUnit/MSTest; not run here)"]
     D --> E{"Ambiguous, or approach\ninfeasible against real code?"}

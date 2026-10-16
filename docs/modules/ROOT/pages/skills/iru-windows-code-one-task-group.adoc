@@ -1,0 +1,138 @@
+= Windows Code One Task Group
+:description: Implements one bucket of Windows desktop app tasks, then validates once: license, XML docs, Core tests, 80% Core coverage, quality diff, FlaUI UI tests.
+:keywords: iru-windows-code-one-task-group, claude code skill, windows desktop, wpf, winui, winforms, flaui, coverlet, dotnet, implementation plan, ui tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Implement one bucket of Windows desktop app tasks from a plan's task group end to end: detect the project shape and
+the bucket's validation scope once, capture a single pre-change analyzer baseline, run `iru-windows-code-one-task` once
+per task (in parallel when the group allows it), then validate the entire bucket once -- cheapest checks first, the
+FlaUI desktop UI stage last, only on Windows, and behind a repository-wide lock.
+
+== Purpose
+
+`iru-windows-code-one-task-group` is the Windows desktop counterpart to `iru-dotnet-code-one-task-group` and
+`iru-kmp-code-one-task-group`, built on the same `iru-dotnet-*` gate skills. It detects once the projects (app, UI-free
+Core, Core tests, UI tests), the architecture, the host (Windows or not, with an interactive desktop session or not) and
+the bucket's validation scope: Core changes run Core gates, app-project changes add the compile check and the UI stage,
+and packaging files are left to `release.yml`.
+
+After one baseline capture via `iru-dotnet-code-quality`, it dispatches each task to `iru-windows-code-one-task` (all at
+once when the bucket is `Parallelizable: yes`, otherwise one at a time; tasks that add and consume the same Core
+interface, or edit the same XAML, designer file, DI registration or manifest, always run sequentially). Validation then
+runs once, every check delegated to an `iru-gate-runner` agent: license headers, XML doc comments via
+`iru-dotnet-docfx`, scoped Core tests via `iru-dotnet-test`, an 80% line-coverage gate on Core only via
+`iru-dotnet-coverage` (the UI layer is reported "not measured", never 0%), the full non-UI suite, and a quality diff
+against the baseline. Only then does the FlaUI UI stage run (`iru-dotnet-test` with the `ui` selector) behind the shared
+atomic-`mkdir` `.integration-test.lock` (stale after 60 minutes, bounded wait of about 45 minutes, released on every exit
+path) and passed to the gate as `lock: held`. A UI stage, WinUI build or packaging step that cannot run (not Windows, no
+interactive desktop, lock wait timeout) is reported "unverified", never skipped silently or reported as passed.
+
+== Purpose group
+
+xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-windows-code-one-task-group <bucket text>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|Bucket text
+|Yes
+|Every `windows`-tagged task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict
+and any relevant "Current code state" context.
+|None -- this skill is always invoked with a specific bucket's text, by `iru-code-one-task-group`.
+|===
+
+== Outputs
+
+* Source, test and XAML/form changes per task, via `iru-windows-code-one-task`.
+* License headers and XML doc comments kept current across every file the bucket touched, checked once for the whole
+  bucket.
+* Unit tests achieving at least 80% line coverage for the bucket's changed or new Core classes, verified against the real
+  coverlet report; app-project types reported as not measured, with any real logic in them flagged as belonging in Core.
+* A green non-UI suite and, on a capable Windows host, a green FlaUI UI stage -- or an explicit "unverified" with the
+  reason.
+* `.integration-test.lock/` taken and released around the UI stage only (and `.gitignore` extended with it if missing).
+* `implementation_plan.md` with each task's checkbox checked and a "group validation pending" note first, replaced with
+  the final outcome quoting Core coverage and the UI result separately; blocked tasks left unchecked with their note.
+* User-facing notifications per task as its implementation lands and once when group validation completes, and a
+  summary handed back to `iru-code-one-task-group`: shape and scope, per-task details, Core and UI results, accepted
+  coverage exceptions, lock behavior and any blocker.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-windows-code-one-task-group] --> B["Step 1: detect projects, architecture, host,\nvalidation scope; capture one pre-change baseline\n(dotnet-code-quality via gate-runner)"]
+    B --> C{Bucket Parallelizable?}
+    C -- yes --> D["Step 2: windows-code-one-task for every task\nconcurrently (isolated-skill-executor);\ndependent tasks sequential"]
+    C -- no --> E["Step 2: windows-code-one-task\nfor each task, one at a time"]
+    D --> F["Confirm/backfill each task's box;\nnotify user; exclude blocked tasks"]
+    E --> F
+    F --> G["Step 3.1-3.2: license headers (check-license),\nXML docs (dotnet-docfx)"]
+    G --> H["Step 3.3: scoped Core tests\n(dotnet-test)"]
+    H --> I["Step 3.4: Core coverage gate 80%\n(dotnet-coverage; UI layer not measured)"]
+    I --> J["Step 3.5: full non-UI suite"]
+    J --> K["Step 3.6: quality diff vs baseline\n(dotnet-code-quality)"]
+    K -- failure traced to a task --> L["Fix that task; re-run\naffected checks"]
+    L --> H
+    K -- clean --> M{"UI stage in scope\nand Windows host?"}
+    M -- no --> N["Report UI stage as unverified\nwith reason, or not in scope"]
+    M -- yes --> O["Step 3.7a: acquire .integration-test.lock\n(wait up to ~45 min; break stale locks)"]
+    O -- timeout --> N
+    O -- acquired --> P["Step 3.7: dotnet-test ui\nlock: held (one gate call)"]
+    P -- assertion failure --> Q["Fix; re-run (re-run 3.3-3.6\nif Core changed)"]
+    Q --> P
+    P --> R["Step 3.7b: release lock"]
+    R --> S
+    N --> S["Step 4: finalize each task's note;\nnotify user"]
+    S --> T["Step 5: report the bucket's\noutcome to the caller"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-windows-code-one-task.adoc[] -- Step 2, once per task in the bucket (concurrently or sequentially per
+  the group's `Parallelizable` verdict, with sequential ordering forced for tasks that share a Core interface, a XAML
+  file, a designer file, DI registration or a manifest), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent. Each run implements exactly what
+  its task specifies, writes/updates its tests, compile-checks, and checks off its own checkbox with a "group validation
+  pending" note.
+
+Each of the following is invoked via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent rather than
+directly, so verbose report output stays out of this skill's own context:
+
+* xref:skills/iru-dotnet-code-quality.adoc[] -- Step 1 (pre-change baseline) and Step 3.6 (regression check against it).
+* xref:skills/iru-check-license.adoc[] -- Step 3.1, license headers for every C#, XAML and PowerShell file the bucket
+  touched.
+* xref:skills/iru-dotnet-docfx.adoc[] -- Step 3.2, XML doc comments and a passing DocFX build for every type touched.
+* xref:skills/iru-dotnet-test.adoc[] -- Step 3.3 (scoped Core tests), Step 3.5 (full non-UI suite), and Step 3.7 (UI
+  stage, `ui` selector, with `lock: held`).
+* xref:skills/iru-dotnet-coverage.adoc[] -- Step 3.4, Core line/branch coverage with an 80% bar.
+
+=== Invoked by
+
+* xref:skills/iru-code-one-task-group.adoc[] -- Step 2, bucket for key windows.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] -- spawned once per task in the bucket
+  (Step 2), potentially many at once when the group is parallelizable, so each task's own implementation transcript
+  doesn't accumulate in this skill's context.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] -- spawned for the baseline capture (Step 1) and every
+  validation check (Step 3), including the single UI-stage call, keeping full reports out of this skill's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-windows-code-one-task-group/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

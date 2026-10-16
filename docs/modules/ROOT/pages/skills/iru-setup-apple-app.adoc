@@ -1,28 +1,40 @@
 = Setup Apple App
-:description: Scaffolds a native Apple app's XcodeGen or Tuist manifest, shared SwiftPM Core package, test targets, lint/format config, and Fastlane/Sonar setup.
-:keywords: iru-setup-apple-app, claude code skill, swift, xcodegen, tuist, swiftui, fastlane, sonarcloud, xcuitest, scaffold
+:description: Scaffolds an iOS, iPadOS, macOS, watchOS or visionOS app with XcodeGen or Tuist, SwiftUI or UIKit, MVVM or MVC Core package, tests and lint.
+:keywords: iru-setup-apple-app, claude code skill, swift, ios, visionos, uikit, swiftui, xcodegen, mvvm mvc architecture, scaffold
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Generate a complete, buildable native Apple application scaffold — a project-generator manifest (XcodeGen's
-`project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one application target per selected platform
-(iOS/iPadOS, macOS, watchOS), a shared `Packages/Core` local SwiftPM package for testable business logic,
-per-platform Swift Testing unit-test and XCUITest UI-test targets, lint/format config, a gated `fastlane/Fastfile`,
-and `sonar-project.properties` — from explicit example templates embedded in the skill itself. It announces whether it
+`project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one application target `<AppName>-<Platform>`
+per selected platform (iOS/iPadOS, macOS, watchOS, visionOS), a UI-framework-free `Packages/Core` local SwiftPM
+package (`Models/`, `Services/`, plus `ViewModels/` for MVVM or `Controllers/` + a passive-view protocol for MVC)
+whose Swift Testing suite covers 100% of its lines, the per-platform UI layer (SwiftUI everywhere, or programmatic
+UIKit for the iOS/iPadOS target), per-platform Swift Testing unit-test and XCUITest UI-test targets, lint/format
+config, an optional gated `fastlane/Fastfile`, and `sonar-project.properties` — from the templates in the skill's
+`reference/` files. It announces whether it
 is scaffolding from scratch or updating an existing app, and warns and asks Update / Keep as is / Replace / Stop for
 each of its files that already exists.
 
 == Purpose
 
 `iru-setup-apple-app` bootstraps a new native Apple application from a house template: one XcodeGen or Tuist
-manifest per repository, one application target per selected platform with `SWIFT_STRICT_CONCURRENCY = complete`
-and the app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`, a shared `Packages/Core` package that holds all
-testable logic outside any UI framework, and per-platform Swift Testing/XCUITest targets. It never commits the
+manifest per repository, one application target per selected platform with `SWIFT_STRICT_CONCURRENCY = complete`,
+the app's `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` and a pinned unit-test host, a shared `Packages/Core` package
+(Foundation + Observation only) that holds all testable logic outside any UI framework, and per-platform Swift
+Testing/XCUITest targets driven by a `--uitesting` launch argument and accessibility identifiers on every control.
+With `ui: uikit` the iOS/iPadOS target becomes a programmatic UIKit app — `AppDelegate` + `UIWindowSceneDelegate`
+with a scene manifest (mandatory with the 27 SDK), a `UINavigationController` root and a code-laid-out
+`UIViewController`, no storyboards — backed by an MVC controller core (recommended) or an MVVM view model rendered
+through UIKit Observation tracking (`UIObservationTrackingEnabled` added below iOS 26); watchOS, visionOS and macOS
+targets always stay SwiftUI. visionOS is a native SwiftUI target, not "Designed for iPad"; tvOS, Mac Catalyst and
+compatibility destinations are not supported. The resulting layout is the scaffold contract the Swift coding and
+gate skills, `iru-explore` and xref:skills/iru-setup-swift-github-workflows.adoc[] rely on. It never commits the
 generated `.xcodeproj`/`.xcworkspace` — those are always generator output, regenerated on demand by
 `xcodegen generate`/`tuist generate` and gitignored by the companion xref:skills/iru-setup-swift-gitignore.adoc[].
 It is the Swift/Apple equivalent of xref:skills/iru-setup-android-app.adoc[] and
 xref:skills/iru-setup-react-native-app.adoc[] for the other app-shaped stacks in this catalog; use
-xref:skills/iru-setup-swift-library.adoc[] instead for a pure SwiftPM library with no app target.
+xref:skills/iru-setup-macos-app.adoc[] for a macOS-only (SwiftUI or AppKit) desktop app and
+xref:skills/iru-setup-swift-library.adoc[] for a pure SwiftPM library with no app target.
 
 == Purpose group
 
@@ -63,10 +75,24 @@ watchOS companion (when both an iOS/iPadOS and a watchOS target are selected) is
 
 |`platforms`
 |Yes (unless supplied via `args`)
-|Multi-select subset of `ios`, `ipados`, `macos`, `watchos`. `ipados` alone or alongside `ios` widens the one iOS
-target's `TARGETED_DEVICE_FAMILY` rather than adding a second target; `macos`/`watchos` each produce their own
-target.
+|Multi-select subset of `ios`, `ipados`, `macos`, `watchos`, `visionos`. `ipados` alone or alongside `ios` widens the
+one iOS target's `TARGETED_DEVICE_FAMILY` rather than adding a second target (and, with UIKit, enables multiple
+scenes); `macos`/`watchos`/`visionos` each produce their own SwiftUI target (`visionos` is a native visionOS app).
+`watchos` without `ios`/`ipados` is a standalone watch app. `tvos` is rejected as not supported.
 |None
+
+|`ui`
+|No
+|`swiftui` or `uikit` — applies only to the iOS/iPadOS target (programmatic UIKit with a scene delegate, no
+storyboards); ignored when neither `ios` nor `ipados` is selected.
+|`swiftui` (asked when `ios`/`ipados` is selected)
+
+|`architecture`
+|No
+|`mvvm` or `mvc`. `ui: swiftui` is always `mvvm` (never asked; `mvc` rejected); `ui: uikit` offers `mvc`
+(recommended) or `mvvm`. Shapes `Packages/Core` — `Controllers/` for MVC, `ViewModels/` for MVVM and every SwiftUI
+target, so UIKit MVC plus SwiftUI platforms gets both.
+|`mvvm` for SwiftUI; `mvc` recommended for UIKit
 
 |`generator`
 |No
@@ -76,8 +102,9 @@ for a project expected to grow multiple internal SwiftPM packages.
 
 |`min-deployment-target`
 |No
-|Single OS version number (e.g. `26.0`) applied to every selected platform's deployment target.
-|Looked up in Step 4 from the highest installed simulator runtime major
+|The iOS deployment target (e.g. `26.0`); other platforms get their equivalent (`N.0` from 26 on; `18.0` maps to
+macOS 15 / watchOS 11 / visionOS 2). Never below `18.0`.
+|`26.0`, lowered only if no 26+ simulator runtime is installed (Step 4)
 
 |`distribution`
 |No
@@ -144,19 +171,27 @@ or updated. Hand-written app/test source is never overwritten either way.
 
 * `project.yml` (XcodeGen) or `Project.swift` + `Tuist.swift` (Tuist), per `generator`, with one target/scheme
   triple per selected platform.
-* `Packages/Core/Package.swift`, `Sources/Core/Greeter.swift`, and `Tests/CoreTests/GreeterTests.swift` — a
-  minimal, genuinely testable placeholder business-logic package.
-* Per selected platform, `Targets/<Platform>/Sources/<AppName>App.swift` (SwiftUI `App` entry point),
-  `ContentView.swift`, `Tests/<AppName>Tests.swift` (Swift Testing), and `UITests/<AppName>UITests.swift`
+* `Packages/Core/Package.swift` (with `swift-docc-plugin`), a DocC catalog, `Models/` (`Greeting`), `Services/`
+  (`GreetingProviding`, `GreetingService`, `GreetingError`), `ViewModels/GreetingViewModel` (MVVM / any SwiftUI
+  target) and/or `Controllers/GreetingController` + `GreetingView` protocol (MVC), and `Tests/CoreTests` at 100%
+  line coverage.
+* Per selected platform, `Targets/<Platform>/Sources` — SwiftUI `<AppName>App.swift` + `ContentView.swift`, or for
+  the iOS target with `ui: uikit` `AppDelegate.swift`, `SceneDelegate.swift`, `GreetingViewController.swift` and
+  `GreetingLayout.swift` — plus `LaunchOptions.swift`; `Tests/` (Swift Testing: `LaunchOptionsTests` and
+  `<AppName>Tests`, or `GreetingViewControllerTests`/`AppShellTests` for UIKit); and `UITests/<AppName>UITests.swift`
   (XCUITest).
 * `.swiftlint.yml` and `.swift-format` at the repository root.
-* `fastlane/Fastfile`, with only the lanes `distribution`/`signing` back — never a lane this skill can't support.
-* `sonar-project.properties`, only when `sonar` != `none`.
+* `fastlane/Fastfile`, with only the lanes `distribution`/`signing` back — never a lane this skill can't support. The
+  `platform :ios` lanes (`test`, `build`, `beta`, `release`) are written only when an iOS/iPadOS target was selected.
+* `sonar-project.properties`, only when `sonar` != `none` — its SwiftLint input is
+  `sonar.externalIssuesReportPaths=swiftlint-sonar.json`, the report the workflows skill's lint job produces.
 * No `.xcodeproj`/`.xcworkspace` — those are `xcodegen generate`/`tuist generate` output, never written here.
 * A report of every resolved input, the mode announced up front, per file whether it was created, updated,
   replaced or kept as is (with each mismatch listed for a kept file, and how `visibility`/`ci` shaped the Sonar
-  recommendation), the Step 7 verification results, and explicit warnings (generator never run locally, review
-  before build/commit, signing/Sonar credentials still needed).
+  recommendation), the Step 7 verification results, the scaffold contract table (targets, schemes, destinations,
+  versions, architecture markers, test/coverage/lint commands, UI-test hooks, UIKit specifics), and explicit
+  warnings (review before build/commit, run `iru-setup-swift-gitignore`, visionOS runtime needed for its tests,
+  signing/Sonar credentials still needed).
 
 == Execution flow
 
@@ -171,6 +206,9 @@ flowchart TD
     E --> F{"What already exists?"}
     F -- nothing --> F1["Announce: scaffolding\nfrom scratch"]
     F -- "only .xcodeproj" --> G3{"Adopt XcodeGen/Tuist\nor stop?"}
+    F -- "macOS-app layout" --> G5{"Suggest iru-setup-macos-app;\ncontinue on explicit yes?"}
+    G5 -- no --> Z1
+    G5 -- yes --> F2
     G3 -- stop --> Z1[Report untouched; end]
     G3 -- adopt --> F2
     F -- "owned files exist" --> F2["Announce: updating an\nexisting app; list files"]
@@ -181,13 +219,13 @@ flowchart TD
     G2 -- other --> G4["Record per-file decision;\nread existing manifest as\ndefaults if replaced"]
     F1 --> H
     G1 --> H
-    G4 --> H["Step 2: Collect inputs\n(app-name, bundle-id-prefix,\nplatforms, generator,\nmin-deployment-target,\ndeveloper info, license,\nopen-source, sonar,\ndistribution, signing)"]
+    G4 --> H["Step 2: Collect inputs\n(app-name, bundle-id-prefix,\nplatforms incl. visionOS,\nui swiftui/uikit, architecture\nmvvm/mvc, generator,\nmin-deployment-target,\ndeveloper info, license,\nopen-source, sonar,\ndistribution, signing)"]
     H --> I["Step 3: Infer repository info\n(owner/repo/host)"]
     I --> J["Step 4: Look up XcodeGen/Tuist/\nSwiftLint/Fastlane versions"]
-    J --> K["Step 5: Resolve templates\n(manifest, Packages/Core,\nper-platform targets,\nswiftlint, Fastfile, sonar)"]
+    J --> K["Step 5: Resolve reference templates\n(manifest, Packages/Core per\narchitecture, SwiftUI or UIKit\ntargets, tests, swiftlint,\nFastfile, sonar)"]
     K --> L["Step 6: Apply each file's decision:\ncreate / update (diff first) /\nkeep as is / replace;\nnever overwrite hand-written source"]
-    L --> M["Step 7: Verify via iru-gate-runner\n(YAML/swiftc parse,\nswift build/test Core,\nxcodebuild where possible)"]
-    M --> N["Step 8: Report mode, per-file action,\nmismatches and warnings"]
+    L --> M["Step 7: Verify via iru-gate-runner\n(swift test Core at 100% lines,\nxcodegen generate, xcodebuild test\nper platform, swiftlint, swift format;\nmissing runtime = unverified)"]
+    M --> N["Step 8: Report mode, per-file action,\nscaffold contract, mismatches\nand warnings"]
 ....
 
 == Dependencies
@@ -199,16 +237,18 @@ Step 7 runs through the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agen
 
 === Invoked by
 
-* xref:skills/iru-setup-swift-repository.adoc[] — Step 5 runs `iru-setup-apple-app` for the app flavor, passing
-  the shared bootstrap inputs through `args` so this skill's own Step 2 questions are skipped.
+* xref:skills/iru-setup-swift-repository.adoc[] — runs `iru-setup-apple-app` for the app flavor, passing the shared
+  bootstrap inputs (including `platforms`, `ui` and `architecture`) through `args` so this skill's own Step 2
+  questions are skipped.
 
 === Related agents
 
-* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 runs the YAML/`swiftc -parse` checks and
-  `swift build`/`swift test` against the scaffolded `Packages/Core`, plus `xcodebuild` against that package where
-  possible, through this agent so the caller gets a compact pass/fail summary instead of raw command output.
-  XcodeGen/Tuist generation itself (`xcodegen generate`/`tuist generate`) and everything downstream of a real
-  `.xcodeproj` remain unverified locally, per Step 7.
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 runs `swift test --enable-code-coverage` +
+  `llvm-cov report` against `Packages/Core`, `xcodegen generate` (or `tuist generate --no-open`), `xcodebuild test`
+  per platform scheme (serialized behind `.simulator-test.lock`), `swiftlint lint --strict` and
+  `swift format lint --strict` through this agent so the caller gets a compact pass/fail summary. Missing tools,
+  non-macOS hosts or a missing simulator runtime (typically visionOS, which falls back to `build-for-testing`) are
+  reported as unverified.
 
 == Source
 

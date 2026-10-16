@@ -1,6 +1,6 @@
 ---
 name: iru-code
-description: Execute the tasks in implementation_plan.md at the repository root, one task group at a time — implement every task in a group (in parallel where the plan marks the group parallelizable), validate the whole group once (tests, coverage, code quality), and check off each task's checkbox directly in implementation_plan.md before moving to the next group. Dispatches each group to the `iru-code-one-task-group` skill, which in turn resolves the language/framework-specific `<key>-code-one-task-group` skill declared by the plan (e.g. `iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`, `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`, `iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `iru-update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or new tickets (on whichever tracker the plan originated from — a GitHub issue via `gh issue create`, or a Jira ticket via the `iru-create-jira-ticket` skill) if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/iru-code` once implementation_plan.md exists (e.g. produced by the `iru-plan` skill).
+description: Execute the tasks in implementation_plan.md at the repository root, one task group at a time — implement every task in a group (in parallel where the plan marks the group parallelizable), validate the whole group once (tests, coverage, code quality), and check off each task's checkbox directly in implementation_plan.md before moving to the next group. Dispatches each group to the `iru-code-one-task-group` skill, which in turn resolves the language/framework-specific `<key>-code-one-task-group` skill declared by the plan (e.g. `iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`, `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`, `iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`, `iru-windows-code-one-task-group`) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `iru-update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or new tickets (on whichever tracker the plan originated from — a GitHub issue via `gh issue create`, or a Jira ticket via the `iru-create-jira-ticket` skill) if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/iru-code` once implementation_plan.md exists (e.g. produced by the `iru-plan` skill).
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(npm *) Bash(composer *) Bash(vendor/bin/*) Bash(detect-secrets *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(date *) Bash(gh issue create *) TaskCreate TaskUpdate TaskList TaskGet Skill Agent
 ---
@@ -67,19 +67,20 @@ summary" section's **Language/framework** line if the plan declared one key for 
 tags in "Implementation steps" if it declared them per task instead (this is exactly what the `iru-plan` skill's Step
 5 produces). Collect the distinct set of keys found across the whole plan — usually just one (e.g. `java`,
 `java-springboot`, `kotlin-springboot`, `quarkus`, `php`, `fastapi`, `django`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `android`,
-`swift`, `kmp`, or `react-native`), occasionally more for a plan spanning several languages.
+`swift`, `kmp`, `react-native`, or `windows`), occasionally more for a plan spanning several languages.
 
 Framework keys share their language's gate skills rather than having their own, so resolve each key's quality
 skill as follows before looking it up (and use the same mapping in Step 7): `java-springboot` →
 `iru-java-code-quality`; `kotlin-springboot` → `iru-kotlin-code-quality`; `quarkus` → `iru-java-code-quality` for a
 Java build or `iru-kotlin-code-quality` for a Kotlin one (per `iru-explore`'s report or `src/main/kotlin/`); `php` →
 `iru-php-code-quality`; `fastapi`/`django` → `iru-python-code-quality`; `nestjs`/`nextjs`/`react-native` →
-`iru-typescript-code-quality`; `kmp` → `iru-kmp-code-quality`; any other key → `iru-<key>-code-quality`.
+`iru-typescript-code-quality`; `kmp` → `iru-kmp-code-quality`; `windows` → `iru-dotnet-code-quality`; any other key →
+`iru-<key>-code-quality`.
 
 For each distinct key, capture a project-wide quality baseline by delegating to the `iru-gate-runner` agent rather
 than running that language's quality skill directly — use the quality skill resolved above for the
 detected language/framework, e.g. `iru-java-code-quality` when the plan is Java (Checkstyle/PMD/SpotBugs), or
-`iru-dotnet-code-quality` when it's .NET (StyleCop.Analyzers/CA rules), `iru-typescript-code-quality` when it's
+`iru-dotnet-code-quality` when it's .NET or a Windows desktop app (StyleCop.Analyzers/CA rules), `iru-typescript-code-quality` when it's
 TypeScript (including NestJS/Next.js/React Native), `iru-kmp-code-quality` when it's Kotlin Multiplatform
 (detekt/ktlint/Android Lint/SwiftLint), `iru-kotlin-code-quality` when it's Kotlin Spring Boot or Kotlin Quarkus
 (detekt/ktlint), `iru-php-code-quality` when it's PHP (PHPStan/Psalm/PHPCS), `iru-python-code-quality` when it's
@@ -210,6 +211,11 @@ keys Step 3 collected). Resolve the command for each key as follows:
      `python manage.py makemigrations --check --dry-run`; `fastapi` with Alembic adds `alembic check` when a
      database is reachable
    - `dotnet`: `dotnet build && dotnet test`
+   - `windows`: `dotnet build -c Release` then `dotnet test --filter "TestCategory!=UI"` for the whole solution — on
+     a non-Windows host add `-p:EnableWindowsTargeting=true` (WPF/WinForms and the Core project still build there) and
+     run only the projects that can execute there (the `net10.0` Core tests), saying in Step 9 that the app run, the
+     WinUI build and the UI tests are unverified (needs Windows); on Windows also run the desktop UI tests through
+     `iru-dotnet-test` with the `ui` selector (it takes `.integration-test.lock` itself)
    - `typescript`: the package manager's `lint`, `typecheck` (when present), and `test` scripts, in that order
      (`npm run lint && npm run typecheck && npm test`, or the `pnpm`/`yarn` equivalents matching the lockfile)
    - `nestjs`: the same scripts as `typescript`, then `npm run build`
@@ -228,7 +234,9 @@ keys Step 3 collected). Resolve the command for each key as follows:
      `ios/<App>.xcworkspace` for a simulator destination; for the `expo` toolchain `npx expo export` (the
      native-toolchain-free bundle check) — e2e flows are not part of this step
    - `swift`: `swift build && swift test` for a SwiftPM package, or `xcodebuild build-for-testing` (with the
-     project's scheme and a simulator destination) for an Xcode app
+     project's scheme and a simulator destination) for an Xcode app — `-destination 'platform=macOS'` for a
+     macOS-only desktop app, plus `swift test` in its local `Packages/Core` (regenerate the project first with
+     `xcodegen generate` when a `project.yml` exists); on a non-macOS host say in Step 9 that it is unverified
    - any other key: skip the full verification for that key and say so in Step 9's summary.
 
 Run each resolved command through the `iru-gate-runner` agent, for the same reason as the other verification
@@ -251,7 +259,7 @@ key found in the plan:
    baseline from Step 3>. Report back only the total issue count per tool and the per-file list of issues."})` —
    e.g. `iru-java-code-quality` for the `java` baseline, `iru-dotnet-code-quality` for the `dotnet` baseline,
    `iru-typescript-code-quality` for `typescript`/`nestjs`/`nextjs`/`react-native`, `iru-kmp-code-quality` for
-   `kmp`, `iru-kotlin-code-quality` for
+   `kmp`, `iru-dotnet-code-quality` for `windows`, `iru-kotlin-code-quality` for
    `kotlin-springboot` (and a Kotlin `quarkus`), `iru-php-code-quality` for `php`, `iru-python-code-quality` for
    `fastapi`/`django`, `iru-android-code-quality` for
    `android`, `iru-swift-code-quality` for `swift` — per the Step 3 mapping. Running each

@@ -48,7 +48,10 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `php` (Laravel / WordPress plugin or theme / PrestaShop module, detected inside), `fastapi`, `django`, `android`,
   `swift`, `kmp` (Kotlin Multiplatform Android + iOS apps — shared `commonMain`/`androidMain`/`iosMain` code, Compose
   Multiplatform or native UI, and the `iosApp/` Swift host), `react-native` (Expo or bare React Native CLI/Metro
-  toolchain, detected inside — the `expo` dependency decides), `database`
+  toolchain, detected inside — the `expo` dependency decides), `windows` (Windows desktop apps on .NET 10 — WPF,
+  WinUI 3 or Windows Forms, detected inside from the app csproj, with MVVM `ViewModels/` or MVC `Controllers/` in a
+  UI-free `net10.0` Core project; plain .NET libraries/services stay `dotnet`, and macOS desktop apps use `swift`),
+  `database`
   — each key `<key>` has an `iru-<key>-code-one-task-group` + `iru-<key>-code-one-task` pair (keys are discovered
   from the installed directories, never hardcoded). The group skill captures one quality baseline for the whole
   group, runs `iru-<key>-code-one-task` once per task — in parallel when the group allows it (`database` is always
@@ -57,16 +60,22 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
   container-backed or server-starting stage (Spring Testcontainers, Quarkus Dev Services, NestJS e2e, Next.js
   Playwright, WordPress `wp-env`, Python testcontainers `integration`-marked pytest tests, React Native Maestro/Detox
-  e2e with Metro on port 8081, KMP iOS simulator test runs) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
+  e2e with Metro on port 8081, KMP iOS simulator test runs, Windows FlaUI desktop UI tests) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
   `.integration-test.lock` (owner file, stale after 60 min, released on every exit path, gitignored); Docker
   unavailable makes that stage "unverified", never silently skipped, and the coverage gate counts only tests
   that need no containers. The same rule covers devices: no booted simulator/emulator (or no macOS host for an iOS
   stage) makes a mobile e2e/iOS stage "unverified", and KMP coverage is measured on JVM/Android host tests only
-  (Kotlin/Native iOS code is reported "not measurable").
+  (Kotlin/Native iOS code is reported "not measurable"). Desktop apps follow the same rule: the 80% bar is measured
+  on the UI-free core (`src/<App>.Core` on Windows, the local `Packages/Core` package on macOS — via `swift test` +
+  `llvm-cov`, since the app scheme's `xccov` can't see it) and the UI layer is reported "not measured"; on a
+  non-Windows host every Windows app-run/WinUI/UI-test/packaging stage is "unverified (needs Windows)" while the
+  Core tests and the `EnableWindowsTargeting` compile of WPF/WinForms still run; macOS XCUITest runs drive the real
+  desktop and stay behind the Swift gates' `.simulator-test.lock`.
 - **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
-  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to five
-  `AskUserQuestion` rounds of three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple), every
-  round ending in a "Something in the next group" escape hatch (the last in "None of these"); an option bundling
+  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to six
+  `AskUserQuestion` rounds of up to three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple,
+  Desktop — macOS app / Windows app), every round ending in a "Something in the next group" escape hatch (the last in
+  "None of these"); an option bundling
   several types (Web app → React/Next.js/Angular, WordPress → plugin/block theme, Android, Apple, cross-platform
   mobile → React Native/Kotlin Multiplatform/Ionic) gets one bounded follow-up (React Native's `toolchain:
   expo|metro` is then asked by the front door because it changes the macOS CI cost picture), while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
@@ -80,26 +89,43 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   **Keep as is** (report mismatches with this run's choices) / **Replace** (regenerate, customizations lost), with
   a **Stop** option where it makes sense; `mode: existing` alone never means "update silently" — only an explicit
   `on-existing` does. Final reports repeat the mode and the per-component action (created / updated / replaced /
-  kept as is / skipped (ci: no)). The eight `*-repository`
+  kept as is / skipped (ci: no)). The ten `*-repository`
   stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`,
   `iru-setup-typescript-repository`, `iru-setup-php-repository`, `iru-setup-python-repository`,
-  `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository` — each also run standalone, and each chains the
+  `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository`,
+  `iru-setup-macos-repository`, `iru-setup-windows-repository` — each also run standalone, and each chains the
   same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
   `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`
-  (Quarkus reuses `iru-setup-java-gitignore`). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
+  (Quarkus reuses `iru-setup-java-gitignore`, macOS reuses `iru-setup-swift-gitignore`). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
   `react`, `angular`, `react-native`, `ionic`, `nestjs` (`iru-setup-nestjs-app`), or `nextjs` (`iru-setup-nextjs-web`),
   and its `react-native` flavor takes `toolchain: expo|metro` (forwarded to `iru-setup-react-native-app` and
   `iru-setup-typescript-github-workflows`: Expo framework with EAS/CNG and `native-builds: eas|local`, or a bare React
   Native CLI project with committed `android/`/`ios/`, CocoaPods, Gradle/Xcode CI jobs and store release);
   `iru-setup-kmp-repository` (via `iru-setup-kmp-app`, `iru-setup-kmp-gitignore`, `iru-setup-kmp-github-workflows`)
   scaffolds a Kotlin Multiplatform app — `shared/` + `androidApp/` + XcodeGen `iosApp/` — with `ui: compose|native`;
+  `iru-setup-swift-repository`'s `app` flavor (via `iru-setup-apple-app`) targets `ios`/`ipados`/`macos`/`watchos`/
+  `visionos` (no tvOS), with `ui: swiftui|uikit` for the iOS/iPadOS target (programmatic UIKit, scene delegate, no
+  storyboards; watchOS/visionOS stay SwiftUI) and `architecture: mvvm|mvc` over the same UI-free `Packages/Core`
+  layout the macOS desktop scaffold uses — its optional Fastlane lanes are an intentional difference from the
+  macOS skills' plain `xcodebuild`/`notarytool` pipeline;
+  the two desktop orchestrators take `ui` plus `architecture: mvvm|mvc` (offered only where the UI framework
+  supports both — SwiftUI, WPF and WinUI are MVVM-only; AppKit, UIKit and Windows Forms offer MVC or MVVM):
+  `iru-setup-macos-repository` (via `iru-setup-macos-app`, `iru-setup-macos-github-workflows`) scaffolds a macOS-only
+  XcodeGen app with `ui: swiftui|appkit`, a UI-free `Packages/Core`, the App Sandbox/hardened runtime, and a
+  Developer ID notarized DMG (`distribution: internal`) or App Store Connect upload (`store`) release;
+  `iru-setup-windows-repository` (via `iru-setup-windows-app`, `iru-setup-windows-gitignore`,
+  `iru-setup-windows-github-workflows`) scaffolds a .NET 10 `<App>.slnx` with `ui: wpf|winui|winforms`, a UI-free
+  `net10.0` Core project, MSTest + coverlet, StyleCop/.NET analyzers, DocFX, optional FlaUI UI tests and MSIX, with
+  Linux CI for everything that can run there and Windows runners for the app build, UI tests and per-RID
+  zip/MSIX/App Installer releases (signed with Azure Artifact Signing or a `.pfx`; optional WinGet; or a Microsoft
+  Store submission);
   `iru-setup-php-repository`'s picks `laravel`, `wordpress-plugin`, `wordpress-theme` (block theme), or
   `prestashop-module` (`iru-setup-php-laravel` / `-wordpress` / `-prestashop`); `iru-setup-python-repository`'s picks
   `fastapi` (`iru-setup-python-fastapi`) or `django` (`iru-setup-python-django`), sharing
   `iru-setup-python-gitignore`/`iru-setup-python-github-workflows`; `iru-setup-quarkus-repository`
   (via `iru-setup-quarkus-service`, `quarkus-stack.yml` manifest) takes `language: java|kotlin`,
   `build-tool: maven|gradle` (Gradle = Kotlin DSL), and `layout: single|hexagonal`.
-  `iru-setup-java-springboot` is the eighth orchestrator but follows its own manifest-driven chain instead: it
+  `iru-setup-java-springboot` is the eleventh orchestrator but follows its own manifest-driven chain instead: it
   interviews the user once, writes a `springboot-stack.yml` manifest, delegates the reactor's generation to its
   `iru-setup-java-springboot-*` sub-skills (pom, modules, apis, optional hilla, testcontainers, platform,
   github-workflows) plus `iru-update-java-springboot-documentation` for the Antora site, and only then fills the
@@ -137,7 +163,8 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `android`, `kmp` (`gradle.properties` `VERSION_NAME`/`VERSION_CODE` + `iosApp` `MARKETING_VERSION`), `swift`,
   `php` (Laravel `config/app.php`, WordPress plugin/theme headers, PrestaShop module class; `x.y.z-dev`
   convention), `python` (`pyproject.toml` `[project].version` + `__version__` literals; PEP 440 `x.y.z.dev0`
-  convention; VCS-derived versions left to the git tag)) and delegates the actual version-file edit to whichever key matches the detected project, keeping
+  convention; VCS-derived versions left to the git tag), `dotnet` (`Directory.Build.props` `<Version>` + the
+  four-part MSIX `Identity Version` of a Windows app; `x.y.z-dev` convention; macOS desktop apps use `swift`)) and delegates the actual version-file edit to whichever key matches the detected project, keeping
   its own branch/PR/label/changelog steps ecosystem-agnostic.
 - **Android reference repository**: every `iru-*android*` skill's embedded templates are genericized from a single
   real repository, https://github.com/albertoirurueta/irurueta-android-glutils (`lib/` + Compose `app/`,
@@ -154,7 +181,12 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   Kotlin Multiplatform (`kmp`) and React Native (`react-native`, both toolchains) follow the official docs
   (kotlinlang.org multiplatform docs + JetBrains KMP/Compose Multiplatform docs; reactnative.dev, docs.expo.dev,
   reactnavigation.org, React Native Testing Library), cited the same way in their `reference/README.md` Sources;
-  the KMP Android side stays consistent with the Android reference repository's conventions above.
+  the KMP Android side stays consistent with the Android reference repository's conventions above. macOS desktop
+  guidance (`iru-swift-code-one-task`'s `macos.md`/`appkit.md`/`architecture.md`, `iru-setup-macos-app`, its
+  workflows) is grounded in the docs repository's `apps/apple/` pages; the Windows desktop stack (`windows` key,
+  `iru-setup-windows-*`) follows the official Microsoft Learn docs (WPF, WinUI 3/Windows App SDK, Windows Forms,
+  CommunityToolkit.Mvvm, MSIX, Store, WinGet) plus the docs repository's C# pages, because the docs repository's
+  own Windows Apps section (albertoirurueta/docs issue 191) isn't written yet — switch the citations once it is.
 - **Template verification**: every scaffold/workflows/gate skill's embedded templates are meant to be exercised
   against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)
   before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can't be
@@ -173,7 +205,9 @@ This repository defines three custom agents for its most-duplicated sub-agent sh
   `typescript` (incl. NestJS/Next.js/React Native — both the Expo and Metro toolchains —, `e2e` selector incl.
   Maestro/Detox), `php` (Pest/PHPUnit, Clover, PHPStan/Psalm/PHPCS),
   `python` (pytest incl. pytest-django, `integration` selector; coverage.py Cobertura; Ruff/mypy/Bandit — shared by
-  the `fastapi` and `django` keys), `android`, `swift`, `kmp` (Kover coverage; detekt/ktlint/Android Lint/SwiftLint);
+  the `fastapi` and `django` keys), `android`, `swift` (incl. a `package-path` coverage mode for an app's local
+  `Packages/Core`), `kmp` (Kover coverage; detekt/ktlint/Android Lint/SwiftLint); the `dotnet` gates also serve the
+  `windows` key (WPF/WinUI/WinForms awareness, `EnableWindowsTargeting` off Windows, a `ui` selector for FlaUI tests);
   `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`, `iru-kmp-dokka`,
   `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (Ruff `D` + Sphinx build), `iru-android-dokka`, `iru-swift-docc`; plus
   `iru-check-license`/`iru-check-security`. Used throughout `iru-code`, `iru-code-one-task-group`, and every

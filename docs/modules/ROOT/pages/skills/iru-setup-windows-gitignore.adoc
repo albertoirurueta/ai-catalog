@@ -1,0 +1,103 @@
+= Setup Windows Gitignore
+:description: Creates or updates the root .gitignore for a .NET Windows desktop repository: build output, IDE state, coverage, MSIX output, signing keys, DocFX, lock.
+:keywords: iru-setup-windows-gitignore, claude code skill, gitignore, dotnet, windows desktop, msix, docfx, signing certificates, visual studio, repository setup
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Create or refresh the root `.gitignore` of a Windows desktop application built on .NET (WPF, WinUI 3 or Windows Forms),
+from a trimmed house template rather than GitHub's 400-line `VisualStudio.gitignore`.
+
+== Purpose
+
+`iru-setup-windows-gitignore` is the `.gitignore` step of the Windows chain run by `iru-setup-windows-repository`, and it
+also works standalone against any `*.sln`/`*.slnx` desktop solution. The base template covers .NET build output
+(`[Bb]in/`, `[Oo]bj/`, `artifacts/`, `publish/`), Visual Studio, Rider and VS Code user state, test and coverage output,
+analyzer SARIF logs, NuGet packages, signing material (`*.pfx`, `*.p12`, `*.cer`), the Antora build output, OS files and
+the repository-wide `.integration-test.lock/` that serializes desktop UI-test runs. It adds an MSIX section (`AppPackages/`,
+`*.msix`, `*.appinstaller`, `packaging/layout/`) and a DocFX section (the `docfx.json` metadata and site folders) only
+when those are detected.
+
+It deliberately keeps `Properties/PublishProfiles/*.pubxml` tracked (WinUI publish profiles carry no secrets and the
+build needs them) and does not ignore `*.snk`. Before proposing content it runs `git check-ignore` against the source
+files the scaffold commits and refuses any line that would hide one. An existing `.gitignore` is never overwritten
+silently: the skill shows a diff and asks Update (merge, keep hand-added lines) / Keep as is / Replace, unless
+`on-existing` decides. It never untracks already-committed files; it reports them with the `git rm -r --cached` each
+needs.
+
+== Purpose group
+
+xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-windows-gitignore
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`mode` (args)
+|No
+|`new` or `existing`.
+|Detected: `existing` when a root `.gitignore` is present
+
+|`on-existing` (args)
+|No
+|`ask`, `keep`, `update` or `replace`: how an existing `.gitignore` is treated. For scripted runs; the warning and diff
+are still printed.
+|`ask`
+|===
+
+Any other key from a full shared-args set is ignored and named in the report.
+
+== Outputs
+
+* The root `.gitignore`: created, updated (merged), replaced or kept as is.
+* A report naming which conditional sections (MSIX, DocFX) were included or skipped and why, the result of the
+  `git check-ignore` safety check, any already-tracked file under a newly ignored path, and warnings to review the file,
+  untrack committed artifacts and rotate any certificate that was ever committed.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-windows-gitignore] --> B["Step 0: Parse args (mode, on-existing)"]
+    B --> C["Step 1: Survey: docfx.json, MSIX packaging,\n.sln/.slnx, tracked files under ignored paths,\nexisting .gitignore"]
+    C --> D["Step 2: Base template"]
+    D --> E["Step 3: Add MSIX and DocFX sections\nonly when detected"]
+    E --> F["Step 4: Compose content (merge existing lines);\ngit check-ignore safety check on committed sources"]
+    F --> G{"Existing .gitignore\ndiffers?"}
+    G -- no --> I
+    G -- yes --> H["Step 5: Show diff, ask\nUpdate / Keep as is / Replace\n(or apply on-existing)"]
+    H --> I["Step 6: Write file and report\nsections, safety check, tracked files, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-setup-windows-gitignore` is a leaf skill; it only reads the repository and runs `git` commands
+(`ls-files`, `check-ignore`, `diff --no-index`).
+
+=== Invoked by
+
+* xref:skills/iru-setup-windows-repository.adoc[] -- Step 6, after the scaffold and the Antora site and before the
+  workflows, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent (only
+  `on-existing` is forwarded, when supplied).
+
+It can also be run directly by a person to add or check a `.gitignore` later. Its `.integration-test.lock/` line
+covers the lock taken by xref:skills/iru-windows-code-one-task-group.adoc[].
+
+=== Related agents
+
+None -- this skill runs inline; it spawns no agents.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-windows-gitignore/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

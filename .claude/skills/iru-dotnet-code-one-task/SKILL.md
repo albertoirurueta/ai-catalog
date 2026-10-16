@@ -1,6 +1,6 @@
 ---
 name: iru-dotnet-code-one-task
-description: Implement a single task from a .NET `implementation_plan.md`-style task list — just the implementation and its tests. Re-checks the current code state, implements exactly what the task specifies, writes/updates test-framework tests (xUnit/NUnit/MSTest, whichever the project uses), then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update doc comments, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-dotnet-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-dotnet-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for .NET/C# projects.
+description: Implement a single task from a .NET `implementation_plan.md`-style task list — just the implementation and its tests. Re-checks the current code state, implements exactly what the task specifies, writes/updates test-framework tests (xUnit/NUnit/MSTest, whichever the project uses), then — if the task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note, so an interrupted run doesn't re-attempt work that already landed, before handing back a short summary (files touched, tests added/updated, and any blocker) for the caller to record. Does not capture a quality baseline, add license headers, update doc comments, run coverage/quality checks, or replace the pending note with the final validation outcome — those still happen once per task group in `iru-dotnet-code-one-task-group`, which is what invokes this skill once per task in a bucket (in parallel when the bucket allows it) and finalizes each checkbox's note once group validation passes. Invoke as `/iru-dotnet-code-one-task <task description>`, passing the task's own text — including its exact `implementation_plan.md` checkbox line(s), so this skill can find and flip them — as the argument. Equivalent to `iru-java-code-one-task` for .NET/C# projects (libraries, services, console apps); Windows desktop app repositories (WPF, WinUI 3, Windows Forms — plan key `windows`) use `iru-windows-code-one-task` instead.
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *)
 ---
@@ -13,6 +13,13 @@ per task in a bucket (potentially many at once, in parallel agents), then handle
 and all test/coverage/quality validation itself, once for the whole bucket, instead of repeating that validation
 here for every single task. It uses a medium model on purpose — the plan already carries the hard reasoning;
 this skill just executes one task's implementation.
+
+**Windows desktop app repositories are out of scope.** If a `*.csproj` in the solution has `<OutputType>WinExe</OutputType>`
+with `<UseWPF>`, `<UseWinUI>`, or `<UseWindowsForms>` set to `true` (a WPF, WinUI 3, or Windows Forms app — `iru-explore`
+reports `Project type: windows-app`, plan key `windows`), stop and hand the request to `iru-windows-code-one-task`
+instead (or tell the caller to, when it isn't installed): it knows the UI-free Core project split, MVVM/MVC layouts,
+and the host-dependent compile checks this skill doesn't. Tasks touching only that repository's `src/<App>.Core`
+project are still `windows` tasks.
 
 ## Step 1 — Re-check the current code state
 

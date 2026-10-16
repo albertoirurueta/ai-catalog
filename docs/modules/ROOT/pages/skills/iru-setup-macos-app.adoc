@@ -1,0 +1,152 @@
+= Setup macOS App
+:description: Scaffolds a native macOS desktop app (Swift 6, XcodeGen, SwiftUI or AppKit) with a UI-free Core package, Swift Testing, XCUITest, SwiftLint, DMG packaging.
+:keywords: iru-setup-macos-app, claude code skill, macos, swift 6, xcodegen, swiftui, appkit, swift testing, notarization, dmg, scaffold app
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable native macOS desktop app: an XcodeGen manifest, a UI-free `Packages/Core` local package
+holding the testable logic, the `App/` UI layer in SwiftUI or AppKit, unit and UI tests, quality configs and
+packaging helpers, written from templates in the skill's `reference/` files.
+
+== Purpose
+
+`iru-setup-macos-app` is the scaffold step of the macOS chain run by `iru-setup-macos-repository`, and it also works
+standalone. It writes `project.yml` (one macOS app target and scheme, a hosted Swift Testing unit-test target, an
+XCUITest target and the package's `CoreTests`; `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in `settings.base`,
+strict concurrency, hardened runtime), an entitlements file with the App Sandbox, `Packages/Core` (models and services,
+plus `ViewModels/` for MVVM or `Controllers/` for MVC) tested to 100% lines, the `App/` layer per `ui` (SwiftUI scenes
+with Settings and Commands, or programmatic AppKit with `NSWindowController`/`NSViewController`), a `--uitesting` launch
+argument with accessibility identifiers, `ExportOptions-*.plist` per `distribution`, `scripts/make-dmg.sh`,
+`.swiftlint.yml`, `.swift-format` and `sonar-project.properties`. The generated `.xcodeproj` is never committed and
+Fastlane is not used.
+
+The layout is the scaffold contract the Swift gate skills (`iru-swift-test`, `iru-swift-coverage`,
+`iru-swift-code-quality`, `iru-swift-docc`, `iru-swift-bump-version`, `iru-swift-code-one-task`) and
+`iru-setup-macos-github-workflows` rely on. It follows `iru-setup-apple-app`'s conventions (use that skill for a
+multi-platform app) and `iru-setup-kmp-app`'s structure. It announces whether it is scaffolding from scratch or
+updating, asks Update / Keep as is / Replace / Stop per existing file group (unless `on-existing` decides), and looks
+up toolchain versions at run time with a dated fallback table.
+
+== Purpose group
+
+xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-macos-app
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ui`
+|No
+|`swiftui` or `appkit`.
+|Asked when absent
+
+|`architecture`
+|No
+|`mvvm` or `mvc`. SwiftUI is `mvvm` only; `mvc` with SwiftUI is rejected with an explanation.
+|`mvvm` for SwiftUI; `mvc` recommended for AppKit
+
+|`app-name`, `bundle-id`, `team-id`
+|Yes (`app-name`, `bundle-id`)
+|Display name (PascalCase form becomes the target, scheme and module), reverse-DNS bundle ID, Apple Developer Team ID.
+|`team-id` empty (needed only for exports)
+
+|`min-macos`, `sandbox`, `category`
+|No
+|Deployment target, App Sandbox on or off, `LSApplicationCategoryType`.
+|`26.0`, `yes`, `public.app-category.productivity`
+
+|`version`, `build-number`
+|No
+|`MARKETING_VERSION` (always numeric `x.y.z`) and `CURRENT_PROJECT_VERSION`.
+|`1.0.0`, `1`
+
+|`generator`
+|No
+|`xcodegen` only; `tuist` is answered with a pointer to `iru-setup-apple-app`.
+|`xcodegen`
+
+|`distribution`
+|No
+|`none` (copy-app export), `internal` (Developer ID) or `store` (App Store Connect upload).
+|`internal`
+
+|`license`, `developer-name`, `developer-email`, `organization-url`
+|No
+|Recorded for the report and copyright line.
+|Asked
+
+|`open-source`, `visibility`, `ci`, `sonar` (+ coordinates), `branching`
+|No
+|Sonar recommendation inputs; `branching` is informational (identical files either way).
+|Asked
+
+|`mode`, `on-existing`
+|No
+|`new`/`existing`; `ask`/`keep`/`update`/`replace` for existing file groups.
+|Detected; `ask`
+|===
+
+== Outputs
+
+* `project.yml`, the entitlements file, the asset catalog, the matching `ExportOptions-*.plist`, `scripts/make-dmg.sh`,
+  `.swiftlint.yml`, `.swift-format` and `sonar-project.properties` (omitted when `sonar: none`).
+* `Packages/Core` (Package.swift, DocC catalog, models, services and view models or controllers) with its Swift Testing
+  suite.
+* `App/Sources`, `App/Tests` and `App/UITests` for the chosen `ui` and `architecture`.
+* A verification pass (Core tests and coverage, `xcodegen generate`, `xcodebuild build-for-testing` and tests, SwiftLint
+  and swift-format, DocC, archive/export/DMG), all through `iru-gate-runner`; everything needing macOS or Xcode is
+  reported "unverified" elsewhere.
+* A report with the action per file group, the resolved options, toolchain versions (live versus fallback) and the
+  scaffold contract table.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-macos-app] --> B["Step 0: Parse args\n(ui, architecture, app-name, bundle-id,\nsandbox, distribution, mode)"]
+    B --> C["Step 1: Survey the repository\nfrom scratch, or update with\nUpdate / Keep / Replace / Stop per file group"]
+    C -- user chose stop --> STOP[Stop and report]
+    C --> D["Step 2: Collect required inputs"]
+    D --> E["Step 3: Infer repository information"]
+    E --> F["Step 4: Look up toolchain versions\n(fallback table)"]
+    F --> G["Step 5: Select reference templates\nfor ui, architecture, sandbox, distribution"]
+    G --> H["Step 6: Scaffold project.yml, Core package,\nApp layer, tests, packaging helpers"]
+    H --> I["Step 7: Verify via iru-gate-runner\nCore tests + coverage, xcodegen, xcodebuild tests,\nlint, DocC, archive/export/DMG"]
+    I --> J["Step 8: Report actions, versions,\nscaffold contract, quirks"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-setup-macos-app` invokes no other catalog skill; it writes files from its own `reference/` templates and
+runs `xcodegen`, `xcodebuild`, `swift`, `swiftlint` and `python3` directly. The layout it writes is the contract for
+xref:skills/iru-swift-code-one-task.adoc[], xref:skills/iru-swift-test.adoc[], xref:skills/iru-swift-coverage.adoc[],
+xref:skills/iru-swift-code-quality.adoc[], xref:skills/iru-swift-docc.adoc[], xref:skills/iru-swift-bump-version.adoc[]
+and xref:skills/iru-setup-macos-github-workflows.adoc[], but it does not call them.
+
+=== Invoked by
+
+* xref:skills/iru-setup-macos-repository.adoc[] -- Step 4 runs `iru-setup-macos-app` (through an isolated skill
+  executor) first in the chain, passing the resolved shared inputs as `args`.
+* xref:skills/iru-setup-repository.adoc[] -- reaches it indirectly by delegating to `iru-setup-macos-repository`. It can
+  also be run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[] -- runs Step 7's verification commands so their long logs stay out of the
+  caller's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-macos-app/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

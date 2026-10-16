@@ -1,20 +1,20 @@
 = Setup Repository
 :description: Catalog-wide bootstrap front door: detects the project type, announces new vs existing setup, asks cost-aware inputs, delegates to a stack orchestrator.
-:keywords: iru-setup-repository, claude code skill, bootstrap, project type detection, java, typescript, python, fastapi, django, android, kotlin multiplatform, react native, swift, orchestrator, askuserquestion
+:keywords: iru-setup-repository, claude code skill, bootstrap, project type detection, java, typescript, python, fastapi, django, android, kotlin multiplatform, react native, swift, macos, windows desktop, orchestrator, askuserquestion
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 The catalog's single entry point for bootstrapping any repository. It does not scaffold anything itself — it
-detects or asks which of the supported project types applies (Java, Spring Boot, Quarkus, TypeScript, web, NestJS, PHP, Python (FastAPI and Django), Android, Swift/Apple and cross-platform mobile — React Native, Ionic or Kotlin Multiplatform), announces whether the run is a from-scratch setup
+detects or asks which of the supported project types applies (Java, Spring Boot, Quarkus, TypeScript, web, NestJS, PHP, Python (FastAPI and Django), Android, Swift/Apple (Swift libraries, and iOS/iPadOS/macOS/watchOS/visionOS apps in SwiftUI or UIKit, MVVM or MVC), cross-platform mobile — React Native, Ionic or Kotlin Multiplatform — and macOS/Windows desktop apps), announces whether the run is a from-scratch setup
 or an update of an existing repository, collects the handful of questions genuinely shared across every stack, and
-hands off to exactly one of nine existing stack orchestrators.
+hands off to exactly one of eleven existing stack orchestrators.
 
 == Purpose
 
 `iru-setup-repository` exists so a user doesn't need to already know which of this catalog's stack-specific
 orchestrators (`iru-setup-java-library-repository`, `iru-setup-java-springboot`,
 `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-`iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository`) applies to their
+`iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository`, `iru-setup-macos-repository`, `iru-setup-windows-repository`) applies to their
 repository. It surveys the working directory (running `iru-explore` when it already holds code) to detect the
 project type, asks only the cross-cutting questions the detected/chosen type still needs, and delegates the
 actual scaffolding — the downstream orchestrator asks its own project-identity questions and does the real work.
@@ -69,8 +69,8 @@ sonar: cloud
 |Any value from the shared vocabulary (`java-library`, `java-springboot`, `java-springboot-hilla`,
 `kotlin-springboot`, `kotlin-springboot-hilla`, `java-quarkus`, `kotlin-quarkus`, `typescript-library`, `react-web`,
 `nextjs`, `angular-web`, `nestjs`, `php-laravel`, `php-wordpress-plugin`, `php-wordpress-theme`,
-`php-prestashop-module`, `php-library`, `python-fastapi`, `python-django`, `python-library`, `android-library`, `android-app`, `swift-library`, `apple-app`,
-`react-native-app`, `ionic-app`, `kmp-app`, `dotnet`, `other`, `unknown`). Pre-resolves Step 2 when supplied.
+`php-prestashop-module`, `php-library`, `python-fastapi`, `python-django`, `python-library`, `android-library`, `android-app`, `swift-library`, `apple-app` (with its platforms in parentheses, e.g. `apple-app (ios, visionos)`), `macos-app`,
+`react-native-app`, `ionic-app`, `kmp-app`, `windows-app`, `dotnet`, `other`, `unknown`). Pre-resolves Step 2 when supplied.
 |Detected by Step 1's `iru-explore` survey, or asked in Step 2
 
 |`mode`
@@ -173,8 +173,10 @@ orchestrator asks them.
 |`platforms`
 |No
 |Comma-separated Apple platforms (`ios`/`ipados`/`macos`/`watchos`) for a Swift library or Apple app; a Swift
-library gets a follow-up multi-select for `tvos`/`visionos`/`linux`, appended to the same list, since
-`iru-setup-swift-repository` never re-asks a key the front door already supplied.
+library gets a follow-up multi-select for `tvos`/`visionos`/`linux`, and an Apple app a narrower "Also target
+visionOS?" follow-up (never `tvos`/`linux`), appended to the same list, since `iru-setup-swift-repository` never
+re-asks a key the front door already supplied. Picking `macos` alone for an Apple app suggests the macOS desktop
+app type instead.
 |Pre-filled from Step 1's detected `apple-app (…)` parenthetical when present, else asked
 
 |`framework`
@@ -195,8 +197,13 @@ Native CLI with committed `android/`/`ios/` projects, React Navigation, CocoaPod
 
 |`ui`
 |No
-|Kotlin Multiplatform UI approach (`compose` shared Compose Multiplatform UI vs. `native` Jetpack Compose + SwiftUI).
-Never asked here; forwarded only when Step 1 detected it or `args` supplied it, otherwise `iru-setup-kmp-repository` asks.
+|UI approach: Kotlin Multiplatform `compose` (shared Compose Multiplatform UI) vs. `native` (Jetpack Compose + SwiftUI), macOS `swiftui`/`appkit`, Windows `wpf`/`winui`/`winforms`, or an Apple app's SwiftUI vs. UIKit.
+Never asked here; forwarded only when Step 1 detected it (from the `kmp-app (…)`/`macos-app (…)`/`windows-app (…)` parenthetical) or `args` supplied it (the only route for an Apple app), otherwise the delegated orchestrator asks.
+|Left to the orchestrator
+
+|`architecture`
+|No
+|`mvvm` or `mvc` for the desktop apps and for an Apple app. Likewise never asked here, only forwarded when supplied via `args`; otherwise detected or confirmed by `iru-setup-macos-repository`/`iru-setup-windows-repository` (from `ViewModels/` vs. `Controllers/`), or asked by `iru-setup-swift-repository` for an Apple app.
 |Left to the orchestrator
 
 |`integration-branch`
@@ -232,7 +239,7 @@ Never asked here; forwarded only when Step 1 detected it or `args` supplied it, 
 |Other `key: value` lines
 |No
 |Opaque pass-through (for example `name`, `package`, `description`, `scope`, `orm`, `database`, `api`, `output`, `e2e`, `slug`, `vendor`, `php-version`,
-`group-id`, `artifact-id`, `java-version`, `namespace`, and for `kmp-app` the identity keys `app-name`, `application-id`, `bundle-id`). Forwarded verbatim only when the delegated orchestrator's own
+`group-id`, `artifact-id`, `java-version`, `namespace`, for `kmp-app` the identity keys `app-name`, `application-id`, `bundle-id`, for `macos-app` `app-name`, `bundle-id`, `team-id`, `min-macos`, `sandbox`, and for `windows-app` `app-name`, `display-name`, `publisher`, `package-name`, `signing`, `winget`). Forwarded verbatim only when the delegated orchestrator's own
 Step 0 recognizes the key; dropped keys are listed in the final report.
 |None
 |===
@@ -244,7 +251,8 @@ Step 0 recognizes the key; dropped keys are listed in the final report.
   to, exactly as that orchestrator's own page describes.
 * An up-front announcement (Step 1): "from scratch" or "updating an existing repository", the latter with the
   absent / present / partial component inventory.
-* A final report (Step 5): the resolved `project-type`, the setup mode and where it came from, and every shared
+* A final report (Step 5): the resolved `project-type` (with, for the app types, the platforms/framework/toolchain/UI
+  approach that came with it, and the MVVM/MVC architecture the desktop orchestrators reported), the setup mode and where it came from, and every shared
   input as actually applied (`visibility` and how it was resolved, `ci`, `ci-tests`, `pages`, and so on); a
   per-component table of what the delegated orchestrator did (created / updated / replaced / kept as is / skipped
   (`ci: no`)) with every mismatch it flagged between a kept file and this run's choices; cost notes tied to the
@@ -252,7 +260,7 @@ Step 0 recognizes the key; dropped keys are listed in the final report.
   forwarded; one consolidated secrets/environments table; and an explicit warning block (review every generated
   file; every listed secret and matching external account must already exist; which values were inferred rather
   than asked).
-* When the detected or chosen type is `dotnet`, `php-library`, `python-library` (a plain Python package; the Python gate skills and individual repository-file skills can still be run by hand), `other` or otherwise unsupported: a plain report that no bootstrap orchestrator
+* When the detected or chosen type is `dotnet` (a plain .NET library or service — Windows desktop apps are `windows-app`, above; the .NET gate skills `iru-dotnet-test`/`-coverage`/`-code-quality`/`-docfx` and `iru-setup-antora`/`-changelog`/`-readme` can still be run individually), `php-library`, `python-library` (a plain Python package; the Python gate skills and individual repository-file skills can still be run by hand), `other` or otherwise unsupported: a plain report that no bootstrap orchestrator
   exists in this catalog for it, with no delegation attempted.
 
 == Execution flow
@@ -270,10 +278,10 @@ flowchart TD
     E -- "other / unknown / multiple" --> F
     E -- "a supported type" --> H["Pre-select matching\nStep 2 option as (detected)"]
     H --> I
-    D1 --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 5 AskUserQuestion rounds of 3 types\n+ 'Something in the next group':\nJVM, Web and Node, PHP, Python, Mobile and Apple\n(bounded follow-ups for bundled options)"]
-    F -- "'None of these'\nin round 5" --> G
-    F -- "resolved" --> I["Step 3: Ask shared inputs once, in order:\nopen-source, visibility (args, gh, or ask),\nci, sonar, ci-tests, pages,\npublish/distribution, conditional questions\n(cost notes per visibility)"]
-    I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of nine\nstack orchestrators\n(each component warns and asks\nkeep / update / replace)"]
+    D1 --> F["Step 2: Ask project type\n(skipped if already resolved via args)\nup to 6 AskUserQuestion rounds of 3 types\n+ 'Something in the next group':\nJVM, Web and Node, PHP, Python, Mobile and Apple,\nDesktop (macOS app / Windows app)\n(bounded follow-ups for bundled options)"]
+    F -- "'None of these'\nin round 6" --> G
+    F -- "resolved" --> I["Step 3: Ask shared inputs once, in order:\nopen-source, visibility (args, gh, or ask),\nci, sonar, ci-tests, pages,\npublish/distribution, conditional questions\n(Apple platforms incl. visionOS, Ionic framework,\nReact Native toolchain; cost notes per visibility)"]
+    I --> J["Step 4: Delegate via\niru-isolated-skill-executor\nto exactly one of eleven\nstack orchestrators\n(each component warns and asks\nkeep / update / replace)"]
     J --> K["Step 5: Report mode, resolved inputs,\nper-component actions and mismatches,\ncost notes, secrets table, warnings"]
 ....
 
@@ -284,7 +292,7 @@ flowchart TD
 * xref:skills/iru-explore.adoc[] — Step 1, directly (not via a sub-agent), and only when the working directory is
   non-empty: reads its `## Tech stack` report's `- Project type:` line to pre-select Step 2's option and set
   `mode: existing`.
-* Exactly one of the following nine, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+* Exactly one of the following eleven, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
   agent in Step 4, chosen by the resolved `project-type` — never more than one per run outside the `multiple`
   case:
 ** xref:skills/iru-setup-java-library-repository.adoc[] — for `java-library`.
@@ -299,9 +307,13 @@ flowchart TD
    arg: `fastapi` or `django`).
 ** xref:skills/iru-setup-android-repository.adoc[] — for `android-library`, `android-app` (via its own `flavor`
    arg).
-** xref:skills/iru-setup-swift-repository.adoc[] — for `swift-library`, `apple-app` (via its own `flavor` arg).
+** xref:skills/iru-setup-swift-repository.adoc[] — for `swift-library`, `apple-app` (via its own `flavor` arg, plus
+   `platforms`; for an app, `ui` (SwiftUI/UIKit) and `architecture` (MVVM/MVC) only when supplied via `args`,
+   otherwise that orchestrator asks them).
 ** xref:skills/iru-setup-kmp-repository.adoc[] — for `kmp-app` (cross-platform Kotlin Multiplatform; apps only, so
    never sent `publish` or `flavor`).
+** xref:skills/iru-setup-macos-repository.adoc[] — for `macos-app` (a native macOS desktop app; only `ui` is forwarded from the detected parenthetical, `architecture` is detected or confirmed by the orchestrator). Reached from the new Round 6 "Desktop" of the project-type interview, or by detection; an `apple-app` whose platforms include macOS plus another platform — or a macOS-only `iru-setup-apple-app` scaffold — stays `apple-app` and never offers `macos-app`.
+** xref:skills/iru-setup-windows-repository.adoc[] — for `windows-app` (a C#/.NET 10 desktop app: WPF, WinUI 3 or Windows Forms; MSIX/WinGet/Microsoft Store), likewise forwarding only `ui`.
 
 === Invoked by
 

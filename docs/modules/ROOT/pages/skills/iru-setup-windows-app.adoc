@@ -1,0 +1,154 @@
+= Setup Windows App
+:description: Scaffolds a WPF, WinUI 3 or Windows Forms app on .NET 10 with a UI-free Core project, MSTest and coverlet tests, FlaUI UI tests, DocFX and MSIX packaging.
+:keywords: iru-setup-windows-app, claude code skill, windows desktop, wpf, winui, winforms, dotnet 10, msix, mstest, flaui, docfx, scaffold app
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable Windows desktop app on .NET 10 and C# 14: a solution with a UI-free `Core` library
+holding all testable logic, a WPF, WinUI 3 or Windows Forms app project composed with the Generic Host, an MSTest 4
+Core test project at 100% line coverage, optional FlaUI UI tests, DocFX API docs and optional MSIX packaging, written
+from templates in the skill's `reference/` files.
+
+== Purpose
+
+`iru-setup-windows-app` is the scaffold step of the Windows chain run by `iru-setup-windows-repository`, and it also
+works standalone. It writes `global.json`, `Directory.Build.props` (the app `<Version>` `x.y.z[-dev]`, nullable,
+warnings as errors, `EnableWindowsTargeting` so WPF and WinForms build on Linux and macOS, one SARIF analyzer log per
+project), central package management, `.editorconfig`, `stylecop.json`, an `<AppName>.slnx` solution, `src/<AppName>.Core`
+(models and services, plus `ViewModels/` for MVVM or `Controllers/` and a passive-view interface for MVC), the
+`src/<AppName>` UI project per `ui`, MSTest tests with `tests/coverlet.runsettings`, an optional FlaUI
+`tests/<AppName>.UITests` project, a DocFX `docfx.json`, generated placeholder icons and, for WPF/WinForms with
+`msix: yes`, a `packaging/` folder with `AppxManifest.xml` and `build-msix.ps1`.
+
+The layout is the scaffold contract that `iru-windows-code-one-task`, `iru-windows-code-one-task-group`, the
+`iru-dotnet-*` gate skills, `iru-dotnet-bump-version` and `iru-setup-windows-github-workflows` rely on; Step 8 of the
+skill lists the confirmed names, commands and paths. It announces whether it is scaffolding from scratch or updating,
+and for each existing file group asks Update / Keep as is / Replace / Stop (unless `on-existing` decides). It never
+overwrites hand-written source and treats a foreign layout (a single-project `dotnet new wpf` app, a `.sln` with other
+projects, a `.wapproj` packaging project) as foreign. Toolchain versions are looked up at run time with a recorded
+fallback table.
+
+== Purpose group
+
+xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-windows-app
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ui`
+|No
+|`wpf`, `winui` or `winforms`.
+|Asked when absent and not detectable
+
+|`architecture`
+|No
+|`mvvm` or `mvc`. WPF and WinUI are `mvvm` only; `mvc` with them is rejected with an explanation.
+|`mvvm` for WPF/WinUI; asked for WinForms
+
+|`app-name`, `display-name`, `root-namespace`
+|Yes (`app-name`)
+|PascalCase solution, project and assembly name; window title and MSIX display name; root namespace.
+|`display-name` and `root-namespace` default from `app-name`
+
+|`publisher`, `publisher-display-name`, `package-name`
+|No
+|MSIX identity: `CN=...` publisher distinguished name (must match the signing certificate), display name and package name.
+|Asked when MSIX is produced
+
+|`version`, `rids`
+|No
+|App version and runtime identifiers.
+|`1.0.0-dev` (gitflow) or `1.0.0`; `win-x64;win-arm64`
+
+|`msix`, `ui-tests`
+|No
+|`yes`/`no` for the `packaging/` folder (WinUI is always packaged); `flaui`/`none` for the UI test project.
+|Derived from `distribution`; `flaui`
+
+|`branching`, `distribution`
+|No
+|`gitflow`/`main-only` (selects the default version); `none`/`internal`/`store` (drives the `msix` default).
+|Asked or supplied
+
+|`license`, `developer-name`, `developer-email`, `organization-url`
+|No
+|Recorded for the report and license headers.
+|Asked
+
+|`open-source`, `visibility`, `ci`, `sonar` (+ coordinates)
+|No
+|Used only for the Sonar recommendation; Sonar produces no file here.
+|Asked
+
+|`mode`, `on-existing`
+|No
+|`new`/`existing`; `ask`/`keep`/`update`/`replace` for existing file groups.
+|Detected; `ask`
+|===
+
+== Outputs
+
+* Build foundation: `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`, `stylecop.json`,
+  `<AppName>.slnx`.
+* `src/<AppName>.Core` (UI-free, `net10.0`), `src/<AppName>` (WPF, WinUI 3 or WinForms app), `app.manifest` and, for
+  WinUI, `Package.appxmanifest` and publish profiles.
+* `tests/<AppName>.Core.Tests` (MSTest 4 plus coverlet), `tests/coverlet.runsettings`, and optionally
+  `tests/<AppName>.UITests` (FlaUI, `[TestCategory("UI")]`, Windows only).
+* `docfx.json` for the Core API, generated icon and tile PNGs, and, with `msix: yes` for WPF/WinForms, `packaging/`.
+* A verification pass (restore, build with analyzers, `dotnet format`, Core tests and coverage, DocFX; Windows-only
+  stages reported as unverified off Windows) and a report with the action per file group, versions used (live versus
+  fallback) and the scaffold contract table.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-windows-app] --> B["Step 0: Parse args\n(ui, architecture, identity, msix, ui-tests,\nbranching, distribution, mode)"]
+    B --> C["Step 1: Survey the repository\nfrom scratch, or update with\nUpdate / Keep / Replace / Stop per file group"]
+    C -- user chose stop --> STOP[Stop and report]
+    C --> D["Step 2: Collect required inputs\n(architecture matrix: WPF/WinUI mvvm only)"]
+    D --> E["Step 3: Infer repository information"]
+    E --> F["Step 4: Look up toolchain versions\n(NuGet, .NET releases; fallback table)"]
+    F --> G["Step 5: Select reference templates\nfor ui and architecture"]
+    G --> H["Step 6: Scaffold the project\n(apply per-group decisions, generate assets)"]
+    H --> I["Step 7: Verify via iru-gate-runner\nrestore, build, format, Core tests + coverage, DocFX;\nWindows-only stages unverified elsewhere"]
+    I --> J["Step 8: Report actions, versions,\nscaffold contract, quirks"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None -- `iru-setup-windows-app` invokes no other catalog skill; it writes files from its own `reference/` templates and
+runs `dotnet`, `docfx`, `pwsh` and `python3` directly. Its Step 7 verification and the documented gate commands mirror
+those of xref:skills/iru-dotnet-test.adoc[], xref:skills/iru-dotnet-coverage.adoc[],
+xref:skills/iru-dotnet-code-quality.adoc[] and xref:skills/iru-dotnet-docfx.adoc[], and the Core/UI layout it writes
+is the contract for xref:skills/iru-windows-code-one-task.adoc[], xref:skills/iru-dotnet-bump-version.adoc[] and
+xref:skills/iru-setup-windows-github-workflows.adoc[], but it does not call them.
+
+=== Invoked by
+
+* xref:skills/iru-setup-windows-repository.adoc[] -- Step 4 runs `iru-setup-windows-app` (through an isolated skill
+  executor) first in the chain, passing the resolved shared inputs as `args`.
+* xref:skills/iru-setup-repository.adoc[] -- reaches it indirectly by delegating to `iru-setup-windows-repository`. It
+  can also be run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[] -- runs Step 7's restore, build, format, test, coverage and DocFX verification
+  commands so their long logs stay out of the caller's context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-windows-app/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

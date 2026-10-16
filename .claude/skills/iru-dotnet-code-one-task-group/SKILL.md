@@ -1,6 +1,23 @@
 ---
 name: iru-dotnet-code-one-task-group
-description: Implement one bucket of .NET/C# tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-dotnet-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, XML doc comments, scoped tests, an 80% coverage check, a full-suite run, and a code-quality regression check against that one baseline. `iru-dotnet-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when several tasks finish at nearly the same moment — and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-dotnet-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to `iru-java-code-one-task-group` for .NET/C# projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its .NET-tagged tasks.
+description: >-
+  Implement one bucket of .NET/C# tasks from a plan's task group end-to-end — captures a single pre-change quality
+  baseline for the whole bucket, runs `iru-dotnet-code-one-task` once per task (in parallel agents when the group is
+  marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers,
+  XML doc comments, scoped tests, an 80% coverage check, a full-suite run, and a code-quality regression check against
+  that one baseline. `iru-dotnet-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md`
+  the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt
+  already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when
+  several tasks finish at nearly the same moment — and replaces each task's pending note with the final
+  coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than
+  waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that
+  task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task.
+  Invoke as `/iru-dotnet-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its
+  own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to
+  `iru-java-code-one-task-group` for .NET/C# projects (libraries, services, console apps); used by
+  `iru-code-one-task-group`, which invokes this once per plan group for its .NET-tagged tasks. Windows desktop app
+  repositories (WPF, WinUI 3, Windows Forms — plan key `windows`) use `iru-windows-code-one-task-group` instead, which
+  adds the Core-only coverage bar, host gating, and the lock-serialized UI-test stage.
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent
 ---
@@ -14,6 +31,14 @@ catalog's per-task validation used to spend redundantly. It is the .NET/C# count
 `iru-java-code-one-task-group` — same shape, but built on `iru-dotnet-code-quality`, `iru-dotnet-test`, `iru-dotnet-coverage`, and
 `iru-dotnet-docfx`. It uses a medium model on purpose: the plan already carries the hard reasoning; this skill drives
 execution of it.
+
+**Windows desktop app repositories are out of scope.** If a `*.csproj` in the solution has `<OutputType>WinExe</OutputType>`
+with `<UseWPF>`, `<UseWinUI>`, or `<UseWindowsForms>` set to `true` (`iru-explore`'s `Project type: windows-app`, plan
+key `windows`), stop and hand the bucket to `iru-windows-code-one-task-group` instead (or tell the caller to, when it
+isn't installed). The gate skills this skill calls are Windows-desktop aware on their own (`iru-dotnet-test` excludes
+`[TestCategory("UI")]` tests by default and skips `net*-windows*` test projects off Windows), so a plain .NET
+repository that merely contains a small WinForms/WPF tool still validates correctly here — but its UI tests are never
+run by this skill.
 
 ## Step 1 — Capture one pre-change quality baseline for the whole bucket
 
@@ -99,8 +124,9 @@ not once per task:
    branch coverage percentage."})`. For any class under 80%, add tests for its uncovered branches/lines (via the
    task that owns that class), re-run Step 3.3 to confirm, then re-check here.
 5. **Full suite**, to catch regressions this bucket's changes may have caused elsewhere, by delegating to
-   `iru-gate-runner`: `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt: "Run `dotnet
-   test`. If everything passes, report back only that all tests passed. If anything fails, report back only the
+   `iru-gate-runner`: `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt: "Invoke
+   Skill({skill: \"iru-dotnet-test\"}) with no selector (fall back to `dotnet test` if unavailable — it skips test
+   projects that can't run on this host and excludes UI-category tests). If everything passes, report back only that all tests passed. If anything fails, report back only the
    failing test names, the failure reason, and the stack trace for each."})`. Fix any regression, then re-invoke
    until it reports all tests passed.
 6. **Code quality**, for the same type set as Step 1, by delegating to `iru-gate-runner`: `Agent({description: "Check
