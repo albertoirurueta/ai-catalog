@@ -1,0 +1,115 @@
+= Rust Test
+:description: Runs a Rust crate or Cargo workspace tests with cargo-nextest or cargo test, plus doctests and ignored container tests, and reports a compact summary.
+:keywords: iru-rust-test, claude code skill, rust, cargo, nextest, cargo test, doctests, junit, run tests, ignored tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Rust project's tests, whether a single crate or a Cargo workspace (a command-line tool with `src/lib.rs` plus a thin `src/main.rs`, an `xtask` member, a library), scope the run to what the caller asked for, and report a compact pass/fail summary. It is a read-only reporting skill: it never fixes a failing test, edits source or test code, updates `Cargo.lock`, installs tools, or starts containers unless asked to as a follow-up.
+
+== Purpose
+
+`iru-rust-test` surveys the workspace with `cargo metadata`, always passes `--locked` when a `Cargo.lock` exists, and picks the runner: cargo-nextest when installed (JUnit XML through the project's own `junit` profile or an injected `iru-rust-test` profile) and `cargo test` otherwise (libtest console output parsed). Doctests run separately through `cargo test --doc`, because nextest cannot run them and bin-only crates have none. `#[ignore = "..."]` tests, this catalog's marker for container or network-backed tests, are excluded by default and run only on request, serialized repository-wide behind the shared `.integration-test.lock`. A filter that matched nothing, a build failure, a stale `Cargo.lock`, a bad `package:` name and an unavailable Docker daemon are each reported plainly, never as "0 passed".
+
+== Purpose group
+
+xref:index.adoc#group-rust[Rust Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-rust-test
+/iru-rust-test <filter> [<filter> ...]
+/iru-rust-test expr:<nextest filterset>
+----
+
+Optional `key: value` lines may follow the filters.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`filter`
+|No
+|Zero or more positional test-name substrings (OR-ed), or one nextest filterset prefixed `expr:` (for example `expr:test(/greet/) & package(democli)`). Filtersets need nextest and cannot be honored with `cargo test`.
+|Every test in the selection.
+
+|`package: <name>`
+|No
+|Run one workspace member (`-p <name>`). An unknown name is reported as a bad selector.
+|Every member (`--workspace`).
+
+|`target: lib\|bins\|tests\|doc\|<stem>`
+|No
+|Narrow to unit tests of the library, unit tests of the binaries, every test target, doctests only, or one integration test file by stem (`cli` is `tests/cli.rs`).
+|Everything, doctests included.
+
+|`features: all\|<comma list>`
+|No
+|`all` passes `--all-features`; a list passes `--features a,b`.
+|The default features; the report says which ran.
+
+|`ignored: exclude\|include\|only`
+|No
+|Whether `#[ignore]`d (container or network-backed) tests run. `include` and `only` go through the Docker check and the repository lock.
+|`exclude`
+
+|`lock: held`
+|No
+|Passed by a calling skill that already holds `.integration-test.lock`, so this skill neither acquires nor releases it.
+|Not set; the skill takes the lock itself for ignored selections.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation: the runner and selection used (for example cargo-nextest with the injected profile, `--workspace`, default features, ignored tests excluded), the pass, fail, error, skipped and flaky counts, and the doctest result reported separately ("no doctests" for a bin-only crate).
+* For each failure, the binary and test path with one cause line, usually the assertion text and its `file:line`. Flaky (retried) tests are reported apart from hard failures.
+* A filter that matched nothing (nextest exit `4`, or `cargo test` with all-zero counts), a build failure (first `error[E...]` line and file), a stale or missing `Cargo.lock`, and a bad `package:` are each stated plainly.
+* For `ignored: include` or `only`: whether the lock was acquired, waited for, or held by the caller. An ignored selection that could not run is reported as unverified (Docker unavailable, blocked by a concurrent run, test service unreachable), never as passed or failed.
+* Logs and the JUnit report are left under `target/iru-rust-test/` and `target/nextest/` (gitignored). No source or test code is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-rust-test\n(optional filters and key: value lines)"] --> B["Step 0: parse filters,\npackage, target, features,\nignored, lock"]
+    B --> C["Step 1: survey workspace\nwith cargo metadata, add --locked"]
+    C --> D{"Cargo.lock\nout of date?"}
+    D -- yes --> E["Stop: report Cargo.lock\nout of date, ask before updating"]
+    D -- no --> F["Pick runner:\nnextest if installed,\nelse cargo test"]
+    F --> G["Step 2: build command\n(project junit profile or\ninjected iru-rust-test profile)"]
+    G --> H{"ignored: include\nor only?"}
+    H -- no --> J["Run tests and write logs"]
+    H -- yes --> I["Step 3: check Docker and\nacquire .integration-test.lock"]
+    I --> K{"Docker up and\nlock acquired?"}
+    K -- no --> L["Report ignored selection\nas unverified"]
+    K -- yes --> J
+    J --> M["Step 4: run doctests with\ncargo test --doc\n(skip bin-only crates)"]
+    M --> N["Step 5: interpret exit codes,\nparse JUnit or libtest output"]
+    N --> O["Release the lock if acquired"]
+    O --> P["Step 6: report counts, doctests,\nnothing-matched, failures,\nenvironment problems"]
+    L --> P
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-rust-test` is a leaf skill; it only runs `cargo` commands and a small Python parser, and reports on their output.
+
+=== Invoked by
+
+* xref:skills/iru-rust-code-one-task-group.adoc[] — scoped tests per task, the full test run, and the container-backed `#[ignore]` run (with `lock: held` when it holds the lock), via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+Its test-runner choice and Step 3 lock protocol are also reused by xref:skills/iru-rust-coverage.adoc[].
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-rust-test/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

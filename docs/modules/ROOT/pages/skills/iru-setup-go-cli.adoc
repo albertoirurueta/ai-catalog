@@ -1,0 +1,177 @@
+= Setup Go CLI
+:description: Scaffolds an agent-friendly Go command-line tool: Cobra CLI, exit-code contract, JSON output, testscript tests, golangci-lint, GoReleaser and gendocs.
+:keywords: iru-setup-go-cli, claude code skill, go, cobra, bubble tea, testscript, golangci-lint, goreleaser, cli scaffold, bootstrap go cli
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Generate a complete, buildable, agent-friendly command-line tool in Go at the repository root: a thin entry point, all behaviour in `internal/` packages with unit and end-to-end tests, quality and release configuration, and a docs generator.
+
+== Purpose
+
+`iru-setup-go-cli` bootstraps a Go CLI from templates embedded in the skill's `reference/` files. The behaviour is the catalog's language-agnostic CLI contract (streams, a single exit-code table, TTY/colour/prompt rules, machine-readable output, safety annotations, flags-env-config precedence, self-description, signal handling) implemented idiomatically with Cobra.
+
+It writes:
+
+* `go.mod` (`go <minor>.0` plus a `toolchain` line) and `go.sum`;
+* a thin `cmd/<bin>/main.go` that only calls `cli.Main`, with a testscript driver `main_test.go`;
+* `internal/cli` (Cobra root, typed `*cli.Error`, exit codes 0-7/130/143 mapped in one place, JSON error envelope, colour and prompt handling, config, signals) with the sample commands `greet`, `schema`, `version` and `completion`;
+* `internal/version` (ldflags-injected version, `0.1.0-dev` in-tree);
+* with `ui: tui`, a Bubble Tea v2 and Lip Gloss v2 `browse` command in `internal/tui`;
+* unit tests plus testscript end-to-end scripts under `testdata/script/`;
+* a golangci-lint v2 `.golangci.yml`, a GoReleaser v2 `.goreleaser.yaml` (when `distribution` is not `none`), and `tools/gendocs` (man pages, Markdown, completions and the Antora `cli-reference.adoc`).
+
+The skill announces whether it is scaffolding from scratch or updating an existing Go CLI. For every file group it owns that already exists it warns and asks Update / Keep as is / Replace / Stop (unless `on-existing` decides), and it never overwrites hand-written Go or txtar files. Module versions are looked up live (proxy.golang.org, go.dev) with a dated fallback table. It writes no workflow, `.gitignore`, README, CHANGELOG, `LICENSE`, Antora site or Sonar file; the sibling skills chained by xref:skills/iru-setup-cli-repository.adoc[] own those. Its layout is the scaffold contract that the `iru-go-*` skills detect.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-go-cli
+----
+
+== Inputs
+
+All inputs are optional `key: value` lines in `args`; any key found is resolved and its question skipped. Unknown keys from a full shared-args set are ignored and named in the report.
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`bin-name`
+|Yes (unless supplied via `args`)
+|The command users type, matching `^[a-z][a-z0-9-]*$`. Names the binary, `cmd/<bin>/`, the GoReleaser project, man pages and completions. The env prefix is the upper-cased name with `-` turned into `_`.
+|Repository directory name, lower-cased
+
+|`module-path`
+|No
+|Go module path. A major version of 2 or more needs a `/vN` suffix; the skill warns and never adds it silently.
+|`github.com/<owner>/<repo>`
+
+|`description`
+|Yes (unless supplied via `args`)
+|One sentence used in the root command, package comment and GoReleaser descriptions; a trailing period is added.
+|None
+
+|`ui`
+|No
+|`none` or `tui`. `tui` adds the TTY-gated Bubble Tea `browse` command.
+|`none`
+
+|`go-version`
+|No
+|`go` directive minor, e.g. `1.27`; the `toolchain` line is always the latest patch of that minor.
+|Latest stable minor
+
+|`owner`
+|No
+|GitHub owner used for the module path, release URLs and package-channel repositories.
+|Derived from `origin`
+
+|`version`
+|No
+|In-tree version (afterwards owned by xref:skills/iru-go-bump-version.adoc[]).
+|`0.1.0-dev`
+
+|`license`
+|No
+|Display name or SPDX id, or `none`; drives only the GoReleaser license fields and the `LICENSE*` archive entry.
+|Asked (MIT recommended)
+
+|`developer-name` / `developer-email` / `organization-url`
+|No
+|WinGet publisher and report details.
+|Asked
+
+|`open-source` / `visibility` / `ci` / `sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|Recorded for the report only; no file written here carries them. `open-source` is asked stand-alone to default `distribution`.
+|Unset
+
+|`distribution`
+|No
+|`none` (no `.goreleaser.yaml`), `internal` (archives and `SHA256SUMS` on GitHub Releases), or `store` (`internal` plus package channels).
+|`store` when open source, otherwise `internal`
+
+|`channels`
+|No
+|Comma list, only with `store`: `homebrew`, `scoop`, `winget`.
+|All three
+
+|`homebrew-tap` / `scoop-bucket`
+|No
+|`owner/repo` of the Homebrew tap and Scoop bucket repositories (the WinGet fork is always `<owner>/winget-pkgs`).
+|`<owner>/homebrew-tap` / `<owner>/scoop-bucket`
+
+|`mode`
+|No
+|`new` or `existing`. `existing` never means a silent gap-fill: Step 1 still warns and asks per existing file group.
+|`new`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; answers Step 1's per-group question for every existing group at once (the warning is still printed).
+|`ask`
+|===
+
+== Outputs
+
+* The Go module and source skeleton described under Purpose, written with Step 1's per-group decision applied to existing files.
+* A verified project: build, vet (also `GOOS=windows` and `linux/arm64`), `gofmt`, race tests, coverage of at least 80%, golangci-lint, govulncheck, gendocs output, and contract smoke checks against the built binary; with GoReleaser installed, `goreleaser check` and a snapshot release.
+* A report of the resolved names, `go`/`toolchain` lines, version, license, distribution and channels, the mode, and per file group the action taken (created, updated, replaced or kept as is, with mismatches for kept groups), which versions were live versus fallback, ignored `args` keys, every verification result (unverified items with the reason), and suggested follow-up Antora pages.
+* A scaffold-contract table (exact names, commands and paths that downstream `iru-go-*` skills rely on) and a warning block: review generated files, run xref:skills/iru-setup-go-gitignore.adoc[], treat exit codes and JSON field names as a public interface, create release secrets and tap/bucket repositories before the first `store` release, and add a `LICENSE` file.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A[Start /iru-setup-go-cli] --> B["Step 0: Resolve inputs\nfrom args key: value lines"]
+    B --> C["Step 1: Survey repository\nfor Go CLI files"]
+    C --> D{"What is there?"}
+    D -- nothing --> E["Announce: scaffolding\nfrom scratch"]
+    D -- existing Go CLI --> F["Announce: updating; list files"]
+    D -- foreign layout --> G{"Add only non-code pieces\nor stop?"}
+    G -- stop --> Z1[Report nothing changed; end]
+    G -- add pieces --> F
+    F --> H{"on-existing decides?"}
+    H -- yes --> I["Apply to every existing group"]
+    H -- no --> J{"AskUserQuestion per group:\nUpdate / Keep as is /\nReplace / Stop"}
+    J -- Stop --> Z1
+    J -- other --> I
+    E --> K
+    I --> K["Step 2: Collect missing inputs\n(bin-name, description, ui,\nlicense, distribution, channels)"]
+    K --> L["Step 3: Infer owner and repo\nfrom git remote"]
+    L --> M{"Step 4: go installed\nand new enough?"}
+    M -- no --> Z2[Tell user to install Go; stop]
+    M -- yes --> N["Look up Go and module versions live,\nfall back to dated table"]
+    N --> O["Step 5: Read reference templates\nand resolve placeholders"]
+    O --> P["Step 6: go mod init and go get,\nwrite templates per group decision,\ngofmt, go mod tidy"]
+    P --> Q["Step 7: Verify via iru-gate-runner\nbuild, vet, tests with race and coverage,\ngolangci-lint, govulncheck, gendocs"]
+    Q --> R["Contract smoke checks\nagainst built binary"]
+    R --> S{"distribution is not none\nand goreleaser installed?"}
+    S -- yes --> T["goreleaser check and\nsnapshot release"]
+    S -- no --> U
+    T --> U["Step 8: Report mode, per-group action,\nversions, verification, scaffold contract,\nand warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-setup-go-cli` is a leaf skill; it does not call any other skill in this catalog. Its Step 7 verification commands (tests, lint, GoReleaser) are run through the `iru-gate-runner` agent rather than through gate skills.
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] — the command-line tool orchestrator runs `iru-setup-go-cli` as its scaffold step for the `go` language, passing the shared bootstrap inputs through `args`.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 runs the long-output checks (tests, lint, GoReleaser) through this agent so the caller gets a compact pass/fail summary.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-go-cli/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

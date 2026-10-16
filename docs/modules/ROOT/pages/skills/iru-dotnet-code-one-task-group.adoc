@@ -1,6 +1,6 @@
 = .NET Code One Task Group
-:description: Implements one bucket of .NET tasks via iru-dotnet-code-one-task per task, then validates the bucket once for license headers, doc comments, and tests.
-:keywords: iru-dotnet-code-one-task-group, claude code skill, dotnet, csharp, code coverage, license headers, xml doc comments, quality baseline, full test suite
+:description: Implements one bucket of .NET tasks via iru-dotnet-code-one-task, then validates once: licenses, docs, tests, coverage, plus Native AOT for CLI tools.
+:keywords: iru-dotnet-code-one-task-group, claude code skill, dotnet, csharp, code coverage, license headers, xml doc comments, quality baseline, full test suite, native aot, system.commandline, cli tool
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -33,6 +33,17 @@ are excluded by default and `net*-windows*` test projects are skipped off Window
 a small WinForms/WPF tool still validates here — its UI tests are just never run. The full-suite check calls
 `iru-dotnet-test` with no selector rather than a raw `dotnet test`.
 
+*Command-line tools.* Before Step 1 the skill detects a CLI-shaped project (an `Exe` project on System.CommandLine
+with `PublishAot`/`PackAsTool`, as scaffolded by xref:skills/iru-setup-dotnet-cli.adoc[]: `src/<Tool>`,
+framework-free `src/<Tool>.Core`, `tests/<Tool>.Core.Tests`, `tests/<Tool>.Cli.Tests`). For that shape, coverage is
+measured only on changed Core classes (the thin command tree is reported "not measured" and covered behaviourally
+by the in-process CLI tests), the full suite includes `tests/<Tool>.Cli.Tests`, and two extra checks run when
+applicable. 3.7 is a Native AOT `dotnet publish -r <host-rid> -c Release`, run via the
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent when the bucket touched the CLI project, Core or the build
+files; it must finish with zero IL trim/AOT warnings and the published-binary tests must pass, and a missing native
+toolchain makes it "unverified", never "passed". 3.8 regenerates the CLI reference when a command, argument or option
+changed and checks that the generated page is current.
+
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]
@@ -62,6 +73,8 @@ verdict and any relevant "Current code state" context.
 * Source and test files created/modified per task, via `iru-dotnet-code-one-task`.
 * License headers and XML doc comments kept current across every file/type the bucket touched, checked once for
   the whole bucket rather than once per task.
+* For CLI-shaped projects: a Native AOT publish result (zero IL trim/AOT warnings, published-binary test counts, or
+  "unverified" when no native toolchain is available) and a current generated CLI reference page.
 * Tests achieving at least 80% line coverage for the bucket's changed/new classes, verified against the real
   coverage report.
 * `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note — first an
@@ -86,7 +99,7 @@ flowchart TD
     C -- no --> E["Step 2: invoke dotnet-code-one-task\nfor each task, one at a time"]
     D --> F["Confirm/backfill each task's box\n(set by dotnet-code-one-task itself); notify user"]
     E --> F
-    F --> G["Step 3: validate the whole bucket once —\nlicense headers, XML doc comments,\nscoped tests, coverage, full suite,\nquality vs. baseline"]
+    F --> G["Step 3: validate the whole bucket once —\nlicense headers, XML doc comments,\nscoped tests, coverage, full suite,\nquality vs. baseline;\nCLI tools: Core-only coverage,\n3.7 Native AOT publish, 3.8 CLI reference"]
     G -- failure traced to a task --> H["Fix that task's implementation;\nre-run the affected check(s)"]
     H --> G
     G -- clean --> I["Step 4: finalize each task's note\nwith final outcome; notify user"]
@@ -112,7 +125,11 @@ so verbose report output stays out of this skill's own context:
 * xref:skills/iru-dotnet-docfx.adoc[] — Step 3, XML doc comments for every type the bucket touched.
 * xref:skills/iru-dotnet-test.adoc[] — Step 3, scoped tests for every type the bucket affected, plus a full-suite
   run.
-* xref:skills/iru-dotnet-coverage.adoc[] — Step 3, coverage for every changed/new class in the bucket.
+* xref:skills/iru-dotnet-coverage.adoc[] — Step 3, coverage for every changed/new class in the bucket (CLI tools:
+  Core classes only).
+
+For CLI-shaped projects the Native AOT publish check (Step 3, item 7) is also delegated to
+xref:agents/iru-gate-runner.adoc[`iru-gate-runner`], as a full project build (`dotnet publish`), not a catalog skill.
 
 === Invoked by
 

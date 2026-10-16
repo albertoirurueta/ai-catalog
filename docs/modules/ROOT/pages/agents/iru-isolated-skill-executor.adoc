@@ -38,6 +38,10 @@ might be asked to run.
   matching `<key>-code-one-task` skill — since that skill always re-checks the current code state from disk
   itself and hands back a self-contained summary, isolating it keeps the caller's own context flat regardless of
   how many tasks the bucket has.
+* xref:skills/iru-rust-code-one-task-group.adoc[] and xref:skills/iru-go-code-one-task-group.adoc[] — once per task in a
+  bucket, to invoke `iru-rust-code-one-task` / `iru-go-code-one-task`, the same way as the Java/.NET groups.
+* xref:skills/iru-setup-cli-repository.adoc[] — runs the scaffold, changelog and readme sub-skills of a command-line
+  tool repository in fresh contexts.
 * xref:skills/iru-java-springboot-code-one-task-group.adoc[] — once per task in a bucket (many at once when the
   group is marked parallelizable) to invoke `iru-java-springboot-code-one-task`, for the same reason as its
   Java/.NET siblings: that skill re-resolves the target module and the current code state from disk itself and hands

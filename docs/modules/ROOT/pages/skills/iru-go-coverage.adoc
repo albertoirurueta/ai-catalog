@@ -1,0 +1,114 @@
+= Go Coverage
+:description: Measures statement coverage of a Go module's container-free tests with -coverpkg and a stdlib Python profile parser, reporting per-file gaps against a bar.
+:keywords: iru-go-coverage, claude code skill, go, coverage, coverprofile, coverpkg, testscript, covdata, statement coverage, measure coverage
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Go module's (or Go workspace's) fast, container-free tests with Go's statement coverage and report the exact, measured coverage for the files the caller cares about, read from the coverprofile. It is a report-only skill: it never adds tests or modifies source or test code.
+
+== Purpose
+
+`go tool cover -func` only reports per-function figures, so `iru-go-coverage` runs `go test -covermode=atomic -coverpkg=<pattern> -coverprofile=build/coverage/cover.out` and reads the profile with a small stdlib Python parser. The parser merges the duplicate blocks `-coverpkg` writes once per test binary, maps import paths back to repository-relative files, excludes generated files (`// Code generated ... DO NOT EDIT.`), and reports the statement % for the total and per file, with uncovered line ranges for files under the bar.
+
+`-coverpkg=./...` makes code exercised from another package's tests count, including in-process testscript end-to-end tests that run the Cobra command tree, so a thin `cmd/<bin>/main.go` and `internal/cli` are measured fairly. Optionally a second profile from instrumented binaries (`go build -cover`, `GOCOVERDIR`, `go tool covdata textfmt`) is merged in. Branch coverage is reported as "not available in Go". Only container-free tests count toward the gate: the `integration` build tag is not set unless asked, and then the result is labeled as not the gate value. A target with no statements or outside `-coverpkg` is reported as "not in profile" rather than a false 0%.
+
+== Purpose group
+
+xref:index.adoc#group-go[Go Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-go-coverage
+/iru-go-coverage <targets>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`targets`
+|No
+|Comma-separated Go files, package directories, directory trees (`internal/cli/...`) or import paths to report on.
+|Every file in the profile (whole-module coverage).
+
+|`bar: <N>`
+|No
+|The threshold each target is judged against.
+|`80`
+
+|`coverpkg: <pattern>`
+|No
+|What is instrumented. In a `go.work` workspace whose root is not a module, the default is one `./<dir>/...` per workspace module, comma-joined.
+|`./...`
+
+|`tags: <comma list>`
+|No
+|Build tags, with the semantics of `iru-go-test`. Containing `integration` triggers a separate, labeled integration run.
+|Not set.
+
+|`run: <regex>`
+|No
+|Narrows the tests that run. Undercounts code other tests also exercise, so the tests that ran are named in the report.
+|The whole fast suite.
+
+|`profile: <path>`
+|No
+|An extra coverprofile to merge, for example a `go tool covdata textfmt` output from an instrumented binary.
+|None.
+
+|`lock: held`
+|No
+|Only meaningful with `tags: integration`: the caller already holds `.integration-test.lock`.
+|Not set.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation: the toolchain, how coverage was collected (`-coverpkg` pattern, `-covermode=atomic`, whether a binary profile was merged), the test selection (and that `integration`-tagged tests were not compiled), and whether the tests passed.
+* Total statement %, with a verdict against the bar, and "branch coverage: not available in Go".
+* Per target (or per file): statement %, and for every target under the bar the uncovered line ranges.
+* Excluded generated files, thin entry points with no logic, and every `NOT IN PROFILE` target with its reason.
+* Coverage from a failing run is reported with the failures listed, and a build failure is reported instead of a percentage.
+* `build/coverage/cover.out` is left in place when `build/` is gitignored, otherwise deleted. No source, test or configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-go-coverage\n(optional targets, bar, coverpkg, tags, run, profile)"] --> B["Step 1: determine scope, toolchain\nand test selection"]
+    B --> C{"Wiring ok?\n(Go, vendoring, go version)"}
+    C -- no --> D["Stop: report wiring problem\nwith command and fix"]
+    C -- yes --> E["Step 2: go test -covermode=atomic\n-coverpkg to cover.out"]
+    E --> F{"Integration tag\nrequested?"}
+    F -- yes --> G["Separate integration profile\nunder lock, labeled not the gate value"]
+    F -- no --> H{"Binary e2e harness\nwired or requested?"}
+    G --> H
+    H -- yes --> I["Step 3: go build -cover, run with\nGOCOVERDIR, covdata textfmt"]
+    H -- no --> J["Step 4: parse profile, merge\nduplicate blocks, exclude generated"]
+    I --> J
+    J --> K["Step 5: report total, per-target\nstatement % and uncovered ranges"]
+    D --> K
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-go-coverage` is a leaf skill. It follows the toolchain, module/workspace detection and container-backed lock procedure of xref:skills/iru-go-test.adoc[] by reusing the same rules rather than invoking it.
+
+=== Invoked by
+
+* xref:skills/iru-go-code-one-task-group.adoc[] — the 80% statement-coverage gate per changed file, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-go-coverage/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -6,14 +6,16 @@ description: Create or update the root `.gitignore` for a Swift package/library 
   (XcodeGen) or `Project.swift` (Tuist) is present — kept tracked otherwise, since a hand-maintained `.xcodeproj` is
   a real source file), `Package.resolved` (asked via `AskUserQuestion`: commit it for an app, ignore it for a
   library — with the reasoning), Fastlane output (`fastlane/report.xml`, `fastlane/screenshots/`,
-  `fastlane/test_output/`, when `fastlane/` exists), macOS desktop distribution output (root `/build/` — or only its
+  `fastlane/test_output/`, when `fastlane/` exists), command-line tool outputs (`flavor: cli` — the docs generator's
+  and release packaging's root `/dist/` and `/build/`, root release archives `/*.tar.gz`/`/*.zip` and `/SHA256SUMS`; `Package.resolved`
+  committed by default), macOS desktop distribution output (root `/build/` — or only its
   generated subfolders when something under `build/` is tracked —, `*.xcarchive/`, `*.dmg`, `*-notarize.zip`, when
   `scripts/make-dmg.sh` or an `ExportOptions-*.plist` exists), signing material (`*.p8`, `*.p12`, `*.mobileprovision`,
   `*.cer`), `.DS_Store`, and, when detected, Antora docs build output (`docs/build/`) and DocC-generated API
   reference (`docs/api/`). Invoke as `/iru-setup-swift-gitignore`, optionally with `args`: `mode: new|existing`
-  (default: detected from whether a root `.gitignore` already exists), `flavor: library|app` and
+  (default: detected from whether a root `.gitignore` already exists), `flavor: library|app|cli` and
   `package-resolved: commit|ignore` (pre-resolved answers so `iru-setup-swift-library`/`iru-setup-apple-app`/
-  `iru-setup-swift-repository` can pass them straight through instead of triggering the `AskUserQuestion` prompt),
+  `iru-setup-swift-repository`/`iru-setup-cli-repository` can pass them straight through instead of triggering the `AskUserQuestion` prompt),
   plus `on-existing: ask|keep|update|replace` for scripted runs. Announces whether it is creating `.gitignore`
   from scratch or updating an existing one — if one already exists, it warns and, after showing the proposed
   merge as a diff, asks Update (merge, keeping every hand-added entry) / Keep as is / Replace (template only,
@@ -39,12 +41,14 @@ Parse `args` as `key: value` lines, skipping any question already answered:
   `existing`; its absence means `new`. Either way the file actually on disk decides the path: an existing
   `.gitignore` always goes through Step 5's warn-and-ask (unless `on-existing` says otherwise), even under
   `mode: new`.
-- `flavor: library|app` — if omitted, infer it before Step 4 needs it: a `Package.swift` whose top-level `Package`
+- `flavor: library|app|cli` — if omitted, infer it before Step 4 needs it: a `Package.swift` with an
+  `.executableTarget` depending on `ArgumentParser` (an `.executable(...)` product) and no `.xcodeproj`/`project.yml`/
+  `Project.swift` means `cli` (the `iru-setup-swift-cli` layout); a `Package.swift` whose top-level `Package`
   declares only `.library(...)` products (no `.executable(...)`, and no `.xcodeproj`/`.xcworkspace` for an iOS/macOS
   app target) means `library`; an `.xcodeproj`/`.xcworkspace` at the root, an `Info.plist` with an
-  `CFBundleIdentifier`/app-icon asset catalog, or a `Package.swift` declaring an `.executable(...)`/iOS app product
-  means `app`. If neither signal is present yet (brand-new, empty repository — this skill running ahead of
-  `iru-setup-swift-library`/`iru-setup-apple-app`), leave it unresolved and let Step 4's `AskUserQuestion` establish
+  `CFBundleIdentifier`/app-icon asset catalog, or a `Package.swift` declaring any other `.executable(...)`/iOS app
+  product means `app` (the `cli` rule is checked first). If no signal is present yet (brand-new, empty repository —
+  this skill running ahead of `iru-setup-swift-library`/`iru-setup-apple-app`/`iru-setup-swift-cli`), leave it unresolved and let Step 4's `AskUserQuestion` establish
   it together with `package-resolved`.
 - `package-resolved: commit|ignore` — if omitted, resolve it in Step 4 via `AskUserQuestion` (informed by
   `flavor` above when known).
@@ -140,7 +144,8 @@ sibling skill) in the target repository.
 - **`Package.resolved`** (`Package.swift` found in Step 1, i.e. this is a SwiftPM package/project at all): resolve
   via `args`' `package-resolved` if given; otherwise ask with `AskUserQuestion` (informed by `flavor` when already
   known, otherwise ask both together):
-  - **Commit it** (recommended default for `flavor: app`): an application should pin its exact resolved dependency
+  - **Commit it** (recommended default for `flavor: app` and `flavor: cli`): an application — and a command-line
+    tool is one — should pin its exact resolved dependency
     graph for reproducible builds across machines and CI, the same reason a `package-lock.json`/`Package.lock` gets
     committed — don't add a `Package.resolved` entry to the template at all (it stays tracked).
   - **Ignore it** (recommended default for `flavor: library`): a library's own `Package.resolved` only pins
@@ -183,6 +188,24 @@ sibling skill) in the target repository.
   zip can't be stapled, so it is a throwaway). `scripts/make-dmg.sh`, `ExportOptions-*.plist`, `project.yml`,
   `App/**` and `Packages/Core/**` (sources, tests, `Package.swift`, `Package.resolved`) stay tracked. Skip the whole
   section when neither file exists.
+
+- **Command-line tool outputs** (`flavor: cli`, or `scripts/generate-docs.sh` found in Step 1): add
+  ```gitignore
+  # Command-line tool outputs — scripts/generate-docs.sh (man page, completions, schema.json) and release packaging
+  /dist/
+  /build/
+  /*.tar.gz
+  /*.zip
+  /SHA256SUMS
+  ```
+  All five are root-anchored: `/dist/` is `scripts/generate-docs.sh`'s default output directory, `/build/` the one
+  the CI docs job passes it (`scripts/generate-docs.sh build/gendocs`, `iru-setup-cli-github-workflows`), and
+  `/dist/` is also where release packaging stages `<bin>-<version>-<target>.tar.gz`/`.zip` archives; archives or a `SHA256SUMS` left at the root by
+  a local packaging run are covered too, while a zip/tarball fixture under `Tests/` stays tracked. The man page the
+  `generate-manual` plugin writes (`.build/plugins/GenerateManual/outputs/…`) and DocC archives are already under
+  `.build/`. The generated Antora partial `docs/modules/ROOT/partials/cli-reference.adoc` is **not** ignored — it is
+  committed and regenerated by `scripts/generate-docs.sh` so the docs site builds without compiling the tool. Skip
+  the section for `library`/`app` flavors without that script.
 
 - **Signing material** — unconditional (see Step 2's note on why this isn't gated on Fastlane): add
   ```gitignore
@@ -251,7 +274,8 @@ root. Then summarize:
 - The path announced in Step 1 and the action actually taken — **created / updated / replaced / kept as is** —
   and which lines were added (or, for kept as is, which expected entries remain missing; for replaced, which
   hand-added lines were dropped).
-- Which conditional Step 3 sections were included versus skipped and why (e.g. "no XcodeGen/Tuist section — no
+- Which conditional Step 3 sections were included versus skipped and why (e.g. "command-line tool outputs —
+  `flavor: cli`", "no XcodeGen/Tuist section — no
   `project.yml`/`Project.swift` found, so `MyApp.xcodeproj` stays tracked", "no Fastlane section — no `fastlane/`
   directory", "no DocC section — no `*.docc` catalog and no DocC plugin dependency").
 - The `Package.resolved` decision: whether it was pre-resolved via `args`, asked via `AskUserQuestion`, or
@@ -337,3 +361,14 @@ scaffold after a real `xcodegen generate`, `xcodebuild test`/`archive`/`-exportA
 Not independently re-verified here (already covered by the sibling gitignore skills' own verification, and nothing
 Swift-specific changes their behavior): the generic diff/`git diff --no-index`-based approval flow in Step 5, and
 `AskUserQuestion`'s prompt/response mechanics in Step 3.
+
+**Command-line tool section (`flavor: cli`)** — verified on 2026-10-16 in
+`$TMPDIR/iru-verify/cli/swift/iru-setup-swift-cli/gitignore-check/` (a copy of an `iru-setup-swift-cli` scaffold after
+`swift build`, `swift test --enable-code-coverage`, a universal release build and `scripts/generate-docs.sh`), with the
+base + CLI section + signing + `docs/build/` composed into `.gitignore` and `Package.resolved` committed:
+
+| Path | Expected | Result |
+|---|---|---|
+| `.build/…` (incl. `.build/plugins/GenerateManual/outputs/<Bin>/<bin>.1`), `build/gendocs/man/<bin>.1`, `dist/man/<bin>.1`, `dist/completions/_<bin>`, `dist/schema.json`, `<bin>-0.1.0-x86_64-apple-darwin.tar.gz`, `<bin>-0.1.0-x86_64-pc-windows-msvc.zip`, `SHA256SUMS` (root) | ignored | ignored — `.build/` / `/build/` / `/dist/` / `/*.tar.gz` / `/*.zip` / `/SHA256SUMS` |
+| `Package.swift`, `Package.resolved`, `Sources/**`, `Tests/**` (incl. a `Tests/Fixtures/sample.zip`), `scripts/generate-docs.sh`, `.swiftlint.yml`, `.swift-format`, `docs/antora.yml`, `docs/modules/ROOT/partials/cli-reference.adoc` | **tracked** | **not ignored** (`git check-ignore` silent) |
+

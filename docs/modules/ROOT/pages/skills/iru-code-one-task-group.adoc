@@ -1,6 +1,6 @@
 = Code One Task Group
 :description: Implements every task in one plan group by dispatching each task's language to a matching skill and checks off its implementation_plan.md boxes.
-:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, kotlin, quarkus, php, nextjs, fastapi, django, typescript, kmp, react native, windows desktop
+:keywords: iru-code-one-task-group, claude code skill, implementation plan, task group, java, kotlin, quarkus, php, nextjs, fastapi, django, typescript, kmp, react native, windows desktop, rust, go
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -20,7 +20,7 @@ tasks (no resolved key, or a key with no matching group skill) directly itself, 
 implement/test/license/document/verify obligations a one-task skill would. The installed group skills are discovered at run time
 (`find .claude/skills -maxdepth 1 -type d -name "*-code-one-task-group"`, key = directory name minus the `iru-` prefix
 and `-code-one-task-group` suffix) rather than hard-coded; the catalog currently ships `java`, `java-springboot`,
-`kotlin-springboot`, `quarkus`, `php`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `fastapi`, `django`, `android`, `swift`, `kmp`, `react-native`, `windows` and `database`.
+`kotlin-springboot`, `quarkus`, `php`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `fastapi`, `django`, `android`, `swift`, `kmp`, `react-native`, `windows`, `rust`, `go` and `database`.
 It checks off each task/sub-task's
 box in `implementation_plan.md` and notifies the user as it happens, so `iru-code` doesn't need to track per-task
 progress itself.
@@ -101,6 +101,8 @@ flowchart TD
 * xref:skills/iru-kmp-code-one-task-group.adoc[] — the same role, for tasks tagged `kmp` (Kotlin Multiplatform).
 * xref:skills/iru-react-native-code-one-task-group.adoc[] — the same role, for tasks tagged `react-native`.
 * xref:skills/iru-windows-code-one-task-group.adoc[] — the same role, for tasks tagged `windows` (Windows desktop apps: WPF, WinUI 3, Windows Forms).
+* xref:skills/iru-rust-code-one-task-group.adoc[] — the same role, for tasks tagged `rust`.
+* xref:skills/iru-go-code-one-task-group.adoc[] — the same role, for tasks tagged `go`.
 * xref:skills/iru-database-code-one-task-group.adoc[] — the same role for tasks tagged `database`, but deliberately
   simpler: always sequential, with no quality baseline or bucket-wide validation of its own.
 

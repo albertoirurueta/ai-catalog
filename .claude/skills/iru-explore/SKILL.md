@@ -1,7 +1,7 @@
 ---
 name: iru-explore
 description: >-
-  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), React Native (Expo vs. bare React Native CLI/Metro toolchain), Ionic/Capacitor, Kotlin Multiplatform (Compose Multiplatform vs. native UI), Android (library vs. application, Compose), SwiftPM/Xcode/XcodeGen/Tuist stacks, macOS desktop apps (SwiftUI vs. AppKit, MVVM vs. MVC), and Windows desktop apps on .NET (WPF, WinUI 3, Windows Forms; MVVM vs. MVC) — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
+  Explore this repository codebase, optionally grounded in a specific GitHub issue or Jira ticket used as the task to investigate, and detect the programming language(s) and framework(s) in play — including Vite+React, Angular CLI, Hilla (Spring Boot + Vaadin + Hilla), Kotlin Spring Boot, Quarkus (Java or Kotlin), NestJS, Next.js, PHP (Laravel, WordPress plugin/theme, PrestaShop module, plain Composer package), Python (FastAPI, Django, plain package), React Native (Expo vs. bare React Native CLI/Metro toolchain), Ionic/Capacitor, Kotlin Multiplatform (Compose Multiplatform vs. native UI), Android (library vs. application, Compose), SwiftPM/Xcode/XcodeGen/Tuist stacks, macOS desktop apps (SwiftUI vs. AppKit, MVVM vs. MVC), Windows desktop apps on .NET (WPF, WinUI 3, Windows Forms; MVVM vs. MVC), Rust and Go projects, and command-line tools (Rust clap/Ratatui, Go Cobra/Bubble Tea, Swift ArgumentParser, .NET System.CommandLine) — both in the existing codebase and in the requested change, and reports a normalized `Project type:` line for downstream bootstrap tooling — plus whether Antora documentation exists and where, which platform hosts the repository (GitHub, Bitbucket, Azure DevOps, or TFS), and whether a `.archive/` directory holds implementation plans from previously resolved tasks that resemble the current one. Works even when the current working directory isn't a git repository at all — it warns the user that git-remote-dependent tooling (e.g. `gh` inferring an owner/repo, `git log` history) won't work, then keeps going with whatever sources don't need one: a Jira ticket, a connected documentation MCP, and any files actually present in the working directory. Invoke as `/iru-explore <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`) — the skill auto-detects which. If invoked as `/iru-explore` with no argument, ask the user for a ticket ID; if they decline or give none, just explore the current codebase. Looks up GitHub issues with the `gh` CLI (or GitHub MCP tools if `gh` is unavailable) and Jira tickets via any connected Jira MCP tools — for a Jira ticket, also fetches its epic and any linked/related tickets (one hop out), and downloads and reads any `implementation_plan_*.md` attached to the ticket, its epic, or its linked tickets (the naming convention `iru-code`/`iru-issue` archive and attach a completed plan under), for additional context — and, if a documentation MCP (e.g. Confluence, Notion) is connected, searches it for pages relevant to the ticket or codebase for extra context. Use for onboarding, understanding "what would it take to fix issue #N"/"ticket PROJ-123", or getting oriented before planning work. Its "Tech stack" and "Related past implementation plans" findings (languages/frameworks, Antora docs location, repository host, relevant archived plans) are meant to be reused by later skills in the same conversation (e.g. `iru-plan`, `iru-code`, `iru-update-docs`, code review, branch/PR creation) to pick language/framework-appropriate flows, best practices, the right git-platform tooling, and proven prior plan structure.
 model: opus
 ---
 
@@ -357,7 +357,28 @@ fallback when manifests are absent or ambiguous:
       Sandbox/hardened-runtime entitlements, and the distribution files (`ExportOptions-*.plist`,
       `scripts/make-dmg.sh`) on the `Build & layout:` line.
   - `CMakeLists.txt`, `Makefile`, `*.vcxproj` with `.c`/`.cpp`/`.h`/`.hpp` sources → C/C++.
-  - `go.mod` → Go. `Cargo.toml` → Rust. `Gemfile` → Ruby.
+  - `Cargo.toml` → Rust. Record whether it is a workspace (`[workspace]` members, an `xtask/` member), the edition
+    and `rust-version` (MSRV), `rust-toolchain.toml`, and the lib/bin split (`src/lib.rs`, `src/main.rs`,
+    `[[bin]]` entries). A binary target **and** a `clap` dependency (or `ratatui`/`crossterm` for a terminal UI) →
+    a **command-line tool**: record the parser (clap derive vs. builder), the TUI library (`ratatui` + `crossterm`
+    → `ui: tui`, else `ui: none`), the async runtime (`tokio`), the test crates (`assert_cmd`, `predicates`,
+    `snapbox`/`trycmd`, `insta`), and the quality config (`[lints]`, `deny.toml`, `rustfmt.toml`, cargo-llvm-cov /
+    nextest config under `.config/`) on the `Build & layout:` line. Any other crate is a plain Rust project.
+  - `go.mod` → Go. Record the module path and `go` directive, a `go.work` workspace, and the layout (`cmd/<name>/`,
+    `internal/`, `pkg/`). A `package main` (under `cmd/<name>/` or at the root) **and** a CLI framework —
+    `github.com/spf13/cobra`, `github.com/urfave/cli`, or `github.com/alecthomas/kong` — or Bubble Tea
+    (`charm.land/bubbletea/v2`, `github.com/charmbracelet/bubbletea`) → a **command-line tool**: record the framework,
+    the TUI library (Bubble Tea → `ui: tui`), testscript e2e tests (`testdata/script/*.txtar`,
+    `github.com/rogpeppe/go-internal/testscript`), `.golangci.yml` (v1 or v2 config) and `.goreleaser.yaml` on the
+    `Build & layout:` line. Any other module is a plain Go project.
+  - **Command-line tools in Swift and .NET** — a `Package.swift` whose `.executableTarget` depends on
+    `ArgumentParser` (swift-argument-parser) → a Swift **command-line tool** (record the executable and library
+    targets, e.g. `<Bin>` + `<Bin>Kit`, and the CLI e2e test target); a `*.csproj` with
+    `<OutputType>Exe</OutputType>`, none of `UseWPF`/`UseWinUI`/`UseWindowsForms`, and a `System.CommandLine` or
+    `Spectre.Console.Cli` reference (or `<PackAsTool>true`) → a .NET **command-line tool** (record the Core project,
+    `PublishAot`, `PackAsTool`, Spectre.Console / Terminal.Gui for a terminal UI). Both still use the existing
+    `swift`/`dotnet` coding keys.
+  - `Gemfile` → Ruby.
 - **Source-level fallback**: when manifests are absent, sparse, or ambiguous (e.g. a monorepo with multiple
   stacks, or a manifest that doesn't disambiguate framework choice), sample actual source files — file
   extensions, `import`/`using`/`#include` statements, and characteristic APIs — to confirm or fill the gap.
@@ -429,14 +450,17 @@ Summarize for the user in plain text (no file output unless asked):
     python-fastapi, python-django, python-library,
     android-library, android-app, swift-library, apple-app (ios, ipados, macos, watchos, visionos),
     macos-app (swiftui|appkit), react-native-app (expo|metro), ionic-app (angular|react),
-    kmp-app (compose|native), windows-app (wpf|winui|winforms), dotnet, other, unknown>
+    kmp-app (compose|native), windows-app (wpf|winui|winforms), cli-tool (rust|go|swift|dotnet), rust, go,
+    dotnet, other, unknown>
   - Build & layout: <JVM backends: e.g. "Gradle (Kotlin DSL, wrapper), hexagonal reactor (domain/, application/,
     infrastructure/, api/)" or "Maven (wrapper), layered single-module"; NestJS: e.g. "ESM, Vitest, TypeORM";
     Next.js: e.g. "Next 16, App Router, cacheComponents: true"; PHP: e.g. "PHP ^8.3, Pest"; Python: e.g. "Python
     >=3.12, uv, pytest, app/ layered, SQLModel async + Alembic" or "Python >=3.12, uv, pytest-django, DRF,
     config.settings"; React Native: e.g. "Expo SDK 57, Expo Router, EAS, Maestro" or "RN 0.8x CLI (Metro), React
     Navigation, CocoaPods"; KMP: e.g. "Gradle (Kotlin DSL, wrapper), shared/ + androidApp/ + iosApp/ (XcodeGen),
-    Kover, detekt, ktlint" — omit for other stacks>
+    Kover, detekt, ktlint"; command-line tools: e.g. "clap 4 + ratatui (ui: tui), xtask, nextest, cargo-llvm-cov"
+    or "Cobra, cmd/mytool + internal/, testscript, golangci-lint v2, GoReleaser" or "swift-argument-parser,
+    MyTool + MyToolKit" or "System.CommandLine, Native AOT, Spectre.Console, MyTool.Core" — omit for other stacks>
   - Antora docs: <e.g. docs/ (antora.yml component "my-lib") — or "none found">
   - Repository host: <e.g. GitHub (github.com/org/repo) — or Bitbucket / Azure DevOps / TFS, with base URL — or
     "no remote configured" — or "none — not a git repository">
@@ -480,14 +504,17 @@ Summarize for the user in plain text (no file output unless asked):
   | `android-library`         | Gradle `com.android.library` plugin (direct or via `libs.versions.toml` alias)             |
   | `android-app`             | Gradle `com.android.application` plugin (direct or via `libs.versions.toml` alias)         |
   | `swift-library`           | `Package.swift` with a `.library(...)` product                                             |
-  | `apple-app`               | `Package.swift` `.executable(...)` product, or an Xcode/XcodeGen/Tuist app target          |
+  | `apple-app`               | An Xcode/XcodeGen/Tuist app target (or a `Package.swift` `.executable(...)` product that isn't an ArgumentParser command-line tool) |
   | `macos-app`               | An Xcode/XcodeGen/Tuist app whose **only** platform is macOS, not in the `iru-setup-apple-app` `Targets/<Platform>/` layout |
   | `react-native-app`        | `expo`/`react-native` deps (+ `app.json`/`metro.config.js`/`eas.json`, `ios/`+`android/`)   |
   | `kmp-app`                 | Kotlin Multiplatform plugin with Android + iOS targets (+ `iosApp/`, `commonMain/`)         |
   | `ionic-app`               | `@ionic/angular` or `@ionic/react` (+ `@capacitor/core`, `capacitor.config.*`)              |
   | `windows-app`             | A `WinExe` `*.csproj` with `UseWPF`/`UseWinUI`/`UseWindowsForms` (Windows desktop app)      |
+  | `cli-tool`                | A command-line tool: Rust binary + `clap` (or `ratatui`); Go `package main` + Cobra/urfave/kong (or Bubble Tea); a `Package.swift` `.executableTarget` on `ArgumentParser`; an `Exe` `*.csproj` (no WPF/WinUI/WinForms) with `System.CommandLine`/`Spectre.Console.Cli`/`PackAsTool` |
+  | `rust`                    | Any other `Cargo.toml` crate or workspace (library, service)                                |
+  | `go`                      | Any other `go.mod` module (library, service)                                                |
   | `dotnet`                  | Any other `*.csproj`/`*.fsproj`/`*.sln`/`*.slnx` (library, ASP.NET Core, MAUI/Xamarin)      |
-  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Go, Rust, Ruby, C/C++, a KMP library with no app) |
+  | `other`                   | A stack was detected but has no key above (e.g. Vue, Flutter, Micronaut, Flask, Ruby, C/C++, a KMP library with no app) |
   | `unknown`                 | Nothing in Step 5 matched any manifest or source-level signal                              |
 
   - `apple-app` lists its detected target platforms in parentheses, using the platform keys `ios`, `ipados`,
@@ -507,6 +534,12 @@ Summarize for the user in plain text (no file output unless asked):
   - `windows-app` lists its UI stack in parentheses — `windows-app (wpf)`, `windows-app (winui)` or
     `windows-app (winforms)`. Its `src/<App>.Core` class library and test projects are part of the same value,
     never extra `dotnet` entries or `multiple`.
+  - `cli-tool` lists its language in parentheses — `cli-tool (rust)`, `cli-tool (go)`, `cli-tool (swift)` or
+    `cli-tool (dotnet)` — and its `Build & layout:` line names the argument parser, the terminal-UI library when
+    there is one (`ui: tui`), and the e2e test setup. It takes precedence over `rust`/`go`/`swift-library`/
+    `apple-app`/`dotnet` for the same module: the library unit a CLI keeps its logic in (`src/lib.rs`, `internal/`,
+    `<Bin>Kit`, `src/<Tool>.Core`) and a Rust `xtask/` workspace member are part of the same value, never extra
+    entries or `multiple`.
   - `kmp-app` lists its UI approach in parentheses — `kmp-app (compose)` (Compose Multiplatform shared UI) or
     `kmp-app (native)` (shared logic, platform-native UI). Its Android host module (`androidApp/`) and `iosApp/`
     are part of the same value, never extra `android-app`/`apple-app` entries or `multiple`.

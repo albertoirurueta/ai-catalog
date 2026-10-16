@@ -1,7 +1,7 @@
 # Swift development reference
 
 General Swift 6 code agreements for implementing a task in a Swift Package or an Apple app project this catalog
-scaffolds (`iru-setup-swift-library`, `iru-setup-apple-app`, `iru-setup-macos-app`). These files exist so
+scaffolds (`iru-setup-swift-library`, `iru-setup-apple-app`, `iru-setup-macos-app`, `iru-setup-swift-cli`). These files exist so
 `iru-swift-code-one-task` can load **only** what the task in front of it actually needs, instead of carrying every rule in context on every
 task.
 
@@ -23,6 +23,8 @@ then read:
 | `appkit.md` | The task adds or changes AppKit code: window/view controllers, target-action, delegates/data sources, `NSMenu`, Auto Layout in code, AppKit MVVM via Observation tracking, or SwiftUI/AppKit interop. |
 | `ios.md` | The task touches an iOS/iPadOS app target: app/scene lifecycle and `scenePhase`, background tasks (`BGTaskScheduler`, background `URLSession`), notifications, permission prompts and `Info.plist` usage-description keys, the privacy manifest, widgets/App Intents, iPad windows/multitasking/menu bar/pointer/keyboard shortcuts, size classes, Dynamic Type/accessibility, Keychain secrets, or main-thread work. |
 | `uikit.md` | The task adds or changes UIKit code: app/scene delegates, view controllers, Auto Layout in code, navigation/tab/split containers, diffable collection views and cell registrations, `UIAction`/target-action, the trait system, UIKit MVVM via Observation tracking (`updateProperties()`/`UIObservationTrackingEnabled`), or `UIHostingController`/`UIHostingConfiguration`/`UIViewRepresentable` interop. |
+| `cli.md` | The package is a command-line tool (an `.executableTarget` depending on `ArgumentParser`) and the task adds or changes a command, flag, output, error/exit code, prompt, signal/cleanup, child process or the CLI tests — where code goes (`<Bin>Kit` vs the thin commands), swift-argument-parser patterns, implementing the contract, testing the executable, Linux portability. |
+| `cli-contract.md` | Together with `cli.md`, whenever a CLI task changes anything a caller observes: stdout/stderr, exit codes, `--format`/JSON, colour, prompts, `--dry-run`/`--yes`, `schema`/help text. |
 | `visionos.md` | The task touches a visionOS target or destination: windows, volumes, immersive spaces, ornaments, hover effects, `RealityView`/`Model3D`, or visionOS-unavailable APIs. |
 
 A task that only changes logic inside one existing function, with no signature change and no UI involved, needs
@@ -30,7 +32,9 @@ A task that only changes logic inside one existing function, with no signature c
 `package-api.md`/`app-structure.md` for a given task — a change belongs to the library's published surface or to
 the app's own target wiring, rarely both. Read at most one of `swiftui.md`/`appkit.md` for a given screen unless it
 hosts one framework inside the other — and likewise at most one of `uikit.md`/`appkit.md`. Read at most the platform
-file(s) of the target(s) the task touches: `macos.md`, `ios.md`, `visionos.md`.
+file(s) of the target(s) the task touches: `macos.md`, `ios.md`, `visionos.md`. A command-line tool task reads
+`cli.md` (+ `cli-contract.md` when observable behaviour changes) and never the app files; it reads `package-api.md`
+only if the Kit is also published as a library product.
 
 ## The three rules that override everything else
 
@@ -46,6 +50,14 @@ file(s) of the target(s) the task touches: `macos.md`, `ios.md`, `visionos.md`.
    those gates; don't run them here.
 
 ## Sources
+
+Command-line tool guidance (`cli.md`; `cli-contract.md` is the catalog's shared, language-agnostic contract, copied
+verbatim) is grounded in irurueta docs: ai/cli-for-agents/ (frameworks-swift-and-dotnet.adoc,
+streams-and-exit-codes.adoc, tty-colour-and-interactivity.adoc, machine-readable-output.adoc,
+safety-and-idempotency.adoc, self-describing-help.adoc, testing-clis.adoc, security.adoc, configuration-and-auth.adoc —
+https://www.irurueta.com/ai/cli-for-agents/index.html), irurueta docs: apps/apple/testing-with-swift-testing.adoc, the
+swift-argument-parser documentation and sources, and swift.org's Static Linux SDK guide; its snippets were
+type-checked with Swift 6.4 and swift-argument-parser 1.8.2 inside an `iru-setup-swift-cli` scaffold.
 
 Compiled from the following, cross-checked against each other and against a real Swift 6.4 toolchain (Xcode 27),
 with this catalog's own stated preferences taking precedence where they are stricter (notably on avoiding

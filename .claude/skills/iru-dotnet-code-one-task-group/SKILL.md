@@ -17,9 +17,14 @@ description: >-
   `iru-java-code-one-task-group` for .NET/C# projects (libraries, services, console apps); used by
   `iru-code-one-task-group`, which invokes this once per plan group for its .NET-tagged tasks. Windows desktop app
   repositories (WPF, WinUI 3, Windows Forms — plan key `windows`) use `iru-windows-code-one-task-group` instead, which
-  adds the Core-only coverage bar, host gating, and the lock-serialized UI-test stage.
+  adds the Core-only coverage bar, host gating, and the lock-serialized UI-test stage. Recognizes the command-line tool
+  shape (`iru-setup-dotnet-cli`: an `Exe` project on System.CommandLine with `PublishAot`/`PackAsTool` plus a
+  framework-free `src/<Tool>.Core`): the coverage bar is measured on Core classes (the thin command tree is "not
+  measured"), the in-process `tests/<Tool>.Cli.Tests` run in the full suite, and — when the bucket touched the CLI
+  project, Core or the build files — a Native AOT `dotnet publish -r <host-rid> -c Release` must finish with zero
+  IL trim/AOT warnings and the generated CLI reference must be current.
 model: sonnet
-allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent
+allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(uname *) Skill Agent
 ---
 
 # Implement one task-group bucket (.NET)
@@ -39,6 +44,41 @@ isn't installed). The gate skills this skill calls are Windows-desktop aware on 
 `[TestCategory("UI")]` tests by default and skips `net*-windows*` test projects off Windows), so a plain .NET
 repository that merely contains a small WinForms/WPF tool still validates correctly here — but its UI tests are never
 run by this skill.
+
+**Command-line tools (CLI shape).** Detect it once, before Step 1: a `*.csproj` with `<OutputType>Exe</OutputType>`,
+none of `UseWPF`/`UseWinUI`/`UseWindowsForms`, and a `System.CommandLine` (or `Spectre.Console.Cli`) reference or
+`PackAsTool`/`PublishAot` — in the `iru-setup-dotnet-cli` layout `src/<Tool>/` (assembly `<bin>`), `src/<Tool>.Core/`,
+`tests/<Tool>.Core.Tests/`, `tests/<Tool>.Cli.Tests/`, `tests/coverlet.runsettings` (`Include [<Tool>.Core]*`). When it
+applies, Step 3 changes as follows (everything else is unchanged):
+
+- **Coverage (3.4)** targets only the bucket's changed/new classes in `src/<Tool>.Core`, measured from
+  `tests/<Tool>.Core.Tests` with the repository's runsettings; changed classes in `src/<Tool>` (commands, the
+  System.CommandLine wiring) are reported "not measured" — they are covered behaviourally by `tests/<Tool>.Cli.Tests`,
+  never by lowering the bar. If logic that can be unit-tested landed in `src/<Tool>`, move it to Core (via the task that
+  owns it) instead of exempting it.
+- **Scoped tests (3.3) and the full suite (3.5)** include `tests/<Tool>.Cli.Tests`, which runs the real command tree
+  in-process. Its `[TestCategory("PublishedBinary")]` tests are inconclusive (skipped) unless `<BIN>_BINARY` is set —
+  that is expected, not a failure; 3.7 runs them against the published binary.
+- **3.7 Native AOT publish check** — only when the bucket touched `src/<Tool>`, `src/<Tool>.Core`,
+  `Directory.Build.props`, `Directory.Packages.props` or `global.json`. Resolve the host RID from `uname -sm`
+  (`Darwin arm64` → `osx-arm64`, `Darwin x86_64` → `osx-x64`, `Linux x86_64` → `linux-x64`, `Linux aarch64` →
+  `linux-arm64`; on Windows `win-x64`/`win-arm64` from `PROCESSOR_ARCHITECTURE`) and delegate:
+  `Agent({description: "Native AOT publish check for task group", subagent_type: "iru-gate-runner", prompt: "Run
+  `dotnet publish src/<Tool> -c Release -r <host-rid> -o <scratch dir outside the repository>` (a full project build).
+  Report back only: pass/fail, every `warning`/`error` line with an IL2xxx/IL3xxx/NETSDK code verbatim (file:line),
+  and the published executable's path and size. Then, if it passed, run `<BIN>_BINARY=<path> dotnet test
+  tests/<Tool>.Cli.Tests -c Release --filter TestCategory=PublishedBinary` and report its pass/fail counts."})`. Any
+  IL trim/AOT warning is a regression even if the build "succeeded" (a package-level warning such as IL2104/IL3053 can
+  appear only at publish): trace it to the task that introduced the reflection, dynamic code or incompatible package,
+  fix it there (source-generated JSON, generics, explicit registration — never a blanket `NoWarn`/
+  `UnconditionalSuppressMessage`), and re-run 3.3–3.7. A missing native toolchain (Xcode command-line tools,
+  `clang`/`zlib1g-dev`, the MSVC workload) makes this check "unverified" — report it, never "passed". Verified on
+  macOS arm64 (osx-arm64) and Linux arm64 (the `mcr.microsoft.com/dotnet/sdk:10.0-noble-aot` image) on 2026-10-16;
+  Windows hosts follow the same command but were not run.
+- **3.8 Generated CLI reference** — only when a task added or changed a command, argument or option: run
+  `dotnet run --project src/<Tool> -c Release -- gen-docs --output-dir .` and check `git diff --exit-code --
+  docs/modules/ROOT/pages/cli-reference.adoc`; if it changed, keep the regenerated page as part of the bucket and say
+  so in Step 5 (never hand-edit it).
 
 ## Step 1 — Capture one pre-change quality baseline for the whole bucket
 
@@ -138,6 +178,8 @@ not once per task:
    re-check until none remain. Leave a new issue in place only if fixing it is genuinely unavoidable (e.g. it
    would contradict what its task explicitly specifies) — record that, and why, for Step 4. Skip this item if
    `iru-dotnet-code-quality` is unavailable in this repository.
+7. **Native AOT publish check** and 8. **generated CLI reference** — CLI shape only, under the conditions and with
+   the commands given in "Command-line tools (CLI shape)" above.
 
 ## Step 4 — Finalize progress notes and notify the user
 

@@ -3,21 +3,28 @@ name: iru-setup-readme
 description: >-
   Create or update the root `README.md` for a repository — a brief description, badges (CI status,
   SonarCloud/SonarQube, npm, Maven Central, Packagist, PyPI, WordPress.org, PHP/Python version, GHCR container
-  image, Swift Package Index, etc.), a project status table (language, versions, framework, platforms, license, CI, quality
-  tools, distribution), documentation links (Antora site, Maven site report, SonarCloud dashboard, generated API
-  docs such as TypeDoc/Compodoc/Storybook/Dokka/DocC/phpDocumentor/Sphinx, OpenAPI/Swagger UI, CHANGELOG),
-  installation instructions (Maven/Gradle/npm/Composer/uv/pip/SwiftPM/etc. dependency snippets, or a "run it locally"/container-image/store-listing
-  section for services, web apps, WordPress plugins/themes and PrestaShop modules, matched to the project's actual
-  stack and build tool — Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress,
-  PrestaShop, NestJS, Next.js, FastAPI, Django, plain Python packages, and the earlier library/app stacks), and a short "how it works" section with a
-  runnable example. Invoke as `/iru-setup-readme`, optionally with `args` (one key/value pair per line, all
+  image, Swift Package Index, crates.io/docs.rs, pkg.go.dev, NuGet, GitHub release, etc.), a project status table
+  (language, versions, framework, platforms, license, CI, quality tools, distribution; for a command-line tool also
+  the toolchain floor, argument parser, terminal-UI library, release targets and channels), documentation links
+  (Antora site, the generated CLI reference page, Maven site report, SonarCloud dashboard, generated API docs such
+  as TypeDoc/Compodoc/Storybook/Dokka/DocC/DocFX/rustdoc/pkg.go.dev/phpDocumentor/Sphinx, OpenAPI/Swagger UI,
+  CHANGELOG), installation instructions (Maven/Gradle/npm/Composer/uv/pip/SwiftPM/etc. dependency snippets, a
+  "run it locally"/container-image/store-listing section for services, web apps, WordPress plugins/themes and
+  PrestaShop modules, or — for a command-line tool — only the release channels actually wired: Homebrew tap,
+  `cargo install`, `go install`, Scoop/WinGet, `dotnet tool install -g`, or the release archive with
+  `SHA256SUMS`/`gh attestation verify`, plus build from source — matched to the project's actual stack and build
+  tool — Spring Boot (Java or Kotlin, Maven or Gradle KTS), Quarkus, Laravel, WordPress, PrestaShop, NestJS,
+  Next.js, FastAPI, Django, plain Python packages, command-line tools in Rust/Go/Swift/.NET, plain Rust crates and
+  Go modules, and the earlier library/app stacks), and a short "how it works" section with a runnable example (for
+  a command-line tool: a human example, a `--json` example piped to `jq`, the exit-code table, and a note on using
+  it from scripts and AI agents). Invoke as `/iru-setup-readme`, optionally with `args` (one key/value pair per line, all
   optional) — `sonar` set to `none` suppresses Sonar badges and dashboard links even when a `sonar {}` block or
   `sonar-project.properties` exists, `ci` set to `no` omits CI status badges, `pages` set to `no` avoids linking a
   github.io documentation site (or Next.js static export) that won't be published, and `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs, default `ask`) pre-answers the existing-README question — so an
   orchestrator's resolved choices produce a README matching them. Explores the repository's actual state
   (`pom.xml`/`build.gradle*`/`gradle.properties`/`composer.json`/`package.json`/`pyproject.toml`/`uv.lock`/
-  `Package.swift`/WordPress plugin
+  `Package.swift`/`Cargo.toml`/`go.mod`/`Directory.Build.props`/WordPress plugin
   or theme headers/PrestaShop module class/Android Gradle modules/Xcode or Tuist project files/etc., git remote,
   GitHub Actions workflows, Sonar config, Antora docs, `CHANGELOG.md`, `LICENSE`, source code) to fill in every
   section — a section whose source material doesn't exist yet (e.g. a brand-new, mostly empty repository) is
@@ -115,7 +122,7 @@ Look at the repository root for `README.md`.
   re-deriving it — `iru-explore` owns the canonical manifest → project-type table (Vite+React, Angular CLI, Hilla,
   React Native (Expo or bare CLI/Metro), Ionic/Capacitor, Kotlin Multiplatform app, Android library/app,
   SwiftPM/XcodeGen/Tuist, macOS desktop app (SwiftUI/AppKit), Windows desktop app (WPF/WinUI 3/Windows Forms),
-  plain TypeScript/npm library,
+  command-line tool (`cli-tool (rust|go|swift|dotnet)`), plain Rust crate/Go module, plain TypeScript/npm library,
   and so on), and duplicating it here would drift the first time it gains a signal:
   - If an `iru-explore` report with a `- Project type:` line is already available earlier in this conversation,
     use it — just confirm the manifest(s) it names are still present.
@@ -126,13 +133,23 @@ Look at the repository root for `README.md`.
     → Java/Maven, `build.gradle*` → Gradle (Android when a module applies `com.android.library`/
     `com.android.application`), `package.json` → npm/TypeScript, `composer.json` → PHP, `pyproject.toml` →
     Python (FastAPI when `fastapi` is a dependency, Django when `manage.py` exists), `Package.swift`/
-    `*.xcodeproj`/`project.yml`/`Project.swift` → Swift/Apple, `*.slnx`/`*.sln`/`*.csproj` → .NET (Windows desktop
-    when a `WinExe` project sets `UseWPF`/`UseWinUI`/`UseWindowsForms`) — and say in Step 11 that the framework
-    flavor wasn't detected.
+    `*.xcodeproj`/`project.yml`/`Project.swift` → Swift/Apple (a command-line tool when an `.executableTarget`
+    depends on `ArgumentParser`), `*.slnx`/`*.sln`/`*.csproj` → .NET (Windows desktop when a `WinExe` project sets
+    `UseWPF`/`UseWinUI`/`UseWindowsForms`; a command-line tool when an `Exe` project references
+    `System.CommandLine` or sets `PackAsTool`), `Cargo.toml` → Rust (a command-line tool when it declares a
+    `[[bin]]`/`src/main.rs` and depends on `clap`), `go.mod` → Go (a command-line tool when `cmd/<bin>/main.go`
+    exists and `github.com/spf13/cobra` is required) — and say in Step 11 that the framework flavor wasn't
+    detected.
   - The project types this skill tailors sections for beyond plain libraries/apps (Steps 3–7): `java-springboot`/
     `kotlin-springboot` (+ `-hilla`), `java-quarkus`/`kotlin-quarkus`, `php-laravel`, `php-wordpress-plugin`,
     `php-wordpress-theme`, `php-prestashop-module`, `php-library`, `nestjs`, `nextjs`, `python-fastapi`,
-    `python-django`, `python-library`. For the Python types, also note the package manager (uv when `uv.lock`
+    `python-django`, `python-library`, `cli-tool (rust|go|swift|dotnet)`, and plain `rust`/`go`. For a
+    `cli-tool`, also note the executable name (`<bin>`), the argument parser (clap, Cobra, swift-argument-parser,
+    System.CommandLine — from the manifest's dependencies) and the terminal-UI library when one is a dependency
+    (Ratatui, Bubble Tea, Terminal.Gui) — the status table, Installation and usage sections use all three. A plain
+    `rust`/`go` project (a library or service, no CLI contract) gets only the identity, badges, docs links and
+    dependency snippet below (`cargo add <crate>` / `go get <module>`), never the CLI usage section. For the Python
+    types, also note the package manager (uv when `uv.lock`
     exists; Poetry/PDM/pipenv only when their lockfile is what's committed) — every command later uses it. For the JVM services, also
     note the language (Kotlin when `src/main/kotlin` holds the sources / the Kotlin plugin is applied) and the build
     tool (Maven, or Gradle with the Kotlin DSL) — every command later in this skill depends on both.
@@ -190,6 +207,21 @@ Look at the repository root for `README.md`.
     UI stack (WPF/WinUI 3/Windows Forms) from the app `*.csproj`, the Windows App SDK version from
     `Directory.Packages.props` (WinUI), and the MSIX identity (`Identity Name`/`Publisher`) from
     `Package.appxmanifest` or `packaging/AppxManifest.xml` when present.
+  - Rust (`cli-tool (rust)`, `rust`): `[package] name` and `version` in the root `Cargo.toml` (the gitflow
+    in-tree version ends in `-dev`, e.g. `0.1.0-dev`; never the `xtask` member's `0.0.0`), the `[[bin]] name` (the
+    executable — it may differ from the package name), `rust-version` (the MSRV — the toolchain floor), `license`,
+    and `publish = false` (then the crate is never on crates.io, whatever Step 3 finds).
+  - Go (`cli-tool (go)`, `go`): the module path from the `module` line of `go.mod` (the executable is the
+    `cmd/<bin>/` directory name), the Go floor from its `go` line (and the CI toolchain from its `toolchain` line),
+    and the version from `var Version = "<x.y.z[-dev]>"` in `internal/version/version.go` (release builds override it
+    through GoReleaser ldflags; a plain `go` module without that file takes its version from git tags only).
+  - Swift command-line tool (`cli-tool (swift)`): the executable product name in `Package.swift`
+    (`.executable(name: "<bin>", …)`), `public let toolVersion = "<x.y.z[-dev]>"` in
+    `Sources/<Bin>Kit/Version.swift` (the only version literal — not git tags as for a SwiftPM library), and the
+    `swift-tools-version`/`platforms` floor from `Package.swift`.
+  - .NET command-line tool (`cli-tool (dotnet)`): `<Version>` in `Directory.Build.props` (`-dev` suffix on
+    `develop`), and from the `Exe` project `src/<ToolName>/<ToolName>.csproj` the `ToolCommandName` (the
+    executable), `PackageId` (the NuGet .NET tool id) and the target framework; the SDK floor from `global.json`.
   - Also find the latest released version for any stack: `git tag --sort=-v:refname | head -1` (or `gh release
     list --limit 1` if on GitHub with `gh` available). If the current version has no `-SNAPSHOT`/prerelease
     suffix (`-SNAPSHOT`, `-dev`, `-dev.N`, `-rc.N`, Python's `.devN`/`rcN`, …) and matches the latest tag, there's only one version to show,
@@ -206,7 +238,9 @@ SonarCloud project that isn't configured yet.
   `https://github.com/<owner>/<repo>/actions/workflows/<file>`.
 - **SonarCloud/SonarQube** (skip entirely when Step 0 resolved `sonar: none`): check `sonar-project.properties` or `sonar.*` properties in `pom.xml`/`build.gradle*`
   (or an equivalent `sonar-project.properties` used by a non-Java stack) for `sonar.projectKey` (and
-  `sonar.organization` if using SonarCloud) — this applies to any stack, not just Java/Maven. If found and hosted
+  `sonar.organization` if using SonarCloud) — this applies to any stack, not just Java/Maven. The command-line tool
+  workflows keep no Sonar file: they pass `-Dsonar.projectKey=…`/`-Dsonar.organization=…`/`-Dsonar.host.url=…` to
+  the scanner step in `.github/workflows/build.yml` — read them from there. If found and hosted
   on SonarCloud, add the full metric set the reference Android READMEs use — Quality Gate Status,
   Maintainability Rating, Reliability Rating, Security Rating, Bugs, Code Smells, Coverage, Duplicated Lines (%),
   Lines of Code, Technical Debt, Vulnerabilities — each of the form
@@ -263,6 +297,26 @@ SonarCloud project that isn't configured yet.
     `themes.svn.wordpress.org` commit) without the slug being live yet — the first review is still pending —
     gets **no** live badges (they'd render "not found"); use the static requirement badges below instead and say
     in Step 11 that the WordPress.org badges can be added after approval.
+  - **crates.io + docs.rs** (Rust, `cli-tool (rust)` or `rust`) — only when the crate is published there: a
+    `crates-io` job in `.github/workflows/release.yml` (or a `cargo publish` step) and `Cargo.toml` has no
+    `publish = false`, **and** `curl -sf -A '<repo>-readme' https://crates.io/api/v1/crates/<crate>` succeeds
+    (crates.io rejects requests without a User-Agent): version `https://img.shields.io/crates/v/<crate>` and
+    downloads `https://img.shields.io/crates/d/<crate>`, linking to `https://crates.io/crates/<crate>`, plus
+    `https://img.shields.io/docsrs/<crate>` linking to `https://docs.rs/<crate>`. A wired channel whose first
+    version isn't live yet (the first crates.io publish is manual) gets no badge — say so in Step 11.
+  - **pkg.go.dev** (Go, `cli-tool (go)` or `go`) — only for a public module whose path is fetchable
+    (`curl -sf https://proxy.golang.org/<module>/@latest` succeeds): `https://pkg.go.dev/badge/<module>.svg`
+    linking to `https://pkg.go.dev/<module>`. **Go Report Card** is optional — add
+    `https://goreportcard.com/badge/<module>` linking to `https://goreportcard.com/report/<module>` only when the
+    user wants it or an existing README already carried it (it is a third-party service that grades on request).
+  - **NuGet** (`cli-tool (dotnet)` .NET tool, or a published .NET library) — only when a `nuget` job in
+    `release.yml` pushes the package **and** `curl -sf https://api.nuget.org/v3-flatcontainer/<package-id-lowercase>/index.json`
+    succeeds: `https://img.shields.io/nuget/v/<package-id>` (add `vpre` for a pre-release-only package) and
+    `https://img.shields.io/nuget/dt/<package-id>`, linking to `https://www.nuget.org/packages/<package-id>`.
+  - **GitHub release** (any project whose `release.yml` uploads release assets — every `cli-tool` with
+    `distribution` ≠ `none`) — only when `gh release list --limit 1` (or `git tag`) shows a release exists:
+    `https://img.shields.io/github/v/release/<owner>/<repo>?sort=semver` linking to
+    `https://github.com/<owner>/<repo>/releases/latest`. Skip it on a repository with no release yet.
 - **Requirement badges** (static, from the files read in Step 2 — use them when no registry badge above already
   shows the same fact):
   - **PHP version** (any PHP project not covered by the Packagist/WordPress.org `required-php` badge):
@@ -314,14 +368,18 @@ Compose a small table from whatever Steps 2–3 actually resolved; omit rows wit
 | Kotlin | Kotlin JVM services (Spring Boot / Quarkus): the Kotlin version from `gradle/libs.versions.toml` or the POM's `kotlin.version`, plus the JDK toolchain |
 | PHP | PHP projects only: the floor from `composer.json` `require.php` (or `Requires PHP:`), e.g. `>= 8.3`                            |
 | Python | Python projects only: `requires-python` (e.g. `>= 3.12`) plus the version CI runs (`.python-version` / workflow `python-version`, e.g. `3.13`), and the package manager (uv / Poetry / PDM) |
+| Toolchain floor | Rust / Go / Swift / .NET command-line tools and plain Rust/Go projects: the MSRV from `Cargo.toml` `rust-version` (e.g. `Rust 1.88+`), the `go` line of `go.mod` (plus its `toolchain` line, e.g. `Go 1.27 (toolchain go1.27.2)`), `swift-tools-version` + the macOS floor from `Package.swift`, or the SDK from `global.json` / the target framework (e.g. `.NET 10`) |
+| Argument parser | `cli-tool` only: clap (derive), Cobra, swift-argument-parser, System.CommandLine — with the pinned version from `Cargo.lock`/`go.mod`/`Package.resolved`/`Directory.Packages.props` |
+| Terminal UI | `cli-tool` only, when one is a dependency: Ratatui, Bubble Tea, Terminal.Gui (and which command opens it, e.g. `browse`); omitted otherwise |
+| Platforms / targets | `cli-tool` only: the targets the release workflow actually builds — Rust target triples (`x86_64-unknown-linux-musl`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, …), GoReleaser's `goos` × `goarch`, Swift's macOS universal + Linux, .NET RIDs (`linux-x64`, `osx-arm64`, `win-x64`, …); with no `release.yml`, the platforms the CI matrix runs on |
 | Swift tools / deployment targets | Swift only: the Swift tools version from `Package.swift` and the platform deployment targets it declares          |
 | Node engine | npm-based projects only: the `engines.node` range from `package.json`, if one is declared                                     |
 | TypeScript | TypeScript projects only: the `typescript` version pinned in `package.json`/`package-lock.json`                               |
 | Framework | Where applicable: the pinned framework version (React, Angular, Ionic, Expo SDK or React Native — with the toolchain, `expo` or `metro` —, Kotlin Multiplatform + Compose Multiplatform from `libs.versions.toml`, Next.js, NestJS, Spring Boot from the catalog/parent POM, Quarkus `quarkus.platform.version`, Laravel from `composer.lock`, FastAPI / Django (+ DRF or Django Ninja) from `uv.lock`), or the host compatibility (WordPress `Requires at least` – `Tested up to`; PrestaShop `ps_versions_compliancy` range) |
 | License | The license identified in Step 2, if any                                                                                       |
 | CI | Which CI system and what it runs (e.g. "GitHub Actions for release and `develop` branch builds"); omitted when Step 0 resolved `ci: no` |
-| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Kover, Checkstyle, SpotBugs, PMD, detekt, ktlint, ESLint, oxlint, Prettier, PHPStan/Larastan, Pint, PHPCS/WPCS, PHP-CS-Fixer, Pest/PHPUnit, Ruff, mypy, pytest + coverage.py, pip-audit, SwiftLint, etc.) |
-| Distribution | Services/apps/plugins (and published Python libraries) only, from the release workflow actually present: container image on GHCR, PyPI, sdist/wheel attached to GitHub Releases (`uv build`), static export on GitHub Pages, WordPress.org directory (SVN deploy), installable zip attached to GitHub Releases (WordPress, PrestaShop), deploy workflow to an environment; omitted when nothing is published |
+| Quality | Which tools actually run — only list ones with real config found (SonarCloud, JaCoCo, Kover, Checkstyle, SpotBugs, PMD, detekt, ktlint, ESLint, oxlint, Prettier, PHPStan/Larastan, Pint, PHPCS/WPCS, PHP-CS-Fixer, Pest/PHPUnit, Ruff, mypy, pytest + coverage.py, pip-audit, SwiftLint, swift-format, Clippy, rustfmt, cargo-deny, cargo-llvm-cov, golangci-lint, govulncheck, StyleCop/.NET analyzers, coverlet, etc.) |
+| Distribution | Services/apps/plugins (and published Python libraries) only, from the release workflow actually present: container image on GHCR, PyPI, sdist/wheel attached to GitHub Releases (`uv build`), static export on GitHub Pages, WordPress.org directory (SVN deploy), installable zip attached to GitHub Releases (WordPress, PrestaShop), deploy workflow to an environment; for a `cli-tool`, the release archives (`<bin>-<version>-<target>` + `SHA256SUMS` + build-provenance attestations) and each channel actually wired (crates.io, Homebrew tap, Scoop, WinGet, NuGet .NET tool); omitted when nothing is published |
 
 Omit every row in this extended set (platforms through framework, and Distribution) that doesn't apply to the
 detected stack — a plain Java/Maven library still shows only the original rows.
@@ -338,6 +396,12 @@ and skip the published API-docs links below.
   site. If a GitHub Pages workflow step publishes it (grep workflows for `gh-pages`/`ghaction-github-pages`), the
   URL is normally `https://<owner>.github.io/<repo>`; if you can't confirm it's actually published, still include
   the link but note in Step 11 that it's inferred from convention, not confirmed live.
+- **CLI reference** (`cli-tool`): when `docs/modules/ROOT/pages/cli-reference.adoc` exists (generated from the
+  command tree by `cargo xtask docs` / `go run ./tools/gendocs` / `gen-docs`; a Swift tool's page only
+  `include::`s the generated `docs/modules/ROOT/partials/cli-reference.adoc`), link the published page —
+  `https://<owner>.github.io/<repo>/<name>/<version>/cli-reference.html`, with `<name>`/`<version>` from
+  `docs/antora.yml` — or, under `pages: no` or while `docs/antora.yml` doesn't exist yet, the source file in the
+  repository (the partial for Swift, since GitHub doesn't resolve Antora includes). Never link it when the file doesn't exist (no Antora module yet).
 - **Maven/Gradle site report**: if the CI workflow merges a Maven `site` (or Gradle equivalent) report into the
   published docs (e.g. a `mvn-site` subpath alongside the Antora output, matching this repository's own
   `develop`/`main` workflow pattern), link to it at that subpath.
@@ -362,6 +426,15 @@ and skip the published API-docs links below.
     `https://<owner>.github.io/<repo>/api/documentation/<module>/` — read the workflow's copy step.
   - **DocFX** (.NET/Windows desktop apps): a `docfx docfx.json` step whose `_site` the workflow copies under the
     Antora site's `api/`, normally `https://<owner>.github.io/<repo>/api` — only when `docfx.json` exists.
+  - **rustdoc** (Rust): docs.rs (`https://docs.rs/<crate>`) when Step 3 added the docs.rs badge; otherwise a
+    `cargo doc --no-deps -p <crate>` step whose `target/doc` the workflow copies under the Antora site's `api/`
+    (with an `index.html` redirect to `<crate_name>/`), normally `https://<owner>.github.io/<repo>/api/`.
+  - **Go doc** (Go): `https://pkg.go.dev/<module>` for a public module (Step 3's check; `internal/` packages are
+    listed there too); the catalog's build workflow also publishes a plain-text `go doc -all` dump at
+    `https://<owner>.github.io/<repo>/api/go-doc.txt` — link it only when the workflow writes `build/api/go-doc.txt`.
+  - **DocC for a Swift command-line tool**: the `<Bin>Kit` library's archive, generated with
+    `--hosting-base-path <repo>/api`, normally at `https://<owner>.github.io/<repo>/api/documentation/<bin>kit/`
+    (lowercased target name) — read the workflow's `generate-documentation` step.
   - **phpDocumentor** (PHP): a `phpdoc run --config phpdoc.dist.xml` step merged into the Pages site, normally at
     `https://<owner>.github.io/<repo>/api` — only when `phpdoc.dist.xml` exists.
   - **Sphinx** (Python): a `sphinx-build … docs/api build/api-docs` step (sources `docs/api/conf.py` +
@@ -417,6 +490,10 @@ versa:
   GitHub Release actually attaches — never an invented index.
 - **Composer** (`php-library`, only when Step 3 confirmed it on Packagist): `composer require <vendor>/<name>`
   (add `--dev` only if the package is a dev tool by its own `composer.json` `type`/description), plus the PHP floor.
+- **Cargo** (plain `rust` library crate, only when Step 3 confirmed it on crates.io): `cargo add <crate>` (or the
+  `[dependencies]` line `<crate> = "<latest-release>"`), plus the MSRV.
+- **Go modules** (plain `go` module, only when it is public): `go get <module>@latest` (or `@v<latest-tag>`), plus the
+  `go` floor; a module path with a `/vN` suffix keeps it.
 
 Services, web apps, WordPress plugins/themes and PrestaShop modules aren't consumed as dependencies, so for them
 the section is **Getting Started** — prerequisites, then the commands to run it locally, then (only when a release
@@ -552,6 +629,38 @@ never copy a value from `.env`/`.env.example` that looks like a secret — list 
   <AppName> -destination 'platform=macOS'` and `swift test --package-path Packages/Core`; Windows — `dotnet build`,
   `dotnet run --project src/<AppName>` (Windows only), `dotnet test --filter "TestCategory!=UI"` (the Core tests
   also run on macOS/Linux), and the .NET 10 SDK / Windows 10 1809+ (WinUI) prerequisites.
+- **Command-line tools** (`cli-tool`): no dependency snippet. An **Installation** section listing **only** the
+  channels the release configuration actually wires — read the jobs of `.github/workflows/release.yml` (`crates-io`,
+  `homebrew`, `winget`, `nuget`, `publish`) and, for Go, the `homebrew_casks`/`scoops`/`winget` blocks of
+  `.goreleaser.yaml` — in this order, each a one-liner with the real names:
+  - Homebrew (`homebrew` job, tap from its `repository:`/checkout, e.g. `<owner>/homebrew-tap` → `<owner>/tap`):
+    `brew install <owner>/tap/<bin>`; Go's GoReleaser writes a **cask**, so `brew install --cask <owner>/tap/<bin>`.
+  - crates.io (`crates-io` job, and Step 3 found the crate live — otherwise say "after the first release"):
+    `cargo install <crate> --locked` (the package name, which may differ from `<bin>`).
+  - Go: `go install <module>/cmd/<bin>@latest` for a public module (it needs no release job — the module proxy serves
+    tags; mention that such a binary reports the tag's version but no commit/date).
+  - Scoop (Go `scoops`, bucket from its `repository:`): `scoop bucket add <bucket> https://github.com/<owner>/<bucket-repo>`
+    then `scoop install <bucket>/<bin>`.
+  - WinGet (`winget` job's `wingetcreate update <id>`, or Go's `package_identifier`): `winget install <id>` — only
+    once the first manual submission was merged into `microsoft/winget-pkgs`; say so in Step 11 when unknown.
+  - .NET tool (`nuget` job, `PackageId`): `dotnet tool install -g <package-id>` (Native AOT binary per RID, falling
+    back to the framework-dependent `any` package), or run it once without installing via `dnx <package-id>`.
+  - Release archives (any `release.yml` with a `publish` job / GoReleaser `archives`): download
+    `<bin>-<version>-<target>.tar.gz` (`.zip` on Windows; Go names targets `<os>-<arch>`, e.g.
+    `linux-amd64`) and `SHA256SUMS` from the latest GitHub Release (`gh release download -R <owner>/<repo>
+    --pattern '<bin>-*-<target>.tar.gz' --pattern SHA256SUMS`), verify with `sha256sum --check SHA256SUMS
+    --ignore-missing` (macOS: `shasum -a 256 --check SHA256SUMS --ignore-missing`) and, only when the workflow runs
+    `actions/attest-build-provenance`, `gh attestation verify <archive> -R <owner>/<repo>`, then put `<bin>` on the
+    `PATH`. List the target names the workflow's matrix actually builds.
+  Then **Build from source**, with the toolchain floor from Step 4: Rust `cargo install --path . --locked` (or
+  `cargo build --release --locked` → `target/release/<bin>`); Go `go install ./cmd/<bin>` (or `go build -o <bin>
+  ./cmd/<bin>`); Swift `swift build -c release --product <bin>` → `$(swift build -c release --show-bin-path)/<bin>`;
+  .NET `dotnet publish src/<ToolName> -c Release -r <rid> -o artifacts/publish/<rid>` (Native AOT, same-OS) or
+  `dotnet run --project src/<ToolName> -- --help`. Add the test/quality commands the project defines (Rust
+  `cargo nextest run --workspace --locked`/`cargo test`, Go `go test ./...`, `swift test`, `dotnet test
+  <ToolName>.slnx`) under a short **Development** subsection. With `distribution: none` (no `release.yml`, no
+  `.goreleaser.yaml`) only `go install` (public Go modules) and Build from source remain — never list a channel
+  the repository doesn't wire.
 - **Python library** (`python-library`) development, after the Installation snippet: `uv sync`, `uv run pytest`,
   `uv run ruff check .`, `uv run mypy .`, `uv build` (sdist + wheel in `dist/`) — only the tools actually
   configured in `pyproject.toml`.
@@ -586,6 +695,24 @@ This is the most judgment-heavy part — ground it in what the code actually doe
   the theme's templates/patterns; for a PrestaShop module, the hooks it registers in `install()` and its
   configuration page. For a `python-library`, a short Python snippet importing its public API (what the package's
   `__init__.py` exports / `__all__`).
+- For a **command-line tool** (`cli-tool`) the section is **Usage**, built from the real command tree (`<bin>
+  --help`, or `<bin> schema` when the tool has it — run the built binary when one is available, else read the
+  command definitions):
+  - a human example — one real command and its text output (the catalog scaffolds' sample: `<bin> greet Ada`);
+  - a machine example — the same command with `--json` piped to `jq` (e.g. `<bin> greet Ada --json | jq -r
+    .greeting`), showing the JSON shape the command actually prints (read a golden file such as
+    `tests/golden/greet-ada.json` or a `testdata/script/*.txtar` expectation rather than guessing field names);
+  - an **Exit codes** table read from the tool's exit-code definition (`src/exit.rs`, `internal/cli/exitcode.go`,
+    `Sources/<Bin>Kit/CLIExitCode.swift`, `src/<ToolName>.Core/ExitCode.cs`) — for the catalog's contract: `0` OK,
+    `1` internal error, `2` usage error, `3` validation failed, `4` not found, `5` confirmation required, `6`
+    retryable (try again later), `7` authentication/authorization, `130`/`143` interrupted by SIGINT/SIGTERM — only
+    the codes the file actually defines;
+  - a short **Using from scripts and AI agents** note: pass `--json` (or `--format json`/`jsonl`) for
+    machine-readable output and `--no-input` (or the `<BIN>_NO_INPUT=1` variable the tool reads) so it never
+    prompts; stdout carries only the result, while diagnostics, progress and the JSON error envelope go to stderr;
+    branch on the exit code, not on message text; `<bin> schema` describes every command, flag, exit code and safety
+    hint as JSON. Mention only flags and commands the tool actually has.
+  A plain `rust`/`go` library shows a short code snippet against its public API instead, like any library.
 - If the repository has no meaningful source yet (a brand-new, scaffolded-but-empty project), omit this section
   entirely rather than writing a placeholder example. A catalog scaffold's sample feature (e.g. a `books` sample)
   is real, runnable code — it may be shown, labeled as the sample it is.
@@ -598,9 +725,10 @@ Include each only when Steps 2–7 gave it real content:
 - **Badges**: from Step 3, directly under the title.
 - **Project Status**: table from Step 4.
 - **Documentation**: links from Step 5.
-- **Installation** (libraries) or **Getting Started** (services, web apps, plugins/themes/modules): snippet(s)
-  and commands from Step 6, with a short **Requirements** list first when Step 6 gathered prerequisites.
-- **How It Works** / **Quick Example**: prose + code from Step 7.
+- **Installation** (libraries, command-line tools) or **Getting Started** (services, web apps,
+  plugins/themes/modules): snippet(s) and commands from Step 6, with a short **Requirements** list first when Step 6
+  gathered prerequisites.
+- **How It Works** / **Quick Example** (or **Usage** for a command-line tool): prose + code from Step 7.
 - **License**: one line naming the license from Step 2, linking to the `LICENSE` file.
 
 If the existing `README.md` read in Step 1 had additional sections this skill doesn't generate (e.g.
@@ -649,7 +777,9 @@ summarize: which sections were included versus omitted and why (e.g. "no Install
 config found", "no CI badges — no GitHub Actions workflows present"), any fact that had to be inferred rather than
 confirmed (e.g. an Antora Pages URL assumed from convention), and every badge/link suppressed by Step 0's
 `sonar: none`/`ci: no`/`pages: no`, and every registry/store badge withheld because the package/slug/image
-isn't live yet (Packagist, PyPI, WordPress.org, GHCR) together with the check used. For WordPress projects, state that
+isn't live yet (Packagist, PyPI, WordPress.org, GHCR, crates.io, NuGet, pkg.go.dev) together with the check used;
+for a command-line tool, every channel listed under Installation and the release job/config it came from, and any
+wired channel left out because its first (manual) publication can't be confirmed. For WordPress projects, state that
 `readme.txt` was left untouched. Remind the user to double-check the "How It Works"/example section
 specifically, since it's the part most dependent on this skill's reading of the current API rather than on
 mechanically-derived facts like versions or badge URLs.

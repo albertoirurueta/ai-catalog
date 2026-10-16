@@ -19,7 +19,7 @@ no file in the repository has one yet. It makes no assumption about language or 
 real source/test roots and file extensions present each run — including Android Gradle module source sets,
 SwiftPM's `Sources/`/`Tests/`, Hilla's embedded frontend, and React Native/Capacitor's native `ios/`/`android/`
 directories, and Python packages (`src/<pkg>/`, FastAPI's `app/`, Django's `config/` + `apps/`) — and it knows the native comment syntax for `.kt`, `.swift`, `.py` (a block of `#` lines, never a docstring) and `.ts`/`.tsx` headers alongside the
-languages it already covered. For Python it keeps a shebang and PEP 263 encoding line on lines 1-2 with the header inserted after them, and skips generated Django/Alembic migrations and empty `__init__.py` files unless existing ones are headered. When no repo-wide inception year is stamped in a config field (e.g. Maven's
+languages it already covered, plus `.rs` and `.go` (a block of `//` lines or `/* ... */`, never Rust `///`/`//!` doc comments). For Python it keeps a shebang and PEP 263 encoding line on lines 1-2 with the header inserted after them, and skips generated Django/Alembic migrations and empty `__init__.py` files unless existing ones are headered. For Rust it inserts the header above inner attributes and `//!` crate docs; for Go it keeps the header above any `//go:build` constraint with a blank line before `package` (so `go doc` doesn't treat it as the package comment) and skips generated `// Code generated ... DO NOT EDIT.` files. When no repo-wide inception year is stamped in a config field (e.g. Maven's
 `<inceptionYear>` or a Gradle library module's `lib/build.gradle.kts`), it falls back to each file's first-commit
 year, or, when a single repo-wide year is needed and no field supplies one, to the repository's own first-commit
 year.
@@ -119,6 +119,8 @@ None — `iru-check-license` is a leaf skill; it does not call any other skill i
 * xref:skills/iru-java-springboot-code-one-task-group.adoc[] — Step 3.1, via `iru-gate-runner`. Skipped if not installed.
 * xref:skills/iru-kmp-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
 * xref:skills/iru-react-native-code-one-task-group.adoc[] — Step 3.1, license headers for touched files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+* xref:skills/iru-rust-code-one-task-group.adoc[] — license headers for touched `.rs` files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent. Skipped if not installed.
+* xref:skills/iru-go-code-one-task-group.adoc[] — license headers for touched `.go` files, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent. Skipped if not installed.
 
 === Related agents
 

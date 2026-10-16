@@ -1,0 +1,159 @@
+= Setup CLI Repository
+:description: Bootstraps a Rust, Go, Swift or .NET command-line tool repository end to end: scaffold, docs, gitignore, CI and release workflows, changelog and README.
+:keywords: iru-setup-cli-repository, claude code skill, cli, rust, go, swift, dotnet, github actions, bootstrap, orchestrator, release binaries
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+End-to-end bootstrap for a command-line tool repository in Rust, Go, Swift or C#/.NET 10 by orchestrating the language's scaffold skill and the shared repository-level skills in one pass, collecting every shared parameter once.
+
+== Purpose
+
+`iru-setup-cli-repository` is the command-line tool stack orchestrator, run stand-alone or from the `iru-setup-repository` front door (project type `cli-tool (<language>)`). Every generated tool follows one contract across languages: data on stdout and messages on stderr, a documented exit-code taxonomy (0-7, 130/143), `--format text|json|jsonl` with a JSON error envelope, TTY and `NO_COLOR` aware colour, no prompts without a terminal (`--no-input`, `--yes`), `--dry-run` for mutations, and generated `completion` and `schema` commands plus a CLI reference built from the command tree.
+
+The skill resolves `language` (from `args`, from on-disk manifests such as `Cargo.toml`, `go.mod`, `Package.swift` or a .NET `Exe` project, otherwise asked), `ui` (`none` or `tui`, forced to `none` for Swift), `branching` (`gitflow` or `main-only`) and `mode`, then collects the tool identity (`bin-name`, description, owner, license, developer details) and the shared pipeline parameters (`open-source`, `visibility`, `ci`, `cross-os-ci`, `sonar`, `ci-tests`, `pages`, `distribution`, `channels`, branches), each with visibility-aware cost guidance. It then runs, each through the `iru-isolated-skill-executor` agent so only a short summary returns: the language scaffold, `iru-setup-antora` (followed by wiring the generated CLI reference page into the site), the language's gitignore skill, `iru-setup-cli-github-workflows` (skipped entirely when `ci` is `no`), `iru-setup-changelog` and `iru-setup-readme`.
+
+It announces the setup mode first (from scratch vs updating an existing repository, with a per-component inventory marked absent/present/partial); each sub-skill then asks Update / Keep as is / Replace for what it finds. A library-only crate, a web service or a desktop app is out of scope, and a repository with several languages' manifests stops the run.
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-cli-repository
+/iru-setup-cli-repository <args as key: value lines>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`language`
+|No
+|`rust`, `go`, `swift` or `dotnet`.
+|Detected from on-disk manifests (confirmed), otherwise asked.
+
+|`ui`
+|No
+|`none` or `tui` (full-screen terminal UI command).
+|Detected and confirmed, `none` for Swift, otherwise asked with `none` recommended.
+
+|`branching`
+|No
+|`gitflow` (integration plus stable branch, `sync.yml`) or `main-only`.
+|Asked; `gitflow` recommended.
+
+|`mode`
+|No
+|`new` or `existing`.
+|`existing` when the language's manifest exists (confirmed), else `new`.
+
+|`open-source`, `visibility`
+|No
+|Whether the tool is open source; `public`, `private` or `internal`.
+|`visibility` detected via `gh repo view`, else asked; open source plus private is flagged as contradictory.
+
+|`ci`, `cross-os-ci`, `ci-tests`, `pages`
+|No
+|Generate workflows; when macOS and Windows test legs run (`all` or `stable`); `unit` or `full` CI tests; publish the Antora site to Pages.
+|`ci` asked (Yes recommended); the others asked only with `ci: yes`; `pages` defaults to `yes` when public.
+
+|`distribution`, `channels`, `homebrew-tap`, `scoop-bucket`
+|No
+|`none`, `internal` (binaries, `SHA256SUMS`, attestations) or `store` (plus package channels such as crates.io, Homebrew, Scoop, WinGet, NuGet).
+|`store` for open source; otherwise asked with `internal` recommended; channels pre-selected per language.
+
+|`sonar`, `sonar-organization`, `sonar-project-key`, `sonar-host-url`
+|No
+|`cloud`, `self-hosted` or `none`, plus its detail keys.
+|`cloud` recommended only for public open source, otherwise `none`.
+
+|`integration-branch`, `stable-branch`
+|No
+|Branches used by the workflows; no integration branch for `main-only`.
+|`develop` and `main`.
+
+|Identity keys
+|No
+|`bin-name`, `description`, `owner`, `license`, `developer-name`, `developer-email`, `organization-url`.
+|Asked; skipped in `existing` mode where the manifest already carries them.
+
+|Language-specific keys
+|No
+|`crate-name`, `msrv` (Rust); `module-path`, `go-version` (Go); `package-name`, `swift-version`, `platforms` (Swift); `tool-name`, `package-id` (.NET). Forwarded untouched.
+|Derived by each scaffold.
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; forwarded to every file-writing sub-skill only when supplied.
+|`ask` (inside each sub-skill).
+|===
+
+The key `publish` is accepted and ignored.
+
+== Outputs
+
+* A scaffolded command-line tool (command tree, library unit, tests, quality configuration, docs generator and optional terminal UI) via the language's scaffold skill.
+* An Antora docs site with the generated CLI reference page in its navigation, a root `.gitignore`, `CHANGELOG.md` and `README.md`, via the delegated skills.
+* Unless `ci: no`, GitHub Actions workflows (`build`, `release`, `sync` for gitflow, `security`) and Dependabot.
+* A final report: the setup mode, resolved language, UI, branching and mode, identity and license, the pipeline parameters applied, a per-component action table (created / updated / replaced / kept as is / skipped (ci: no)), what was wired or omitted and why, the required-secrets table, every decision made on the user's behalf, and explicit warnings.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-cli-repository"] --> B["Step 0: resolve inputs from args"]
+    B --> C["Step 1: resolve language, ui, branching and mode,\nannounce setup mode and inventory"]
+    C --> C1{"Several manifests or not a CLI?"}
+    C1 -- yes --> C2["Stop - out of scope"]
+    C1 -- no --> D["Step 2: collect identity and license"]
+    D --> E["Step 3: collect pipeline parameters"]
+    E --> F["Step 4: language scaffold skill"]
+    F --> F1{"Scaffold reported Stop?"}
+    F1 -- yes --> F2["Stop"]
+    F1 -- no --> G["Step 5: iru-setup-antora,\nthen wire the CLI reference page"]
+    G --> H["Step 6: language gitignore skill"]
+    H --> J{"ci: no?"}
+    J -- yes --> K["Step 7 skipped"]
+    J -- no --> L["Step 7: iru-setup-cli-github-workflows"]
+    K --> M["Step 8: iru-setup-changelog"]
+    L --> M
+    M --> N["Step 9: iru-setup-readme"]
+    N --> O["Step 10: report per-component actions,\nsecrets table and warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+All sub-skills run via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+* xref:skills/iru-setup-rust-cli.adoc[] — Step 4, scaffold for `language: rust`.
+* xref:skills/iru-setup-go-cli.adoc[] — Step 4, scaffold for `language: go`.
+* xref:skills/iru-setup-swift-cli.adoc[] — Step 4, scaffold for `language: swift`.
+* xref:skills/iru-setup-dotnet-cli.adoc[] — Step 4, scaffold for `language: dotnet`.
+* xref:skills/iru-setup-antora.adoc[] — Step 5, Antora documentation site; the same step then re-runs the scaffold's docs generator and adds the CLI reference to the navigation.
+* xref:skills/iru-setup-rust-gitignore.adoc[] — Step 6, root `.gitignore` for Rust.
+* xref:skills/iru-setup-go-gitignore.adoc[] — Step 6, root `.gitignore` for Go.
+* xref:skills/iru-setup-swift-gitignore.adoc[] — Step 6, root `.gitignore` for Swift (`flavor: cli`).
+* xref:skills/iru-setup-dotnet-gitignore.adoc[] — Step 6, root `.gitignore` for .NET.
+* xref:skills/iru-setup-cli-github-workflows.adoc[] — Step 7, CI, release and security workflows, skipped when `ci: no`.
+* xref:skills/iru-setup-changelog.adoc[] — Step 8, root `CHANGELOG.md`.
+* xref:skills/iru-setup-readme.adoc[] — Step 9, root `README.md`.
+
+=== Invoked by
+
+* xref:skills/iru-setup-repository.adoc[] — delegates the command-line tool project type (Rust, Go, Swift, .NET), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — Steps 4-9, runs each sub-skill (and the docs-generator wiring task) in a fresh context so only a short completion summary returns.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-cli-repository/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

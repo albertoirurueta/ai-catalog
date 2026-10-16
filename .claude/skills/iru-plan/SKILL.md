@@ -1,6 +1,6 @@
 ---
 name: iru-plan
-description: Generate an implementation_plan.md at the repository root detailing the tasks needed to complete a piece of work, optionally grounded in a specific GitHub issue or Jira ticket. Invoke as `/iru-plan <ticket-id>` to plan for that ticket (a GitHub issue ID or Jira key, auto-detected like `iru-explore`), or `/iru-plan` with a description in the same message to plan manually described work. Runs the `iru-explore` skill first to ground the plan in the actual codebase and ticket, unless that exploration already happened earlier in this conversation. Records the source GitHub issue or Jira ticket, if any, in the plan's Task summary so later steps in the pipeline can track which tracked ticket the plan resolves, and — when the base branch the work forks from is known (e.g. `iru-issue` already confirmed it with the user) — records that too as a `Base branch:` line, so a later `/iru-pr-description` run in a separate session targets the same base. If `implementation_plan.md` already exists at the repository root, determines whether it matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or update it while preserving already-completed tasks. Groups tasks into dependency-aware task groups — each marked parallelizable or not — so a downstream `iru-code`-style skill can validate once per group instead of once per task. Records which language/framework (e.g. `java`, `java-springboot`, `kotlin-springboot`, `quarkus`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `php`, `fastapi`, `django`, `android`, `swift`, `kmp`, `react-native`, `windows`) each task and sub-task belongs to, using the same keys as this repository's installed `<language>-code-one-task` skills, so a downstream execution skill knows which one to invoke per task without re-inferring it. Use when the user wants a concrete, reviewable step-by-step plan before code changes begin.
+description: Generate an implementation_plan.md at the repository root detailing the tasks needed to complete a piece of work, optionally grounded in a specific GitHub issue or Jira ticket. Invoke as `/iru-plan <ticket-id>` to plan for that ticket (a GitHub issue ID or Jira key, auto-detected like `iru-explore`), or `/iru-plan` with a description in the same message to plan manually described work. Runs the `iru-explore` skill first to ground the plan in the actual codebase and ticket, unless that exploration already happened earlier in this conversation. Records the source GitHub issue or Jira ticket, if any, in the plan's Task summary so later steps in the pipeline can track which tracked ticket the plan resolves, and — when the base branch the work forks from is known (e.g. `iru-issue` already confirmed it with the user) — records that too as a `Base branch:` line, so a later `/iru-pr-description` run in a separate session targets the same base. If `implementation_plan.md` already exists at the repository root, determines whether it matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or update it while preserving already-completed tasks. Groups tasks into dependency-aware task groups — each marked parallelizable or not — so a downstream `iru-code`-style skill can validate once per group instead of once per task. Records which language/framework (e.g. `java`, `java-springboot`, `kotlin-springboot`, `quarkus`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `php`, `fastapi`, `django`, `android`, `swift`, `kmp`, `react-native`, `windows`, `rust`, `go`) each task and sub-task belongs to, using the same keys as this repository's installed `<language>-code-one-task` skills, so a downstream execution skill knows which one to invoke per task without re-inferring it. Use when the user wants a concrete, reviewable step-by-step plan before code changes begin.
 model: opus
 ---
 
@@ -89,7 +89,8 @@ which in turn dispatches each task in the group to a language-specific `<key>-co
 `iru-android-code-one-task`, `iru-swift-code-one-task`, `iru-java-springboot-code-one-task`,
 `iru-kotlin-springboot-code-one-task`, `iru-quarkus-code-one-task`, `iru-php-code-one-task`,
 `iru-nestjs-code-one-task`, `iru-nextjs-code-one-task`, `iru-fastapi-code-one-task`, `iru-django-code-one-task`,
-`iru-kmp-code-one-task`, `iru-react-native-code-one-task`, `iru-windows-code-one-task`). Both the language key and the
+`iru-kmp-code-one-task`, `iru-react-native-code-one-task`, `iru-windows-code-one-task`, `iru-rust-code-one-task`,
+`iru-go-code-one-task`). Both the language key and the
 grouping need to be explicit and unambiguous in the plan — don't leave either to be re-inferred later.
 
 **Language/framework keys:**
@@ -102,7 +103,7 @@ grouping need to be explicit and unambiguous in the plan — don't leave either 
   `iru-quarkus-code-one-task` → `quarkus`, `iru-php-code-one-task` → `php`, `iru-nestjs-code-one-task` → `nestjs`,
   `iru-nextjs-code-one-task` → `nextjs`, `iru-fastapi-code-one-task` → `fastapi`, `iru-django-code-one-task` →
   `django`, `iru-kmp-code-one-task` → `kmp`, `iru-react-native-code-one-task` → `react-native`,
-  `iru-windows-code-one-task` → `windows`) — the `iru-` prefix is only this catalog's marketplace-collision namespace, not part of the
+  `iru-windows-code-one-task` → `windows`, `iru-rust-code-one-task` → `rust`, `iru-go-code-one-task` → `go`) — the `iru-` prefix is only this catalog's marketplace-collision namespace, not part of the
   language/framework key itself. Use these exact keys — don't invent a synonym (e.g. write `dotnet`, not `csharp`
   or `net`, if `iru-dotnet-code-one-task` is what's installed).
 - Determine each task's language/framework from the exploration in Step 3 (the `iru-explore` skill already detects the
@@ -140,11 +141,19 @@ grouping need to be explicit and unambiguous in the plan — don't leave either 
   - `macos-app (swiftui|appkit)` → `swift` (the Swift coding skill handles macOS desktop apps — scenes, menus,
     Settings, the App Sandbox, AppKit MVC or MVVM — and detects the UI framework and architecture itself); state
     the UI framework and architecture in the plan's "Current code state".
+  - `cli-tool (rust)` and `rust` → `rust`; `cli-tool (go)` and `go` → `go` — every task in the crate/module (the
+    command tree, the library/`internal/` logic, a Ratatui or Bubble Tea terminal UI, `xtask`/`tools/gendocs`
+    generators, and their tests) takes the language key. `cli-tool (swift)` → `swift` and `cli-tool (dotnet)` →
+    `dotnet` — those coding skills detect the command-line-tool shape (ArgumentParser executable + `<Bin>Kit`
+    library; System.CommandLine `Exe` + `<Tool>.Core`) themselves. For every `cli-tool`, state in the plan's
+    "Current code state" the argument parser, the terminal-UI library if any, and which commands are read-only vs.
+    destructive, and phrase CLI-facing tasks in terms of the observable contract (stdout/stderr content, `--json`
+    output schema, exit codes) so their tests are unambiguous.
   - If the specific framework key isn't installed but its language key is (e.g. no `iru-quarkus-code-one-task`,
     but `iru-java-code-one-task` is), still record the specific key — per the next bullet the plan stays
     accurate, and `iru-code-one-task-group` falls back to implementing such a task directly.
 - If a task's actual language/framework has no matching `*-code-one-task` skill installed, still record the real
-  language/framework (e.g. `python`, `go`) rather than forcing it into an unrelated key — a downstream
+  language/framework (e.g. `python`, `ruby`) rather than forcing it into an unrelated key — a downstream
   skill can then fall back to generic tooling or flag it as unsupported, but the plan must stay accurate about
   what the task actually is.
 - If a task's language/framework genuinely can't be determined (e.g. a non-code task like documentation-only or

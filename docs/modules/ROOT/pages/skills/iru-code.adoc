@@ -1,6 +1,6 @@
 = Code
 :description: Executes implementation_plan.md end to end, implementing and validating each task group in order, then updates docs and archives the finished plan.
-:keywords: iru-code, claude code skill, implementation plan, automated coding, code quality gate, security baseline, test coverage, java, dotnet, typescript, kotlin, quarkus, php, nestjs, nextjs, fastapi, django, python, android, swift, kmp, react native, windows desktop, github issue
+:keywords: iru-code, claude code skill, implementation plan, automated coding, code quality gate, security baseline, test coverage, java, dotnet, typescript, kotlin, quarkus, php, nestjs, nextjs, fastapi, django, python, android, swift, kmp, react native, windows desktop, rust, go, github issue
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -13,9 +13,9 @@ skill orchestrates the actual implementation work; it is the execution counterpa
 `iru-code` is the autonomous orchestration engine of the catalog. Given a plan produced by `iru-plan` (or by `iru-issue`,
 which runs `iru-plan` internally), it determines which language/framework key(s) are in play, captures a
 project-wide code-quality baseline (via `iru-java-code-quality`, `iru-kotlin-code-quality`, `iru-php-code-quality`, `iru-python-code-quality`,
-`iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-android-code-quality`, `iru-kmp-code-quality`, `iru-swift-code-quality`, resolved
+`iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-android-code-quality`, `iru-kmp-code-quality`, `iru-swift-code-quality`, `iru-rust-code-quality`, `iru-go-code-quality`, resolved
 per key: framework keys share their language's gate, e.g. `java-springboot` uses the Java one, `kotlin-springboot` the
-Kotlin one, `quarkus` the Java or Kotlin one depending on the build, `nestjs`/`nextjs`/`react-native` the TypeScript one, `kmp` the Kotlin Multiplatform one, `fastapi`/`django` the Python one, `windows` the .NET one) and a
+Kotlin one, `quarkus` the Java or Kotlin one depending on the build, `nestjs`/`nextjs`/`react-native` the TypeScript one, `kmp` the Kotlin Multiplatform one, `fastapi`/`django` the Python one, `windows` the .NET one, `rust` the Rust one, `go` the Go one) and a
 project-wide security baseline (via `iru-check-security`), then works
 through every task **group** in plan order — dispatching each group to `iru-code-one-task-group`, which resolves
 each task's language and delegates to the matching `<key>-code-one-task-group` skill (implementing, testing,
@@ -140,9 +140,10 @@ so verbose report output stays out of `iru-code`'s own context window and only t
 * xref:skills/iru-java-code-quality.adoc[] / xref:skills/iru-kotlin-code-quality.adoc[] /
   xref:skills/iru-php-code-quality.adoc[] / xref:skills/iru-python-code-quality.adoc[] / xref:skills/iru-dotnet-code-quality.adoc[] /
   xref:skills/iru-typescript-code-quality.adoc[] / xref:skills/iru-android-code-quality.adoc[] /
-  xref:skills/iru-kmp-code-quality.adoc[] / xref:skills/iru-swift-code-quality.adoc[] — whichever one each key resolves to (`java`/`java-springboot` → Java;
+  xref:skills/iru-kmp-code-quality.adoc[] / xref:skills/iru-swift-code-quality.adoc[] /
+  xref:skills/iru-rust-code-quality.adoc[] / xref:skills/iru-go-code-quality.adoc[] — whichever one each key resolves to (`java`/`java-springboot` → Java;
   `kotlin-springboot` and a Kotlin `quarkus` → Kotlin; `quarkus` on Java → Java; `php` → PHP; `fastapi`/`django` → Python; `typescript`/`nestjs`/
-  `nextjs`/`react-native` → TypeScript; `kmp` → Kotlin Multiplatform; `windows` → .NET; other keys → `iru-<key>-code-quality`) — Step 3 (project-wide baseline, once per language/framework key
+  `nextjs`/`react-native` → TypeScript; `kmp` → Kotlin Multiplatform; `windows` → .NET; `rust` → Rust (clippy/rustfmt/cargo-deny); `go` → Go (golangci-lint/go vet/govulncheck); other keys → `iru-<key>-code-quality`) — Step 3 (project-wide baseline, once per language/framework key
   involved) and Step 7 (final project-wide comparison against that baseline).
 * xref:skills/iru-check-security.adoc[] — Step 3 (project-wide baseline) and Step 7 (final comparison) — any increase
   is a hard stop, unlike the quality gate's "accept as-is" option.
@@ -152,9 +153,9 @@ so verbose report output stays out of `iru-code`'s own context window and only t
   javadoc:jar source:jar -P '!build-extras'` for `java` on Maven, `mvn -B -ntp clean verify` for `java-springboot`,
   `./mvnw -B -ntp clean verify` or `./gradlew build` for `kotlin-springboot` and `quarkus` (container-backed tests
   need Docker), `composer validate --strict` plus the project's composer test/lint scripts for `php`, `ruff check`/`ruff format --check`/`mypy`/`pytest` under the project runner (`uv run`, `poetry run`, `pdm run` or `.venv`) for `fastapi`/`django` (plus `manage.py check` and `makemigrations --check --dry-run` for `django`, `alembic check` for FastAPI with Alembic; `integration` tests need Docker),
-  `dotnet build && dotnet test`, the package manager's `lint`/`typecheck`/`test` scripts for `typescript` (then
+  `dotnet build && dotnet test` (plus `dotnet publish -c Release -r <host RID>` for a command-line tool, so trim/AOT warnings surface), the package manager's `lint`/`typecheck`/`test` scripts for `typescript` (then
   `npm run build` for `nestjs`/`nextjs`), `./gradlew build` for `android`, `./gradlew build` plus (on macOS) the iOS host app's `xcodebuild build` for `kmp` (iOS reported as unverified on other hosts), the `typescript` scripts plus `./gradlew assembleDebug`/`pod install` + `xcodebuild build` (Metro toolchain) or `npx expo export` (Expo toolchain) for `react-native`, `swift build && swift test` or
-  `xcodebuild build-for-testing` for `swift` (`-destination 'platform=macOS'` plus `swift test` in `Packages/Core` for a macOS desktop app; unverified off macOS), `dotnet build -c Release` plus `dotnet test --filter "TestCategory!=UI"` for `windows` (on a non-Windows host with `-p:EnableWindowsTargeting=true`, running only the portable Core tests and reporting the app run, WinUI build and UI tests as unverified; on Windows the desktop UI tests also run through `iru-dotnet-test`'s `ui` selector));
+  `xcodebuild build-for-testing` for `swift` (`-destination 'platform=macOS'` plus `swift test` in `Packages/Core` for a macOS desktop app; unverified off macOS), `dotnet build -c Release` plus `dotnet test --filter "TestCategory!=UI"` for `windows` (on a non-Windows host with `-p:EnableWindowsTargeting=true`, running only the portable Core tests and reporting the app run, WinUI build and UI tests as unverified; on Windows the desktop UI tests also run through `iru-dotnet-test`'s `ui` selector), `cargo fmt --all --check` + `cargo clippy ... -D warnings` + `cargo test --workspace` (plus `cargo deny check` and, for a CLI with an `xtask`, `cargo xtask docs`) for `rust`, and `go build ./...` + `go vet ./...` + `go test -race ./...` (plus `golangci-lint`, `govulncheck`, `goreleaser check` when configured) for `go`; a `swift` command-line tool is just `swift build && swift test`; container-backed Rust/Go tests need Docker);
   skipped when no key could be resolved.
 
 === Invoked by
@@ -170,7 +171,7 @@ so verbose report output stays out of `iru-code`'s own context window and only t
   (license headers, doc comments, scoped tests, coverage, per-group quality) is no longer spawned directly by
   `iru-code` — it happens two levels down, inside whichever `<key>-code-one-task-group` skill handles each group's
   bucket of tasks (Java, Spring Boot, Kotlin Spring Boot, Quarkus, PHP, FastAPI, Django, .NET, TypeScript, NestJS, Next.js, Android,
-  Kotlin Multiplatform, React Native, Swift, Windows desktop).
+  Kotlin Multiplatform, React Native, Swift, Windows desktop, Rust, Go).
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — spawned once per task group (Step 4)
   to invoke `iru-code-one-task-group`, so a plan with many groups doesn't accumulate every group's full
   implementation transcript in `iru-code`'s own context.

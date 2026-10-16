@@ -1,0 +1,201 @@
+= Rust Code One Task
+:description: Implements one Rust task from an implementation plan in any Cargo crate or workspace, honoring the CLI contract and thin main.rs, then checks it off.
+:keywords: iru-rust-code-one-task, claude code skill, rust, cargo, clap, ratatui, cli contract, implement plan task, cargo check, rustfmt
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests, and checkbox update in a Rust crate or workspace — nothing else.
+This is the narrowest execution unit for a `rust` task in the `iru-code` pipeline: `iru-rust-code-one-task-group`
+calls it once per task in a bucket (potentially many at once, in parallel agents via `iru-isolated-skill-executor`).
+
+== Purpose
+
+`iru-rust-code-one-task` is the Rust-specific implementation worker `iru-rust-code-one-task-group` calls once per
+task. Given one task's own text (what to build, its exact `implementation_plan.md` checkbox line(s), and any
+sub-tasks), it detects the project shape at runtime from `cargo metadata` and the manifests, loads only the matching
+guidance from its own bundled `reference/` directory, re-checks the current code state, implements exactly what is
+specified, and writes/updates the tests. It formats only its own files with rustfmt and compile-checks the touched
+packages with `cargo check --all-targets --locked`. If the task didn't stop on a blocker, it then immediately checks
+off the task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note,
+before reporting back. Tests, clippy, coverage, `cargo deny`, `cargo doc` and license-header checks all happen once per
+bucket in `iru-rust-code-one-task-group`, not here. It uses a medium model on purpose: the plan carries the hard
+reasoning, so this skill executes one task against code agreements that live in `reference/`.
+
+Two things shape every Rust task:
+
+* **Logic lives in the library.** In a CLI, `src/main.rs` only gathers process facts and calls one library entry
+  point with injected writers; commands, policies, TUI state and rendering are library code with unit tests, which is
+  what makes the 80% per-file coverage bar reachable.
+* **A contract CLI's observable behavior is the interface.** When the project follows the catalog's CLI contract
+  (an exit-code enum converted to `ExitCode`, `--format`/`--json`, a JSON error envelope), stdout/stderr separation,
+  exit codes, the envelope, no prompts without a TTY and `NO_COLOR` are non-negotiable.
+
+=== Project shape detection
+
+Step 0 settles these from the files, never from assumptions, because the skill is copied into other repositories:
+
+* **Rust at all** — a `Cargo.toml` at the root or in the directory the task names; otherwise the task was mis-tagged
+  and is reported as a blocker.
+* **Layout** — workspace vs. single crate, each package's targets (`lib`, `bin`, `test`, `example`, `bench`,
+  `build.rs`), edition, `rust-version` (MSRV), features, an `xtask` member and its cargo alias. A bin-only package
+  can't be imported from `tests/`.
+* **Toolchain and lints** — `rust-toolchain.toml`, `clippy.toml`, `rustfmt.toml`, `deny.toml`, and the `[lints]` /
+  `[workspace.lints]` set new code must satisfy.
+* **Frameworks** — clap derive vs. builder, ratatui/crossterm, tokio, serde, thiserror/anyhow, colour, prompt, signal
+  and progress crates.
+* **Tests** — assert_cmd, predicates, tempfile, snapbox/trycmd, insta, proptest, rstest, serial_test, testcontainers,
+  golden files, and a few existing tests for naming style.
+* **CLI contract** — followed when an exit-code enum maps to `ExitCode`, a `--format`/`--json` flag exists, or an
+  error envelope with `schemaVersion` is present; otherwise the CLI's own conventions win and the contract isn't
+  retrofitted.
+* **Host** — Windows or not; `#[cfg(windows)]` code is cross-checked only when that target is already installed.
+
+Step 1 then decides where the code goes (library modules, `src/cli.rs` for clap types, `main.rs` for process facts
+only, `xtask/` for generators) and records the packages touched, which Step 5 turns into the compile-check.
+
+=== The bundled reference library
+
+This skill ships a `reference/` directory alongside its `SKILL.md`, read by progressive disclosure:
+`reference/README.md` routes to the rest, `code-style.md` is always read, and the others only when the task needs them.
+
+[cols="2,3", options="header"]
+|===
+|File |Read when
+
+|`code-style.md`
+|Always — edition 2024 rules, logic in the lib, naming, ownership, the lint set, no new dependencies.
+
+|`testing.md`
+|The task writes or updates tests (nearly every task) — unit tests with injected writers, `assert_cmd` end-to-end tests with a cleared environment, golden JSON, exit-code tables, no-TTY and `NO_COLOR` tests.
+
+|`error-handling.md`
+|An error type, a fallible function, a panic/`expect`, or the failure-to-exit-code mapping.
+
+|`rustdoc.md`
+|The task adds or changes a `pub` item, including clap fields and variants.
+
+|`cli-contract.md`
+|A contract CLI and the task touches a command, flag, output, exit code, prompt, signal, config, `schema` or `completion`.
+
+|`clap.md`
+|A subcommand, argument, flag, value enum, env-backed flag, help text, completions/man pages, or config precedence.
+
+|`output-and-terminal.md`
+|Stdout/stderr output, JSON/JSONL or the envelope, colour, prompts, progress, SIGINT/SIGTERM, broken pipe.
+
+|`ratatui.md`
+|`ratatui` is a dependency and the task touches the terminal UI (`TestBackend` testing).
+
+|`security.md`
+|Spawning a process, paths from arguments/config, untrusted input, tokens/secrets, writing files, or anything tempting `unsafe`/`env::set_var`.
+
+|`async.md`
+|`tokio` is already a dependency and the task touches async code, cancellation, timeouts, or async tests.
+|===
+
+Every file follows the same override: the rules are the default for new code, and a file that consistently does
+something else wins, with the divergence reported in Step 8. If `reference/` is missing, the skill falls back to the
+repository's own `CLAUDE.md` conventions and the surrounding code's style, and says so in its report.
+
+== Purpose group
+
+xref:index.adoc#group-rust[Rust Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-rust-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/type(s)/function(s),
+the described behavior, its exact checkbox line(s) for itself and its sub-tasks, and any relevant "Current code
+state" context. Normally supplied by `iru-rust-code-one-task-group` dispatching one task in a bucket at a time.
+|None — this skill has nothing to do without a task description.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory (`README.md`, `code-style.md`, `testing.md`, `error-handling.md`,
+`rustdoc.md`, `cli-contract.md`, `clap.md`, `output-and-terminal.md`, `ratatui.md`, `security.md`, `async.md`). If
+missing, the skill falls back to `CLAUDE.md` and the surrounding code's style and says so in its report.
+|Bundled with the skill
+|===
+
+== Outputs
+
+* Source and test files created/modified per the task, following the bundled `reference/` agreements — logic in the
+  library, a thin `main.rs`, no `println!`/`process::exit` in library code, rustdoc on every new `pub` item, no new
+  dependency/feature/`unsafe`/lint relaxation unless the task calls for it — plus the repository's own `CLAUDE.md`
+  conventions where more specific.
+* Unit, end-to-end (`tests/cli.rs`), golden-file and TUI (`TestBackend`) tests added or updated, including a case per
+  documented `# Errors`/`# Panics` — not run by this skill; the caller runs the suite once for the whole bucket.
+* A rustfmt pass over only the files this task touched, and a `cargo check --all-targets --locked -p <package>`
+  compile-check of each touched package (plus `--all-features` when the package declares features, and another target
+  when it is already installed) — passed, fixed, found unrelated to this task, or reported unavailable.
+* `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
+  pending" note, written immediately once the task finishes cleanly. Left untouched if the task stopped on a blocker.
+* A short summary handed back to the caller: shape detected, packages touched, reference files read, files touched,
+  tests added/updated, golden/snapshot changes (additive or needing a `schemaVersion` bump), compile-check result,
+  generated artifacts needing regeneration (completions, man pages, CLI reference), whether it stopped on a blocker,
+  and any deviation from `reference/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-rust-code-one-task\n(task description)"] --> B{"Step 0: Cargo.toml found?"}
+    B -- no --> B2["Blocker: task mis-tagged;\nstop and report"]
+    B -- yes --> C["Step 0: detect layout, toolchain, lints,\nframeworks, tests, CLI contract, host"]
+    C --> D["Step 1: decide where code goes;\nread reference/README.md + only needed files"]
+    D -- "reference/ missing" --> D2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    D2 --> E
+    D --> E["Step 2: re-check current code state\nand what binds to it"]
+    E --> F["Step 3: implement exactly what the task specifies"]
+    F --> G["Step 4: write/update tests\n(not run here)"]
+    G --> H["Step 5: rustfmt own files;\ncargo check --all-targets --locked per touched package"]
+    H -- "fails on this task's own code" --> H2["Fix it"]
+    H2 --> I
+    H -- "fails outside task scope,\nor cargo unavailable" --> H3["Note it; don't fix unrelated code"]
+    H3 --> I
+    H -- passes --> I{"Step 6: ambiguous, infeasible,\nor needs dependency/unsafe/\ncontract-breaking change?"}
+    I -- yes --> J["Stop; leave checkbox unchecked;\nreport blocker to caller"]
+    I -- no --> K["Step 7: check off this task's checkbox\n+ 'group validation pending' note"]
+    K --> L["Step 8: report outcome to caller:\nshape, files, tests, compile result, deviations"]
+....
+
+A conflict between `reference/` and the surrounding code is deliberately not a stop condition — the skill follows the
+surrounding code and reports the divergence in Step 8.
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-rust-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads its own
+`reference/` directory and edits the code and test files the task names. Tests, clippy, coverage, `cargo deny`,
+`cargo doc` and license-header checks all happen once per bucket in `iru-rust-code-one-task-group`.
+
+=== Invoked by
+
+* xref:skills/iru-rust-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently when the group
+  allows it, one at a time otherwise), via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+  agent, passing that task's full text including its exact checkbox line(s). That caller re-reads
+  `implementation_plan.md` afterward to confirm the checkbox this skill already flipped landed, then replaces the
+  "pending" note with the final validation outcome.
+
+=== Related agents
+
+`iru-rust-code-one-task` itself does not spawn any agent — it only reads its `reference/` files, runs read-only
+`cargo`/`rustfmt` commands and edits the code/test files the task names.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-rust-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled Rust code agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-rust-code-one-task/reference[`reference/`].

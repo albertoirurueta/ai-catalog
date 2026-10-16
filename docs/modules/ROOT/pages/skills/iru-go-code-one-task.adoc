@@ -1,0 +1,201 @@
+= Go Code One Task
+:description: Implements a Go task from an implementation plan in any Go module or Cobra CLI, writes its tests, compile-checks with go build and vet, and checks it off.
+:keywords: iru-go-code-one-task, claude code skill, go, golang, cobra cli, bubble tea, testscript, go vet compile check, implement plan task, golang tests
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Carry out a single task's implementation, tests, and checkbox update in a Go module — nothing else. This is the
+narrowest execution unit for a `go` task in the `iru-code` pipeline: `iru-go-code-one-task-group` calls it once per
+task in a bucket (potentially many at once, in parallel agents via `iru-isolated-skill-executor`).
+
+== Purpose
+
+`iru-go-code-one-task` is the Go-specific implementation worker `iru-go-code-one-task-group` calls once per task. It
+works in any Go module: an agent-friendly command-line tool (Cobra, optional Bubble Tea v2 terminal UI) scaffolded by
+`iru-setup-go-cli`, or any other Go library, service or CLI. Given one task's own text (what to build, its exact
+`implementation_plan.md` checkbox line(s), and any sub-tasks), it detects the project shape, loads only the matching
+guidance from its own bundled `reference/` directory, re-checks the current code state, implements exactly what is
+specified, and writes/updates the tests next to the code. It then formats the touched files and compile-checks them
+(`go build ./...` plus `go vet` on the touched packages, test files included). If the task didn't stop on a blocker,
+it immediately checks off that task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group
+validation pending" note, before reporting back — so an interrupted run doesn't re-attempt work that already landed.
+License headers, doc-comment audits, the test run, coverage, the race detector, golangci-lint and govulncheck all
+happen once per bucket in `iru-go-code-one-task-group`. It uses a medium model on purpose: the plan carries the hard
+reasoning, so this skill executes one task against code agreements that live in `reference/`.
+
+Two things shape how a Go task is done here:
+
+* **Logic lives in `internal/` packages, `main` stays thin.** `cmd/<bin>/main.go` only builds a context and calls
+  `cli.Main`; commands are small Cobra constructors over plain, unit-testable functions, which keeps the group's
+  80%-per-file coverage gate reachable without a TTY, a network or a container.
+* **A CLI's observable behaviour is its API.** Exit codes, stdout vs stderr, JSON shapes and the error envelope follow
+  `reference/cli-contract.md`; a task changes them only as it says, never renumbers an exit code, and pins every
+  change with a test.
+
+=== Project shape detection
+
+Step 0 settles these from the files, never from assumptions:
+
+* **Module(s)** — the nearest `go.mod` (module path, `go` directive, `toolchain`), `go version`, and any `go.work`
+  workspace (build each touched module from its own directory). No `go.mod` is a blocker: the task was mis-tagged.
+* **Layout** — `cmd/<bin>/main.go` vs a root `main.go`, the `internal/` packages, a docs generator, `vendor/`.
+* **CLI framework** — Cobra, urfave/cli, kong or standard `flag`, plus the scaffold's contract files (`exitcode.go`,
+  `errors.go`, `output.go`, `term.go`, `signals.go`, `config.go`, `root.go`). No framework and no `package main`
+  means a library/service, so the CLI references don't apply.
+* **TUI** — Bubble Tea/Lip Gloss, v2 (`charm.land/...`) or v1 import paths.
+* **Tests** — neighbouring assertion style, testscript `testdata/script/*.txtar`, teatest, golden files and their
+  `-update` flag, `integration`-tagged container tests.
+* **Quality config** — the golangci-lint config (v2 or not), `goimports` local prefixes, and `//go:generate`
+  directives / generated files.
+
+=== The bundled reference library
+
+This skill ships a `reference/` directory alongside its `SKILL.md`, read by progressive disclosure: `README.md` routes
+to the rest, `code-style.md` is always read, and the others only when the task's shape calls for them.
+
+[cols="2,3", options="header"]
+|===
+|File |Read when
+
+|`code-style.md`
+|Always — Go style, package naming, `internal/`, small consumer-side interfaces, `context.Context` first.
+
+|`errors.md`
+|Always for code that returns, wraps, compares or maps errors — `%w` wrapping, `errors.Is`/`As`, exit-code mapping in one place.
+
+|`testing.md`
+|The task writes or updates tests — table tests, golden files, testscript, Cobra in-process tests, teatest.
+
+|`cli-contract.md`
+|A CLI task adding/changing a command, flag, output, exit code, prompt or error message.
+
+|`cobra.md`
+|A Cobra command, flag, `Args` validator, flag group, completion, or generated reference/man pages.
+
+|`output-and-terminal.md`
+|stdout/stderr writes, `--format`/JSON payloads, styling, prompts, TTY detection, signals, broken pipes, file writes.
+
+|`bubbletea.md`
+|The Bubble Tea model or the command that starts it.
+
+|`godoc.md`
+|A new/changed exported identifier or a new package.
+
+|`security.md`
+|Child processes, paths from arguments/env/config, secrets/tokens, network I/O, or a `gosec` finding.
+
+|`concurrency.md`
+|Goroutines, channels, `sync`, `errgroup`, timeouts/cancellation, signal handling.
+|===
+
+A package that consistently does something else than the reference wins, and the divergence is reported in Step 8. If
+`reference/` is missing entirely, the skill falls back to the repository's own `CLAUDE.md` and the surrounding code's
+style, and says so in its report.
+
+== Purpose group
+
+xref:index.adoc#group-go[Go Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-go-code-one-task <task description>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`task description`
+|Yes
+|The task's full text as written in `implementation_plan.md` — what to build, the named file(s)/package(s)/
+function(s), the described behavior, its exact checkbox line(s) for itself and its sub-tasks, and any relevant
+"Current code state" context. Normally supplied by `iru-go-code-one-task-group` dispatching one task in a bucket at a
+time.
+|None — this skill has nothing to do without a task description.
+
+|`reference/`
+|No
+|The skill's own bundled reference directory (`README.md`, `code-style.md`, `errors.md`, `testing.md`,
+`cli-contract.md`, `cobra.md`, `output-and-terminal.md`, `bubbletea.md`, `godoc.md`, `security.md`,
+`concurrency.md`). If missing, the skill falls back to `CLAUDE.md` and the surrounding code's style, and says so in its
+report.
+|Bundled with the skill
+|===
+
+== Outputs
+
+* Source and test files created/modified per the task, following the bundled `reference/` agreements — logic in
+  `internal/`, injected streams instead of `os.Exit`/`os.Stdout` below `cmd/<bin>/`, existing exit-code constants,
+  alphabetically ordered JSON fields with `schemaVersion`, doc comments on every exported identifier, `ctx` first and
+  argv-only `exec.CommandContext` — plus the repository's own `CLAUDE.md` conventions where more specific.
+* Tests added/updated next to the code (table tests, in-process command tests, golden files, testscript `.txtar`
+  scripts, pure `Update` and teatest tests for a TUI, `integration`-tagged container tests) — not run by this skill;
+  the caller runs the suite once for the whole bucket. A new golden file is hand-written from the exact output the
+  code produces and flagged for confirmation by the group's run.
+* Touched files formatted (`gofmt`, plus `goimports` or `golangci-lint fmt` when available) and compile-checked with
+  `go build ./...` and `go vet` on the touched packages — passed, fixed, found unrelated to this task, or reported
+  unavailable. `go mod tidy` runs only when the task was allowed to add a dependency.
+* `implementation_plan.md` with this task's own checkbox (and its sub-tasks') checked off and a "group validation
+  pending" note, written immediately once the task finishes cleanly. Left untouched if the task stopped on a blocker.
+* A short summary handed back to the caller: shape detected (module path, `go` directive, workspace, CLI framework,
+  TUI library, test harness), packages touched, reference files read, files touched, tests added/updated, compile-check
+  result, interface changes (commands, flags, exit codes, JSON fields, whether generated CLI docs need regenerating),
+  dependency changes, whether the run stopped on a blocker, and any deliberate deviation from `reference/`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-go-code-one-task\n(task description)"] --> B["Step 0: detect module, layout, CLI framework,\nTUI, test harness, lint config, go:generate"]
+    B -- "no go.mod" --> Z["Blocker: task mis-tagged;\nreport to caller"]
+    B --> C["Step 1: decide package(s);\nread reference/README.md + only needed files"]
+    C -- "reference/ missing" --> C2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    C2 --> D
+    C --> D["Step 2: re-check current code state\nof every file the task touches"]
+    D --> E["Step 3: implement exactly what the task specifies"]
+    E --> F["Step 4: write/update tests\n(not run here)"]
+    F --> G["Step 5: gofmt/goimports, go build ./...,\ngo vet on touched packages"]
+    G -- "fails on this task's own code" --> G2["Fix it"]
+    G2 --> H
+    G -- "fails outside scope,\nor toolchain unavailable" --> G3["Note it; don't fix unrelated code"]
+    G3 --> H
+    G -- "passes" --> H{"Step 6: ambiguous, infeasible,\nnew dependency, or interface break?"}
+    H -- yes --> I["Stop; leave checkbox unchecked;\nreport blocker to caller"]
+    H -- no --> J["Step 7: check off this task's\ncheckbox + 'validation pending' note"]
+    J --> K["Step 8: report outcome to caller:\nshape, files, tests, compile result, deviations"]
+....
+
+A conflict between `reference/` and the surrounding code is deliberately not a stop condition — the skill follows the
+surrounding code and reports the divergence in Step 8.
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-go-code-one-task` is a leaf skill; it does not call any other skill in this catalog. It reads its own
+`reference/` directory and edits the code and test files the task names. License headers, doc-comment audits, the test
+run, coverage, golangci-lint and govulncheck all happen once per bucket in
+xref:skills/iru-go-code-one-task-group.adoc[].
+
+=== Invoked by
+
+* xref:skills/iru-go-code-one-task-group.adoc[] — Step 2, once per task in a bucket (concurrently, in a single batch
+  of `Agent` calls, when the group is marked `Parallelizable: yes`; one at a time otherwise), via the
+  xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent, passing that task's full text
+  including its exact checkbox line(s). That caller re-reads `implementation_plan.md` afterward to confirm the
+  checkbox this skill already flipped landed, then replaces the "pending" note with the final validation outcome.
+
+=== Related agents
+
+`iru-go-code-one-task` itself does not spawn any Agent — it only reads its `reference/` files and edits the code/test
+files the task names. It is run inside an xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`]
+agent spawned by its caller.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-go-code-one-task/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from. The bundled Go code agreements live alongside it under https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-go-code-one-task/reference[`reference/`].

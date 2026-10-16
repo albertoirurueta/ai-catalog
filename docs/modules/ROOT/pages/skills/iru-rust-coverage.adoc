@@ -1,0 +1,102 @@
+= Rust Coverage
+:description: Measures a Rust crate or Cargo workspace line and region coverage with cargo-llvm-cov, reading lcov and JSON reports and listing uncovered line ranges.
+:keywords: iru-rust-coverage, claude code skill, rust, coverage, cargo-llvm-cov, nextest, lcov, cargo workspace, measure coverage, uncovered lines
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Run a Rust project's container-free tests under cargo-llvm-cov and report the exact, measured line and region coverage for the files the caller cares about, read from an lcov file and llvm-cov's JSON summary. It is a read-only measuring skill: it never adds tests, modifies source or test code, changes coverage configuration, or installs tools unless asked to as a follow-up.
+
+== Purpose
+
+A coverage number is only meaningful if coverage is actually wired and the right code is measured. `iru-rust-coverage` checks that `cargo-llvm-cov` and the `llvm-tools` component are present, runs the tests once with instrumentation (`cargo llvm-cov nextest` when cargo-nextest is installed, plain `cargo llvm-cov` otherwise, always `--locked`) using `--no-report`, then writes `target/coverage/lcov.info` and `target/coverage/summary.json` and reads both with a small stdlib Python parser. The line % is the gate figure and the region % is reported alongside; branch coverage is reported as unavailable on a stable toolchain, because `--branch` needs nightly.
+
+Binaries launched by end-to-end tests (for example through assert_cmd) are instrumented too, so a thin `src/main.rs` is measured fairly. Tooling members such as `xtask/` are excluded with `--ignore-filename-regex`, `tests/` files are never reported, and doctests do not count on stable. `#[ignore]` tests are never run, so the gate value is reproducible without Docker. A run with failing tests still yields a report, labeled as such. The skill never passes `--fail-under-*` flags: it judges the bar itself. A missing cargo-llvm-cov or `llvm-tools-preview`, a build failure, or a target absent from the report is reported instead of a false 0%.
+
+== Purpose group
+
+xref:index.adoc#group-rust[Rust Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-rust-coverage
+/iru-rust-coverage <targets>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`targets`
+|No
+|Comma-separated source files (`src/commands/greet.rs`), directories (`src/commands/`), or module paths (`crate::output`, `commands::greet`, `<member_crate>::config`). Module paths are resolved against the owning package's library root from `cargo metadata`.
+|Every reported file in the workspace.
+
+|`bar: <N>`
+|No
+|The threshold each target's line % is judged against.
+|`80`
+
+|`package: <name>`
+|No
+|Restricts the run to one workspace member (`-p <name>`).
+|`--workspace`
+
+|`features: all\|<comma list>`
+|No
+|`--all-features` or `--features a,b`.
+|Default features.
+
+|`filter: <x>`
+|No
+|Narrows the test run: a test-name substring, or `expr:<filterset>` (nextest only). A narrow filter undercounts code that other tests also exercise.
+|The whole suite.
+|===
+
+== Outputs
+
+* A plain-text summary in the conversation: the runner (`cargo llvm-cov nextest` or `cargo llvm-cov`), the toolchain (stable means no branch data), the selection (`--workspace` or `-p`, features, filter, ignored tests not run), what the exclusion regex removed, and whether the tests passed.
+* Total line % and region % (branch reported as unavailable on stable), with a verdict on whether the line % meets the bar.
+* Per target (or per file for a small unscoped run): line % and region %, and for every target under the bar its uncovered line ranges.
+* `NOT IN REPORT <target>` with the likely cause (module not declared, disabled feature, excluded path, bin-only crate with no executing test) instead of a 0%, and "coverage not wired" with the exact install command when tooling is missing.
+* The files `target/coverage/lcov.info`, `target/coverage/summary.json` and `target/coverage/run.log` are left in place (`target/` is gitignored; CI and Sonar read the lcov file). No source, test or configuration is ever modified.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-rust-coverage\n(optional targets, bar, package, features, filter)"] --> B["Step 0: parse arguments and\nresolve module paths to files"]
+    B --> C["Step 1: check cargo-llvm-cov,\nllvm-tools and nextest"]
+    C --> D{"cargo-llvm-cov and\nllvm-tools present?"}
+    D -- no --> E["Stop: report coverage\nnot wired with the fix"]
+    D -- yes --> F["Step 2: run the tests once,\ninstrumented, with no-report"]
+    F --> G{"Build failed?"}
+    G -- yes --> H["Report the compile error;\nnever read a stale file"]
+    G -- no --> I["Step 3: write lcov and JSON\nsummary excluding tooling members"]
+    I --> J["Step 4: parse lcov and summary for\nexact line and region coverage"]
+    J --> K["Step 5: report totals, per-target\ngaps and bar verdict"]
+    E --> K
+    H --> K
+....
+
+== Dependencies
+
+=== Invokes
+
+None — `iru-rust-coverage` is a leaf skill. It reuses the runner detection and the container-backed lock procedure (Docker check plus `.integration-test.lock`) of xref:skills/iru-rust-test.adoc[] by following the same rules, and borrows that procedure only when integration coverage is explicitly requested.
+
+=== Invoked by
+
+* xref:skills/iru-rust-code-one-task-group.adoc[] — the 80% coverage gate, measured from container-free tests alone, via the xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — calling skills normally run it inside this sub-agent. It spawns no agents itself.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-rust-coverage/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

@@ -1,0 +1,127 @@
+= Go Bump Version
+:description: Sets a Go module's in-tree Version literal to an exact value and checks the -ldflags -X overrides in GoReleaser, Makefile and workflow files.
+:keywords: iru-go-bump-version, claude code skill, go, golang, version bump, ldflags, goreleaser, cobra, release
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Set a Go project's in-tree version literal to an exact, caller-supplied value, verify that the release build's
+`-ldflags -X` override still reaches it, and follow the catalog's `x.y.z-dev` development-version convention.
+
+== Purpose
+
+`iru-go-bump-version` never computes a version; it validates the given string (`X.Y.Z` or `X.Y.Z-dev`, stripping a
+leading `v`, asking about other SemVer pre-releases and refusing anything else) and applies it. An embedded Python
+helper with `--list`, `--dry-run`, `--force` and `--files=` modes finds every `var Version = "..."` or
+`const Version = "..."` literal in non-test, non-generated `.go` files, including the `internal/version/version.go`
+file of the `iru-setup-go-cli` scaffold. It refuses to write when literals disagree until the user confirms, flags a
+`const Version` (which `-ldflags -X` silently cannot override), and checks every `-X ...Version=` reference in
+`.goreleaser.yaml`, `Makefile`, `Taskfile.yml`, `justfile` and GitHub workflows against the real import path, since the
+linker ignores a wrong path silently. It warns when a major version 2 or above does not match a `/vN` module-path
+suffix, without ever rewriting it. A library with no literal is reported as taking its version from git tags and
+nothing is changed. Step 5 documents the pre-release convention that `iru-release` calls it against, and it can
+optionally sync README and Antora version mentions.
+
+== Purpose group
+
+xref:index.adoc#group-go[Go Development Tooling]
+
+== Invocation
+
+[source]
+----
+/iru-go-bump-version <new-version>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`<new-version>`
+|Yes
+|Literal target version without a `v`, such as `1.4.0` or `1.5.0-dev`. Never computed by this skill.
+|Asked for if missing.
+
+|`sync-files`
+|No
+|`yes` or `no`: also update README and Antora version mentions.
+|Ask when such mentions exist.
+
+|`next-version`
+|No
+|Upcoming development version that "Current development version" markers should show after a release. Only meaningful
+with `sync-files: yes`.
+|None
+
+|`files`
+|No
+|Comma list of `.go` files to restrict the search to.
+|Every git-tracked non-test `.go` file outside `vendor/`, `testdata/` and `dist/`.
+
+|`dry-run`
+|No
+|`yes` prints the diff and writes nothing.
+|`no`
+|===
+
+== Outputs
+
+* Updated `Version` literals in the detected `.go` files, or no change when the version comes from git tags.
+* Optionally updated README and Antora version mentions.
+* A report: each literal with its old and new value, `const` notes, every `-ldflags -X` reference marked `ok` or
+  `MISMATCH`, every file touched, any disagreement aligned with `--force`, golden or test files that mirror the old
+  value, and the sanity-check result (`--list` agreement, `--version` output or "not run").
+* A warning to review the diff before committing, to tag releases as `v<new-version>`, and that a major version 2 or
+  above needs the `/vN` module path.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    S0["Step 0: resolve inputs\nask for version if missing"] --> S1{"Step 1: valid\nX.Y.Z or X.Y.Z-dev?"}
+    S1 -- no --> RF["Refuse or ask about\nSemVer pre-release"]
+    S1 -- yes --> S2["Step 2: write helper,\nsurvey with --list"]
+    RF --> S2
+    S2 --> L{"Literal found?"}
+    L -- no --> TG["Report: version comes from git tags;\nnothing changed"]
+    L -- yes --> D{"Literals disagree?"}
+    D -- yes --> Q["Ask user: align with --force"]
+    D -- no --> S3
+    Q --> S3["Step 3: look for mirrored mentions"]
+    S3 --> S4{"Step 4: dry-run?"}
+    S4 -- yes --> DR["Show diff only; stop"]
+    S4 -- no --> AP["Step 4: apply helper"]
+    AP --> S6["Step 6: sanity check\n--list and go build --version"]
+    S6 --> S7{"Step 7: sync files?"}
+    S7 -- yes --> SY["Scoped README and\nAntora updates"]
+    S7 -- no --> S8
+    SY --> S8["Step 8: report"]
+    DR --> S8
+    TG --> S8
+....
+
+== Dependencies
+
+=== Invokes
+
+None — it runs an embedded Python helper and `go build` directly. Step 5 is a documented convention for callers rather
+than an invocation.
+
+=== Invoked by
+
+* xref:skills/iru-release.adoc[] — Step 6, version bump for Go projects (called twice per release: release value and
+  next development value).
+
+Also referenced (not invoked) by xref:skills/iru-setup-go-cli.adoc[] and
+xref:skills/iru-setup-cli-github-workflows.adoc[], whose scaffold and `sync.yml` workflow follow the `x.y.z-dev`
+convention this skill maintains.
+
+=== Related agents
+
+None.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-go-bump-version/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

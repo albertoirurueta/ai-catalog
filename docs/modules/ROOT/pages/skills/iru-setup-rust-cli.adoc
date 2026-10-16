@@ -1,0 +1,192 @@
+= Setup Rust CLI
+:description: Scaffolds an agent-friendly Rust command-line tool: Cargo workspace, clap tree, exit codes, JSON output, optional Ratatui UI, tests, and an xtask for docs.
+:keywords: iru-setup-rust-cli, claude code skill, rust, cargo, clap, ratatui, cargo-deny, cargo-llvm-cov, scaffold cli, generate man pages
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Scaffold a complete, buildable, agent-friendly Rust command-line tool at the repository root: a Cargo workspace whose
+library holds all behavior behind a thin `main.rs`, sample commands that are each tested, an optional Ratatui
+terminal UI, quality configuration, and an `xtask` that generates man pages, shell completions and the Antora CLI
+reference.
+
+== Purpose
+
+`iru-setup-rust-cli` writes the catalog's Rust CLI scaffold contract, which the Rust coding and gate skills and
+xref:skills/iru-setup-cli-github-workflows.adoc[] later detect and call. The root `Cargo.toml` holds the tool package
+(version `0.1.0-dev` on gitflow, edition 2024, a computed `rust-version`, an explicit `[[bin]]`, workspace lints with
+`missing_docs`, `unsafe_code = "forbid"` and Clippy pedantic, and a release profile with fat LTO), next to
+`rust-toolchain.toml`, `rustfmt.toml`, `deny.toml` and `.cargo/config.toml` (the `cargo xtask` alias).
+
+The library implements the shared CLI contract: a clap 4 derive tree with global flags (`--format text|json|jsonl`,
+`--json`, `--no-color`, `--no-input`, `-q`, `-v`, `--log-format`, `--config`) and `<BIN>_*` environment variables,
+an exit-code enum (0 to 7, 130, 143), a `thiserror` error with a JSON error envelope on stderr, per-stream colour
+rules, prompts only on a terminal, flags then environment then TOML config then defaults, and signal handling. The
+sample commands are `greet`, `completion`, `schema`, `version` and `--version`; with `ui: tui` a Ratatui `browse`
+picker is added. Tests are in-process tests of `run`, assert_cmd and snapbox golden-file end-to-end tests, aiming at
+about 98% line coverage measured with cargo-llvm-cov (80% bar).
+
+The skill announces whether it is scaffolding from scratch or updating an existing tool. For every file group it
+owns that already exists it warns and asks Update / Keep as is / Replace / Stop (or applies `on-existing`), never
+overwrites hand-written source, and treats a foreign Cargo layout as foreign. Crate versions are looked up live on
+crates.io with a verified fallback table. It writes no CI workflow, `.gitignore`, README, changelog, `LICENSE` or
+Sonar file; those belong to the sibling skills chained by xref:skills/iru-setup-cli-repository.adoc[].
+
+== Purpose group
+
+xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-setup-rust-cli
+----
+
+== Inputs
+
+All inputs are optional `key: value` lines in `args`, normally passed by
+xref:skills/iru-setup-cli-repository.adoc[]; any key not supplied is asked interactively.
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`bin-name`
+|Yes (unless supplied via `args`)
+|Executable name (`^[a-z][a-z0-9-]*$`, at most 40 characters); also the clap command name, man page and completion
+file names, and, upper-cased, the `<BIN>_` environment prefix.
+|Repository directory basename, lowercased
+
+|`crate-name`
+|No
+|Cargo package (and crates.io) name; checked for availability on crates.io when `distribution: store` publishes there.
+|`bin-name`
+
+|`description`
+|Yes (unless supplied via `args`)
+|One sentence ending in a period; becomes the package description, the crate doc's first line and the `--help` text.
+|None
+
+|`ui`
+|No
+|`none` or `tui` (adds a Ratatui `browse` picker and raises the MSRV to 1.88).
+|`none`
+
+|`msrv`
+|No
+|Minimum supported Rust version for `rust-version`; never lower than the value computed from the dependency graph.
+|Computed (1.85 for `none`, 1.88 for `tui`)
+
+|`branching`
+|No
+|`gitflow` (version `0.1.0-dev`) or `main-only` (`0.1.0`).
+|`gitflow`
+
+|`license`
+|No
+|SPDX expression, or no license (proprietary, `publish = false`).
+|Asked; `MIT OR Apache-2.0` recommended
+
+|`developer-name` / `developer-email` / `organization-url`
+|Yes (unless supplied via `args`)
+|Populate the package `authors` and related metadata.
+|None
+
+|`owner` / `repository-url`
+|No
+|Repository identity; the URL defaults to `https://github.com/<owner>/<repo>` inferred from `git remote get-url origin`.
+|Inferred from `origin`; condition dropped when unknown
+
+|`open-source` / `visibility` / `ci`
+|No
+|Shared pipeline vocabulary; `visibility` falls back to `gh repo view`.
+|Asked when stand-alone
+
+|`sonar` (+ `sonar-organization`, `sonar-project-key`, `sonar-host-url`)
+|No
+|`cloud`, `self-hosted` or `none`; recorded for the report only, since no file carries Sonar keys.
+|`cloud` only for public open source, otherwise `none`
+
+|`distribution`
+|No
+|`none`, `internal` or `store`; recorded for the report, and `store` triggers the crate-name availability check.
+|`store` when open source, otherwise `internal`
+
+|`mode`
+|No
+|`new` or `existing`. Never means "update silently": every pre-existing file group is still asked about.
+|Derived from a root `Cargo.toml`
+
+|`on-existing`
+|No
+|`ask`, `keep`, `update` or `replace`; answers the per-group question for every existing group at once.
+|`ask`
+|===
+
+== Outputs
+
+* `Cargo.toml` (workspace with the tool package and the `xtask` member) and a generated, committed `Cargo.lock`.
+* `rust-toolchain.toml`, `rustfmt.toml`, `deny.toml` and `.cargo/config.toml`.
+* `src/main.rs`, `src/lib.rs`, `src/cli.rs`, `src/exit.rs`, `src/error.rs`, `src/output.rs`, `src/term.rs`,
+  `src/config.rs`, `src/signals.rs`, `src/tests.rs` and `src/commands/{mod,greet,completion,schema,version}.rs`.
+* With `ui: tui`: `src/commands/browse.rs` and `src/tui/{mod,app,ui}.rs`.
+* `tests/cli.rs`, `tests/golden/greet-ada.json` and a generated `tests/golden/schema.json`.
+* `xtask/Cargo.toml` and `xtask/src/main.rs`, plus generated man pages and completions under `target/dist/` and the CLI
+  reference page `docs/modules/ROOT/pages/cli-reference.adoc` (or `target/dist/cli-reference.adoc` when the Antora
+  module does not exist yet).
+* A report of the mode (from scratch, updated or stopped), the resolved identity, `ui`, version, MSRV, license, the
+  per-group action (created, updated, replaced, kept as is), crate versions used (live versus fallback), each
+  verification result, anything unverified, ignored `args` keys, suggested Antora pages, and explicit warnings (review
+  generated files, commit `Cargo.lock` and golden files, register new commands, run the gitignore skill, add
+  `LICENSE`, Sonar and crates.io prerequisites).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-setup-rust-cli"] --> B["Step 0: Resolve inputs from args"]
+    B --> C["Step 1: Survey Cargo.toml, toolchain config, src, tests, xtask"]
+    C --> D{"What is on disk?"}
+    D -- nothing --> D1["Announce: from scratch"]
+    D -- Rust CLI in this layout --> D2["Announce: updating; ask Update, Keep, Replace or Stop per group unless on-existing decides"]
+    D -- foreign layout --> D3["Warn; add only missing config alongside, or stop"]
+    D2 -- Stop --> Z["Report nothing changed; end"]
+    D3 -- Stop --> Z
+    D1 --> E
+    D2 --> E
+    D3 --> E["Step 2: Ask missing inputs\nbin-name, crate-name, description, ui, license, branching, open-source, sonar, distribution"]
+    E --> F["Step 3: Infer owner and repo from git origin"]
+    F --> G{"Step 4: cargo and rustup present?"}
+    G -- no --> Z2["Tell user to install rustup; stop"]
+    G -- yes --> H["Look up crate versions on crates.io; compute MSRV; check gate tools"]
+    H --> I["Step 5: Read reference templates and resolve placeholders"]
+    I --> J["Step 6: Write templates per group decision"]
+    J --> K["cargo generate-lockfile, recompute MSRV, cargo fmt"]
+    K --> L["Generate golden schema.json and run cargo xtask docs"]
+    L --> M["Step 7: Verify via iru-gate-runner\nfmt, clippy, nextest, doctests, rustdoc, deny, llvm-cov, xtask docs --check, MSRV, release build"]
+    M --> N["Smoke checks on pipes and on a pseudo-terminal"]
+    N --> O["Step 8: Report mode, per-group action, results, warnings"]
+....
+
+== Dependencies
+
+=== Invokes
+
+None as catalog skills. `iru-setup-rust-cli` is a leaf skill; it reads its own `reference/` templates and runs `cargo`,
+`rustup`, `curl` and `git` directly.
+
+=== Invoked by
+
+* xref:skills/iru-setup-cli-repository.adoc[] — the command-line tool bootstrap orchestrator runs it as the Rust
+  scaffold step, passing the resolved shared inputs through `args`. The `iru-setup-repository` front door reaches it
+  through that orchestrator.
+
+=== Related agents
+
+* xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] — Step 7 may run the long-output verification commands (build,
+  Clippy, tests, coverage) through this agent so only pass/fail and key figures come back.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-rust-cli/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

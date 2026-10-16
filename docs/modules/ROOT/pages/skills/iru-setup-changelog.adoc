@@ -116,6 +116,7 @@ sub-agent it delegates to.
 
 === Invoked by
 
+* xref:skills/iru-setup-cli-repository.adoc[] — bootstraps or updates the root `CHANGELOG.md` of a command-line tool repository via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 * xref:skills/iru-setup-java-library-repository.adoc[] — Step 7 runs `iru-setup-changelog` with no `args`, working
   entirely from the repository's own git tag/GitHub Release history.
 * xref:skills/iru-setup-typescript-repository.adoc[] — Step 9, root CHANGELOG.md, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
