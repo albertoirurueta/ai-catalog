@@ -23,7 +23,7 @@ description: >-
   Accepts pre-resolved inputs via `args` (`key: value` lines) — `name`, `package`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `python-version`, `database` (`postgresql`/`sqlite`),
   `api` (`drf`/`ninja`/`none`), `open-source`, `visibility`, `ci`, `distribution`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`), `mode` (`new`/`existing`),
+  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`/`none`), `mode` (`new`/`existing`),
   `on-existing` (`ask`/`keep`/`update`/`replace`) — so `iru-setup-python-repository` can drive it without re-prompting; stand-alone it asks whatever `args` didn't
   resolve. Announces whether it is scaffolding from scratch or updating an existing project and, for every artifact
   it owns that already exists, warns and asks Update / Keep as is / Replace (or Stop). Ends by running the same
@@ -121,7 +121,7 @@ Recognized keys:
   (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no` — only consulted by the Sonar
   question), `distribution` (`none`/`internal`/`store` — only reported; the `Dockerfile` is written either way and the
   workflows decide whether to push it), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `cloud`/`self-hosted`,
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility` (`enforce`/`report`/`off`, default
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility` (`enforce`/`report`/`off`/`none`, default
   `enforce` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`; asked only in
   a stand-alone run, Step 2), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default
   `ask`, for scripted runs).
@@ -131,6 +131,15 @@ Recognized keys:
 Ignore any other key (`ci-tests`, `pages`, `publish`, `integration-branch`, `stable-branch`, `orm`, … may arrive from
 the orchestrator). `mode: existing` marks an **update** run but never means "update silently": Step 1 still warns and
 asks per pre-existing artifact unless `on-existing` says otherwise.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core in the browser UI tests), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic template landmarks, labelled form controls, `alt` on images, relative font sizes, `prefers-reduced-motion` guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -223,8 +232,7 @@ conversation for free text, `AskUserQuestion` for bounded choices):
    would send reports and recommend **None**. For `cloud` ask `sonar-organization` (suggest `<owner>-github`) and
    `sonar-project-key` (suggest `<owner>_<repo>`), host `https://sonarcloud.io`; for `self-hosted` ask the host URL,
    the organization only if the server uses them, and the project key.
-7. **accessibility** (stand-alone runs only; an orchestrator always passes it) — "Automated accessibility checks in
-   UI tests?" **Enforce (Recommended)** "axe violations fail the UI tests" / **Report only** "listed in the test
+7. **accessibility** (stand-alone runs only; an orchestrator always passes it) — "Support accessibility and assistive technologies?" **Enforce (Recommended)** "axe violations fail the UI tests" / **Report only** "listed in the test
    output and the gate summary, never failing" / **Off** "not run; the accessibility coding defaults still apply".
    Written to `.ui-quality.yml`.
 

@@ -59,3 +59,5 @@ Exactly the fields the prompt asked for, and nothing else:
 If something doesn't fit any of the above, follow the prompt's own explicit reporting instructions rather than
 guessing — the caller always tells you exactly what shape of summary it needs, because it uses your report
 directly in its own tracking (a plan checkbox note, a Step 7 quality-gate decision, etc.).
+
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.

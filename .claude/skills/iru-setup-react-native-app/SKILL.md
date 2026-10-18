@@ -17,7 +17,7 @@ description: >-
   coverage with a safe-area mock, the shared `test`/`coverage`/`lint`/`format`/`typecheck` scripts, ESLint/Prettier
   ignores for native build output, then runs `npm install`, `./gradlew assembleDebug` and, on macOS, `bundle exec
   pod install` + a simulator `xcodebuild`. Both toolchains get a Maestro smoke flow (`.maestro/smoke.yaml`), the
-  catalog's UI contract wiring — `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`,
+  catalog's UI contract wiring — `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off|none`,
   directions, themes), `eslint-plugin-react-native-a11y` in the ESLint config at that level, a dev-only UI gallery
   (`src/dev/ui-gallery/`, reached by a `<app-slug>://ui-gallery?…` deep link, stripped from production bundles by
   `__DEV__`) with its Jest test, and the Maestro screenshot helper (`.maestro/subflows/ui-capture.yaml`) plus a
@@ -37,7 +37,7 @@ description: >-
   still stops. Accepts pre-resolved inputs via `args` (`key: value` lines) — `toolchain`, `app-name`, `app-slug`,
   `app-directory`, `app-id`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`,
   `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (expo only),
-  `distribution`, `accessibility` (`enforce`/`report`/`off`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public
+  `distribution`, `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public
   open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar), `on-existing`
   (`ask`/`keep`/`update`/`replace`, default `ask`), and `mode` (`new`/`existing`) — so an orchestrating skill can
   supply them without re-prompting; invoked stand-alone, it asks `toolchain` and `open-source` first and derives the
@@ -110,7 +110,7 @@ for `expo`), `license`, `developer-name`, `developer-email`, `organization-url`,
 `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `native-builds` (`eas`/`local` — **expo only**; ignored
 with a one-line note for `metro`), `distribution` (`none`/`internal`/`store`), `accessibility`
-(`enforce`/`report`/`off` — the UI contract's automated accessibility level, written to `.ui-quality.yml`; default
+(`enforce`/`report`/`off`/`none` — the UI contract's automated accessibility level, written to `.ui-quality.yml`; default
 `enforce`), `visibility`
 (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key Step 2's Sonar
 recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions workflows at all;
@@ -121,6 +121,15 @@ Step 1 treats each pre-existing tooling file; meant for scripted runs), and `mod
 established repository) that this run is an **update**: Step 1 announces it as such, but still warns and asks per
 pre-existing file at the resolved `app-directory` unless `on-existing` says otherwise — `mode: existing` alone never
 means "update silently". `mode: new` or an unset `mode` follows the same survey.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (`eslint-plugin-react-native-a11y` and the role-query accessibility assertions), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `accessibilityLabel`/`accessibilityRole` on touchables and icon buttons, `allowFontScaling`-safe text, reduced-motion checks (`AccessibilityInfo`) — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -298,8 +307,8 @@ shared convention:
     edits to a prebuilt `ios/`/`android/` folder are lost on the next `prebuild` run).
   - This answer doesn't change anything this skill writes to disk beyond `eas.json`'s `cli` block — it's recorded
     here so `iru-setup-typescript-github-workflows` can wire the matching CI job later without asking again.
-- **accessibility** (stand-alone runs only, when `args` didn't supply it; `AskUserQuestion`) — "Automated
-  accessibility checks in UI tests?" **Enforce (Recommended)** — `eslint-plugin-react-native-a11y` errors fail lint
+- **accessibility** (stand-alone runs only, when `args` didn't supply it; `AskUserQuestion`) — "Support accessibility
+  and assistive technologies?" **Enforce (Recommended)** — `eslint-plugin-react-native-a11y` errors fail lint
   (and the group skills' UI stage); **Report only** — reported as warnings, never failing; **Off** — the plugin's rules
   are off (the accessible-by-default coding rules still apply). Say that React Native has no automated native audit
   (contrast, touch-target size): the check is the lint plugin plus the tests' role/label queries. Written to
@@ -592,7 +601,7 @@ State explicitly what was included versus omitted, and why:
 - **`native-builds`** (expo): `eas`/`local` — restate the EAS free-tier cap (15 builds/platform/month) if `eas` was
   chosen, or the native-toolchain requirement if `local` was chosen. For metro: "not applicable — native builds
   run with Gradle/`xcodebuild`".
-- **`accessibility`**: `enforce`/`report`/`off`, where it came from (`args`, an existing `.ui-quality.yml`, or the
+- **`accessibility`**: `enforce`/`report`/`off`/`none`, where it came from (`args`, an existing `.ui-quality.yml`, or the
   question), the `.ui-quality.yml` action (created / updated / replaced / kept as is, with any mismatch), and that
   React Native's automated check is the `eslint-plugin-react-native-a11y` lint plus role queries — no native
   contrast/touch-target audit. Also whether the UI gallery is wired into the entry (`index.ts`/`index.js`) and the

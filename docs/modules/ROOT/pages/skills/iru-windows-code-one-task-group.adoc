@@ -32,6 +32,8 @@ visual state x configured direction x theme, with no malformed names. Axe.Window
 `accessibility: enforce` and are only listed at `report`. A UI stage, WinUI build or packaging step that cannot run (not Windows, no
 interactive desktop, lock wait timeout) is reported "unverified", never skipped silently or reported as passed.
 
+When `.ui-quality.yml` says `accessibility: none` (the user opted out of accessibility support entirely), the accessibility rules are not applied and the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks) are not run or required; they are reported as "accessibility: opted out" in the group report — never "unverified" and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]

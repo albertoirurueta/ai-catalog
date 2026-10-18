@@ -178,6 +178,12 @@ applies the level: **enforce** → `t.Errorf` listing the violations; **report**
 <message>` lines to `<screenshots dir>/a11y-report.txt` (the test gate counts them); **off** → nothing. The coding
 defaults still apply under `off`. Say in the report that these are asserted checks, not an automated audit.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Terminal UI only (Bubble Tea): no colour-only information (pair with symbols/text), honour `NO_COLOR`, keyboard-only operation with a help line, no animation when non-TTY; these are asserted checks, not an audit. Plain CLIs have no UI rules here.
+
 ## Sources
 
 - Bubble Tea v2: <https://pkg.go.dev/charm.land/bubbletea/v2> (`Model`, `View`/`NewView` and its `Content` field,

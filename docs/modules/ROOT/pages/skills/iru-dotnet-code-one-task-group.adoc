@@ -82,7 +82,7 @@ verdict and any relevant "Current code state" context.
 * For CLI-shaped projects: a Native AOT publish result (zero IL trim/AOT warnings, published-binary test counts, or
   "unverified" when no native toolchain is available) and a current generated CLI reference page; when the terminal
   UI was touched, the UI stage result (UI test counts, captures per view and any missing state × direction, malformed
-  names, the accessibility level applied and its violations).
+  names, the accessibility level applied - or "accessibility: opted out" when `.ui-quality.yml` says `none` - and its violations).
 * Tests achieving at least 80% line coverage for the bucket's changed/new classes, verified against the real
   coverage report.
 * `implementation_plan.md` with each task's (and sub-task's) checkbox checked and a progress note — first an

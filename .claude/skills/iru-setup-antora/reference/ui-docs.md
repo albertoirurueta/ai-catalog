@@ -51,7 +51,9 @@ Screens are listed in navigation order (start destination first), components alp
 Every fact comes from the code and its doc comments — never invent behaviour.
 
 **`ui/index.adoc`** — one paragraph on the app's UI; a table of screens (name, purpose, route/entry point); a
-table of components (name, purpose, used by); the accessibility level from `.ui-quality.yml`; a link to the flows.
+table of components (name, purpose, used by); the accessibility level from `.ui-quality.yml` (with `accessibility:
+none`, one sentence stating that accessibility and assistive-technology support is opted out for this project instead);
+a link to the flows.
 
 **`ui/navigation.adoc`** — the navigation graph from the app's single navigation definition (navigation graph,
 router, `NavigationStack` destinations, file-based routes, coordinator, Bubble Tea model switch): a Mermaid
@@ -67,6 +69,8 @@ section per flow with each step's `flow/<flow>/NN-<step>--ltr--light.png` screen
 4. *Composed of*: `xref:`s to the component pages it nests.
 5. *States*: one subsection per documented visual state, with the screenshots chosen by §4.
 6. *Accessibility*: labels/roles worth knowing, and the automated check result when the UI test run reported it.
+   Write this subsection only when `.ui-quality.yml` `accessibility` is not `none`; with `none`, omit it from every
+   page (the opt-out sentence on `ui/index.adoc` is the only mention).
 
 Screenshots use the image macro with meaningful alternative text, inside a table so light/dark and LTR/RTL sit
 side by side:

@@ -18,6 +18,8 @@ returns a concise pass/fail report instead of a raw console dump. It detects the
 from the project's own manifests rather than assuming one, and distinguishes a genuinely clean run from a
 selector that silently matched nothing — a distinction that looks identical in a broken CI job if conflated.
 
+When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: they are skipped and reported as "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
@@ -165,7 +167,7 @@ Every Playwright, Maestro or Detox `e2e`/`ui` run is also a UI run, wrapping the
 (see xref:guides/building-user-interfaces.adoc[Building user interfaces]):
 
 * The settings are resolved at the repository root: `UI_SCREENSHOTS_DIR` (absolute, from the environment) or
-  `.ui-screenshots/`, and the `accessibility` (`enforce`/`report`/`off`), `directions` and `themes` keys of
+  `.ui-screenshots/`, and the `accessibility` (`enforce`/`report`/`off`/`none`), `directions` and `themes` keys of
   `.ui-quality.yml` (missing file or key means `enforce`, left-to-right and right-to-left, light and dark).
 * A full UI run (no file, directory, name or tag) clears the screenshot directory's contents first, only when the path
   is `.ui-screenshots` or came from `UI_SCREENSHOTS_DIR`; a scoped run adds to it. A missing `.gitignore` entry is

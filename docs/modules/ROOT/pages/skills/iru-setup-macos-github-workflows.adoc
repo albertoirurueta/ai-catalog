@@ -104,7 +104,7 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
 == Outputs
 
-* `.github/workflows/build.yml` (including the `.ui-screenshots/` recovery step and artifact upload), `release.yml` (when `distribution` is not `none`), `sync.yml` and
+* `.github/workflows/build.yml` (including the `.ui-screenshots/` recovery step and artifact upload), with no accessibility report artifact or step when `.ui-quality.yml` says `accessibility: none`; `release.yml` (when `distribution` is not `none`), `sync.yml` and
   `.github/scripts/sync_versions.py` (gitflow), `security.yml`, `.github/dependabot.yml`, and
   `.github/scripts/lcov_to_sonar_generic.py` when Sonar is configured.
 * A verification pass: `actionlint` (or a YAML parse), `py_compile` of the scripts and, on macOS with the scaffold, a

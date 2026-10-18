@@ -27,7 +27,7 @@ description: >-
   module exists; `--check` for CI). Invoke as `/iru-setup-rust-cli`. Accepts pre-resolved inputs via `args`
   (`key: value` lines) — `bin-name`, `crate-name`, `description`, `ui` (`none`/`tui`), `msrv`, `branching`
   (`gitflow`/`main-only`), `license`, `developer-name`, `developer-email`, `organization-url`, `owner`,
-  `repository-url`, `accessibility` (`enforce`/`report`/`off`, `ui: tui` only), `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
+  `repository-url`, `accessibility` (`enforce`/`report`/`off`/`none`, `ui: tui` only), `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `distribution` (`none`/`internal`/`store`), `mode` (`new`/`existing`) and `on-existing`
   (`ask`/`keep`/`update`/`replace`) — so `iru-setup-cli-repository` can drive it without re-prompting. Announces
   whether it is scaffolding from scratch or updating; for every file group it owns that already exists it warns and
@@ -118,7 +118,7 @@ Recognized keys:
   `no-license` condition: no `license` key, `publish = false`); `developer-name`, `developer-email` (→ `authors`);
   `organization-url`, `owner`, `repository-url` (→ `repository`; default `https://github.com/<owner>/<repo>` from
   Step 3).
-- **Shape (this skill)**: `ui` (`none`/`tui`, default `none`); `accessibility` (`enforce`/`report`/`off`, default
+- **Shape (this skill)**: `ui` (`none`/`tui`, default `none`); `accessibility` (`enforce`/`report`/`off`/`none`, default
   `enforce`; only used with `ui: tui` — the level written to `.ui-quality.yml`, which the TUI's UI tests read); `msrv` (the minimum supported Rust version written
   to `rust-version`; default computed in Step 4 — never lower than what Step 4 computes); `branching`
   (`gitflow` → version `0.1.0-dev`, `main-only` → `0.1.0`; default `gitflow`).
@@ -134,6 +134,15 @@ and named in the report. `mode: existing` never means "update silently": Step 1 
 every pre-existing file group. Only `on-existing` skips that question (`keep` = create only missing files;
 `update`/`replace` applied to every existing group; the warning is still printed). Orchestrators forward
 `on-existing` only when their own `args` received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (the terminal UI's asserted accessibility checks), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — selection visible without colour, key help on screen, every action reachable by key — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -198,8 +207,7 @@ Then, with `AskUserQuestion` (skip any resolved):
 - **ui** — **No terminal UI (Recommended)** (`none`: every command is a plain command; styled, TTY-aware output is
   still there) / **Ratatui terminal UI** (`tui`: adds `browse`, a full-screen picker for people; agents and scripts
   keep using `greet --json`; adds ratatui + crossterm and raises the MSRV to 1.88).
-- **accessibility** — only with `ui: tui` and stand-alone (an orchestrator resolves it): "Automated accessibility
-  checks in UI tests?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report only** (listed, never
+- **accessibility** — only with `ui: tui` and stand-alone (an orchestrator resolves it): "Support accessibility and assistive technologies?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report only** (listed, never
   failing) / **Off** (not run). For a terminal UI these are the asserted checks (selection visible without colour,
   key help on screen), not an automated audit.
 - **license** — **MIT OR Apache-2.0 (Recommended)** "the Rust ecosystem's dual license" / **MIT** / **Apache-2.0** /

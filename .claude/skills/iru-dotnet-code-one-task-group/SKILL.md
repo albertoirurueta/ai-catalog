@@ -97,6 +97,8 @@ applies, Step 3 changes as follows (everything else is unchanged):
   the view and re-run; `report` → list the `a11y-report.txt` violations in Step 5; `off` → say so. No UI tests at all
   for a changed view → "terminal UI untested", never a pass.
 
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 ## Step 1 — Capture one pre-change quality baseline for the whole bucket
 
 Before implementing anything, collect the set of type(s) every task in this bucket is expected to touch (from

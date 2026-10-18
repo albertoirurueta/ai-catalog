@@ -88,7 +88,7 @@ Recognized keys:
   whether GitHub Actions workflows are generated/updated at all), `ci-tests` (`unit`/`full` — only meaningful when
   `ci: yes`), `pages` (`yes`/`no` — only meaningful when `ci: yes`), `on-existing` (`ask`/`keep`/`update`/
   `replace` — how every component sub-skill treats prior setup it finds; never asked, and forwarded only when it
-  arrived here via `args`), `accessibility` (`enforce`/`report`/`off` — `app` only: the level of the UI tests'
+  arrived here via `args`), `accessibility` (`enforce`/`report`/`off`/`none` — `app` only: the level of the UI tests'
   automated accessibility checks, written by `iru-setup-apple-app` to `.ui-quality.yml`; ignored for `library`).
 - **Flavor-specific inputs** named in Step 3: `platforms`, `min-deployment-targets` (`library`),
   `min-deployment-target` (`app`), `generator` (`xcodegen`/`tuist` — `app` only), `signing`
@@ -379,10 +379,10 @@ already resolved):
   integration-test target stay local" (recommended for private/internal) / **Unit + UI tests** — "unit tests plus
   XCUITest UI tests on every selected simulator/platform destination (complete verification, uses considerably more
   macOS minutes — each UI-test run boots a simulator and launches the app)" (recommended for public).
-- **accessibility** (`app` only; skip for `library`) — "Automated accessibility checks in UI tests?" —
+- **accessibility** (`app` only; skip for `library`) — "Support accessibility and assistive technologies?" —
   **Enforce (Recommended)** (`enforce`: every `performAccessibilityAudit()` issue fails the UI tests) / **Report
   only** (`report`: issues listed, never failing) / **Off** (`off`: the audit isn't run; labels, contrast and Dynamic
-  Type are still coded). Written by the scaffold to `.ui-quality.yml`, read by the UI tests and the Swift coding/test
+  Type are still coded). **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. Written by the scaffold to `.ui-quality.yml`, read by the UI tests and the Swift coding/test
   skills.
 - **pages** (only when `ci: yes`; the DocC + Antora site) — public: **`yes`** without asking (state it in Step
   11). Private/internal: ask — **No (Recommended)** — "CI still builds the docs and uploads them as a workflow
@@ -627,7 +627,7 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   roughly 10× against it.
 - **`ci-tests`** (`ci: yes` only): `unit` (UI-test bundles skipped via `-skip-testing:` for an app; any library
   integration-test target skipped) or `full`.
-- **`accessibility`** (`app`): the level written to `.ui-quality.yml` (`enforce`/`report`/`off`) and whether it came
+- **`accessibility`** (`app`): the level written to `.ui-quality.yml` (`enforce`/`report`/`off`/`none`) and whether it came
   from `args` or the user; the scaffold's UI tests capture the sample screen into `.ui-screenshots/` (gitignored) and
   CI uploads those captures as a 7-day artifact.
 - **`pages`** (`ci: yes` only): `yes` (deployed to GitHub Pages — defaulted without asking for a public

@@ -253,6 +253,14 @@ All three compiled with FlaUI.UIA3 5.0.0, Axe.Windows 2.4.2 and MSTest 4.5.1 (`n
 `EnableWindowsTargeting`, warnings as errors) on macOS; **running them is unverified locally (needs an interactive
 Windows desktop)** — the group skill reports that stage "unverified (needs Windows)" off Windows, never passed.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Narrator/UI Automation: set `AutomationProperties.Name`, `HelpText`, `LabeledBy`, `LiveSetting`, and `AccessibilityView="Raw"` for decoration; WinUI: `AutomationProperties` plus `ToolTipService`; Windows Forms: `AccessibleName`/`AccessibleRole`/`AccessibleDescription`.
+- High Contrast: use system brushes/theme resources (`SystemColors`, `ThemeResource`), never hard-coded colours; keep full keyboard operation (`TabIndex`, `AccessKey`, visible focus).
+- Text follows system text scaling; honour `SystemParameters.ClientAreaAnimation` / `UISettings.AnimationsEnabled`.
+
 ## Sources
 
 - WPF data templating and `ItemsControl`: <https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/data-templating-overview>

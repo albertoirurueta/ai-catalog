@@ -25,7 +25,7 @@ description: >-
   `router` (`app`/`pages`), `output` (`server`/`static`), `cache-components` (`yes`/`no`), `styling`
   (`tailwind`/`css-modules`), `e2e` (`playwright`/`none`), `distribution` (`none`/`internal`), `docs-tool`
   (`typedoc`/`none`), `agents-md` (`yes`/`no`), `package-manager` (`npm`/`pnpm`/`yarn`), `node-version`,
-  `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`, default `enforce`), `mode` (`new`/`existing`),
+  `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `mode` (`new`/`existing`),
   `on-existing` (`ask`/`keep`/`update`/`replace`) — and asks
   whatever `args` didn't resolve. Announces whether it is scaffolding from scratch or updating an existing app and,
   for every artifact it owns that already exists, asks Update / Keep as is / Replace (or Stop). Use whenever a
@@ -106,7 +106,7 @@ Recognized keys:
 | `node-version` | Node major | `24` (current LTS) — the `Dockerfile`'s `NODE_VERSION` |
 | `visibility` | `public`/`private`/`internal` | resolved only if the Sonar question is asked |
 | `ci` | `yes`/`no` | `yes` (only consulted for the Sonar recommendation) |
-| `accessibility` | `enforce`/`report`/`off` | asked with `e2e: playwright`, else `enforce` — the UI tests' automated accessibility level written to `.ui-quality.yml` |
+| `accessibility` | `enforce`/`report`/`off`/`none` | asked with `e2e: playwright`, else `enforce` — the UI tests' automated accessibility level written to `.ui-quality.yml` |
 | `mode` | `new`/`existing` | derived in Step 1 |
 | `on-existing` | `ask`/`keep`/`update`/`replace` | `ask` |
 
@@ -125,6 +125,15 @@ Contradictions are resolved, not obeyed, and reported in Step 10:
 
 `mode: existing` marks the run as an update, but never means "update silently": Step 1 still asks per artifact
 unless `on-existing` says otherwise.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core in the Playwright tests and `eslint-plugin-jsx-a11y`), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic landmarks, accessible names on icon-only buttons, `alt` on images (`next/image`), `rem`/relative font sizes, `prefers-reduced-motion` guards, visible focus — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -224,8 +233,7 @@ confirm it in one line instead of asking.
 - **docs-tool**: **TypeDoc** (Recommended — `npm run docs` writes `docs/api`, which the workflows skill merges
   under the Antora site; also lets `iru-typescript-tsdoc` verify instead of running audit-only) or **None**.
 
-- **accessibility** (only with `e2e: playwright`; `AskUserQuestion`): "Automated accessibility checks in UI
-  tests?" — **Enforce (Recommended)** (axe violations fail the UI tests) / **Report only** (listed, never failing) /
+- **accessibility** (only with `e2e: playwright`; `AskUserQuestion`): "Support accessibility and assistive technologies?" — **Enforce (Recommended)** (axe violations fail the UI tests) / **Report only** (listed, never failing) /
   **Off** (not run; the coding defaults still apply).
 
 Do not ask `router`, `styling`, `e2e`, `agents-md`, or `package-manager` unless the user brings them up — their

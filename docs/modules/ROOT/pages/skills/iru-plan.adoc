@@ -90,7 +90,7 @@ task.
 * For UI work: a `Screen › Region › Component (in: …; out: …)` tree in "Current code state" with each node marked
   new/changed/reused; one task per component or screen (inputs, events, visual states, plus its tests across
   left-to-right/right-to-left × light/dark, `.ui-screenshots/` captures and the accessibility check at the
-  `.ui-quality.yml` level, per the coding skill's `reference/ui-contract.md`); collections planned as a virtualizing
+  `.ui-quality.yml` level, per the coding skill's `reference/ui-contract.md`; with `accessibility: none` the accessibility tasks, attributes and checks are omitted entirely); collections planned as a virtualizing
   collection component plus one item component; groups ordered leaves first; and a final untagged documentation task
   that runs `/iru-update-docs`.
 * Any decisions made on the user's behalf (per the ambiguity-resolution step) are stated in the plan itself,

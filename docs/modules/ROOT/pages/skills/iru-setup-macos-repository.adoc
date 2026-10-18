@@ -104,11 +104,11 @@ Pages versus a workflow artifact.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the UI tests' automated accessibility level (`performAccessibilityAudit()`), written by
+|`enforce`, `report`, `off` or `none` (opt out entirely) — the UI tests' automated accessibility level (`performAccessibilityAudit()`), written by
 the scaffold to `.ui-quality.yml`; the UI tests also capture the main window across left-to-right/right-to-left ×
 light/dark into the gitignored `.ui-screenshots/`, which CI uploads as a 7-day artifact (see
 xref:guides/building-user-interfaces.adoc[Building user interfaces]).
-|Asked (Enforce recommended)
+|Asked (Enforce recommended); in `existing` mode pre-selected from the explored `Accessibility:` line (present: Enforce, partial: Report only, absent: None)
 
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)
 |No

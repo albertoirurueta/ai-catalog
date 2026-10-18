@@ -271,6 +271,15 @@ def check_accessibility(page: Page) -> list[str]:
 — projects that turn warnings into errors would fail it); `off` skips the scan, while the coding defaults of the
 contract's §8 still apply. Run it after every capture, in every theme — contrast differs between light and dark.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Prefer native semantic elements (`button`, `a`, `nav`, `main`, `label`/`input`, headings in order) over `div` + `role`; add `aria-*` only where HTML has no equivalent.
+- Icon-only controls get `aria-label`; images get `alt` (empty `alt=""` when decorative); dynamic updates use `aria-live`; modals trap and restore focus.
+- Honour `prefers-reduced-motion` and `forced-colors`; size text in `rem`, never fixed `px` heights that clip on zoom.
+- Templates: base template with `<main>`, `<nav aria-label>`, skip-link and `lang`/`dir` on `<html>`; form fields rendered with `<label for>` and `aria-describedby` pointing at `errorlist`; messages in a `role="status"`/`alert` region.
+
 ## Sources
 
 - Django: templates and the template language <https://docs.djangoproject.com/en/6.1/ref/templates/language/>,

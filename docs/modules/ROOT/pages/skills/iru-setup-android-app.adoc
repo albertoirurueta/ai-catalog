@@ -20,7 +20,7 @@ block. It also scaffolds UI tests per the catalog's UI contract (see
 xref:guides/building-user-interfaces.adoc[Building user interfaces]): a `.ui-quality.yml` at the repository root,
 Roborazzi plus the Accessibility Test Framework on Robolectric, a shared `testing/UiScreenshots.kt` helper, and a
 sample screen test that captures `.ui-screenshots/` across left-to-right/right-to-left × light/dark with the
-accessibility check; the sample layouts use `Start`/`End` constraints and localized string resources. It never writes a Maven Central publishing block — `iru-setup-android-library` is the companion skill for
+accessibility check (and, unless `accessibility: none`, assistive-technology attributes such as `contentDescription`, `sp` font sizes and 48dp touch targets); the sample layouts use `Start`/`End` constraints and localized string resources. It never writes a Maven Central publishing block — `iru-setup-android-library` is the companion skill for
 a library module. Every Gradle/Kotlin/plugin version is looked up at run time against the real package registries,
 falling back to a recorded, CI-verified combination when a lookup fails. It announces whether it is scaffolding from
 scratch or updating an existing Gradle project; for each file group it owns that already exists (each build file,
@@ -148,7 +148,7 @@ Publisher plugin).
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` — the accessibility level, written to `.ui-quality.yml`; `none` opts out entirely (no accessibility test tooling, no accessibility attributes in the templates).
 Asked as a bounded choice when unresolved.
 |`enforce`
 

@@ -76,7 +76,7 @@ When called from `iru-setup-python-repository`, the resolved answers arrive as `
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`. Asked only in a stand-alone run.
+|`enforce`, `report`, `off` or `none` — whether accessibility and assistive-technology support is wanted and the automated level of the browser UI tests, written to `.ui-quality.yml`. `none` opts out entirely: `accessibility: none` is written to `.ui-quality.yml`, no accessibility test tooling (axe-core) is installed and the accessibility attributes are omitted from the templates. Otherwise the templates carry the assistive-technology attributes. Asked only in a stand-alone run ("Support accessibility and assistive technologies?"); an existing `.ui-quality.yml` value is never silently flipped.
 |`enforce`; an existing `.ui-quality.yml` pre-selects its value
 
 |`mode`

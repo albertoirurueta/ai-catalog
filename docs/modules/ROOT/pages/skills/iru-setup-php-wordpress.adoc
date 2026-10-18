@@ -19,7 +19,7 @@ and `.distignore`; `blocks: yes` additionally adds a `blocks/` source directory 
 and a minimal `functions.php`). Both flavors get `composer.json` with the catalog's shared scripts, `phpcs.xml.dist`
 (WordPress-Extra, WordPress-Docs, PHPCompatibilityWP), `phpstan.neon.dist` (phpstan-wordpress, level 6), a Brain
 Monkey `unit` suite, a `WP_UnitTestCase` `integration` suite running in a dedicated `@wordpress/env` environment,
-sample tests, Clover/JUnit output under `build/logs/`, browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]) and `sonar-project.properties` when Sonar is on. The UI tests are a `.ui-quality.yml`, a `playwright.config.ts` extending `wp-scripts test-playwright` against the wp-env tests instance, `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper, a test-only RTL mu-plugin and a sample spec (the plugin's `ContentNotice` component or the theme's `Index` screen) that captures `.ui-screenshots/` across left-to-right/right-to-left x light/dark with an accessibility check.
+sample tests, Clover/JUnit output under `build/logs/`, browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]) and `sonar-project.properties` when Sonar is on. The UI tests are a `.ui-quality.yml`, a `playwright.config.ts` extending `wp-scripts test-playwright` against the wp-env tests instance, `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper, a test-only RTL mu-plugin and a sample spec (the plugin's `ContentNotice` component or the theme's `Index` screen) that captures `.ui-screenshots/` across left-to-right/right-to-left x light/dark with an accessibility check. With `accessibility: none` no accessibility tooling is installed and the templates omit assistive-technology attributes; otherwise they carry them.
 
 Dependency versions, the PHP floor and the WordPress floor/tested-up-to versions are resolved live (Packagist, npm,
 php.net, api.wordpress.org) with a documented fallback table; PHPUnit stays on 9.6 because the WordPress test library
@@ -92,7 +92,7 @@ for `theme.json` v3 and blocks).
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` (opt out entirely) — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`.
 |`enforce` (asked in Step 2 when unresolved)
 
 |`mode`

@@ -22,7 +22,7 @@ compared against the baseline and each task's declared intent, flagging unexpect
 Playwright suite, which doubles as the UI stage of the catalog's UI contract (see
 xref:guides/building-user-interfaces.adoc[Building user interfaces]) when the bucket touched UI. Because builds and Playwright's web server cannot run concurrently, both stages sit behind the atomic
 `mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded wait of about 45 minutes, released on every
-exit path). A missing browser, occupied port or unavailable environment variable is reported as unverified, never as a pass.
+exit path). A missing browser, occupied port or unavailable environment variable is reported as unverified, never as a pass. With `accessibility: none` in `.ui-quality.yml` (opted out entirely), the accessibility rules and checks are neither applied nor required and are reported as "accessibility: opted out" in the group report, never unverified or failed; `off` still applies the rules but skips the automated checks.
 
 == Purpose group
 

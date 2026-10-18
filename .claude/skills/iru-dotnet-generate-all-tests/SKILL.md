@@ -171,6 +171,8 @@ generated" (this skill doesn't scaffold one; `iru-setup-windows-app`/`iru-setup-
    terminal UI tests on any host. Fix failures in the generated tests (not the views, unless a missing automation id
    or accessible name is the cause — then fix the view minimally and report it).
 
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
+
 ## Step 8 — Report
 
 Summarize:

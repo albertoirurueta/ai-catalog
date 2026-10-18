@@ -22,7 +22,7 @@ Replace per file (or applies `on-existing` when that arrived via `args`) — the
 questions itself, so nothing is asked twice. Pipeline questions are cost-aware: the repository `visibility` drives
 recommendations about GitHub Actions minutes, SonarCloud pricing and GitHub Pages availability, and `ci: no` skips
 the workflows step entirely (security block included). It also asks the `accessibility` level once
-(`enforce`/`report`/`off`, for both flavors) and forwards it to the scaffold skill, which writes it to
+(`enforce`/`report`/`off`/`none`, for both flavors) and forwards it to the scaffold skill, which writes it to
 `.ui-quality.yml` (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
 
 == Purpose group
@@ -141,8 +141,8 @@ the locally installed SDK platforms.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the UI tests (the library's `app/` sample has one
-too), asked once with the other shared inputs and forwarded to the scaffold skill, which writes it to `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` — the automated accessibility level of the UI tests (the library's `app/` sample has one
+too), asked once with the other shared inputs and forwarded to the scaffold skill, which writes it to `.ui-quality.yml`. In `mode: existing` it is pre-selected from `iru-explore`'s `Accessibility:` line (`present` → enforce, `partial` → report, `absent` → none).
 |`enforce` recommended
 
 |Scaffold toolchain toggles (`built-in-kotlin`, `junit`, `coverage-tool`, `static-analysis`, `ui` for `app`)

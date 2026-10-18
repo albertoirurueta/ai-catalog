@@ -109,7 +109,7 @@ the site would be public.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` -- UI flavors only (`react`, `nextjs`, `angular`, `react-native`, `ionic`; ignored with a note for `library`/`nestjs`): the automated accessibility level of the UI tests, written by the scaffold to `.ui-quality.yml`. Asked once in Step 4 (regardless of `ci`) with Enforce recommended and forwarded to the UI scaffolds. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
+|`enforce`, `report`, `off` or `none` -- UI flavors only (`react`, `nextjs`, `angular`, `react-native`, `ionic`; ignored with a note for `library`/`nestjs`): the automated accessibility level of the UI tests, written by the scaffold to `.ui-quality.yml`. Asked once in Step 4 (regardless of `ci`) ("Support accessibility and assistive technologies?") with Enforce recommended; `none` opts out entirely (no accessibility rules, checks or docs) and, in `mode: existing`, is pre-selected from `iru-explore`'s `Accessibility:` line. Forwarded to the UI scaffolds. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 |Asked for UI flavors
 
 |`publish`

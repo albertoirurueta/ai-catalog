@@ -340,6 +340,8 @@ skill owns the run-level half of that; the tests themselves own the captures.
    separate from assertion failures); `report`: violations listed, the run's pass/fail unaffected; `off`: say the
    automated check is off and don't count.
 
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
+
 ## Step 3 — Run with a JSON reporter and parse it
 
 Always keep the runner's normal console reporter for a human glancing at the log, and add a JSON reporter written

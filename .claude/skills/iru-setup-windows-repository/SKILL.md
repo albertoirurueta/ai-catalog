@@ -19,7 +19,7 @@ description: >-
   included) when `ci: no`. Invoke as `/iru-setup-windows-repository`, optionally with `args` (`key: value` lines) to
   pre-resolve `ui`, `architecture`, `branching`, `mode` (`new`/`existing`), `open-source`, `visibility`, `ci`,
   `ci-tests`, `pages`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), `distribution`,
-  `signing`, `winget`, `msix`, `ui-tests`, `rids`, `accessibility` (`enforce`/`report`/`off` — the automated
+  `signing`, `winget`, `msix`, `ui-tests`, `rids`, `accessibility` (`enforce`/`report`/`off`/`none` — the automated
   Axe.Windows level of the UI tests, written by the scaffold to `.ui-quality.yml`), `sonar` (+ `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`), `integration-branch`, `stable-branch`, and every identity field, skipping
   the matching question.
@@ -90,7 +90,7 @@ Recognized keys:
   never asked; forwarded to the component sub-skills only when it arrived here via `args`), `distribution`
   (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set, `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`, `accessibility`
-  (`enforce`/`report`/`off` — the catalog's UI-contract key: the automated accessibility level the UI tests apply,
+  (`enforce`/`report`/`off`/`none` — the catalog's UI-contract key: the automated accessibility level the UI tests apply,
   written to `.ui-quality.yml`; every Windows app has a UI, so it is always forwarded to `iru-setup-windows-app`).
 - **Windows release keys**: `signing` (`artifact-signing`/`certificate`/`none`), `winget` (`yes`/`no`).
 - **Identity fields** named in Step 2: `app-name`, `display-name`, `root-namespace`, `publisher`,
@@ -272,9 +272,9 @@ current pricing" (verified October 2026 against docs.github.com) and tell the us
   needs a `WINGET_TOKEN` (a classic PAT with `public_repo`).
 
 - **accessibility** — unless `args` supplied it (or an existing `.ui-quality.yml` already sets it — confirm that value
-  instead): "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** ("Axe.Windows violations fail
+  instead): "Support accessibility and assistive technologies?" — **Enforce (Recommended)** ("Axe.Windows violations fail
   the UI tests") / **Report only** ("listed in the UI-test report, never failing") / **Off** ("not run; the coding
-  defaults still apply"). It applies whether or not CI runs the UI tests (`ci-tests`), since they also run locally.
+  defaults still apply"). **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. It applies whether or not CI runs the UI tests (`ci-tests`), since they also run locally.
 
 These values pass through unchanged to Step 4 (`iru-setup-windows-app`) and Step 7
 (`iru-setup-windows-github-workflows`), so neither re-asks them.

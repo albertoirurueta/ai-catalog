@@ -91,7 +91,7 @@ Parse them now; every key found is resolved and not asked again in Step 2. Recog
 `major.minor`), `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`),
 `distribution` (`none`/`internal`/`store` — only changes Step 8's packaging notes; `bin/package.sh` is always
 written because it is also how a module is installed on any shop), `sonar` (`cloud`/`self-hosted`/`none`) plus
-`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `tab`, `accessibility` (`enforce`/`report`/`off` — the
+`sonar-organization`/`sonar-project-key`/`sonar-host-url`, `tab`, `accessibility` (`enforce`/`report`/`off`/`none` — the
 automated accessibility level of the browser UI tests, written to `.ui-quality.yml`; default `enforce`), `mode`
 (`new`/`existing`), and `on-existing`
 (`ask`/`keep`/`update`/`replace`, default `ask`). Ignore any other key (e.g. `ci-tests`, `pages` belong to the
@@ -100,6 +100,15 @@ not in this format, treat everything as unset.
 
 `mode: existing` means an established repository: Step 1 announces an **update** but still asks per existing file
 unless `on-existing` says otherwise — `mode: existing` alone never means "update silently".
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core in the browser UI tests), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic landmarks, labelled form controls, `alt` on images, relative font sizes, `prefers-reduced-motion` guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository and decide per existing file
 
@@ -186,8 +195,7 @@ PrestaShop 8 support. It sets `<php-version>` (`require.php: >=<php-version>`, `
 <php-version>.0`) and `<ps-min>`: `8.0.0` when the floor is ≤ 8.1, otherwise `9.0.0` — say so when the user picks the
 higher floor.
 
-Then **accessibility** unless resolved (`AskUserQuestion`, header `Accessibility`, "Automated accessibility checks
-in UI tests?"): **Enforce (Recommended)** — "axe-core violations fail the browser UI tests" / **Report only** —
+Then **accessibility** unless resolved (`AskUserQuestion`, header `Accessibility`, "Support accessibility and assistive technologies?"): **Enforce (Recommended)** — "axe-core violations fail the browser UI tests" / **Report only** —
 "listed in the test output, never failing" / **Off** — "not run; the coding rules still apply". Written to
 `.ui-quality.yml`.
 

@@ -27,7 +27,7 @@ affected unit-test classes, unit-test line coverage against an 80% bar (instrume
 information only and never counted toward it), a full `./gradlew test` run, and a quality-regression check
 against its one baseline. When the bucket added or changed a screen, component or list, a UI stage (Step 3.7) also reads `.ui-quality.yml`,
 runs the `ui` selector of `iru-android-test`, checks that `.ui-screenshots/` holds a capture for every state ×
-direction × theme, and applies the accessibility level (`enforce`/`report`/`off`); an on-device flow stage with no
+direction × theme, and applies the accessibility level (`enforce`/`report`/`off`; `none` opts out entirely and is reported as "accessibility: opted out"); an on-device flow stage with no
 attached device or emulator is reported unverified. A failure traced to a specific task sends that task back for a fix
 and a re-run of the affected checks, rather than re-validating the whole bucket. The UI contract is described in
 xref:guides/building-user-interfaces.adoc[Building user interfaces].

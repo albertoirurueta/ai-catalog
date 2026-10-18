@@ -116,7 +116,7 @@ via a `cap init` re-run.
 
 |`accessibility`
 |No
-|`enforce`/`report`/`off` — the UI tests' automated accessibility level, written to `.ui-quality.yml` in Step 8: `enforce` fails the tests on axe violations, `report` lists them without failing, `off` does not run the check.
+|`enforce`/`report`/`off`/`none` — the UI tests' automated accessibility level, written to `.ui-quality.yml` in Step 8: `enforce` fails the tests on axe violations, `report` lists them without failing, `off` does not run the check; `none` opts out entirely: no accessibility tooling is installed and the generated templates omit accessibility attributes (asked as "None — opt out entirely"). In `mode: existing` a prior level is never silently flipped.
 |`enforce` (asked when unset)
 
 |`on-existing`

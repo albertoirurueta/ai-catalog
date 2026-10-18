@@ -161,6 +161,12 @@ SonarSource's current pricing — tell the user to double-check their plan):
    Laravel: **none** / **internal** (image to GHCR — free for public repositories, storage/transfer quotas for
    private ones); `store` is never valid for Laravel.
 
+**Accessibility opt-out.** Read the repository's `.ui-quality.yml` `accessibility` level (UI contract §8). When it is
+`none` (opted out entirely), emit no accessibility report artifact, upload or step: do not collect `a11y-report.txt`
+or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
+the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
+generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
 ## Step 2 — Announce scratch vs update, decide per existing file
 
 Check `build.yml`, `release.yml`, `sync.yml` + its two scripts (one unit — partial if not all exist),

@@ -84,7 +84,7 @@ xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
 
 |`accessibility`
 |No
-|`enforce`/`report`/`off`: the automated accessibility level written to `.ui-quality.yml` (`enforce` fails the UI tests on Axe.Windows violations, `report` lists them in `.ui-screenshots/a11y-report.txt`, `off` skips the scan). Only used with `ui-tests: flaui`.
+|`enforce`/`report`/`off`/`none`: the automated accessibility level written to `.ui-quality.yml` (`enforce` fails the UI tests on Axe.Windows violations, `report` lists them in `.ui-screenshots/a11y-report.txt`, `off` skips the scan, `none` opts out entirely: no Axe.Windows tooling and no accessibility attributes in the templates). Only used with `ui-tests: flaui`.
 |`enforce`
 
 |`license`, `developer-name`, `developer-email`, `organization-url`

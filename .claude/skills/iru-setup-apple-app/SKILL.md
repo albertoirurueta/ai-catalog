@@ -25,7 +25,7 @@ description: >-
   (`mvvm`/`mvc`; `mvc` only with `uikit`), `generator` (`xcodegen`/`tuist`), `min-deployment-target`,
   `distribution` (`none`/`internal`/`store`), `signing` (`fastlane-match`/`api-key`/`none`), `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`, default
+  `sonar-project-key`/`sonar-host-url`), `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`/`none`, default
   `enforce`), `on-existing` (`ask`/`keep`/`update`/`replace`) and `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; stand-alone it asks
   `open-source` first and derives the `sonar` default from it. Announces whether it is scaffolding from scratch or
   updating; for each owned file that already exists it warns and asks Update / Keep as is / Replace / Stop (unless
@@ -134,7 +134,7 @@ is absent or doesn't look like this format, treat everything as unset and ask no
 | `signing` | `fastlane-match` / `api-key` / `none` |
 | `license`, `developer-name`, `developer-email`, `organization-url` | report + copyright line |
 | `open-source`, `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`) | the `sonar` recommendation (Step 2); `visibility` is only used for that; `internal` behaves like `private` |
-| `accessibility` | `enforce` (default) / `report` / `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` (UI contract §8) |
+| `accessibility` | `enforce` (default) / `report` / `off` / `none` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` (UI contract §8) |
 | `on-existing` | `ask` (default) / `keep` / `update` / `replace` — how Step 1 treats each already-existing file |
 | `mode` | `new` / `existing` |
 
@@ -143,6 +143,15 @@ means a silent gap-fill**: Step 1 still warns about and asks per already-existin
 otherwise). `mode: new` or an unset `mode` follows the same Step 1 survey — the files on disk decide whether each one is
 created or updated. Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, `branching`, …) are
 ignored and named in the report.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (`performAccessibilityAudit()`), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `accessibilityLabel`/`accessibilityHint`/traits on icon buttons and images, Dynamic Type-safe text styles, VoiceOver-friendly ordering, Reduce Motion guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -318,7 +327,7 @@ default from that answer, per this catalog's shared convention:
   - **`none`** — no automated signing; the Fastfile only gets a `test` lane. Valid with `distribution` ≠ `none` but
     unusual — warn in Step 8 that nothing here produces a distributable build automatically.
 
-- **accessibility** — asked only when unset: "Automated accessibility checks in UI tests?" — **Enforce
+- **accessibility** — asked only when unset: "Support accessibility and assistive technologies?" — **Enforce
   (Recommended)** (`enforce`: every `performAccessibilityAudit()` issue fails the UI tests) / **Report only**
   (`report`: issues are attached and listed, never failing) / **Off** (`off`: the audit test skips; the coding
   defaults — labels, Dynamic Type, contrast — still apply). Written to `.ui-quality.yml`.

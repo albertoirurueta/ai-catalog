@@ -117,6 +117,8 @@ Agent({
 Record it as the bucket's baseline — empty if every file is new. Step 3.6 diffs against it. Skip if
 `iru-kmp-code-quality` isn't installed, and say so in Step 5.
 
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 ## Step 2 — Implement each task via `iru-kmp-code-one-task`
 
 - **Bucket marked `Parallelizable: yes`**: issue all the `Agent` calls together, in the same response:

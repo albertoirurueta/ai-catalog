@@ -13,7 +13,7 @@ Windows minutes cost about 1.7x Linux minutes on a private repository.
 `iru-setup-windows-github-workflows` is the CI/CD step of the Windows chain run by `iru-setup-windows-repository`, and it
 also works standalone. It writes `build.yml` (a Linux `core` job with restore, warnings-as-errors build, format check,
 Core tests and an 80% line-coverage bar; a `windows-latest` job with the solution build, non-UI tests and, with
-`ci-tests: full`, the FlaUI desktop UI tests, whose `.ui-screenshots/` captures (and the `a11y-report.txt` of `accessibility: report`) are uploaded as a 7-day `ui-screenshots` workflow artifact; an optional SonarScanner for .NET job; and an Antora + DocFX docs job
+`ci-tests: full`, the FlaUI desktop UI tests, whose `.ui-screenshots/` captures (and the `a11y-report.txt` of `accessibility: report`) are uploaded as a 7-day `ui-screenshots` workflow artifact (with `accessibility: none` no accessibility report is collected or uploaded); an optional SonarScanner for .NET job; and an Antora + DocFX docs job
 deployed to GitHub Pages or uploaded as an artifact), `release.yml` per `distribution` (`internal`: per-architecture
 self-contained zips, an MSIX signed with Azure Artifact Signing or a `.pfx`, App Installer files and an optional WinGet
 pull request; `store`: an `.msixbundle` submitted with the Microsoft Store Developer CLI), `sync.yml` plus

@@ -258,6 +258,8 @@ here.
    run_in_background: false})`. Fix generated-test mistakes and re-run (two attempts per spec, as in Step 6); an
    environment failure makes the UI tests **unverified** with the reason — never passed.
 
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
+
 ## Step 7 — Run the full suite once to confirm no regressions
 
 Delegate to `iru-gate-runner`: `Agent({description: "Run full test suite", subagent_type: "iru-gate-runner", prompt:

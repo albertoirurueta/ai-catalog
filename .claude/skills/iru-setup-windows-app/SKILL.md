@@ -26,7 +26,7 @@ description: >-
   (`wpf`/`winui`/`winforms`), `architecture` (`mvvm`/`mvc`; WPF and WinUI are `mvvm` only), `app-name` (PascalCase,
   also solution/project/assembly name), `display-name`, `root-namespace`, `publisher` (`CN=…`), `publisher-display-name`,
   `package-name`, `version`, `rids` (default `win-x64;win-arm64`), `msix` (`yes`/`no`), `ui-tests` (`flaui`/`none`),
-  `branching` (`gitflow`/`main-only`), `accessibility` (`enforce`/`report`/`off`, default `enforce`), `license`,
+  `branching` (`gitflow`/`main-only`), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `sonar` (+
   `sonar-organization`/`sonar-project-key`/`sonar-host-url`),
   `distribution` (`none`/`internal`/`store`), `mode` (`new`/`existing`) and `on-existing` (`ask`/`keep`/`update`/
@@ -145,7 +145,7 @@ the Partner Center value for the Store; default `CN=<developer-name>`), `publish
 gitflow`, `1.0.0` for `main-only`), `rids` (default `win-x64;win-arm64` — WinUI `RuntimeIdentifiers`/`Platforms` and
 the packaging script's default), `msix` (`yes`/`no`; `ui: winui` is always packaged → `yes`; WPF/WinForms default
 `yes` when `distribution` ≠ `none`, else `no`), `ui-tests` (`flaui`/`none`, default `flaui`), `branching`
-(`gitflow`/`main-only`, default `gitflow`), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the
+(`gitflow`/`main-only`, default `gitflow`), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce` — the
 automated accessibility level written to `.ui-quality.yml`: `enforce` makes Axe.Windows violations fail the UI tests,
 `report` lists them, `off` skips the scan), `license`, `developer-name`, `developer-email`, `organization-url`,
 `open-source` (`yes`/`no`), `visibility`, `ci`, `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`
@@ -158,6 +158,15 @@ found is resolved — skip its question in Step 2. Unknown keys from a full shar
 group. Only `on-existing` skips that question (`keep` = create only missing files; `update`/`replace` applied to
 every existing group; the warning is still printed). Orchestrators forward `on-existing` only when their own `args`
 received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (Axe.Windows), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `AutomationProperties.Name`/`HelpText` on icon buttons and images, keyboard access and tab order for Narrator, system font scaling and high-contrast resources — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -228,7 +237,7 @@ Then, with `AskUserQuestion` (skip any resolved):
 - **ui-tests** — **FlaUI UI tests (Recommended)** — say plainly it is third-party, runs only on Windows with an
   interactive desktop, and that Microsoft has no current desktop UI-test recommendation — / **None**.
 - **accessibility** — only when `ui-tests: flaui` and stand-alone (an orchestrator resolves it; otherwise default
-  `enforce`): "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (Axe.Windows violations fail
+  `enforce`): "Support accessibility and assistive technologies?" — **Enforce (Recommended)** (Axe.Windows violations fail
   the UI tests) / **Report only** (listed in `.ui-screenshots/a11y-report.txt`, never failing) / **Off** (not run;
   the coding defaults still apply).
 - **license** — MIT License (recommended for an app) / Apache License 2.0 / No license (proprietary) / Other. If one is

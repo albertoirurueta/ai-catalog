@@ -257,6 +257,17 @@ export class OrderList {
 - Screen/flow tests run against the Spring Boot app (`webServer` starting it with the backend's external services
   faked, Testcontainers where it needs them) — the slow, lock-serialized stage of the group skill.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Prefer native semantic elements (`button`, `a`, `nav`, `main`, `label`/`input`, headings in order) over `div` + `role`; add `aria-*` only where HTML has no equivalent.
+- Icon-only controls get `aria-label`; images get `alt` (empty `alt=""` when decorative); dynamic updates use `aria-live`; modals trap and restore focus.
+- Honour `prefers-reduced-motion` and `forced-colors`; size text in `rem`, never fixed `px` heights that clip on zoom.
+- Angular: use `@angular/cdk/a11y` (`LiveAnnouncer`, `FocusTrap`, `FocusMonitor`, `ListKeyManager`); keep `@angular-eslint/template` accessibility rules on.
+- React: `eslint-plugin-jsx-a11y`; Ionic: set `aria-label` on `ion-button`/`ion-icon`-only controls; Hilla/Vaadin components expose accessible-name properties - set them.
+- React Native components in this key: `accessibilityRole`, `accessibilityLabel`, `accessibilityState`, `accessible`, and `allowFontScaling` left on.
+
 ## Sources
 
 - Playwright component testing (stories and gallery, `mount` fixture): <https://playwright.dev/docs/test-components>

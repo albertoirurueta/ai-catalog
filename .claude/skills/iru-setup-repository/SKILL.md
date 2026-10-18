@@ -26,8 +26,9 @@ description: >-
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, the stack-shape keys `language` (JVM
   `java`/`kotlin`, or a command-line tool's `rust`/`go`/`swift`/`dotnet`), `build-tool`,
-  `layout`, and `frontend` (JVM services), `accessibility` (`enforce`/`report`/`off` — UI types: how strictly the UI
-  tests' automated accessibility checks gate, recorded in `.ui-quality.yml`), `python-version`, `platforms`, `framework`, `toolchain` (React Native
+  `layout`, and `frontend` (JVM services), `accessibility` (`enforce`/`report`/`off`/`none` — UI types: whether
+  accessibility and assistive-technology support is wanted and how strictly the UI tests' automated checks gate;
+  `none` opts out entirely; recorded in `.ui-quality.yml`), `python-version`, `platforms`, `framework`, `toolchain` (React Native
   `expo`/`metro`), `native-builds`, `ui` (Kotlin Multiplatform `compose`/`native`, macOS `swiftui`/`appkit`,
   Windows `wpf`/`winui`/`winforms`, a command-line tool's `none`/`tui`), `architecture` (desktop apps'
   `mvvm`/`mvc`), `integration-branch`,
@@ -95,8 +96,9 @@ or pre-set by Step 1's detection — `platforms` (Apple app / Swift library), `f
 `toolchain` (React Native's `expo`/`metro`), `native-builds` (React Native's `eas`/`local` — Expo toolchain
 only), `ui` (Kotlin Multiplatform's `compose`/`native`, macOS's `swiftui`/`appkit`, Windows' `wpf`/`winui`/
 `winforms`, a command-line tool's `none`/`tui` — never asked here, only forwarded), `architecture` (desktop apps' `mvvm`/`mvc` — likewise only
-forwarded), `accessibility` (`enforce`/`report`/`off` — UI types only; how strictly the UI tests' automated
-accessibility checks gate, recorded by the UI scaffold in `.ui-quality.yml`), `python-version` (Python only — likewise never asked here), plus the
+forwarded), `accessibility` (`enforce`/`report`/`off`/`none` — UI types only; whether accessibility
+support is wanted (`none` = opted out entirely) and how strictly the UI tests' automated accessibility checks gate,
+recorded by the UI scaffold in `.ui-quality.yml`), `python-version` (Python only — likewise never asked here), plus the
 pass-through-only keys `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`,
 `organization-url` (see Step 3's closing note — this skill never asks for these itself, it only forwards them when
 supplied). Every key found here is resolved — skip the matching question below. Any **other** `key: value` line
@@ -559,12 +561,25 @@ them in the order below — `visibility` and `ci` change the recommendations of 
    `cli-tool` — whose `frontend`/`ui` the orchestrator asks — leave it to the orchestrator) — "Run automated
    accessibility checks in the UI tests?" Every UI scaffold follows the catalog's UI contract: composed
    components with explicit inputs and events, virtualized lists, UI tests across states, left-to-right and
-   right-to-left, light and dark, screenshots reused by the Antora docs, and automated accessibility checks
-   (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility audit, Axe.Windows).
-   Options: **Enforce (Recommended)** — "violations fail the UI tests"; **Report only** — "violations are listed in
-   test reports but never fail the build"; **Off** — "no automated checks (accessible coding defaults still
-   apply)". The choice is written to `.ui-quality.yml` at the repository root, where the coding and test skills
-   read it; it can be changed there later by hand.
+   right-to-left, light and dark, screenshots reused by the Antora docs, and — unless opted out — accessibility
+   and assistive-technology support (semantic/ARIA markup on the web, TalkBack, VoiceOver, Narrator; adjustable
+   font sizes, contrast) with automated checks (axe-core on the web, Android's Accessibility Test Framework,
+   Xcode's accessibility audit, Axe.Windows).
+
+   Ask it as **"Support accessibility and assistive technologies?"**. Options: **Enforce (Recommended for new
+   projects)** — "AT rules apply; violations fail the UI tests"; **Report only** — "rules apply; violations are
+   listed in test reports but never fail the build"; **Off** — "rules apply, no automated checks run"; **None —
+   opt out entirely** — "no accessibility rules, checks or docs (e.g. a mandated non-compliant design)". The
+   choice is written to `.ui-quality.yml` at the repository root, where the coding and test skills read it; it can
+   be changed there later by hand.
+
+   In `mode: existing`, before asking, take the `Accessibility:` line from the Step 1 `iru-explore` run (run or
+   reuse it; follow `reference/accessibility-detection.md`, byte-identical to `iru-explore`'s copy), show the
+   evidence it printed, and apply that file's pre-selection table: `present` → recommend **Enforce**; `partial` →
+   recommend **Report only** and warn about mixed compliance (new code follows the rules, old code only
+   partly); `absent` → recommend **None** and warn that enabling it makes only new code compliant, leaving a
+   half-compliant app; a prior `.ui-quality.yml` value is shown but never decides alone. New (empty) repositories
+   recommend **Enforce**. The user always decides. An `args` value of `accessibility` skips the question.
 
 `integration-branch`, `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` are
 **never actively asked here** — this front door only forwards them when they arrived via its own `args`
@@ -696,7 +711,7 @@ and `pages` (when `ci: yes`), and `on-existing` (when supplied via `args`), per 
   `module-path`, `go-version`, `package-name`, `swift-version`, `platforms`, `tool-name`, `package-id`) when
   supplied. Never send `publish` or `flavor`.
 
-**`accessibility`**: send it, when Step 3 resolved it (or `args` supplied it), to every orchestrator above whose
+**`accessibility`** (`enforce|report|off|none`): send it, when Step 3 resolved it (or `args` supplied it), to every orchestrator above whose
 on-disk Step 0 recognizes it — `iru-setup-typescript-repository` (UI flavors), `iru-setup-php-repository`,
 `iru-setup-python-repository` (`django`), `iru-setup-android-repository`, `iru-setup-swift-repository` (`app`),
 `iru-setup-kmp-repository`, `iru-setup-macos-repository`, `iru-setup-windows-repository`,
@@ -733,7 +748,7 @@ Summarize for the user:
   whether `mode` came from Step 1's survey or an explicit `args`/user answer, and every shared input from Step 3 as
   actually applied (`open-source`, `visibility` and whether it was supplied/detected via `gh`/asked, `ci`,
   `ci-tests`, `pages` — noting when `pages: yes` was defaulted because the repository is public —
-  `publish`/`distribution`, `sonar` + detail keys, `accessibility` for a UI type (and that `.ui-quality.yml`
+  `publish`/`distribution`, `sonar` + detail keys, `accessibility` for a UI type (`enforce|report|off|none`, whether it was pre-selected from the detection result, and that `.ui-quality.yml`
   records it), `on-existing` if supplied, and any conditional flavor-specific input).
 - A **per-component table** — the Step 1 inventory's rows, each with what the delegated orchestrator (named
   explicitly) reported doing: **created / updated / replaced / kept as is / skipped (ci: no)** and the file paths

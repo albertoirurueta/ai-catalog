@@ -74,7 +74,7 @@ file names, and, upper-cased, the `<BIN>_` environment prefix.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — only with `ui: tui`: the level written to `.ui-quality.yml`, which the TUI's UI tests read. For a terminal UI these are asserted checks (selection visible without colour, key help on screen), not an automated audit.
+|`enforce`, `report`, `off` or `none` (opt out entirely: no asserted accessibility checks or attributes) — only with `ui: tui`: the level written to `.ui-quality.yml`, which the TUI's UI tests read. For a terminal UI these are asserted checks (selection visible without colour, key help on screen), not an automated audit.
 |`enforce`
 
 |`msrv`

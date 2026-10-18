@@ -111,8 +111,8 @@ questions.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the UI tests' automated accessibility level, written by the scaffold to
-`.ui-quality.yml`. Always applies (both `ui` values render UI); asked once here, never again by the scaffold.
+|`enforce`, `report`, `off` or `none` — the UI tests' automated accessibility level, written by the scaffold to
+`.ui-quality.yml`. Always applies (both `ui` values render UI); asked once here, never again by the scaffold. `none` opts out entirely: no accessibility tooling is installed and the generated templates omit accessibility attributes (asked as "None — opt out entirely"). In `mode: existing` a prior level is never silently flipped. In `mode: existing` it is pre-selected from `iru-explore`'s `Accessibility:` line.
 |Asked (Enforce recommended)
 
 |`sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`)

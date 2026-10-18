@@ -169,7 +169,7 @@ import { expect, type Locator, type Page, type TestInfo } from '@playwright/test
 
 export type Direction = 'ltr' | 'rtl';
 export type Theme = 'light' | 'dark' | 'high-contrast';
-export interface UiQuality { accessibility: 'enforce' | 'report' | 'off'; directions: Direction[]; themes: Theme[] }
+export interface UiQuality { accessibility: 'enforce' | 'report' | 'off' | 'none'; directions: Direction[]; themes: Theme[] }
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function repoRoot(): string {
@@ -225,11 +225,11 @@ export async function captureUiState(page: Page, s: { kind: 'component' | 'scree
   return path;
 }
 
-/** axe-core at the `.ui-quality.yml` level: enforce fails the test, report annotates, off skips.
+/** axe-core at the `.ui-quality.yml` level: enforce fails the test, report annotates, off and none skip.
  *  `include` scopes the scan to a component's selector, so host-page markup never fails a component test. */
 export async function checkAccessibility(page: Page, testInfo: TestInfo, include?: string): Promise<void> {
   const level = uiQuality().accessibility;
-  if (level === 'off') return;
+  if (level === 'off' || level === 'none') return;
   let builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
   if (include) builder = builder.include(include);
   const results = await builder.analyze();
@@ -261,6 +261,16 @@ for (const direction of directions) for (const theme of themes) {
 **This skill writes these specs but never runs them** — they need a browser plus a running server, wp-env or
 shop. `iru-php-code-one-task-group` runs them through `iru-php-test` with the `ui` selector behind
 `.integration-test.lock`, checks the screenshot matrix, and applies the accessibility level.
+
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Prefer native semantic elements (`button`, `a`, `nav`, `main`, `label`/`input`, headings in order) over `div` + `role`; add `aria-*` only where HTML has no equivalent.
+- Icon-only controls get `aria-label`; images get `alt` (empty `alt=""` when decorative); dynamic updates use `aria-live`; modals trap and restore focus.
+- Honour `prefers-reduced-motion` and `forced-colors`; size text in `rem`, never fixed `px` heights that clip on zoom.
+- Laravel Blade/Livewire: semantic landmarks in the layout, `<label for>` on every field, `aria-describedby` for validation errors, `role="alert"` for flash messages.
+- WordPress themes/plugins: skip-link, `screen-reader-text` class, `wp_nav_menu` landmarks, accessible-name on block variations; PrestaShop: Smarty templates follow the same markup rules, label every `form_field`.
 
 ## Sources
 

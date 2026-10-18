@@ -27,7 +27,7 @@ description: >-
   asked when missing), `name`, `slug`, `vendor`, `namespace`, `prefix`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `php-version`, `wp-version`, `blocks`, `open-source`,
   `visibility`, `ci`, `distribution` (`none`/`internal`/`store`), `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`), `mode` (`new`/`existing`),
+  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`/`none`), `mode` (`new`/`existing`),
   `on-existing` (`ask`/`keep`/`update`/`replace`) — as `iru-setup-php-repository` passes them. Announces whether it creates from scratch or updates; for every
   owned file that already exists it warns and asks Update / Keep as is / Replace. Use whenever a WordPress plugin or
   block theme repository needs its code skeleton, tests, and quality tooling bootstrapped from this house template.
@@ -87,12 +87,21 @@ as synonyms), `name`, `slug`, `vendor`, `namespace`, `prefix` (function/option/h
 plugin only), `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no` — only
 consulted for the Sonar recommendation), `distribution` (`none`/`internal`/`store`), `sonar`
 (`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility`
-(`enforce`/`report`/`off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`;
+(`enforce`/`report`/`off`/`none` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`;
 default `enforce`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`).
 Ignore unknown keys. Everything resolved here is never asked again.
 
 `mode: existing` means "this is an established repository": Step 1 announces an update and still asks per
 pre-existing file unless `on-existing` says otherwise — `mode: existing` alone never means "update silently".
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core in the browser UI tests), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic landmarks/block markup, labelled form controls, `alt` on images, relative font sizes, `prefers-reduced-motion` guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Flavor, survey, per-file decisions
 
@@ -167,7 +176,7 @@ Ask only what Steps 0–1 left open, in plain conversation unless noted, confirm
   source). For `store`, also ask for the WordPress.org username(s) for `readme.txt`'s `Contributors:`.
 - **blocks** (plugin only, `AskUserQuestion`): **No (Recommended for a start)** / **Yes** — "adds a `blocks/`
   source directory built by `@wordpress/scripts` and a first dynamic block".
-- **accessibility** (`AskUserQuestion`, header `Accessibility`, "Automated accessibility checks in UI tests?"):
+- **accessibility** (`AskUserQuestion`, header `Accessibility`, "Support accessibility and assistive technologies?"):
   **Enforce (Recommended)** — "axe-core violations fail the browser UI tests" / **Report only** — "listed in the
   test output, never failing" / **Off** — "not run; the coding rules still apply". Written to `.ui-quality.yml`.
 - **sonar** — recommend **cloud** only for a public, open-source repository (resolve `visibility` from `args`, else

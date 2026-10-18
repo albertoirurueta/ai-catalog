@@ -1,6 +1,6 @@
 ---
 name: iru-setup-react-web
-description: Scaffold a new React web application with `npm create vite@latest <name> -- --template react-ts`, then add Vitest + `@vitest/coverage-v8` + `@testing-library/react` + `jsdom` for unit tests, ESLint (flat config, with `eslint-plugin-react-hooks`) or the template's own Oxlint (asked once), Prettier, Stylelint 17 for CSS, Playwright for end-to-end smoke tests under `e2e/` — plus, per the catalog's UI contract, a Playwright component-testing project with a component gallery (`playwright/gallery/`, driven by Playwright's built-in `mount()` fixture), `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts` helper, a sample screen spec capturing `.ui-screenshots/screen/App/` across left-to-right/right-to-left × light/dark with an accessibility check, the template's CSS switched to logical properties, and a `.ui-quality.yml` at the repository root —, an optional Storybook setup, and — when Sonar is enabled — `sonar-project.properties`. Invoke as `/iru-setup-react-web`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `keep-oxlint` (`yes`/`no`), `storybook` (`yes`/`no`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar since no CI would send reports), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the level written to `.ui-quality.yml`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — one answer for every pre-existing file in scripted runs), `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it asks whatever `args` didn't resolve. There is no `publish`/`distribution` question for this skill — a web app isn't published to a package registry or an app store. Announces whether it is scaffolding from scratch or updating an existing app; for every artifact it owns that already exists (`package.json`, Vitest/Jest config, ESLint/Oxlint, Prettier, Stylelint, Playwright, the component gallery and UI-test helper, `.ui-quality.yml`, Storybook, `tsconfig` references, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a React + Vite + TypeScript web app bootstrapped with its full test/lint/e2e toolchain from this house template, instead of running `npm create vite` and wiring the rest by hand.
+description: Scaffold a new React web application with `npm create vite@latest <name> -- --template react-ts`, then add Vitest + `@vitest/coverage-v8` + `@testing-library/react` + `jsdom` for unit tests, ESLint (flat config, with `eslint-plugin-react-hooks`) or the template's own Oxlint (asked once), Prettier, Stylelint 17 for CSS, Playwright for end-to-end smoke tests under `e2e/` — plus, per the catalog's UI contract, a Playwright component-testing project with a component gallery (`playwright/gallery/`, driven by Playwright's built-in `mount()` fixture), `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts` helper, a sample screen spec capturing `.ui-screenshots/screen/App/` across left-to-right/right-to-left × light/dark with an accessibility check, the template's CSS switched to logical properties, and a `.ui-quality.yml` at the repository root —, an optional Storybook setup, and — when Sonar is enabled — `sonar-project.properties`. Invoke as `/iru-setup-react-web`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `keep-oxlint` (`yes`/`no`), `storybook` (`yes`/`no`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar since no CI would send reports), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce` — the level written to `.ui-quality.yml`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask` — one answer for every pre-existing file in scripted runs), `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone it asks whatever `args` didn't resolve. There is no `publish`/`distribution` question for this skill — a web app isn't published to a package registry or an app store. Announces whether it is scaffolding from scratch or updating an existing app; for every artifact it owns that already exists (`package.json`, Vitest/Jest config, ESLint/Oxlint, Prettier, Stylelint, Playwright, the component gallery and UI-test helper, `.ui-quality.yml`, Storybook, `tsconfig` references, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a repository needs a React + Vite + TypeScript web app bootstrapped with its full test/lint/e2e toolchain from this house template, instead of running `npm create vite` and wiring the rest by hand.
 model: haiku
 ---
 
@@ -52,7 +52,7 @@ Recognized keys: `app-name`, `description`, `license`, `developer-name`, `develo
 `keep-oxlint` (`yes` keeps the Vite template's Oxlint script alongside ESLint, `no` replaces it), `storybook`
 (`yes`/`no`), `visibility` (`public`/`private`/`internal` — the GitHub repository's visibility, used only to key
 Step 2's Sonar recommendation), `ci` (`yes`/`no` — whether the run invoking this skill generates GitHub Actions
-workflows at all; only consulted by Step 2's Sonar question), `accessibility` (`enforce`/`report`/`off`, default
+workflows at all; only consulted by Step 2's Sonar question), `accessibility` (`enforce`/`report`/`off`/`none`, default
 `enforce` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` in Step 6b),
 `on-existing` (`ask`/`keep`/`update`/`replace`,
 default `ask` — how Step 1 treats each pre-existing artifact; meant for scripted runs), and `mode`
@@ -60,6 +60,15 @@ default `ask` — how Step 1 treats each pre-existing artifact; meant for script
 
 `mode: existing` marks this run as an **update** of an established repository, but it never means "update
 silently": Step 1 still warns and asks per pre-existing artifact unless `on-existing` says otherwise.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core and `eslint-plugin-jsx-a11y`), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic landmarks (`header`/`nav`/`main`), accessible names on icon-only buttons, `alt` on images, `rem`/relative font sizes, `prefers-reduced-motion` guards, visible focus — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -173,7 +182,7 @@ generates `.oxlintrc.json` and a `"lint": "oxlint"` script, not ESLint):
 
 Finally, ask **storybook** (`yes`/`no`, default **No** — it's a heavier, optional add-on) unless Step 0
 already resolved it, and — in the same `AskUserQuestion` call — **accessibility** unless Step 0 resolved it:
-"Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (axe violations fail the UI tests) /
+"Support accessibility and assistive technologies?" — **Enforce (Recommended)** (axe violations fail the UI tests) /
 **Report only** (listed, never failing) / **Off** (not run; the coding defaults still apply).
 
 ## Step 3 — Scaffold the Vite React app
@@ -514,7 +523,7 @@ it. Component tests use Playwright's built-in `mount()` fixture (since `@playwri
 
    ```yaml
    # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
-   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run | none: opted out entirely
    directions: [ltr, rtl]      # screenshot matrix directions
    themes: [light, dark]       # screenshot matrix themes
    ```

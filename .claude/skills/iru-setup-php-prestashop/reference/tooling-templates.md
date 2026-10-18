@@ -488,7 +488,7 @@ import { expect, type Locator, type Page, type TestInfo } from '@playwright/test
 
 export type Direction = 'ltr' | 'rtl';
 export type Theme = 'light' | 'dark' | 'high-contrast';
-export type AccessibilityLevel = 'enforce' | 'report' | 'off';
+export type AccessibilityLevel = 'enforce' | 'report' | 'off' | 'none';
 export type UiKind = 'component' | 'screen' | 'flow';
 
 export interface UiQuality {
@@ -553,7 +553,7 @@ export function uiQuality(): UiQuality {
 			continue;
 		}
 		const [ , key, value ] = match;
-		if ( key === 'accessibility' && [ 'enforce', 'report', 'off' ].includes( value ) ) {
+		if ( key === 'accessibility' && [ 'enforce', 'report', 'off', 'none' ].includes( value ) ) {
 			quality.accessibility = value as AccessibilityLevel;
 		} else if ( key === 'directions' ) {
 			quality.directions = listValue( value ).filter( ( d ): d is Direction => d === 'ltr' || d === 'rtl' );
@@ -656,7 +656,7 @@ export async function checkAccessibility(
 	options: { include?: string | string[] } = {}
 ): Promise< void > {
 	const level = uiQuality().accessibility;
-	if ( level === 'off' ) {
+	if ( level === 'off' || level === 'none' ) {
 		return;
 	}
 	let builder = new AxeBuilder( { page } ).withTags( WCAG_TAGS );

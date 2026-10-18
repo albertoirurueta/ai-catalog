@@ -36,6 +36,8 @@ compile-checked against `generic/platform=visionOS Simulator` and reported "unve
 installed)", never as passed and never downloaded (verified on Xcode 27.1 for the iOS, UIKit iOS, watchOS and
 visionOS scaffold schemes).
 
+When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: they are skipped and reported as "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
+
 == Purpose group
 
 xref:index.adoc#group-swift[Swift Development Tooling]

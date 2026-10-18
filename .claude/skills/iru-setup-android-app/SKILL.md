@@ -20,7 +20,7 @@ description: Scaffold a new single-module Android application (Gradle Kotlin DSL
   `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
   `sonar-host-url`), `ui` (`compose`/`views`), `distribution` (`none`/`internal`/`store`), `built-in-kotlin`
   (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool` (`jacoco`/`kover`), `static-analysis`
-  (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
+  (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
   a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `sonar: none` is recommended since no CI
   would send reports), `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`, default
   `ask`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks
@@ -110,7 +110,7 @@ Recognized keys: `application-id`, `namespace` (defaults to `application-id` if 
 `organization-url`, `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is
 `cloud` or `self-hosted`, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `ui` (`compose`/`views`),
 `distribution` (`none`/`internal`/`store`), `built-in-kotlin` (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool`
-(`jacoco`/`kover`), `static-analysis` (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`,
+(`jacoco`/`kover`), `static-analysis` (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`/`none`,
 default `enforce` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`), `visibility` (`public`/`private`/`internal` —
 GitHub repository visibility, only used to pick the `sonar` recommendation in Step 2), `ci` (`yes`/`no` — whether
 CI workflows will exist to send Sonar reports; only used by Step 2's `sonar` question), `mode` (`new`/`existing`),
@@ -122,6 +122,15 @@ every pre-existing file group. Only `on-existing` skips that question — `keep`
 every existing one untouched — the old `mode: existing` behaviour), `update`, or `replace` is then applied to every
 pre-existing file group without asking (the warning is still printed). `on-existing` is meant for scripted runs; an
 orchestrator passes it only if its own `args` received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (the Accessibility Test Framework (ATF) audit), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `contentDescription` (or `Modifier.semantics`) on icon buttons and images, `sp` font sizes, 48dp touch targets, TalkBack-friendly traversal — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -226,7 +235,7 @@ Then, unless Step 0 already resolved them, ask about **ui**, **built-in-kotlin**
   instead).
 - **static-analysis** — `lint` (default; Android Lint only, already built into AGP) or `lint+detekt+ktlint` (adds
   Detekt for Kotlin static analysis and Spotless-driven ktlint formatting — see Step 5's opt-ins).
-- **accessibility** — "Automated accessibility checks in UI tests?": `enforce` (Recommended — Accessibility Test
+- **accessibility** — "Support accessibility and assistive technologies?": `enforce` (Recommended — Accessibility Test
   Framework violations fail the UI tests), `report` (listed, never failing), or `off` (not run; the coding
   defaults still apply). Written to `.ui-quality.yml` (Step 5).
 
@@ -1261,7 +1270,7 @@ Runs only via `./gradlew :app:connectedAndroidTest` against a running emulator/d
 
 ```yaml
 # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
-accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run | none: opted out entirely
 directions: [ltr, rtl]      # screenshot matrix directions
 themes: [light, dark]       # screenshot matrix themes
 ```
@@ -1302,7 +1311,7 @@ object UiScreenshots {
     enum class Theme { LIGHT, DARK, HIGH_CONTRAST }
 
     /** Level of the automated accessibility checks. */
-    enum class Accessibility { ENFORCE, REPORT, OFF }
+    enum class Accessibility { ENFORCE, REPORT, OFF, NONE }
 
     /** One cell of the capture matrix. */
     data class Variant(val direction: Direction, val theme: Theme) {
@@ -1386,7 +1395,7 @@ object UiScreenshots {
             Accessibility.REPORT -> RoborazziATFAccessibilityCheckOptions(
                 failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.LogOnly,
             )
-            Accessibility.OFF -> null
+            Accessibility.OFF, Accessibility.NONE -> null
         }
     }
 

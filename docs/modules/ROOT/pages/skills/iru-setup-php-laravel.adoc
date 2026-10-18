@@ -15,7 +15,7 @@ Scaffolds a Laravel application with `composer create-project laravel/laravel` (
 * Pint (`pint.json`) and Larastan (`phpstan.neon`) — level 9 for a new app, a lower level plus a generated baseline for an existing one.
 * Composer scripts the workflows and gates call by name: `test`, `test:coverage` (Clover and JUnit under `build/logs/`, 80% floor), `lint`, `lint:report`, `format`, `format:check`.
 * A sample action, Form Request, policy and resource with feature tests (never added to an existing app without asking).
-* Browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, Playwright (`playwright.config.ts` serving `php artisan serve`) with `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper and a `WelcomePage` spec that captures `.ui-screenshots/screen/WelcomePage/` across left-to-right/right-to-left x light/dark with an accessibility check. Two small edits to `welcome.blade.php` (a locale-driven `dir` attribute and an accessible link colour) make the sample pass under `accessibility: enforce`. Details live in `reference/sample-code.md`.
+* Browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, Playwright (`playwright.config.ts` serving `php artisan serve`) with `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper and a `WelcomePage` spec that captures `.ui-screenshots/screen/WelcomePage/` across left-to-right/right-to-left x light/dark with an accessibility check. With `accessibility: none` no accessibility tooling is installed and the templates omit assistive-technology attributes; otherwise they carry them. Two small edits to `welcome.blade.php` (a locale-driven `dir` attribute and an accessible link colour) make the sample pass under `accessibility: enforce`. Details live in `reference/sample-code.md`.
 * Only when chosen: a database-backed `Integration` suite (MySQL or PostgreSQL), Laravel Sail, a production `Dockerfile` (FrankenPHP or PHP-FPM + Nginx) for `distribution: internal`, `sonar-project.properties`, and Laravel Boost as a dev-only dependency.
 
 The skill announces whether it is scaffolding from scratch or updating an existing app. For every artifact it owns that already exists it warns and asks **Update** / **Keep as is** / **Replace** (or **Stop**), unless `on-existing` pre-answers. Replace is never offered for the application itself, since re-running `create-project` would overwrite live code. The browser UI tests serialize behind the shared `.integration-test.lock` and are reported unverified when Node, a browser or a servable PHP is missing. It ends by running the same commands the `iru-php-test`, `iru-php-coverage` and `iru-php-code-quality` gates run, and reports what it could not verify rather than assuming it works.
@@ -91,7 +91,7 @@ When called from `iru-setup-php-repository`, the resolved answers arrive as `arg
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the level the browser UI tests apply to axe-core accessibility checks, written to `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` (opt out entirely) — the level the browser UI tests apply to axe-core accessibility checks, written to `.ui-quality.yml`.
 |`enforce`; an existing `.ui-quality.yml` pre-selects its value
 
 |`mode`

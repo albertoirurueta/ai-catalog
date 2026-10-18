@@ -159,6 +159,16 @@ The same mapping with `pages/<route>.tsx` as the screen (data from `getServerSid
 component is client-hydrated, so all of them can be storied; server pagination uses query parameters in
 `getServerSideProps`.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Prefer native semantic elements (`button`, `a`, `nav`, `main`, `label`/`input`, headings in order) over `div` + `role`; add `aria-*` only where HTML has no equivalent.
+- Icon-only controls get `aria-label`; images get `alt` (empty `alt=""` when decorative); dynamic updates use `aria-live`; modals trap and restore focus.
+- Honour `prefers-reduced-motion` and `forced-colors`; size text in `rem`, never fixed `px` heights that clip on zoom.
+- Per-route: set a unique `<title>` and one `<h1>`; announce client-side route changes (focus the new heading or use a live region); Server Components render the semantic markup, Client Components add ARIA state.
+- Lint with `eslint-plugin-jsx-a11y` (bundled in `eslint-config-next`).
+
 ## Sources
 
 - Playwright component testing (stories and gallery, `mount` fixture): <https://playwright.dev/docs/test-components>

@@ -119,8 +119,8 @@ in `androidApp`, SwiftUI in `iosApp`).
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`. Never
-asked stand-alone, just defaulted.
+|`enforce`, `report`, `off` or `none` — the automated accessibility level of the UI tests, written to `.ui-quality.yml`. Never
+asked stand-alone, just defaulted. `none` opts out entirely: no accessibility tooling is installed and the generated templates omit accessibility attributes (asked as "None — opt out entirely"). In `mode: existing` a prior level is never silently flipped.
 |`enforce`
 
 |`distribution`

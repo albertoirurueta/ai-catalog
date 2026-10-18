@@ -147,7 +147,7 @@ object UiScreenshots {
     enum class Kind { COMPONENT, SCREEN, FLOW }
     enum class Direction { LTR, RTL }
     enum class Theme { LIGHT, DARK, HIGH_CONTRAST }
-    enum class Accessibility { ENFORCE, REPORT, OFF }
+    enum class Accessibility { ENFORCE, REPORT, OFF, NONE }
     data class Variant(val direction: Direction, val theme: Theme) {
         val isRtl: Boolean get() = direction == Direction.RTL
         val isDark: Boolean get() = theme == Theme.DARK
@@ -197,7 +197,7 @@ object UiScreenshots {
         when (accessibility) {
             Accessibility.ENFORCE -> RoborazziATFAccessibilityCheckOptions(failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.Error)
             Accessibility.REPORT -> RoborazziATFAccessibilityCheckOptions(failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.LogOnly)
-            Accessibility.OFF -> null
+            Accessibility.OFF, Accessibility.NONE -> null
         }
     }
 
@@ -256,7 +256,7 @@ plugin's output directory — separate from the `.ui-screenshots/` export, which
 - **JVM (primary)** — `checkRoboAccessibility(UiScreenshots.accessibilityOptions)` from
   `roborazzi-accessibility-check` runs the Accessibility Test Framework (ATF) over the rendered Compose node or
   View hierarchy on Robolectric: `enforce` fails the test (`AccessibilityViewCheckException`), `report` logs each
-  result to stderr as `Roborazzi: Error: [… AccessibilityHierarchyCheckResult ERROR <CheckName> …]`, `off` skips it.
+  result to stderr as `Roborazzi: Error: [… AccessibilityHierarchyCheckResult ERROR <CheckName> …]`, `off` and `none` skip it.
 - **Espresso on a device** — `AccessibilityChecks.enable().setRunChecksFromRootView(true)`
   (`androidx.test.espresso:espresso-accessibility`) in a `@Before`; every `perform(...)` then runs ATF. For
   `report`, also call `.setThrowExceptionFor(null)` so results are logged instead of thrown.
@@ -270,6 +270,14 @@ plugin's output directory — separate from the `.ui-screenshots/` export, which
 - ATF's `TouchTargetSizeCheck` accepts 32dp by default; the contract still asks for 48dp targets, which Android
   Lint and `Modifier.minimumInteractiveComponentSize()` (Material 3 does this for its own controls) help keep.
   Suppress an individual ATF result only with a narrow matcher and a comment saying why.
+
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- TalkBack: `contentDescription` on icon-only/image views (`null`/`importantForAccessibility="no"` when decorative); Compose: `Modifier.semantics { }`, `clearAndSetSemantics`, `Role`, `stateDescription`, `liveRegion`, `mergeDescendants` for grouped rows.
+- Text in `sp`, layouts that survive font scale 200%; touch targets >= 48dp (`minimumInteractiveComponentSize`); honour the animator-duration scale (0 = no non-essential animation) via `ValueAnimator.areAnimatorsEnabled()` / `Settings.Global.ANIMATOR_DURATION_SCALE`.
+- Logical focus order via `traversalIndex`/`accessibilityTraversalBefore`; custom views implement `AccessibilityNodeInfo` actions.
 
 ## Sources
 

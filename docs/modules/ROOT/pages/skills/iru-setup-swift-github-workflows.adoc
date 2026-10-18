@@ -92,7 +92,9 @@ and no longer short-circuits the per-file question.
   existing test legs with no extra job or minutes: a package with SwiftUI/UIKit/AppKit views uploads `.ui-screenshots/`
   as a 7-day `ui-screenshots` artifact; each app leg passes `TEST_RUNNER_UI_SCREENSHOTS_DIR`, copies the captures
   attached to the `.xcresult` into `.ui-screenshots/` with `xcrun xcresulttool export attachments`, and uploads them as
-  `ui-screenshots-<scheme>` (`if-no-files-found: ignore`).
+  `ui-screenshots-<scheme>` (`if-no-files-found: ignore`). When `.ui-quality.yml` sets `accessibility: none`, no
+  accessibility report (`a11y-report.txt`), upload or accessibility-only step is emitted; the UI test run and screenshot
+  upload are unaffected.
 * `.github/workflows/build.yml`, `release.yml` (app flavor: only when `distribution` isn't `none`), and (gitflow
   only) `sync.yml` — created fresh, or updated, replaced or kept
   as is per file when it already existed (the user's Update / Keep as is / Replace choice, or `on-existing`).

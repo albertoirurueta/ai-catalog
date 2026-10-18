@@ -151,6 +151,12 @@ above the test binaries), defaulting to `[ltr, rtl]`; `QualitySetting("accessibi
 `enforce`). All three levels were exercised: `enforce` failed the tests with `[a11y]` messages when the key help was
 removed, `report` wrote `a11y-report.txt` and passed, the default passed with the help in place.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Terminal UI only: assert and implement what a terminal can offer - no colour-only information, `NO_COLOR` honoured, keyboard-only operation, a visible help line, and screen-reader-friendly linear output (no spinner spam when not a TTY). Plain CLIs have no UI rules here.
+
 ## Sources
 
 - Terminal.Gui v2 documentation: <https://tui-cs.github.io/Terminal.Gui/> and repository

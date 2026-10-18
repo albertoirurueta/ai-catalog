@@ -162,6 +162,12 @@ choose a signing method or `store`); `distribution: store` with WPF/WinForms but
 MSIX — re-run `iru-setup-windows-app` with `msix: yes`, or choose `internal`); `winget: yes` on a private repository
 (winget-pkgs needs publicly downloadable URLs) or without signing.
 
+**Accessibility opt-out.** Read the repository's `.ui-quality.yml` `accessibility` level (UI contract §8). When it is
+`none` (opted out entirely), emit no accessibility report artifact, upload or step: do not collect `a11y-report.txt`
+or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
+the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
+generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
 ## Step 1 — Survey the repository
 
 - **Scaffold detection**: the `WinExe` project under `src/` (its name is `<AppName>`; `UseWPF`/`UseWindowsForms` →

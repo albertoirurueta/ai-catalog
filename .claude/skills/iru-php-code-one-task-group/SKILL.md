@@ -128,6 +128,8 @@ issues this bucket introduces are flagged, not the repository's backlog (or what
 Don't touch the integration lock here — a lock held through Step 2's implementation would block every other group
 for the whole bucket. It's acquired in Step 3.8a, immediately before the run that needs it.
 
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 ## Step 2 — Implement each task via `iru-php-code-one-task`
 
 For every task in the bucket, invoke `iru-php-code-one-task` — it implements exactly what the task specifies,

@@ -482,7 +482,7 @@ import { expect, type Page, type TestInfo } from '@playwright/test';
 
 export type Kind = 'component' | 'screen' | 'flow';
 export type Direction = 'ltr' | 'rtl';
-export type AccessibilityLevel = 'enforce' | 'report' | 'off';
+export type AccessibilityLevel = 'enforce' | 'report' | 'off' | 'none';
 
 export interface UiQuality {
   accessibility: AccessibilityLevel;
@@ -539,7 +539,7 @@ export function uiQuality(): UiQuality {
       const match = /^([a-z]+):\s*([^#]*)/.exec(line.trim());
       if (!match) continue;
       const [, key, value] = match;
-      if (key === 'accessibility' && ['enforce', 'report', 'off'].includes(value.trim())) {
+      if (key === 'accessibility' && ['enforce', 'report', 'off', 'none'].includes(value.trim())) {
         quality.accessibility = value.trim() as AccessibilityLevel;
       } else if (key === 'directions') {
         quality.directions = listValue(value.trim()).filter((d): d is Direction => d === 'ltr' || d === 'rtl');
@@ -621,7 +621,7 @@ export async function captureUiState(page: Page, ui: UiState): Promise<string> {
 /** Runs axe-core (WCAG 2.x A/AA) at the `.ui-quality.yml` level: enforce fails, report annotates, off skips. */
 export async function checkAccessibility(page: Page, testInfo: TestInfo): Promise<void> {
   const level = uiQuality().accessibility;
-  if (level === 'off') return;
+  if (level === 'off' || level === 'none') return;
   await settle(page);
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])

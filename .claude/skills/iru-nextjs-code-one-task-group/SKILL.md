@@ -353,6 +353,8 @@ run and an explicit "unverified" when it can't.**
    behind blocks every other group for an hour. If you took it, you release it before returning. Also delete
    `.next-build.log` if a failed agent left it behind.
 
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 ## Step 4 — Finalize progress notes and notify the user
 
 Once Step 3 passes clean (or leaves only explicitly accepted issues), replace each task's "group validation pending"

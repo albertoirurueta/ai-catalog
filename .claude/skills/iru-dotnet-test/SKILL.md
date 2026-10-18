@@ -144,7 +144,7 @@ Windows-desktop additions:
   0. **Screenshot directory** — resolve `UI_SCREENSHOTS_DIR` (an absolute path from the environment, else
      `<repo root>/.ui-screenshots`) and export it for the run. On a **full** UI run (no narrower selector) delete and
      recreate that directory first so it holds exactly this run; on a scoped run leave other captures alone. Read
-     `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, `directions`, `themes`; a missing
+     `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off|none`, `directions`, `themes`; a missing
      file means `enforce`, `[ltr, rtl]`, `[light, dark]`) — the tests read it themselves; this skill only reports the
      level applied.
   1. **Lock** — unless `lock: held` was passed, take the repository-wide lock from the repository root

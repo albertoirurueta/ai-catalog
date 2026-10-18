@@ -458,6 +458,8 @@ Then run, in this order — cheapest first; **3.1–3.9 gate the bucket, 3.10 ru
    `.ui-screenshots/` is gitignored evidence — never commit it and never copy it anywhere here (the documentation
    skills do that).
 
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 ## Step 4 — Finalize progress notes and notify the user
 
 Confirm the lock is released (3.10b); if a failure path skipped the release, release it now — this skill must never

@@ -159,9 +159,9 @@ reports.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` -- the automated accessibility level of the UI tests, written to `.ui-quality.yml`:
+|`enforce`, `report`, `off` or `none` -- the automated accessibility level of the UI tests, written to `.ui-quality.yml`:
 `enforce` fails the UI tests on any `performAccessibilityAudit()` issue, `report` attaches and lists issues without
-failing, `off` skips the audit test.
+failing, `off` skips the audit test, and `none` opts out entirely (writes `accessibility: none`, installs no accessibility tooling and omits the accessibility attributes from the templates); a prior `.ui-quality.yml` value is never silently flipped in `mode: existing`.
 |`enforce` (asked when unset)
 
 |`on-existing`

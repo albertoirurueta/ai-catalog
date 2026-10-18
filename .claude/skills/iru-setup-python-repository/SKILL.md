@@ -21,7 +21,7 @@ description: >-
   `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `python-version` (default `3.13`), `database`
   (`postgresql`/`sqlite`/`none`), `orm` (FastAPI: `sqlmodel`/`sqlalchemy`), `api` (Django: `drf`/`ninja`/`none`),
   `integration-branch` (default `develop`), `stable-branch` (default `main`), `accessibility`
-  (`enforce`/`report`/`off`, Django only), `on-existing`
+  (`enforce`/`report`/`off`/`none`, Django only), `on-existing`
   (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), and every identity key, skipping the matching
   question. Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
   inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
@@ -86,7 +86,7 @@ Recognized keys: `flavor` (`fastapi`/`django`), `mode` (`new`/`existing`), `open
 `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) and — only when not `none` —
 `sonar-organization`, `sonar-project-key`, `sonar-host-url`; `python-version` (the runtime CI, Docker and
 `.python-version` use, e.g. `3.13`), `database` (`postgresql`/`sqlite`/`none`), `orm` (`sqlmodel`/`sqlalchemy` —
-`fastapi` only), `api` (`drf`/`ninja`/`none` — `django` only), `accessibility` (`enforce`/`report`/`off` — `django`
+`fastapi` only), `api` (`drf`/`ninja`/`none` — `django` only), `accessibility` (`enforce`/`report`/`off`/`none` — `django`
 only: the level of the automated accessibility checks in the browser UI tests, written to `.ui-quality.yml`; the
 FastAPI flavor renders no UI), `integration-branch`, `stable-branch`; the identity
 keys `name`, `package`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`; and
@@ -307,9 +307,9 @@ Then, **only when `ci: yes`**:
 
 Then, **only for `django`** (with the other shared inputs, whatever `ci` is):
 
-- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** — "axe-core violations
+- **accessibility** — "Support accessibility and assistive technologies?" **Enforce (Recommended)** — "axe-core violations
   fail the browser UI tests" / **Report only** — "violations are listed, never failing" / **Off** — "not run; the
-  accessibility coding defaults still apply". Written to `.ui-quality.yml` by the scaffold and read by the coding and
+  accessibility coding defaults still apply". **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. Written to `.ui-quality.yml` by the scaffold and read by the coding and
   test skills; with `ci-tests: full` on `database: postgresql` the integration job also runs the UI tier.
 
 These values are forwarded only to the sub-skills that accept them: identity + `python-version` + `database` +

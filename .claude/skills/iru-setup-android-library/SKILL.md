@@ -1,6 +1,6 @@
 ---
 name: iru-setup-android-library
-description: Generate the standard Gradle/Kotlin toolchain for a new Android library at the repository root — the Gradle wrapper (`gradle/wrapper/gradle-wrapper.properties` pinned to the current Gradle version plus its `distributionSha256Sum`, `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, a `lib/` library module (`build.gradle.kts`, `proguard-rules.pro`, manifests, `robolectric.properties`, `.gitignore`, one placeholder source + unit test + instrumented test), and an `app/` Jetpack Compose sample module (`build.gradle.kts`, manifest, `.gitignore`, `MainActivity.kt`, launcher/theme resources) that depends on `lib` — asks for `group-id`, `artifact-id`, `namespace`, `description`, `min-sdk` (default `26`), `compile-sdk` (default the current stable API level), license, developer name/email/organization URL, whether the project is open source, whether it publishes to Maven Central (`publish`, gating the `mavenPublishing`/vanniktech block), whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), `built-in-kotlin` (`no`/`yes`, gating `android.builtInKotlin`/`android.newDsl` in `gradle.properties`), `junit` (`4`/`5`, gating the `de.mannodermaus.android-junit` plugin), `coverage-tool` (`jacoco`/`kover`, gating AGP's own unit-test-coverage flags vs. the Kover plugin), and `static-analysis` (`lint`/`lint+detekt+ktlint`, gating Detekt + Spotless(ktlint + licenseHeader)), and `accessibility` (`enforce`/`report`/`off`, default `enforce` — written to a `.ui-quality.yml` at the repository root that the `app/` sample's UI test reads: per the catalog's UI contract the sample gets Roborazzi + Accessibility Test Framework checks on Robolectric, the shared `app/src/test/java/<namespace-path>/app/testing/UiScreenshots.kt` helper, and a `GreetingTest` capturing `.ui-screenshots/component/Greeting/` across left-to-right/right-to-left × light/dark). Invoke as `/iru-setup-android-library`. Ships with explicit example templates embedded in this skill file, genericized (no real repository/organization/person names, `<placeholder>` markers with a resolution table) from a real Android library's actual project files — https://github.com/albertoirurueta/irurueta-android-glutils — including its `lib/` module shape (JUnit 4 + MockK + Robolectric + AndroidX Espresso, AGP JaCoCo, inline `sonar { properties {…} } ` block run as `./gradlew :lib:sonar`, `mavenPublishing { AndroidSingleVariantLibrary(...) }`) and its Compose `app/` sample module, which is part of this scaffold, not a separate skill. Every toolchain version (Gradle, AGP, Kotlin, Dokka, the `sonarqube`/`com.vanniktech.maven.publish`/Detekt/Spotless/Kover/`de.mannodermaus.android-junit` Gradle plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK, Robolectric, `com.irurueta:irurueta-android-test-utils`) is looked up at run time (Google Maven, Maven Central, the Gradle Plugin Portal, `services.gradle.org`), with this skill's own September 2026 findings as the fallback. Announces whether it is scaffolding from scratch or updating an existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/tasks) / Keep as is / Replace (regenerate, losing customizations) / Stop, even under `mode: existing`, unless `on-existing` (`ask`/`keep`/`update`/`replace`) decides; accepts every input pre-resolved via `args` (`key: value` lines) — including `visibility` (`public`/`private`/`internal`, so SonarCloud is recommended only for a public open-source repository) and `ci` (`yes`/`no`, recommending `sonar: none` when no CI would send reports) — so an orchestrating skill can supply them without re-prompting. Verifies with `./gradlew --offline help` then `./gradlew :lib:assembleDebug` through the `iru-gate-runner` agent, warning up front that the first run downloads Gradle itself, Android SDK components, and every dependency. Use whenever a new Android/Kotlin library repository (with its Compose sample app) needs its Gradle build scaffolded from this house template, instead of hand-writing each Gradle/manifest/properties file.
+description: Generate the standard Gradle/Kotlin toolchain for a new Android library at the repository root — the Gradle wrapper (`gradle/wrapper/gradle-wrapper.properties` pinned to the current Gradle version plus its `distributionSha256Sum`, `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`), root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/libs.versions.toml`, a `lib/` library module (`build.gradle.kts`, `proguard-rules.pro`, manifests, `robolectric.properties`, `.gitignore`, one placeholder source + unit test + instrumented test), and an `app/` Jetpack Compose sample module (`build.gradle.kts`, manifest, `.gitignore`, `MainActivity.kt`, launcher/theme resources) that depends on `lib` — asks for `group-id`, `artifact-id`, `namespace`, `description`, `min-sdk` (default `26`), `compile-sdk` (default the current stable API level), license, developer name/email/organization URL, whether the project is open source, whether it publishes to Maven Central (`publish`, gating the `mavenPublishing`/vanniktech block), whether to wire up SonarQube/SonarCloud (`sonar`: `cloud`/`self-hosted`/`none`), `built-in-kotlin` (`no`/`yes`, gating `android.builtInKotlin`/`android.newDsl` in `gradle.properties`), `junit` (`4`/`5`, gating the `de.mannodermaus.android-junit` plugin), `coverage-tool` (`jacoco`/`kover`, gating AGP's own unit-test-coverage flags vs. the Kover plugin), and `static-analysis` (`lint`/`lint+detekt+ktlint`, gating Detekt + Spotless(ktlint + licenseHeader)), and `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce` — written to a `.ui-quality.yml` at the repository root that the `app/` sample's UI test reads: per the catalog's UI contract the sample gets Roborazzi + Accessibility Test Framework checks on Robolectric, the shared `app/src/test/java/<namespace-path>/app/testing/UiScreenshots.kt` helper, and a `GreetingTest` capturing `.ui-screenshots/component/Greeting/` across left-to-right/right-to-left × light/dark). Invoke as `/iru-setup-android-library`. Ships with explicit example templates embedded in this skill file, genericized (no real repository/organization/person names, `<placeholder>` markers with a resolution table) from a real Android library's actual project files — https://github.com/albertoirurueta/irurueta-android-glutils — including its `lib/` module shape (JUnit 4 + MockK + Robolectric + AndroidX Espresso, AGP JaCoCo, inline `sonar { properties {…} } ` block run as `./gradlew :lib:sonar`, `mavenPublishing { AndroidSingleVariantLibrary(...) }`) and its Compose `app/` sample module, which is part of this scaffold, not a separate skill. Every toolchain version (Gradle, AGP, Kotlin, Dokka, the `sonarqube`/`com.vanniktech.maven.publish`/Detekt/Spotless/Kover/`de.mannodermaus.android-junit` Gradle plugins, JUnit, AndroidX Test, Compose BOM, Material3, MockK, Robolectric, `com.irurueta:irurueta-android-test-utils`) is looked up at run time (Google Maven, Maven Central, the Gradle Plugin Portal, `services.gradle.org`), with this skill's own September 2026 findings as the fallback. Announces whether it is scaffolding from scratch or updating an existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the `lib/`/`app/` skeletons, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/tasks) / Keep as is / Replace (regenerate, losing customizations) / Stop, even under `mode: existing`, unless `on-existing` (`ask`/`keep`/`update`/`replace`) decides; accepts every input pre-resolved via `args` (`key: value` lines) — including `visibility` (`public`/`private`/`internal`, so SonarCloud is recommended only for a public open-source repository) and `ci` (`yes`/`no`, recommending `sonar: none` when no CI would send reports) — so an orchestrating skill can supply them without re-prompting. Verifies with `./gradlew --offline help` then `./gradlew :lib:assembleDebug` through the `iru-gate-runner` agent, warning up front that the first run downloads Gradle itself, Android SDK components, and every dependency. Use whenever a new Android/Kotlin library repository (with its Compose sample app) needs its Gradle build scaffolded from this house template, instead of hand-writing each Gradle/manifest/properties file.
 model: haiku
 ---
 
@@ -61,7 +61,7 @@ Recognized keys: `group-id`, `artifact-id`, `namespace` (the Android `namespace`
 (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `sonar` is `cloud` or `self-hosted`,
 `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `built-in-kotlin` (`no`/`yes`, default `no`), `junit`
 (`4`/`5`, default `4`), `coverage-tool` (`jacoco`/`kover`, default `jacoco`), `static-analysis`
-(`lint`/`lint+detekt+ktlint`, default `lint`), `accessibility` (`enforce`/`report`/`off`, default `enforce` — the
+(`lint`/`lint+detekt+ktlint`, default `lint`), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce` — the
 automated accessibility level of the sample app's UI tests, written to `.ui-quality.yml`), `version` (default
 `1.0.0-SNAPSHOT`), `visibility`
 (`public`/`private`/`internal` — GitHub repository visibility, only used to pick the `sonar` recommendation in
@@ -74,6 +74,15 @@ every pre-existing file group. Only `on-existing` skips that question — `keep`
 every existing one untouched — the old `mode: existing` behaviour), `update`, or `replace` is then applied to every
 pre-existing file group without asking (the warning is still printed). `on-existing` is meant for scripted runs; an
 orchestrator passes it only if its own `args` received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (the Accessibility Test Framework (ATF) audit), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `contentDescription` (or `Modifier.semantics`) on icon buttons and images, `sp` font sizes, 48dp touch targets — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -225,7 +234,7 @@ Finally, resolve the four toolchain toggles and the UI-test accessibility level 
 - **static-analysis** (`lint`/`lint+detekt+ktlint`, default `lint`) — Android Lint is always wired (it ships with
   AGP; no opt-in needed). `lint+detekt+ktlint` additionally applies Detekt (with a `detekt.yml` at the repository
   root) and Spotless configured for ktlint + a license-header check — **unverified locally**.
-- **accessibility** (`enforce`/`report`/`off`, default `enforce`) — "Automated accessibility checks in UI tests?":
+- **accessibility** (`enforce`/`report`/`off`/`none`, default `enforce`) — "Support accessibility and assistive technologies?":
   **Enforce (Recommended)** — Accessibility Test Framework violations fail the sample app's UI tests; **Report
   only** — listed, never failing; **Off** — not run (the coding defaults still apply). Written to `.ui-quality.yml`
   (Step 7).
@@ -1335,7 +1344,7 @@ Android Studio's Image Asset tool) before relying on the launcher icon rendering
 
 ```yaml
 # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
-accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run | none: opted out entirely
 directions: [ltr, rtl]      # screenshot matrix directions
 themes: [light, dark]       # screenshot matrix themes
 ```
@@ -1384,7 +1393,7 @@ object UiScreenshots {
     enum class Theme { LIGHT, DARK, HIGH_CONTRAST }
 
     /** Level of the automated accessibility checks. */
-    enum class Accessibility { ENFORCE, REPORT, OFF }
+    enum class Accessibility { ENFORCE, REPORT, OFF, NONE }
 
     /** One cell of the capture matrix. */
     data class Variant(val direction: Direction, val theme: Theme) {
@@ -1468,7 +1477,7 @@ object UiScreenshots {
             Accessibility.REPORT -> RoborazziATFAccessibilityCheckOptions(
                 failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.LogOnly,
             )
-            Accessibility.OFF -> null
+            Accessibility.OFF, Accessibility.NONE -> null
         }
     }
 

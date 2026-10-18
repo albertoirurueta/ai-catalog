@@ -156,8 +156,8 @@ instead (unverified locally).
 
 |`accessibility`
 |No
-|`enforce`/`report`/`off` — the automated accessibility level of the sample app's UI tests, written to
-`.ui-quality.yml`. Asked as a bounded choice when unresolved.
+|`enforce`/`report`/`off`/`none` — the automated accessibility level of the sample app's UI tests, written to
+`.ui-quality.yml`. Asked as a bounded choice when unresolved. `none` opts out entirely (writes `accessibility: none`, installs no accessibility tooling and omits the accessibility attributes from the templates); a prior `.ui-quality.yml` value is never silently flipped in `mode: existing`.
 |`enforce`
 
 |`mode`

@@ -67,7 +67,7 @@ xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off`; only meaningful with `ui: tui`. The level written to `.ui-quality.yml` for the terminal UI's asserted accessibility checks (selection readable without colour, key help on screen, every action on a key); ignored and named in the report with `ui: none`. `report` lists issues in `.ui-screenshots/a11y-report.txt` without failing.
+|`enforce`, `report`, `off` or `none`; only meaningful with `ui: tui`. The level written to `.ui-quality.yml` for the terminal UI's asserted accessibility checks (selection readable without colour, key help on screen, every action on a key); ignored and named in the report with `ui: none`. `none` opts out entirely (writes `accessibility: none`, installs no accessibility tooling and omits the accessibility attributes from the templates); a prior `.ui-quality.yml` value is never silently flipped in `mode: existing`. `report` lists issues in `.ui-screenshots/a11y-report.txt` without failing.
 |`enforce`
 
 |`version`

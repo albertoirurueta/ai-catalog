@@ -87,7 +87,7 @@ every file.
 
 |`accessibility`
 |No
-|`args` `key: value` line, `enforce`, `report` or `off`: the UI tests' automated accessibility level written to `.ui-quality.yml` (Step 4b). Resolved from `args`, else the manifest's top-level `accessibility` key (written by xref:skills/iru-setup-java-springboot.adoc[], meaningful only with `frontend: hilla`), else `enforce`; never asked.
+|`args` `key: value` line, `enforce`, `report`, `off` or `none`: the UI tests' automated accessibility level written to `.ui-quality.yml` (Step 4b). Resolved from `args`, else the manifest's top-level `accessibility` key (written by xref:skills/iru-setup-java-springboot.adoc[], meaningful only with `frontend: hilla`), else `enforce`; never asked. `none` opts out entirely: no accessibility tooling is installed and the generated templates omit accessibility attributes (asked as "None — opt out entirely"). In `mode: existing` a prior level is never silently flipped.
 |`enforce`
 
 |`sonar.mode`

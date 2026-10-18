@@ -45,7 +45,7 @@ xref:index.adoc#group-python[Python Development Tooling]
 * Clean Django framework checks: `check`, `makemigrations --check` and, when applicable, the drf-spectacular schema validation.
 * Fast tests reaching at least 80% line coverage for the changed/new production files, measured without the integration tier.
 * No new Ruff, mypy/pyright or other configured-tool issues versus the one baseline; security-relevant findings (Ruff `S`, `DJ001`/`DJ006`/`DJ007`) fixed or explicitly accepted.
-* For UI work: the browser UI stage outcome — screenshot counts per kind under `.ui-screenshots/`, matrix gaps or malformed names fixed, the accessibility level applied and its violations by rule id, or unverified with the reason.
+* For UI work: the browser UI stage outcome — screenshot counts per kind under `.ui-screenshots/`, matrix gaps or malformed names fixed, the accessibility level applied (or "accessibility: opted out" for `none`) and its violations by rule id, or unverified with the reason.
 * `implementation_plan.md` with each task's checkbox checked and its note replaced by the final outcome (fast-test coverage, quality, integration and UI results).
 * A bucket report to the caller: detected shape and the fast/integration selectors, per-task results, framework check results including informational deploy warnings, security findings, accepted coverage exceptions, the integration outcome (passed, fixed, unverified with reason, or no integration tests) and lock behavior, the UI stage outcome and the per-task `Screen › Region › Component` trees, and any blocked task.
 

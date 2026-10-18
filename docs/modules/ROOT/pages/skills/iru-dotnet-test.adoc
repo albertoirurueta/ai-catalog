@@ -39,7 +39,7 @@ portable test project, rendered through the ANSI driver), which run on any host 
 `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears it only on a full UI run, validates every capture
 name against the `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>...]` layout (`.png`, or `.txt` for terminal
 captures), and reports screenshot counts per kind, malformed names, accessibility violations (Axe.Windows for desktop,
-the asserted `tui-*` checks for terminal UIs; count + rule ids) and the `.ui-quality.yml` level applied.
+the asserted `tui-*` checks for terminal UIs; count + rule ids) and the `.ui-quality.yml` level applied (`enforce|report|off|none`).
 
 == Purpose group
 

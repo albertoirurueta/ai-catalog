@@ -134,7 +134,7 @@ without asking, with the warning still printed.
 |File |Written when
 
 |`.github/workflows/build.yml`
-|Always (the test jobs include the UI screenshot artifact uploads)
+|Always (the test jobs include the UI screenshot artifact uploads; with `.ui-quality.yml` `accessibility: none` no accessibility report is collected or uploaded)
 
 |`.github/workflows/release.yml`
 |`distribution` is not `none`

@@ -216,6 +216,8 @@ Once every task that didn't block has been implemented, run the following once f
    remain. Leave a new issue in place only if fixing it would contradict what its task explicitly specifies —
    record that, and why, for Step 5. Skip if `iru-swift-code-quality` isn't installed.
 
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
 ## Step 4 — Finalize progress notes and notify the user
 
 Once Step 3 passes clean for the bucket (or leaves only explicitly-accepted issues), update each task's note in
