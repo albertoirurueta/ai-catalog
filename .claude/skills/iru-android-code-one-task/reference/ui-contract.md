@@ -217,7 +217,10 @@ directions: [ltr, rtl]      # screenshot matrix directions
 themes: [light, dark]       # screenshot matrix themes
 ```
 
-A missing file means the defaults shown (`enforce`) for a new UI project. `off` turns off only the automated
+A missing file means the defaults shown (`enforce`) only for a new UI project — a repository with no UI code yet. In a
+repository that already has UI code, a missing file means the level was never chosen: the coding skills do not
+assume `enforce` but resolve it once, before any UI work, as described in "Opting out and existing code" below.
+`off` turns off only the automated
 checks — the coding defaults above and the rules below still apply to every new component; only `none` lifts them.
 
 ### Platform assistive-technology rules
@@ -257,4 +260,12 @@ up half-compliant (old non-compliant code next to new compliant code). Never mix
 generated code, tests and docs omit the AT-specific additions (accessible names, ARIA, semantics, AT lint and audit
 tooling, reduced-motion guards added only for accessibility) and the UI docs index says so once; a skill never
 silently flips the level in either direction.
+
+When `.ui-quality.yml` is missing in a repository that already has UI code (it predates the catalog's setup, or the
+file was deleted), the coding skill resolves the level before its first UI task: it reuses the `Accessibility:` line
+of an `iru-explore` report (in the plan's "Current code state" or the conversation) or applies the same detection
+rules, asks the user once with the setup's pre-selection — `present` → `enforce`, `partial` → `report` with a
+mixed-compliance warning, `absent` → `none` with a half-compliance warning — and writes the answer (with the default
+`directions` and `themes`) to `.ui-quality.yml`, so every later skill and test gate reads the same level. Test and
+gate skills run after that and keep reading a missing file as `enforce`.
 

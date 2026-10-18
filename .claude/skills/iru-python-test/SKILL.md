@@ -273,8 +273,10 @@ PY
 - **The level applied** comes from `.ui-quality.yml` at the repository root (`grep -E '^(accessibility|directions|themes):'`;
   missing file = `enforce`, `[ltr, rtl]`, `[light, dark]`). With `enforce`, violations already failed their tests
   (first line `accessibility violations: <rule>×<nodes>, …`); with `report` they are listed, never failures; with
-  `off`, `a11y_scans=0` is expected. Scans present but no `a11y-report.jsonl` lines at all with a level other than
-  `off` means the tests don't call the helper's `check_accessibility` — say so.
+  `off` or `none`, `a11y_scans=0` is expected — report "accessibility checks off" (`off`) or "accessibility: opted
+  out" (`none`, the project opted out entirely), never "unverified" and never a failure. Scans present but no
+  `a11y-report.jsonl` lines at all with `enforce` or `report` means the tests don't call the helper's
+  `check_accessibility` — say so.
 - Failure screenshots under the output directory are reported by count and path only, never copied into
   `<shots>` (they are not contract states).
 

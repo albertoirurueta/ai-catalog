@@ -91,7 +91,7 @@ Detect once and reuse for every gate call below (the same facts `iru-rust-code-o
   completions) — look for its command in `.cargo/config.toml`, `xtask/src/main.rs`, the CI workflow, or a
   `README`/`CONTRIBUTING` note.
 - **Terminal UI**: `ratatui` in any member's dependencies, the TUI module (`src/tui/`), its capture helper
-  (`src/tui/ui_screenshots.rs`) and `.ui-quality.yml` at the repository root (missing = `accessibility: enforce`,
+  (`src/tui/ui_screenshots.rs`) and `.ui-quality.yml` at the repository root (missing (new UI project) = `accessibility: enforce`,
   `directions: [ltr, rtl]`, `themes: [light, dark]`). Note whether the TUI has a `Theme` with light/dark palettes —
   the themes 3.5a expects are the listed ones it defines plus `no-color` (only `no-color` without a palette).
 - **Docker**: `docker info` now (only matters when container-backed tests exist), recorded for 3.7.
@@ -116,6 +116,8 @@ Record it as the bucket's baseline — empty if every file is new. Step 3.6 diff
 `iru-rust-code-quality` isn't installed, and say so in Step 5.
 
 **Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
+**Missing `.ui-quality.yml` in a repository that already has UI code.** The level was never chosen, so don't assume the `enforce` default — that default is only for a new UI project with no UI code yet. Before the first UI task of the bucket, resolve it once per `reference/ui-contract.md` §8 ("Opting out and existing code"): reuse the `Accessibility:` line of an `iru-explore` report in the plan's "Current code state" or this conversation (otherwise apply the detection rules of `iru-explore`'s `reference/accessibility-detection.md`), ask the user via `AskUserQuestion` with the setup's pre-selection (`present` → Enforce, `partial` → Report only with the mixed-compliance warning, `absent` → None with the half-compliance warning), and write `.ui-quality.yml` with the chosen level and the default `directions`/`themes`, so the per-task skills and the test gates read the same value. This is a decision only the user can make, so it is an allowed pause.
 
 ## Step 2 — Implement each task via `iru-rust-code-one-task`
 

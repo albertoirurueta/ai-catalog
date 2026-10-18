@@ -27,10 +27,10 @@ affected unit-test classes, unit-test line coverage against an 80% bar (instrume
 information only and never counted toward it), a full `./gradlew test` run, and a quality-regression check
 against its one baseline. When the bucket added or changed a screen, component or list, a UI stage (Step 3.7) also reads `.ui-quality.yml`,
 runs the `ui` selector of `iru-android-test`, checks that `.ui-screenshots/` holds a capture for every state ×
-direction × theme, and applies the accessibility level (`enforce`/`report`/`off`; `none` opts out entirely and is reported as "accessibility: opted out"); an on-device flow stage with no
+direction × theme, and applies the accessibility level (`enforce`/`report`/`off`/`none`; `none` opts out entirely and is reported as "accessibility: opted out"); an on-device flow stage with no
 attached device or emulator is reported unverified. A failure traced to a specific task sends that task back for a fix
 and a re-run of the affected checks, rather than re-validating the whole bucket. The UI contract is described in
-xref:guides/building-user-interfaces.adoc[Building user interfaces].
+xref:guides/building-user-interfaces.adoc[Building user interfaces]. When `.ui-quality.yml` is missing in a repository that already has UI code, it doesn't assume `enforce`: before the first UI task it asks once, pre-selected from `iru-explore`'s `Accessibility:` line, and writes the file.
 
 Kotlin Multiplatform projects are out of scope: when the Kotlin Multiplatform plugin is applied anywhere in the build (a KMP app's Android host module included), the skill stops and hands the request to xref:skills/iru-kmp-code-one-task-group.adoc[] instead.
 

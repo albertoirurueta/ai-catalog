@@ -47,7 +47,7 @@ optional Terminal.Gui UI (`src/<Tool>/Tui/`, a view, the hosting command, or Cor
 excludes `[TestCategory("UI")]` tests, so it runs `iru-dotnet-test` with the `ui` selector (any host, no lock), checks
 that every changed screen and component has a `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt` capture for each visual
 state × `.ui-quality.yml` direction, and applies the asserted terminal accessibility checks (`tui-color-only`,
-`tui-help-line`, `tui-keyboard`) at the configured `enforce`/`report`/`off` level. A changed view with no UI tests is
+`tui-help-line`, `tui-keyboard`) at the configured `enforce`/`report`/`off`/`none` level. A changed view with no UI tests is
 reported "terminal UI untested", never passed. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 
 == Purpose group
@@ -92,7 +92,7 @@ verdict and any relevant "Current code state" context.
 * User-facing notifications at both phases: per task as its implementation lands, and once when group
   validation completes.
 * A summary handed back to the caller (`iru-code-one-task-group`): per task, files touched, tests added/updated,
-  coverage achieved, code-quality outcome, and any task that stopped on a blocker.
+  coverage achieved, code-quality outcome, and any task that stopped on a blocker. When `.ui-quality.yml` is missing in a repository that already has UI code, it doesn't assume `enforce`: before the first UI task it asks once, pre-selected from `iru-explore`'s `Accessibility:` line, and writes the file.
 
 == Execution flow
 

@@ -109,7 +109,7 @@ Stage-to-task mapping (Step 2):
   **no matching tests for `<pattern>`**, **timed out**, **not applicable**, or **unverified (reason)**.
 * An explicit callout when a test fails on one target only, which usually means an `actual` implementation differs.
 * The lock is mentioned only when it was anything other than an immediate acquire.
-* For a UI run: the capture directory and whether it was cleared (full run) or kept (scoped run); screenshots per kind and per platform (`android`/`ios`); malformed names; accessibility violations (total + rule ids with counts) and the `.ui-quality.yml` level applied (`enforce`/`report`/`off`); device flow tests run or **unverified (reason)**.
+* For a UI run: the capture directory and whether it was cleared (full run) or kept (scoped run); screenshots per kind and per platform (`android`/`ios`); malformed names; accessibility violations (total + rule ids with counts) and the `.ui-quality.yml` level applied (`enforce`/`report`/`off`/`none`); device flow tests run or **unverified (reason)**.
 * No source or test code is ever modified; raw Gradle/`xcodebuild` output is never pasted.
 
 == Execution flow

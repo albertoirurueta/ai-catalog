@@ -298,7 +298,7 @@ skill owns the run-level half of that; the tests themselves own the captures.
 
 1. **Resolve the settings** at the repository root (`git rev-parse --show-toplevel`, else the current directory):
    - `UI_SCREENSHOTS_DIR` from the environment (must be absolute) or `<repo root>/.ui-screenshots`.
-   - `.ui-quality.yml`: `accessibility` (`enforce`/`report`/`off`), `directions`, `themes` — a missing file or key
+   - `.ui-quality.yml`: `accessibility` (`enforce`/`report`/`off`/`none`), `directions`, `themes` — a missing file or key
      means `enforce`, `[ltr, rtl]`, `[light, dark]`. Read the three keys with a line match
      (`^accessibility:\s*(\w+)`, `^directions:\s*\[(.*)\]`, `^themes:\s*\[(.*)\]`); anything else is reported
      as "unparsed `.ui-quality.yml`, defaults applied".

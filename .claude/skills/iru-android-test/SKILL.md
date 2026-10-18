@@ -110,8 +110,8 @@ a device and write captures through AndroidX Test Storage (`DeviceUiScreenshots.
 
 1. **Resolve the directory and the level.** `UI_SCREENSHOTS_DIR` from the environment if set (absolute path),
    else `<repo root>/.ui-screenshots`; export it for every Gradle call below (the forked test JVMs inherit it).
-   Read `.ui-quality.yml` at the repository root for `accessibility` (`enforce`/`report`/`off`; missing file or
-   key = `enforce`). On a **full** UI run (no class/pattern given) delete only that screenshot directory's
+   Read `.ui-quality.yml` at the repository root for `accessibility` (`enforce`/`report`/`off`/`none`; missing file or
+   key = `enforce`). Under `none` (opted out entirely) or `off` (rules apply, checks not run) the accessibility check is not applicable: report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure. On a **full** UI run (no class/pattern given) delete only that screenshot directory's
    contents first (`rm -rf "$UI_SCREENSHOTS_DIR" && mkdir -p "$UI_SCREENSHOTS_DIR"`), so it holds exactly this run;
    a scoped run adds to what is there.
 2. **JVM stage** (`ui: jvm` or `all`) — the same task as Step 3, scoped by any pattern given:

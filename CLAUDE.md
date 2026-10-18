@@ -162,7 +162,8 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   types only — asked once by the front door or the orchestrator, written by the UI scaffold to `.ui-quality.yml`;
   `none` = opted out entirely, `off` = rules apply but checks don't run; on an existing repository `iru-explore`'s
   `Accessibility: present|partial|absent` line, produced from the shared `reference/accessibility-detection.md`,
-  pre-selects the answer),
+  pre-selects the answer; a missing `.ui-quality.yml` means `enforce` only in a repository with no UI code yet —
+  otherwise the coding group skills ask once with that same pre-selection and write the file before any UI work),
   `mode: new|existing`, and
   `on-existing: ask|keep|update|replace` — so a value collected once by a front door or orchestrator never needs
   re-asking downstream; each downstream scaffold/workflows skill parses only the subset of those keys its own Step 0

@@ -21,7 +21,7 @@ description: >-
   without the lock, the iOS simulator and `iosApp` captures inside the locked iOS stage), a check that every
   added/changed screen and component has a capture per visual state × `.ui-quality.yml` direction × theme × platform
   (`--android`/`--ios`) in `.ui-screenshots/`, and the accessibility results applied at the configured
-  `enforce`/`report`/`off` level — device/simulator unavailable makes that part unverified, never passed. Scopes each gate by the module(s) the bucket touched (`shared`/`composeApp`, `androidApp`, `iosApp`) and by
+  `enforce`/`report`/`off`/`none` level — device/simulator unavailable makes that part unverified, never passed. Scopes each gate by the module(s) the bucket touched (`shared`/`composeApp`, `androidApp`, `iosApp`) and by
   source set — a `commonMain` change runs every target's tests, `androidMain` only the Android host tests, `iosMain`
   only the iOS tests, `iosApp` Swift only the XCTest bundle. `iru-kmp-code-one-task` checks off each task's box itself
   with a "group validation pending" note; this skill backfills any that didn't land and replaces each note with the
@@ -98,7 +98,7 @@ Record this once as the bucket's **validation scope** and reuse it, rather than 
   decomposition: the **UI inventory** (every added/changed screen and component `<Id>`, its kind, its visual states,
   and the platforms it renders on — both for shared Compose UI and for a screen built natively on both sides, one for
   a platform-only view) that Step 3.8 checks captures against. Read `.ui-quality.yml` at the repository root
-  (`accessibility`, `directions`, `themes`; missing file or key → `enforce`, `[ltr, rtl]`, `[light, dark]`).
+  (`accessibility`, `directions`, `themes`; missing (new UI project) file or key → `enforce`, `[ltr, rtl]`, `[light, dark]`).
 
 Then collect the files every task is expected to touch and capture a single pre-change baseline via
 `iru-gate-runner`:
@@ -118,6 +118,8 @@ Record it as the bucket's baseline — empty if every file is new. Step 3.6 diff
 `iru-kmp-code-quality` isn't installed, and say so in Step 5.
 
 **Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
+**Missing `.ui-quality.yml` in a repository that already has UI code.** The level was never chosen, so don't assume the `enforce` default — that default is only for a new UI project with no UI code yet. Before the first UI task of the bucket, resolve it once per `reference/ui-contract.md` §8 ("Opting out and existing code"): reuse the `Accessibility:` line of an `iru-explore` report in the plan's "Current code state" or this conversation (otherwise apply the detection rules of `iru-explore`'s `reference/accessibility-detection.md`), ask the user via `AskUserQuestion` with the setup's pre-selection (`present` → Enforce, `partial` → Report only with the mixed-compliance warning, `absent` → None with the half-compliance warning), and write `.ui-quality.yml` with the chosen level and the default `directions`/`themes`, so the per-task skills and the test gates read the same value. This is a decision only the user can make, so it is an allowed pause.
 
 ## Step 2 — Implement each task via `iru-kmp-code-one-task`
 

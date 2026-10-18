@@ -688,7 +688,7 @@ namespace __ToolName__.Cli.Tests;
 /// <summary>
 /// Applies the <c>.ui-quality.yml</c> accessibility level to the asserted terminal-UI checks (no automated audit
 /// exists for terminals): <c>enforce</c> fails the test, <c>report</c> appends to
-/// <c>&lt;screenshots dir&gt;/a11y-report.txt</c>, <c>off</c> ignores them.
+/// <c>&lt;screenshots dir&gt;/a11y-report.txt</c>, <c>off</c> and <c>none</c> ignore them.
 /// </summary>
 internal static class AccessibilityCheck
 {
@@ -700,7 +700,7 @@ internal static class AccessibilityCheck
     public static void Apply(string target, IReadOnlyList<string> violations)
     {
         var level = UiScreenshots.QualitySetting("accessibility") ?? "enforce";
-        if (violations.Count == 0 || level == "off")
+        if (violations.Count == 0 || level is "off" or "none")
         {
             return;
         }

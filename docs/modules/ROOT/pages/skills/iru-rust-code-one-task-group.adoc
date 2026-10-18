@@ -33,7 +33,7 @@ components (Ratatui), a UI stage (3.5a) also checks that each has `.txt` capture
 × `.ui-quality.yml` direction × theme, and applies the accessibility level (`enforce` fails the bucket, `report` lists
 the rule ids); see xref:guides/building-user-interfaces.adoc[Building user interfaces]. Last, and only when the repository has them, `#[ignore]`d
 container-backed tests (testcontainers) run behind the shared atomic-`mkdir` `.integration-test.lock`; Docker being
-unavailable makes that stage "unverified", never silently skipped. Plain CLI end-to-end tests need no lock. With `accessibility: none` in `.ui-quality.yml` (opted out entirely), the accessibility rules and checks are neither applied nor required and are reported as "accessibility: opted out" in the group report, never unverified or failed; `off` still applies the rules but skips the automated checks.
+unavailable makes that stage "unverified", never silently skipped. Plain CLI end-to-end tests need no lock. With `accessibility: none` in `.ui-quality.yml` (opted out entirely), the accessibility rules and checks are neither applied nor required and are reported as "accessibility: opted out" in the group report, never unverified or failed; `off` still applies the rules but skips the automated checks. When `.ui-quality.yml` is missing in a repository that already has UI code, it doesn't assume `enforce`: before the first UI task it asks once, pre-selected from `iru-explore`'s `Accessibility:` line, and writes the file.
 
 == Purpose group
 

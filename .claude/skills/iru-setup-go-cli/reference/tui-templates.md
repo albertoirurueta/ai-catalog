@@ -514,10 +514,10 @@ func checkAccessibility(t *testing.T, target string, violations []string) {
 }
 
 // applyLevel fails the test (enforce), appends to <dir>/a11y-report.txt
-// (report) or does nothing (off).
+// (report) or does nothing (off, or none when the project opted out).
 func applyLevel(r errorReporter, level, target string, violations []string, dir string) {
 	r.Helper()
-	if len(violations) == 0 || level == "off" {
+	if len(violations) == 0 || level == "off" || level == "none" {
 		return
 	}
 	if level != "report" {

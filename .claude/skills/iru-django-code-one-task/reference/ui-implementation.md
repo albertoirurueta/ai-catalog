@@ -251,7 +251,7 @@ _AXE_OPTIONS = {"runOnly": {"type": "tag", "values": ["wcag2a", "wcag2aa", "wcag
 
 def check_accessibility(page: Page) -> list[str]:
     level = ui_quality()["accessibility"]
-    if level == "off":
+    if level in ("off", "none"):
         return []
     results = Axe().run(page, options=_AXE_OPTIONS)
     violations = results.response["violations"]

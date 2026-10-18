@@ -1198,7 +1198,7 @@ class MainActivityInstrumentedTest {
     fun enableAccessibilityChecks() {
         // Level from the `uiAccessibility` runner argument iru-android-test passes (.ui-quality.yml); API 34+ only.
         val level = InstrumentationRegistry.getArguments().getString("uiAccessibility", "enforce")
-        if (level != "off" && Build.VERSION.SDK_INT >= 34) {
+        if (level != "off" && level != "none" && Build.VERSION.SDK_INT >= 34) {
             composeRule.enableAccessibilityChecks(
                 AccessibilityValidator().setRunChecksFromRootView(true).apply {
                     if (level == "report") setThrowExceptionFor(null)
@@ -1253,7 +1253,7 @@ class MainActivityInstrumentedTest {
     fun mainActivity_isAccessible() {
         // Level from the `uiAccessibility` runner argument iru-android-test passes (.ui-quality.yml).
         val level = InstrumentationRegistry.getArguments().getString("uiAccessibility", "enforce")
-        if (level == "off") return
+        if (level == "off" || level == "none") return
         AccessibilityChecks.enable().setRunChecksFromRootView(true).apply {
             if (level == "report") setThrowExceptionFor(null)
         }

@@ -116,7 +116,9 @@ terminal, container or device.
 3. **Level**: read `accessibility:` from `.ui-quality.yml` at the repository root (`grep -E '^accessibility:'`);
    missing file or key → `enforce`. Under `enforce` a violation fails its test (it shows up as a normal failure whose
    message names the rule ids); under `report` the tests append `<target>\t<rule-id>: <message>` lines to
-   `<dir>/a11y-report.txt`; under `off` nothing is checked.
+   `<dir>/a11y-report.txt`; under `off` nothing is checked (reported "accessibility checks off"), and under `none` — the
+   project opted out entirely — nothing is checked either (reported "accessibility: opted out"); neither is ever
+   "unverified" or a failure.
 4. **After the run**, validate and count with stdlib Python (script kept outside the repository, e.g.
    `$TMPDIR/iru-rust-test/uicheck.py`, run as `python3 -I <script> "<dir>"`):
 

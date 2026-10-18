@@ -121,6 +121,11 @@ For a repository that already has code, setup first runs the `iru-explore` acces
 enabling support makes only new code compliant. Detection never edits code. A level is never silently flipped on a
 re-run.
 
+A missing `.ui-quality.yml` means `enforce` only for a new UI project. In a repository that already has UI code
+(for example one that predates the catalog's setup), the coding group skills don't assume `enforce`: before the
+first UI task they reuse the `Accessibility:` line (or apply the same detection), ask once with the same
+pre-selection, and write `.ui-quality.yml`, so every later skill and test gate reads the chosen level.
+
 == Screenshots become documentation
 
 For a repository with a UI, `iru-setup-antora` adds a **User interface** section skeleton and `iru-update-docs`
