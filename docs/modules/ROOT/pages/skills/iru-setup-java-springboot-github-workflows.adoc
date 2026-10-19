@@ -1,12 +1,12 @@
 = Setup Java Spring Boot GitHub Workflows
-:description: Creates or updates build, deploy, undeploy and security GitHub Actions workflows for a Java or Kotlin Spring Boot service on Maven or Gradle.
-:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks, hilla, vaadin, codeql, dependabot, osv-scanner, gitleaks, kotlin, gradle
+:description: Creates or updates build, deploy, promote, undeploy and security GitHub Actions workflows for a Java or Kotlin Spring Boot service on Maven or Gradle.
+:keywords: iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks, hilla, vaadin, codeql, dependabot, osv-scanner, gitleaks, kotlin, gradle, blue green deployment, canary, rolling deployment, promote workflow
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Creates the GitHub Actions workflows a Spring Boot service needs: one that builds, tests, analyses, and publishes
-documentation (optionally running a Hilla frontend's tests too); one that deploys; one that stops or destroys an
-environment; and one that runs dependency/code/secret security scans, plus a Dependabot config.
+documentation (optionally running a Hilla frontend's tests too); one that deploys (as a staged rollout when rolling deployments are enabled, with a further `promote.yml` to advance
+or roll it back); one that stops or destroys an environment; and one that runs dependency/code/secret security scans, plus a Dependabot config.
 
 == Purpose
 
@@ -49,6 +49,12 @@ artifact
 |`workflow_dispatch` with an environment input, optionally on release published
 |Build and push the container image, authenticate via keyless OIDC, `tofu plan` then apply *that plan file*, then a
 smoke check that fails the deploy if the service never becomes healthy
+
+|`promote.yml`
+|`workflow_dispatch` with environment and target inputs; only with rolling deployments, and not for strategy `rolling`
+|Advance a rollout one step, or roll it back or abort it. Stateless: it reads the current traffic split from the cloud
+(ECS weighted target groups, Cloud Run traffic tags, Argo Rollouts) and sets the next one. It needs no GitHub
+Environment reviewers, so it works on any GitHub plan
 
 |`undeploy.yml`
 |`workflow_dispatch` only
@@ -103,6 +109,28 @@ compiles manually with `./gradlew` instead of autobuild, and Dependabot uses the
 use `-Pvaadin.productionMode=true -Pvaadin.ci.build=true`.
 |===
 
+=== Rolling deployments
+
+When the manifest's `deploy.rolling.enabled` is true (or `rolling: yes` arrives in `args`), `deploy.yml` becomes a
+staged rollout instead of one job: build and push the image, deploy the new version ("green") at 0 % traffic, smoke-test
+its candidate URL, shift traffic in the configured steps behind a metric gate, and roll back automatically on a breach.
+How far it goes unattended depends on `advance`: `auto` runs the gate alone, `hybrid` adds a human confirmation through
+`promote.yml` on `prod` (auto-advancing on `dev`), and `manual` ends the run once green is deployed so a human runs
+`promote.yml` for each step. Strategy `blue-green` is a single cutover (`steps: [100]`), `canary` and `linear` use the
+manifest's steps with `bakeMinutes` of soak, and strategy `rolling` keeps the single-job `deploy.yml` (the runtime's
+native rolling update) and generates no `promote.yml`. The first deploy of an environment, which has no rollout outputs
+yet, is applied at 100 % and the staged jobs are skipped.
+
+The rollout shell functions are runtime-specific (ECS Fargate, Cloud Run, or Argo Rollouts on EKS/GKE) and embedded in
+`deploy.yml`, `promote.yml` and `undeploy.yml`; the workflows rely on the `rollout_*` outputs and resource naming that
+xref:skills/iru-setup-java-springboot-platform.adoc[] produces. `deploy.yml`, `promote.yml` and `undeploy.yml` share one
+concurrency group per environment so a deploy, a promotion and a teardown never interleave, and `undeploy.yml` resets
+the traffic split first. Rolling disabled or absent keeps today's single-job `deploy.yml` unchanged, with no
+`promote.yml`; with `ci: no` there are no workflows at all, hence no rolling. Because a rollout in flight must not be
+orphaned, replacing or updating an existing `deploy.yml` across this behavioural change needs an explicit yes. The
+report also advises who may dispatch `promote.yml`, since a `workflow_dispatch` workflow is open to anyone with write
+access. See xref:skills/iru-springboot-rolling-deployments.adoc[].
+
 == Purpose group
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -149,6 +177,13 @@ then manifest, then (for `visibility`) `gh repo view --json visibility`, then as
 offered back to the manifest; an `args` override applies to this run only unless the user agrees.
 |Manifest values
 
+|`rolling`, `deployment-strategy`, `advance`, `steps`, `bake-minutes`
+|No
+|`args` `key: value` lines: `rolling` is `yes`/`no`, `deployment-strategy` is `rolling`/`blue-green`/`canary`/`linear`,
+`advance` is `auto`/`manual`/`hybrid`, `steps` a comma list of percentages, `bake-minutes` a number. The manifest's
+`deploy.rolling` block is the source of truth; the lines apply when there is no block or the caller passes them.
+|Rolling disabled
+
 |`mode`
 |No
 |`new` or `existing`. Informational only: `mode: existing` does not mean "update silently" — existing files are
@@ -174,7 +209,7 @@ GitHub Environments exist, and how heavy the compose stack is.
 
 |Existing workflow files
 |No
-|Covers `build.yml`, `deploy.yml`, `undeploy.yml`, `security.yml` and `.github/dependabot.yml`. For each that exists,
+|Covers `build.yml`, `deploy.yml`, `promote.yml` (only with rolling deployments), `undeploy.yml`, `security.yml` and `.github/dependabot.yml`. For each that exists,
 the skill warns, states where it contradicts this run's choices, and asks (unless `on-existing` is set): **Update**
 (merge, keeping steps this skill doesn't own such as a Slack notification or an extra matrix leg), **Keep as is**,
 **Replace** (regenerate from the template, losing customizations), or **Stop**.
@@ -214,8 +249,17 @@ the skill warns, states where it contradicts this run's choices, and asks (unles
 * `.github/workflows/deploy.yml` — with `id-token: write`, a concurrency group per environment that never cancels
   in progress, the GitHub Environment as the approval gate, buildpack image build and push, and `tofu apply` of the
   previously produced plan file.
+* `.github/workflows/deploy.yml` when rolling deployments are enabled (and the strategy is not `rolling`) — jobs
+  `build-image`, `deploy-green` (apply at 0 % traffic), `smoke-candidate` (health-check the candidate URL), `shift`
+  (step through the manifest's percentages with the metric gate; omitted for `advance: manual`) and `rollback`
+  (return traffic to the stable version on any failure), in the same per-environment concurrency group as
+  `promote.yml` and `undeploy.yml`. Per-runtime variants authenticate and drive ECS (weighted target groups on the ALB
+  listener), Cloud Run (revision tags and traffic percentages) or Argo Rollouts (`kubectl argo rollouts`).
+* `.github/workflows/promote.yml` — only with rolling deployments and a strategy other than `rolling`: a `promote`
+  job that advances the rollout one step or rolls it back or aborts it, deliberately without Environment reviewers.
 * `.github/workflows/undeploy.yml` — with the typed-confirmation check, the same concurrency group as `deploy.yml`
-  so the two can never run at once, and separate `stop` and `destroy` paths.
+  so the two can never run at once, and separate `stop` and `destroy` paths; with rolling deployments it resets the
+  traffic split first.
 * `.github/workflows/security.yml` — a `dependency-review` job (pull requests only), on Gradle a
   `dependency-submission` job, a `codeql` job (matrix
   `java-kotlin`, plus `javascript-typescript` when `frontend: hilla`), an `osv-scanner` job (the
@@ -230,7 +274,7 @@ the skill warns, states where it contradicts this run's choices, and asks (unles
   GitHub Environments — plus the settings that are easy to miss: GitHub Pages served from `gh-pages` (only when `ci.pages: yes`), an OIDC trust
   policy scoped to the repository *and* the environment, and (for `security.yml`) Code scanning and Dependency
   graph enabled in repository settings so CodeQL and dependency review have somewhere to report into. The report also
-  states whether the run created or updated the workflows, the action taken per file (created / updated / replaced /
+  states whether rolling deployments were enabled (strategy, advance, steps, bake minutes), whether the run created or updated the workflows, the action taken per file (created / updated / replaced /
   kept as is, with each mismatch for kept files), how `visibility`, `ci.tests` and `ci.pages` were resolved, and the
   Actions-minutes note for private/internal repositories.
 
@@ -248,8 +292,10 @@ flowchart TD
     D -- update, keep or replace --> E
     B2 --> E["Step 1: Write build.yml\n(unit vs full tests, Pages vs artifact)\n(build job + main-branch-only docs job:\nMaven site, OpenAPI/protobuf docs, AsyncAPI\nand GraphQL html, Antora, merge into ./doc)"]
     C --> E
-    E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check)"]
-    F --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy)"]
+    E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check;\nwhen rolling is enabled: Step 2b staged rollout\nwith build, deploy at 0 percent, smoke test,\nshift with metric gate, automatic rollback)"]
+    F -- "rolling enabled and strategy is not rolling" --> F2["Step 2c: Write promote.yml\n(advance, roll back or abort a rollout;\nstate read from the cloud)"]
+    F -- "rolling disabled or strategy rolling" --> G
+    F2 --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy;\nresets the traffic split first when rolling)"]
     G --> G2["Step 3b: Write security.yml\n(dependency-review, CodeQL, OSV-Scanner,\ngitleaks - each gated by a security-* flag)\nand always write dependabot.yml"]
     G2 --> H["Step 4: Assemble the secrets,\nvariables, and environments table"]
     H --> I["Step 5: Validate — YAML parses, actionlint,\naction versions current, secret names consistent;\nMaven or Gradle commands verified locally via iru-gate-runner"]
@@ -271,7 +317,9 @@ Otherwise it reads `springboot-stack.yml` and surveys the repository, then write
 
 === Invoked by
 
-* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, build/deploy/undeploy/security workflows, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+* xref:skills/iru-springboot-rolling-deployments.adoc[] — when enabling or disabling rolling deployments on an existing
+  service, it re-runs this skill so `deploy.yml` is regenerated and `promote.yml` added or removed.
+* xref:skills/iru-setup-java-springboot.adoc[] — Step 8, build/deploy/promote/undeploy/security workflows, skipped when ci is no, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runs standalone (`/iru-setup-java-springboot-github-workflows`).
 

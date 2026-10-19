@@ -1,6 +1,6 @@
 = Setup Java Spring Boot
 :description: Bootstraps or updates a Spring Boot service as a hexagonal multi-module build in Java or Kotlin, with Maven or Gradle, CI, Sonar, OpenTofu and docs.
-:keywords: iru-setup-java-springboot, claude code skill, spring boot, kotlin, gradle, hexagonal architecture, maven multi-module, spring initializr, microservice bootstrap, hilla
+:keywords: iru-setup-java-springboot, claude code skill, spring boot, kotlin, gradle, hexagonal architecture, maven multi-module, spring initializr, microservice bootstrap, hilla, blue green deployment, canary, rolling deployment
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -76,6 +76,9 @@ visibility: public
 ci: yes
 ci-tests: full
 pages: yes
+rolling-deployments: yes
+deployment-strategy: canary
+advance: hybrid
 on-existing: ask
 ----
 
@@ -163,6 +166,17 @@ Testcontainers stack). Only meaningful when `ci: yes`; `unit` is recommended for
 `ci: yes`. Public repositories get `yes` without asking; private/internal ones are asked (No recommended: Pages needs
 Pro, Team or Enterprise Cloud and the site is public on the internet unless Enterprise Cloud access control is used).
 |Asked when `ci: yes` and not public
+
+|`args: rolling-deployments` (+ `deployment-strategy` / `advance` / `steps` / `bake-minutes`)
+|No
+|`rolling-deployments` is `yes`/`no` and only meaningful with `ci: yes`; `deployment-strategy` is
+`rolling`/`blue-green`/`canary`/`linear` and `advance` is `auto`/`manual`/`hybrid` (both only meaningful with
+`rolling-deployments: yes`). Optional `steps` (comma list of percentages) and `bake-minutes` override the Step 3c
+defaults (`10,50,100` and `10`). They pre-resolve Step 3c ("Support blue/green rolling deployments?"), which is
+opt-in: the default is today's single-job `deploy.yml`. With `ci: no` the step is skipped, because `deploy.yml` drives
+the rollout and `promote.yml` advances it. Recorded as the manifest's `deploy.rolling` block. Switch later with
+xref:skills/iru-springboot-rolling-deployments.adoc[].
+|Asked when `ci: yes` and not supplied (No recommended for a small or `dev`-only service)
 
 |`args: on-existing`
 |No
@@ -280,7 +294,9 @@ typically less relevant and some actively conflict with the contract-first hexag
 
 * `springboot-stack.yml` at the repository root — the manifest recording the resolved identity, every technology
   choice, and also `openSource`, `sonar` (`mode`/`organization`/`projectKey`/`hostUrl`), `frontend`
-  (`none`/`hilla`), `visibility`, and `ci` (`enabled`/`tests`/`pages`), with container image tags pinned. If a
+  (`none`/`hilla`), `visibility`, `ci` (`enabled`/`tests`/`pages`), and the optional `deploy.rolling` block
+  (`enabled`, `strategy`, `advance`, `steps`, `bakeMinutes`; absent means rolling deployments are disabled), with
+  container image tags pinned. If a
   manifest already existed, the user chooses Update / Keep as is / Replace (or `on-existing` applies). Meant to be committed; read by every sub-skill and later by
   `iru-update-java-springboot-documentation`.
 * The full build (via `iru-setup-java-springboot-pom`): for Maven (Java, or Kotlin + Maven) a root reactor `pom.xml`
@@ -301,14 +317,20 @@ typically less relevant and some actively conflict with the contract-first hexag
   `iru-setup-java-springboot-testcontainers`).
 * An `infra/` OpenTofu configuration for the chosen cloud (via `iru-setup-java-springboot-platform`).
 * `build.yml`, `deploy.yml`, `undeploy.yml`, and `security.yml` GitHub Actions workflows plus
-  `.github/dependabot.yml` (via `iru-setup-java-springboot-github-workflows`) — all skipped when `ci: no`.
+  `.github/dependabot.yml` (via `iru-setup-java-springboot-github-workflows`) — all skipped when `ci: no`. When
+  rolling deployments are enabled, `deploy.yml` becomes a staged rollout and a `promote.yml` workflow is generated
+  to advance, roll back or abort it (a `rolling` strategy keeps the single-job `deploy.yml` and generates no
+  `promote.yml`); the OpenTofu configuration then also carries the rollout infrastructure and `rollout_*` outputs.
 * An Antora documentation site with Mermaid and Kroki and the full service page set (via
   `iru-update-java-springboot-documentation`).
 * Repository-level supporting files: `.gitignore`, `README.md`, `CHANGELOG.md`, `checkstyle.xml` (Java only; an
   existing one is kept), and optionally `LICENSE`. On Kotlin builds `detekt.yml` is expected from the pom sub-skill
   and reported as a gap if missing.
 * A final report with the setup mode and, per component, the action taken (created / updated / replaced / kept as is /
-  skipped (ci: no)), consolidating the open-source/visibility/CI/Sonar/frontend choices (and, when `frontend: hilla`, the `accessibility` level, the `.ui-quality.yml` action, and what
+  skipped (ci: no)), consolidating the open-source/visibility/CI/Sonar/frontend choices, whether rolling deployments are enabled (strategy,
+  advance mode, steps and bake minutes, whether `promote.yml` was generated, the `rollout_*` outputs and
+  prerequisites, the cost note that blue/green temporarily doubles capacity, and that
+  `/iru-springboot-rolling-deployments enable|disable` switches it later) (and, when `frontend: hilla`, the `accessibility` level, the `.ui-quality.yml` action, and what
   `iru-setup-java-springboot-hilla` reported back), every secret and variable that must be supplied out-of-band
   (the Sonar token only when `sonar.mode` is not `none`, plus `GITLEAKS_LICENSE` if a Pro key is used), every open
   gap, and the result of the three verification builds (Maven or Gradle, as run).
@@ -325,7 +347,9 @@ flowchart TD
     C --> D["Step 2: Collect project identity;\ninfer repository info from git"]
     D --> E["Step 3: Language (Java/Kotlin), build tool\n(Kotlin only), Kotlin version, platform\n(AWS/GCP) and concurrency model"]
     E --> EB["Step 3b: Open source, visibility, CI\n(ci, ci-tests, pages), Sonar mode, frontend, accessibility"]
-    EB --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
+    EB -- "ci: yes" --> EC["Step 3c: Rolling deployments?\n(strategy, advance, steps, bake minutes)"]
+    EB -- "ci: no, step skipped" --> F
+    EC --> F["Step 4: Choose technologies\n(databases, caches, security, Kafka, servers,\nclients, observability, AI, dynamic config)"]
     F --> G["Step 5: Confirm the whole plan"]
     G -- corrections --> F
     G -- confirmed --> H["Step 6: Write springboot-stack.yml\n(Update / Keep as is / Replace if it exists)"]
@@ -363,12 +387,20 @@ filesystem directly, so only a short completion summary needs to come back:
 * xref:skills/iru-setup-java-springboot-testcontainers.adoc[] — Step 8: `compose.yaml` and the integration-test
   harness. Runs after the APIs (and Hilla, when present) because the compose stack must know whether a schema
   registry is needed.
-* xref:skills/iru-setup-java-springboot-platform.adoc[] — Step 8: the OpenTofu configuration.
+* xref:skills/iru-setup-java-springboot-platform.adoc[] — Step 8: the OpenTofu configuration. When
+  `deploy.rolling.enabled` is true it also receives `rolling: yes`, `deployment-strategy`, `advance`, `steps` and
+  `bake-minutes` (alongside `mode`/`on-existing`) and generates the rollout infrastructure; `rolling: no` or nothing
+  when disabled.
 * xref:skills/iru-setup-java-springboot-github-workflows.adoc[] — Step 8: the build, deploy, undeploy and security
-  workflows plus Dependabot, using Maven or `./gradlew` commands and Javadoc or Dokka per the manifest. Reads `visibility`, `ci.tests` and `ci.pages` from the manifest. Skipped entirely when
+  workflows plus Dependabot, using Maven or `./gradlew` commands and Javadoc or Dokka per the manifest. When rolling
+  deployments are enabled it generates a staged `deploy.yml` and the `promote.yml` workflow (receiving the same
+  `rolling:`/`deployment-strategy:`/`advance:`/`steps:`/`bake-minutes:` lines). Reads `visibility`, `ci.tests` and `ci.pages` from the manifest. Skipped entirely when
   `ci.enabled: false`. Runs late because it surveys what is actually on disk.
 * xref:skills/iru-update-java-springboot-documentation.adoc[] — Step 8, last: the Antora site and the service
   page set, derived from the finished codebase, with commands and samples matching the manifest's build tool and language.
+
+Rolling deployments can be switched on or off after the bootstrap with xref:skills/iru-springboot-rolling-deployments.adoc[], which edits the manifest's
+`deploy.rolling` block and re-runs the platform and workflows sub-skills.
 
 In Step 9 it also invokes directly, if available, xref:skills/iru-setup-java-gitignore.adoc[],
 xref:skills/iru-setup-readme.adoc[], and xref:skills/iru-setup-changelog.adoc[] for the repository-level files the

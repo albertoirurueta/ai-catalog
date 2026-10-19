@@ -385,4 +385,6 @@ nothing is left pointing at the previous release once the PR merges.
 * xref:skills/iru-issue.adoc[], xref:skills/iru-plan.adoc[], xref:skills/iru-code.adoc[] — detail pages for the typical
   development cycle's own skills.
 * xref:skills/iru-setup-repository.adoc[] — detail page for the repository-bootstrap front door.
+* xref:guides/rolling-deployments.adoc[] — staged blue/green, canary and linear deployments for generated Spring Boot
+  services, and the `promote.yml` workflow that advances them.
 * xref:skills/iru-release.adoc[] — detail page for the release workflow.

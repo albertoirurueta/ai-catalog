@@ -1,6 +1,6 @@
 = Setup Java Spring Boot Platform
 :description: Generates OpenTofu infrastructure-as-code deploying a Spring Boot service to AWS or Google Cloud, preferring managed services and writing no secrets.
-:keywords: iru-setup-java-springboot-platform, claude code skill, opentofu, terraform, aws, google cloud, github oidc, managed services, secret manager, infrastructure as code
+:keywords: iru-setup-java-springboot-platform, claude code skill, opentofu, terraform, aws, google cloud, github oidc, managed services, secret manager, infrastructure as code, blue green deployment, canary, argo rollouts
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -40,6 +40,43 @@ environment, the backend configuration) it warns and asks **Update (fill gaps) (
 confirmation for any environment with remote state; an `on-existing: replace` from `args` is treated as Update for
 those environments, so a scripted run can never replace live-resource configuration unattended.
 
+=== Rolling deployments (optional)
+
+When the manifest's `deploy.rolling.enabled` is true (or `rolling: yes` arrives in `args`), the skill also creates the
+infrastructure for a staged rollout, following one design: the *workflow* drives the traffic shifting and the rollout
+state lives in the cloud, so `promote.yml` is stateless. OpenTofu creates the capability to hold two versions and split
+traffic between them but never the split itself: live weights, traffic and step are in `lifecycle { ignore_changes }`,
+so an unrelated `tofu apply` cannot reset a rollout in flight, and new versions always deploy at 0 % traffic. Strategy
+`rolling` has no second environment and uses the runtime's native rolling update with a weaker rollback.
+
+[cols="1,3", options="header"]
+|===
+|Runtime |What is generated
+
+|ECS Fargate
+|Blue and green target groups with identical health checks and two ECS services (one per slot); a weighted `forward`
+action on the production ALB listener plus a test listener that points at the green group; CloudWatch alarms (5xx
+rate, p95 response time, unhealthy hosts) as the metric gate; and the deploy role's extra, scoped ELB, CloudWatch and
+ECS permissions. An ALB is required: if the service is exposed any other way the skill flags it and stops rather than
+generate a canary that cannot split traffic. ECS's native blue/green deployment type was checked and documented as the
+alternative for `advance: auto` only.
+
+|Cloud Run
+|An explicit `traffic` block pinned to the stable revision (new revisions get 0 %), a revision tag that provides the
+candidate URL, a Cloud Monitoring alert policy, and a deploy service account scoped to the service rather than the
+project.
+
+|EKS / GKE Autopilot
+|The Argo Rollouts controller (installed with a pinned Helm release, or verified as a prerequisite; Flagger is
+documented but not generated), the `Deployment` turned into an Argo `Rollout` whose canary steps start with
+`setWeight: 0` then an indefinite pause, a Prometheus `AnalysisTemplate`, and namespace-scoped RBAC for the deploy
+identity.
+|===
+
+Every environment's `outputs.tf` then also exposes `rollout_candidate_url`, `rollout_gate`, and per runtime
+`rollout_alarm_names`, `rollout_target_groups` or `rollout_name`, which the workflows consume. With rolling absent or
+disabled nothing in this skill changes. See xref:skills/iru-springboot-rolling-deployments.adoc[].
+
 == Purpose group
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -68,6 +105,14 @@ infrastructure is needed.
 |No
 |`args` `key: value` line, `new` or `existing`. Informational only: it never means "update silently".
 |None
+
+|`rolling`, `deployment-strategy`, `advance`, `steps`, `bake-minutes`
+|No
+|`args` `key: value` lines: `rolling` is `yes`/`no`, `deployment-strategy` is `rolling`/`blue-green`/`canary`/`linear`,
+`advance` is `auto`/`manual`/`hybrid`, `steps` a comma list of percentages, `bake-minutes` a number. The manifest's
+`deploy.rolling` block (`enabled`, `strategy`, `advance`, `steps`, `bakeMinutes`) is the source of truth when
+`stack-file` is given; the lines apply when there is no block or the caller passes them explicitly.
+|Rolling disabled
 
 |`on-existing`
 |No
@@ -144,6 +189,13 @@ NAT gateways, load balancers, Kafka clusters, provisioned OpenSearch).
   expiry, the compute service with actuator-matching health probes and graceful-shutdown period, empty secrets with
   scoped IAM, log groups with an explicit retention period, and the managed metrics target.
 * Pinned `required_version` and `required_providers` constraints, with `.terraform.lock.hcl` committed.
+* Only when rolling deployments are enabled: the rollout resources per runtime (second target group and weighted
+  listener with test listener, alarms, Cloud Run traffic pin and tag, or Argo Rollouts, `Rollout` and
+  `AnalysisTemplate`), the `rollout_*` outputs in every environment, and a rolling-prerequisites section in
+  `infra/README.md` (an ALB for ECS, Prometheus scraping for Kubernetes, thresholds to tune, the Argo controller, a
+  candidate URL reachable from CI runners, the roughly doubled compute during a rollout, and how to inspect or reset the
+  cloud-side split by hand). The report states whether rolling is enabled or disabled, the resources, the outputs,
+  the design decision and the prerequisites.
 
 == Execution flow
 
@@ -158,10 +210,10 @@ flowchart TD
     E --> D
     D --> F["Cost acknowledgement"]
     F --> G["Step 2: Scaffold infra/ —\nmodules/ and one envs/ dir per environment"]
-    G --> H["Step 3: Generate per cloud, preferring\nmanaged services; raise every\ncompatibility caveat"]
+    G --> H["Step 3: Generate per cloud, preferring\nmanaged services; raise every\ncompatibility caveat;\nwhen rolling is enabled also the rollout\nresources and rollout outputs"]
     H --> I["Step 4: Wire the service to its dependencies —\nendpoints, secret references, network path, IAM"]
     I --> J["Step 5: Write infra/README.md\nincluding every manual step"]
-    J --> K["Step 6: tofu init -backend=false,\nvalidate, fmt — never apply"]
+    J --> K["Step 6: tofu init -backend=false,\nvalidate, fmt — never apply;\nwhen rolling, check ignore_changes\non every weight and traffic attribute"]
     K -- schema error --> L["Fix against the provider docs"]
     L --> K
     K --> M["Step 7: Report actions per group, resources,\ncaveats, secrets to populate, manual steps"]
@@ -179,6 +231,9 @@ the placeholders already referenced there), and writes OpenTofu configuration.
 * xref:skills/iru-setup-java-springboot.adoc[] — Step 8, OpenTofu deployment config, via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
 
 Also runs standalone (`/iru-setup-java-springboot-platform`).
+
+Related: xref:skills/iru-springboot-rolling-deployments.adoc[] — the skill that enables, disables and operates rolling deployments, and whose workflows consume the
+`rollout_*` outputs this skill exposes.
 
 === Related agents
 

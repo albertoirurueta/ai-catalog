@@ -1,0 +1,160 @@
+= Spring Boot Rolling Deployments
+:description: Enables, disables or changes blue/green rolling deployments in an existing Spring Boot service by editing one manifest block and re-running its generators.
+:keywords: iru-springboot-rolling-deployments, claude code skill, rolling deployments, blue green, canary, linear, promote workflow, spring boot, opentofu, rollback
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Switches blue/green rolling deployments on or off, or changes their strategy, in a repository whose scaffold came from
+xref:skills/iru-setup-java-springboot.adoc[]. It owns one manifest block and delegates every generated file to the
+sub-skills that already own them.
+
+== Purpose
+
+`iru-springboot-rolling-deployments` turns every deployment of an existing Spring Boot service into a staged rollout,
+or turns that back off, without re-running the whole `iru-setup-java-springboot` interview. With rolling deployments
+the new version ("green") deploys at 0 % traffic, is smoke-tested on a candidate URL, and is shifted per the chosen
+`strategy` while the old version ("blue") stays for rollback. The workflow drives the shifting, and the rollout state
+lives in the cloud, never in GitHub.
+
+* `strategy` is `canary` or `linear` (through `steps`), `blue-green` (one cutover), or `rolling` (the runtime's native
+  in-place update, no traffic split).
+* `advance` is `auto` (metric gate only), `manual` (a human through the generated `promote.yml` for every step), or
+  `hybrid` (the gate must pass, then a human confirms on `prod`; `dev` auto-advances; a failing gate rolls back
+  automatically).
+
+Five rules govern the skill:
+
+* **Never apply infrastructure.** It edits the manifest and runs generators; it never runs `tofu apply` or
+  `tofu destroy`, never makes cloud mutations, and never triggers a workflow. Reads are fine.
+* **Never replace live-resource configuration unattended.** Sub-skills run with `on-existing: update`, never
+  `replace`, unless the user explicitly picks Replace for a specific file.
+* **Never leave a rollout orphaned.** Changing the strategy or disabling while the cloud split is not 100 % stable
+  stops the skill; it checks read-only against ECS (ALB listener weights), Cloud Run (candidate-tagged traffic) or
+  Kubernetes (`Rollout` status), and says "could not verify" rather than assuming.
+* **Never delete without asking.** Removing `promote.yml` needs an explicit confirmation.
+* **No credentials, ever.**
+
+Disabling restores the single-job `deploy.yml`, removes `promote.yml` after confirmation, and warns that the rollout
+infrastructure (second target group, traffic pinning, `Rollout` resources, alarms) stays in `infra/` and in the cloud
+until a reviewed `tofu plan` and an `apply` by the user remove it.
+
+== Purpose group
+
+xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
+
+== Invocation
+
+[source]
+----
+/iru-springboot-rolling-deployments enable
+/iru-springboot-rolling-deployments disable
+/iru-springboot-rolling-deployments
+----
+
+With no action it reports the detected state and asks whether to enable, change or disable.
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`action`
+|No
+|`enable` or `disable`, as the first line or an `args` `key: value` line. Without it the skill reports the current
+state and asks.
+|Asked
+
+|`strategy`
+|No
+|`args` line: `rolling`, `blue-green`, `canary` or `linear`.
+|Canary (asked)
+
+|`advance`
+|No
+|`args` line: `auto`, `manual` or `hybrid`. Skipped for `rolling`, which resolves to `auto`.
+|Hybrid (asked)
+
+|`steps`
+|No
+|`args` line: comma list of strictly ascending integers in 1-100 ending in 100. `blue-green` is exactly `100`.
+|`10,50,100`
+
+|`bake-minutes`
+|No
+|`args` line: soak time between steps.
+|`10`
+
+|`stack-file`
+|No
+|`args` line giving the manifest path. Must exist, otherwise the skill stops and offers to run
+`iru-setup-java-springboot`.
+|`springboot-stack.yml`
+
+|`on-existing`
+|No
+|`args` line: `ask`, `keep`, `update` or `replace`, forwarded to both sub-skills.
+|`update`
+|===
+
+Enabling requires `ci.enabled: true` in the manifest, because rolling deployments are driven by the generated
+workflows. On ECS every strategy other than `rolling` needs an ALB; the platform skill flags and stops without one.
+
+== Outputs
+
+* The `deploy.rolling` block of `springboot-stack.yml` (`enabled`, `strategy`, `advance`, `steps`, `bakeMinutes`),
+  edited in place after the user approves the diff. Disabling keeps the other keys so re-enabling remembers them.
+* Through the sub-skills: a staged `.github/workflows/deploy.yml` (or the single-job template again on disable), a
+  `promote.yml` workflow, and the `rollout_*` resources and outputs in `infra/`.
+* A report stating the mode (enabled, disabled, changed from one shape to another, or no change), the final values and
+  runtime, the action per file (`springboot-stack.yml`, `deploy.yml`, `promote.yml` created / updated / replaced /
+  kept as is / removed / not generated, `undeploy.yml`, the `infra/` file groups), and manual follow-ups: new
+  environment variables to set, reviewing and running `tofu plan` / `apply` yourself, alarm thresholds, the
+  deployment-branch rule on `prod`, who may promote, the cost note (blue/green temporarily doubles capacity), the
+  leftover infrastructure after a disable, and a first real exercise (a `dev` deploy, one promote, one deliberate
+  rollback).
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start /iru-springboot-rolling-deployments"] --> B["Step 0: Parse args, resolve action;\nstop if the manifest is missing"]
+    B --> C["Step 1: Detect state from the manifest,\ndeploy.yml, promote.yml and infra/;\nannounce setup mode and drift"]
+    C -- no action --> D["Ask: Enable / Change / Disable"]
+    D --> E
+    C --> E{"Action?"}
+    E -- Enable or Change --> F["Step 2: Ask missing strategy, advance,\nsteps and soak; validate"]
+    E -- Disable --> G["Step 3: In-progress check, read-only"]
+    F -- changing the shape --> G
+    G -- rollout in progress --> H["Refuse; finish it with promote.yml first"]
+    G -- none or confirmed --> I["Edit deploy.rolling after a diff and a yes"]
+    F -- no shape change --> I
+    I --> J["Step 4: Run platform then github-workflows\nsub-skills via iru-isolated-skill-executor,\non-existing: update"]
+    J --> K{"Disable?"}
+    K -- yes --> L["Step 5: Restore single-job deploy.yml;\nremove promote.yml only after confirmation;\nwarn about leftover infra"]
+    K -- no --> M["Step 6: Report mode, values,\nper-file actions and follow-ups"]
+    L --> M
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-setup-java-springboot-platform.adoc[] — updates the rollout infrastructure and `rollout_*` outputs in `infra/` (skipped on disable unless requested).
+* xref:skills/iru-setup-java-springboot-github-workflows.adoc[] — generates the staged `deploy.yml` and `promote.yml`, or restores the single-job `deploy.yml`.
+
+Both run via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent.
+
+=== Invoked by
+
+None; it runs standalone (`/iru-springboot-rolling-deployments`). It is the follow-up to
+xref:skills/iru-setup-java-springboot.adoc[], whose `rolling-deployments` choice it can change later.
+
+=== Related agents
+
+* xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs each sub-skill in a fresh context.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-springboot-rolling-deployments/SKILL.md[`SKILL.md` on GitHub] — the file this page was generated from.

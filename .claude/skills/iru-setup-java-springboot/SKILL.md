@@ -43,8 +43,14 @@ description: >-
   (`maven`/`gradle`; `gradle` only with Kotlin), `open-source` (`yes`/`no`), `sonar`
   (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url` when set),
   `frontend` (`none`/`hilla`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
-  (`unit`/`full`), `pages` (`yes`/`no`), and `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded to every
-  file-writing sub-skill only when supplied), skipping the matching interview question. Use when starting a new
+  (`unit`/`full`), `pages` (`yes`/`no`), `rolling-deployments` (`yes`/`no`), `deployment-strategy`
+  (`rolling`/`blue-green`/`canary`/`linear`), `advance` (`auto`/`manual`/`hybrid`), and `on-existing`
+  (`ask`/`keep`/`update`/`replace`, forwarded to every file-writing sub-skill only when supplied), skipping the
+  matching interview question. When CI is on it also asks whether to support blue/green rolling deployments
+  (opt-in; default is today's single-job deploy): every deployment then becomes a staged rollout — the new version
+  is deployed at 0 % traffic, shifted per the chosen strategy/steps, the old one kept for rollback — advanced
+  automatically, manually or by a metric gate plus a human via a generated `promote.yml` workflow; the choice is
+  recorded as `deploy.rolling` in the manifest. Use when starting a new
   Spring Boot microservice (Java or Kotlin) from nothing and you want the whole hexagonal build, CI/CD,
   infrastructure-as-code, and documentation scaffold in one pass, instead of running the sub-skills separately and
   re-answering the same questions each time.
@@ -139,6 +145,9 @@ visibility: public
 ci: yes
 ci-tests: full
 pages: yes
+rolling-deployments: yes
+deployment-strategy: canary
+advance: hybrid
 on-existing: ask
 ```
 
@@ -148,8 +157,11 @@ Recognized keys: `mode` (`new`/`existing`), `language` (`java`/`kotlin`), `build
 `frontend` (`none`/`hilla`), `accessibility` (`enforce`/`report`/`off`/`none`, only meaningful with `frontend: hilla`),
 `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests`
 (`unit`/`full`, only meaningful when `ci: yes`), `pages` (`yes`/`no`, only meaningful when `ci: yes`), and
-`on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key found here is resolved — skip the matching
-question in Step 3 or 3b. If `args` is absent or doesn't look like this format, treat everything as unset and ask
+`rolling-deployments` (`yes`/`no`, only meaningful when `ci: yes`), `deployment-strategy`
+(`rolling`/`blue-green`/`canary`/`linear`) and `advance` (`auto`/`manual`/`hybrid`) — both only meaningful with
+`rolling-deployments: yes` — and `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Optional extras
+`steps` (comma list of percentages) and `bake-minutes` override the Step 3c defaults. Every key found here is
+resolved — skip the matching question in Step 3, 3b or 3c. If `args` is absent or doesn't look like this format, treat everything as unset and ask
 normally.
 
 Validate the language/build-tool pair before anything else: `build-tool: gradle` together with `language: java` is
@@ -184,7 +196,7 @@ Then, before asking anything else, print a short **Setup mode** statement:
   | Hilla frontend (only when `frontend: hilla`) | `iru-setup-java-springboot-hilla` | `boot/src/main/frontend/`, `boot/package.json`, `vitest.config.ts` |
   | Compose stack + IT harness | `iru-setup-java-springboot-testcontainers` | `compose.yaml`/`docker-compose.yml`, the IT base class |
   | OpenTofu platform | `iru-setup-java-springboot-platform` | `infra/**` |
-  | Workflows + security block | `iru-setup-java-springboot-github-workflows` | each of `.github/workflows/build.yml`, `deploy.yml`, `undeploy.yml`, `security.yml`, and `.github/dependabot.yml` |
+  | Workflows + security block | `iru-setup-java-springboot-github-workflows` | each of `.github/workflows/build.yml`, `deploy.yml`, `promote.yml` (only when rolling deployments are enabled), `undeploy.yml`, `security.yml`, and `.github/dependabot.yml` |
   | Antora docs | `iru-update-java-springboot-documentation` | `docs/antora.yml`, `docs/antora-playbook.yml`, `docs/modules/ROOT/` |
   | Sonar config | `iru-setup-java-springboot-pom` | `sonar.*` properties / `sonar-maven-plugin` in `pom.xml`, or the `org.sonarqube` plugin / `sonar {}` block in the root `build.gradle.kts` |
   | `detekt.yml` (Kotlin only) | `iru-setup-java-springboot-pom` | the file |
@@ -436,6 +448,50 @@ facts below are per GitHub's current pricing — say so and tell the user to dou
   across states, left-to-right/right-to-left and light/dark, screenshots reused by the Antora UI pages, axe-core
   checks); `iru-setup-java-springboot-hilla` writes the choice to `.ui-quality.yml`. With `frontend: none` it is
   neither asked nor recorded.
+
+## Step 3c — Rolling deployments (blue/green)
+
+Asked **only when `ci.enabled: true`** (Step 3b) and not already resolved by `rolling-deployments` in `args` or an
+existing manifest's `deploy.rolling`. With `ci: no`, skip the whole step, record nothing, and say plainly that
+rolling deployments need the generated workflows (`deploy.yml` drives the rollout and `promote.yml` advances it) —
+`/iru-springboot-rolling-deployments enable` can add them later once workflows exist.
+
+Ask (`AskUserQuestion`, header `Rolling`): **"Support blue/green rolling deployments?"**
+
+- **No (Recommended for a `dev`-only or small service)** — today's behaviour: one `deploy.yml` job applies the
+  OpenTofu environment and health-checks it. No `promote.yml`, no second environment, no extra cost.
+- **Yes** — every deployment becomes a staged rollout: the new version ("green") is deployed at **0 % traffic**,
+  smoke-tested on a candidate URL, shifted in steps, and the old version ("blue") is kept for rollback. Adds a
+  generated `promote.yml` workflow and rollout infrastructure; blue/green temporarily doubles capacity (cost).
+
+If **Yes**, ask the follow-ups in as few calls as possible (`AskUserQuestion`, max 4 questions per call):
+
+1. **Strategy** (`strategy`, header `Strategy`) — **Canary (Recommended)** (gradual shift through `steps`, e.g.
+   10 → 50 → 100 %; "blue/green plus gradual"), **Blue/green** (one cutover from 0 to 100 %, `steps: [100]`),
+   **Linear** (equal-sized steps at a fixed interval), **Rolling** (in-place replacement by the runtime's native
+   rolling update — no second environment, no traffic split, `advance` limited to `auto`, weaker rollback).
+2. **Advancement** (`advance`, header `Advance`) — **Hybrid (Recommended)** (a metric gate must pass, then a human
+   confirms through `promote.yml` on `prod`; on `dev` it auto-advances; a failing gate rolls back automatically),
+   **Auto** (metric gate only, no human), **Manual** (the run ends after green is deployed; a human runs
+   `promote.yml` for every step). Skip this question for strategy `rolling` (resolves to `auto`; say so).
+3. **Steps and soak** — unless `steps`/`bake-minutes` came in `args`: confirm the defaults `steps: [10, 50, 100]`
+   and `bakeMinutes: 10` for canary/linear (`steps: [100]` for blue/green, no `steps` for rolling), offering
+   **Use defaults (Recommended)** or **Customize** (then ask the percentages — ascending, ending at 100 — and the
+   soak minutes). `bakeMinutes` is ignored for `advance: manual`.
+
+Validate and flag contradictions rather than generating something that can't work:
+
+- `steps` must be strictly ascending integers in 1–100 ending in 100; `blue-green` is exactly `[100]`.
+- `rolling` with `advance: manual` or `hybrid` is contradictory (nothing to promote between) — ask which to change.
+- The compute runtime (ECS vs EKS, Cloud Run vs GKE) is chosen later by `iru-setup-java-springboot-platform`, so
+  runtime-specific limits are enforced there: the platform skill flags `canary`/`linear`/`blue-green` on ECS Fargate
+  without an ALB (an internet-facing or internal ALB is required for weighted target groups) and stops rather than
+  generating it. Mention this prerequisite here when `stack.cloud` is `aws`. `rolling` is valid on every runtime.
+- When `stack.cloud` is `gcp`, Cloud Run shifts traffic between revisions natively; GKE Autopilot uses Argo
+  Rollouts (installed or verified by the platform skill).
+
+Record the answers as the `deploy.rolling` block in Step 6 (see the manifest template). `rolling-deployments: no`
+(or an unanswered/skipped step) records `enabled: false`, or omits the block.
 
 ## Step 4 — Choose the technologies
 
@@ -728,7 +784,8 @@ wired by `iru-setup-java-springboot-apis`/`-hilla` from the manifest; the choice
 
 Present a single compact summary: project identity, Boot and Java versions, platform, concurrency model, whether
 the project is open source, the repository visibility, the CI choices (`ci`, and when `yes` the `ci-tests` scope
-and whether docs go to GitHub Pages), the Sonar mode (and organization/project key/host URL when not `none`), the
+and whether docs go to GitHub Pages), whether rolling deployments are enabled (and if so strategy, advance mode,
+steps and bake minutes), the Sonar mode (and organization/project key/host URL when not `none`), the
 frontend choice, every selected technology with the dependency ids it resolved to, the migration tool per database, the
 client names and the mocking tool chosen for them,
 the language, build tool and (Kotlin) Kotlin version, the exact list of modules (Maven modules or Gradle project
@@ -790,6 +847,13 @@ ci:                              # from Step 3b — read by iru-setup-java-sprin
   enabled: true                  # false ⇒ no workflows at all: no build/deploy/undeploy/security.yml, no dependabot.yml
   tests: full                    # unit (Surefire only, -DskipITs / Gradle `test` only, no Testcontainers in CI) | full (plus Failsafe / Gradle `integrationTest` + Testcontainers); omitted when enabled: false
   pages: true                    # false ⇒ docs built in CI and uploaded as a workflow artifact, not deployed to GitHub Pages; omitted when enabled: false
+deploy:                          # from Step 3c — optional; absent ⇒ rolling deployments disabled (single-job deploy.yml, no promote.yml)
+  rolling:
+    enabled: true                # false/absent ⇒ single-job deploy.yml, no promote.yml; always omitted/false when ci.enabled: false
+    strategy: canary             # rolling | blue-green | canary | linear
+    advance: hybrid              # auto | manual | hybrid — rolling strategy only supports auto
+    steps: [10, 50, 100]         # canary/linear shift percentages; blue-green = [100]; omitted for rolling
+    bakeMinutes: 10              # soak between steps for auto/hybrid gates
 stack:
   concurrency: blocking          # blocking | reactive | both
   cloud: aws                     # aws | gcp
@@ -984,16 +1048,24 @@ Repeat that shape for, in order:
    class, and the Failsafe wiring (the `integrationTest` task on Gradle). Report back: compose services and their
    pinned images, base test class location, the base URL each client resolves to against the mock, whether
    `mvn verify` / `./gradlew integrationTest` ran and its result.
-5. **`iru-setup-java-springboot-platform`** — the OpenTofu configuration for the chosen cloud. Report back:
-   resources it will manage, what it deliberately left to the user, and every secret/variable that must be
-   provided out-of-band.
+5. **`iru-setup-java-springboot-platform`** — the OpenTofu configuration for the chosen cloud. When the manifest's
+   `deploy.rolling.enabled` is `true` it also generates the rollout infrastructure (second target group / revision
+   tags / Argo Rollouts, candidate URL, metric gate), so add these `args` lines in addition to `mode`/`on-existing`:
+   `rolling: yes`, `deployment-strategy: <strategy>`, `advance: <advance>`, `steps: <comma list>`,
+   `bake-minutes: <n>` (the manifest stays the source of truth through `stack-file`; the lines make a stale
+   manifest impossible to misread). Pass `rolling: no` — or nothing — when disabled. Report back:
+   resources it will manage, what it deliberately left to the user, every secret/variable that must be
+   provided out-of-band, and — when rolling — the `rollout_*` outputs it exposes and its prerequisites.
 6. **`iru-setup-java-springboot-github-workflows`** — the test/analyse/publish workflow, the deploy workflow, and
-   the undeploy workflow, plus `security.yml` and `.github/dependabot.yml`. It reads `visibility`, `ci.tests`, and
+   the undeploy workflow, plus `security.yml` and `.github/dependabot.yml`, and — when rolling deployments are
+   enabled — a staged `deploy.yml` and the `promote.yml` workflow that advances or rolls back a rollout. It reads
+   `visibility`, `ci.tests`, and
    `ci.pages` (and the language/build tool, which switch it between Maven and `./gradlew` commands and between
    Checkstyle/PMD/SpotBugs + Javadoc and detekt/ktlint + Dokka) from the manifest, so they needn't be forwarded
-   (only `mode`, and `on-existing` when applicable).
-   Report back: workflow files created/updated/replaced/kept, required repository secrets and environments, and
-   any gap. **Skipped entirely when the manifest's `ci.enabled: false`** — record it as "skipped (ci: no)" and
+   (only `mode`, and `on-existing` when applicable) — except the rolling settings, which are forwarded exactly as
+   for the platform skill (`rolling:`, `deployment-strategy:`, `advance:`, `steps:`, `bake-minutes:`).
+   Report back: workflow files (including `promote.yml`) created/updated/replaced/kept, required repository secrets
+   and environments, and any gap. **Skipped entirely when the manifest's `ci.enabled: false`** — record it as "skipped (ci: no)" and
    note in Step 11 that the deploy/undeploy workflows were skipped with it (deployment and teardown are manual
    `tofu apply`/`tofu destroy` runs) along with the shared security block.
 7. **`iru-update-java-springboot-documentation`** — the Antora site (Mermaid **and** Kroki) with the full
@@ -1094,6 +1166,10 @@ Summarize:
   site exists; when public, that `yes` was applied without asking). For a private/internal repository, repeat the
   included-minutes budget, and if `sonar.mode` is `cloud`, that SonarCloud needs a paid plan for it. If
   `ci: no` with a Sonar mode other than `none`, say no CI step sends reports.
+- Rolling deployments: enabled or not (with `ci: no`, "not offered — needs the workflows"); when enabled the
+  strategy, advance mode, `steps`/`bakeMinutes`, that `promote.yml` was generated (and its action), the `rollout_*`
+  OpenTofu outputs and prerequisites the platform sub-skill reported, the cost note (blue/green temporarily doubles
+  capacity), and that `/iru-springboot-rolling-deployments enable|disable` switches it later.
 - Whether the project is open source, the Sonar mode wired (`cloud`/`self-hosted`/`none`, plus organization/project
   key/host URL when not `none`), and the frontend choice (`none`/`hilla` — when `hilla`, what
   `iru-setup-java-springboot-hilla` reported back: the resolved Vaadin version, whether the frontend gates passed,

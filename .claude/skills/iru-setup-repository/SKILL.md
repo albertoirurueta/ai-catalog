@@ -26,7 +26,7 @@ description: >-
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, the stack-shape keys `language` (JVM
   `java`/`kotlin`, or a command-line tool's `rust`/`go`/`swift`/`dotnet`), `build-tool`,
-  `layout`, and `frontend` (JVM services), `accessibility` (`enforce`/`report`/`off`/`none` — UI types: whether
+  `layout`, and `frontend` (JVM services), `rolling-deployments`/`deployment-strategy`/`advance` (Spring Boot only, with `ci: yes` — forwarded, never asked here), `accessibility` (`enforce`/`report`/`off`/`none` — UI types: whether
   accessibility and assistive-technology support is wanted and how strictly the UI tests' automated checks gate;
   `none` opts out entirely; recorded in `.ui-quality.yml`), `python-version`, `platforms`, `framework`, `toolchain` (React Native
   `expo`/`metro`), `native-builds`, `ui` (Kotlin Multiplatform `compose`/`native`, macOS `swiftui`/`appkit`,
@@ -92,7 +92,7 @@ library types only), `distribution` (`none`/`internal`/`store` — app types onl
 Step 2's follow-up resolves), `build-tool`
 (`maven`/`gradle`), `frontend` (`none`/`hilla` — Spring Boot only), and `layout` (`single`/`hexagonal` — Quarkus
 only) — **never asked here** (the delegated orchestrator asks them itself), only forwarded when supplied via `args`
-or pre-set by Step 1's detection — `platforms` (Apple app / Swift library), `framework` (Ionic's `angular`/`react`),
+or pre-set by Step 1's detection — `rolling-deployments` (`yes`/`no`), `deployment-strategy` (`rolling`/`blue-green`/`canary`/`linear`) and `advance` (`auto`/`manual`/`hybrid`) (Spring Boot only, meaningful only with `ci: yes`; blue/green rolling deployments are a stack-shape choice that `iru-setup-java-springboot` asks itself in its Step 3c, so they are likewise **never asked here**, only forwarded when supplied via `args`) — `platforms` (Apple app / Swift library), `framework` (Ionic's `angular`/`react`),
 `toolchain` (React Native's `expo`/`metro`), `native-builds` (React Native's `eas`/`local` — Expo toolchain
 only), `ui` (Kotlin Multiplatform's `compose`/`native`, macOS's `swiftui`/`appkit`, Windows' `wpf`/`winui`/
 `winforms`, a command-line tool's `none`/`tui` — never asked here, only forwarded), `architecture` (desktop apps' `mvvm`/`mvc` — likewise only
@@ -650,10 +650,10 @@ and `pages` (when `ci: yes`), and `on-existing` (when supplied via `args`), per 
 - **Spring Boot** (`java-springboot`, `java-springboot-hilla`, `kotlin-springboot`, `kotlin-springboot-hilla`, or
   the manual "Spring Boot service" pick) → `iru-setup-java-springboot`, `args`: `mode`, `open-source`, the cost/CI
   keys, `sonar` (+ detail keys), and `language`/`build-tool`/`frontend` **only** when Step 1's detection pre-set
-  them or this skill's own `args` supplied them (otherwise omitted, so its Step 3/3b asks them) — no
+  them or this skill's own `args` supplied them (otherwise omitted, so its Step 3/3b asks them), and — only with `ci: yes` and only when supplied via `args` — `rolling-deployments`/`deployment-strategy`/`advance` (otherwise omitted, so its Step 3c asks; with `ci: no` they are never sent, since rolling deployments need the generated workflows) — no
   `publish`/`distribution`/branch/license/developer keys exist on this skill either. It validates the pair itself
   (Java is Maven-only) and records `language`/`buildTool`/`ci`/`ci-tests`/`pages` in its `springboot-stack.yml`
-  manifest for its sub-skills.
+  manifest (plus the optional `deploy.rolling` block) for its sub-skills.
 - **Quarkus** (`java-quarkus`, `kotlin-quarkus`, or the manual "Quarkus service" pick) →
   `iru-setup-quarkus-repository`, `args`: `mode`, `open-source`, the cost/CI keys, `distribution`
   (`registry`/`none`), `sonar` (+ detail keys), `language` when detected or supplied, `build-tool`/`layout`/
@@ -762,6 +762,7 @@ Summarize for the user:
   `sonar: cloud`, and — when `pages: yes` — that Pages needs Pro/Team/Enterprise Cloud and the site is public unless
   on Enterprise Cloud with private access control (with `pages: no`, the docs are uploaded as a workflow artifact
   instead).
+- For Spring Boot types, one line on rolling deployments as the orchestrator reported them: enabled or not (with `ci: no`, "not offered — needs the workflows"), and when enabled the strategy, advance mode, whether `promote.yml` was generated (a `rolling` strategy keeps the single-job `deploy.yml` and generates none), and that `/iru-springboot-rolling-deployments enable|disable` switches it later.
 - When `ci: no`: that no workflows were generated, that the shared security block (Dependabot, dependency-review,
   CodeQL, OSV-Scanner, gitleaks) was skipped with them (and, for Spring Boot, the deploy/undeploy workflows), that
   any Sonar configuration is build-side only with no CI step sending reports, and that re-running the stack's

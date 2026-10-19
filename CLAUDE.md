@@ -155,6 +155,19 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   only with Kotlin) switch the same module tree to Kotlin — detekt/ktlint + Dokka instead of Checkstyle/PMD/SpotBugs
   + Javadoc, and for Gradle a Kotlin DSL build with `gradle/libs.versions.toml` and `build-logic/` convention
   plugins; the Java path stays Maven-only and unchanged.
+  Rolling deployments are an opt-in Spring Boot capability (asked in `iru-setup-java-springboot`'s Step 3c only with
+  `ci: yes`; the front door merely forwards `rolling-deployments`/`deployment-strategy`/`advance`): the manifest's
+  optional `deploy.rolling` block (`enabled`, `strategy: rolling|blue-green|canary|linear`, `advance:
+  auto|manual|hybrid`, `steps`, `bakeMinutes`) makes `iru-setup-java-springboot-github-workflows` generate a staged
+  `deploy.yml` (green deployed at 0 % traffic → smoke test on the candidate URL → shift) plus a `promote.yml`
+  `workflow_dispatch` workflow that a human uses to advance, roll back or abort, and makes
+  `iru-setup-java-springboot-platform` generate the rollout infrastructure (ECS weighted target groups, Cloud Run
+  revision tags, Argo Rollouts on EKS/GKE). The rule: the **workflow drives the shifting and the rollout state lives
+  in the cloud** (listener weights / Cloud Run traffic / `Rollout` status), never in GitHub, so `promote.yml` is
+  stateless; GitHub Environment required reviewers are deliberately not the mechanism (private repositories need
+  Enterprise). The `rolling` strategy keeps the single-job `deploy.yml` and generates no `promote.yml`.
+  `iru-springboot-rolling-deployments` (`enable`/`disable`) switches it on an existing repository and never runs
+  `tofu apply`/`destroy`. See `docs/modules/ROOT/pages/guides/rolling-deployments.adoc`.
 - **Shared bootstrap inputs**: the front door and the orchestrators share one `args` vocabulary —
   `open-source: yes|no`, `visibility: public|private|internal`, `ci: yes|no`, `ci-tests: unit|full`, `pages: yes|no`,
   `publish: yes|no` (libraries), `distribution: none|internal|store` (apps), `sonar: cloud|self-hosted|none`
