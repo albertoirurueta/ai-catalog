@@ -1139,6 +1139,14 @@ gate_wait() {
 }
 
 tfout() { tofu -chdir="$TF_DIR" output -json "$1"; }
+
+# True when the OpenTofu state has output $1, false when it does not. When the state itself cannot be read (backend,
+# lock or permission error) it fails the step instead, so such an error is never mistaken for "not deployed yet".
+has_output() {
+  local all
+  all="$(tofu -chdir="$TF_DIR" output -json)" || { echo "::error::Cannot read the OpenTofu outputs in $TF_DIR"; exit 1; }
+  jq -e --arg k "$1" 'has($k)' <<<"$all" >/dev/null
+}
 ```
 
 **AWS — ECS Fargate** (needs `ECS_CLUSTER`, `ECS_SERVICE` environment variables):
@@ -1337,9 +1345,19 @@ rollout_set() {
     kubectl argo rollouts promote "$ROLLOUT" -n "$K8S_NAMESPACE" --full
     return
   fi
+  # Only promote while the Rollout is Paused: promoting a running step would skip it (and its analysis). Give up after
+  # 15 minutes, or as soon as the Rollout degrades, rather than looping until the runner's time limit.
+  local deadline=$(( $(date +%s) + 900 ))
   cur="$(rollout_current)"
   while [ "$cur" -lt "$p" ]; do
-    kubectl argo rollouts promote "$ROLLOUT" -n "$K8S_NAMESPACE"
+    rollout_gate_ok || { echo "::error::Rollout degraded or aborted at ${cur} %"; return 1; }
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      echo "::error::Rollout did not reach ${p} % within 15 minutes (still at ${cur} %)"
+      return 1
+    fi
+    if [ "$(jq -r '.status.phase // ""' <<<"$RJ")" = Paused ]; then
+      kubectl argo rollouts promote "$ROLLOUT" -n "$K8S_NAMESPACE"
+    fi
     sleep 5
     cur="$(rollout_current)"
   done
@@ -1454,6 +1472,8 @@ jobs:
     outputs:
       first_deploy: ${{ steps.apply.outputs.first_deploy }}
       candidate_url: ${{ steps.apply.outputs.candidate_url }}
+      # true once THIS run has marked a candidate; the rollback job only acts on a rollout this run started.
+      marked: ${{ steps.apply.outputs.marked }}
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -1482,7 +1502,9 @@ jobs:
           TAG: ${{ needs.build-image.outputs.tag }}
         run: |
           source "$RUNNER_TEMP/rollout.sh"
-          if ! tfout rollout_target_groups >/dev/null 2>&1; then
+          # Only a state that genuinely lacks the rollout outputs is a first deploy; has_output fails the step on any
+          # error reading the state, so a lock or permission problem can never fall through to a 100 % apply.
+          if ! has_output rollout_target_groups; then
             # First deploy of this environment: there is no stable version to keep, so apply everything at 100 %.
             echo "first_deploy=true" >> "$GITHUB_OUTPUT"
             tofu -chdir="$TF_DIR" plan -input=false -var="image_tag_blue=$TAG" -var="image_tag_green=$TAG" -out=tfplan
@@ -1498,6 +1520,7 @@ jobs:
           stable_tag="$(slot_image_tag "$STABLE_SLOT")"
           # Mark the candidate BEFORE changing anything so a concurrent attempt is refused, and so a failed apply is rolled back.
           rollout_mark_candidate
+          echo "marked=true" >> "$GITHUB_OUTPUT"
           tofu -chdir="$TF_DIR" plan -input=false \
             -var="image_tag_${STABLE_SLOT}=$stable_tag" -var="image_tag_${IDLE_SLOT}=$TAG" -out=tfplan
           tofu -chdir="$TF_DIR" apply -input=false -auto-approve tfplan
@@ -1589,7 +1612,9 @@ jobs:
     name: Roll back automatically
     needs: [ build-image, deploy-green, smoke-candidate, shift ]
     # A failed deploy, smoke test or gate returns 100 % to the previous version. Omit `shift` from needs for advance: manual.
-    if: ${{ always() && (needs.deploy-green.result == 'failure' || needs.smoke-candidate.result == 'failure' || needs.shift.result == 'failure') }}
+    # Only when this run marked the candidate: a deploy refused because another rollout is in progress (or one that failed
+    # before marking) must leave that rollout untouched.
+    if: ${{ always() && needs.deploy-green.outputs.marked == 'true' && (needs.deploy-green.result == 'failure' || needs.smoke-candidate.result == 'failure' || needs.shift.result == 'failure') }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
@@ -1634,8 +1659,9 @@ Notes on the template, to apply when generating:
 - **First deploy** of an environment (no rollout outputs yet) is applied at 100 % and the staged jobs are skipped.
 - **Cloud Run** — auth with `google-github-actions/auth@v3` + `google-github-actions/setup-gcloud@v3`; env
   `CLOUD_RUN_SERVICE`, `GCP_REGION`, `GCP_PROJECT_ID`, optional `ERROR_RATE_MAX` from `vars`; the `Plan and apply`
-  step passes `-var="image_tag=$TAG"`; after `apply` it calls `rollout_mark_candidate` (the revision exists only
-  now), then `echo "candidate_url=$(rollout_candidate_url)"` (fall back to `tfout rollout_candidate_url`) and the same
+  step passes `-var="image_tag=$TAG"` and detects a first deploy with `has_output rollout_candidate_url`; after
+  `apply` it calls `rollout_mark_candidate` (the revision exists only now) followed by `echo "marked=true" >>
+  "$GITHUB_OUTPUT"`, then `echo "candidate_url=$(rollout_candidate_url)"` (fall back to `tfout rollout_candidate_url`) and the same
   0 % guard; there is no slot or ECS scaling code.
 - **EKS / GKE** — after cloud auth add `aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}"` /
   `google-github-actions/get-gke-credentials@v3` (`cluster_name: ${{ vars.GKE_CLUSTER_NAME }}`), install the Argo
@@ -1644,6 +1670,10 @@ Notes on the template, to apply when generating:
   candidate smoke test use `kubectl run smoke --rm -i --restart=Never --image=curlimages/curl -n "$K8S_NAMESPACE" --
   -fsS "$CANDIDATE_URL"` when the URL is cluster-internal (`*.svc.cluster.local`) because the runner cannot resolve it.
   The Rollout deploys paused at its first step (0 %); `rollout_active` is then true until it is promoted to 100 %.
+  Detect a first deploy with `has_output rollout_name`, and write `marked=true` to `$GITHUB_OUTPUT` right after the
+  `apply` that starts the new Rollout revision.
+- **`marked`** must be written to `$GITHUB_OUTPUT` before any later command can fail: outputs written by a step that
+  then fails are still published, which is what lets `rollback` act on a failed apply but not on a refused deploy.
 - Untrusted inputs never reach a shell as `${{ … }}` text: `image_tag` and `target` go through `env`
   (`IMAGE_TAG_INPUT`, `TAG`, `TARGET`); the only `${{ inputs.environment }}` inside scripts is a `choice` input, whose
   value is limited to the generated option list. The Gradle variant keeps its `meta` step as in Step 2.
@@ -1877,12 +1907,13 @@ rolling off it stays exactly as above:
         # the stable version: otherwise the "stop" leaves a half-shifted split behind for the next deploy to trip over.
         run: |
           source "$RUNNER_TEMP/rollout.sh"
-          if tfout rollout_target_groups >/dev/null 2>&1 || tfout rollout_name >/dev/null 2>&1 || tfout rollout_gate >/dev/null 2>&1; then
+          if has_output rollout_target_groups || has_output rollout_name || has_output rollout_gate; then
             rollout_init
             if rollout_active; then rollout_rollback; fi
           fi
   ```
-  (the guard makes it a no-op for an environment that was never deployed or has no rollout outputs).
+  (the guard makes it a no-op for an environment that was never deployed or has no rollout outputs, and fails the
+  teardown if the state cannot be read, rather than skipping the reset).
 - For `mode: stop`, scale **both** ECS slot services (`$ECS_SERVICE-blue`, `$ECS_SERVICE-green`) to zero as well as
   passing the `desired_count`/`min_instances` variables the platform skill defines; on Cloud Run and Kubernetes the
   existing variables already cover it.
