@@ -164,11 +164,11 @@ function accessibilitySeverity() {
   for (let dir = __dirname; ; dir = path.dirname(dir)) {
     const file = path.join(dir, '.ui-quality.yml');
     if (fs.existsSync(file)) {
-      const match = /^accessibility:\s*(enforce|report|off)\b/m.exec(
+      const match = /^accessibility:\s*(enforce|report|off|none)\b/m.exec(
         fs.readFileSync(file, 'utf8'),
       );
       const level = match ? match[1] : 'enforce';
-      return { report: 'warn', off: 'off' }[level] || 'error';
+      return { report: 'warn', off: 'off', none: 'off' }[level] || 'error';
     }
     if (fs.existsSync(path.join(dir, '.git')) || path.dirname(dir) === dir) {
       return 'error';

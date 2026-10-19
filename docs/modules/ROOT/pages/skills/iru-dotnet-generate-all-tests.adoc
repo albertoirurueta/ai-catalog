@@ -63,7 +63,7 @@ None — no arguments are accepted. It always scopes to the whole repository's .
 * For a repository with a UI-test project (Step 7b): new UI test classes for every screen and component that lacked
   one, the `.ui-screenshots/` captures they write, and a report of the screens/components inventoried, those newly
   covered (states covered), the `ui` run result (or "unverified (needs Windows)"), screenshot counts per kind,
-  malformed names, the `.ui-quality.yml` accessibility level with its violations (count + rule ids), and any view
+  malformed names, the `.ui-quality.yml` accessibility level (`none` reported as "accessibility: opted out", `off` as "accessibility checks off") with its violations (count + rule ids), and any view
   changed only to add an automation id.
 * No license headers, doc comments, or code-quality fixes — those remain `iru-check-license`, `iru-dotnet-docfx`, and
   `iru-dotnet-code-quality`'s jobs.

@@ -116,7 +116,7 @@ whether to open a WinGet pull request on each release.
 
 |`accessibility`
 |No
-|`enforce`/`report`/`off`: the automated Axe.Windows accessibility level of the FlaUI UI tests, written by the scaffold to `.ui-quality.yml`. Always forwarded to `iru-setup-windows-app`, and asked (Enforce recommended) unless supplied or already set by an existing `.ui-quality.yml`; it applies whether or not CI runs the UI tests.
+|`enforce`/`report`/`off`/`none`: the automated Axe.Windows accessibility level of the FlaUI UI tests, written by the scaffold to `.ui-quality.yml`. Always forwarded to `iru-setup-windows-app`, and asked ("Support accessibility and assistive technologies?", Enforce recommended; `none` opts out entirely and, in `mode: existing`, is pre-selected from `iru-explore`'s `Accessibility:` line) unless supplied or already set by an existing `.ui-quality.yml`; it applies whether or not CI runs the UI tests.
 |Asked; `enforce` recommended
 
 |`msix`, `ui-tests`, `rids`

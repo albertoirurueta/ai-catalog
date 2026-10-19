@@ -29,7 +29,7 @@ templates or their CSS/JS assets), Step 3.9 adds a browser UI stage: `iru-php-te
 plus `@axe-core/playwright`, or `wp-scripts test-playwright` for WordPress) behind the same lock, then a check that
 `.ui-screenshots/` holds every added/changed screen and component's states × `.ui-quality.yml` directions × themes and
 the accessibility level is applied (`enforce` fails the bucket, `report` lists violations). No browser, Docker, wp-env
-or shop makes it unverified, never skipped; see xref:guides/building-user-interfaces.adoc[Building user interfaces].
+or shop makes it unverified, never skipped; see xref:guides/building-user-interfaces.adoc[Building user interfaces]. With `accessibility: none` in `.ui-quality.yml` (opted out entirely), the accessibility rules and checks are neither applied nor required and are reported as "accessibility: opted out" in the group report, never unverified or failed; `off` still applies the rules but skips the automated checks. When `.ui-quality.yml` is missing in a repository that already has UI code, it doesn't assume `enforce`: before the first UI task it asks once, pre-selected from `iru-explore`'s `Accessibility:` line, and writes the file.
 
 == Purpose group
 

@@ -25,7 +25,7 @@ description: >-
   exists warns and asks Update (fill gaps) / Keep as is / Replace / Stop — or applies `on-existing` from `args`.
   Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest
   path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`),
-  `on-existing:` (`ask`/`keep`/`update`/`replace`) and `accessibility:` (`enforce`/`report`/`off`) lines). Runs standalone against any build created by
+  `on-existing:` (`ask`/`keep`/`update`/`replace`) and `accessibility:` (`enforce`/`report`/`off`/`none`) lines). Runs standalone against any build created by
   `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via
   `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is
   `hilla`. Reads `springboot-stack.yml` for the module layout, language, build tool and `sonar.mode`, and looks up
@@ -80,7 +80,7 @@ accessibility: enforce
 `mode` (`new`/`existing`) is informational — it never means "update silently"; `on-existing`
 (`ask`/`keep`/`update`/`replace`, default `ask`) pre-answers Step 1's existing-frontend question for every file.
 
-`accessibility` (`enforce`/`report`/`off`) is the UI tests' automated accessibility level written to
+`accessibility` (`enforce`/`report`/`off`/`none`) is the UI tests' automated accessibility level written to
 `.ui-quality.yml` (Step 4b). Resolve it from `args` first, else the manifest's top-level `accessibility` key
 (written by `iru-setup-java-springboot`, meaningful only with `frontend: hilla`), else `enforce` — never ask.
 
@@ -91,6 +91,15 @@ doesn't scaffold a reactor from nothing, only a frontend into one that already e
 actually set; if it's `none`, ask via `AskUserQuestion` whether to proceed anyway (the user may be adding a
 frontend after the fact) or stop, and if proceeding, update the manifest's `frontend:` field to `hilla` before
 writing anything else, so a later re-run of `iru-setup-java-springboot` sees the choice that was actually made.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core in the Playwright UI tests), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic landmarks, accessible names on icon-only buttons, `alt` on images, relative font sizes, `prefers-reduced-motion` guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey
 
@@ -437,7 +446,7 @@ instead. Vitest browser mode stays the behaviour-test runner.
 
    ```yaml
    # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
-   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+   accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run | none: opted out entirely
    directions: [ltr, rtl]      # screenshot matrix directions
    themes: [light, dark]       # screenshot matrix themes
    ```

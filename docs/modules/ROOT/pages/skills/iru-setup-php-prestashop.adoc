@@ -19,7 +19,7 @@ with 8.x and 9.x (form type, data configuration, services, route, controller, Tw
 `translations/`, `index.php` guards and license headers (AFL-3.0 by convention, or OSL-3.0, MIT, proprietary, other).
 Tooling comprises `prestashop/php-dev-tools`, a stub-based PHPStan config that needs no shop, PHP-CS-Fixer, a PHPUnit
 unit suite with Clover/JUnit output, an optional Integration suite with a Docker `prestashop/prestashop` plus MariaDB
-dev shop, `bin/package.sh` for the distributable zip, and `sonar-project.properties` when Sonar is on, and browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, a test-only `package.json` with Playwright and `@axe-core/playwright`, `playwright.config.ts` pointed at a running shop through `PS_BASE_URL` (specs skip when it is unset), the shared `tests/e2e/support/ui-screenshots.ts` helper, and a `FooterMessage` spec that captures the hook template across left-to-right/right-to-left x light/dark with an accessibility check. All of it is excluded from the module zip by `.distignore`. Dev-dependency
+dev shop, `bin/package.sh` for the distributable zip, and `sonar-project.properties` when Sonar is on, and browser UI tests per the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]): `.ui-quality.yml`, a test-only `package.json` with Playwright and `@axe-core/playwright`, `playwright.config.ts` pointed at a running shop through `PS_BASE_URL` (specs skip when it is unset), the shared `tests/e2e/support/ui-screenshots.ts` helper, and a `FooterMessage` spec that captures the hook template across left-to-right/right-to-left x light/dark with an accessibility check (with `accessibility: none`, no accessibility tooling is installed and the templates omit assistive-technology attributes). All of it is excluded from the module zip by `.distignore`. Dev-dependency
 versions are resolved by Composer under the pinned PHP platform, with a documented fallback table. On an existing
 module it adds tooling only and never the sample feature unless asked.
 
@@ -87,7 +87,7 @@ Optional `args`, one `key: value` per line (supplied by `iru-setup-php-repositor
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` (opt out entirely) — the automated accessibility level of the browser UI tests, written to `.ui-quality.yml`.
 |`enforce` (asked in Step 2 when unresolved)
 
 |`mode`

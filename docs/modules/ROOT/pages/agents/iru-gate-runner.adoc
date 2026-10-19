@@ -61,6 +61,8 @@ files were missing, fixed or compliant; for UI test runs, pass/fail plus the scr
 accessibility report), and every UI stage that could not run (no browser, device, simulator or host OS) reported as
 unverified with its reason.
 
+When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: it skips them and reports "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
+
 == Tools
 
 `Skill`, `Bash`, `Read` — enough to invoke a skill (or fall back to a raw command) and read whatever report file

@@ -144,6 +144,12 @@ adds 15–40 (notarization waits are billed too).
    self-run). With `sonar` ≠ `none` but no `sonar-project.properties`, warn: the scan needs `iru-setup-macos-app`'s
    file (re-run it with that `sonar`), or pass the coordinates as `-D` args — offer to add them to the step.
 
+**Accessibility opt-out.** Read the repository's `.ui-quality.yml` `accessibility` level (UI contract §8). When it is
+`none` (opted out entirely), emit no accessibility report artifact, upload or step: do not collect `a11y-report.txt`
+or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
+the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
+generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
 ## Step 1 — Survey the repository
 
 - **Scaffold detection**: `project.yml` (`name:` → `<AppName>`, `INFOPLIST_KEY_CFBundleDisplayName` → `<app-name>`,

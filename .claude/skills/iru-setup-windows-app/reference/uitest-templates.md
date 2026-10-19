@@ -280,7 +280,7 @@ internal static class AccessibilityCheck
     public static void Run(int processId, string context)
     {
         var level = UiQuality.Current.Accessibility;
-        if (level == "off")
+        if (level is "off" or "none")
         {
             return;
         }

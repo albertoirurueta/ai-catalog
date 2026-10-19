@@ -130,10 +130,10 @@ organization/project-key/host-URL keys apply only when `sonar` is `cloud` or `se
 
 |`args: accessibility`
 |No
-|`enforce`, `report`, or `off` — the automated accessibility level of the frontend's UI tests. Meaningful only with
+|`enforce`, `report`, `off`, or `none` — the automated accessibility level of the frontend's UI tests. Meaningful only with
 `frontend: hilla` (neither asked nor recorded otherwise); `iru-setup-java-springboot-hilla` writes it to
 `.ui-quality.yml`. The Hilla frontend follows the catalog's UI contract (see
-xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+xref:guides/building-user-interfaces.adoc[Building user interfaces]). `none` opts out entirely: no accessibility tooling is installed and the generated templates omit accessibility attributes (asked as "None — opt out entirely"). In `mode: existing` a prior level is never silently flipped. In `mode: existing` the choice is pre-selected from `iru-explore`'s `Accessibility:` line.
 |Asked via `AskUserQuestion` when `frontend: hilla` and not supplied (Enforce recommended)
 
 |`args: visibility`

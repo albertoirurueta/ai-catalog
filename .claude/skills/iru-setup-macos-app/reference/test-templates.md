@@ -44,7 +44,7 @@ import XCTest
 
 /// The repository's `.ui-quality.yml`; a missing or unreadable file means the defaults.
 enum UIQuality {
-    enum Accessibility: String { case enforce, report, off }
+    enum Accessibility: String { case enforce, report, off, none }
 
     static let accessibility = Accessibility(rawValue: values["accessibility"]?.first ?? "") ?? .enforce
     static let directions = (values["directions"] ?? ["ltr", "rtl"]).compactMap(UIScreenshots.Direction.init)
@@ -637,7 +637,7 @@ final class <AppName>UITests: XCTestCase {
     /// Runs Xcode's accessibility audit at the `.ui-quality.yml` level (UI contract §8).
     @MainActor
     func testMainWindowAccessibility() throws {
-        try XCTSkipIf(UIQuality.accessibility == .off, "accessibility: off in .ui-quality.yml")
+        try XCTSkipIf(UIQuality.accessibility == .off || UIQuality.accessibility == .none, "accessibility: off or none in .ui-quality.yml")
         let app = launchApp()
         XCTAssertTrue(app.windows.firstMatch.buttons["greetButton"].waitForExistence(timeout: 10))
         try app.performAccessibilityAudit { issue in

@@ -273,6 +273,14 @@ repository already applies its plugin (unverified here).
   they rely on the SwiftUI defaults (`.accessibilityLabel`, Dynamic Type fonts, 44pt targets).
 - The level comes from `.ui-quality.yml` (read by the helpers; `iru-kmp-test` reports which level applied).
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Compose Multiplatform: `Modifier.semantics` (`contentDescription`, `role`, `stateDescription`) maps to TalkBack on Android and VoiceOver on iOS; text in `sp`; targets >= 48dp.
+- Android side: see the Android guidance (TalkBack, `contentDescription`, animator-duration scale). iOS host (`iosApp/`): VoiceOver - native SwiftUI/UIKit views set `accessibilityLabel`/`accessibilityTraits`; respect Dynamic Type and Reduce Motion in host code.
+- Native-UI flavor: each platform's own rules apply to its own UI code.
+
 ## Sources
 
 - Testing Compose Multiplatform UI (`runComposeUiTest`, targets): <https://kotlinlang.org/docs/multiplatform/compose-test.html>

@@ -7,7 +7,7 @@ description: End-to-end bootstrap for an Android/Gradle repository of either fla
   branch `develop`, stable branch `main`, Java `17`, min SDK `26`, emulator API level `35`, `open-source`, the
   repository `visibility` (detected via `gh repo view` or asked), `ci` (GitHub Actions wanted at all), `sonar`
   plus its detail keys, `ci-tests` (`unit`, or `full` = unit + emulator instrumented tests), `pages` (GitHub
-  Pages vs. a workflow artifact for the docs), `publish` for libraries, `distribution` for apps, `accessibility` (`enforce`/`report`/`off` — the automated
+  Pages vs. a workflow artifact for the docs), `publish` for libraries, `distribution` for apps, `accessibility` (`enforce`/`report`/`off`/`none` — the automated
   accessibility level of the UI tests, written by the scaffold to `.ui-quality.yml`; both flavors render UI, the
   library through its `app/` sample) — each question
   stating the Actions-minutes / SonarCloud / Pages cost facts for that visibility) once, prints a setup-mode
@@ -83,7 +83,7 @@ Recognized keys:
   (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing` (`ask`/`keep`/`update`/`replace` —
   never asked; forwarded to the component sub-skills only when it arrived here via `args`), `publish` (`yes`/`no` —
   `library` only),
-  `distribution` (`none`/`internal`/`store` — `app` only), `accessibility` (`enforce`/`report`/`off` — both
+  `distribution` (`none`/`internal`/`store` — `app` only), `accessibility` (`enforce`/`report`/`off`/`none` — both
   flavors; forwarded to the scaffold skill, which writes it to `.ui-quality.yml`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when
   set, `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`,
   `java-version`, `min-sdk`, `compile-sdk`, `api-level`, `run-instrumented-tests` (`yes`/`no` — the workflows
@@ -294,7 +294,7 @@ October 2026 against docs.github.com) and tell the user to double-check their ow
   outcome from `app/build.gradle.kts` afterward.
 - **accessibility** — both flavors (the library's `app/` sample has a UI test too): "Automated accessibility
   checks in UI tests?" — **Enforce (Recommended)** ("Accessibility Test Framework violations fail the UI tests"),
-  **Report only** ("listed in test output, never failing"), **Off** ("not run; the coding defaults still apply").
+  **Report only** ("listed in test output, never failing"), **Off** ("not run; the coding defaults still apply"). **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value.
   Asked once here, alongside the other shared inputs, and forwarded to the scaffold skill (Step 4), which writes it
   to `.ui-quality.yml`.
 
@@ -529,7 +529,7 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   source, private/internal, or `ci: no`) or a direct user choice; if configured with `ci: no`, that no CI step
   sends reports.
 - **`run-instrumented-tests`**: yes/no — whether the emulator (KVM) job was generated.
-- **`accessibility`**: `enforce`/`report`/`off` as written to `.ui-quality.yml` (and the file's action), the sample
+- **`accessibility`**: `enforce`/`report`/`off`/`none` as written to `.ui-quality.yml` (and the file's action), the sample
   UI test's capture count the scaffold reported, and that every CI run uploads `.ui-screenshots/` as a 7-day
   `ui-screenshots` artifact (ci: yes only).
 - **Toolchain versions**: which came from a live lookup versus the recorded fallback, as reported by the scaffold

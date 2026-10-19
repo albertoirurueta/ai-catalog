@@ -243,6 +243,12 @@ violations; **report** → appends `<target>\t<rule-id>: <message>` lines to `<s
 operation, a visible help line, no colour-only information, `NO_COLOR` honoured. Say in the report that these are
 asserted checks, not an automated audit.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Terminal UI only (Ratatui): no colour-only information (pair with symbols/text), honour `NO_COLOR`, keyboard-only operation with a help line, no animation when `--no-input`/non-TTY; these are asserted checks, not an audit. Plain CLIs have no UI rules here.
+
 ## Sources
 
 - Ratatui 0.30: <https://docs.rs/ratatui/0.30.2> (`Widget`, `StatefulWidget`, `List`/`ListState`, `Table`/

@@ -63,7 +63,7 @@ All inputs are optional `key: value` lines in `args`; any key found is resolved 
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off`; only with `ui: tui`. The level written to `.ui-quality.yml`, which the TUI's UI tests read. For a terminal UI these are asserted checks (selection visible without colour, key help on screen), not an automated audit.
+|`enforce`, `report`, `off` or `none`; only with `ui: tui`. The level written to `.ui-quality.yml`, which the TUI's UI tests read. For a terminal UI these are asserted checks (selection visible without colour, key help on screen), not an automated audit. `none` opts out entirely (writes `accessibility: none`, installs no accessibility tooling and omits the accessibility attributes from the templates); a prior `.ui-quality.yml` value is never silently flipped in `mode: existing`.
 |`enforce`
 
 |`go-version`

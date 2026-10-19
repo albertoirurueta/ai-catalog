@@ -24,7 +24,7 @@ description: >-
   `args` (`key: value` lines) — `bin-name`, `module-path`, `description`, `ui` (`none`/`tui`), `go-version`, `owner`,
   `version`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`,
   `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
-  `channels` (`homebrew,scoop,winget`), `homebrew-tap`, `scoop-bucket`, `accessibility` (`enforce`/`report`/`off`, `ui: tui`
+  `channels` (`homebrew,scoop,winget`), `homebrew-tap`, `scoop-bucket`, `accessibility` (`enforce`/`report`/`off`/`none`, `ui: tui`
   only), `mode` (`new`/`existing`) and `on-existing`
   (`ask`/`keep`/`update`/`replace`) — so `iru-setup-cli-repository` can drive it without re-prompting. Announces
   whether it is scaffolding from scratch or updating; for every file group it owns that already exists it warns and
@@ -122,7 +122,7 @@ Recognized keys (every key found is resolved — skip its question in Step 2):
 | `module-path` | default `github.com/<owner>/<repo>` (Step 3; `<repo>` = the `origin` repository name, else `bin-name`). A major version ≥ 2 needs a `/vN` suffix — warn, never add one silently |
 | `description` | one sentence (root `Short`/`Long`, package comment, GoReleaser descriptions); a trailing period is added if missing |
 | `ui` | `none` (default) / `tui` (adds the Bubble Tea `browse` command) |
-| `accessibility` | `enforce` (default) / `report` / `off` — only with `ui: tui`: the level written to `.ui-quality.yml`, which the TUI's UI tests read |
+| `accessibility` | `enforce` (default) / `report` / `off` / `none` — only with `ui: tui`: the level written to `.ui-quality.yml`, which the TUI's UI tests read |
 | `go-version` | `go` directive minor, e.g. `1.27` → `go 1.27.0`; default the latest stable minor (Step 4). The `toolchain` line is always the latest patch of that minor |
 | `owner` | GitHub owner (user or organization) for `module-path`, release URLs and the package-channel repositories; default from `origin` |
 | `version` | in-tree version, default `0.1.0-dev` (`iru-go-bump-version` owns it afterwards) |
@@ -140,6 +140,15 @@ Unknown keys from a full shared-args set (`language`, `branching`, `ci-tests`, `
 that question (`keep` = create only missing files; `update`/`replace` applied to every existing group, with the
 source-file limit below; the warning is still printed). Orchestrators forward `on-existing` only when their own `args`
 received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (the terminal UI's asserted accessibility checks), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — selection visible without colour, key help on screen, every action reachable by key — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -193,8 +202,7 @@ Then, with `AskUserQuestion` (skip any resolved):
 - **ui** — **None (Recommended)** (`none`: a plain command tool; styled, TTY-aware text output is still there) /
   **Terminal UI** (`tui`: adds `browse`, a full-screen Bubble Tea v2 list for people — TTY-gated, every function stays
   available non-interactively with `--json`).
-- **accessibility** — only with `ui: tui` and stand-alone (an orchestrator resolves it): "Automated accessibility
-  checks in UI tests?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report only** (listed, never
+- **accessibility** — only with `ui: tui` and stand-alone (an orchestrator resolves it): "Support accessibility and assistive technologies?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report only** (listed, never
   failing) / **Off** (not run). For a terminal UI these are the asserted checks (selection visible without color, key
   help on screen), not an automated audit.
 - **license** — MIT (Recommended for a tool) / Apache 2.0 / No license (proprietary) / Other. Remind in Step 8 to add

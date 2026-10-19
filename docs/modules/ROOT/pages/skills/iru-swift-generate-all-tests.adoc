@@ -21,6 +21,8 @@ and style. For apps it also closes the UI-test gap under the catalog's UI contra
 production source code when a type is genuinely untestable as written, which it reports explicitly rather than
 silently redesigning the type.
 
+When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: they are skipped and reported as "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
+
 == Purpose group
 
 xref:index.adoc#group-swift[Swift Development Tooling]

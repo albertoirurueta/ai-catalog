@@ -78,21 +78,53 @@ gitignored and cleared by the test gate at the start of a full UI run, and the C
 short-lived artifact for review. A stage that needs a browser, device, simulator or host OS that isn't available is
 reported **unverified**, never silently skipped.
 
-== Accessibility
+== Accessibility and assistive technologies
 
-Accessible coding defaults always apply — accessible names and roles, alternative text, contrast in both themes,
-touch-target sizes, keyboard and focus order, font scaling and reduced motion. On top of that, the UI tests run the
-platform's automated checks (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility
-audit, Axe.Windows, accessibility lint rules) at the level the repository chose when it was set up —
-`/iru-setup-repository` asks it for every UI project type and the scaffold records it:
+Accessibility support is **optional but on by default**. `/iru-setup-repository` asks "Support accessibility and
+assistive technologies?" for every UI project type and the scaffold records the answer in `.ui-quality.yml`:
 
 [source,yaml]
 ----
 # .ui-quality.yml
-accessibility: enforce      # enforce | report | off
+accessibility: enforce      # enforce | report | off | none
 directions: [ltr, rtl]
 themes: [light, dark]
 ----
+
+[cols="1,3",options="header"]
+|===
+| Level | Meaning
+| `enforce` | Accessibility rules apply and the UI tests' automated checks (axe-core, Android's Accessibility Test Framework, Xcode's accessibility audit, Axe.Windows, accessibility lint rules) fail the run. Recommended for new projects.
+| `report` | Rules apply; the checks run and list findings without failing.
+| `off` | Rules apply; the automated checks are not run.
+| `none` | Opted out entirely (for example a mandated non-compliant design): no accessibility rules, no checks, no accessibility docs; the UI docs index says so once.
+|===
+
+=== Platform rules
+
+Unless the level is `none`, the shared UI contract (section 8) adds platform assistive-technology rules: semantic
+HTML and ARIA with keyboard-operable controls on the web; TalkBack (`contentDescription`, Compose semantics,
+48dp targets) on Android; VoiceOver (`accessibilityLabel`/`Value`/`Hint`, traits, Dynamic Type) on Apple platforms;
+Narrator (`AutomationProperties`, UI Automation peers, tab order) on Windows; colour independence, `NO_COLOR` and
+keyboard-only use in terminal UIs. Each stack's `ui-implementation.md` adds a short section for its own APIs.
+
+=== Visual comfort
+
+Legible and user-adjustable font sizes and sufficient contrast are part of the rules. Reduced-motion modes,
+light/dark themes and high-contrast modes are preferred extras, not gated.
+
+=== Existing code
+
+For a repository that already has code, setup first runs the `iru-explore` accessibility scan (the
+`Accessibility:` line, `present`, `partial` or `absent`) and pre-selects the level: `present` recommends `enforce`,
+`partial` recommends `report` with a warning about mixed compliance, `absent` recommends `none` with a warning that
+enabling support makes only new code compliant. Detection never edits code. A level is never silently flipped on a
+re-run.
+
+A missing `.ui-quality.yml` means `enforce` only for a new UI project. In a repository that already has UI code
+(for example one that predates the catalog's setup), the coding group skills don't assume `enforce`: before the
+first UI task they reuse the `Accessibility:` line (or apply the same detection), ask once with the same
+pre-selection, and write `.ui-quality.yml`, so every later skill and test gate reads the chosen level.
 
 == Screenshots become documentation
 

@@ -165,6 +165,8 @@ terminal, container or device.
    automated accessibility tool — say the checks are the asserted TUI checks (`tui-color-only`, `tui-help-line`,
    `tui-keyboard`), not an audit.
 
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
+
 ## Step 5 — Serialize container-backed runs behind the repository lock
 
 Applies to an `integration`-tagged run and a fast run Step 3 classified as container-backed. Skip it otherwise —

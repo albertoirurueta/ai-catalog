@@ -10,7 +10,7 @@ description: >-
   shared pipeline parameters (integration branch `develop`, stable branch `main`, `runner` `macos-26`,
   `open-source`, the repository `visibility` (detected via `gh repo view` or asked), `ci`, `macos-ci` (when the
   ~10×-cost macOS jobs run: `all`/`stable`), `ci-tests` (`unit`, or `full` = also the XCUITest UI tests),
-  `accessibility` (`enforce`/`report`/`off` — the UI tests' automated accessibility level, written by the scaffold to
+  `accessibility` (`enforce`/`report`/`off`/`none` — the UI tests' automated accessibility level, written by the scaffold to
   `.ui-quality.yml`), `pages`
   (GitHub Pages vs. a workflow artifact for the Antora + DocC docs), `distribution` (`none`/`internal` = Developer
   ID signed, notarized and stapled DMG on GitHub Releases/`store` = Mac App Store via App Store Connect), `sonar` plus
@@ -90,7 +90,7 @@ Recognized keys:
   `mode` (`new`/`existing`).
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci`
   (`yes`/`no`), `macos-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `accessibility`
-  (`enforce`/`report`/`off` — the UI tests' automated accessibility level, written to `.ui-quality.yml`), `on-existing`
+  (`enforce`/`report`/`off`/`none` — the UI tests' automated accessibility level, written to `.ui-quality.yml`), `on-existing`
   (`ask`/`keep`/`update`/`replace` — never asked; forwarded to the component sub-skills only when it arrived here via
   `args`), `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when set,
   `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `integration-branch`, `stable-branch`, `runner`
@@ -246,9 +246,9 @@ current pricing" (verified October 2026 against docs.github.com) and tell the us
     app target's unit tests; the XCUITest UI tests stay local."
   - **Unit + UI tests** (`full`, recommended for public) — "Also the XCUITest UI tests, which launch the app on the
     runner's desktop — complete verification, several more macOS minutes per run."
-- **accessibility** — "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (`enforce`: every
+- **accessibility** — "Support accessibility and assistive technologies?" — **Enforce (Recommended)** (`enforce`: every
   `performAccessibilityAudit()` issue fails the UI tests) / **Report only** (`report`: issues listed, never failing) /
-  **Off** (`off`: the audit isn't run; labels, contrast and keyboard access are still coded). The scaffold writes it to
+  **Off** (`off`: the audit isn't run; labels, contrast and keyboard access are still coded). **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. The scaffold writes it to
   `.ui-quality.yml`; the UI tests capture the main window in left-to-right/right-to-left × light/dark into the
   gitignored `.ui-screenshots/`, uploaded by CI as a 7-day artifact.
 - **pages** (only with `ci: yes`) — public: **yes** without asking (say so in the report). Private/internal: ask —
@@ -392,7 +392,7 @@ State explicitly what was wired or deliberately omitted, and why:
 - **`ci`**: with `no`, no workflows/`security.yml`/Dependabot were generated.
 - **`macos-ci`** / **`ci-tests`**: when the macOS job runs and whether it runs the XCUITest UI tests, restating the
   ~10× macOS cost on private repositories.
-- **`accessibility`**: the level written to `.ui-quality.yml` (`enforce`/`report`/`off`) and whether it came from
+- **`accessibility`**: the level written to `.ui-quality.yml` (`enforce`/`report`/`off`/`none`) and whether it came from
   `args` or the user.
 - **`pages`**: `yes` (Antora + DocC deployed to GitHub Pages) or `no` (uploaded as a workflow artifact).
 - **`distribution`**: which release job exists (Developer ID + notarized DMG, or App Store Connect upload) and the

@@ -35,6 +35,8 @@ shared `support/ui-screenshots.ts` helper when missing, asks before adding `@axe
 Playwright itself (no Playwright means "UI tests not generated"); React Native UI tests are left to
 `iru-react-native-code-one-task`. Accessibility violations it finds are reported, not silently fixed.
 
+When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: they are skipped and reported as "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]

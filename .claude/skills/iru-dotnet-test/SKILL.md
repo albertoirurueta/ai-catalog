@@ -144,9 +144,9 @@ Windows-desktop additions:
   0. **Screenshot directory** — resolve `UI_SCREENSHOTS_DIR` (an absolute path from the environment, else
      `<repo root>/.ui-screenshots`) and export it for the run. On a **full** UI run (no narrower selector) delete and
      recreate that directory first so it holds exactly this run; on a scoped run leave other captures alone. Read
-     `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, `directions`, `themes`; a missing
+     `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off|none`, `directions`, `themes`; a missing
      file means `enforce`, `[ltr, rtl]`, `[light, dark]`) — the tests read it themselves; this skill only reports the
-     level applied.
+     level applied. Under `none` (opted out entirely) or `off` (rules apply, checks not run) the accessibility check is not applicable: report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
   1. **Lock** — unless `lock: held` was passed, take the repository-wide lock from the repository root
      (`git rev-parse --show-toplevel`) before building: `mkdir .integration-test.lock 2>/dev/null && echo ACQUIRED ||
      echo HELD`. `ACQUIRED` → write `.integration-test.lock/owner` with "iru-dotnet-test ui", the project, and
@@ -226,7 +226,7 @@ Summarize the `dotnet test` output concisely:
   failure. Skipped or not-run UI tests are never "passed". Report how the lock behaved when this skill took it.
 - `ui` runs (desktop and terminal): the screenshot directory used and whether it was cleared (full run) or kept
   (scoped run); screenshot count per kind (`component`/`screen`/`flow`) and per `<kind>/<Id>`; malformed names; the
-  `.ui-quality.yml` level applied (`enforce`/`report`/`off`, or "missing — defaults"); accessibility violations as
+  `.ui-quality.yml` level applied (`enforce`/`report`/`off`/`none`, or "missing — defaults"); accessibility violations as
   count + rule ids per context (Axe.Windows for desktop, asserted `tui-*` checks for terminal UIs); and "captures
   unverified (needs Windows)" whenever the desktop stage couldn't run.
 - Do not attempt to fix failing tests or modify source/test code unless the user asks for that as a next step.

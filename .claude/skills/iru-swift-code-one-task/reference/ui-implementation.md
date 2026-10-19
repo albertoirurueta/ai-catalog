@@ -199,7 +199,7 @@ import XCTest
 
 /// `.ui-quality.yml` (UI contract §8); a missing or unreadable file means the defaults.
 enum UIQuality {
-  enum Accessibility: String { case enforce, report, off }
+  enum Accessibility: String { case enforce, report, off, none }
 
   static let accessibility = Accessibility(rawValue: values["accessibility"]?.first ?? "") ?? .enforce
   static let directions = (values["directions"] ?? ["ltr", "rtl"]).compactMap(UIScreenshots.Direction.init)
@@ -327,12 +327,20 @@ when the same `<Id>` renders on several platforms, then the form factor (`"table
   (Xcode 15+, iOS 17/macOS 14/watchOS 10/visionOS 1+). Its issue handler attaches every issue
   (`XCTAttachment(string: issue.compactDescription)` named `a11y~<Screen>~<rule>`, kept always — `iru-swift-test`
   counts these) and returns `false` to fail the test or `true` to accept it: `false` when `UIQuality.accessibility ==
-  .enforce`, `true` when `.report`; with `.off` the test skips itself (`try XCTSkipIf(UIQuality.accessibility == .off)`). Rule ids come from `issue.auditType`: `contrast`, `element-detection`,
+  .enforce`, `true` when `.report`; with `.off` or `.none` the test skips itself (`try XCTSkipIf(UIQuality.accessibility == .off || UIQuality.accessibility == .none)`). Rule ids come from `issue.auditType`: `contrast`, `element-detection`,
   `hit-region`, `sufficient-element-description` everywhere; `dynamic-type`, `text-clipped`, `trait` on
   iOS/watchOS/visionOS only; `action`, `parent-child` on macOS only — the compiler rejects the others per platform.
   Ignoring a known false positive is a commented `return true` for that exact element and audit type, never a blanket
   `true`.
 - SwiftLint has no accessibility rules; the audit is the gate.
+
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- VoiceOver: `accessibilityLabel`/`Value`/`Hint`/`Traits` (SwiftUI `.accessibilityLabel`, `.accessibilityElement(children:)`, `.accessibilityAction`); decorative images `.accessibilityHidden(true)`; UIKit sets `isAccessibilityElement` and `UIAccessibility.post(notification:argument:)` for announcements.
+- Dynamic Type (`Font.TextStyle`/`UIFontMetrics`, `@ScaledMetric`) without clipping; check `accessibilityReduceMotion`, `accessibilityDifferentiateWithoutColor`, Increase Contrast (`colorSchemeContrast`/`UIAccessibility.isDarkerSystemColorsEnabled`), Reduce Transparency.
+- Platform notes: iOS/iPadOS targets >= 44pt; macOS: full keyboard access, `NSAccessibility` roles on AppKit custom views; watchOS: concise labels, Digital Crown actions; visionOS: gaze/pinch targets >= 60pt, label spatial controls.
 
 ## Sources
 

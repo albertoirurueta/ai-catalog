@@ -200,7 +200,8 @@ components/fragments/views/controls — on any web, mobile, desktop or terminal 
   including its own UI tests: component/screen tests over every state with minimal/typical/many-items data,
   events fired, left-to-right and right-to-left × light and dark, screenshot captures under `.ui-screenshots/`
   and the automated accessibility check at the repository's `.ui-quality.yml` level (the coding skill's
-  `reference/ui-contract.md` holds the details — name it, don't restate it).
+  `reference/ui-contract.md` holds the details — name it, don't restate it). When `.ui-quality.yml` says
+  `accessibility: none`, omit accessibility tasks, attributes and checks from the plan entirely.
 - **Group bottom-up**: leaf components first (independent leaves together, `Parallelizable: yes`), then the
   components composing them, then screens, then navigation/flow tests — a composite depends on its children
   having landed.

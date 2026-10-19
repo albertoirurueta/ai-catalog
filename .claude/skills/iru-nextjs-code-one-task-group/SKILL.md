@@ -18,7 +18,7 @@ description: >-
   which, when the bucket touched UI, is also the UI stage of the catalog's UI contract: the component-gallery and
   screen/flow specs run, every added/changed page and Client Component must have captures in `.ui-screenshots/` for
   each visual state × `.ui-quality.yml` direction × theme, and the axe results are applied at the configured
-  `enforce`/`report`/`off` level.
+  `enforce`/`report`/`off`/`none` level.
   Because `next build` refuses to run twice in one project and Playwright's web server builds and serves the same
   app, the build and e2e stages are serialized repository-wide behind the same atomic `mkdir`-based
   `.integration-test.lock` as `iru-java-springboot-code-one-task-group` (owner file, stale after 60 minutes, give up
@@ -352,6 +352,10 @@ run and an explicit "unverified" when it can't.**
    On **every** exit path — passed, failed, unverified, a blocked task, a user interruption, a hard stop. A lock left
    behind blocks every other group for an hour. If you took it, you release it before returning. Also delete
    `.next-build.log` if a failed agent left it behind.
+
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
+**Missing `.ui-quality.yml` in a repository that already has UI code.** The level was never chosen, so don't assume the `enforce` default — that default is only for a new UI project with no UI code yet. Before the first UI task of the bucket, resolve it once per `reference/ui-contract.md` §8 ("Opting out and existing code"): reuse the `Accessibility:` line of an `iru-explore` report in the plan's "Current code state" or this conversation (otherwise apply the detection rules of `iru-explore`'s `reference/accessibility-detection.md`), ask the user via `AskUserQuestion` with the setup's pre-selection (`present` → Enforce, `partial` → Report only with the mixed-compliance warning, `absent` → None with the half-compliance warning), and write `.ui-quality.yml` with the chosen level and the default `directions`/`themes`, so the per-task skills and the test gates read the same value. This is a decision only the user can make, so it is an allowed pause.
 
 ## Step 4 — Finalize progress notes and notify the user
 

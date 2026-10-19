@@ -75,8 +75,8 @@ instructions).
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the browser UI tests, forwarded to the Laravel, WordPress and PrestaShop scaffolds (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
-|`enforce` recommended; pre-selected from an existing `.ui-quality.yml` in `existing` mode.
+|`enforce`, `report`, `off` or `none` (opt out entirely) — the automated accessibility level of the browser UI tests, forwarded to the Laravel, WordPress and PrestaShop scaffolds (see xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+|`enforce` recommended; in `existing` mode pre-selected from the explored `Accessibility:` line (present: Enforce, partial: Report only, absent: None), never silently flipping an existing `.ui-quality.yml`.
 
 |`php-version`
 |No

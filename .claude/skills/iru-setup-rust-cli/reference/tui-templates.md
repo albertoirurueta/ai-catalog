@@ -512,7 +512,7 @@ The one capture helper every UI test uses (test-only: declared `#[cfg(test)]` in
 //!
 //! Captures go to `UI_SCREENSHOTS_DIR` (else `<repository root>/.ui-screenshots`) as
 //! `<kind>/<Id>/<state>--<direction>--<theme>.txt`; `.ui-quality.yml` at the repository root sets the
-//! accessibility level (`enforce`, `report`, `off`) and the directions and themes the tests render.
+//! accessibility level (`enforce`, `report`, `off`, `none`) and the directions and themes the tests render.
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -630,7 +630,7 @@ pub(crate) fn check_accessibility(target: &str, violations: &[String]) {
 }
 
 fn apply_level(level: &str, target: &str, violations: &[String], dir: &Path) {
-    if violations.is_empty() || level == "off" {
+    if violations.is_empty() || level == "off" || level == "none" {
         return;
     }
     if level == "report" {

@@ -94,8 +94,8 @@ xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the UI tests' automated accessibility level, written to `.ui-quality.yml`. Asked in
-Step 2 unless resolved.
+|`enforce`, `report`, `off` or `none` — the UI tests' automated accessibility level, written to `.ui-quality.yml`. Asked in
+Step 2 unless resolved. `none` opts out entirely: no accessibility tooling is installed and the generated templates omit accessibility attributes (asked as "None — opt out entirely"). In `mode: existing` a prior level is never silently flipped.
 |`enforce`
 
 |`mode`, `on-existing`

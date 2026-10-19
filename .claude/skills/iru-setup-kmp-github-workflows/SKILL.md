@@ -129,6 +129,12 @@ macOS minutes, i.e. 150–300 minutes of a private budget per run.
    `docs-site` artifact") / **Yes** ("requires Pro/Team/Enterprise Cloud; the site is PUBLIC unless Enterprise Cloud
    private Pages").
 
+**Accessibility opt-out.** Read the repository's `.ui-quality.yml` `accessibility` level (UI contract §8). When it is
+`none` (opted out entirely), emit no accessibility report artifact, upload or step: do not collect `a11y-report.txt`
+or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
+the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
+generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
 ## Step 1 — Survey the repository
 
 - Module layout and task names: `settings.gradle.kts` includes, `shared/build.gradle.kts` (plugins: KMP library

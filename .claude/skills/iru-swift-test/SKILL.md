@@ -279,7 +279,7 @@ screen and flow tests are XCUITests, and every capture goes through the shared `
 writes `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` under `UI_SCREENSHOTS_DIR` **and** attaches it to
 the test as `<kind>~<Id>~<file>`.
 
-1. **Settings.** Read `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, `directions`,
+1. **Settings.** Read `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off|none`, `directions`,
    `themes`; a missing file means `enforce`, `[ltr, rtl]`, `[light, dark]`) — the tests read it themselves; this skill
    reports the level applied. Resolve `UI_SCREENSHOTS_DIR`: the environment's value if set (absolute), else
    `<repository root>/.ui-screenshots`. On a **full** UI run (nothing after `ui`) clear it first — `rm -rf
@@ -340,6 +340,8 @@ the test as `<kind>~<Id>~<file>`.
 5. **Accessibility**: issues come from the `a11y~<Screen>~<rule>` attachments the audit tests add (rule = the
    `XCUIAccessibilityAuditType`: `contrast`, `hit-region`, `dynamic-type`, `text-clipped`, …) and, at `enforce`, from
    the failing audit tests in the summary. Report counts and rule ids — never the raw issue descriptions.
+
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
 
 ## Step 6 — Report
 

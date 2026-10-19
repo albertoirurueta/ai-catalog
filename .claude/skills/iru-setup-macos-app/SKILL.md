@@ -26,7 +26,7 @@ description: >-
   `generator` (`xcodegen` only), `sandbox` (`yes`/`no`), `version`, `build-number`, `category`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `sonar`
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
-  `branching`, `accessibility` (`enforce`/`report`/`off`, default `enforce`), `mode` (`new`/`existing`) and
+  `branching`, `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `mode` (`new`/`existing`) and
   `on-existing` (`ask`/`keep`/`update`/`replace`) — so
   `iru-setup-macos-repository` can supply them without re-prompting; stand-alone it asks `open-source` first and
   derives the `sonar` default from it. Announces whether it is scaffolding from scratch or updating; for every file
@@ -131,13 +131,22 @@ Recognized keys (every key found is resolved — skip its question in Step 2):
 | `open-source`, `visibility`, `ci`, `sonar` (+ coordinates) | the `sonar` recommendation, as in `iru-setup-kmp-app` |
 | `distribution` | `none` (copy-app export, local/QA builds) / `internal` (Developer ID + notarized DMG on GitHub Releases) / `store` (Mac App Store via App Store Connect); default `internal` (a notarized DMG on GitHub Releases is the natural public download, open source or not; `store` only when asked) |
 | `branching` | `gitflow` / `main-only` — informational: the macOS app carries no pre-release marker in-tree (`iru-swift-bump-version` Step 5), so the files are identical either way |
-| `accessibility` | `enforce` (default) / `report` / `off` — the UI tests' automated accessibility level, written to `.ui-quality.yml` (UI contract §8) |
+| `accessibility` | `enforce` (default) / `report` / `off` / `none` — the UI tests' automated accessibility level, written to `.ui-quality.yml` (UI contract §8) |
 | `mode`, `on-existing` | as in every catalog setup skill (default `ask`) |
 
 Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`,
 `runner`, `macos-ci`, …) are ignored and named in the report. `mode: existing` never means "gap-fill silently":
 Step 1 still warns about and asks about every pre-existing file group; only `on-existing` skips that question.
 Orchestrators forward `on-existing` only when their own `args` received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (`performAccessibilityAudit()`), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `accessibilityLabel`/roles on icon buttons and images, Dynamic Type-safe text styles, VoiceOver-friendly ordering, keyboard access — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -220,7 +229,7 @@ Then **sandbox** (unless resolved): **Yes (Recommended)** — required for the M
 builds too (irurueta docs: apps/apple/macos.adoc, "The App Sandbox"); **No** — only for tools that need
 unrestricted file/process access. `sandbox: no` + `distribution: store` is contradictory: warn and ask again.
 
-Then **accessibility** (unless resolved), `AskUserQuestion` "Automated accessibility checks in UI tests?":
+Then **accessibility** (unless resolved), `AskUserQuestion` "Support accessibility and assistive technologies?":
 **Enforce (Recommended)** (`enforce` — every `performAccessibilityAudit()` issue fails the UI tests) / **Report
 only** (`report` — issues attached and listed, never failing) / **Off** (`off` — the audit test skips; labels,
 contrast and keyboard access are still coded). Written to `.ui-quality.yml`.

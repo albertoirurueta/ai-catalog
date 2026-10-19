@@ -30,7 +30,9 @@ resolves `visibility`, `sonar`, `ci-tests` and `pages` with cost-aware recommend
 means CI is wanted. Every `build` job also ends with an `Upload UI screenshots` step (`actions/upload-artifact`,
 `if: always()`, 7-day retention) that attaches the `.ui-screenshots/` captures of the catalog's UI contract as a
 `ui-screenshots` workflow artifact — evidence only, nothing is published (see
-xref:guides/building-user-interfaces.adoc[Building user interfaces]).
+xref:guides/building-user-interfaces.adoc[Building user interfaces]). When the repository's `.ui-quality.yml` sets
+`accessibility: none`, no accessibility report artifact, upload or accessibility-only job/step is generated (the UI test
+run and screenshot upload are unaffected).
 
 == Purpose group
 

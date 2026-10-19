@@ -8,8 +8,8 @@ The catalog's single entry point for bootstrapping any repository. It does not s
 detects or asks which of the supported project types applies (Java, Spring Boot, Quarkus, TypeScript, web, NestJS, PHP, Python (FastAPI and Django), Android, Swift/Apple (Swift libraries, and iOS/iPadOS/macOS/watchOS/visionOS apps in SwiftUI or UIKit, MVVM or MVC), cross-platform mobile — React Native, Ionic or Kotlin Multiplatform — and macOS/Windows desktop apps, and agent-friendly command-line tools in Rust, Go, Swift or C#/.NET), announces whether the run is a from-scratch setup
 or an update of an existing repository, collects the handful of questions genuinely shared across every stack, and
 hands off to exactly one of twelve existing stack orchestrators.
-For project types with a user interface it also asks how strictly automated accessibility checks gate the UI tests
-(the `accessibility` input), part of the catalog's xref:guides/building-user-interfaces.adoc[UI contract].
+For project types with a user interface it also asks whether to support accessibility and assistive technologies, and how strictly automated checks gate the UI tests
+(the `accessibility` input, with an opt-out `none`; in an existing repository it is pre-selected from `iru-explore`'s `Accessibility:` detection), part of the catalog's xref:guides/building-user-interfaces.adoc[UI contract].
 
 == Purpose
 
@@ -155,7 +155,7 @@ self-hosted SonarQube as the second option
 
 |`accessibility`
 |No
-|`enforce`, `report`, or `off` — UI project types only: how strictly the UI tests' automated accessibility checks gate (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility audit, Axe.Windows). Asked once in Step 3 with Enforce recommended, forwarded to every orchestrator that recognizes it, and recorded by the UI scaffold in `.ui-quality.yml` at the repository root. For Spring Boot without Hilla and for command-line tools the orchestrator asks (or applies it only for a terminal UI / Hilla frontend).
+|`enforce`, `report`, `off`, or `none` (opt out entirely) — UI project types only: whether accessibility and assistive-technology support is wanted and how strictly the UI tests' automated accessibility checks gate (axe-core on the web, Android's Accessibility Test Framework, Xcode's accessibility audit, Axe.Windows). Asked once in Step 3 ("Support accessibility and assistive technologies?") with Enforce recommended for new projects; in `mode: existing` it is pre-selected from `iru-explore`'s `Accessibility:` line (`present` enforce, `partial` report with a mixed-compliance warning, `absent` none) after showing the evidence, forwarded to every orchestrator that recognizes it, and recorded by the UI scaffold in `.ui-quality.yml` at the repository root. For Spring Boot without Hilla and for command-line tools the orchestrator asks (or applies it only for a terminal UI / Hilla frontend).
 |Asked for UI types (`enforce` recommended); not asked or forwarded for types without a UI
 
 |`flavor`

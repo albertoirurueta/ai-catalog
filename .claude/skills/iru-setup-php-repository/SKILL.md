@@ -19,7 +19,7 @@ description: >-
   `visibility` (`public`/`private`/`internal`, detected via `gh` when absent), `ci` (`yes`/`no`), `ci-tests`
   (`unit`/`full`), `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar`
   (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `accessibility`
-  (`enforce`/`report`/`off`, default `enforce`), `php-version`, `integration-branch` (default `develop`),
+  (`enforce`/`report`/`off`/`none`, default `enforce`), `php-version`, `integration-branch` (default `develop`),
   `stable-branch` (default `main`), `on-existing`
   (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), and every identity key, skipping the matching
   question. Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
@@ -81,7 +81,7 @@ Recognized keys: `flavor` (`laravel`/`wordpress-plugin`/`wordpress-theme`/`prest
 (`new`/`existing`), `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`),
 `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar`
 (`cloud`/`self-hosted`/`none`) and — only when not `none` — `sonar-organization`, `sonar-project-key`,
-`sonar-host-url`; `accessibility` (`enforce`/`report`/`off` — the level of the automated accessibility checks in the
+`sonar-host-url`; `accessibility` (`enforce`/`report`/`off`/`none` — the level of the automated accessibility checks in the
 browser UI tests, written by the scaffold to `.ui-quality.yml`; every flavor here renders UI — Laravel pages, the
 WordPress plugin's/theme's front end and editor, the PrestaShop module's views — so it is always forwarded);
 `php-version` (the minimum supported PHP, e.g. `8.3`), `integration-branch`, `stable-branch`; the
@@ -289,10 +289,9 @@ Then, **only when `ci: yes`**:
 
 Then, whatever `ci` is:
 
-- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** — "axe-core
+- **accessibility** — "Support accessibility and assistive technologies?" **Enforce (Recommended)** — "axe-core
   violations fail the browser UI tests" / **Report only** — "violations are listed in the test output, never
-  failing" / **Off** — "not run; the accessibility coding defaults still apply to new UI". In `mode: existing` with a
-  `.ui-quality.yml` on disk, pre-select its `accessibility` value.
+  failing" / **Off** — "not run; the accessibility coding defaults still apply to new UI". **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. A `.ui-quality.yml` on disk is shown, never decides alone.
 
 These values are forwarded only to the sub-skills that accept them: identity + `php-version` + `open-source`/
 `visibility`/`ci`/`distribution`/`sonar` (+ keys)/`accessibility` to Step 5; the same pipeline keys +
@@ -458,7 +457,7 @@ State explicitly what was wired or deliberately omitted, and why:
 - **`sonar`** — `cloud`/`self-hosted`/`none`; whether `sonar-project.properties` and the CI analysis step were
   included; for `none`, whether that's the expected default (not open source, not public, or `ci: no`) or a direct
   choice; for cloud/self-hosted with `ci: no`, that no CI step sends reports.
-- **`accessibility`** — `enforce`/`report`/`off` as written to `.ui-quality.yml`, and where the browser UI tests
+- **`accessibility`** — `enforce`/`report`/`off`/`none` as written to `.ui-quality.yml`, and where the browser UI tests
   (Playwright + axe-core, screenshots under `.ui-screenshots/`) run: locally behind `.integration-test.lock`, and in
   CI only where the workflows step wired them (each flavor's `ci-tests: full` integration job, against the server,
   wp-env test instance or shop it already starts; with `ci-tests: unit`, nowhere).

@@ -247,6 +247,8 @@ isn't installed, say so and skip this step):
   the generated tests (not in production code); report accessibility issues at the configured level instead of
   silencing them. No simulator runtime/macOS desktop session → the generated UI tests are reported **unverified**.
 
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
+
 ## Step 6 — Re-measure and iterate on shortfalls
 
 Re-run Step 3's delegated `iru-swift-coverage` pass, scoped to just the types touched in Step 5, to confirm each

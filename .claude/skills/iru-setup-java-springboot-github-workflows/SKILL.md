@@ -238,6 +238,12 @@ question each), stating concretely where the existing file contradicts this run'
   file is lost (recoverable only from git history).
 - **Stop** — end this skill now without changing any file.
 
+**Accessibility opt-out.** Read the repository's `.ui-quality.yml` `accessibility` level (UI contract §8). When it is
+`none` (opted out entirely), emit no accessibility report artifact, upload or step: do not collect `a11y-report.txt`
+or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
+the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
+generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
 ## Step 1 — `build.yml`
 
 Structure it as two jobs so a pull request gets fast feedback and Pages publishing only happens on the main branch.

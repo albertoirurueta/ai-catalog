@@ -22,7 +22,7 @@ compared against the baseline and each task's declared intent, flagging unexpect
 Playwright suite, which doubles as the UI stage of the catalog's UI contract (see
 xref:guides/building-user-interfaces.adoc[Building user interfaces]) when the bucket touched UI. Because builds and Playwright's web server cannot run concurrently, both stages sit behind the atomic
 `mkdir`-based `.integration-test.lock` (stale after 60 minutes, bounded wait of about 45 minutes, released on every
-exit path). A missing browser, occupied port or unavailable environment variable is reported as unverified, never as a pass.
+exit path). A missing browser, occupied port or unavailable environment variable is reported as unverified, never as a pass. With `accessibility: none` in `.ui-quality.yml` (opted out entirely), the accessibility rules and checks are neither applied nor required and are reported as "accessibility: opted out" in the group report, never unverified or failed; `off` still applies the rules but skips the automated checks. When `.ui-quality.yml` is missing in a repository that already has UI code, it doesn't assume `enforce`: before the first UI task it asks once, pre-selected from `iru-explore`'s `Accessibility:` line, and writes the file.
 
 == Purpose group
 
@@ -55,7 +55,7 @@ xref:index.adoc#group-typescript[TypeScript Development Tooling]
 * Unit tests with at least 80% line coverage for changed files, measured from unit tests only.
 * For a bucket that touched UI: the screenshot matrix check against `.ui-screenshots/` (every added/changed page and
   Client Component captured for each visual state × `.ui-quality.yml` direction × theme), the accessibility (axe) result
-  at the configured `enforce`/`report`/`off` level, and each task's `Screen › Region › Component` tree — or an explicit
+  at the configured `enforce`/`report`/`off`/`none` level, and each task's `Screen › Region › Component` tree — or an explicit
   "unverified (no component gallery / no Playwright)".
 * A parsed `next build` route table for the bucket's routes, with every unexpected rendering-mode change resolved or
   recorded, and a Playwright result (passed, failed-and-fixed, flaky, not configured, or unverified).

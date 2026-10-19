@@ -26,7 +26,7 @@ description: >-
   stdout/stderr (every exit code, JSON goldens, no-TTY/`NO_COLOR` behaviour) plus opt-in published-binary smoke tests;
   `tests/coverlet.runsettings` and a DocFX `docfx.json` for the Core API. Invoke as `/iru-setup-dotnet-cli`. Accepts
   pre-resolved inputs via `args` (`key: value` lines) — `tool-name` (PascalCase solution/project name), `bin-name`
-  (the command), `package-id`, `description`, `ui` (`none`/`tui`), `accessibility` (`enforce`/`report`/`off`, only
+  (the command), `package-id`, `description`, `ui` (`none`/`tui`), `accessibility` (`enforce`/`report`/`off`/`none`, only
   with `ui: tui`), `version`, `branching`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `owner`, `open-source`, `visibility`, `ci`, `sonar`
   (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
@@ -126,7 +126,7 @@ namespace; default: `bin-name` PascalCased), `bin-name` (the command users type 
 `^[a-z][a-z0-9-]*$`; default: the repository directory name lower-cased), `package-id` (NuGet package id of the .NET
 tool, `[A-Za-z0-9._-]`; default `bin-name` — check `https://api.nuget.org/v3-flatcontainer/<id>/index.json` returns
 404, else warn that the id is taken), `description` (one line: what the tool does and when to use it), `ui`
-(`none`/`tui`, default `none`), `accessibility` (`enforce`/`report`/`off`, default `enforce`; only meaningful with
+(`none`/`tui`, default `none`), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`; only meaningful with
 `ui: tui` — the level written to `.ui-quality.yml` for the terminal UI's asserted accessibility checks; ignored and
 named in the report with `ui: none`), `version` (default `0.1.0-dev` for `branching: gitflow`, `0.1.0` for `main-only`),
 `branching` (`gitflow`/`main-only`, default `gitflow`), `license`, `developer-name`, `developer-email`,
@@ -143,6 +143,15 @@ keys from a full shared-args set (`language`, `ci-tests`, `pages`, `cross-os-ci`
 group. Only `on-existing` skips that question (`keep` = create only missing files; `update`/`replace` applied to
 every existing group; the warning is still printed). Orchestrators forward `on-existing` only when their own `args`
 received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (the terminal UI's asserted accessibility checks), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — selection visible without colour, key help on screen, every action reachable by key — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -205,7 +214,7 @@ Then, with `AskUserQuestion` (skip any resolved):
   command). If Step 4 finds no stable (non-prerelease) Terminal.Gui 2.x at all, say so and do not offer `tui` — the
   templates for it target the v2 API.
 - **accessibility** — only with `ui: tui`, stand-alone (an orchestrator resolves it; otherwise default `enforce`):
-  "Automated accessibility checks in UI tests?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report
+  "Support accessibility and assistive technologies?" — **Enforce (Recommended)** (violations fail the UI tests) / **Report
   only** (listed in `.ui-screenshots/a11y-report.txt`, never failing) / **Off** (not run; the coding defaults still
   apply). Say that for a terminal UI these are asserted checks — the selection readable without colour, the key help
   on screen, every action on a key — since no automated accessibility audit exists for terminals.

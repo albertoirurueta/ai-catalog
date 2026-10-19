@@ -301,6 +301,14 @@ In Jest, theme and direction are props of the provider the app already has (rend
 - Level semantics: `enforce` → lint errors fail the group's quality gate; `report` → listed in the summary;
   `off` → lint rules off, the coding defaults still apply.
 
+## Assistive technologies
+
+Applies unless `.ui-quality.yml` says `accessibility: none` (opted out entirely - then omit these attributes and checks). Rules and levels: `reference/ui-contract.md` §8 ("Platform assistive-technology rules", "Visual comfort").
+
+- Every pressable has `accessibilityRole`, `accessibilityLabel` (icon-only) and `accessibilityState` (`selected`, `disabled`, `checked`); group related content with `accessible`; hide decorative elements (`importantForAccessibility="no"`, `accessibilityElementsHidden`).
+- Leave `allowFontScaling` on and test with a large `fontScale`; use `AccessibilityInfo` (`isReduceMotionEnabled`, `announceForAccessibility`) for motion and announcements; targets >= 44pt/48dp.
+- Screen readers: VoiceOver (iOS) and TalkBack (Android); `eslint-plugin-react-native-a11y` is the automated check.
+
 ## Sources
 
 - React Native: FlatList <https://reactnative.dev/docs/flatlist>, SectionList <https://reactnative.dev/docs/sectionlist>,

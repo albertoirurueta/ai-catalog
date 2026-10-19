@@ -3,7 +3,7 @@
  *
  * Screenshots go to `$UI_SCREENSHOTS_DIR` (absolute) or `<repository root>/.ui-screenshots`, as
  * `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`. `.ui-quality.yml` at the repository root narrows
- * the matrix (`directions`, `themes`) and sets the accessibility level (`enforce` | `report` | `off`).
+ * the matrix (`directions`, `themes`) and sets the accessibility level (`enforce` | `report` | `off` | `none`).
  */
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -13,7 +13,7 @@ import { expect, type Locator, type Page, type TestInfo } from '@playwright/test
 export type UiKind = 'component' | 'screen' | 'flow'
 export type UiDirection = 'ltr' | 'rtl'
 export type UiTheme = 'light' | 'dark' | 'high-contrast'
-export type AccessibilityLevel = 'enforce' | 'report' | 'off'
+export type AccessibilityLevel = 'enforce' | 'report' | 'off' | 'none'
 
 /** The repository's `.ui-quality.yml` settings. */
 export interface UiQuality {
@@ -83,7 +83,7 @@ export function readUiQuality(root: string = repositoryRoot()): UiQuality {
   }
   const level = values.get('accessibility')
   return {
-    accessibility: level === 'report' || level === 'off' ? level : 'enforce',
+    accessibility: level === 'report' || level === 'off' || level === 'none' ? level : 'enforce',
     directions: (list('directions') as readonly UiDirection[] | undefined) ?? DEFAULTS.directions,
     themes: (list('themes') as readonly UiTheme[] | undefined) ?? DEFAULTS.themes,
   }
@@ -204,7 +204,8 @@ export async function captureUiMatrix(
 
 /**
  * Runs axe-core (WCAG 2.x A/AA rules) on the page — or only inside `include` — at the `.ui-quality.yml` level:
- * `enforce` fails the test on any violation, `report` attaches and annotates them, `off` skips the check.
+ * `enforce` fails the test on any violation, `report` attaches and annotates them, `off` skips the check, and `none`
+ * (the project opted out of accessibility support entirely) skips it too.
  *
  * Violations are asserted softly, so a matrix run still captures every cell before the test fails.
  *
@@ -220,7 +221,7 @@ export async function checkAccessibility(
   label = 'page',
 ): Promise<void> {
   const { accessibility } = readUiQuality()
-  if (accessibility === 'off') return
+  if (accessibility === 'off' || accessibility === 'none') return
   let builder = new AxeBuilder({ page }).withTags([
     'wcag2a',
     'wcag2aa',

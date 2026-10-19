@@ -33,7 +33,7 @@ resolved toolchain is loaded, plus `reference/ui-templates.md` for both. A proje
 about and asked; the skill never converts an app between toolchains. For a Capacitor-based hybrid app,
 xref:skills/iru-setup-ionic-app.adoc[] is used instead.
 
-The UI contract wiring is: `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off`, directions, themes); `eslint-plugin-react-native-a11y` in the ESLint config at that level (React Native has no automated native contrast or touch-target audit, so the check is that lint plus the tests' role/label queries); a dev-only UI gallery (`src/dev/ui-gallery/`, reached by a `<app-slug>://ui-gallery` deep link and stripped from production bundles by `__DEV__`) with its Jest test; and the Maestro screenshot helper `.maestro/subflows/ui-capture.yaml` plus a capture flow for the root screen that writes `.ui-screenshots/screen/App/default--<ltr|rtl>--<light|dark>--<platform>.png`. On a new scaffold the entry file (`index.ts` or `index.js`) wraps the app with the gallery and the deep-link scheme is registered; on an existing app those edits are printed for the user instead.
+The UI contract wiring is: `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off|none`, directions, themes); `eslint-plugin-react-native-a11y` in the ESLint config at that level (React Native has no automated native contrast or touch-target audit, so the check is that lint plus the tests' role/label queries); a dev-only UI gallery (`src/dev/ui-gallery/`, reached by a `<app-slug>://ui-gallery` deep link and stripped from production bundles by `__DEV__`) with its Jest test; and the Maestro screenshot helper `.maestro/subflows/ui-capture.yaml` plus a capture flow for the root screen that writes `.ui-screenshots/screen/App/default--<ltr|rtl>--<light|dark>--<platform>.png`. On a new scaffold the entry file (`index.ts` or `index.js`) wraps the app with the gallery and the deep-link scheme is registered; on an existing app those edits are printed for the user instead.
 
 == Purpose group
 
@@ -115,7 +115,7 @@ as newline-separated `key: value` lines. Every field found here is resolved in S
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the UI contract's automated accessibility level, written to `.ui-quality.yml` and applied to `eslint-plugin-react-native-a11y` (errors, warnings or off). Asked in stand-alone runs when `args` did not supply it.
+|`enforce`, `report`, `off` or `none` — whether accessibility support is wanted and the UI contract's automated level, written to `.ui-quality.yml` and applied to `eslint-plugin-react-native-a11y` (errors, warnings or off). `none` opts out entirely: `accessibility: none` is written to `.ui-quality.yml`, no accessibility test tooling (the plugin and role-query assertions) is installed and the accessibility attributes are omitted from the templates. Otherwise the templates carry the assistive-technology attributes. Asked in stand-alone runs when `args` did not supply it.
 |`enforce`; an existing `.ui-quality.yml` pre-selects its value
 
 |`visibility`

@@ -1,6 +1,6 @@
 = Explore
 :description: Investigates a repository and a linked GitHub issue or Jira ticket into a grounded, read-only report with a normalized project-type line.
-:keywords: iru-explore, claude code skill, github, jira, codebase research, ticket investigation, tech stack detection, project type detection, macos and windows desktop apps, rust and go cli tools, exploration
+:keywords: iru-explore, claude code skill, github, jira, codebase research, ticket investigation, accessibility detection, tech stack detection, project type detection, macos and windows desktop apps, rust and go cli tools, exploration
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
@@ -72,13 +72,13 @@ general codebase tour.
 * A plain-text report in the conversation — never a written file.
 * Always a **Tech stack** section: codebase languages/frameworks (per module, if more than one), the
   languages/frameworks implicated by the requested change, a normalized **`Project type:`** line, the Antora docs
-  location (or "none found"), and the detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, "no remote
+  location (or "none found"), an **`Accessibility:`** line (`present`, `partial`, `absent`, or not applicable without a UI, with the evidence summary and the `.ui-quality.yml` level: `enforce`, `report`, `off`, `none` or missing), and the detected repository host (GitHub/Bitbucket/Azure DevOps/TFS, "no remote
   configured", or "none — not a git repository") — structured so later skills in the same conversation can read it
   directly instead of re-detecting it. It also carries a **User interface** line: `none`, or the UI stack(s) and where,
   rough counts of screens and reusable components, the `.ui-quality.yml` accessibility level when present, and whether
   the Antora module already has a `ui/` section (or, for a requested change that adds UI, the screens/components it
   introduces) — which tells `iru-plan` to decompose the work into screens/components with virtualized collections, UI
-  tests, screenshots and accessibility checks, and `iru-update-docs` to maintain the UI pages (see
+  tests, screenshots and accessibility checks (omitted when `accessibility: none`), and `iru-update-docs` to maintain the UI pages (see
   xref:guides/building-user-interfaces.adoc[Building user interfaces]).
 * The **`Project type:`** line is a single-token-per-module normalization of the detected stack — this exact
   vocabulary is a shared contract with `iru-setup-repository`, which reads it verbatim to pre-select the right
@@ -241,7 +241,8 @@ flowchart TD
     I --> O["Check .archive/ for a plan whose\ntopic overlaps the current task"]
     J --> O
     O --> K["Detect tech stack (incl. Spring Boot/Quarkus,\nNestJS, Next.js, PHP, Python (FastAPI/Django), Vite+React, Angular,\nHilla, React Native (Expo/Metro), Ionic, KMP, Android, SwiftPM/Xcode (Apple apps: platforms incl. visionOS,\nSwiftUI/UIKit, MVVM/MVC), macOS apps,\nWindows apps (WPF/WinUI/WinForms),\nRust/Go/Swift/.NET command-line tools)\n+ Antora docs; derive normalized\nProject type: line;\nUser interface line (stack, screens, .ui-quality.yml, ui/ docs)"]
-    K --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
+    K --> K2["UI projects only: read-only accessibility scan\n(present / partial / absent) and\n.ui-quality.yml level"]
+    K2 --> M{"Documentation MCP\nconnected (Confluence, Notion, ...)?"}
     M -- yes --> N["Search it for pages relevant\nto the ticket/codebase"]
     M -- no --> L["Report findings: Tech stack +\nRelated past implementation plans\n(+ epic/linked tickets,\n+ Related documentation)"]
     N --> L

@@ -27,7 +27,7 @@ description: >-
   `app-name`, `application-id`, `bundle-id`, `namespace`, `project-name`, `min-sdk`, `compile-sdk`, `target-sdk`,
   `ios-deployment-target`, `version-name`, `version-code`, `team-id`, `license`, `developer-name`,
   `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`, `accessibility`
-  (`enforce`/`report`/`off`, default `enforce` — written to `.ui-quality.yml`), `sonar` (+ `sonar-organization`/
+  (`enforce`/`report`/`off`/`none`, default `enforce` — written to `.ui-quality.yml`), `sonar` (+ `sonar-organization`/
   `sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`), `mode` (`new`/`existing`) and
   `on-existing` (`ask`/`keep`/`update`/`replace`) — so `iru-setup-kmp-repository` can supply them without
   re-prompting; stand-alone it asks `open-source` first and derives the `sonar` default from it. Announces whether
@@ -114,7 +114,7 @@ only keys the `sonar` recommendation), `ci` (`yes`/`no` — only keys the `sonar
 (`cloud`/`self-hosted`/`none`) plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `distribution`
 (`none`/`internal`/`store` — recorded for the report; the store/TestFlight uploads live in
 `iru-setup-kmp-github-workflows`' `release.yml`, so the build files are identical for every value), `accessibility`
-(`enforce`/`report`/`off`, default `enforce` — the automated accessibility level of the UI tests, written to
+(`enforce`/`report`/`off`/`none`, default `enforce` — the automated accessibility level of the UI tests, written to
 `.ui-quality.yml`; never asked stand-alone, just defaulted), `mode`
 (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`). Every key found is resolved —
 skip its question in Step 2. Unknown keys from a full shared-args set (`publish`, `ci-tests`, `pages`, …) are
@@ -124,6 +124,15 @@ ignored and named in the report.
 group. Only `on-existing` skips that question (`keep` = create only missing files; `update`/`replace` applied to
 every existing group; the warning is still printed). Orchestrators forward `on-existing` only when their own `args`
 received it.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (the Android Accessibility Test Framework audit and the iOS accessibility audit), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — `contentDescription`/`Modifier.semantics` on Android, `accessibilityLabel` on iOS, scalable font sizes, reduced-motion guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 

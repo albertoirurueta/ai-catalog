@@ -244,7 +244,7 @@ started by Playwright's `webServer`), the wp-env **tests** instance (WordPress, 
    (absolute). On a **full** UI run (no spec paths) clear it first (`rm -rf .ui-screenshots` for the default) so it
    holds exactly this run; on a scoped run leave it as is. Read `.ui-quality.yml` at the repository root
    (`accessibility`, `directions`, `themes`; missing file → `enforce`, `[ltr, rtl]`, `[light, dark]`) and record
-   the level.
+   the level. Under `none` (opted out entirely) or `off` (rules apply, checks not run) the accessibility check is not applicable: report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
 5. **Run** with a JSON report next to the console output (inside the project, like Step 5's JUnit log):
    ```bash
    mkdir -p build

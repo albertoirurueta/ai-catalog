@@ -649,12 +649,12 @@ private val MIN_TOUCH_TARGET = 48.dp
 /**
  * Portable semantics checks that run on every target: each clickable node has an accessible name and a touch
  * target (its touch bounds, which include Material's minimum interactive size) of at least 48dp. Applies
- * `.ui-quality.yml`'s `accessibility` level — `enforce` fails the test, `report` prints a summary, `off` skips.
+ * `.ui-quality.yml`'s `accessibility` level — `enforce` fails the test, `report` prints a summary, `off` and `none` skip.
  */
 @OptIn(ExperimentalTestApi::class)
 fun ComposeUiTest.checkUiAccessibility(): List<UiA11yIssue> {
     val level = UiQuality.accessibility
-    if (level == "off") return emptyList()
+    if (level == "off" || level == "none") return emptyList()
     val minPx = with(density) { MIN_TOUCH_TARGET.toPx() }
     val issues =
         onAllNodes(hasClickAction()).fetchSemanticsNodes().flatMap { node ->

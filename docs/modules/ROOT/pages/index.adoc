@@ -3023,7 +3023,7 @@ flowchart TD
 over up to six rounds — JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple, Desktop & command line), collects the shared,
 cost-aware inputs once, and delegates to exactly one orchestrator via `iru-isolated-skill-executor`, forwarding
 `mode: existing` when the repository already has content. For a project type with a user interface it also asks
-the shared `accessibility` input (`enforce`/`report`/`off`), which the UI scaffold records in `.ui-quality.yml`
+the shared `accessibility` input ("Support accessibility and assistive technologies?": `enforce`/`report`/`off`/`none`, or `none` to opt out; pre-selected from `iru-explore`'s `Accessibility:` line on an existing repository), which the UI scaffold records in `.ui-quality.yml`
 alongside a `.ui-screenshots/` capture helper — see <<workflow-ui,Building a user interface>>.
 
 === Setting up a command-line tool
@@ -3221,7 +3221,7 @@ flowchart LR
 ....
 
 - **Bootstrap**: `iru-setup-repository` and the stack orchestrators ask the shared `accessibility` input
-  (`enforce`/`report`/`off`, UI project types only); the UI scaffold records it in `.ui-quality.yml`, wires a
+  (`enforce`/`report`/`off`/`none`, UI project types only); the UI scaffold records it in `.ui-quality.yml`, wires a
   screenshot helper writing to `.ui-screenshots/` (gitignored by the matching `-gitignore` skill), and
   `iru-setup-antora` adds the User interface section described in its `reference/ui-docs.md`.
 - **Planning**: `iru-plan` decomposes the design top-down (screen › region › component, reusing existing

@@ -282,7 +282,7 @@ is Steps 3–5 with these additions:
    A KMP capture without an `android`/`ios` first variant is worth flagging: the same `<Id>` renders on both
    platforms, so unsuffixed names collide.
 7. **Accessibility**: read `accessibility` from `<repo root>/.ui-quality.yml` (missing file or key → `enforce`) and
-   report the level applied. Count violations from the results, never by dumping them: the scaffold's
+   report the level applied. Under `none` (opted out entirely) or `off` (rules apply, checks not run) the accessibility check is not applicable: report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure. Count violations from the results, never by dumping them: the scaffold's
    `checkUiAccessibility()` fails with `Accessibility violations {rule=count, …}` under `enforce` and prints
    `UI accessibility (report): {rule=count, …}` under `report` (in the JUnit XML's `<failure message>` /
    `<system-out>`); XCUITest `performAccessibilityAudit()` failures appear in the `.xcresult` `testFailures`
@@ -348,7 +348,7 @@ but not Android) is worth calling out explicitly — it usually means an `actual
 lock only when it was anything other than an immediate acquire. For a UI run add: the capture directory and whether
 it was cleared (full run) or not (scoped); screenshots per kind and per platform (`android`/`ios`); malformed names
 (path list); accessibility violations (total + rule ids with counts) and the `.ui-quality.yml` level applied
-(`enforce`/`report`/`off`); device flow tests run or **unverified (<reason>)**. Never paste raw Gradle/xcodebuild output, and never
+(`enforce`/`report`/`off`/`none`); device flow tests run or **unverified (<reason>)**. Never paste raw Gradle/xcodebuild output, and never
 fix tests or source code — that's a follow-up the user (or `iru-kmp-code-one-task`) drives.
 
 ## Known quirks / verification notes

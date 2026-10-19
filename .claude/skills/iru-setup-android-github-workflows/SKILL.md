@@ -146,6 +146,12 @@ pricing" (verified October 2026 against docs.github.com) and tell the user to do
      Enterprise Cloud (Pages isn't available for private repositories on GitHub Free); the site will be PUBLIC on
      the internet unless you're on Enterprise Cloud with private Pages access control."
 
+**Accessibility opt-out.** Read the repository's `.ui-quality.yml` `accessibility` level (UI contract §8). When it is
+`none` (opted out entirely), emit no accessibility report artifact, upload or step: do not collect `a11y-report.txt`
+or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
+the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
+generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
 ## Step 1 — Survey the target repository
 
 Gather every fact Step 0 didn't already resolve via `args`, and decide whether this is a fresh setup or an

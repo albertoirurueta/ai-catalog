@@ -84,7 +84,7 @@ from playwright.sync_api import Page
 KINDS = frozenset({"component", "screen", "flow"})
 DIRECTIONS = frozenset({"ltr", "rtl"})
 THEMES = frozenset({"light", "dark", "high-contrast"})
-LEVELS = frozenset({"enforce", "report", "off"})
+LEVELS = frozenset({"enforce", "report", "off", "none"})
 RTL_LANGUAGE = "ar"  # any bidi language Django ships translations for
 LIVE_SERVER_HOSTS = ("localhost", "127.0.0.1")  # cookies ignore the port
 _AXE_OPTIONS = {
@@ -250,7 +250,7 @@ def check_accessibility(page: Page) -> list[str]:
         ``"<rule id> x <node count>"`` per violation.
     """
     level = ui_quality()["accessibility"]
-    if level == "off":
+    if level in ("off", "none"):
         return []
     results = Axe().run(page, options=_AXE_OPTIONS)
     violations: list[dict[str, Any]] = results.response["violations"]

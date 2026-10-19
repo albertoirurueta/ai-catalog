@@ -24,7 +24,7 @@ description: >-
   (nextjs), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default
   `24`), `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when
   absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `accessibility`
-  (`enforce`/`report`/`off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` by the
+  (`enforce`/`report`/`off`/`none` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` by the
   UI flavors' scaffolds — react, nextjs, angular, react-native, ionic; asked once with Enforce recommended when
   absent, never for library/nestjs), `on-existing` (`ask`/`keep`/
   `update`/`replace`, forwarded only when supplied), and every identity field, skipping the matching question.
@@ -91,7 +91,7 @@ Recognized keys: `flavor` (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-
 (`app`/`pages`), `output` (`server`/`static`), `cache-components` (`yes`/`no`), `styling`
 (`tailwind`/`css-modules`), `e2e` (`playwright`/`none`), `integration-branch`, `stable-branch`, `node-version`,
 `package-manager`, `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`),
-`pages` (`yes`/`no`), `accessibility` (`enforce`/`report`/`off` — UI flavors only: `react`/`nextjs`/`angular`/
+`pages` (`yes`/`no`), `accessibility` (`enforce`/`report`/`off`/`none` — UI flavors only: `react`/`nextjs`/`angular`/
 `react-native`/`ionic`; ignored with a one-line note for `library`/`nestjs`), `on-existing` (`ask`/`keep`/`update`/`replace` — never asked; forwarded to every
 file-writing sub-skill only when it arrived here via `args`), and every identity field named in Steps 2–3 below (`name`, `scope`, `app-id`, `description`,
 `license`, `developer-name`, `developer-email`, `organization-url`, `directory`, `storybook`). Every key found here
@@ -347,10 +347,10 @@ Then resolve, with `AskUserQuestion`, per this catalog's shared open-source-driv
 Then, **only for a UI flavor** (`react`/`nextjs`/`angular`/`react-native`/`ionic` — never `library`/`nestjs`) and
 only when `args` didn't supply it:
 
-- **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** ("violations fail
+- **accessibility** — "Support accessibility and assistive technologies?" **Enforce (Recommended)** ("violations fail
   the UI tests — axe-core in the Playwright tests on the web, `eslint-plugin-react-native-a11y` plus role queries on
   React Native") / **Report only** ("violations are listed in test and group reports but never fail anything") /
-  **Off** ("the automated checks don't run; the accessible-by-default coding rules still apply"). The scaffold
+  **Off** ("the automated checks don't run; the accessible-by-default coding rules still apply"). **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. The scaffold
   writes it to `.ui-quality.yml` at the repository root, which the coding, test and documentation skills read. It
   costs no CI minutes either way. Asked regardless of `ci` — local UI test runs read it too.
 
@@ -616,7 +616,7 @@ State explicitly which of publishing/distribution and Sonar analysis were wired,
   not public, or `ci: no`) or a direct user choice; if cloud/self-hosted with `ci: no`, note that no CI step sends
   reports.
 - **`docs-tool`**: the value derived in Step 8 and why (flavor, plus the `storybook` answer for `react`).
-- **`accessibility`** (UI flavors): `enforce`/`report`/`off`, where it came from (`args` or the question), and the
+- **`accessibility`** (UI flavors): `enforce`/`report`/`off`/`none`, where it came from (`args` or the question), and the
   `.ui-quality.yml` action (created / updated / replaced / kept as is — with any mismatch when kept). For
   `library`/`nestjs`: "not applicable — no UI".
 

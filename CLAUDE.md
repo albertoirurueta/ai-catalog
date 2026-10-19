@@ -78,7 +78,7 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `src/<Tool>.Core`), and a Swift or .NET CLI keeps the `swift`/`dotnet` key — those coding skills detect the CLI
   shape (an ArgumentParser `.executableTarget`; a System.CommandLine `Exe`) themselves.
 - **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
-  `iru-explore`, reading its `Project type:` line to pre-select), otherwise asks the project type over up to six
+  `iru-explore`, reading its `Project type:` and `Accessibility:` lines to pre-select), otherwise asks the project type over up to six
   `AskUserQuestion` rounds of up to three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple,
   Desktop & command line — macOS app / Windows app / command-line tool), every round ending in a "Something in the next group" escape hatch (the last in
   "None of these"); an option bundling
@@ -158,8 +158,12 @@ Skills compose into a few recurring pipelines rather than each standing alone:
 - **Shared bootstrap inputs**: the front door and the orchestrators share one `args` vocabulary —
   `open-source: yes|no`, `visibility: public|private|internal`, `ci: yes|no`, `ci-tests: unit|full`, `pages: yes|no`,
   `publish: yes|no` (libraries), `distribution: none|internal|store` (apps), `sonar: cloud|self-hosted|none`
-  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `accessibility: enforce|report|off` (UI project
-  types only — asked once by the front door or the orchestrator, written by the UI scaffold to `.ui-quality.yml`),
+  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `accessibility: enforce|report|off|none` (UI project
+  types only — asked once by the front door or the orchestrator, written by the UI scaffold to `.ui-quality.yml`;
+  `none` = opted out entirely, `off` = rules apply but checks don't run; on an existing repository `iru-explore`'s
+  `Accessibility: present|partial|absent` line, produced from the shared `reference/accessibility-detection.md`,
+  pre-selects the answer; a missing `.ui-quality.yml` means `enforce` only in a repository with no UI code yet —
+  otherwise the coding group skills ask once with that same pre-selection and write the file before any UI work),
   `mode: new|existing`, and
   `on-existing: ask|keep|update|replace` — so a value collected once by a front door or orchestrator never needs
   re-asking downstream; each downstream scaffold/workflows skill parses only the subset of those keys its own Step 0
@@ -231,12 +235,14 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   desktop/JVM, a simulator/emulator or a real browser (Playwright) over every state and data set, LTR+RTL ×
   light+dark, writing `.ui-screenshots/<kind>/<Id>/<state>--<dir>--<theme>[--<variant>…].png` (gitignored,
   `UI_SCREENSHOTS_DIR` overrides, cleared by the test gate on a full UI run, uploaded as a CI artifact) and running
-  automated accessibility checks at the `.ui-quality.yml` level (`accessibility: enforce|report|off`). Docs:
+  automated accessibility checks at the `.ui-quality.yml` level (`accessibility: enforce|report|off|none`; §8 also carries platform assistive-technology
+  rules and visual-comfort extras, all skipped with `none`). Docs:
   `iru-setup-antora`, `iru-update-docs` and `iru-update-java-springboot-documentation` carry a verbatim
   `reference/ui-docs.md` — a **User interface** section (`ui/index.adoc`, `ui/navigation.adoc`, one page per screen
   and per component) illustrated with the tests' screenshots, of which only the referenced ones are copied into
   `images/ui/` (the only committed copies, replaced when a component changes, deleted with it), the rest discarded.
-  Both shared files must stay byte-identical across the skills that carry them. Hand-maintained overview:
+  The shared files — `ui-contract.md`, `ui-docs.md`, and `accessibility-detection.md` (in `iru-explore` and
+  `iru-setup-repository`) — must stay byte-identical across the skills that carry them. Hand-maintained overview:
   `docs/modules/ROOT/pages/guides/building-user-interfaces.adoc`.
 - **Template verification**: every scaffold/workflows/gate skill's embedded templates are meant to be exercised
   against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)

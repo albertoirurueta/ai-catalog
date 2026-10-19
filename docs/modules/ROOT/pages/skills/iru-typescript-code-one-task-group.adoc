@@ -33,6 +33,8 @@ React Native is its own key: when Step 1 classifies the project as `react-native
 because it owns the native builds, Expo prebuild check, and device e2e stage this skill does not run. Without
 it, this skill continues and states in its Step 5 report that those stages were not run.
 
+When `.ui-quality.yml` says `accessibility: none` (the user opted out of accessibility support entirely), the accessibility rules are not applied and the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks) are not run or required; they are reported as "accessibility: opted out" in the group report — never "unverified" and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run. When `.ui-quality.yml` is missing in a repository that already has UI code, it doesn't assume `enforce`: before the first UI task it asks once, pre-selected from `iru-explore`'s `Accessibility:` line, and writes the file.
+
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]

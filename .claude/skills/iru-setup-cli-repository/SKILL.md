@@ -8,7 +8,7 @@ description: >-
   `--format text|json|jsonl` with a JSON error envelope, TTY/`NO_COLOR`-aware colour, no prompts without a terminal
   (`--no-input`/`--yes`), `--dry-run` for mutations, `completion`/`schema` commands and a CLI reference generated
   from the command tree. Collects `language` (`rust`/`go`/`swift`/`dotnet`), `ui` (`none`/`tui`; not offered for
-  Swift), `accessibility` (`enforce`/`report`/`off` — only with `ui: tui`: the level of the terminal UI's asserted
+  Swift), `accessibility` (`enforce`/`report`/`off`/`none` — only with `ui: tui`: the level of the terminal UI's asserted
   accessibility checks, written by the scaffold to `.ui-quality.yml`), `branching` (`gitflow`/`main-only`), the tool's identity (`bin-name`, `description`, license, developer
   name/email/organization URL, `owner`) and the shared pipeline parameters (integration branch `develop`, stable
   branch `main`, `open-source`, repository `visibility` (detected via `gh repo view` or asked), `ci`, `cross-os-ci`
@@ -98,7 +98,7 @@ bin-name: logsift
 Recognized keys:
 
 - **Shape and mode**: `language` (`rust`/`go`/`swift`/`dotnet`), `ui` (`none`/`tui`), `accessibility`
-  (`enforce`/`report`/`off` — meaningful only with `ui: tui`; ignored and named in the report otherwise), `branching`
+  (`enforce`/`report`/`off`/`none` — meaningful only with `ui: tui`; ignored and named in the report otherwise), `branching`
   (`gitflow`/`main-only`), `mode` (`new`/`existing`).
 - **Shared pipeline vocabulary**: `open-source` (`yes`/`no`), `visibility` (`public`/`private`/`internal`), `ci`
   (`yes`/`no`), `cross-os-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `on-existing`
@@ -154,9 +154,9 @@ Unless `ui` was supplied via `args`, resolve it:
     non-interactive command with `--json`."
 
 With `ui: tui`, unless `accessibility` was supplied via `args` (or an existing `.ui-quality.yml` already sets it —
-confirm that value instead), ask it once with `AskUserQuestion`: "Automated accessibility checks in UI tests?" —
+confirm that value instead), ask it once with `AskUserQuestion`: "Support accessibility and assistive technologies?" —
 **Enforce (Recommended)** ("violations fail the UI tests") / **Report only** ("listed in the test report, never
-failing") / **Off** ("not run; the coding defaults still apply"). Say that for a terminal UI these are the asserted
+failing") / **Off** ("not run; the coding defaults still apply"). **None — opt out entirely** ("no accessibility rules, checks or docs"; written as `accessibility: none`). In `mode: existing`, pre-select from `iru-explore`'s `Accessibility:` line per `iru-setup-repository`'s `reference/accessibility-detection.md` (`present` → Enforce, `partial` → Report only with a mixed-compliance warning, `absent` → None) and never silently flip an existing `.ui-quality.yml` value. Say that for a terminal UI these are the asserted
 checks the UI tests run — the selection visible without colour, the key help on screen, every action on a key — since
 no automated accessibility audit exists for terminals. With `ui: none` it is never asked or forwarded.
 

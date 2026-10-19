@@ -126,7 +126,7 @@ Any other key (including `ci`) is ignored — invoking the skill means CI is wan
 == Outputs
 
 * `.github/workflows/build.yml` (with `ci-tests: full`, the integration jobs include the browser UI test steps and the
-  `ui-screenshots-integration*` artifact uploads), and `release.yml` unless `distribution: none`.
+  `ui-screenshots-integration*` artifact uploads) (no accessibility reports when `.ui-quality.yml` says `accessibility: none`), and `release.yml` unless `distribution: none`.
 * `.github/workflows/sync.yml` with `.github/scripts/php_version.py` and `.github/scripts/sync_versions.py`
   (made executable).
 * `.github/workflows/security.yml`, `.github/psalm/` configuration, and `.github/dependabot.yml`.

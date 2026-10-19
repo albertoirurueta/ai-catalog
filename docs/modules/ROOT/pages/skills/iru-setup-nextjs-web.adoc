@@ -24,7 +24,7 @@ Templates are kept in `reference/` next to the skill (`config-templates.md`, `ap
 determines the `16-prev` or `16-cc` coding profile later tasks apply.
 
 Following the catalog's UI contract (see xref:guides/building-user-interfaces.adoc[Building user interfaces]) it also
-writes a root `.ui-quality.yml` (even with `e2e: none`, because the coding skills read it) and, with
+writes a root `.ui-quality.yml` (even with `e2e: none`, because the coding skills read it) (`accessibility: none` skips the axe tooling and the assistive-technology template attributes) and, with
 `e2e: playwright`, a Playwright component-testing project against a standalone Vite component gallery, the shared
 `e2e/support/ui-screenshots.ts` helper and axe-core checks, so the sample `LikeButton` and the `Home` screen are
 captured into `.ui-screenshots/` across left-to-right/right-to-left × light/dark.
@@ -117,7 +117,7 @@ xref:skills/iru-setup-typescript-repository.adoc[], which passes resolved values
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the UI tests' automated (axe) accessibility level, written to `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` (opt out entirely) — the UI tests' automated (axe) accessibility level, written to `.ui-quality.yml`.
 |Asked with `e2e: playwright` (Enforce recommended), else `enforce`
 
 |`visibility`, `ci`

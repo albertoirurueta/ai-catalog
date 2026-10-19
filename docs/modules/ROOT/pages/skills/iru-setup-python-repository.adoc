@@ -98,8 +98,8 @@ xref:index.adoc#group-python-bootstrap[Python Bootstrap]
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the Django scaffold's browser UI tests, written to `.ui-quality.yml` (see xref:guides/building-user-interfaces.adoc[Building user interfaces]); Django only, since the FastAPI flavor renders no UI.
-|`enforce` recommended; pre-selected from an existing `.ui-quality.yml`.
+|`enforce`, `report`, `off` or `none` (opt out entirely) — whether accessibility and assistive-technology support is wanted and the automated level of the Django scaffold's browser UI tests, written to `.ui-quality.yml` (see xref:guides/building-user-interfaces.adoc[Building user interfaces]); Django only, since the FastAPI flavor renders no UI.
+|`enforce` recommended; in an existing repository pre-selected from `iru-explore`'s `Accessibility:` line (`present` enforce, `partial` report with a mixed-compliance warning, `absent` none), never silently flipping an existing `.ui-quality.yml`.
 
 |`integration-branch`, `stable-branch`
 |No

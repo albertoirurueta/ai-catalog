@@ -555,12 +555,12 @@ private val MIN_TOUCH_TARGET = 48.dp
 /**
  * Semantics checks on the JVM: each clickable node has an accessible name and a touch target (its touch bounds,
  * which include Material's minimum interactive size) of at least 48dp. Applies `.ui-quality.yml`'s `accessibility`
- * level — `enforce` fails the test, `report` prints a summary, `off` skips. (ATF checks through
+ * level — `enforce` fails the test, `report` prints a summary, `off` and `none` skip. (ATF checks through
  * `enableAccessibilityChecks()` only report reliably on a device or emulator, not under Robolectric.)
  */
 fun ComposeContentTestRule.checkUiAccessibility(): List<UiA11yIssue> {
     val level = UiQuality.accessibility
-    if (level == "off") return emptyList()
+    if (level == "off" || level == "none") return emptyList()
     val minPx = with(density) { MIN_TOUCH_TARGET.toPx() }
     val issues =
         onAllNodes(hasClickAction()).fetchSemanticsNodes().flatMap { node ->

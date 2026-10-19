@@ -113,7 +113,7 @@ config when enabled.
 
 |`accessibility`
 |No
-|`enforce`, `report`, or `off` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` in Step 6b. `enforce` makes axe violations fail the tests; `report` lists them without failing; `off` does not run them.
+|`enforce`, `report`, `off`, or `none` — whether accessibility and assistive-technology support is wanted and the automated level of the UI tests, written to `.ui-quality.yml` in Step 6b. `enforce` makes axe violations fail the tests; `report` lists them without failing; `off` does not run them; `none` opts out entirely (no axe-core or `eslint-plugin-jsx-a11y`, no accessibility attributes in the templates).
 |Asked with `AskUserQuestion` (recommended: `enforce`; `enforce` when run via `args` without it)
 
 |`on-existing`

@@ -111,6 +111,11 @@ prefix are derived from it.
 xref:skills/iru-setup-cli-github-workflows.adoc[]).
 |Unset
 
+|`accessibility`
+|No
+|`enforce`, `report`, `off` or `none` (UI contract section 8). `none` opts out entirely: it writes `accessibility: none` to `.ui-quality.yml`, installs no accessibility tooling and omits the accessibility attributes from the templates. With `enforce`, `report` or `off` the templates include the assistive-technology attributes (selection visible without colour, key help on screen, every action reachable by key). In `mode: existing` a prior `.ui-quality.yml` follows the Update / Keep / Replace prompt and its value is never silently flipped.
+|Unset
+
 |`mode`
 |No
 |`new` or `existing`. `existing` never means a silent gap-fill; Step 1 still warns and asks per file group.

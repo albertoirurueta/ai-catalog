@@ -185,6 +185,8 @@ them; then run them once more through `iru-gate-runner` with `Skill({skill: "iru
 Fix a component's genuine accessibility violation only when the fix is local and obvious (a missing content
 description or label); otherwise report it — under `enforce` it keeps that test red, so name it explicitly.
 
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
+
 ## Step 6 — Re-measure and iterate on shortfalls
 
 Re-run Step 3's delegated `iru-android-coverage` pass, scoped to just the classes touched in Step 5, to confirm

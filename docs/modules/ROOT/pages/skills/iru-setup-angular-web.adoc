@@ -103,8 +103,8 @@ license is chosen.
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` — the automated accessibility level of the UI tests (axe violations fail them, are listed,
-or are not run), written to `.ui-quality.yml`. Asked in Step 2 when unresolved.
+|`enforce`, `report`, `off` or `none` — the automated accessibility level of the UI tests (axe violations fail them, are listed,
+or are not run), written to `.ui-quality.yml`. Asked in Step 2 when unresolved. `none` opts out entirely (writes `accessibility: none`, installs no accessibility tooling and omits the accessibility attributes from the templates); a prior `.ui-quality.yml` value is never silently flipped in `mode: existing`.
 |`enforce`
 
 |`on-existing`

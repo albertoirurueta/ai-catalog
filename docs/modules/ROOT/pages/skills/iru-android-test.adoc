@@ -34,7 +34,7 @@ UI tests (Step 4b) instead of the plain unit run:
   **unverified** (never passed). Captures are collected from AGP's additional test output (or `adb pull`) into the same layout.
 * `UI_SCREENSHOTS_DIR` is exported (default `<repo root>/.ui-screenshots`) and cleared only at the start of a full,
   unscoped UI run; a scoped run adds to it.
-* The accessibility level (`enforce`/`report`/`off`) comes from `.ui-quality.yml`; a bundled parser validates every
+* The accessibility level (`enforce`/`report`/`off`/`none`) comes from `.ui-quality.yml`; a bundled parser validates every
   capture name against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`, counts captures per kind and
   Accessibility Test Framework results by check id.
 

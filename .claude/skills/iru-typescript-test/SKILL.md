@@ -298,7 +298,7 @@ skill owns the run-level half of that; the tests themselves own the captures.
 
 1. **Resolve the settings** at the repository root (`git rev-parse --show-toplevel`, else the current directory):
    - `UI_SCREENSHOTS_DIR` from the environment (must be absolute) or `<repo root>/.ui-screenshots`.
-   - `.ui-quality.yml`: `accessibility` (`enforce`/`report`/`off`), `directions`, `themes` — a missing file or key
+   - `.ui-quality.yml`: `accessibility` (`enforce`/`report`/`off`/`none`), `directions`, `themes` — a missing file or key
      means `enforce`, `[ltr, rtl]`, `[light, dark]`. Read the three keys with a line match
      (`^accessibility:\s*(\w+)`, `^directions:\s*\[(.*)\]`, `^themes:\s*\[(.*)\]`); anything else is reported
      as "unparsed `.ui-quality.yml`, defaults applied".
@@ -339,6 +339,8 @@ skill owns the run-level half of that; the tests themselves own the captures.
 7. **Apply the level** — `enforce`: any violation makes the UI run **failed** (named as an accessibility failure,
    separate from assertion failures); `report`: violations listed, the run's pass/fail unaffected; `off`: say the
    automated check is off and don't count.
+
+**Accessibility level `none`/`off`.** If `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: skip them and report "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) - never "unverified" and never a failure.
 
 ## Step 3 — Run with a JSON reporter and parse it
 

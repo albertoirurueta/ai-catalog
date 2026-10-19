@@ -85,7 +85,7 @@ Detect once and reuse for every gate call below (the same facts `iru-go-code-one
 - **Quality tools wired**: `.golangci.yml` (v2 when `version: "2"`), `command -v golangci-lint`, `command -v
   govulncheck`; a missing tool is reported, not installed by this skill.
 - **Terminal UI** — `charm.land/bubbletea/v2` (or v1) in `go.mod`, the TUI package(s) (`internal/tui/`), the capture
-  helper (`ui_screenshots_test.go`) and `.ui-quality.yml` at the repository root (missing = `accessibility: enforce`,
+  helper (`ui_screenshots_test.go`) and `.ui-quality.yml` at the repository root (missing (new UI project) = `accessibility: enforce`,
   `directions: [ltr, rtl]`, `themes: [light, dark]`). Note whether the TUI adapts to the background (a `Theme` built
   with `lipgloss.LightDark` from `tea.BackgroundColorMsg`) — the themes 3.5a expects are the listed ones it defines
   plus `no-color` (only `no-color` for a single palette).
@@ -107,6 +107,10 @@ Agent({
 
 Record it as the bucket's baseline — empty if every file is new. Step 3.6 diffs against it so only issues this bucket
 introduces are flagged. Skip if `iru-go-code-quality` isn't installed, and say so in Step 5.
+
+**Accessibility opt-out (`accessibility: none`).** When `.ui-quality.yml` says `none`, the user opted out of accessibility support entirely (see `reference/ui-contract.md` §8, "Opting out and existing code"): do not apply the accessibility rules, do not run or require the accessibility checks (axe, ATF/semantics audit, `performAccessibilityAudit()`, Axe.Windows, a11y lint rules, TUI asserted checks), and report them as "accessibility: opted out" in the group report - never "unverified", and never a failure. `off` differs: the rules still apply when writing code, only the automated checks are not run.
+
+**Missing `.ui-quality.yml` in a repository that already has UI code.** The level was never chosen, so don't assume the `enforce` default — that default is only for a new UI project with no UI code yet. Before the first UI task of the bucket, resolve it once per `reference/ui-contract.md` §8 ("Opting out and existing code"): reuse the `Accessibility:` line of an `iru-explore` report in the plan's "Current code state" or this conversation (otherwise apply the detection rules of `iru-explore`'s `reference/accessibility-detection.md`), ask the user via `AskUserQuestion` with the setup's pre-selection (`present` → Enforce, `partial` → Report only with the mixed-compliance warning, `absent` → None with the half-compliance warning), and write `.ui-quality.yml` with the chosen level and the default `directions`/`themes`, so the per-task skills and the test gates read the same value. This is a decision only the user can make, so it is an allowed pause.
 
 ## Step 2 — Implement each task via `iru-go-code-one-task`
 

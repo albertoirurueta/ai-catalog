@@ -19,7 +19,7 @@ description: >-
   Accepts pre-resolved inputs via `args` (`key: value` lines) — `name`, `slug`, `vendor`, `description`, `license`,
   `developer-name`, `developer-email`, `organization-url`, `php-version`, `open-source`, `visibility`, `ci`,
   `ci-tests` (`unit`/`full`), `distribution` (`none`/`internal`), `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`), `test-framework`
+  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`/`none`), `test-framework`
   (`pest`/`phpunit`), `integration-tests`
   (`none`/`mysql`/`pgsql`), `sail`, `boost` (`yes`/`no`), `runtime` (`frankenphp`/`fpm`), `mode`
   (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`) — so `iru-setup-php-repository` can drive it
@@ -93,7 +93,7 @@ Recognized keys:
   `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full` — only used as the
   default for `integration-tests`), `distribution` (`none`/`internal`; `store` is not valid for an application —
   treat it as invalid and ask), `sonar` (`cloud`/`self-hosted`/`none`) plus, only when `cloud`/`self-hosted`,
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility` (`enforce`/`report`/`off`, default
+  `sonar-organization`/`sonar-project-key`/`sonar-host-url`, `accessibility` (`enforce`/`report`/`off`/`none`, default
   `enforce` — the level the browser UI tests apply, written to `.ui-quality.yml`), `mode` (`new`/`existing`),
   `on-existing` (`ask`/`keep`/`update`/`replace`, default `ask`, for scripted runs).
 - **This skill only**: `test-framework` (`pest`/`phpunit`), `integration-tests` (`none`/`mysql`/`pgsql`), `sail`
@@ -102,6 +102,15 @@ Recognized keys:
 Ignore any other key (an orchestrator may send its whole vocabulary). `mode: existing` marks an **update** run but
 never means "update silently": Step 1 still warns and asks per pre-existing artifact unless `on-existing` says
 otherwise.
+
+**Accessibility level `none` and assistive-technology templates.** `accessibility` takes `enforce`, `report`, `off` or
+`none` (UI contract §8; the stand-alone question gains a fourth option, **None — opt out entirely**, e.g. a mandated
+non-compliant design). With `none`: write `accessibility: none` to `.ui-quality.yml`, do not install or configure the
+accessibility test tooling (axe-core in the browser UI tests), and omit the accessibility-specific attributes from the generated templates.
+With `enforce`, `report` or `off`: include the assistive-technology attributes from the contract's §8 platform
+subsections in every generated template — semantic Blade landmarks, labelled form controls, `alt` on images, relative font sizes, `prefers-reduced-motion` guards — and, for `enforce`/`report` only, the automated checks. In
+`mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
+`accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
 
 ## Step 1 — Survey the repository
 
@@ -203,7 +212,7 @@ Otherwise ask (plain conversation for free text, `AskUserQuestion` for bounded c
 9. **boost** — "Install Laravel Boost (dev-only MCP server + guidelines + agent skills for Claude Code)?"
    **Yes (Recommended)** / **No**. Say it belongs in `require-dev` only, runs with the developer's database
    credentials, and adds its own skills next to this catalog's in `.claude/skills/`.
-10. **accessibility** — "Automated accessibility checks in UI tests?" **Enforce (Recommended)** "axe-core violations
+10. **accessibility** — "Support accessibility and assistive technologies?" **Enforce (Recommended)** "axe-core violations
     fail the browser UI tests" / **Report only** "listed in the test output, never failing" / **Off** "not run (the
     accessibility coding defaults still apply)". Existing app with a `.ui-quality.yml`: pre-select its value.
 

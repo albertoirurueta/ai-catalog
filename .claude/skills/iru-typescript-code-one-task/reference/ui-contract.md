@@ -189,7 +189,7 @@ Example: `.ui-screenshots/component/OrderRow/selected--rtl--dark.png`.
 
 ## 8. Accessibility
 
-Coding defaults, always:
+Coding defaults, unless `accessibility: none` (see "Opting out and existing code" below):
 
 - Every interactive element has an accessible name, role and state; images have alternative text or are marked
   decorative; icons-only buttons have labels.
@@ -211,10 +211,61 @@ the linter has them) at the level the repository chose:
 
 ```yaml
 # .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
-accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: not run
+accessibility: enforce      # enforce: violations fail the UI tests | report: listed, never failing | off: rules apply, checks not run
+                            # | none: opted out entirely — none of the rules below apply, no checks, no a11y docs
 directions: [ltr, rtl]      # screenshot matrix directions
 themes: [light, dark]       # screenshot matrix themes
 ```
 
-A missing file means the defaults shown. `off` turns off only the automated checks — the coding defaults above
-still apply to every new component.
+A missing file means the defaults shown (`enforce`) only for a new UI project — a repository with no UI code yet. In a
+repository that already has UI code, a missing file means the level was never chosen: the coding skills do not
+assume `enforce` but resolve it once, before any UI work, as described in "Opting out and existing code" below.
+`off` turns off only the automated
+checks — the coding defaults above and the rules below still apply to every new component; only `none` lifts them.
+
+### Platform assistive-technology rules
+
+Unless `accessibility: none`, name the assistive-technology (AT) API of the platform explicitly:
+
+- **Web** (React, Angular, Ionic, Hilla, Next.js, server-rendered templates): native semantic elements first
+  (`h1`…`h6`, `nav`, `main`, `article`, `section`, `button`, `a`, `ul`/`li`) before ARIA roles; every interactive
+  control is keyboard-operable; never hide a focusable element with `display:none` or `aria-hidden`; accessible
+  names come from `aria-label`/`aria-labelledby`, `alt`, or an associated `<label for>`.
+- **Android** (TalkBack): `contentDescription` on views, Compose `Modifier.semantics { contentDescription = … }`
+  (or `clearAndSetSemantics` for merged content), `importantForAccessibility` to hide purely decorative views,
+  touch targets ≥ 48dp.
+- **Apple** (VoiceOver): `accessibilityLabel`, `accessibilityValue`, `accessibilityHint` and traits; SwiftUI
+  `.accessibilityLabel(_:)`, `.accessibilityValue(_:)`, `.accessibilityHint(_:)`, `.accessibilityAddTraits(_:)`;
+  Dynamic Type for every text style.
+- **Windows** (Narrator): `AutomationProperties.Name` / `HelpText` / `LabeledBy`, UI Automation peers for custom
+  controls, a logical tab order (`TabIndex`, `IsTabStop`).
+- **React Native**: `accessibilityLabel`, `accessibilityRole`, `accessibilityState`, `accessibilityHint`.
+- **Terminal UIs** (unchanged): no information by colour alone, honour `NO_COLOR`, keyboard-only operation.
+
+### Visual comfort
+
+- Required: legible, user-adjustable font sizes (dynamic type, `sp`, `rem`, no fixed pixel text that ignores the
+  system setting) and the contrast ratios above.
+- Preferred, not gated (no automated check fails on their absence): a reduced-motion mode
+  (`prefers-reduced-motion`, Android animator duration scale, `accessibilityReduceMotion` /
+  `UIAccessibility.isReduceMotionEnabled`, `SystemParameters.ClientAreaAnimation`); light and dark themes; a
+  high-contrast mode (`forced-colors`, Windows High Contrast themes, iOS Increase Contrast).
+
+### Opting out and existing code
+
+`none` is chosen at setup, never inferred later. A repository that already contains UI code is scanned first —
+`iru-explore` reports an `Accessibility: present|partial|absent` line (detection rules in its
+`reference/accessibility-detection.md`) and the setup question is pre-selected from it, so a project does not end
+up half-compliant (old non-compliant code next to new compliant code). Never mix: when the level is `none`,
+generated code, tests and docs omit the AT-specific additions (accessible names, ARIA, semantics, AT lint and audit
+tooling, reduced-motion guards added only for accessibility) and the UI docs index says so once; a skill never
+silently flips the level in either direction.
+
+When `.ui-quality.yml` is missing in a repository that already has UI code (it predates the catalog's setup, or the
+file was deleted), the coding skill resolves the level before its first UI task: it reuses the `Accessibility:` line
+of an `iru-explore` report (in the plan's "Current code state" or the conversation) or applies the same detection
+rules, asks the user once with the setup's pre-selection — `present` → `enforce`, `partial` → `report` with a
+mixed-compliance warning, `absent` → `none` with a half-compliance warning — and writes the answer (with the default
+`directions` and `themes`) to `.ui-quality.yml`, so every later skill and test gate reads the same level. Test and
+gate skills run after that and keep reading a missing file as `enforce`.
+

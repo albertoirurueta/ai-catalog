@@ -162,7 +162,7 @@ recommended (Pages on private repos needs a paid plan and the site is public).
 
 |`accessibility`
 |No
-|`enforce`, `report` or `off` -- `app` flavor only (ignored for `library`): the level of the UI tests' automated accessibility checks (`performAccessibilityAudit()`), written by `iru-setup-apple-app` to `.ui-quality.yml`. Asked in Step 4 with Enforce recommended; forwarded to the scaffold skill. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
+|`enforce`, `report`, `off` or `none` -- `app` flavor only (ignored for `library`): the level of the UI tests' automated accessibility checks (`performAccessibilityAudit()`), written by `iru-setup-apple-app` to `.ui-quality.yml`. Asked in Step 4 ("Support accessibility and assistive technologies?") with Enforce recommended; `none` opts out entirely (no accessibility rules, checks or docs) and, in `mode: existing`, is pre-selected from `iru-explore`'s `Accessibility:` line. Forwarded to the scaffold skill. See xref:guides/building-user-interfaces.adoc[Building user interfaces].
 |Asked for `app`
 
 |`on-existing`
