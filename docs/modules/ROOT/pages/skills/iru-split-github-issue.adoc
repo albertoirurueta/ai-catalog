@@ -11,8 +11,8 @@ Turn one oversized issue into a root issue plus small, self-sufficient sub-issue
 `iru-split-github-issue` judges size from signals (many requirements, several independently deliverable capabilities,
 several areas touched, estimated difficulty hard or above), proposes slices that each own a subset of the
 requirements and acceptance criteria, computes `Blocked by` relations and parallel groups (same group means independent),
-reviews each sub-issue draft with xref:skills/iru-review-github-issue.adoc[], and creates a milestone, the sub-issues and
-GitHub's sub-issue links. Steps 1 to 5 are read-only: nothing is created, edited or linked before the explicit
+reviews each sub-issue draft with xref:skills/iru-review-github-issue.adoc[], and creates the root issue, a milestone linking it
+(reusing an existing milestone with the same title), the sub-issues and GitHub's sub-issue links. Steps 1 to 5 are read-only: nothing is created, edited or linked before the explicit
 confirmation in Step 6. An existing issue stays the root and its original text is preserved. It stops on
 non-GitHub hosts.
 
@@ -49,11 +49,18 @@ xref:index.adoc#group-intake[Ticket Intake]
 |No
 |`yes` skips the size assessment.
 |`no`
+
+|`label`
+|No
+|Label for the root and sub-issues (`documentation`-kind sub-issues use `documentation` when it exists); ignored if
+it is not in the repository's label list. Passed by xref:skills/iru-draft-github-issue.adoc[].
+|An existing root's own labels; none for a draft
 |===
 
 == Outputs
 
-* After confirmation: a milestone, the root issue (new or rewritten), the sub-issues in dependency order, and
+* After confirmation: the root issue (new or rewritten), a milestone linking it (found by title across open and
+  closed milestones and reused, or created), the sub-issues in dependency order, and
   sub-issue links (a task list fallback when the endpoint is unavailable).
 * A report with the milestone and issue URLs and a table of sub-issues.
 * If the user declines, nothing is created and the proposal is the deliverable.
@@ -72,7 +79,7 @@ flowchart TD
     F --> G{User confirms?}
     G -- adjust --> D
     G -- no --> Y["Stop: proposal is the deliverable"]
-    G -- yes --> H["Create milestone, root,\nsub-issues, links"]
+    G -- yes --> H["Look up milestone, create root,\nmilestone, sub-issues, links"]
     H --> I["Report"]
 ....
 

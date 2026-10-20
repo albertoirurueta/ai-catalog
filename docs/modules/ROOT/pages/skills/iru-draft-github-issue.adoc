@@ -53,7 +53,7 @@ xref:index.adoc#group-intake[Ticket Intake]
 
 * A draft file for the issue, revised through the review loop.
 * If the user confirms: a new GitHub issue (or, if a split was accepted, the root issue, sub-issues and milestone
-  created by `iru-split-github-issue`).
+  created by `iru-split-github-issue`, which receives the chosen label as `label:`).
 * A final report with the issue number and URL.
 * If the user declines, no issue is created and the draft remains the deliverable.
 

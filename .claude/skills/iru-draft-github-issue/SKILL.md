@@ -14,20 +14,20 @@ skill's directory); read it before Step 4.
 
 Never guess. A missing, doubtful or inconsistent point is put to the user as a question.
 
-## Step 1 - Confirm this repository is hosted on GitHub
+## Step 1 — Confirm this repository is hosted on GitHub
 
 - If `iru-explore` already ran in this conversation, reuse its `Repository host: ...` finding.
 - Otherwise run `git remote get-url origin` (fall back to `git remote -v`) and check it matches `github.com` or a
   GitHub Enterprise Server domain.
 - If the host is something else or there is no remote, say this skill only drafts GitHub issues and stop.
 
-## Step 2 - Explore the codebase
+## Step 2 — Explore the codebase
 
 Run `Skill({skill: "iru-explore"})` with no argument (general orientation, no ticket yet). Skip it when general
 exploration already happened in this conversation and looks current. Use the findings to cite real files, modules
 and conventions in the draft.
 
-## Step 3 - Decide the kind
+## Step 3 — Decide the kind
 
 Parse the arguments: an optional first word `functional` or `documentation`, the rest being a short description.
 
@@ -38,7 +38,7 @@ Parse the arguments: an optional first word `functional` or `documentation`, the
 
 A short description is a starting point: ask only for what it leaves unclear.
 
-## Step 4 - Interview
+## Step 4 — Interview
 
 Open-ended questions (purpose, requirements, page contents) are asked as plain conversational text; fixed choices
 (technical vs. non-technical, importance, label) use `AskUserQuestion`. Ask in small batches, wait for each answer,
@@ -71,7 +71,7 @@ and do not move on while a required item is unanswered.
 
 If the user has no answer to a required point, record it as a question to resolve in Step 7, not as a placeholder.
 
-## Step 5 - Optional context, due date, importance, label
+## Step 5 — Optional context, due date, importance, label
 
 Ask (plain text, all optional): linked URLs, local files or documents to attach, related issues.
 
@@ -94,13 +94,13 @@ Ask (plain text, all optional): linked URLs, local files or documents to attach,
   exists in that list (documentation kind maps to `documentation`; a defect to `bug`; otherwise `enhancement`). If
   none fits or it is ambiguous, ask via `AskUserQuestion` from the actual list. Never invent a label.
 
-## Step 6 - Write the draft file
+## Step 6 — Write the draft file
 
 Fill the matching template from `reference/issue-templates.md`. Write it to a temp file in the scratchpad directory
 if the system prompt lists one, otherwise to a fresh `mktemp -d` directory, as `issue-draft.md`: first line `# <title>`
 (concise, imperative), then the body. Keep the path; every later step uses it.
 
-## Step 7 - Review loop (maximum 5 rounds)
+## Step 7 — Review loop (maximum 5 rounds)
 
 Repeat:
 
@@ -129,13 +129,14 @@ seen remain.
 
 Keep the last block's `Suggestions:` for Step 8.
 
-## Step 8 - Size check and split offer
+## Step 8 — Size check and split offer
 
 Judge whether the issue is large using the same signals as the review (more than about 7 requirements or criteria,
 more than one independently deliverable capability, more than one module or area, estimated difficulty hard or
 above), and use the review's `Suggestions:` hint. If any fires, ask via `AskUserQuestion`:
 
-- **Split it** (recommended): run `Skill({skill: "iru-split-github-issue", args: "draft:<path>"})`. The split skill
+- **Split it** (recommended): run `Skill({skill: "iru-split-github-issue", args: "draft:<path>\nlabel: <label>"})`
+  (omit the `label:` line when Step 5 chose none), so the root and sub-issues carry the label chosen here. The split skill
   proposes the sub-issues, asks its own confirmation and then creates the root issue, sub-issues and milestone
   together from the draft. If it completes, skip Steps 9-10 (everything is created) and go to Step 11 with the root
   number it reports. If the user declines inside it, return here and offer Step 9 for the single issue.
@@ -143,7 +144,7 @@ above), and use the review's `Suggestions:` hint. If any fires, ask via `AskUser
 
 If no signal fires, continue without asking.
 
-## Step 9 - Show the draft and confirm
+## Step 9 — Show the draft and confirm
 
 Show the full title and body of the final draft, the label, and any remaining accepted findings. Filing an issue is
 visible to everyone with repository access, so nothing is created before the user answers via `AskUserQuestion`:
@@ -152,7 +153,7 @@ visible to everyone with repository access, so nothing is created before the use
 - **Edit the draft first**: take their edits, update the file, and re-run the review loop (Step 7) before asking again
 - **Do not create it**: stop; the draft file is the deliverable (give its path)
 
-## Step 10 - Create the issue
+## Step 10 — Create the issue
 
 Only after "Create the issue now":
 
@@ -165,7 +166,7 @@ Step 5 chose none. Add `--milestone` only if the user asked for one. If `gh` is 
 for GitHub MCP tools (`ToolSearch` "github issue") and create the issue with the same title, body and label.
 Capture the number and URL from the output (or `gh issue view --json number,url`).
 
-## Step 11 - Report
+## Step 11 — Report
 
 Give the issue number and URL (for a split, the root and the sub-issues with their dependency groups), note that the
 issue is ready to be picked up with `/iru-issue <number>` (or `/iru-plan <number>` for a plan only), and mention any

@@ -12,7 +12,7 @@ findings; it never guesses an answer for the author, and it changes nothing on G
 The checklist lives in `reference/issue-quality-checklist.md` (relative to this skill's directory); read it in full
 before Step 3. Item ids below (C1, D1, DOC2, S1...) refer to that file.
 
-## Step 1 - Resolve the input and fetch the issue
+## Step 1 — Resolve the input and fetch the issue
 
 Parse the arguments:
 
@@ -36,7 +36,7 @@ If `gh` is missing or unauthenticated, search for GitHub MCP tools (`ToolSearch`
 fields. Comments matter: a later comment may correct or contradict the body. If the issue is closed, note it and
 continue.
 
-## Step 2 - Detect the kind
+## Step 2 — Detect the kind
 
 Use the `kind` argument if given. Otherwise:
 
@@ -46,7 +46,7 @@ Use the `kind` argument if given. Otherwise:
 
 If it is genuinely ambiguous, choose `functional` and add a `doubt` finding asking which kind it is.
 
-## Step 3 - Run the checklist
+## Step 3 — Run the checklist
 
 Apply the checklist items for the detected kind: Common, plus Development (functional) or Documentation
 (documentation), plus Size signals.
@@ -64,7 +64,7 @@ Apply the checklist items for the detected kind: Common, plus Development (funct
 Verdict: `ready` when there are no findings; `needs-work` otherwise. Size signals alone never make a `needs-work`
 verdict; they go in `Suggestions:`.
 
-## Step 4 - Emit the result
+## Step 4 — Emit the result
 
 Print exactly this block, with nothing between its lines, using one `- [...]` line per finding (or `- none` when
 there are none) and `Suggestions: none` when there is nothing to suggest:
@@ -85,7 +85,7 @@ Rules for the block:
   `iru-split-github-issue`) invoked this one, return the block as the result with no reformatting, summarising or
   reordering, so the caller can parse it. Put any commentary after the block, never inside it.
 
-## Step 5 - Offer follow-up actions (existing issues only)
+## Step 5 — Offer follow-up actions (existing issues only)
 
 Skip this step for `draft:<path>` input and when the verdict is `ready`. When this skill was invoked by another
 skill, skip it as well (the caller applies resolutions).
@@ -100,7 +100,7 @@ Otherwise ask via `AskUserQuestion`:
 Execute only the option the user picked. If `gh` is unavailable, use GitHub MCP tools. Never comment or edit
 without this confirmation.
 
-## Step 6 - Report
+## Step 6 — Report
 
 Tell the user the verdict and the number of findings per class. For an existing issue say what, if anything, was
 posted or edited. If size signals fired, remind them `/iru-split-github-issue <n>` can split the issue. When the
