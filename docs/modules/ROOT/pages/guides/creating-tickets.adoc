@@ -203,6 +203,90 @@ a|
   MCP tool(s) for a Jira ticket, including the epic link/parent field if one was assigned
 |===
 
+[[detailed-spec-style-issues]]
+== Detailed, spec-style issues
+
+`iru-create-github-issue` is the **quick path**: a handful of questions, a short structured body, filed in a
+minute. When an issue needs to be written like a specification -- every requirement testable, every acceptance
+criterion traceable, gaps found before the issue exists -- use the **detailed path**, which is GitHub-only (there is
+no Jira counterpart) and made of three skills that also work on their own:
+
+[cols="2,5", options="header"]
+|===
+|Skill |What it does
+
+|xref:skills/iru-draft-github-issue.adoc[`iru-draft-github-issue`]
+|Interviews the user in small batches (after `iru-explore`), writes a complete draft to a local file, runs the
+review loop on it, offers a split when the issue is large, shows the final draft and creates the issue only after
+confirmation. Invoked as `/iru-draft-github-issue [functional\|documentation] [<short description>]`.
+
+|xref:skills/iru-review-github-issue.adoc[`iru-review-github-issue`]
+|Reviews an existing issue (`/iru-review-github-issue <issue-number>`) or a draft file
+(`/iru-review-github-issue draft:<path>`) against a quality checklist and returns classified findings -- **gap**,
+**pending**, **inconsistency** or **doubt** -- each with the exact question to ask. Read-only: for an existing
+issue it only posts a comment or edits the body after explicit confirmation.
+
+|xref:skills/iru-split-github-issue.adoc[`iru-split-github-issue`]
+|Assesses whether an issue is too large and, after the user confirms the proposal, splits it into sub-issues under
+a root issue, tracked by a milestone. Invoked as `/iru-split-github-issue <issue-number>` or
+`/iru-split-github-issue draft:<path>`.
+|===
+
+=== The two shapes
+
+[cols="1,4", options="header"]
+|===
+|Shape |Sections
+
+|Functional
+|Context, functional requirements, acceptance criteria, optional technical details (classes and lines to change,
+for highly technical tasks), out of scope, dependencies, and task details.
+
+|Documentation
+|Audience and the page structure to follow. Technical docs cover architecture, data model, use cases,
+configuration properties, metrics and algorithms; non-technical docs are a learning guide with pages or sections
+per concept. Every documentation issue requires bibliography or official-documentation links (the review fetches
+them to confirm they resolve) and Mermaid or SVG diagrams where they aid understanding, plus acceptance criteria.
+|===
+
+Missing, doubtful or inconsistent points are put to the user as questions, never silently guessed. The review first
+resolves what it can from the codebase and context, and only asks the user for the rest.
+
+[mermaid]
+....
+flowchart LR
+    A["/iru-draft-github-issue\ninterview + draft file"] --> B["iru-review-github-issue\n(loop, max 5 rounds)"]
+    B -- findings --> C["Resolve from codebase\nor ask the user"]
+    C --> B
+    B -- no gaps --> D{"Issue too large?"}
+    D -- yes --> E["iru-split-github-issue\nroot + sub-issues + milestone"]
+    D -- no --> F["Show draft, confirm"]
+    F --> G["gh issue create"]
+    E --> H(["Issues ready for\n/iru-issue or /iru-plan"])
+    G --> H
+....
+
+=== Splitting, milestones and dependencies
+
+A split proposes the sub-issues first and creates nothing until the user confirms. Size is judged from concrete
+signals: more than about seven acceptance criteria or requirements, more than one independently deliverable
+capability, more than one module or area touched, or an estimate of hard or above. A split always creates a
+**milestone** tracking all the sub-issues. Dependencies are recorded in three redundant places:
+
+* GitHub **sub-issues** link each child to the root issue.
+* Each sub-issue body has a `Blocked by: #N, #M` line (or `Blocked by: none`) and a `Parallel group: <n>` line. The
+  same group number means independent, so those issues can proceed in parallel.
+* The root issue carries an ordered table of groups (group, issues, parallelizable).
+
+Sub-issues are created in dependency order so `Blocked by` can reference real issue numbers.
+
+=== Quick path or detailed path?
+
+Use `iru-create-github-issue` (or `iru-create-jira-ticket`) for a simple, well-understood task. Use
+`iru-draft-github-issue` when the issue is a feature or documentation effort that needs full requirements and
+acceptance criteria, or may be large enough to split. `iru-review-github-issue` can also be run on its own on an
+existing issue before picking it up with `/iru-issue`.
+
 == Where this fits
 
 Filing a ticket this way is entirely optional — nothing in
@@ -218,6 +302,8 @@ information, rather than depending on whoever's filing it to remember what a wel
   one-diagram version of this same workflow, alongside the catalog's other common workflows.
 * xref:guides/extending-the-catalog.adoc#_customizing_jira_ticket_creation[Customizing Jira ticket creation] —
   how to extend `iru-jira-custom-context` with organization-specific questions.
+* xref:skills/iru-draft-github-issue.adoc[], xref:skills/iru-review-github-issue.adoc[],
+  xref:skills/iru-split-github-issue.adoc[] -- detail pages for the detailed, spec-style path.
 * xref:index.adoc#group-intake[Ticket Intake] — the purpose group these two skills belong to.
 * xref:skills/iru-create-github-issue.adoc[], xref:skills/iru-create-jira-ticket.adoc[],
   xref:skills/iru-jira-custom-context.adoc[], xref:skills/iru-explore.adoc[] — detail pages for every skill this

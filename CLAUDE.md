@@ -196,6 +196,12 @@ Skills compose into a few recurring pipelines rather than each standing alone:
   `yes`/`store` only when the project is open source.
 - **Ticket intake**: `iru-create-github-issue` / `iru-create-jira-ticket` ground a draft in the codebase via
   `iru-explore` before filing.
+  `iru-create-github-issue` stays the quick path. The detailed, spec-style path (GitHub only) is
+  `iru-draft-github-issue` (interview → functional or documentation draft) → `iru-review-github-issue` loop (classified
+  gap/pending/inconsistency/doubt findings, report-only on existing issues) → optional `iru-split-github-issue`.
+  A split creates a root issue, sub-issues (GitHub sub-issues API) and a milestone; dependencies are recorded as a
+  `Blocked by: #N` line and a `Parallel group: <n>` line in each sub-issue (same group = parallelizable) plus an
+  ordered group table in the root.
 - **Release**: `iru-release` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
   it discovers the installed `iru-<key>-bump-version` skills (`find .claude/skills -maxdepth 1 -type d -name
   "iru-*-bump-version"`, currently `java` (Java or Kotlin, Maven or Gradle), `typescript`, `react-native`
