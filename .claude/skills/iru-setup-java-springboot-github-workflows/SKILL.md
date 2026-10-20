@@ -41,7 +41,15 @@ description: >-
   `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks`, each `yes`/`no`, default `yes`,
   and the shared `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`),
   `sonar`, `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`) keys) when called from
-  `iru-setup-java-springboot`. Use whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of
+  `iru-setup-java-springboot`. When the manifest's `deploy.rolling.enabled` is true (or `rolling: yes` arrives in
+  `args`, with `deployment-strategy:` (`rolling`/`blue-green`/`canary`/`linear`), `advance:` (`auto`/`manual`/`hybrid`),
+  `steps:` and `bake-minutes:`) `deploy.yml` becomes a staged rollout — build image, deploy the new version at 0 %
+  traffic, smoke-test its candidate URL, shift traffic in steps with a metric gate and an automatic rollback — and a
+  `promote.yml` (`workflow_dispatch`, no GitHub Environment reviewers needed) lets a human advance, roll back or abort
+  the rollout on any GitHub plan, with the rollout state read from the cloud (ECS weighted target groups, Cloud Run
+  traffic tags, Argo Rollouts); `undeploy.yml` resets the split first. Rolling disabled or absent keeps today's
+  single-job `deploy.yml` unchanged and generates no `promote.yml`; with `ci: no` no workflows, hence no rolling. Use
+  whenever a Spring Boot service needs its CI/CD pipeline bootstrapped instead of
   hand-writing the YAML for testing, analysis, documentation publishing, deployment, teardown, and
   dependency/secret/code security scanning.
 model: sonnet
@@ -49,7 +57,7 @@ model: sonnet
 
 # Setup Java Spring Boot GitHub Workflows
 
-Generate three workflows for a Spring Boot service. This is deliberately a different pipeline from the
+Generate the workflows for a Spring Boot service (three, plus `promote.yml` when rolling deployments are enabled). This is deliberately a different pipeline from the
 library-oriented `iru-setup-java-github-workflows`: a service is not published to Maven Central and is not
 GPG-signed — it is built into a container image and deployed. The shared stages (test, analyse, Sonar, Antora,
 GitHub Pages) follow the same house pattern as that skill, so the two are recognisably related; the publish/sign/
@@ -58,7 +66,8 @@ sync stages are replaced by image build, OpenTofu apply, and teardown.
 | Workflow | Trigger | Does |
 |---|---|---|
 | `build.yml` | push to integration/main branch, and every pull request | build, unit tests, integration tests (only when `ci.tests: full`), static analysis, coverage, Sonar (when `sonar.mode` isn't `none`), docs; publishes Pages from the main branch only when `ci.pages: yes`, otherwise uploads the built docs as a workflow artifact |
-| `deploy.yml` | `workflow_dispatch` (environment input) and optionally on release published | build + push image, OIDC auth, `tofu apply`, smoke check |
+| `deploy.yml` | `workflow_dispatch` (environment input) and optionally on release published | build + push image, OIDC auth, `tofu apply`, smoke check — or, with rolling deployments, a staged rollout (Step 2b) |
+| `promote.yml` | `workflow_dispatch` (environment + target inputs); **only with rolling deployments** (not for `strategy: rolling`) | advance a rollout one step, or roll back / abort it (Step 2c) |
 | `undeploy.yml` | `workflow_dispatch` only, with typed confirmation | scale to zero, or `tofu destroy` an environment |
 | `security.yml` | push to main branch, every pull request, weekly schedule | dependency review, CodeQL, OSV-Scanner, gitleaks — each individually omittable |
 | `.github/dependabot.yml` | n/a (config, not a workflow) | grouped weekly updates for `maven`, `docker`, `github-actions`, and `npm` when a frontend is present |
@@ -91,6 +100,12 @@ on-existing: ask
   **`sonar`** (`cloud`/`self-hosted`/`none`) — overrides for the manifest's `visibility`, `ci.tests`, `ci.pages`,
   and `sonar.mode` (see "Resolving the CI choices" below). Normally absent: `iru-setup-java-springboot` records
   them in the manifest, which is enough.
+- **`rolling`** (`yes`/`no`), **`deployment-strategy`** (`rolling`/`blue-green`/`canary`/`linear`), **`advance`**
+  (`auto`/`manual`/`hybrid`), **`steps`** (comma list of percentages), **`bake-minutes`** — rolling deployments (see
+  "Rolling deployments" below). Normally absent: the manifest's `deploy.rolling` block is the source of truth when
+  `stack-file` is given; the `args` lines apply when there is no such block or when the caller passes them
+  explicitly. Absent or `rolling: no` ⇒ rolling is off and Steps 2b/2c, the `promote.yml` rows and every "rolling"
+  paragraph below are skipped.
 - **`mode`** (`new`/`existing`) — informational; this skill still decides scratch-vs-update per file from what's on
   disk, and `mode: existing` does **not** mean "update silently" — existing files are still asked about below.
 - **`on-existing`** (`ask`/`keep`/`update`/`replace`, default `ask`) — how to treat each workflow/config file that
@@ -143,6 +158,16 @@ Step 3b. Then survey what's actually on disk — the workflows must match realit
 - Whether `infra/envs/<env>/` directories exist and which environments they define. If `infra/` doesn't exist,
   still generate `deploy.yml`/`undeploy.yml` but mark the OpenTofu steps as requiring
   `/iru-setup-java-springboot-platform` first, and say so in the report.
+- **Rolling deployments.** Resolve `deploy.rolling` (`enabled`, `strategy`, `advance`, `steps`, `bakeMinutes`) as
+  described above and validate it like the orchestrator does (`steps` ascending, ending in 100, `blue-green` is
+  `[100]`; `rolling` with `manual`/`hybrid` is contradictory — ask which to change). Rolling is **forced off** when
+  `ci.enabled: false` (no workflows exist to drive it — say so). When on, survey `infra/envs/*` for the OpenTofu
+  outputs `rollout_candidate_url`, `rollout_gate`, `rollout_alarm_names`, `rollout_target_groups`, `rollout_name`
+  (grep the `outputs.tf` files): which runtime they imply (`cloudwatch` ⇒ ECS, `cloud-monitoring` ⇒ Cloud Run,
+  `prometheus` ⇒ Kubernetes) decides the rollout-functions block and the auth/kubeconfig steps in Step 2b. If they
+  are missing, still generate the workflows but mark the rollout steps as requiring
+  `/iru-setup-java-springboot-platform` (with `rolling: yes`) first and say so in the report. For `strategy:
+  rolling` only Step 2's single-job template (plus the settle step) is generated.
 - The branch model: run `git branch -a`, don't assume gitflow. Confirm the integration and main branch names.
 - Whether GitHub Environments already exist (`gh api repos/{owner}/{repo}/environments`) — `deploy.yml` and
   `undeploy.yml` depend on them for approval gates.
@@ -221,7 +246,16 @@ only and not written back unless the user agrees.
 ### Existing workflow files
 
 Say up front whether this run is **creating the workflows from scratch** (none of `build.yml`, `deploy.yml`,
-`undeploy.yml`, `security.yml`, `.github/dependabot.yml` exist) or **updating existing ones** (list which exist).
+`promote.yml`, `undeploy.yml`, `security.yml`, `.github/dependabot.yml` exist) or **updating existing ones** (list
+which exist), and **whether rolling deployments are on or off** (strategy, advance, steps, bake minutes when on) with
+the state of the two files it changes — `deploy.yml`: *absent*, *single-job* (today's template), or *staged*
+(contains `deploy-green`); `promote.yml`: *absent*, *present*, or *partial* (exists but does not match the current
+`steps`/`advance`/runtime). The usual Update / Keep as is / Replace / Stop prompt applies to `promote.yml` like any
+other file, with these rolling-specific warnings: switching `deploy.yml` between single-job and staged is a
+**behavioural change** (replace/update it only with an explicit yes — a rollout in flight must not be orphaned, so
+check the cloud split via `/iru-springboot-rolling-deployments`'s in-progress check first); a `promote.yml` found
+while rolling is off is *stale* (offer to remove it — never delete without confirmation); `promote.yml` carries
+the `target` options generated from `steps`, so a changed `steps` list makes an existing one *partial*.
 For each one that exists, warn and — unless `on-existing` is `keep`/`update`/`replace`, in which case apply it to
 every file without asking (still print the warning) — ask with `AskUserQuestion` (up to 4 files per call, one
 question each), stating concretely where the existing file contradicts this run's choices (e.g. "your current
@@ -1040,6 +1074,746 @@ with:
 - `IMAGE_REGISTRY` (the registry host, e.g. `ghcr.io` or `<account>.dkr.ecr.<region>.amazonaws.com`) is one more
   environment variable than the Maven variant needs — list it in Step 4's table only for the Gradle variant.
 
+## Step 2b — Rolling `deploy.yml` (only when rolling deployments are enabled)
+
+Generated **instead of** the single-job `deploy.yml` of Step 2 when rolling is enabled (`deploy.rolling.enabled: true`
+in the manifest, or `rolling: yes` in `args`) **and** `strategy` is `blue-green`, `canary` or `linear`. With rolling
+disabled or absent, Step 2's template is used byte-for-byte as written — nothing in this Step applies.
+
+Design (decided by the platform skill, repeated here because the workflows implement it): **the workflow drives the
+traffic shifting and the rollout state lives in the cloud** — never in GitHub (no artifacts, variables or run
+history are read back). Every run first asks the platform "is a rollout in progress, what is the current split?", so
+`deploy.yml`, `promote.yml` and `undeploy.yml` are stateless and safe to re-run. A new version ("green", the
+*candidate*) always deploys at **0 % production traffic**, is smoke-tested on its candidate URL, and is then shifted
+in steps while the previous version ("blue", the *stable* one) keeps running for rollback.
+
+`strategy: rolling` has no second environment and no traffic split. For it, generate Step 2's single-job template
+plus **one extra step after `Tofu apply`** that waits for the runtime's native rolling update to settle and fail the
+deploy if it does not — ECS: `aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"`
+(the deployment circuit breaker the platform skill enables rolls back on failure); Cloud Run: nothing extra (the
+revision only takes traffic once healthy); Kubernetes: `kubectl rollout status deployment/<name> --timeout=10m`. It
+generates **no `promote.yml`** (there is nothing to promote between) and `advance` is `auto`. Rollback is weaker: re-run
+`deploy.yml` with the previous `image_tag`. Say so in the report.
+
+### Contract with the platform skill
+
+The templates below rely on exactly this from `iru-setup-java-springboot-platform` (its "Rolling deployments"
+section); if the generated `infra/` disagrees, fix the mismatch in the generated workflows and report it:
+
+| Runtime | The workflow assumes |
+|---|---|
+| ECS Fargate | `tofu output -json rollout_target_groups` = `{"blue":{"name":…,"arn":…},"green":{…}}`; `rollout_alarm_names` = JSON list; slot services named `<ECS_SERVICE>-blue` / `<ECS_SERVICE>-green` in cluster `ECS_CLUSTER`; per-slot variables `image_tag_blue` / `image_tag_green`; the production listener is the only listener whose default action forwards to **both** target groups (the test listener forwards to green only) and has `ignore_changes` on its weights; the deploy role may also call `elasticloadbalancing:AddTags`, `RemoveTags`, `DescribeTags` on that listener (the workflow stores *which slot is the candidate* in a listener tag `rollout-candidate` — a 50/50 split cannot say which side is stable) |
+| Cloud Run | a service `CLOUD_RUN_SERVICE` whose `traffic` is pinned and `ignore_changes`-d, so a new revision gets 0 %; the deploy identity may update traffic and tags on that service; `image_tag` variable |
+| EKS / GKE Autopilot | `rollout_name` = an Argo `Rollout` in namespace `K8S_NAMESPACE` whose **first steps are `setWeight: 0` then `pause: {}`** (the new version is deployed at 0 %, and the first `promote` moves it to step 1) for `canary`, or `autoPromotionEnabled: false` for `blueGreen`; `image_tag` variable; for `auto`/`hybrid` an `AnalysisTemplate` referenced from the steps |
+
+### The rollout functions (runtime-specific, embedded in `deploy.yml` and `promote.yml` and `undeploy.yml`)
+
+Both workflows (and `undeploy.yml`) need the same logic, so each writes the same shell library to
+`$RUNNER_TEMP/rollout.sh` in a step called `Load rollout functions` and `source`s it. Use the block for the detected
+runtime and embed it **verbatim and identically** in every file. Shared contract of every block: `rollout_init`
+(read the state from the cloud), `rollout_active` (a rollout is in progress), `rollout_current` (candidate percent),
+`rollout_set <pct>`, `rollout_gate_ok`, `rollout_finalise`, `rollout_rollback` (restore 100 % stable, retire the
+candidate), `rollout_abort` (restore 100 % stable, leave the candidate running for debugging). The runtime-independent
+helpers `next_step` and `gate_wait` are identical everywhere and come first. The workflow passes `STEPS` (the
+manifest's steps, space-separated, e.g. `10 50 100`), `BAKE_MINUTES`, `ADVANCE` and `TF_DIR` as `env`.
+
+```bash
+set -euo pipefail
+
+# --- runtime independent -----------------------------------------------------------------------------------------
+# Smallest manifest step strictly greater than $1 (empty when $1 is already the last step).
+next_step() {
+  for s in $STEPS; do
+    if [ "$s" -gt "$1" ]; then echo "$s"; return; fi
+  done
+}
+
+# Hold the gate for BAKE_MINUTES: fail on the first breach, succeed only if it is still healthy at the end.
+gate_wait() {
+  local end=$(( $(date +%s) + BAKE_MINUTES * 60 ))
+  while [ "$(date +%s)" -lt "$end" ]; do
+    rollout_gate_ok || { echo "::error::Metric gate breached"; return 1; }
+    sleep 30
+  done
+  rollout_gate_ok
+}
+
+tfout() { tofu -chdir="$TF_DIR" output -json "$1"; }
+
+# True when the OpenTofu state has output $1, false when it does not. When the state itself cannot be read (backend,
+# lock or permission error) it fails the step instead, so such an error is never mistaken for "not deployed yet".
+has_output() {
+  local all
+  all="$(tofu -chdir="$TF_DIR" output -json)" || { echo "::error::Cannot read the OpenTofu outputs in $TF_DIR"; exit 1; }
+  jq -e --arg k "$1" 'has($k)' <<<"$all" >/dev/null
+}
+```
+
+**AWS — ECS Fargate** (needs `ECS_CLUSTER`, `ECS_SERVICE` environment variables):
+
+```bash
+# --- ECS Fargate: weighted target groups on the production ALB listener ------------------------------------------
+slot_arn() { if [ "$1" = blue ]; then echo "$BLUE_ARN"; else echo "$GREEN_ARN"; fi; }
+other_slot() { if [ "$1" = blue ]; then echo green; else echo blue; fi; }
+
+weight_of() {
+  aws elbv2 describe-listeners --listener-arns "$LISTENER" --output json |
+    jq -r --arg tg "$1" '[.Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[] | select(.TargetGroupArn == $tg) | .Weight][0] // 0'
+}
+
+rollout_init() {
+  TGS="$(tfout rollout_target_groups)"
+  ALARMS="$(tfout rollout_alarm_names)"
+  BLUE_ARN="$(jq -r .blue.arn <<<"$TGS")"
+  GREEN_ARN="$(jq -r .green.arn <<<"$TGS")"
+  local lb
+  lb="$(aws elbv2 describe-target-groups --target-group-arns "$BLUE_ARN" --query 'TargetGroups[0].LoadBalancerArns[0]' --output text)"
+  # The production listener is the one forwarding to BOTH target groups (the test listener forwards to green only).
+  LISTENER="$(aws elbv2 describe-listeners --load-balancer-arn "$lb" --output json |
+    jq -r --arg b "$BLUE_ARN" --arg g "$GREEN_ARN" '
+      [.Listeners[]
+       | select(([.DefaultActions[0].ForwardConfig.TargetGroups[]?.TargetGroupArn] | index($b)) != null
+            and ([.DefaultActions[0].ForwardConfig.TargetGroups[]?.TargetGroupArn] | index($g)) != null)
+       | .ListenerArn][0] // empty')"
+  [ -n "$LISTENER" ] || { echo "::error::Production listener not found"; return 1; }
+  CAND_SLOT="$(aws elbv2 describe-tags --resource-arns "$LISTENER" \
+    --query "TagDescriptions[0].Tags[?Key=='rollout-candidate'].Value | [0]" --output text)"
+  if [ "$CAND_SLOT" = None ]; then CAND_SLOT=""; fi
+  if [ -n "$CAND_SLOT" ]; then
+    STABLE_SLOT="$(other_slot "$CAND_SLOT")"
+  elif [ "$(weight_of "$BLUE_ARN")" -ge 50 ]; then
+    STABLE_SLOT=blue
+  else
+    STABLE_SLOT=green
+  fi
+  IDLE_SLOT="$(other_slot "$STABLE_SLOT")"
+}
+
+rollout_active() { [ -n "$CAND_SLOT" ]; }
+rollout_current() { if rollout_active; then weight_of "$(slot_arn "$CAND_SLOT")"; else echo 0; fi; }
+
+# Called by deploy.yml before it touches anything, so a second deploy cannot start while this one is unfinished.
+rollout_mark_candidate() {
+  CAND_SLOT="$IDLE_SLOT"
+  aws elbv2 add-tags --resource-arns "$LISTENER" --tags "Key=rollout-candidate,Value=$CAND_SLOT"
+}
+
+# Image tag a slot's ECS service is running now (the stable slot keeps its tag across the candidate's apply).
+slot_image_tag() {
+  local td
+  td="$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE-$1" --query 'services[0].taskDefinition' --output text)"
+  aws ecs describe-task-definition --task-definition "$td" --query 'taskDefinition.containerDefinitions[0].image' --output text | sed 's/.*://'
+}
+
+rollout_set() {
+  local p="$1"
+  aws elbv2 modify-listener --listener-arn "$LISTENER" --default-actions "$(jq -nc \
+    --arg c "$(slot_arn "$CAND_SLOT")" --arg s "$(slot_arn "$STABLE_SLOT")" --argjson p "$p" \
+    '[{Type: "forward", ForwardConfig: {TargetGroups: [{TargetGroupArn: $s, Weight: (100 - $p)}, {TargetGroupArn: $c, Weight: $p}]}}]')" >/dev/null
+}
+
+# Healthy = none of the alarms exported as rollout_alarm_names is in ALARM. INSUFFICIENT_DATA is reported but not a
+# breach (a candidate at a few percent may have no datapoints yet); the alarms should use treat_missing_data = notBreaching.
+rollout_gate_ok() {
+  local names state
+  names="$(jq -r '.[]' <<<"$ALARMS")"
+  # shellcheck disable=SC2086
+  state="$(aws cloudwatch describe-alarms --alarm-names $names --output json)"
+  if jq -e '[.MetricAlarms[] | select(.StateValue == "INSUFFICIENT_DATA")] | length > 0' <<<"$state" >/dev/null; then
+    echo "::warning::Some rollout alarms report INSUFFICIENT_DATA"
+  fi
+  ! jq -e '[.MetricAlarms[] | select(.StateValue == "ALARM")] | length > 0' <<<"$state" >/dev/null
+}
+
+scale_slot_down() { # scale slot $1 to zero and clear the marker
+  aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE-$1" --desired-count 0 >/dev/null
+  aws elbv2 remove-tags --resource-arns "$LISTENER" --tag-keys rollout-candidate
+}
+
+rollout_finalise() { # candidate is now 100 %: retire the old stable slot
+  rollout_set 100
+  scale_slot_down "$STABLE_SLOT"
+}
+
+rollout_rollback() {
+  rollout_set 0
+  scale_slot_down "$CAND_SLOT"
+}
+
+rollout_abort() {
+  rollout_set 0
+  aws elbv2 remove-tags --resource-arns "$LISTENER" --tag-keys rollout-candidate
+}
+```
+
+(`scale_slot_down` scales *the slot it is given* to zero and clears the `rollout-candidate` marker: the old stable slot at
+finalise, the candidate at rollback.)
+
+**Google Cloud — Cloud Run** (needs `CLOUD_RUN_SERVICE`; `GCP_REGION`, `GCP_PROJECT_ID`; optional `ERROR_RATE_MAX`,
+default `0.02`). State is two revision **tags**: `stable` on the revision serving production and `candidate` on the new one.
+
+```bash
+# --- Cloud Run: revision tags + traffic percentages ----------------------------------------------------------------
+run_describe() { gcloud run services describe "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --format=json; }
+
+rollout_init() {
+  local j
+  j="$(run_describe)"
+  CAND_REV="$(jq -r '[.status.traffic[]? | select(.tag == "candidate")][0].revisionName // empty' <<<"$j")"
+  STABLE_REV="$(jq -r '[.status.traffic[]? | select(.tag == "stable")][0].revisionName // empty' <<<"$j")"
+  if [ -z "$STABLE_REV" ]; then # first rollout after a plain deploy: the revision with 100 % is the stable one
+    STABLE_REV="$(jq -r '[.status.traffic[]? | select(.percent == 100)][0].revisionName // empty' <<<"$j")"
+  fi
+}
+
+rollout_active() { [ -n "$CAND_REV" ]; }
+rollout_current() { run_describe | jq -r '[.status.traffic[]? | select(.tag == "candidate")][0].percent // 0'; }
+rollout_candidate_url() { run_describe | jq -r '[.status.traffic[]? | select(.tag == "candidate")][0].url // empty'; }
+
+# deploy.yml, after `tofu apply` created the new revision at 0 %: tag stable + candidate.
+rollout_mark_candidate() {
+  CAND_REV="$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --format='value(status.latestCreatedRevisionName)')"
+  gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" \
+    --update-tags "stable=$STABLE_REV,candidate=$CAND_REV" >/dev/null
+}
+
+rollout_set() {
+  local p="$1"
+  if [ "$p" -ge 100 ]; then
+    gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --to-tags "candidate=100" >/dev/null
+  else
+    gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --to-tags "candidate=$p,stable=$((100 - p))" >/dev/null
+  fi
+}
+
+# Healthy = candidate 5xx ratio over the last 5 minutes <= ERROR_RATE_MAX (PromQL on Cloud Monitoring); no traffic = healthy.
+rollout_gate_ok() {
+  local q ratio
+  q="sum(rate(run_googleapis_com:request_count{monitored_resource=\"cloud_run_revision\",service_name=\"$CLOUD_RUN_SERVICE\",revision_name=\"$CAND_REV\",response_code_class=\"5xx\"}[5m])) / sum(rate(run_googleapis_com:request_count{monitored_resource=\"cloud_run_revision\",service_name=\"$CLOUD_RUN_SERVICE\",revision_name=\"$CAND_REV\"}[5m]))"
+  ratio="$(curl -fsS -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    --data-urlencode "query=$q" \
+    "https://monitoring.googleapis.com/v1/projects/$GCP_PROJECT_ID/location/global/prometheus/api/v1/query" |
+    jq -r '.data.result[0].value[1] // "0"')"
+  awk -v r="$ratio" -v m="${ERROR_RATE_MAX:-0.02}" 'BEGIN { exit !(r == "NaN" || r + 0 <= m + 0) }'
+}
+
+rollout_finalise() {
+  gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --to-revisions "$CAND_REV=100" >/dev/null
+  gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --remove-tags candidate,stable >/dev/null
+  gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --update-tags "stable=$CAND_REV" >/dev/null
+}
+
+rollout_rollback() {
+  gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --to-revisions "$STABLE_REV=100" >/dev/null
+  gcloud run services update-traffic "$CLOUD_RUN_SERVICE" --region "$GCP_REGION" --remove-tags candidate >/dev/null
+}
+
+rollout_abort() { rollout_rollback; }
+```
+
+**EKS / GKE Autopilot — Argo Rollouts** (needs `K8S_NAMESPACE`; the `kubectl-argo-rollouts` plugin is installed by a
+workflow step, see the templates). Percentages are derived from the `Rollout`'s `currentStepIndex`; the analysis
+(`AnalysisTemplate`) runs inside the cluster, so the gate is "the Rollout is not Degraded/aborted".
+
+```bash
+# --- Kubernetes: Argo Rollouts --------------------------------------------------------------------------------------
+rollout_init() {
+  ROLLOUT="$(tfout rollout_name | jq -r .)"
+  RJ="$(kubectl get rollout "$ROLLOUT" -n "$K8S_NAMESPACE" -o json)"
+}
+
+# In progress = paused (or progressing) at a step before the last one, or a blue/green preview waiting for promotion.
+rollout_active() {
+  RJ="$(kubectl get rollout "$ROLLOUT" -n "$K8S_NAMESPACE" -o json)"
+  jq -e '(.status.phase // "") as $p
+         | if .spec.strategy.blueGreen != null then $p == "Paused"
+           else ((.spec.strategy.canary.steps // []) | length) as $n
+                | ($p == "Paused" or $p == "Progressing") and ((.status.currentStepIndex // 0) < $n) end' <<<"$RJ" >/dev/null
+}
+
+rollout_current() {
+  RJ="$(kubectl get rollout "$ROLLOUT" -n "$K8S_NAMESPACE" -o json)"
+  jq -r 'if .spec.strategy.blueGreen != null then (if (.status.phase // "") == "Paused" then 0 else 100 end)
+         else ((.spec.strategy.canary.steps // []) as $s | (.status.currentStepIndex // 0) as $i
+               | if $i >= ($s | length) then 100 else ([$s[:$i][] | .setWeight | select(. != null)] | last // 0) end) end' <<<"$RJ"
+}
+
+# Move to <pct> by promoting step by step (each promote resumes the indefinite pause and stops at the next one).
+rollout_set() {
+  local p="$1" cur
+  if [ "$p" -ge 100 ]; then
+    kubectl argo rollouts promote "$ROLLOUT" -n "$K8S_NAMESPACE" --full
+    return
+  fi
+  # Only promote while the Rollout is Paused: promoting a running step would skip it (and its analysis). Give up after
+  # 15 minutes, or as soon as the Rollout degrades, rather than looping until the runner's time limit.
+  local deadline=$(( $(date +%s) + 900 ))
+  cur="$(rollout_current)"
+  while [ "$cur" -lt "$p" ]; do
+    rollout_gate_ok || { echo "::error::Rollout degraded or aborted at ${cur} %"; return 1; }
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      echo "::error::Rollout did not reach ${p} % within 15 minutes (still at ${cur} %)"
+      return 1
+    fi
+    if [ "$(jq -r '.status.phase // ""' <<<"$RJ")" = Paused ]; then
+      kubectl argo rollouts promote "$ROLLOUT" -n "$K8S_NAMESPACE"
+    fi
+    sleep 5
+    cur="$(rollout_current)"
+  done
+}
+
+rollout_gate_ok() {
+  RJ="$(kubectl get rollout "$ROLLOUT" -n "$K8S_NAMESPACE" -o json)"
+  jq -e '(.status.phase // "") != "Degraded" and ((.status.abort // false) | not)' <<<"$RJ" >/dev/null
+}
+
+rollout_finalise() { kubectl argo rollouts status "$ROLLOUT" -n "$K8S_NAMESPACE" --timeout 15m; }
+
+# `abort` returns traffic to the stable ReplicaSet and scales the new one down; the Rollout reads Degraded until a fixed
+# image is deployed (or `kubectl argo rollouts retry`). The next `tofu apply` re-applies the image in the state, so
+# fix forward or deploy the previous tag.
+rollout_rollback() { kubectl argo rollouts abort "$ROLLOUT" -n "$K8S_NAMESPACE"; }
+rollout_abort() { rollout_rollback; }
+```
+
+### The staged `deploy.yml`
+
+Maven shown; the Gradle variant swaps only the JDK/Gradle/tag/registry/image steps exactly as in Step 2's Gradle
+variant (and publishes the same `tag` job output). The AWS ECS runtime is shown; the other runtimes are the swaps
+listed under the template. `<…>` are filled from the survey and manifest; `STEPS`/`BAKE_MINUTES`/`ADVANCE`/
+`STRATEGY` are written as literals from `deploy.rolling` — they are not secrets.
+
+```yaml
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [ dev, prod ]        # from the infra/envs/* directories found in Step 0
+      image_tag:
+        description: Image tag to deploy (defaults to the commit SHA)
+        required: false
+        type: string
+
+concurrency:
+  # Shared with promote.yml and undeploy.yml: a deploy, a promotion and a teardown never interleave.
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  TF_DIR: infra/envs/${{ inputs.environment }}
+  STRATEGY: <canary>                  # deploy.rolling.strategy
+  ADVANCE: <hybrid>                   # deploy.rolling.advance
+  STEPS: "<10 50 100>"                # deploy.rolling.steps, space separated (blue-green: "100")
+  BAKE_MINUTES: "<10>"                # deploy.rolling.bakeMinutes
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+
+permissions:
+  contents: read
+  id-token: write        # required for OIDC; this is the whole reason no access key is needed
+  packages: write
+
+jobs:
+  build-image:
+    name: Build image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Refuse a production deploy from a non-main branch
+        if: inputs.environment == 'prod' && github.ref_name != '<main-branch>'
+        run: |
+          echo "::error::Production deploys must run from <main-branch>."
+          exit 1
+
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK <java-version>
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: <java-version>
+          cache: maven
+
+      - name: Resolve image tag
+        id: meta
+        env:
+          IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
+        run: echo "tag=${IMAGE_TAG_INPUT:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Build and push the container image
+        # Same image build as Step 2 (registry login rules included).
+        run: |
+          mvn -B -ntp -pl boot -am spring-boot:build-image -DskipTests \
+            -Dspring-boot.build-image.imageName=${{ vars.IMAGE_REPOSITORY }}:${{ steps.meta.outputs.tag }} \
+            -Dspring-boot.build-image.publish=true \
+            -Ddocker.publishRegistry.username=${{ secrets.REGISTRY_USERNAME }} \
+            -Ddocker.publishRegistry.password=${{ secrets.REGISTRY_PASSWORD }}
+
+  deploy-green:
+    name: Deploy new version at 0 % traffic
+    needs: build-image
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      first_deploy: ${{ steps.apply.outputs.first_deploy }}
+      candidate_url: ${{ steps.apply.outputs.candidate_url }}
+      # true once THIS run has marked a candidate; the rollback job only acts on a rollout this run started.
+      marked: ${{ steps.apply.outputs.marked }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v2
+
+      - name: Load rollout functions
+        run: |
+          cat > "$RUNNER_TEMP/rollout.sh" <<'ROLLOUT_EOF'
+          <the rollout functions block for the runtime, indented to this level>
+          ROLLOUT_EOF
+
+      - name: Tofu init
+        run: tofu -chdir="$TF_DIR" init
+
+      - name: Plan and apply the new version
+        id: apply
+        env:
+          TAG: ${{ needs.build-image.outputs.tag }}
+        run: |
+          source "$RUNNER_TEMP/rollout.sh"
+          # Only a state that genuinely lacks the rollout outputs is a first deploy; has_output fails the step on any
+          # error reading the state, so a lock or permission problem can never fall through to a 100 % apply.
+          if ! has_output rollout_target_groups; then
+            # First deploy of this environment: there is no stable version to keep, so apply everything at 100 %.
+            echo "first_deploy=true" >> "$GITHUB_OUTPUT"
+            tofu -chdir="$TF_DIR" plan -input=false -var="image_tag_blue=$TAG" -var="image_tag_green=$TAG" -out=tfplan
+            tofu -chdir="$TF_DIR" apply -input=false -auto-approve tfplan
+            exit 0
+          fi
+          echo "first_deploy=false" >> "$GITHUB_OUTPUT"
+          rollout_init
+          if rollout_active; then
+            echo "::error::A rollout is already in progress. Finish it with promote.yml (next / rollback / abort) first."
+            exit 1
+          fi
+          stable_tag="$(slot_image_tag "$STABLE_SLOT")"
+          # Mark the candidate BEFORE changing anything so a concurrent attempt is refused, and so a failed apply is rolled back.
+          rollout_mark_candidate
+          echo "marked=true" >> "$GITHUB_OUTPUT"
+          tofu -chdir="$TF_DIR" plan -input=false \
+            -var="image_tag_${STABLE_SLOT}=$stable_tag" -var="image_tag_${IDLE_SLOT}=$TAG" -out=tfplan
+          tofu -chdir="$TF_DIR" apply -input=false -auto-approve tfplan
+          # The idle slot is scaled to zero between rollouts: bring it to the stable slot's size and wait for it.
+          want="$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE-$STABLE_SLOT" --query 'services[0].desiredCount' --output text)"
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE-$IDLE_SLOT" --desired-count "$want" >/dev/null
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE-$IDLE_SLOT"
+          # Guard: the new version must NOT have traffic yet.
+          if [ "$(rollout_current)" != "0" ]; then
+            echo "::error::Candidate already receives traffic ($(rollout_current) %); aborting."
+            exit 1
+          fi
+          echo "candidate_url=$(tfout rollout_candidate_url | jq -r .)" >> "$GITHUB_OUTPUT"
+
+  smoke-candidate:
+    name: Smoke test the candidate
+    needs: deploy-green
+    if: needs.deploy-green.outputs.first_deploy != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Smoke check on the candidate URL
+        env:
+          CANDIDATE_URL: ${{ needs.deploy-green.outputs.candidate_url }}
+        run: |
+          # The candidate takes no production traffic; this is the only thing exercising it until the first shift.
+          for _ in $(seq 1 30); do
+            if curl -fsS "$CANDIDATE_URL" >/dev/null; then echo "Candidate healthy"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::Candidate did not become healthy within 5 minutes"
+          exit 1
+
+  shift:
+    name: Shift traffic
+    needs: [ build-image, deploy-green, smoke-candidate ]
+    if: needs.deploy-green.outputs.first_deploy != 'true'      # omit this whole job for advance: manual
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v2
+
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Load rollout functions
+        run: |
+          cat > "$RUNNER_TEMP/rollout.sh" <<'ROLLOUT_EOF'
+          <the same rollout functions block>
+          ROLLOUT_EOF
+
+      - name: Tofu init
+        run: tofu -chdir="$TF_DIR" init
+
+      - name: Shift to the first step and gate it
+        run: |
+          source "$RUNNER_TEMP/rollout.sh"
+          rollout_init
+          # advance: auto  -> walk every step, gating each one, then finalise.
+          # advance: hybrid-> dev behaves like auto; prod stops after the first gated step and waits for promote.yml.
+          walk_all=false
+          if [ "$ADVANCE" = auto ] || { [ "$ADVANCE" = hybrid ] && [ "${{ inputs.environment }}" != prod ]; }; then walk_all=true; fi
+          pct=0
+          while true; do
+            nxt="$(next_step "$pct")"
+            [ -n "$nxt" ] || break
+            rollout_set "$nxt"
+            pct="$nxt"
+            gate_wait
+            if [ "$walk_all" != true ]; then break; fi
+          done
+          if [ "$pct" -ge 100 ]; then
+            rollout_finalise
+            echo "### Rollout complete: 100 % on the new version" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### Rollout paused at ${pct} % — the metric gate passed"
+              echo "Run **promote.yml** for \`${{ inputs.environment }}\` with target \`next\` to continue, \`rollback\` to revert."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  rollback:
+    name: Roll back automatically
+    needs: [ build-image, deploy-green, smoke-candidate, shift ]
+    # A failed deploy, smoke test or gate returns 100 % to the previous version. Omit `shift` from needs for advance: manual.
+    # Only when this run marked the candidate: a deploy refused because another rollout is in progress (or one that failed
+    # before marking) must leave that rollout untouched.
+    if: ${{ always() && needs.deploy-green.outputs.marked == 'true' && (needs.deploy-green.result == 'failure' || needs.smoke-candidate.result == 'failure' || needs.shift.result == 'failure') }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v2
+
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Load rollout functions
+        run: |
+          cat > "$RUNNER_TEMP/rollout.sh" <<'ROLLOUT_EOF'
+          <the same rollout functions block>
+          ROLLOUT_EOF
+
+      - name: Tofu init
+        run: tofu -chdir="$TF_DIR" init
+
+      - name: Restore 100 % on the previous version
+        run: |
+          source "$RUNNER_TEMP/rollout.sh"
+          rollout_init
+          if rollout_active; then rollout_rollback; fi
+          echo "### Rolled back: 100 % on the previous version" >> "$GITHUB_STEP_SUMMARY"
+```
+
+Notes on the template, to apply when generating:
+
+- **`advance: manual`** — omit the `shift` job (and `shift` from `rollback`'s `needs`/`if`) and add a last job
+  `announce` (`needs: smoke-candidate`) that writes the candidate URL and "run **promote.yml** with target `next`" to
+  `$GITHUB_STEP_SUMMARY`. The run ends with the new version deployed at 0 %.
+- **`blue-green`** — `STEPS: "100"`: the shift is a single cutover. With `advance: hybrid` the human confirmation is
+  the whole point of the strategy, so on `prod` the cutover must wait for `promote.yml`: add
+  `&& inputs.environment != 'prod'` to the `shift` job's `if` and generate the `announce` job (as for `manual`) with
+  `if: inputs.environment == 'prod'`; `dev` auto-advances.
+- **First deploy** of an environment (no rollout outputs yet) is applied at 100 % and the staged jobs are skipped.
+- **Cloud Run** — auth with `google-github-actions/auth@v3` + `google-github-actions/setup-gcloud@v3`; env
+  `CLOUD_RUN_SERVICE`, `GCP_REGION`, `GCP_PROJECT_ID`, optional `ERROR_RATE_MAX` from `vars`; the `Plan and apply`
+  step passes `-var="image_tag=$TAG"` and detects a first deploy with `has_output rollout_candidate_url`; after
+  `apply` it calls `rollout_mark_candidate` (the revision exists only now) followed by `echo "marked=true" >>
+  "$GITHUB_OUTPUT"`, then `echo "candidate_url=$(rollout_candidate_url)"` (fall back to `tfout rollout_candidate_url`) and the same
+  0 % guard; there is no slot or ECS scaling code.
+- **EKS / GKE** — after cloud auth add `aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}"` /
+  `google-github-actions/get-gke-credentials@v3` (`cluster_name: ${{ vars.GKE_CLUSTER_NAME }}`), install the Argo
+  Rollouts kubectl plugin (a **pinned** release from `argoproj/argo-rollouts`, checksum-verified against the
+  release's `argo-rollouts-checksums.txt`; resolve the current version live), `-var="image_tag=$TAG"`, and in the
+  candidate smoke test use `kubectl run smoke --rm -i --restart=Never --image=curlimages/curl -n "$K8S_NAMESPACE" --
+  -fsS "$CANDIDATE_URL"` when the URL is cluster-internal (`*.svc.cluster.local`) because the runner cannot resolve it.
+  The Rollout deploys paused at its first step (0 %); `rollout_active` is then true until it is promoted to 100 %.
+  Detect a first deploy with `has_output rollout_name`, and write `marked=true` to `$GITHUB_OUTPUT` right after the
+  `apply` that starts the new Rollout revision.
+- **`marked`** must be written to `$GITHUB_OUTPUT` before any later command can fail: outputs written by a step that
+  then fails are still published, which is what lets `rollback` act on a failed apply but not on a refused deploy.
+- Untrusted inputs never reach a shell as `${{ … }}` text: `image_tag` and `target` go through `env`
+  (`IMAGE_TAG_INPUT`, `TAG`, `TARGET`); the only `${{ inputs.environment }}` inside scripts is a `choice` input, whose
+  value is limited to the generated option list. The Gradle variant keeps its `meta` step as in Step 2.
+
+## Step 2c — `promote.yml` (only when rolling deployments are enabled and `strategy` is not `rolling`)
+
+The human "this step is safe" signal. A separate `workflow_dispatch` workflow — **not** a GitHub Environment
+approval: required reviewers on private repositories need GitHub Enterprise, so they cannot be the mechanism on
+every plan, and a job waiting for approval would hold a runner open between steps. `promote.yml` is stateless: it
+reads the current split from the cloud, validates, moves one step, and ends.
+
+```yaml
+name: Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment whose rollout to advance
+        required: true
+        type: choice
+        options: [ dev, prod ]        # same list as deploy.yml
+      target:
+        description: next = the next step; a percentage = that step; rollback = back to 100 % on the previous version; abort = same, keeping the candidate for debugging
+        required: true
+        type: choice
+        default: next
+        options: [ next, "10", "50", "100", rollback, abort ]   # percentages = deploy.rolling.steps, in order
+
+concurrency:
+  group: deploy-${{ inputs.environment }}     # same group as deploy.yml and undeploy.yml
+  cancel-in-progress: false
+
+env:
+  TF_DIR: infra/envs/${{ inputs.environment }}
+  ADVANCE: <hybrid>
+  STEPS: "<10 50 100>"
+  BAKE_MINUTES: "<10>"
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  promote:
+    name: Promote ${{ inputs.environment }} (${{ inputs.target }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Refuse a production promotion from a non-main branch
+        if: inputs.environment == 'prod' && github.ref_name != '<main-branch>'
+        run: |
+          echo "::error::Production promotions must run from <main-branch>."
+          exit 1
+
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v2
+
+      - name: Load rollout functions
+        run: |
+          cat > "$RUNNER_TEMP/rollout.sh" <<'ROLLOUT_EOF'
+          <the same rollout functions block>
+          ROLLOUT_EOF
+
+      - name: Tofu init
+        run: tofu -chdir="$TF_DIR" init
+
+      - name: Advance, hold or revert the rollout
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          source "$RUNNER_TEMP/rollout.sh"
+          summary() { echo "$1" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          rollout_init
+
+          case "$TARGET" in
+            rollback|abort)
+              if ! rollout_active; then summary "No rollout in progress for ${{ inputs.environment }}; nothing to do."; exit 0; fi
+              "rollout_$TARGET"
+              summary "### ${TARGET^}: 100 % on the previous version (${{ inputs.environment }})"
+              exit 0 ;;
+          esac
+
+          if ! rollout_active; then
+            echo "::error::No rollout in progress for ${{ inputs.environment }}. Run deploy.yml first."
+            exit 1
+          fi
+          pct="$(rollout_current)"
+          nxt="$(next_step "$pct")"
+          if [ "$TARGET" = next ]; then target="$nxt"; else target="$TARGET"; fi
+          [ -n "$target" ] || { echo "::error::Already at the last step ($pct %)."; exit 1; }
+          case " $STEPS " in *" $target "*) ;; *) echo "::error::$target % is not one of the configured steps ($STEPS)."; exit 1 ;; esac
+          # Never skip past the configured steps: going forward is only allowed to the very next one.
+          if [ "$target" -gt "$pct" ] && [ "$target" != "$nxt" ]; then
+            echo "::error::Refusing to jump from $pct % to $target %; the next step is $nxt %."
+            exit 1
+          fi
+
+          # The previous step must have held its gate before anything moves forward (auto and hybrid).
+          if [ "$ADVANCE" != manual ] && [ "$target" -gt "$pct" ]; then
+            if ! rollout_gate_ok; then
+              rollout_rollback
+              summary "### Gate failing at ${pct} % — rolled back to 100 % on the previous version"
+              exit 1
+            fi
+          fi
+
+          rollout_set "$target"
+          # Hold the new step for the soak time; a breach rolls back automatically (auto and hybrid).
+          if [ "$ADVANCE" != manual ] && ! gate_wait; then
+            rollout_rollback
+            summary "### Gate breached at ${target} % — rolled back to 100 % on the previous version"
+            exit 1
+          fi
+          if [ "$target" -ge 100 ]; then
+            rollout_finalise
+            summary "### Rollout complete: 100 % on the new version (${{ inputs.environment }})"
+          else
+            summary "### Now at ${target} % (${{ inputs.environment }}) — run promote.yml again with target \`next\` when it looks safe"
+          fi
+```
+
+- The `target` options are generated from the manifest: `next`, every step as a quoted string, `rollback`, `abort`
+  (choice inputs are static, so a changed `steps` list means regenerating this file — that is what
+  `/iru-springboot-rolling-deployments` does).
+- Use the same cloud auth / kubeconfig / plugin steps as `deploy.yml` for the detected runtime (Cloud Run, EKS/GKE).
+  The `env:` block carries the same runtime variables as `deploy.yml`.
+- **Do not add `needs`-style approval or Environment reviewers here** — see Step 4's advice on who may dispatch it.
+
 ## Step 3 — `undeploy.yml`
 
 This workflow destroys things, so its guards are the feature, not the ceremony.
@@ -1119,6 +1893,31 @@ jobs:
         run: tofu apply -input=false -auto-approve tfdestroy
 ```
 
+**When rolling deployments are enabled** (and `strategy` is not `rolling`), change the template as follows — with
+rolling off it stays exactly as above:
+
+- It already shares `concurrency: deploy-${{ inputs.environment }}` with `deploy.yml`; `promote.yml` uses the same
+  group, so a teardown never interleaves with a deploy or a promotion.
+- Add the workflow-level `env:` block (`TF_DIR`, and the runtime variables `ECS_CLUSTER`/`ECS_SERVICE`, or
+  `CLOUD_RUN_SERVICE`/`GCP_REGION`/`GCP_PROJECT_ID`, or `K8S_NAMESPACE`) and, after `Tofu init`, two steps — `Load
+  rollout functions` (the same block as `deploy.yml`) and **`Reset the rollout to the stable version`**:
+  ```yaml
+      - name: Reset the rollout to the stable version
+        # Never tear down (or scale to zero) an environment that is mid-rollout without first returning all traffic to
+        # the stable version: otherwise the "stop" leaves a half-shifted split behind for the next deploy to trip over.
+        run: |
+          source "$RUNNER_TEMP/rollout.sh"
+          if has_output rollout_target_groups || has_output rollout_name || has_output rollout_gate; then
+            rollout_init
+            if rollout_active; then rollout_rollback; fi
+          fi
+  ```
+  (the guard makes it a no-op for an environment that was never deployed or has no rollout outputs, and fails the
+  teardown if the state cannot be read, rather than skipping the reset).
+- For `mode: stop`, scale **both** ECS slot services (`$ECS_SERVICE-blue`, `$ECS_SERVICE-green`) to zero as well as
+  passing the `desired_count`/`min_instances` variables the platform skill defines; on Cloud Run and Kubernetes the
+  existing variables already cover it.
+
 Additional guards to put in, and to explain in the report:
 
 - **`stop` is the default**, and it's reversible: re-running `deploy.yml` brings the service back with its data
@@ -1127,7 +1926,8 @@ Additional guards to put in, and to explain in the report:
   fails on them rather than silently deleting a production database. That means `destroy` on `prod` will error
   until someone deliberately removes the protection — which is correct behaviour, not a bug. Say this explicitly.
 - Recommend restricting `prod` in the Environment settings to required reviewers **and** a deployment branch rule,
-  so this workflow can't be dispatched from an arbitrary branch.
+  so this workflow can't be dispatched from an arbitrary branch (required reviewers on a *private* repository need
+  GitHub Enterprise; see "Who may promote" in Step 4).
 - Consider omitting `prod` from the `destroy` path entirely for a service holding real data, and say so as a
   recommendation.
 
@@ -1427,6 +2227,9 @@ Report these as a table; this skill cannot create them.
 | `IMAGE_REPOSITORY` | environment variable | the registry path the image is pushed to |
 | `IMAGE_REGISTRY` | environment variable | the registry host `docker/login-action` logs in to — **Gradle variant only**, and only while the `REGISTRY_*` secrets below are used |
 | `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` | environment secrets | registry push credentials — **only for a third-party registry**; omit both when the image goes to ECR or Artifact Registry through the OIDC-derived login (Step 2) |
+| `ECS_CLUSTER`, `ECS_SERVICE` | environment variables | **rolling, ECS only** — the cluster and the base service name (slot services are `<ECS_SERVICE>-blue` / `-green`); must match the platform skill's resources |
+| `CLOUD_RUN_SERVICE` | environment variable | **rolling, Cloud Run only** — the service whose revisions are tagged `stable`/`candidate`; reuses `GCP_PROJECT_ID`/`GCP_REGION`; optional `ERROR_RATE_MAX` (default `0.02`) tunes the 5xx gate |
+| `EKS_CLUSTER_NAME` or `GKE_CLUSTER_NAME`, `K8S_NAMESPACE` | environment variables | **rolling, Kubernetes only** — kubeconfig and the namespace of the Argo `Rollout` (its name comes from the `rollout_name` output) |
 | `<PROVIDER>_API_KEY` | environment secret | LLM provider key, if `stack.ai.enabled` — never in the repository |
 | third-party provider tokens (`MONGODB_ATLAS_*`, `CONFLUENT_CLOUD_*`, …) | environment secrets | needed by the OpenTofu providers for managed services outside the cloud account |
 
@@ -1440,7 +2243,20 @@ The Gradle variant adds no secret either: `gradle/actions/setup-gradle` and `dep
 there is no Develocity/Gradle account or access key involved. Kotlin itself (detekt, ktlint, Dokka) needs nothing.
 Also required, and easy to miss:
 
-- **A GitHub Environment per deployment environment**, with required reviewers on `prod`.
+- **A GitHub Environment per deployment environment**, with required reviewers on `prod` where the plan allows it
+  (public repositories, or GitHub Pro/Team/Enterprise on private ones — for private repositories on the lower plans
+  required reviewers are an Enterprise feature) and a **deployment branch rule on `prod`** limiting it to the main
+  branch. The rolling templates also refuse a `prod` run from any other branch themselves, but the branch rule is
+  the control that holds.
+- **Who may promote (rolling deployments only).** `promote.yml` is a `workflow_dispatch` workflow, so anyone with
+  **repository write access** can dispatch it — including `target: 100`, `rollback` and `abort` on `prod`. This is
+  deliberately **not** gated by Environment required reviewers (unavailable on private repositories below Enterprise,
+  and a job waiting for approval would hold a runner open between steps). Treat that as a **security finding to
+  state in the report**: the "this step is safe" signal is as trustworthy as your write-access list. Mitigate by
+  restricting `prod` with a deployment branch rule, a ruleset/CODEOWNERS on `.github/workflows/`, keeping write
+  access small, and — on a private Enterprise repository — adding required reviewers to the `prod` Environment (the
+  `promote` job already declares `environment:`, so it then pauses for approval with no template change). The metric
+  gate still runs in `promote.yml`, so a human cannot promote past a failing gate.
 - **GitHub Pages** configured to serve from the `gh-pages` branch (Settings → Pages), or the docs job publishes
   into a branch nobody reads — only when `ci.pages: yes`. For a private/internal repository that needs GitHub
   Pro, Team, or Enterprise Cloud, and the site is public unless Enterprise Cloud private Pages access control is
@@ -1491,6 +2307,13 @@ Also required, and easy to miss:
   a module-not-found error from `vite.generated.ts` (it imports compiled helpers under `<web-module>/target/`)
   that has nothing to do with the frontend tests — confirmed while writing `iru-setup-java-springboot-hilla`, and
   the single most likely way this ordering gets silently swapped in a future edit.
+- Rolling deployments: lint `deploy.yml` and `promote.yml` with `actionlint` the same way, run `bash -n` on the
+  embedded rollout-functions block for the runtime (it is a shell library — `shellcheck` it too when available), and
+  read `promote.yml`'s `target` options against the manifest's `steps`. Never trigger `deploy.yml`, `promote.yml` or
+  `undeploy.yml` as a test: the first real exercise should be a deploy to `dev` followed by `promote` steps and one
+  deliberate `rollback`, watched to completion. Anything that needs a live cloud (the PromQL query endpoint, ALB
+  listener discovery, `kubectl argo rollouts` semantics, the tag-based candidate marker) is **unverified** until that
+  `dev` rehearsal — report it as such.
 - Do **not** trigger `deploy.yml` or `undeploy.yml` as a test. Recommend instead: a dry run of `build.yml` by
   pushing to a throwaway branch with the trigger temporarily widened, and a first `deploy.yml` run against `dev`
   only, watched to completion.
@@ -1531,12 +2354,21 @@ standard runner, Code scanning or Dependency graph not yet enabled for `security
 missing `<web-module>/src/main/frontend/` (`frontend: hilla` but `iru-setup-java-springboot-hilla` hasn't run
 yet).
 
+Also report the rolling-deployment outcome: **on or off** (and why — `ci: no` forces off), the strategy, advance
+mode, `steps`/`bakeMinutes`, the runtime the rollout functions were generated for, the `deploy.yml` shape
+(single-job / staged) and the action taken, `promote.yml`'s action (**created / updated / replaced / kept as is /
+not generated** — `strategy: rolling` or rolling off — **/ removed**), the new environment variables from Step 4, any
+`rollout_*` output the platform skill has not produced yet, the "who may promote" security finding, and which parts
+could not be verified without a live cloud.
+
 Warn explicitly:
 
 - **Review all workflows before pushing.** `deploy.yml` and `undeploy.yml` change and destroy real
   infrastructure; a wrong environment name or a missing approval gate has immediate consequences.
 - **Configure required reviewers on `prod` before the workflows land on the main branch**, not after — until then,
-  anyone with write access can dispatch a production deploy or teardown.
+  anyone with write access can dispatch a production deploy or teardown. With rolling deployments that includes
+  `promote.yml`; on plans without Environment reviewers the deployment branch rule and the write-access list are the
+  only controls (Step 4, "Who may promote").
 - **Verify the OIDC trust policy is scoped to the repository *and* the environment.**
 - With `ci.tests: full`, integration tests need Docker on the runner; if the compose stack is too heavy for
   `ubuntu-latest`, the first `build.yml` run will fail on resource exhaustion rather than on a code defect — deal

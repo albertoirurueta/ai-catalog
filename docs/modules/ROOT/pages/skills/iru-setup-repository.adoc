@@ -172,6 +172,15 @@ Never asked here; forwarded only when supplied via `args` or pre-set by Step 1's
 orchestrator asks them.
 |Detected from the build (Kotlin Spring Boot build tool), else left to the orchestrator
 
+|`rolling-deployments`, `deployment-strategy`, `advance`
+|No
+|Spring Boot only, meaningful only with `ci: yes`: `rolling-deployments` is `yes`/`no`, `deployment-strategy` is
+`rolling`/`blue-green`/`canary`/`linear`, `advance` is `auto`/`manual`/`hybrid`. Blue/green rolling deployments are a
+stack-shape choice that `iru-setup-java-springboot` asks itself in its Step 3c, so they are never asked here; they are
+forwarded only when supplied via `args` (and never with `ci: no`, since rolling deployments need the generated
+workflows). See xref:skills/iru-springboot-rolling-deployments.adoc[].
+|Left to the orchestrator
+
 |`python-version`
 |No
 |Python version floor for the Python flavors. Never asked here; forwarded only when supplied via `args`, otherwise `iru-setup-python-repository` asks it.
@@ -267,7 +276,10 @@ Step 0 recognizes the key; dropped keys are listed in the final report.
   visibility; a `ci: no` note when workflows and the security block were skipped; any key that could not be
   forwarded; one consolidated secrets/environments table; and an explicit warning block (review every generated
   file; every listed secret and matching external account must already exist; which values were inferred rather
-  than asked).
+  than asked). For Spring Boot types it adds one line on rolling deployments as the orchestrator reported them:
+  enabled or not (with `ci: no`, "not offered - needs the workflows"), and when enabled the strategy, advance mode,
+  whether `promote.yml` was generated (a `rolling` strategy keeps the single-job `deploy.yml` and generates none),
+  and that `/iru-springboot-rolling-deployments enable|disable` switches it later.
 * When the detected or chosen type is `dotnet` (a plain .NET library or service — Windows desktop apps are `windows-app`, a .NET command-line tool is `cli-tool (dotnet)`, above; the .NET gate skills `iru-dotnet-test`/`-coverage`/`-code-quality`/`-docfx` and `iru-setup-antora`/`-changelog`/`-readme` can still be run individually), `rust`/`go` (a Rust crate or Go module that is not a command-line tool; the Rust/Go gate skills can still be run by hand), `php-library`, `python-library` (a plain Python package; the Python gate skills and individual repository-file skills can still be run by hand), `other` or otherwise unsupported: a plain report that no bootstrap orchestrator
   exists in this catalog for it, with no delegation attempted.
 
@@ -305,7 +317,9 @@ flowchart TD
   case:
 ** xref:skills/iru-setup-java-library-repository.adoc[] — for `java-library`.
 ** xref:skills/iru-setup-java-springboot.adoc[] — for `java-springboot`, `java-springboot-hilla`, `kotlin-springboot`,
-   `kotlin-springboot-hilla` (language, build tool and frontend asked by the orchestrator itself).
+   `kotlin-springboot-hilla` (language, build tool, frontend and, with `ci: yes`, blue/green rolling deployments
+   asked by the orchestrator itself; the `rolling-deployments`/`deployment-strategy`/`advance` keys are forwarded
+   only when supplied via `args`). Related: xref:skills/iru-springboot-rolling-deployments.adoc[].
 ** xref:skills/iru-setup-quarkus-repository.adoc[] — for `java-quarkus`, `kotlin-quarkus`.
 ** xref:skills/iru-setup-typescript-repository.adoc[] — for `typescript-library`, `react-web`, `nextjs`,
    `angular-web`, `nestjs`, `react-native-app` (with `toolchain: expo|metro`), `ionic-app` (via its own `flavor` arg).
