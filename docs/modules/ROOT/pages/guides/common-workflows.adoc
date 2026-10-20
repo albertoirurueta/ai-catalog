@@ -152,6 +152,13 @@ repository's actual label set or Jira project configuration rather than inventin
 for confirmation before anything is filed. See xref:guides/creating-tickets.adoc[] for the full breakdown of
 what's asked, how the draft is structured, and every skill involved.
 
+For a larger or more demanding issue there is a **detailed, spec-style path** (GitHub only):
+xref:skills/iru-draft-github-issue.adoc[`iru-draft-github-issue`] interviews the user, writes a complete functional
+or documentation draft, runs xref:skills/iru-review-github-issue.adoc[`iru-review-github-issue`] on it in a loop until
+no gaps remain, and offers xref:skills/iru-split-github-issue.adoc[`iru-split-github-issue`] when the issue is too
+large (sub-issues ordered by dependency, tracked by a milestone). `iru-create-github-issue` stays the quick path. See
+xref:guides/creating-tickets.adoc#detailed-spec-style-issues[Detailed, spec-style issues].
+
 Tickets can still be created manually — directly in GitHub or Jira, with no AI involvement at all — and nothing
 in the xref:guides/common-workflows.adoc#typical-development-cycle[typical development cycle] requires going through
 these skills first; `/iru-issue` and `/iru-plan` work the same way against a hand-written ticket, or even no ticket at
@@ -170,6 +177,8 @@ flowchart LR
     E -- declines --> F["Stop: draft kept,\nnothing filed"]
     E -- confirmed --> G["File via gh issue create\nor Jira MCP tools"]
     G --> H(["/iru-issue &amp;lt;id&amp;gt; or /iru-plan &amp;lt;id&amp;gt;\n(separate, later invocation)"])
+    X["/iru-draft-github-issue\n(detailed path)"] --> Y["iru-review-github-issue loop\n+ optional iru-split-github-issue"]
+    Y --> G
 ....
 
 [[bootstrapping-a-repository]]

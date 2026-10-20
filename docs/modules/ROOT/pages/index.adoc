@@ -274,6 +274,11 @@ features, and where the underlying models genuinely differ.
 |Runs .NET tests via dotnet test by selector, Windows-desktop aware, with a ui selector for FlaUI and Terminal.Gui UI tests, screenshots and accessibility.
 |xref:skills/iru-dotnet-test.adoc[]
 
+|`iru-draft-github-issue`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Interview the user and write a spec-style GitHub issue (functional or documentation), review it in a loop, offer a split, and file it after confirmation.
+|xref:skills/iru-draft-github-issue.adoc[]
+
 |`iru-explore`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |Read-only repository and ticket exploration that reports tech stack and a normalized Project type line.
@@ -613,6 +618,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Cuts a release_x.y.z branch from develop, delegates the version bump, drafts release notes and opens the release PR.
 |xref:skills/iru-release.adoc[]
+
+|`iru-review-github-issue`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Review a GitHub issue or draft against a quality checklist and return classified findings with the exact question for each.
+|xref:skills/iru-review-github-issue.adoc[]
 
 |`iru-rust-bump-version`
 |xref:index.adoc#group-rust[Rust Development Tooling]
@@ -998,6 +1008,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-windows-bootstrap[Windows Desktop Bootstrap]
 |Orchestrates a Windows desktop app repository: scaffold, Antora, gitignore, workflows, changelog, and README.
 |xref:skills/iru-setup-windows-repository.adoc[]
+
+|`iru-split-github-issue`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Split an oversized GitHub issue into dependency-ordered sub-issues under a root issue and milestone, after confirmation.
+|xref:skills/iru-split-github-issue.adoc[]
 
 |`iru-springboot-rolling-deployments`
 |xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
@@ -1548,6 +1563,12 @@ estimated difficulty folded into the draft.
 
 * xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] — drafts and files a GitHub issue via `gh issue
   create`, matched against this repository's actual label set.
+* xref:skills/iru-draft-github-issue.adoc[`iru-draft-github-issue`] — interviews the user and writes a detailed, spec-style
+  GitHub issue (functional or documentation), reviews it in a loop, offers a split, and files it after confirmation.
+* xref:skills/iru-review-github-issue.adoc[`iru-review-github-issue`] — reviews an existing issue or a draft against a
+  quality checklist and returns classified findings (gap, pending, inconsistency, doubt) with the question to ask.
+* xref:skills/iru-split-github-issue.adoc[`iru-split-github-issue`] — splits an oversized issue into dependency-ordered
+  sub-issues under a root issue and a milestone, after confirmation.
 * xref:skills/iru-create-jira-ticket.adoc[`iru-create-jira-ticket`] — drafts and files a Jira ticket via connected Jira
   MCP tools, resolving the target project and issue type against the real Jira configuration; supports an
   optional epic assignment and delegates to `iru-jira-custom-context` for organization-specific context.
@@ -2362,6 +2383,9 @@ flowchart LR
 
     subgraph GROUP_INTAKE["Ticket Intake"]
         CREATE_GITHUB_ISSUE["iru-create-github-issue"]
+        DRAFT_GITHUB_ISSUE["iru-draft-github-issue"]
+        REVIEW_GITHUB_ISSUE["iru-review-github-issue"]
+        SPLIT_GITHUB_ISSUE["iru-split-github-issue"]
         CREATE_JIRA_TICKET["iru-create-jira-ticket"]
         JIRA_CUSTOM_CONTEXT["iru-jira-custom-context"]
     end
@@ -2579,6 +2603,10 @@ flowchart LR
     CODE_ONE_TASK_GROUP --> TYPESCRIPT_CODE_ONE_TASK_GROUP
     CREATE_GITHUB_ISSUE --> EXPLORE
     CREATE_JIRA_TICKET --> EXPLORE
+    DRAFT_GITHUB_ISSUE --> EXPLORE
+    DRAFT_GITHUB_ISSUE --> REVIEW_GITHUB_ISSUE
+    DRAFT_GITHUB_ISSUE --> SPLIT_GITHUB_ISSUE
+    SPLIT_GITHUB_ISSUE --> REVIEW_GITHUB_ISSUE
     CREATE_JIRA_TICKET --> JIRA_CUSTOM_CONTEXT
     DATABASE_CODE_ONE_TASK --> EXPLORE
     DATABASE_CODE_ONE_TASK_GROUP --> DATABASE_CODE_ONE_TASK
@@ -3125,6 +3153,9 @@ flowchart LR
     C2 --> D["Draft (+ estimated difficulty)\n+ confirm + file\n(gh issue create /\nJira MCP tools)"]
     D --> E(["/iru-issue &amp;lt;id-or-key&amp;gt;\n(separate, later invocation)"])
 ....
+
+For a detailed, spec-style issue use `/iru-draft-github-issue`, which interviews the user, reviews the draft in a loop
+with `iru-review-github-issue` and offers `iru-split-github-issue` when the issue is too large.
 
 Both skills work the same way up to filing; which one to use depends on which tracker the repository/team
 uses. Neither is required — `/iru-issue` and `/iru-plan` work fine against a ticket filed by hand, or against no ticket

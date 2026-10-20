@@ -1,0 +1,97 @@
+= Split GitHub Issue
+:description: Assesses whether a GitHub issue is too large and splits it into dependency-ordered sub-issues under a root issue, tracked by a milestone, after confirmation.
+:keywords: iru-split-github-issue, claude code skill, github issue, sub-issues, milestone, issue dependencies, parallel groups, ticket intake
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Turn one oversized issue into a root issue plus small, self-sufficient sub-issues ordered by dependency.
+
+== Purpose
+
+`iru-split-github-issue` judges size from signals (many requirements, several independently deliverable capabilities,
+several areas touched, estimated difficulty hard or above), proposes slices that each own a subset of the
+requirements and acceptance criteria, computes `Blocked by` relations and parallel groups (same group means independent),
+reviews each sub-issue draft with xref:skills/iru-review-github-issue.adoc[], and creates a milestone, the sub-issues and
+GitHub's sub-issue links. Steps 1 to 5 are read-only: nothing is created, edited or linked before the explicit
+confirmation in Step 6. An existing issue stays the root and its original text is preserved. It stops on
+non-GitHub hosts.
+
+== Purpose group
+
+xref:index.adoc#group-intake[Ticket Intake]
+
+== Invocation
+
+[source]
+----
+/iru-split-github-issue <issue-number>
+/iru-split-github-issue draft:<path>
+/iru-split-github-issue <issue-number> force: yes
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`issue-number`
+|One of the two
+|An existing issue, which stays the root.
+|Asked if neither form is given.
+
+|`draft:<path>`
+|One of the two
+|A not-yet-created draft file; the root is created from it.
+|Asked if neither form is given.
+
+|`force`
+|No
+|`yes` skips the size assessment.
+|`no`
+|===
+
+== Outputs
+
+* After confirmation: a milestone, the root issue (new or rewritten), the sub-issues in dependency order, and
+  sub-issue links (a task list fallback when the endpoint is unavailable).
+* A report with the milestone and issue URLs and a table of sub-issues.
+* If the user declines, nothing is created and the proposal is the deliverable.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start"] --> B["Resolve input, GitHub check, fetch"]
+    B --> C{Large enough\nor force?}
+    C -- no --> Z["Stop: not large enough"]
+    C -- yes --> D["Propose sub-issues"]
+    D --> E["Compute dependencies and groups"]
+    E --> F["Review each draft\n(iru-review-github-issue)"]
+    F --> G{User confirms?}
+    G -- adjust --> D
+    G -- no --> Y["Stop: proposal is the deliverable"]
+    G -- yes --> H["Create milestone, root,\nsub-issues, links"]
+    H --> I["Report"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-review-github-issue.adoc[] - Step 5, to review each proposed sub-issue draft.
+
+=== Invoked by
+
+* xref:skills/iru-draft-github-issue.adoc[] - Step 8, when the drafted issue is too large.
+
+Otherwise a top-level entry point, run directly by a person.
+
+=== Related agents
+
+None; `iru-split-github-issue` does not spawn any agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-split-github-issue/SKILL.md[`SKILL.md` on GitHub] - the file this page was generated from.

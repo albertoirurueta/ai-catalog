@@ -1,0 +1,92 @@
+= Review GitHub Issue
+:description: Reviews a GitHub issue or local draft against a quality checklist and returns classified findings, each with the exact question to ask the user.
+:keywords: iru-review-github-issue, claude code skill, github issue, issue review, quality checklist, acceptance criteria, ticket intake, gap analysis
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Review one GitHub issue, or a local draft of one, for gaps before anyone builds from it.
+
+== Purpose
+
+`iru-review-github-issue` applies a quality checklist (common items, development items for functional issues or
+documentation items for documentation issues, plus size signals) and verifies technical details against the code and
+cited links by fetching them. Findings are classified as `gap`, `pending`, `inconsistency` or `doubt`, each with the exact
+question for the user, and the verdict is `ready` or `needs-work`. It never guesses an answer, and for an existing issue
+it only posts a comment or edits the body after explicit confirmation. It stops on non-GitHub hosts.
+
+== Purpose group
+
+xref:index.adoc#group-intake[Ticket Intake]
+
+== Invocation
+
+[source]
+----
+/iru-review-github-issue <issue-number>
+/iru-review-github-issue draft:<path>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`issue-number`
+|One of the two
+|An existing issue, optionally prefixed with `#`.
+|Asked if neither form is given.
+
+|`draft:<path>`
+|One of the two
+|A local Markdown file whose first line is `# <title>`.
+|Asked if neither form is given.
+
+|`kind`
+|No
+|`functional` or `documentation`, overriding auto-detection.
+|Auto-detected.
+|===
+
+== Outputs
+
+* A fixed result block (`Verdict`, `Kind`, `Findings`, `Suggestions`), returned unchanged to a calling skill.
+* For an existing issue only, and after explicit confirmation: a comment with the findings or an edited body.
+* A short report with the verdict, finding counts per class, and a hint about `/iru-split-github-issue` when size
+  signals fired.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Start"] --> B["Resolve input and fetch issue\n(GitHub host check for existing issues)"]
+    B --> C["Detect kind"]
+    C --> D["Run checklist\n(verify code and links)"]
+    D --> E["Emit result block"]
+    E --> F{Existing issue,\nneeds-work, direct call?}
+    F -- yes --> G["Ask: leave / comment / edit body"]
+    F -- no --> H["Report"]
+    G --> H
+....
+
+== Dependencies
+
+=== Invokes
+
+None.
+
+=== Invoked by
+
+* xref:skills/iru-draft-github-issue.adoc[] - Step 7, as its review loop.
+* xref:skills/iru-split-github-issue.adoc[] - Step 5, to review each proposed sub-issue draft.
+
+Otherwise a top-level entry point, run directly by a person before picking up an issue with `/iru-issue`.
+
+=== Related agents
+
+None; `iru-review-github-issue` does not spawn any agent.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-review-github-issue/SKILL.md[`SKILL.md` on GitHub] - the file this page was generated from.
