@@ -20,6 +20,8 @@ directly: every sub-skill re-derives what it needs from the files the previous s
 keeping six sub-skills' transcripts out of this orchestrator's context. `AskUserQuestion`s raised inside a sub-skill
 still reach the user — tell the executor to let them through rather than answering them itself.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 This skill runs stand-alone (`/iru-setup-quarkus-repository`) or from the `iru-setup-repository` front door, so parse

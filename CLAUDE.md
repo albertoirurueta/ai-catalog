@@ -43,14 +43,14 @@ marketplace once both sit side by side in a consuming repository's `.claude/skil
 added to this catalog must follow the same convention — see
 `docs/modules/ROOT/pages/guides/creating-skills-and-agents.adoc`.
 
-
+Each skill is a single, self-contained `SKILL.md` file: YAML frontmatter with `name` and `description` (the
 description is what Claude Code uses to decide when the skill is relevant — it should state the exact
 invocation form, e.g. `/iru-check-license` or `/iru-check-license <path-or-glob>`), followed by step-by-step
 instructions written for an agent to follow. A skill is adopted by another repository by copying its
 directory into that repository's `.claude/skills/` — skills must not assume they're running inside
 `ai-catalog` itself (they detect language/platform/tooling at runtime rather than hardcoding it).
 
-Skills compose into a few recurring pipelines rather than each standing alone:
+Conventions enforced by the tools (`tools/catalog-audit.py --check`):
 
 - **Descriptions** are budgeted: at most 1,024 characters (internal skills target 400), the invocation form within the
   first 200, values quoted in YAML. **Model tiers** (one `model:` per skill, enforced): `haiku` for mechanical gates,

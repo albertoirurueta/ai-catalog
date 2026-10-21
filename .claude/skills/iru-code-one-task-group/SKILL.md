@@ -31,8 +31,9 @@ differently):
 Find which `*-code-one-task-group` skills are actually installed. First read them from the skills available in
 this session (the names matching `iru-*-code-one-task-group`) — that works whether the skills were copied into
 `.claude/skills/` or installed as plugins, where that directory does not exist. When `.claude/skills` exists,
-corroborate with `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task-group"`. The skill (directory)
-name minus its `iru-` prefix and its `-code-one-task-group` suffix is the key (e.g. `iru-java-code-one-task-group` → `java`,
+corroborate with `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task-group"`. First drop any `<plugin>:`
+namespace the session listing shows in plugin mode (`iru-java:iru-java-code-one-task-group` → `iru-java-code-one-task-group`);
+the skill (directory) name minus its `iru-` prefix and its `-code-one-task-group` suffix is then the key (e.g. `iru-java-code-one-task-group` → `java`,
 `iru-typescript-code-one-task-group` → `typescript`, `iru-android-code-one-task-group` → `android`,
 `iru-swift-code-one-task-group` → `swift`, `iru-java-springboot-code-one-task-group` → `java-springboot`,
 `iru-kotlin-springboot-code-one-task-group` → `kotlin-springboot`, `iru-quarkus-code-one-task-group` → `quarkus`,

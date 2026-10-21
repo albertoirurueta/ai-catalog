@@ -16,6 +16,8 @@ untestable as written (Step 5) — which it reports rather than silently redesig
 `iru-kmp-code-one-task/reference/testing.md` and `mandatory-rules.md` when that skill is installed alongside — read
 them first if present.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Parse `args` as `key: value` lines if given (`scope: <module-or-class-list>`, `ios: yes|no`), and accept a bare

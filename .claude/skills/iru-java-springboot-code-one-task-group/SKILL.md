@@ -43,6 +43,8 @@ they shape the whole validation order:
 
 It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Read this before running anything container-backed
 
 Everything below assumes one rule, and getting it wrong corrupts results rather than merely slowing them down:

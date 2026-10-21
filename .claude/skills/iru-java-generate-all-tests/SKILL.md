@@ -14,6 +14,8 @@ language. It only adds/extends test code; it does not add license headers, Javad
 (those are separate skills' jobs), and it only touches production source code if a class is genuinely untestable
 as written (see Step 5) — which it reports rather than silently "fixing" by redesigning the class.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Confirm this is a Java/Maven project
 
 ```bash

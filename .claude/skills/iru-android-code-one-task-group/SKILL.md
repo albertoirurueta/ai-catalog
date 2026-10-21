@@ -18,6 +18,8 @@ plan already carries the hard reasoning; this skill drives execution of it.
 
 **Kotlin Multiplatform projects are out of scope.** If the Kotlin Multiplatform plugin (`kotlin("multiplatform")`/`org.jetbrains.kotlin.multiplatform`, directly or via a `libs.versions.toml` alias) is applied anywhere in the build — a KMP app's Android host module included — stop and hand the request to `iru-kmp-code-one-task-group` instead (or tell the caller to, when it isn't installed); this skill assumes a plain Android `lib`/`app` layout.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Detect the touched module(s), then capture one pre-change quality baseline for the whole bucket
 
 Before implementing anything, determine which Gradle module(s) this bucket's tasks touch — `lib`, `app`, or both —

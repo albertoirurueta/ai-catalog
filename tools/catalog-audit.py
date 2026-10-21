@@ -56,6 +56,8 @@ ASSET_PATH_RE = re.compile(
     r"(?<![\w/.\-])((?:templates|reference)/[\w.\-/{}<>*]*[\w}>*])"
 )
 AGENT_LOOKBACK = 4000
+AGENT_NAMES = ("iru-gate-runner", "iru-isolated-skill-executor")
+AGENT_MENTION_LOOKBACK = 250
 COVERAGE_HEADING_RE = re.compile(
     r"^#{1,6}\s+Acceptance criteria coverage\s*$", re.IGNORECASE
 )
@@ -129,26 +131,39 @@ def parse_frontmatter(text):
     return info, body
 
 
-def fenced_bytes(text):
-    """Number of UTF-8 bytes (newlines included) of the lines inside fenced code blocks, fences excluded."""
-    total = 0
+def fenced_lines(text):
+    """Yield ``(line_number, line, kind)`` for every line of ``text``: ``kind`` is ``"fence"`` for an opening or closing
+    fence line, ``"code"`` for a line inside a fenced code block and ``"text"`` otherwise. A block closes only on a line
+    that is exactly a fence of the same character and at least the opening length (an info string such as
+    ```` ```yaml ```` inside a longer-fenced example does not close it); an unterminated block runs to the end."""
     fence = None
-    for line in text.split("\n"):
+    for number, line in enumerate(text.split("\n"), 1):
         match = FENCE_RE.match(line)
         if fence is None:
             if match:
                 fence = match.group(1)
-            continue
-        if (
+                yield number, line, "fence"
+            else:
+                yield number, line, "text"
+        elif (
             match
             and match.group(1)[0] == fence[0]
             and len(match.group(1)) >= len(fence)
             and line.strip() == match.group(1)
         ):
             fence = None
-            continue
-        total += len(line.encode("utf-8")) + 1
-    return total
+            yield number, line, "fence"
+        else:
+            yield number, line, "code"
+
+
+def fenced_bytes(text):
+    """Number of UTF-8 bytes (newlines included) of the lines inside fenced code blocks, fences excluded."""
+    return sum(
+        len(line.encode("utf-8")) + 1
+        for _number, line, kind in fenced_lines(text)
+        if kind == "code"
+    )
 
 
 def first_invocation_position(description):
@@ -180,16 +195,23 @@ def skill_calls(text):
     for match in SKILL_CALL_RE.finditer(text):
         target = match.group(2).strip()
         escaped = bool(match.group(1))
+        in_agent_prompt = escaped or inside_agent_call(text, match.start())
+        near_agent_mention = any(
+            agent in text[max(0, match.start() - AGENT_MENTION_LOOKBACK) : match.start()]
+            for agent in AGENT_NAMES
+        )
         calls.append(
             {
                 "target": target,
                 "dynamic": NAME_RE.match(target) is None,
-                "in_agent_prompt": escaped or inside_agent_call(text, match.start()),
+                "in_agent_prompt": in_agent_prompt,
+                "near_agent_mention": near_agent_mention,
+                # A call is delegated (the callee runs in an agent's context, not the caller's) when it sits inside
+                # an Agent({...}) argument object, or when the prose just before it names a catalog agent: the
+                # generate-all-tests skills describe the dispatch in a sentence and write the Skill() call as the
+                # prompt it carries.
+                "delegated": in_agent_prompt or near_agent_mention,
                 "line": text.count("\n", 0, match.start()) + 1,
-                "near_agent_mention": any(
-                    agent in text[max(0, match.start() - 250) : match.start()]
-                    for agent in ("iru-gate-runner", "iru-isolated-skill-executor")
-                ),
             }
         )
     return calls
@@ -202,20 +224,16 @@ def asset_mentions(text):
     )
 
 
-def sha256_file(path):
-    digest = hashlib.sha256()
+def file_digests(path, algorithms=("sha256", "md5")):
+    """Hex digests of ``path`` for each algorithm, computed in one read: ``{"sha256": ..., "md5": ...}``."""
+    digests = [hashlib.new(algorithm) for algorithm in algorithms]
     with open(path, "rb") as handle:
         for chunk in iter(lambda: handle.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def md5_file(path):
-    digest = hashlib.md5()
-    with open(path, "rb") as handle:
-        for chunk in iter(lambda: handle.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+            for digest in digests:
+                digest.update(chunk)
+    return {
+        algorithm: digest.hexdigest() for algorithm, digest in zip(algorithms, digests)
+    }
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -290,8 +308,7 @@ def collect_skills(root):
                         "path": os.path.relpath(full, root),
                         "basename": filename,
                         "bytes": size,
-                        "sha256": sha256_file(full),
-                        "md5": md5_file(full),
+                        **file_digests(full),
                     }
                 )
         entry["support_files"] = support_count
@@ -390,7 +407,7 @@ def analyse(root, budgets=None):
                     }
                 )
                 continue
-            if call["in_agent_prompt"]:
+            if call["delegated"]:
                 continue
             if caller["model"] != callee["model"]:
                 cross_model.append(
@@ -400,7 +417,6 @@ def analyse(root, budgets=None):
                         "callee": target,
                         "callee_model": callee["model"],
                         "line": call["line"],
-                        "near_agent_mention": call["near_agent_mention"],
                         "accepted_reason": accepted_calls.get((caller_name, target)),
                     }
                 )
@@ -484,6 +500,7 @@ def public_view(data):
                     "dynamic": c["dynamic"],
                     "in_agent_prompt": c["in_agent_prompt"],
                     "near_agent_mention": c["near_agent_mention"],
+                    "delegated": c["delegated"],
                 }
                 for c in entry["skill_calls"]
             ]
@@ -612,7 +629,7 @@ def run_checks(data, budgets):
         if position is None:
             if name not in internal and skill["description_length"] > 0:
                 add(
-                    "warning",
+                    "error",
                     "invocation-form-missing",
                     name,
                     "description has no '/iru-' or 'Invoke as' form",
@@ -761,21 +778,9 @@ def run_checks(data, budgets):
 
 def plan_lines_outside_code(text):
     """Yield (line_number, text) for every plan line outside fenced code blocks, inline code spans removed."""
-    fence = None
-    for number, line in enumerate(text.split("\n"), 1):
-        match = FENCE_RE.match(line)
-        if fence is None and match:
-            fence = match.group(1)
-            continue
-        if fence is not None:
-            if (
-                match
-                and match.group(1)[0] == fence[0]
-                and len(match.group(1)) >= len(fence)
-            ):
-                fence = None
-            continue
-        yield number, INLINE_CODE_RE.sub("", line)
+    for number, line, kind in fenced_lines(text):
+        if kind == "text":
+            yield number, INLINE_CODE_RE.sub("", line)
 
 
 def coverage_rows(lines):
@@ -1098,9 +1103,11 @@ def markdown_report(data):
     out += [
         "## Inline cross-model `Skill()` calls",
         "",
-        "{} calls where caller and callee `model` differ and the call is not inside an `Agent({{...}})` prompt "
-        "({} recorded as accepted under `accepted_cross_model_calls` in the budgets file).".format(
-            len(cross), totals["inline_cross_model_calls_accepted"]
+        "{} calls where caller and callee `model` differ and the call is not delegated to an agent (inside an "
+        "`Agent({{...}})` prompt, or within {} characters after a mention of `iru-gate-runner` or "
+        "`iru-isolated-skill-executor`) ({} recorded as accepted under `accepted_cross_model_calls` in the budgets "
+        "file).".format(
+            len(cross), AGENT_MENTION_LOOKBACK, totals["inline_cross_model_calls_accepted"]
         ),
         "",
     ]
@@ -1113,7 +1120,6 @@ def markdown_report(data):
                     "Callee",
                     "Callee model",
                     "Line",
-                    "Near agent mention",
                     "Decision",
                 ],
                 [
@@ -1123,7 +1129,6 @@ def markdown_report(data):
                         c["callee"],
                         c["callee_model"] or "-",
                         c["line"],
-                        "yes" if c["near_agent_mention"] else "no",
                         "accepted: " + c["accepted_reason"]
                         if c.get("accepted_reason") is not None
                         else "open",
@@ -1131,11 +1136,6 @@ def markdown_report(data):
                     for c in cross
                 ],
                 align_right=(4,),
-            ),
-            "",
-            (
-                "`Near agent mention = yes` means the 250 characters before the call name `iru-gate-runner` or "
-                "`iru-isolated-skill-executor` in prose: likely already delegated, review by hand."
             ),
             "",
         ]

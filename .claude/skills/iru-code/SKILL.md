@@ -56,15 +56,19 @@ into task groups each marked `Parallelizable: yes`/`Parallelizable: no`. Track c
 - Treat any task or sub-task whose checkbox is already `[x]` (from a prior run of this skill) as already done —
   this makes the skill resumable across interrupted runs. A group where every task is already `[x]` is itself
   done; skip it entirely in Step 4.
-- Scan the whole plan for the literal text `[NEEDS CLARIFICATION` (the marker `iru-plan` persists when it could not
-  ask, in the form `[NEEDS CLARIFICATION: <question> — options: <a> | <b>; recommended: <a>]`, also listed under
-  `Open clarifications:` in the Task summary). **No implementation starts on an unresolved marker.** If any
-  remain, list each one with the task it blocks and ask the user to resolve them via `AskUserQuestion` — one
-  question per marker, the recorded recommended option first. Apply each answer to the plan in place: replace the
-  marker with the chosen decision, adjust the affected tasks if the decision changes them, remove it from the
-  `Open clarifications:` list (which reads `Open clarifications: none` once empty), and save the file; only then
-  continue. If the user declines, or no one can be asked (an unattended run), stop per Step 6's interrupt rules,
-  leaving the plan untouched, and report the markers that are still open.
+- Scan the whole plan for the literal text `[NEEDS CLARIFICATION` outside inline code spans and fenced code blocks
+  (the same rule as `catalog-audit.py --plan`, so a plan that merely documents the syntax in backticks is not
+  blocked). It is the marker `iru-plan` persists when it could not ask, in the form
+  `[NEEDS CLARIFICATION: <question> — options: <a> | <b>; recommended: <a>]`, written on the task it blocks and
+  repeated verbatim under `Open clarifications:` in the Task summary. **No implementation starts on an unresolved
+  marker.** If any remain, list each one with the task it blocks and ask the user to resolve them via
+  `AskUserQuestion` — one question per distinct marker (the `Open clarifications:` entries repeat the task markers,
+  so never ask twice), the recorded recommended option first. Apply each answer to the plan in place: replace the
+  marker (both copies) with the chosen decision, adjust the affected tasks if the decision changes them, remove it
+  from the `Open clarifications:` list (which reads `Open clarifications: none` once empty), and save the file; only
+  then continue. If the user declines some or all of them, or no one can be asked (an unattended run), the answers
+  already given are applied and saved as above, only the declined markers stay open: stop per Step 6's interrupt
+  rules and report the markers that are still open.
 - Check that the plan has the `## Acceptance criteria coverage` section (a table mapping each criterion to the
   tasks that cover it). If it is absent — a plan written by an older `iru-plan` — warn the user once that the
   coverage check in Step 7 will be skipped, and continue; this keeps older plans executable.

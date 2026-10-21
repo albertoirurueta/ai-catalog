@@ -11,6 +11,8 @@ update every place that names the current release/pre-release version, draft the
 pull request. This mirrors the repository's existing release history (`release_1.0.0` … `release_1.3.0`, each a PR
 into `main`) — follow that convention unless the user says otherwise.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Verify this is being run from `develop`
 
 This is a precondition and must be checked before anything else in this skill, including reading versions or
@@ -66,8 +68,9 @@ touching any file.
   ```bash
   find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"
   ```
-  The key is each matching skill's name with the `iru-` prefix and `-bump-version` suffix stripped (e.g.
-  `iru-java-bump-version` → `java`). Match the detected ecosystem's key against what's actually installed.
+  First drop any `<plugin>:` namespace the session listing shows in plugin mode (`iru-java:iru-java-bump-version` →
+  `iru-java-bump-version`); the key is then each matching skill's name with the `iru-` prefix and `-bump-version` suffix
+  stripped (e.g. `iru-java-bump-version` → `java`). Match the detected ecosystem's key against what's actually installed.
   - **Match found**: read that skill's own `SKILL.md` and apply its documented "read the current version"
     mechanism directly to obtain the current value — every `iru-<key>-bump-version` skill in this catalog
     documents locating and reading the current version as the very first thing it does before writing anything
@@ -94,7 +97,7 @@ touching any file.
     `package.json`) and what its pre-release suffix convention is — don't guess a bump-version skill into
     existence, and don't fall back to editing that file directly either at this point. Note in the final report
     (Step 12) that the version bump in Step 6 will need to be done by hand, since no matching
-    `iru-<key>-bump-version` skill is installed in this repository's `.claude/skills/`.
+    `iru-<key>-bump-version` skill is installed (neither in this repository's `.claude/skills/` nor as a plugin).
 - The current version **must be a pre-release per that ecosystem's convention** (e.g. ends in `-SNAPSHOT` for
   Java/Android, `-dev.N` for npm, `.devN` for Python) — if it isn't, tell the user there's nothing to release and stop. This check
   doesn't apply the same way to a Swift library, which has no in-tree pre-release marker at all: its "current

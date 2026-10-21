@@ -24,6 +24,8 @@ completion summary needs to flow back, keeping all six sub-skills' full transcri
 very long template listings) out of this orchestrator's own context. Every sub-agent is launched with
 `run_in_background: false` — each step depends on the previous one's files being on disk.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 This skill can be invoked stand-alone (`/iru-setup-android-repository`) or driven by another orchestrator (the

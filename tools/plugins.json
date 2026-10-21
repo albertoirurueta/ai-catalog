@@ -203,10 +203,6 @@
       "skills": [
         "iru-kmp-*",
         "iru-setup-kmp-*"
-      ],
-      "depends_on": [
-        "iru-android",
-        "iru-swift"
       ]
     },
     {

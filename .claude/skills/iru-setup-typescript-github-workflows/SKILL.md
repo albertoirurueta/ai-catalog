@@ -604,11 +604,13 @@ Notes specific to this template: `reference/notes-release-nestjs-nextjs-server.m
 
 Template: `templates/react-native-expo-eas/.github/workflows/release.yml` — read it in full before filling placeholders
 
+Notes specific to both `toolchain: expo` variants: `reference/notes-release-react-native-expo.md` — read it in full together with the template.
+
 ### `release.yml` template — `react-native` flavor, `toolchain: expo`, `native-builds: local`
 
 Template: `templates/react-native-expo-local/.github/workflows/release.yml` — read it in full before filling placeholders
 
-Notes specific to this template: `reference/notes-release-react-native-expo.md` — read it in full together with the template.
+Notes specific to both `toolchain: expo` variants: `reference/notes-release-react-native-expo.md` — read it in full together with the template.
 
 ### `release.yml` template — `react-native` flavor, `toolchain: metro`
 

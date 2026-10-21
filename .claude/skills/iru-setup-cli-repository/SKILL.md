@@ -37,6 +37,8 @@ tool is equally usable by a person, a script, and an AI agent.
 Scope: a single command-line tool (one binary) per repository. A library without a binary, a service, or a desktop
 app is out of scope — point the user at `/iru-setup-repository`.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Invoked stand-alone (`/iru-setup-cli-repository`) or by the catalog's `iru-setup-repository` front door (project

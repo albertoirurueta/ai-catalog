@@ -28,6 +28,8 @@ Scope: a **macOS-only** desktop app. A multi-platform Apple app (iOS + macOS, �
 and cross-platform desktop stacks (Electron, Tauri, Compose Multiplatform Desktop) are not scaffolded — mention them
 only if asked.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Invoked stand-alone (`/iru-setup-macos-repository`) or by the catalog's `iru-setup-repository` front door (project

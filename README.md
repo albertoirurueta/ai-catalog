@@ -43,7 +43,11 @@ claude plugin marketplace add albertoirurueta/ai-catalog
 
 In plugin mode a skill is also reachable under its namespace (`/iru-java:iru-java-test`); the bare `/iru-java-test` keeps
 working. Agents are dispatched as `iru-core:iru-gate-runner` (and likewise for the other two), and the skills explain
-that rule. `claude -p` needs `--allowedTools=Skill` to run skills that declare `allowed-tools`.
+that rule. `iru-core` alone is not enough for `/iru-setup-repository` and `/iru-code`: they hand off to the stack plugin
+of the detected project type (`iru-setup-java-library-repository`, `iru-java-code-one-task-group`, and so on) and only
+report the missing skill when it is absent, so install the matching stack plugin too. `claude -p` needs
+`--allowedTools=Skill` to run skills that declare `allowed-tools`, and in plugin mode also `--add-dir <plugin directory>`
+(the cached checkout under `~/.claude/plugins/`) so the skill may read its own `templates/` and `reference/` files.
 
 **By copying.** Copy a skill's directory into that repository's `.claude/skills/`; this still works because every skill
 keeps its templates and references under its own directory:

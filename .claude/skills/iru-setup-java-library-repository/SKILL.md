@@ -21,6 +21,8 @@ just written to (as each step below notes), so this orchestrator only ever needs
 orchestrator's own context. Without this, all six sub-skills' full transcripts would accumulate in one
 conversation over the course of a single bootstrap run.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 This skill can be invoked stand-alone (`/iru-setup-java-library-repository`) or driven by another orchestrator, so

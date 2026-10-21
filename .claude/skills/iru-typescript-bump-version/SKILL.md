@@ -34,7 +34,8 @@ output) or a bare React Native CLI app on the Metro toolchain — and the versio
 `package.json`'s: it's `app.json`/`app.config.*` `expo.version` (expo) or `versionName`/`versionCode` in
 `android/app/build.gradle` and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in `ios/<App>.xcodeproj` (metro).
 
-- **`iru-react-native-bump-version` installed** (listed among the skills available in this session — which also
+- **`iru-react-native-bump-version` installed** (listed among the skills available in this session, bare or under a
+  `<plugin>:` namespace such as `iru-react-native:iru-react-native-bump-version` — which also
   holds when the catalog is installed as plugins and `.claude/skills` does not exist; when it does exist,
   corroborate with `find .claude/skills -maxdepth 1 -type d -name "iru-react-native-bump-version"`, run from the
   repository root): invoke it with exactly the arguments this skill

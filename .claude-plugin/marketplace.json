@@ -350,9 +350,7 @@
       "source": "./",
       "strict": false,
       "dependencies": [
-        "iru-core",
-        "iru-android",
-        "iru-swift"
+        "iru-core"
       ],
       "skills": [
         "./.claude/skills/iru-kmp-bump-version",

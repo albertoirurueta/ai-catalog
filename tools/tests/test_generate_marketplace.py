@@ -416,6 +416,22 @@ class BuildAndMainTests(MarketplaceTestCase):
         self.assertEqual(status, 1)
         self.assertIn("is stale", err)
 
+    def test_check_ignores_the_release_version(self):
+        self.standard_tree()
+        self.write("CHANGELOG.md", "## [Unreleased]\n\n## [2.0.0] - 2026-02-02\n")
+        self.run_main("--owner", "X")
+        self.write("CHANGELOG.md", "## [Unreleased]\n\n## [2.1.0] - 2026-03-03\n\n## [2.0.0] - 2026-02-02\n")
+        status, out, err = self.run_main("--check", "--no-validate", "--owner", "X")
+        self.assertEqual(status, 0)
+        self.assertIn("up to date", out)
+        self.assertIn("only the release version differs", err)
+        self.assertIn("2.0.0", err)
+        self.assertIn("2.1.0", err)
+        self.assertEqual(
+            gen.without_version({"metadata": {"version": "1"}, "plugins": [{"name": "p", "version": "1"}]}),
+            {"plugins": [{"name": "p"}]},
+        )
+
     def test_generation_problems_exit_one(self):
         self.standard_tree()
         self.skill("orphan")

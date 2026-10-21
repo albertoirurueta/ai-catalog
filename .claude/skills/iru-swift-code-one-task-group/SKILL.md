@@ -15,6 +15,8 @@ shape, but built on `iru-swift-code-quality`, `iru-swift-test`, `iru-swift-cover
 aware that an app target's test/coverage/full-suite run needs a Simulator that only one run may drive at a time.
 It uses a medium model on purpose: the plan already carries the hard reasoning; this skill drives execution of it.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Detect the project shape and touched target(s), then capture one pre-change quality baseline
 
 Before implementing anything, detect the project shape once, the same way `iru-swift-code-one-task`'s own Step 1

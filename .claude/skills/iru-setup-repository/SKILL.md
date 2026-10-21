@@ -15,6 +15,8 @@ slug, etc.) and its own stack-shape questions (JVM language/build tool/layout/fr
 PHP version floor, Python version/database/ORM/API, Kotlin Multiplatform UI approach, desktop UI framework and
 MVVM/MVC architecture, a command-line tool's terminal UI and package channels, ...) and does the actual scaffolding.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 This skill is always the entry point (nothing else in this catalog orchestrates it), but it can still be re-invoked

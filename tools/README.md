@@ -37,7 +37,7 @@ python3 tools/catalog-audit.py --check
 
 Violations go to stderr, one per line (`ERROR [rule] subject: message`), followed by a count. Only errors change
 the exit status; warnings are informational. Typical rules: `description-max`, `invocation-form-position`,
-`frontmatter-parse`, `skill-lines-max`, `agent-model-missing`, `shared-file-drift`, `skill-target-missing`, `asset-path-missing`, `template-unreferenced`. Run it
+`invocation-form-missing` (an error for every skill not listed in `internal_skills`), `frontmatter-parse`, `skill-lines-max`, `agent-model-missing`, `shared-file-drift`, `skill-target-missing`, `asset-path-missing`, `template-unreferenced`. Run it
 before opening a pull request that touches a skill or agent.
 
 ### Template and reference paths
@@ -108,7 +108,10 @@ not part of the graph), and when the dependency graph has a cycle.
 `claude plugin validate <root>` when the `claude` CLI is on `PATH` (and prints a note when it is not). It compares against the
 *committed* owner so the result does not depend on the contributor's `git config`; when generating, the owner comes from
 `--owner`, else `git config user.name`/`user.email`, else `gh api user`, else the owner already in the file. The `version`
-is the newest released `## [x.y.z]` heading of `CHANGELOG.md` (omitted while only `[Unreleased]` exists).
+is the newest released `## [x.y.z]` heading of `CHANGELOG.md` (omitted while only `[Unreleased]` exists). `--check`
+ignores that version (`metadata.version` and each plugin's `version`) when comparing, so a release that adds a heading
+does not make the committed file stale on its own: it prints a note naming both versions, and the next plain run of the
+script refreshes the file.
 
 Run the script after adding, removing or renaming a skill or agent (a new skill must also be added to a plugin in
 `plugins.json`), then also run `claude plugin validate .` and `claude plugin validate . --strict`.
@@ -139,7 +142,7 @@ The thresholds `--check` enforces:
 | `internal_skills` | skills only ever invoked by other catalog skills through `Skill()` |
 | `inline_cross_model_level` | `warning` or `error` for inline cross-model `Skill()` calls |
 | `asset_path_ignore` | per skill, `templates/...` or `reference/...` paths its `SKILL.md` mentions that live in the target repository, not in the skill (exempt from `asset-path-missing`) |
-| `accepted_cross_model_calls` | `{caller, callee, reason}` entries for inline cross-model `Skill()` calls that were reviewed and kept on purpose; the report shows the reason and `--check` stops warning about them |
+| `accepted_cross_model_calls` | `{caller, callee, reason}` entries for inline cross-model `Skill()` calls that were reviewed and kept on purpose; the report shows the reason and `--check` stops warning about them. A call inside an `Agent({...})` prompt, or within 250 characters after a mention of `iru-gate-runner` or `iru-isolated-skill-executor`, counts as delegated and is not reported at all |
 | `external_skills` | `Skill()` targets that live outside this catalog (for example Claude Code's built-in `code-review`) and are not reported as missing |
 
 `internal_skills` holds every `*-code-one-task`, `*-code-one-task-group`, `*-test`, `*-coverage`,

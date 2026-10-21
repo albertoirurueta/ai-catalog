@@ -14,6 +14,8 @@ per-task validation used to spend redundantly. It is the Java/Maven counterpart 
 same shape, but built on `iru-java-code-quality`, `iru-java-test`, `iru-java-coverage`, and `iru-java-javadoc`. It uses a medium
 model on purpose: the plan already carries the hard reasoning; this skill drives execution of it.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Capture one pre-change quality baseline for the whole bucket
 
 Before implementing anything, collect the set of class(es) every task in this bucket is expected to touch (from

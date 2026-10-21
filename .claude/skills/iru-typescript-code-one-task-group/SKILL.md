@@ -15,6 +15,8 @@ catalog's per-task validation used to spend redundantly. It is the npm/TypeScrip
 `iru-typescript-coverage`, and `iru-typescript-tsdoc`. It uses a medium model on purpose: the plan already carries
 the hard reasoning; this skill drives execution of it.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Detect the toolchain once, then capture one pre-change quality baseline for the whole bucket
 
 Before anything else, detect once — and reuse for every step below rather than re-deriving it per gate call — the

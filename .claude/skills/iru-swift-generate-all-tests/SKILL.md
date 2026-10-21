@@ -15,6 +15,8 @@ comments, or run a code-quality pass (those are `iru-check-license`, `iru-swift-
 jobs), and it only touches production source code if a type is genuinely untestable as written (see Step 5) —
 which it reports rather than silently "fixing" by redesigning the type.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Parse `args` as `key: value` lines if given (currently just `scope: <target-or-type-list>`), and accept a bare

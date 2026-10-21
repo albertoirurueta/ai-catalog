@@ -28,6 +28,8 @@ ASP.NET Core service is out of scope here (no `iru-setup-dotnet-*` scaffold exis
 Avalonia, Uno Platform, React Native for Windows and Electron are not scaffolded either; mention them as alternatives
 only if the user asks.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Invoked stand-alone (`/iru-setup-windows-repository`) or by the catalog's `iru-setup-repository` front door (project

@@ -53,8 +53,13 @@ Used by `iru-code`, `iru-java-code-one-task-group`, `iru-java-springboot-code-on
 ## Why these models
 
 This agent is pinned to `haiku` (`model: haiku` in the frontmatter): it only runs one gate skill, which itself runs a tool
-and reads its report, and then condenses the result. That is mechanical work, and a fixed model also keeps the gate skills
-it invokes (mostly `haiku`) from switching models mid-turn inside the subagent.
+and reads its report, and then condenses the result. That is mechanical work, and a fixed model also keeps the `haiku` gate skills
+it invokes (tests, coverage, code quality, license and security) from switching models mid-turn inside the subagent.
+The exception is the 11 doc-comment audit skills (`iru-java-javadoc`, `iru-kotlin-kdoc`, `iru-android-dokka`,
+`iru-kmp-dokka`, `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings`, `iru-swift-docc`,
+`iru-rust-rustdoc`, `iru-go-godoc`): they are `sonnet` because they write the missing doc comments, so dispatching one
+through this agent still switches the model once inside the subagent. That cost is accepted (the switch stays out of the
+caller's context and its cache); it is recorded in the performance guide of this catalog.
 
 ## What you do
 

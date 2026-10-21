@@ -120,14 +120,24 @@ The catalog avoids this in two ways:
   each test, coverage, quality, license and security run to the `iru-gate-runner` agent. A subagent has its own context,
   its own (small) prefix and its own model, so the caller's cache is untouched, and only a compact summary comes back
   into the caller's context. Whole coding skills run through `iru-isolated-skill-executor`, which inherits the model.
-* `catalog-audit.py` reports every `Skill()` call whose caller and callee models differ and that is not inside an
-  `Agent({...})` prompt (the "inline cross-model calls" section), so a new one cannot appear unnoticed.
+  One accepted exception remains inside the gate runner: the 11 doc-comment audit skills (`iru-java-javadoc`,
+  `iru-kotlin-kdoc`, `iru-android-dokka`, `iru-kmp-dokka`, `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`,
+  `iru-python-docstrings`, `iru-swift-docc`, `iru-rust-rustdoc`, `iru-go-godoc`) are `sonnet`, because they write the
+  missing doc comments, and every group skill dispatches them through the `haiku` `iru-gate-runner`, so the model still
+  switches once inside that subagent. The switch stays out of the caller's context and cache, and the subagent's prefix
+  is small, which is why it is accepted rather than fixed; the audit does not report it because the call sits inside an
+  `Agent({...})` prompt.
+* `catalog-audit.py` reports every `Skill()` call whose caller and callee models differ and that is not delegated to an
+  agent (the "inline cross-model calls" section), so a new one cannot appear unnoticed. A call counts as delegated
+  when it sits inside an `Agent({...})` prompt or within 250 characters after a mention of `iru-gate-runner` or
+  `iru-isolated-skill-executor`: the `*-generate-all-tests` skills describe the dispatch in a sentence and write the
+  `Skill()` call as the prompt it carries.
 
-The audit found 21 such calls in the original tree; there are now 17, all reviewed and recorded with their reason under
-`accepted_cross_model_calls` in the budgets file:
+The audit found 21 such calls in the original tree. Four of them (the `*-generate-all-tests` skills of `android`, `dotnet`,
+`kmp` and `swift`, which already run the test skill through `iru-gate-runner`) are recognised as delegated by the rule
+above and no longer reported. The 13 call sites that remain (12 caller/callee pairs) were all reviewed and are recorded
+with their reason under `accepted_cross_model_calls` in the budgets file:
 
-* 4 are audit false positives: the `*-generate-all-tests` skills of `android`, `dotnet`, `kmp` and `swift` already run the
-  test skill through `iru-gate-runner`, and the `Skill()` call is that dispatch's prompt.
 * 10 are calls to `iru-explore` (`opus`) from skills that need its report (project type, technology stack, docs location)
   in their own context; an agent would return only a summary, and the exploration is a one-off per run.
 * 2 are `iru-issue` calling `iru-plan` and `iru-pr-review` (`opus`): both are interactive (questions, confirmation before
@@ -137,6 +147,44 @@ The audit found 21 such calls in the original tree; there are now 17, all review
 
 The remaining differences of the original list (four `*-repository` orchestrators that were `haiku` calling `sonnet`
 scaffolds) disappeared when those orchestrators moved to `sonnet`.
+
+[#splitting-the-catalog]
+== Splitting the catalog
+
+Ask (5) of the issue was to evaluate splitting the catalog by purpose or by technology. The marketplace implements a split
+by technology: `iru-core` (25 skills, the stack-independent pipeline and the three agents), `iru-knowledge` (7) and one
+plugin per stack, from `iru-nestjs` (3 skills) to `iru-swift` (16). The alternative, a split by purpose, was evaluated and
+not taken:
+
+* *By purpose* would give a `setup` plugin (70 scaffold and workflow skills, 26,401 description characters), a `gates`
+  plugin (59 test, coverage, quality, doc-audit, version-bump and test-generation skills, 19,422 characters) and a
+  `code` plugin (39 `*-code-one-task` and `*-code-one-task-group` skills, 14,360 characters) besides the core. A
+  repository uses one or two stacks, so every one of those plugins would still carry the other sixteen stacks' skills:
+  installing "gates" for a Java library lists 59 skills of which 5 apply. The per-purpose split also crosses the dependency
+  graph the wrong way: a stack's code skill calls that stack's gates and scaffolds, so the three purpose plugins would
+  depend on each other and install together in practice.
+* *By technology* matches how the skills call each other: every `Skill()` edge is inside a stack or from a stack to
+  `iru-core` (or to a sibling the stack really reuses, such as `iru-springboot` to `iru-java`), which is what lets
+  `tools/generate-marketplace.py` derive the plugin dependencies from the audit's call graph and fail on an uncovered
+  edge.
+
+The effect on the skill listing is the point of the split. The listing is the part of the fixed prompt that grows with
+the number of installed skills (every description, capped per entry, inside about 1 % of the context window):
+
+[cols="3,1,1",options="header"]
+|===
+| Installed | Skills listed | Description characters
+
+| Everything (copying the whole `.claude/skills/` tree) | 196 | 73,851
+| `iru-core` + `iru-java` | 39 | 15,750
+| `iru-core` + `iru-typescript` | 40 | 16,297
+| `iru-core` + `iru-springboot` (pulls in `iru-java`) | 54 | 21,967
+|===
+
+So a single-stack repository that installs its plugin carries about a fifth of the listing a full copy would, roughly
+4,000 tokens of the 30,278-token fixed prompt measured in S0 instead of the full listing's share. The split does not
+change what any skill does: the plugins select directories from the unchanged tree, and copying a skill directory keeps
+working.
 
 == Additional agents: evaluated, not adopted
 
@@ -165,10 +213,14 @@ A spike (`tools/spikes/plugin-resolution.md`, Claude Code 2.1.260) showed that w
 * Agents listed on a marketplace entry whose `source` is the repository root load even though `claude plugin details`
   shows `Agents (0)`.
 
-Rewriting about 290 call sites would have broken the copy-a-directory installation, so each agent's body now starts with
-the rule "dispatch as `subagent_type: "<agent-name>"` when installed under `.claude/agents/`, or `"iru-core:<agent-name>"`
-when installed as a plugin, using whichever name appears in your available agent types", and `iru-code`,
-`iru-code-one-task-group`, `iru-issue` and `iru-setup-changelog` (the skills that explain dispatch) state it once.
+Rewriting about 290 call sites would have broken the copy-a-directory installation, so every skill that dispatches an
+agent itself (`iru-code`, `iru-code-one-task-group`, `iru-issue`, `iru-release`, `iru-setup-changelog`,
+`iru-setup-repository` and the `*-repository` orchestrators, every `*-code-one-task-group` and `*-generate-all-tests`
+skill, and the few others that use `iru-isolated-skill-executor` or `iru-gate-runner` directly) states the rule once at
+the top of its body: dispatch as `subagent_type: "<agent-name>"` when installed under `.claude/agents/`, or
+`"iru-core:<agent-name>"` when installed as a plugin, using whichever name appears in your available agent types. Each
+agent's body repeats the same line as documentation; the dispatching caller never reads it, which is why the rule has to
+live in the callers.
 
 == Documented, not done
 
@@ -183,7 +235,8 @@ These were considered and left as options because they change more than this wor
   interface, and the gate runner and every code skill refer to them.
 * *A physical `plugins/<name>/skills/` tree.* The marketplace instead lists each plugin's skill directories over the
   unchanged `.claude/skills/` tree (`source: "./"`). The trade-off is that each installed plugin caches a full copy of the
-  repository (about 11 MB); a physical tree would remove that but move 196 directories and change the path used when
+  repository (231 MB measured for two plugins from a directory marketplace, see xref:guides/plugins.adoc[]); a physical
+  tree would remove that but move 196 directories and change the path used when
   copying a skill, so it needs an explicit decision.
 
 See xref:guides/plugins.adoc[] and xref:guides/packaging-and-distribution.adoc[] for installing the catalog, and

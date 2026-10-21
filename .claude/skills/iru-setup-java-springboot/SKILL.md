@@ -29,6 +29,8 @@ The architecture is not negotiable — it is what this skill exists to impose:
   `iru.kotlin-library` convention plugin). Never generate a project below 21, even if Spring Initializr's own
   default is lower — as of this writing its default `javaVersion` is `17`, which this skill overrides.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Module layout this skill imposes
 
 `<a>` below is the project `artifactId`; directory names are the short forms. The **artifactId** and

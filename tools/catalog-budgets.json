@@ -204,11 +204,6 @@
   },
   "accepted_cross_model_calls": [
     {
-      "caller": "iru-android-generate-all-tests",
-      "callee": "iru-android-test",
-      "reason": "Already delegated: the Skill() call is the prompt of the iru-gate-runner dispatch described in the surrounding prose, so the callee does not run in the caller's context (audit false positive)."
-    },
-    {
       "caller": "iru-create-github-issue",
       "callee": "iru-explore",
       "reason": "Intentional direct call: iru-explore is opus by the model-tier policy and its report (Project type, Tech stack, docs location) must land in the caller's own context; routing it through an agent would return only a summary and change what the caller can use."
@@ -222,11 +217,6 @@
       "caller": "iru-database-code-one-task",
       "callee": "iru-explore",
       "reason": "Intentional direct call: iru-explore is opus by the model-tier policy and its report (Project type, Tech stack, docs location) must land in the caller's own context; routing it through an agent would return only a summary and change what the caller can use."
-    },
-    {
-      "caller": "iru-dotnet-generate-all-tests",
-      "callee": "iru-dotnet-test",
-      "reason": "Already delegated: the Skill() call is the prompt of the iru-gate-runner dispatch described in the surrounding prose, so the callee does not run in the caller's context (audit false positive)."
     },
     {
       "caller": "iru-draft-github-issue",
@@ -247,11 +237,6 @@
       "caller": "iru-issue",
       "callee": "iru-pr-review",
       "reason": "Intentional direct call: iru-pr-review is opus by policy and asks the user to confirm before posting comments; it must run in the orchestrator's conversation, not in an isolated agent."
-    },
-    {
-      "caller": "iru-kmp-generate-all-tests",
-      "callee": "iru-kmp-test",
-      "reason": "Already delegated: the Skill() call is the prompt of the iru-gate-runner dispatch described in the surrounding prose, so the callee does not run in the caller's context (audit false positive)."
     },
     {
       "caller": "iru-knowledge-compact",
@@ -277,11 +262,6 @@
       "caller": "iru-setup-repository",
       "callee": "iru-explore",
       "reason": "Intentional direct call: iru-explore is opus by the model-tier policy and its report (Project type, Tech stack, docs location) must land in the caller's own context; routing it through an agent would return only a summary and change what the caller can use."
-    },
-    {
-      "caller": "iru-swift-generate-all-tests",
-      "callee": "iru-swift-test",
-      "reason": "Already delegated: the Skill() call is the prompt of the iru-gate-runner dispatch described in the surrounding prose, so the callee does not run in the caller's context (audit false positive)."
     }
   ]
 }

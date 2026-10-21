@@ -27,6 +27,8 @@ KMP setup only scaffolds **apps** (a shared KMP module consumed by an Android ap
 published to Maven Central is out of scope — say so if the user asks for one, and suggest
 `iru-setup-java-library-repository`/`iru-setup-android-repository` for the publishing pipeline shape instead.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Invoked stand-alone (`/iru-setup-kmp-repository`) or by the catalog's `iru-setup-repository` front door (project

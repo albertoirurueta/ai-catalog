@@ -29,6 +29,8 @@ Five rules govern the skill:
 4. **Never delete without asking.** `promote.yml` is a file this skill's sub-skill owns; removing it needs a confirmation.
 5. **No credentials, ever.** Nothing here writes a secret into a file.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Parse `args` and resolve the action
 
 Parse `args` for `key: value` lines (the action word may arrive as the first line or as `action: enable|disable`):

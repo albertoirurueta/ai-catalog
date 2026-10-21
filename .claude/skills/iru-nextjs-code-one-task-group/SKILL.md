@@ -33,6 +33,8 @@ Three things differ from the plain TypeScript group skill, and they shape the wh
 
 It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Read this before running `next build` or Playwright
 
 **Only one `next build` or Playwright run may be in flight against this project at any moment.** Both write

@@ -116,6 +116,21 @@ class ParsingTests(unittest.TestCase):
     def test_fenced_bytes_unterminated_fence_counts_to_end(self):
         self.assertEqual(audit.fenced_bytes("```\nabc\n"), 4 + 1)
 
+    def test_fenced_lines_kinds(self):
+        text = "a\n```md\nb\n```\nc"
+        self.assertEqual(
+            list(audit.fenced_lines(text)),
+            [(1, "a", "text"), (2, "```md", "fence"), (3, "b", "code"), (4, "```", "fence"), (5, "c", "text")],
+        )
+
+    def test_fenced_bytes_and_plan_lines_share_the_closing_rule(self):
+        # A ```lang line inside a ````-fenced example does not close the block for either consumer.
+        text = "````md\n```yaml\nkey: [NEEDS CLARIFICATION: x]\n```\n````\nafter `[NEEDS CLARIFICATION: y]` z\n"
+        self.assertEqual(
+            audit.fenced_bytes(text), len("```yaml\n") + len("key: [NEEDS CLARIFICATION: x]\n") + len("```\n")
+        )
+        self.assertEqual(list(audit.plan_lines_outside_code(text)), [(6, "after  z"), (7, "")])
+
     def test_first_invocation_position(self):
         self.assertEqual(audit.first_invocation_position("abc /iru-x"), 4)
         self.assertEqual(audit.first_invocation_position("Invoke as foo /iru-x"), 0)
@@ -138,6 +153,34 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual([c["dynamic"] for c in calls], [False, False, False, True])
         self.assertTrue(calls[1]["near_agent_mention"])
         self.assertFalse(calls[0]["near_agent_mention"])
+        # iru-c and iru-<key>-x follow the "iru-gate-runner" mention within 250 characters, so they count as
+        # delegated too (the generate-all-tests skills write their gate call that way).
+        self.assertEqual([c["delegated"] for c in calls], [False, True, True, True])
+
+    def test_call_after_agent_mention_is_delegated(self):
+        text = (
+            "Run them via `iru-gate-runner`: `Skill({skill: \"iru-b\", args: \"ui\"})` as its prompt.\n"
+            + "x" * 300
+            + 'Later `Skill({skill: "iru-c"})` inline.\n'
+        )
+        calls = audit.skill_calls(text)
+        self.assertEqual([c["target"] for c in calls], ["iru-b", "iru-c"])
+        self.assertEqual([c["in_agent_prompt"] for c in calls], [False, False])
+        self.assertEqual([c["delegated"] for c in calls], [True, False])
+
+    def test_file_digests_one_read(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "blob.bin")
+            with open(path, "wb") as handle:
+                handle.write(b"abc")
+            digests = audit.file_digests(path)
+        self.assertEqual(
+            digests,
+            {
+                "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "md5": "900150983cd24fb0d6963f7d28e17f72",
+            },
+        )
 
     def test_inside_agent_call_multiline_unescaped(self):
         text = 'Agent({\n  description: "d",\n  prompt: "Invoke Skill({skill: "iru-x"})"\n})\nlater Skill({skill: "iru-y"})'
@@ -306,9 +349,9 @@ class CheckTests(CatalogTestCase):
         found = self.rules()
         self.assertIn(("error", "description-max", "iru-long"), found)
         self.assertIn(("error", "invocation-form-position", "iru-late"), found)
-        self.assertIn(("warning", "invocation-form-missing", "iru-noform"), found)
+        self.assertIn(("error", "invocation-form-missing", "iru-noform"), found)
         self.assertIn(("warning", "description-internal-target", "iru-internal"), found)
-        self.assertNotIn(("warning", "invocation-form-missing", "iru-internal"), found)
+        self.assertNotIn(("error", "invocation-form-missing", "iru-internal"), found)
         self.assertIn(("error", "model-missing", "iru-nomodel"), found)
         self.assertIn(("error", "model-not-allowed", "iru-badmodel"), found)
         self.assertIn(("error", "frontmatter-parse", "iru-broken"), found)
@@ -475,6 +518,18 @@ class AcceptedCrossModelTests(CatalogTestCase):
         self.assertEqual(
             [v["rule"] for v in violations], ["inline-cross-model-call"] * 2
         )
+
+    def test_delegated_calls_are_not_cross_model(self):
+        self.skill(
+            "iru-d",
+            model="sonnet",
+            body='Run it through `iru-gate-runner`: `Skill({skill: "iru-c"})` is the prompt.\n',
+        )
+        data = audit.analyse(self.root, {})
+        self.assertEqual(
+            [c["caller"] for c in data["inline_cross_model_calls"]], ["iru-a", "iru-a"]
+        )
+        self.assertTrue(data["skills"]["iru-d"]["skill_calls"][0]["delegated"])
 
     def test_accepted_call_is_recorded_not_flagged(self):
         budgets = {

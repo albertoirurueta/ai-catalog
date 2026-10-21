@@ -34,6 +34,8 @@ all three combinations. Both Kotlin paths were verified on Spring Boot 4.1.1 + V
 Kotlin `@BrowserCallable` service compiled, the TypeScript client was generated from it, and a production bundle
 was built — on Maven with `vaadin-maven-plugin` and on Gradle 8.14 with the `com.vaadin` plugin.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 Parse `args` for `key: value` lines:

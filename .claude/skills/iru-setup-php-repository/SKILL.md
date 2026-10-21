@@ -26,6 +26,8 @@ this catalog. If that's what the repository is (or what the user wants), say so 
 (`iru-php-test`, `iru-php-coverage`, `iru-php-code-quality`, `iru-php-phpdoc`) and `iru-setup-antora`,
 `iru-setup-php-gitignore`, `iru-setup-changelog`, `iru-setup-readme` can still be run individually.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 0 — Resolve inputs
 
 This skill runs stand-alone (`/iru-setup-php-repository`) or from the `iru-setup-repository` front door, so parse

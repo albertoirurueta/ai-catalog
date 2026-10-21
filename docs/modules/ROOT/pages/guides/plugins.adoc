@@ -78,8 +78,10 @@ the repository bootstrap front door, and the three agents), `iru-knowledge`, and
 `iru-springboot`, `iru-quarkus`, `iru-dotnet`, `iru-typescript`, `iru-nestjs`, `iru-nextjs`, `iru-react-native`,
 `iru-php`, `iru-python`, `iru-android`, `iru-swift`, `iru-kmp`, `iru-rust`, `iru-go`, `iru-cli`). Every stack plugin
 depends on `iru-core`, and a few depend on a sibling stack whose gates they reuse (`iru-springboot` and `iru-quarkus` on
-`iru-java`; `iru-nestjs`, `iru-nextjs` and `iru-react-native` on `iru-typescript`; `iru-kmp` on `iru-android` and
-`iru-swift`; `iru-cli` on `iru-rust`, `iru-go`, `iru-swift` and `iru-dotnet`).
+`iru-java`; `iru-nestjs`, `iru-nextjs` and `iru-react-native` on `iru-typescript`; `iru-cli` on `iru-rust`, `iru-go`,
+`iru-swift` and `iru-dotnet`). Every edge is one that a `Skill()` call in the dependent plugin proves
+(`tools/generate-marketplace.py` fails on an uncovered cross-plugin call); `iru-kmp` only mentions the Android and Swift
+skills in prose, so it has no edge to them.
 
 [source]
 ----
@@ -98,15 +100,30 @@ Things that differ from copying the files:
   `iru-core:iru-isolated-skill-executor` and `iru-core:iru-change-summarizer`. The skills that dispatch agents explain
   this rule, and each agent's body repeats it (`subagent_type: "iru-gate-runner"` when installed under
   `.claude/agents/`, `"iru-core:iru-gate-runner"` as a plugin).
+* *`iru-core` alone is not enough for the stack-dependent front doors.* `/iru-setup-repository` hands off to the
+  `iru-setup-<stack>-repository` orchestrator of the detected project type, and `/iru-code` dispatches each task to the
+  `iru-<key>-code-one-task-group` skill of the task's language key; both live in the stack plugins. With only `iru-core`
+  installed they report the missing skill instead of bootstrapping or implementing, so install the matching stack plugin
+  (for example `iru-java`) alongside it. Likewise `iru-typescript` routes React Native tasks to `iru-react-native`, which
+  must be installed for them. These calls are recorded as `optional_calls` in `tools/plugins.json` rather than as
+  dependencies (a dependency from `iru-core` to every stack would be circular, and the calls are conditional on the stack).
 * *Headless mode.* `claude -p` denies the `Skill` tool for skills that declare `allowed-tools`; pass
-  `--allowedTools=Skill` (together with whatever else the run needs) when running a catalog skill non-interactively.
-* *Disk use.* Each installed plugin caches a full copy of the repository (about 11 MB), because the plugins select skills
-  from the unchanged `.claude/skills/` tree rather than from per-plugin directories.
+  `--allowedTools=Skill` (together with whatever else the run needs) when running a catalog skill non-interactively. In
+  plugin mode also pass `--add-dir <plugin directory>` (the plugin's cached checkout under `~/.claude/plugins/`):
+  without it a headless run refuses to read the skill's `templates/` and `reference/` files, which sit outside the
+  working directory, and the skill stops at that read.
+* *Disk use.* Each installed plugin caches a full copy of the repository, because the plugins select skills from the
+  unchanged `.claude/skills/` tree rather than from per-plugin directories. The measured cost is large: two plugins
+  installed from a directory marketplace took 231 MB (`tools/baseline/sample-runs-after.md`), and a git-source install
+  still copies every tracked file, which today includes `docs/node_modules` (6,310 tracked files). Dependencies multiply
+  it: installing `iru-cli` pulls in six plugins. Untracking `docs/node_modules` is a separate follow-up that would shrink
+  every copy.
 * *Copying still works.* Nothing about the plugins changes the files: copying a skill directory into another
   repository's `.claude/skills/` (xref:guides/packaging-and-distribution.adoc[]) is still supported, and every skill keeps
   all its templates and references under its own directory.
 
-See xref:guides/performance-and-token-budget.adoc[] for why the catalog is split this way.
+See xref:guides/performance-and-token-budget.adoc#splitting-the-catalog[Splitting the catalog] in the performance guide
+for why the catalog is split by stack rather than by purpose, and what one stack's install saves in the skill listing.
 
 == Getting updates when a new release is published
 

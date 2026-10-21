@@ -346,6 +346,22 @@ def render(document):
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
 
+def without_version(document):
+    """A deep copy of a marketplace document with the release version removed everywhere it is written: the
+    top-level ``metadata.version`` and each plugin's ``version``. ``--check`` compares documents this way so that
+    a release (a new ``## [x.y.z]`` CHANGELOG heading) does not make the committed file stale on its own."""
+    copy = json.loads(json.dumps(document))
+    metadata = copy.get("metadata")
+    if isinstance(metadata, dict):
+        metadata.pop("version", None)
+        if not metadata:
+            copy.pop("metadata")
+    for plugin in copy.get("plugins", []):
+        if isinstance(plugin, dict):
+            plugin.pop("version", None)
+    return copy
+
+
 def generate(
     root,
     membership_path=DEFAULT_MEMBERSHIP,
@@ -421,8 +437,9 @@ def main(argv=None, validate=validate_with_cli):
     parser.add_argument(
         "--check",
         action="store_true",
-        help="do not write; exit 1 when the committed marketplace.json is stale, and run "
-        "'claude plugin validate' when the claude CLI is installed",
+        help="do not write; exit 1 when the committed marketplace.json is stale (the release version "
+        "from CHANGELOG.md is ignored in the comparison), and run 'claude plugin validate' when the "
+        "claude CLI is installed",
     )
     parser.add_argument(
         "--no-validate",
@@ -474,10 +491,24 @@ def main(argv=None, validate=validate_with_cli):
             )
             return 1
         if committed != text:
+            try:
+                committed_document = json.loads(committed)
+            except ValueError:
+                committed_document = None
+            if committed_document is None or without_version(
+                committed_document
+            ) != without_version(document):
+                sys.stderr.write(
+                    f"ERROR {MARKETPLACE_REL} is stale; run python3 tools/generate-marketplace.py and commit the result\n"
+                )
+                return 1
+            committed_version = (committed_document.get("metadata") or {}).get("version")
+            current_version = (document.get("metadata") or {}).get("version")
             sys.stderr.write(
-                f"ERROR {MARKETPLACE_REL} is stale; run python3 tools/generate-marketplace.py and commit the result\n"
+                f"generate-marketplace: note: only the release version differs ({MARKETPLACE_REL} says "
+                f"{committed_version or 'none'}, CHANGELOG.md says {current_version or 'none'}); "
+                "run python3 tools/generate-marketplace.py when convenient\n"
             )
-            return 1
         if not args.no_validate:
             ran, ok, output = validate(args.root)
             if not ran:

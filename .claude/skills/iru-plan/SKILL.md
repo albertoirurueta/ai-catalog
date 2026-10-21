@@ -12,6 +12,8 @@ only output artifact is the plan file itself. It uses a complex model on purpose
 `iru-code` pipeline assumes the hard reasoning already happened here, so planning mistakes are the most expensive ones
 to make in the whole pipeline.
 
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
+
 ## Step 1 — Determine what is being planned
 
 The skill may be invoked with a ticket ID as its argument — a GitHub issue ID (e.g. `/iru-plan 42`) or a Jira
@@ -72,8 +74,7 @@ plan must be grounded in a prior exploration, not produced from a cold start.
 After grounding, decide whether anything is genuinely ambiguous or under-specified in a way that would make the
 plan wrong or force a guess with real consequences (e.g. conflicting requirements, a choice between materially
 different architectures, a missing decision only the user can make like which library/framework to standardize
-on, or scope that could reasonably mean two very different things, or an acceptance criterion too vague to verify
-such as "documented somewhere" — do not silently pick a reading of it).
+on, or scope that could reasonably mean two very different things).
 
 - If something is ambiguous: ask the user via `AskUserQuestion`, but keep it tight — 1-4 focused questions,
   each with a recommended default option based on codebase conventions and common best practices for the
@@ -89,7 +90,7 @@ such as "documented somewhere" — do not silently pick a reading of it).
   ```
 
   Write the marker as plain text in the plan: never wrap it in backticks or put it inside a code fence (the block
-  above is fenced only to show the syntax), because `grep` and the plan audit ignore code spans and fences.
+  above is fenced only to show the syntax), because `iru-code`'s scan and the plan audit (`catalog-audit.py --plan`) ignore code spans and fences.
 
   Then keep planning around the recommended option, so the plan stays complete and reviewable. When the user does
   answer (now or at the Step 7 review), resolve the marker in place — replace it with the chosen decision, adjust
@@ -118,8 +119,9 @@ grouping need to be explicit and unambiguous in the plan — don't leave either 
 - Find which `*-code-one-task` skills are actually installed. First read them from the skills available in this
   session (the names matching `iru-*-code-one-task`) — that works whether the skills were copied into
   `.claude/skills/` or installed as plugins, where that directory does not exist. When `.claude/skills` exists,
-  corroborate with `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`. The skill (directory)
-  name minus its `iru-` prefix and its `-code-one-task` suffix is the key (e.g. `iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task`
+  corroborate with `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`. First drop any `<plugin>:`
+  namespace the session listing shows in plugin mode (`iru-java:iru-java-code-one-task` → `iru-java-code-one-task`);
+  the skill (directory) name minus its `iru-` prefix and its `-code-one-task` suffix is then the key (e.g. `iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task`
   → `dotnet`, `iru-typescript-code-one-task` → `typescript`, `iru-android-code-one-task` → `android`,
   `iru-swift-code-one-task` → `swift`, `iru-kotlin-springboot-code-one-task` → `kotlin-springboot`,
   `iru-quarkus-code-one-task` → `quarkus`, `iru-php-code-one-task` → `php`, `iru-nestjs-code-one-task` → `nestjs`,
