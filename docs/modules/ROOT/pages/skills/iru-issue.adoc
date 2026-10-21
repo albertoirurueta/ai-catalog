@@ -20,9 +20,14 @@ the base for a local run and the repository's default branch — never the throw
 a cloud run, and always asks the user to confirm that base before branching, since it is both the fork point and
 the pull request's eventual destination. It creates the matching branch off the confirmed base, runs `iru-explore`
 and `iru-plan` to produce a reviewable `implementation_plan.md` — recording the confirmed base in the plan's Task
-summary as a `Base branch:` line, so that a later, separate `/iru-pr-description` session can recover the choice —
-then — depending on
-the user's choice — either stops for manual review or hands implementation off to `iru-code` inside a sub-agent.
+summary as a `Base branch:` line, so that a later, separate `/iru-pr-description` session can recover the choice.
+A question `iru-plan` could not get answered does not stop the run: it stays in the plan as a
+`[NEEDS CLARIFICATION: ...]` marker (also listed under `Open clarifications:` in the Task summary), and `iru-issue`
+reads the plan afterwards and notes any open markers. Then — depending on the user's choice — it either stops for
+manual review or hands implementation off to `iru-code` inside a sub-agent. When markers are open, the question
+lists them and explains that an automatic `iru-code` run stops at its own gate until they are resolved, so manual
+review is the natural choice unless the user answers them now (the plan is then updated in place and set to
+`Open clarifications: none` before handing off).
 Once implementation finishes successfully, it attaches the archived implementation plan back onto the original
 ticket — as a GitHub issue comment (via `gh issue comment`, since GitHub's API has no generic file-attachment
 endpoint) or a Jira attachment/comment (via connected Jira MCP tools) — so a future exploration of that same
@@ -37,6 +42,10 @@ opens a PR for that run.
 == Purpose group
 
 xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 
@@ -76,8 +85,10 @@ rather than falling back to a codebase-only mode.
   the run, the skill stops short of attaching anything, pushing, or opening a PR, and reports exactly where it
   stopped — for the security-gate case, with an explicit warning naming what was flagged and reminding the user
   to verify the resolution themselves before pushing anything.
-* A final summary: ticket id/title, classification and why, the branch and its base, and one of: manual review
-  pending, the security gate fired (with the sub-agent's implementation summary and what was flagged), or the
+* A final summary: ticket id/title, classification and why, the branch and its base, followed (when `[NEEDS
+  CLARIFICATION` markers are still unresolved) by the list of those markers — task blocked, question, recommended
+  option — with the reminder that `/iru-code` will not start implementing until they are resolved, and then one of:
+  manual review pending, the security gate fired (with the sub-agent's implementation summary and what was flagged), or the
   full implementation/PR/review outcome — always noting the PR is a draft still needing the user's own review.
 
 == Execution flow
@@ -103,8 +114,9 @@ flowchart TD
     F5 -- confirmed --> G["Create feature/&amp;lt;id&amp;gt;-&amp;lt;slug&amp;gt;\nor hotfix/&amp;lt;id&amp;gt;-&amp;lt;slug&amp;gt;\nbranch off the confirmed base"]
     G --> H["Invoke explore skill\n(scoped to ticket id)"]
     H --> I["Invoke plan skill\n(scoped to ticket id)"]
-    I --> I2["Record 'Base branch:' line in\nimplementation_plan.md Task summary"]
-    I2 --> J{"Ask user: proceed\nautomatically with code,\nor review manually?"}
+    I --> I1["Read plan: note open\nNEEDS CLARIFICATION markers"]
+    I1 --> I2["Record 'Base branch:' line in\nimplementation_plan.md Task summary"]
+    I2 --> J{"Ask user: proceed\nautomatically with code,\nor review manually?\n(lists open markers, if any)"}
     J -- manual review --> K["Stop: implementation_plan.md\nready for user to run /iru-code later"]
     J -- automatic --> L["Delegate full code skill run\nto isolated-skill-executor agent"]
     L -- blocker reported --> M["Surface blocker to user and stop"]
@@ -127,7 +139,8 @@ flowchart TD
 * xref:skills/iru-explore.adoc[] — Step 5.1 runs `iru-explore` scoped to the ticket id as the first step of the
   explore → plan → code → PR pipeline.
 * xref:skills/iru-plan.adoc[] — Step 5.2 runs `iru-plan` scoped to the ticket id right after `iru-explore`, producing
-  `implementation_plan.md`.
+  `implementation_plan.md`; its open `[NEEDS CLARIFICATION` markers are then surfaced in the Step 6 question and
+  the Step 9 report.
 * xref:skills/iru-code.adoc[] — Step 6, when the user chooses automatic implementation over manual review, runs
   `iru-code` via the xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] agent so the whole
   implementation run starts from a clean context rather than carrying the exploration/planning transcript into it.

@@ -1,33 +1,6 @@
 ---
 name: iru-setup-quarkus-service
-description: >-
-  Scaffold (or bring up to date) a Quarkus service in the current repository — Java or Kotlin, Maven or Gradle
-  (Kotlin DSL), as a single-module service or a DDD/hexagonal multi-module build (`domain`, `application`,
-  `infrastructure/*`, `api/*`, `app`, plus `coverage` on Maven). Interviews once: identity (groupId, artifactId,
-  base package, description, developer, license), `language` (`java`/`kotlin`), `build-tool` (`maven`/`gradle`),
-  `layout` (`single`/`hexagonal`), Java version, and every technology choice (REST + OpenAPI, persistence —
-  Hibernate ORM or Reactive with Panache, MongoDB — databases, Flyway/Liquibase migrations, Kafka/AMQP/RabbitMQ/
-  Pulsar messaging, REST clients, gRPC, OIDC/JWT security, health/metrics/tracing/JSON logging, native build,
-  container image), resolving the Quarkus platform version from the live `https://code.quarkus.io/api/streams`
-  (falling back to `https://registry.quarkus.io/client/platforms`) and validating every extension id against
-  `https://code.quarkus.io/api/extensions/stream/<stream>` rather than a hardcoded list. Records the answers in a
-  `quarkus-stack.yml` manifest, scaffolds with `quarkus-maven-plugin:<platform>:create` (`-DbuildTool=maven` or
-  `gradle-kotlin-dsl`), then post-processes it to this catalog's conventions — Kotlin all-open/no-arg, the
-  `quarkus-jacoco` + JaCoCo setup that makes `@QuarkusComponentTest` coverage visible with an 80% line check,
-  Checkstyle/PMD/SpotBugs + Javadoc (Java) or detekt/ktlint + Dokka (Kotlin), Failsafe/`skipITs` or
-  `quarkusIntTest` wiring, `%dev`/`%test`/`%prod` configuration, Sonar config when wanted, Jandex indexing and an
-  ArchUnit boundary test for hexagonal builds, and a sample feature tested at all four levels (plain,
-  `@QuarkusComponentTest`, `@QuarkusTest`, `@QuarkusIntegrationTest`) — and verifies the result builds, tests, and
-  passes its gates. Invoke as `/iru-setup-quarkus-service`, optionally with `args` (`key: value` lines) pre-resolving
-  `mode` (`new`/`existing`), `open-source`, `visibility` (`public`/`private`/`internal`), `ci` (`yes`/`no`),
-  `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `distribution` (`none`/`registry`), `sonar`
-  (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `on-existing`
-  (`ask`/`keep`/`update`/`replace`), and the identity/shape keys `group-id`, `artifact-id`, `version`, `package`,
-  `description`, `developer-name`, `developer-email`, `organization-url`, `license`, `java-version`, `language`,
-  `build-tool`, `layout` — skipping the matching questions. Announces whether it is setting up from scratch or
-  updating an existing Quarkus build (with an inventory of every artifact it owns), and asks Update / Keep as is /
-  Replace per existing artifact instead of overwriting; a non-Quarkus build gets a hard stop question. Used by
-  `iru-setup-quarkus-repository` as its scaffold step; also runs standalone.
+description: "Invoked as /iru-setup-quarkus-service with optional key: value args, usually by iru-setup-quarkus-repository. Interviews for identity, language, build tool, layout and extensions, writes quarkus-stack.yml, scaffolds a Quarkus service (single or hexagonal multi-module) and wires coverage, quality tooling and a tested sample feature."
 model: sonnet
 ---
 

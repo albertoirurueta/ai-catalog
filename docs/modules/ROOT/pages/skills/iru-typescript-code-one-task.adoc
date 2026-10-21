@@ -104,6 +104,10 @@ code turns a two-line change into an unreviewable diff.
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-typescript` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-typescript@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

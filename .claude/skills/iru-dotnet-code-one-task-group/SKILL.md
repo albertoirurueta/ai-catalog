@@ -1,32 +1,6 @@
 ---
 name: iru-dotnet-code-one-task-group
-description: >-
-  Implement one bucket of .NET/C# tasks from a plan's task group end-to-end — captures a single pre-change quality
-  baseline for the whole bucket, runs `iru-dotnet-code-one-task` once per task (in parallel agents when the group is
-  marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers,
-  XML doc comments, scoped tests, an 80% coverage check, a full-suite run, and a code-quality regression check against
-  that one baseline. `iru-dotnet-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md`
-  the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt
-  already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when
-  several tasks finish at nearly the same moment — and replaces each task's pending note with the final
-  coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than
-  waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that
-  task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task.
-  Invoke as `/iru-dotnet-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its
-  own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to
-  `iru-java-code-one-task-group` for .NET/C# projects (libraries, services, console apps); used by
-  `iru-code-one-task-group`, which invokes this once per plan group for its .NET-tagged tasks. Windows desktop app
-  repositories (WPF, WinUI 3, Windows Forms — plan key `windows`) use `iru-windows-code-one-task-group` instead, which
-  adds the Core-only coverage bar, host gating, and the lock-serialized UI-test stage. Recognizes the command-line tool
-  shape (`iru-setup-dotnet-cli`: an `Exe` project on System.CommandLine with `PublishAot`/`PackAsTool` plus a
-  framework-free `src/<Tool>.Core`): the coverage bar is measured on Core classes (the thin command tree is "not
-  measured"), the in-process `tests/<Tool>.Cli.Tests` run in the full suite, and — when the bucket touched the CLI
-  project, Core or the build files — a Native AOT `dotnet publish -r <host-rid> -c Release` must finish with zero
-  IL trim/AOT warnings and the generated CLI reference must be current; when the bucket touched the optional
-  Terminal.Gui terminal UI, a UI stage per the catalog's UI contract runs its `[TestCategory("UI")]` view tests
-  (`iru-dotnet-test` selector `ui` — any host, no lock) and checks that every changed screen/component has its
-  `.ui-screenshots/<kind>/<Id>/<state>--<direction>--no-color.txt` capture for each visual state × `.ui-quality.yml`
-  direction.
+description: "Invoked as /iru-dotnet-code-one-task-group <bucket text> (the group's tasks, Parallelizable verdict, code-state context) via Skill. Implements one .NET/C# (not Windows desktop) task bucket: one quality baseline, iru-dotnet-code-one-task per task (parallel when allowed), then validates the bucket once (license, XML docs, tests, 80% coverage, quality, CLI AOT and UI stages) and finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(uname *) Skill Agent
 ---

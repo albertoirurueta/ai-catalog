@@ -1,30 +1,6 @@
 ---
 name: iru-quarkus-code-one-task
-description: >-
-  Implement a single task from a Quarkus `implementation_plan.md`-style task list — the implementation, its tests,
-  and its checkbox update — for a Quarkus service written in Java or Kotlin (detected per module: `src/main/kotlin`,
-  the `quarkus-kotlin` extension, the Kotlin Maven/Gradle plugin), built with Maven or Gradle (Kotlin DSL or Groovy,
-  wrapper preferred), laid out either as a DDD/hexagonal multi-module build or a single-module feature-packaged
-  service, detected at runtime. For Kotlin it first checks the all-open (`@ApplicationScoped`, `@RequestScoped`,
-  `@Path`, `@Entity`, `@QuarkusTest`) and no-arg (`@Entity`, `@Embeddable`, `@MappedSuperclass`) compiler-plugin
-  configuration and adds what the task needs before writing code. Loads only the relevant guidance from this
-  skill's own `reference/` directory — ArC build-time CDI rules (bean-defining annotations, scopes and client
-  proxies, `@Unremovable`, package-private/constructor injection, no runtime registration), Quarkus REST (worker vs
-  event-loop dispatch by signature, `@Blocking`/`@NonBlocking`/`@RunOnVirtualThread`, exception mappers, REST
-  Client), Panache (active record vs repository — following what the module uses, `@Transactional` on the calling
-  service/resource, Flyway/Liquibase, schema-generation settings, reactive Panache), Mutiny vs coroutines (one per
-  service, never block an event loop), `@ConfigMapping`/profiles/build-time-fixed properties, native-image
-  registration (only when a native build exists), the four Quarkus test levels and which of them start Dev
-  Services containers, the language's mandatory rules (`java.md`: JUnit assertions, Mockito, test naming, records,
-  `final` except where Quarkus proxies, full Javadoc; `kotlin.md`: MockK for plain tests, Mockito-backed
-  `@InjectMock`, backtick names, no `!!`, no data-class entities, KDoc), and hexagonal module rules only when the
-  repository is laid out that way. Runs only plain JUnit and `@QuarkusComponentTest` classes it touched, with Dev
-  Services disabled — never `@QuarkusTest`, `@QuarkusIntegrationTest`, `mvn verify`, `quarkusIntTest`, or anything
-  that starts a container or binds the test port — then checks off this task's own checkbox in
-  `implementation_plan.md` with a "group validation pending" note and hands back a short summary. Does not capture
-  a quality baseline, add license headers, run coverage/quality checks, or run the full suite — those belong to
-  `iru-quarkus-code-one-task-group`. Invoke as `/iru-quarkus-code-one-task <task description>`, passing the
-  task's own text including its exact `implementation_plan.md` checkbox line(s).
+description: "Invoked as /iru-quarkus-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Quarkus (Java or Kotlin, Maven or Gradle) plan task and its tests, ticks the checkbox with a group-validation-pending note; Dev Services containers never started; no baseline or full gates, which iru-quarkus-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(QUARKUS_DEVSERVICES_ENABLED=false *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

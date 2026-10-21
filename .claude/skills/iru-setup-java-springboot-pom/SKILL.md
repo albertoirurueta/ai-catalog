@@ -1,45 +1,6 @@
 ---
 name: iru-setup-java-springboot-pom
-description: >-
-  Generate the multi-module build for a DDD/hexagonal Spring Boot service, in the language and build tool the
-  `springboot-stack.yml` manifest records (`project.language` `java`|`kotlin`, `project.buildTool` `maven`|`gradle`,
-  `project.kotlinVersion`; absent means Java on Maven, generated exactly as before). Java and Kotlin on Maven get a
-  Maven reactor — the root `pom.xml` (the single place every dependency and plugin version is declared) plus one
-  `pom.xml` per module (`domain`, `application`, `infrastructure/database/<engine>`, `infrastructure/configuration`,
-  `infrastructure/clients/<name>`, `infrastructure/producers`, `infrastructure/metrics`, `api/rest-server`,
-  `api/grpc-server`, `api/graphql-server`, `api/consumers`, `boot`, `coverage`). Enforces Java 21 as a minimum via
-  `maven.compiler.release`, `java.version`, and a `maven-enforcer-plugin` `requireJavaVersion` rule, and enforces
-  the hexagonal dependency direction per module with `banned-dependencies`. Wires the full report/quality plugin
-  set — for Java Javadoc, Checkstyle, PMD, SpotBugs; for Kotlin the `kotlin-maven-plugin` (spring/jpa/all-open
-  compiler plugins, `-Xjsr305=strict`, mixed Java/Kotlin source roots with `default-compile` rebound after
-  `kotlinc`), detekt, ktlint and Dokka instead; for both Surefire, Failsafe, JaCoCo (per module plus a
-  `report-aggregate` in `coverage`), JXR, Maven Site, `groovy-maven-plugin` for `build-info.properties`, and, unless
-  the manifest's `sonar.mode` is `none`, `sonar-maven-plugin` (Kotlin adds the detekt/ktlint report paths and
-  `src/main/kotlin` sources) — with generated sources excluded from every analysis. Kotlin on Gradle gets the
-  equivalent Gradle Kotlin DSL multi-project build instead — `settings.gradle.kts`, `gradle.properties`,
-  `gradle/libs.versions.toml` (every version, the Spring Boot BOM through `platform()`), a `build-logic/` included
-  build with the `iru.kotlin-library`, `iru.spring-boot-app`, `iru.quality` (detekt + ktlint + Dokka),
-  `iru.integration-test` (`integrationTest` over `*IT*`) and `iru.coverage` convention plugins, one
-  `build.gradle.kts` per module with `project(":...")` dependencies matching the module table, a root
-  `build.gradle.kts` with Dokka aggregation and Sonar, a `coverage` project using `jacoco-report-aggregation`, and
-  the Gradle wrapper. Writes the root `detekt.yml` and `.editorconfig` for Kotlin (as `checkstyle.xml` and
-  `spotbugs-exclude.xml` for Java). When the manifest's `frontend` is `hilla`, also owns the root-level
-  Vaadin/Hilla version pins (Maven: a `vaadin.version` property, a `vaadin-bom` import, a `vaadin-maven-plugin`
-  `pluginManagement` entry, a `production` profile and the `vaadin.skip` escape hatch; Gradle: the catalog's
-  `vaadin` version, BOM and plugin entries) — `iru-setup-java-springboot-hilla` then wires the actual module.
-  Reads its inputs from `springboot-stack.yml` (including `sonar.mode`/`sonar.organization`/`sonar.projectKey`/
-  `sonar.hostUrl` — `cloud` points at SonarCloud, `self-hosted` at the given host URL, `none` omits Sonar
-  entirely — and `frontend`) and from the Initializr reference build (a pom, or the starter's
-  `build.gradle.kts` for Gradle), so starter artifact names and BOM imports come from the API rather than from
-  memory; every other version is resolved live from Maven Central or the Gradle plugin portal. Announces whether
-  it is generating the build from scratch or updating an existing one, and for every build/analysis-config file it
-  owns that already exists warns and asks Update (merge, keeping custom dependencies/plugins/profiles) / Keep as
-  is / Replace / Stop — or applies `on-existing` from `args`. Invoke as `/iru-setup-java-springboot-pom` (it reads
-  `springboot-stack.yml` from the repository root), or with `args` (`stack-file:` / `initializr-pom:` / `mode:`
-  (`new`/`existing`) / `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from
-  `iru-setup-java-springboot`. Use whenever a Spring Boot service's multi-module Maven reactor or Gradle KTS build
-  needs generating or regenerating from the recorded stack, instead of hand-writing a dozen interdependent build
-  files.
+description: "Invoked as `/iru-setup-java-springboot-pom` (args: `stack-file`, `initializr-pom`, `mode`, `on-existing`), normally by `iru-setup-java-springboot`. Generates the multi-module build of a hexagonal Spring Boot service from the manifest: a Maven reactor (Java or Kotlin) or a Gradle Kotlin DSL build with convention plugins (Kotlin)."
 model: sonnet
 ---
 
@@ -67,6 +28,44 @@ it always did. Two rules govern every path:
    Testcontainers modules became `testcontainers-<engine>`, Jackson moved to `tools.jackson.*`, and each starter
    gained a `spring-boot-starter-<x>-test` companion. Copy what the reference build actually says; the Maven
    coordinates are the same on Gradle.
+
+## Templates
+
+Every file template this skill writes is a file under `templates/<variant>/<path of the generated file>`, holding the exact bytes of that template; the steps below point at them. Read only the files for the variant resolved in Step 0 (`java`/`maven` and `kotlin`/`maven` use `templates/maven/` — Kotlin + Maven adds the fragments in `templates/kotlin-maven/` and `templates/kotlin/`; `kotlin`/`gradle` uses `templates/kotlin-gradle/` plus `templates/kotlin/`), each in full, before filling placeholders; never read the others:
+
+| Generated file | Template | Applies when |
+|---|---|---|
+| `pom.xml` | `templates/maven/pom.xml` | Java + Maven (written as is); Kotlin + Maven (the base that Step 1K's fragments modify) |
+| `pom.xml (Step 1K, Properties)` | `templates/kotlin-maven/pom.xml.properties` | Kotlin + Maven: properties added to the root pom |
+| `pom.xml (Step 1K, Sonar properties)` | `templates/kotlin-maven/pom.xml.sonar-properties` | Kotlin + Maven, unless `sonar.mode: none`: added to the root pom's `sonar.*` block |
+| `pom.xml (Step 1K, dependencyManagement)` | `templates/kotlin-maven/pom.xml.dependency-management` | Kotlin + Maven: test-scope entries added to the root `dependencyManagement` |
+| `pom.xml (Step 1K, root dependencies)` | `templates/kotlin-maven/pom.xml.dependencies` | Kotlin + Maven: replaces the Java project-wide root `<dependencies>` |
+| `pom.xml (Step 1K, Compilation)` | `templates/kotlin-maven/pom.xml.compilation` | Kotlin + Maven: build plugins inserted after the enforcer, replacing the `maven-compiler-plugin` entry |
+| `pom.xml (Step 1K, Quality and documentation)` | `templates/kotlin-maven/pom.xml.quality` | Kotlin + Maven: detekt, ktlint and Dokka plugins in `<build><plugins>` in place of Checkstyle/PMD/SpotBugs |
+| `pom.xml (Step 1K, reporting)` | `templates/kotlin-maven/pom.xml.reporting` | Kotlin + Maven: `<reporting>` plugin entry added to the site configuration |
+| `<module>/pom.xml (every module pom)` | `templates/maven/module/pom.xml` | Java + Maven and Kotlin + Maven: every module pom |
+| `domain/pom.xml (and the analogous banned-dependencies of the other modules)` | `templates/maven/domain/pom.xml.enforcer` | Java + Maven and Kotlin + Maven: the `banned-dependencies` enforcer `<build>` of `domain` |
+| `coverage/pom.xml` | `templates/maven/coverage/pom.xml.body` | Java + Maven and Kotlin + Maven: the `coverage` aggregator module |
+| `boot/pom.xml` | `templates/maven/boot/pom.xml.build` | Java + Maven and Kotlin + Maven: the `boot` module's executable-artifact and build-info `<build>` |
+| `spotbugs-exclude.xml` | `templates/maven/spotbugs-exclude.xml` | Java + Maven only (the template lines carry the 2-space indent of the list item they sit in; the generated file has no such leading indent) |
+| `detekt.yml` | `templates/kotlin/detekt.yml` | Kotlin (Maven and Gradle) (the template lines carry the 2-space indent of the list item they sit in; the generated file has no such leading indent) |
+| `.editorconfig` | `templates/kotlin/.editorconfig` | Kotlin (Maven and Gradle) (the template lines carry the 2-space indent of the list item they sit in; the generated file has no such leading indent) |
+| `settings.gradle.kts` | `templates/kotlin-gradle/settings.gradle.kts` | Kotlin + Gradle |
+| `gradle.properties` | `templates/kotlin-gradle/gradle.properties` | Kotlin + Gradle |
+| `gradle/libs.versions.toml` | `templates/kotlin-gradle/gradle/libs.versions.toml` | Kotlin + Gradle |
+| `build-logic/settings.gradle.kts` | `templates/kotlin-gradle/build-logic/settings.gradle.kts` | Kotlin + Gradle |
+| `build-logic/build.gradle.kts` | `templates/kotlin-gradle/build-logic/build.gradle.kts` | Kotlin + Gradle |
+| `build-logic/src/main/kotlin/iru.kotlin-library.gradle.kts` | `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.kotlin-library.gradle.kts` | Kotlin + Gradle |
+| `build-logic/src/main/kotlin/iru.spring-boot-app.gradle.kts` | `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.spring-boot-app.gradle.kts` | Kotlin + Gradle |
+| `build-logic/src/main/kotlin/iru.quality.gradle.kts` | `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.quality.gradle.kts` | Kotlin + Gradle |
+| `build-logic/src/main/kotlin/iru.integration-test.gradle.kts` | `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.integration-test.gradle.kts` | Kotlin + Gradle |
+| `build-logic/src/main/kotlin/iru.coverage.gradle.kts` | `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.coverage.gradle.kts` | Kotlin + Gradle |
+| `build.gradle.kts` | `templates/kotlin-gradle/build.gradle.kts` | Kotlin + Gradle |
+| `domain/build.gradle.kts` | `templates/kotlin-gradle/domain/build.gradle.kts` | Kotlin + Gradle |
+| `application/build.gradle.kts` | `templates/kotlin-gradle/application/build.gradle.kts` | Kotlin + Gradle |
+| `infrastructure/database/<engine>/build.gradle.kts (ENGINE in the template path stands for `<engine>`)` | `templates/kotlin-gradle/infrastructure/database/ENGINE/build.gradle.kts` | Kotlin + Gradle |
+| `boot/build.gradle.kts` | `templates/kotlin-gradle/boot/build.gradle.kts` | Kotlin + Gradle |
+| `coverage/build.gradle.kts` | `templates/kotlin-gradle/coverage/build.gradle.kts` | Kotlin + Gradle |
 
 ## Step 0 — Resolve inputs
 
@@ -195,505 +194,7 @@ writes no pom at all — read Step 2 for placement, then go to Step 5G.
 Substitute `<placeholders>` from the manifest. Include only the `<module>` entries for modules the manifest's
 `modules:` list actually names.
 
-```xml
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-
-  <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version><spring-boot-version></version>
-    <relativePath/>
-  </parent>
-
-  <groupId><group-id></groupId>
-  <artifactId><artifact-id>-parent</artifactId>
-  <version><version></version>
-  <packaging>pom</packaging>
-
-  <name>${project.groupId}:${project.artifactId}</name>
-  <description><description></description>
-  <url>https://<host>/<owner>/<repo></url>
-  <inceptionYear><inception-year></inceptionYear>
-
-  <developers>
-    <developer>
-      <name><developer-name></name>
-      <email><developer-email></email>
-      <organizationUrl><organization-url></organizationUrl>
-    </developer>
-  </developers>
-  <scm>
-    <connection>scm:git@<host>:<owner>/<repo>.git</connection>
-    <developerConnection>scm:git@<host>:<owner>/<repo>.git</developerConnection>
-    <url>git@<host>:<owner>/<repo>.git</url>
-  </scm>
-
-  <modules>
-    <module>domain</module>
-    <module>application</module>
-    <module>infrastructure</module>
-    <module>api</module>
-    <module>boot</module>
-    <module>coverage</module>
-  </modules>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!-- Java 21 is this catalog's enforced minimum; all three must agree. -->
-    <java.version><java-version></java.version>
-    <maven.compiler.release><java-version></maven.compiler.release>
-    <maven.compiler.source><java-version></maven.compiler.source>
-    <maven.compiler.target><java-version></maven.compiler.target>
-
-    <!-- BOM versions copied verbatim from the Initializr reference pom; omit any not present there. -->
-    <spring-cloud.version><from-reference-pom></spring-cloud.version>
-    <spring-ai.version><from-reference-pom></spring-ai.version>
-
-    <!-- Dependencies with no Initializr id and no Boot-managed version. Omit any the stack doesn't use. -->
-    <mapstruct.version><latest></mapstruct.version>
-    <lombok-mapstruct-binding.version><latest></lombok-mapstruct-binding.version>
-    <caffeine.version><latest></caffeine.version>
-    <flamingock.version><latest></flamingock.version>
-    <liquibase-mongodb.version><latest></liquibase-mongodb.version>
-    <liquibase-couchbase.version><latest></liquibase-couchbase.version>
-    <liquibase-neo4j.version><latest></liquibase-neo4j.version>
-    <spring-cloud-aws.version><latest></spring-cloud-aws.version>
-    <archunit.version><latest></archunit.version>
-
-    <!-- Plugin versions. Pinned explicitly for reproducible builds even where the Boot parent also manages
-         them — that override is deliberate and shared with the rest of this catalog's Java skills. -->
-    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
-    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
-    <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
-    <maven-javadoc-plugin.version>3.11.3</maven-javadoc-plugin.version>
-    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-    <maven-pmd-plugin.version>3.27.0</maven-pmd-plugin.version>
-    <spotbugs-maven-plugin.version>4.9.6.0</spotbugs-maven-plugin.version>
-    <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
-    <maven-jxr-plugin.version>3.6.0</maven-jxr-plugin.version>
-    <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
-    <groovy-maven-plugin.version>2.1.1</groovy-maven-plugin.version>
-    <sonar-maven-plugin.version><latest></sonar-maven-plugin.version>
-    <openapi-generator-maven-plugin.version><latest></openapi-generator-maven-plugin.version>
-    <protobuf-maven-plugin.version><from-reference-pom-or-latest></protobuf-maven-plugin.version>
-    <avro-maven-plugin.version><latest></avro-maven-plugin.version>
-    <!-- GraphQL SDL -> Java. The same version is ALSO used for the io.github.kobylynskyi:graphql-java-codegen
-         runtime dependency that generated GraphQL *client* code extends; keep the two in lockstep. -->
-    <graphql-codegen-maven-plugin.version><latest></graphql-codegen-maven-plugin.version>
-    <!-- Runs the AsyncAPI documentation generators (npm-based) from the Maven build; see
-         iru-setup-java-springboot-apis. Needed when messaging and/or a GraphQL server is enabled. -->
-    <frontend-maven-plugin.version><latest></frontend-maven-plugin.version>
-    <!-- Escape hatches for the two npm-driven documentation steps, so an offline build can opt out.
-         CI must leave both false or the published documentation silently goes stale. -->
-    <asyncapi.docs.skip>false</asyncapi.docs.skip>
-    <graphql.docs.skip>false</graphql.docs.skip>
-
-    <!-- Only when the manifest's frontend: hilla. vaadin.version pins both the vaadin-bom import below and the
-         vaadin-maven-plugin pluginManagement entry, so the module (wired by iru-setup-java-springboot-hilla) and
-         the root always agree on one version. vaadin.skip is the plugin's own documented escape hatch
-         (verified: the plugin's own metadata declares `<skip>` bound to `${vaadin.skip}`, default false) so an
-         analysis-only or offline build can pass -Dvaadin.skip=true and get a real compile without Node/npm. -->
-    <vaadin.version><latest-release-from-maven-metadata></vaadin.version>
-    <vaadin.skip>false</vaadin.skip>
-
-    <!-- Analysis and coverage settings. The whole sonar.* block below is omitted, property for property,
-         when the manifest's `sonar.mode: none` — a service with no Sonar wiring has no use for any of them,
-         not just the identity properties. sonar.organization is normally omitted for `self-hosted` too, unless
-         that server has organizations enabled — see the note after this template. -->
-    <sonar.organization><sonar-organization></sonar.organization>
-    <sonar.projectKey><owner>_<repo></sonar.projectKey>
-    <sonar.host.url><sonar-host-url></sonar.host.url> <!-- https://sonarcloud.io for mode: cloud; manifest's sonar.hostUrl for mode: self-hosted -->
-    <sonar.coverage.jacoco.xmlReportPaths>${maven.multiModuleProjectDirectory}/coverage/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-    <!-- Generated sources are never the developer's code; keep them out of coverage and duplication metrics. -->
-    <sonar.exclusions>**/generated-sources/**,**/generated/**</sonar.exclusions>
-  </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <!-- This project's own modules, so module poms never repeat ${project.version}. -->
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId><artifact-id>-domain</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <!-- ... one entry per module in the manifest's `modules:` list, same shape ... -->
-
-      <!-- BOM imports copied from the Initializr reference pom (Spring Cloud, Spring AI, ...). -->
-      <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-dependencies</artifactId>
-        <version>${spring-cloud.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
-      <!-- Only when the manifest's frontend: hilla. Not from the Initializr reference pom — Initializr's own
-           "vaadin" dependency id resolves to a Flow-oriented starter combination, not this catalog's Hilla
-           wiring, so this BOM import is added independently, version from Maven Central's vaadin-bom
-           maven-metadata.xml (see the <vaadin.version> note above). -->
-      <dependency>
-        <groupId>com.vaadin</groupId>
-        <artifactId>vaadin-bom</artifactId>
-        <version>${vaadin.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
-      <!-- Non-Initializr dependencies. Include only what the stack uses. -->
-      <dependency>
-        <groupId>org.mapstruct</groupId>
-        <artifactId>mapstruct</artifactId>
-        <version>${mapstruct.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.github.ben-manes.caffeine</groupId>
-        <artifactId>caffeine</artifactId>
-        <version>${caffeine.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.tngtech.archunit</groupId>
-        <artifactId>archunit-junit5</artifactId>
-        <version>${archunit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <!-- ... the Flamingock BOM, the Liquibase extensions, and the AWS BOM as the stack requires ... -->
-    </dependencies>
-  </dependencyManagement>
-
-  <dependencies>
-    <!-- Project-wide: every module gets these. Nothing Spring-specific belongs here — `domain` inherits it too. -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.mapstruct</groupId>
-      <artifactId>mapstruct</artifactId>
-    </dependency>
-    <!-- Test dependencies every module needs; artifact names taken from the reference pom. -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.openapitools</groupId>
-          <artifactId>openapi-generator-maven-plugin</artifactId>
-          <version>${openapi-generator-maven-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId><protobuf-plugin-group-from-reference-pom></groupId>
-          <artifactId>protobuf-maven-plugin</artifactId>
-          <version>${protobuf-maven-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro-maven-plugin</artifactId>
-          <version>${avro-maven-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>io.github.kobylynskyi</groupId>
-          <artifactId>graphql-codegen-maven-plugin</artifactId>
-          <version>${graphql-codegen-maven-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>com.github.eirslett</groupId>
-          <artifactId>frontend-maven-plugin</artifactId>
-          <version>${frontend-maven-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-maven-plugin</artifactId>
-        </plugin>
-        <!-- Only when the manifest's frontend: hilla. The execution itself (which goals run, in which module)
-             is wired by iru-setup-java-springboot-hilla into the boot module's pom — this pluginManagement
-             entry only pins the version every such execution inherits. -->
-        <plugin>
-          <groupId>com.vaadin</groupId>
-          <artifactId>vaadin-maven-plugin</artifactId>
-          <version>${vaadin.version}</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-
-    <plugins>
-      <!-- Java 21 minimum, enforced at build time and not just declared in a property -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${maven-enforcer-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>enforce-java</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireJavaVersion>
-                  <version>[<java-version>,)</version>
-                  <message>This project requires Java <java-version> or newer.</message>
-                </requireJavaVersion>
-                <requireMavenVersion>
-                  <version>[3.9.0,)</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Lombok and MapStruct annotation processors. lombok-mapstruct-binding is required for the two to
-           coexist: without it MapStruct runs before Lombok has generated getters and produces empty mappers.
-           Order matters — lombok, then the binding, then mapstruct-processor. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <release>${maven.compiler.release}</release>
-          <parameters>true</parameters>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-              <version>${lombok.version}</version>
-            </path>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok-mapstruct-binding</artifactId>
-              <version>${lombok-mapstruct-binding.version}</version>
-            </path>
-            <path>
-              <groupId>org.mapstruct</groupId>
-              <artifactId>mapstruct-processor</artifactId>
-              <version>${mapstruct.version}</version>
-            </path>
-            <path>
-              <groupId>org.springframework.boot</groupId>
-              <artifactId>spring-boot-configuration-processor</artifactId>
-              <version>${spring-boot.version}</version>
-            </path>
-          </annotationProcessorPaths>
-          <compilerArgs>
-            <arg>-Amapstruct.defaultComponentModel=spring</arg>
-            <arg>-Amapstruct.unmappedTargetPolicy=ERROR</arg>
-          </compilerArgs>
-        </configuration>
-      </plugin>
-
-      <!-- Unit tests: *Test. Integration tests are Failsafe's, below, and never run here. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
-        <configuration>
-          <includes>
-            <include>**/*Test.java</include>
-          </includes>
-          <excludes>
-            <exclude>**/*IT.java</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-
-      <!-- Integration tests: *IT, bound to verify. These are the Testcontainers-backed ones. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <version>${maven-failsafe-plugin.version}</version>
-        <configuration>
-          <includes>
-            <include>**/*IT.java</include>
-          </includes>
-        </configuration>
-        <executions>
-          <execution>
-            <id>integration-tests</id>
-            <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Coverage. Generated sources are excluded so codegen output can't inflate or deflate the number. -->
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <version>${jacoco-maven-plugin.version}</version>
-        <configuration>
-          <excludes>
-            <exclude><base-package-path>/**/generated/**</exclude>
-            <exclude>**/*MapperImpl.class</exclude>
-            <exclude>**/*Application.class</exclude>
-          </excludes>
-        </configuration>
-        <executions>
-          <execution>
-            <id>jacoco-initialize</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>jacoco-initialize-it</id>
-            <goals>
-              <goal>prepare-agent-integration</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>jacoco-report</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>report</goal>
-              <goal>report-integration</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Static analysis. All three analyse hand-written sources only. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${maven-checkstyle-plugin.version}</version>
-        <configuration>
-          <configLocation>${checkstyle.config.location}</configLocation>
-          <sourceDirectories>
-            <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-          </sourceDirectories>
-          <includeTestSourceDirectory>true</includeTestSourceDirectory>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
-        <version>${maven-pmd-plugin.version}</version>
-        <configuration>
-          <targetJdk>${maven.compiler.release}</targetJdk>
-          <excludeRoots>
-            <excludeRoot>${project.build.directory}/generated-sources</excludeRoot>
-          </excludeRoots>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>com.github.spotbugs</groupId>
-        <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>${spotbugs-maven-plugin.version}</version>
-        <configuration>
-          <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
-        </configuration>
-      </plugin>
-
-      <!-- Maven site, the report aggregator -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>${maven-site-plugin.version}</version>
-      </plugin>
-
-      <!-- SonarCloud/SonarQube; omit this whole plugin entry when manifest `sonar.mode: none` -->
-      <plugin>
-        <groupId>org.sonarsource.scanner.maven</groupId>
-        <artifactId>sonar-maven-plugin</artifactId>
-        <version>${sonar-maven-plugin.version}</version>
-      </plugin>
-    </plugins>
-  </build>
-
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${maven-javadoc-plugin.version}</version>
-        <configuration>
-          <show>private</show>
-          <nohelp>true</nohelp>
-          <detectJavaApiLink>true</detectJavaApiLink>
-          <doclint>none</doclint>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>report</report>
-              <report>failsafe-report-only</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <version>${jacoco-maven-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${maven-checkstyle-plugin.version}</version>
-        <configuration>
-          <configLocation>${checkstyle.config.location}</configLocation>
-        </configuration>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>checkstyle</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
-        <version>${maven-pmd-plugin.version}</version>
-      </plugin>
-      <plugin>
-        <groupId>com.github.spotbugs</groupId>
-        <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>${spotbugs-maven-plugin.version}</version>
-      </plugin>
-      <!-- Cross-referenced source, so every report above can link straight to the offending line -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jxr-plugin</artifactId>
-        <version>${maven-jxr-plugin.version}</version>
-      </plugin>
-    </plugins>
-  </reporting>
-
-  <!-- Only when the manifest's frontend: hilla. `mvn package -Pproduction` builds the real Vite production
-       bundle instead of leaving the frontend in dev-bundle mode; without it a packaged jar still works (Vaadin
-       serves the dev bundle) but is not what should ship. See the profile note below the template. -->
-  <profiles>
-    <profile>
-      <id>production</id>
-      <properties>
-        <vaadin.productionMode>true</vaadin.productionMode>
-      </properties>
-    </profile>
-  </profiles>
-</project>
-```
+Template: `templates/maven/pom.xml` — read it in full before filling placeholders
 
 Notes on filling this in:
 
@@ -756,18 +257,7 @@ configuration of `maven-compiler-plugin` (replaced below); the Checkstyle, PMD a
 
 **Properties** — add, next to the other plugin/library versions:
 
-```xml
-    <!-- From the manifest's project.kotlinVersion — the version Spring Boot manages; overriding the parent's
-         kotlin.version keeps kotlin-stdlib/-reflect/-test and the kotlin-maven-plugin on one version. -->
-    <kotlin.version><kotlin-version></kotlin.version>
-    <kotlin.compiler.jvmTarget>${java.version}</kotlin.compiler.jvmTarget>
-    <mockk.version><latest></mockk.version>
-    <!-- springmockk 5.x is the line built for Spring Boot 4 / Spring Framework 7 (4.x targets Boot 3). -->
-    <springmockk.version><latest-5.x></springmockk.version>
-    <detekt-maven-plugin.version><latest></detekt-maven-plugin.version>
-    <ktlint-maven-plugin.version><latest></ktlint-maven-plugin.version>
-    <dokka-maven-plugin.version><latest></dokka-maven-plugin.version>
-```
+Template: `templates/kotlin-maven/pom.xml.properties` — read it in full before filling placeholders
 
 Resolve each `<latest>` from Maven Central's `maven-metadata.xml` (newest version without an
 `-alpha`/`-beta`/`-RC`/`-M` suffix): `io/mockk/mockk-jvm`, `com/ninja-squad/springmockk`,
@@ -778,74 +268,18 @@ and 26. detekt 2.x is still alpha and has no Maven plugin release — don't use 
 
 Unless `sonar.mode: none`, add to the `sonar.*` block (all relative paths resolve per module):
 
-```xml
-    <!-- Explicit because `mvn sonar:sonar` runs standalone in CI, before kotlin-maven-plugin has registered
-         src/main/kotlin as a source root. Paths must exist in every jar module (Step 4 creates them); pom-packaged
-         modules ignore missing ones. A module that also has Java sources overrides these two in its own pom. -->
-    <sonar.sources>src/main/kotlin</sonar.sources>
-    <sonar.tests>src/test/kotlin</sonar.tests>
-    <sonar.kotlin.detekt.reportPaths>target/detekt.xml</sonar.kotlin.detekt.reportPaths>
-    <sonar.kotlin.ktlint.reportPaths>target/ktlint.xml</sonar.kotlin.ktlint.reportPaths>
-```
+Template: `templates/kotlin-maven/pom.xml.sonar-properties` — read it in full before filling placeholders
 
 `sonar.coverage.jacoco.xmlReportPaths` and `sonar.exclusions` stay as in Step 1.
 
 **`dependencyManagement`** — add (scope `test`, like ArchUnit):
 
-```xml
-      <dependency>
-        <groupId>io.mockk</groupId>
-        <artifactId>mockk-jvm</artifactId>   <!-- not io.mockk:mockk: that one is a Gradle-metadata-only umbrella -->
-        <version>${mockk.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.ninja-squad</groupId>
-        <artifactId>springmockk</artifactId>
-        <version>${springmockk.version}</version>
-        <scope>test</scope>
-      </dependency>
-```
+Template: `templates/kotlin-maven/pom.xml.dependency-management` — read it in full before filling placeholders
 
 **Root `<dependencies>`** — replace the Java project-wide set with (versions all come from the Boot BOM or the
 entries above; nothing Spring-specific, since `domain` inherits it too):
 
-```xml
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib</artifactId>
-    </dependency>
-    <!-- Spring uses Kotlin reflection for constructor binding, default values and nullability. -->
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-reflect</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-test-junit5</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.mockk</groupId>
-      <artifactId>mockk-jvm</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- Only when stack.concurrency is reactive or both: suspend ports in domain, runTest in every test. -->
-    <dependency>
-      <groupId>org.jetbrains.kotlinx</groupId>
-      <artifactId>kotlinx-coroutines-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jetbrains.kotlinx</groupId>
-      <artifactId>kotlinx-coroutines-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-```
+Template: `templates/kotlin-maven/pom.xml.dependencies` — read it in full before filling placeholders
 
 `jackson-module-kotlin` is **not** project-wide — `domain` must stay free of Jackson; Step 2's Kotlin note places
 it. Initializr's Kotlin pom lists `lombok` and `spring-boot-configuration-processor` when the Java defaults asked
@@ -855,109 +289,7 @@ for them; drop both (no kapt in this build).
 `maven-compiler-plugin` entry. `spring-boot-starter-parent` already manages the `kotlin-maven-plugin` version
 and pre-configures `jvmTarget`/`javaParameters` and the two executions — but none of the compiler plugins:
 
-```xml
-      <!-- kotlinc first, over both source roots, so Java code may reference Kotlin and vice versa. -->
-      <plugin>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-maven-plugin</artifactId>
-        <configuration>
-          <jvmTarget>${kotlin.compiler.jvmTarget}</jvmTarget>
-          <javaParameters>true</javaParameters>
-          <args>
-            <!-- Spring's nullability annotations become real Kotlin nullability. -->
-            <arg>-Xjsr305=strict</arg>
-            <!-- Copied from Initializr's Kotlin pom: the Kotlin 2.2+ default-target rule for annotations on
-                 constructor properties (parameter, then property/field), which validation and Jackson rely on. -->
-            <arg>-Xannotation-default-target=param-property</arg>
-          </args>
-          <compilerPlugins>
-            <plugin>spring</plugin>   <!-- all-open for @Component/@Transactional/@Configuration/... -->
-            <plugin>jpa</plugin>      <!-- no-arg constructors for @Entity/@MappedSuperclass/@Embeddable -->
-            <plugin>all-open</plugin> <!-- open entities so Hibernate's lazy proxies work -->
-          </compilerPlugins>
-          <pluginOptions>
-            <option>all-open:annotation=jakarta.persistence.Entity</option>
-            <option>all-open:annotation=jakarta.persistence.MappedSuperclass</option>
-            <option>all-open:annotation=jakarta.persistence.Embeddable</option>
-          </pluginOptions>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-maven-allopen</artifactId>
-            <version>${kotlin.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-maven-noarg</artifactId>
-            <version>${kotlin.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <configuration>
-              <sourceDirs>
-                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
-                <sourceDir>${project.basedir}/src/main/java</sourceDir>
-              </sourceDirs>
-            </configuration>
-          </execution>
-          <execution>
-            <id>test-compile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>test-compile</goal>
-            </goals>
-            <configuration>
-              <sourceDirs>
-                <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
-                <sourceDir>${project.basedir}/src/test/java</sourceDir>
-              </sourceDirs>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- javac after kotlinc: the lifecycle-bound default executions would otherwise run first and fail on any
-           Java class that references a Kotlin one. Declaring kotlin-maven-plugin first is not enough on its own. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <release>${maven.compiler.release}</release>
-          <parameters>true</parameters>
-        </configuration>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>default-testCompile</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>java-compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>java-test-compile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-```
+Template: `templates/kotlin-maven/pom.xml.compilation` — read it in full before filling placeholders
 
 Don't set `<sourceDirectory>src/main/kotlin</sourceDirectory>` the way a pure-Kotlin Initializr pom does: it
 silently drops `src/main/java` from `javac`, and the mixed-source modules this catalog allows (generated Java
@@ -977,101 +309,13 @@ must be in `<build><plugins>` (not only `pluginManagement`, and not in a profile
 `mvn detekt:check ktlint:check dokka:dokka` by prefix, and the Dokka Maven plugin additionally refuses to run
 (`Not found dokka plugin`) when it is only declared in `pluginManagement` (verified).
 
-```xml
-      <!-- detekt: fails the build on any finding (maxIssues: 0 in detekt.yml), like Checkstyle/PMD/SpotBugs do
-           for Java. Bound to verify; the XML report is what Sonar imports. -->
-      <plugin>
-        <groupId>com.github.ozsie</groupId>
-        <artifactId>detekt-maven-plugin</artifactId>
-        <version>${detekt-maven-plugin.version}</version>
-        <configuration>
-          <config>${maven.multiModuleProjectDirectory}/detekt.yml</config>
-          <buildUponDefaultConfig>true</buildUponDefaultConfig>
-          <input>${project.basedir}/src/main/kotlin,${project.basedir}/src/test/kotlin</input>
-          <excludes>**/generated/**,**/generated-sources/**</excludes>
-          <report>
-            <report>xml:${project.build.directory}/detekt.xml</report>
-            <report>html:${project.build.directory}/detekt.html</report>
-          </report>
-        </configuration>
-        <executions>
-          <execution>
-            <id>detekt</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- ktlint: formatting/style, failOnViolation defaults to true. Rules come from .editorconfig (Step 5).
-           Source roots are explicit so a standalone `mvn ktlint:check` (no compile first) still sees Kotlin;
-           generated sources live under target/ and are never listed. `mvn ktlint:format` fixes most findings. -->
-      <plugin>
-        <groupId>com.github.gantsign.maven</groupId>
-        <artifactId>ktlint-maven-plugin</artifactId>
-        <version>${ktlint-maven-plugin.version}</version>
-        <configuration>
-          <sourceRoots>
-            <sourceRoot>${project.basedir}/src/main/kotlin</sourceRoot>
-          </sourceRoots>
-          <testSourceRoots>
-            <testSourceRoot>${project.basedir}/src/test/kotlin</testSourceRoot>
-          </testSourceRoots>
-          <includeScripts>false</includeScripts>
-          <reporters>
-            <reporter>
-              <name>plain</name>
-            </reporter>
-            <reporter>
-              <name>checkstyle</name>
-              <output>${project.build.directory}/ktlint.xml</output>
-            </reporter>
-          </reporters>
-        </configuration>
-        <executions>
-          <execution>
-            <id>ktlint</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Dokka replaces Javadoc: `mvn compile dokka:dokka` writes <module>/target/dokka (no execution bound, so
-           ordinary builds don't pay for it). -->
-      <plugin>
-        <groupId>org.jetbrains.dokka</groupId>
-        <artifactId>dokka-maven-plugin</artifactId>
-        <version>${dokka-maven-plugin.version}</version>
-        <configuration>
-          <jdkVersion>${java.version}</jdkVersion>
-          <sourceDirectories>
-            <dir>${project.basedir}/src/main/kotlin</dir>
-          </sourceDirectories>
-          <documentedVisibilities>
-            <visibility>PUBLIC</visibility>
-            <visibility>PROTECTED</visibility>
-            <visibility>INTERNAL</visibility>
-          </documentedVisibilities>
-        </configuration>
-      </plugin>
-```
+Template: `templates/kotlin-maven/pom.xml.quality` — read it in full before filling placeholders
 
 **`<reporting>`** — the site keeps Surefire/Failsafe, JaCoCo and JXR exactly as in Step 1, drops Javadoc,
 Checkstyle, PMD and SpotBugs, and adds the ktlint report (the plugin is also a Maven reporting plugin); detekt and
 Dokka have no site report, so the site links nothing for them and the CI publishes `target/dokka` directly:
 
-```xml
-      <plugin>
-        <groupId>com.github.gantsign.maven</groupId>
-        <artifactId>ktlint-maven-plugin</artifactId>
-        <version>${ktlint-maven-plugin.version}</version>
-      </plugin>
-```
+Template: `templates/kotlin-maven/pom.xml.reporting` — read it in full before filling placeholders
 
 ## Step 2 — Where each dependency belongs
 
@@ -1121,29 +365,7 @@ compile → `implementation`, runtime → `runtimeOnly`, test → `testImplement
 
 Every module pom follows this shape. Note the complete absence of `<version>` on dependencies.
 
-```xml
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-
-  <parent>
-    <groupId><group-id></groupId>
-    <artifactId><parent-artifact-id></artifactId>
-    <version><version></version>
-    <relativePath><relative-path-to-parent-pom></relativePath>
-  </parent>
-
-  <artifactId><artifact-id>-<module-suffix></artifactId>
-  <packaging>jar</packaging>
-  <name>${project.groupId}:${project.artifactId}</name>
-  <description><what this module is responsible for></description>
-
-  <dependencies>
-    <!-- Only what this module needs, per Step 2's table. No <version> anywhere. -->
-  </dependencies>
-</project>
-```
+Template: `templates/maven/module/pom.xml` — read it in full before filling placeholders
 
 - `<relativePath>` is `../pom.xml` for a top-level module, `../../pom.xml` for an `infrastructure/*` or `api/*`
   module, `../../../pom.xml` for an `infrastructure/database/<engine>` or `infrastructure/clients/<name>` module.
@@ -1170,46 +392,7 @@ Every module pom follows this shape. Note the complete absence of `<version>` on
 Add a `banned-dependencies` enforcer execution to each module so a violation of the hexagon fails the build
 instead of being caught in review. In `domain/pom.xml`:
 
-```xml
-<build>
-  <plugins>
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-enforcer-plugin</artifactId>
-      <executions>
-        <execution>
-          <id>enforce-domain-purity</id>
-          <goals>
-            <goal>enforce</goal>
-          </goals>
-          <configuration>
-            <rules>
-              <bannedDependencies>
-                <searchTransitive>false</searchTransitive>
-                <excludes>
-                  <exclude>org.springframework:*</exclude>
-                  <exclude>org.springframework.boot:*</exclude>
-                  <exclude>org.springframework.data:*</exclude>
-                  <exclude>${project.groupId}:<artifact-id>-application</exclude>
-                  <exclude>${project.groupId}:<artifact-id>-infrastructure-*</exclude>
-                  <exclude>${project.groupId}:<artifact-id>-api-*</exclude>
-                </excludes>
-                <!-- The root pom gives every module spring-boot-starter-test (test scope), which matches
-                     org.springframework.boot:* above; without this include the rule fails on every build. -->
-                <includes>
-                  <include>org.springframework.boot:spring-boot-starter-test:*:*:test</include>
-                </includes>
-                <message>The domain module must not depend on Spring or on any outer module. Define a port
-                  (interface) here and implement it in the adapter module instead.</message>
-              </bannedDependencies>
-            </rules>
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
-  </plugins>
-</build>
-```
+Template: `templates/maven/domain/pom.xml.enforcer` — read it in full before filling placeholders
 
 Apply the same idea to the others, banning what each must not see:
 
@@ -1224,45 +407,7 @@ it is a one-line change, whereas noticing the leak later is not.
 
 ### `coverage/pom.xml`
 
-```xml
-  <artifactId><artifact-id>-coverage</artifactId>
-  <packaging>pom</packaging>
-  <name>${project.groupId}:${project.artifactId}</name>
-  <description>JaCoCo coverage aggregation across every module. No sources of its own.</description>
-
-  <dependencies>
-    <!-- one test-scope entry per module whose coverage should be aggregated -->
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId><artifact-id>-domain</artifactId>
-    </dependency>
-    <!-- ... -->
-  </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>aggregate-report</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>report-aggregate</goal>
-            </goals>
-            <configuration>
-              <dataFileIncludes>
-                <dataFileInclude>**/jacoco*.exec</dataFileInclude>
-              </dataFileIncludes>
-              <outputDirectory>${project.build.directory}/site/jacoco-aggregate</outputDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-```
+Template: `templates/maven/coverage/pom.xml.body` — read it in full before filling placeholders
 
 `coverage` must be the **last** `<module>` in the root pom so every other module's `jacoco.exec` already exists
 when `report-aggregate` runs. `dataFileIncludes` picks up both the unit (`jacoco.exec`) and integration
@@ -1272,114 +417,7 @@ when `report-aggregate` runs. `dataFileIncludes` picks up both the unit (`jacoco
 
 Additionally carries the executable-artifact and build-info plugins:
 
-```xml
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <mainClass><base-package>.<ServiceName>Application</mainClass>
-          <image>
-            <name><image-registry>/<artifact-id>:${project.version}</name>
-          </image>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>repackage</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Writes build-info.properties into this module's resources, the same house pattern as
-           iru-setup-java-library, so the running service can report exactly what was deployed. -->
-      <plugin>
-        <groupId>org.codehaus.gmaven</groupId>
-        <artifactId>groovy-maven-plugin</artifactId>
-        <version>${groovy-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>execute</goal>
-            </goals>
-            <configuration>
-              <source>
-                <![CDATA[
-                import java.util.Date
-                import java.util.Properties
-                import java.text.SimpleDateFormat
-                import java.io.File
-                import java.io.FileWriter
-
-                println("Saving build info...")
-                def dateFormatter = new SimpleDateFormat("yy-MM-dd HH:mm:ss")
-                def buildTimestamp = dateFormatter.format(new Date())
-
-                String groupId = "${project.groupId}"
-                String artifactId = "${project.artifactId}"
-                String version = "${project.version}"
-
-                //GITHUB ACTIONS
-                def buildNumber = System.getenv("GITHUB_RUN_NUMBER")
-                def commit = System.getenv("GITHUB_SHA")
-                def branch = System.getenv("GITHUB_REF_NAME")
-
-                //JENKINS
-                if (buildNumber == null) {
-                  buildNumber = System.getenv("BUILD_NUMBER")
-                }
-                if (commit == null) {
-                  commit = System.getenv("GIT_COMMIT")
-                }
-                if (branch == null) {
-                  branch = System.getenv("GIT_BRANCH")
-                }
-
-                //GITLAB
-                if (buildNumber == null) {
-                  buildNumber = System.getenv("CI_JOB_ID")
-                }
-                if (commit == null) {
-                  commit = System.getenv("CI_COMMIT_SHA")
-                }
-                if (branch == null) {
-                  branch = System.getenv("CI_COMMIT_REF_NAME")
-                }
-
-                def props = new Properties()
-                props.setProperty("BUILD_TIMESTAMP", buildTimestamp)
-                props.setProperty("GROUP_ID", groupId)
-                props.setProperty("ARTIFACT_ID", artifactId)
-                props.setProperty("VERSION", version)
-                if (buildNumber != null) {
-                  props.setProperty("BUILD_NUMBER", buildNumber)
-                }
-                if (commit != null) {
-                  props.setProperty("COMMIT", commit)
-                }
-                if (branch != null) {
-                  props.setProperty("BRANCH", branch)
-                }
-
-                File dir = new File("${project.basedir}/src/main/resources/<base-package-path>")
-                dir.mkdirs()
-                File file = new File(dir, "build-info.properties")
-                FileWriter writer = new FileWriter(file)
-                props.store(writer, null)
-                writer.close()
-                println("Build info saved at " + file)
-                ]]>
-              </source>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-```
+Template: `templates/maven/boot/pom.xml.build` — read it in full before filling placeholders
 
 `<base-package-path>` is the base package with dots replaced by slashes. The GitHub Actions branch is listed
 first because that's what this catalog's generated workflows actually run under; the Jenkins/GitLab fallbacks are
@@ -1410,20 +448,7 @@ Java writes `checkstyle.xml` and `spotbugs-exclude.xml`; Kotlin (Maven or Gradle
 - **`spotbugs-exclude.xml`** at the repository root, if absent (an existing one follows Step 0's answer — Keep by
   default; on Update, add the generated-source matches below if missing), excluding the generated-source packages:
 
-  ```xml
-  <FindBugsFilter>
-    <Match>
-      <Source name="~.*[\\/]generated-sources[\\/].*"/>
-    </Match>
-    <Match>
-      <Class name="~.*\.generated\..*"/>
-    </Match>
-    <!-- MapStruct-generated implementations -->
-    <Match>
-      <Class name="~.*MapperImpl"/>
-    </Match>
-  </FindBugsFilter>
-  ```
+  Template: `templates/maven/spotbugs-exclude.xml` — read it in full before filling placeholders
 
 - **Kotlin (Maven and Gradle)**: write these two instead of `checkstyle.xml`/`spotbugs-exclude.xml` — both if
   absent, an existing one following Step 0's answer (Keep by default; on Update add only missing keys).
@@ -1431,49 +456,7 @@ Java writes `checkstyle.xml` and `spotbugs-exclude.xml`; Kotlin (Maven or Gradle
   `detekt.yml` at the repository root, layered over detekt's defaults (`buildUponDefaultConfig`), relaxing only
   what a Spring service can't reasonably satisfy — the same philosophy as the lenient `checkstyle.xml`:
 
-  ```yaml
-  # detekt configuration, layered over detekt's default ruleset (buildUponDefaultConfig: true): only deviations
-  # from the defaults belong here. maxIssues: 0 makes any finding fail the build, like Checkstyle/PMD/SpotBugs do
-  # for the Java services.
-  build:
-    maxIssues: 0
-
-  config:
-    validation: true
-    warningsAsErrors: false
-
-  complexity:
-    LongParameterList:
-      # Spring constructors injecting several collaborators, data classes mapping wide DTOs.
-      constructorThreshold: 10
-      ignoreDefaultParameters: true
-      ignoreAnnotated: ['ConfigurationProperties']
-    TooManyFunctions:
-      excludes: ['**/test/**', '**/generated/**']
-
-  naming:
-    FunctionNaming:
-      # Backtick test names (`returns 404 when missing`) are the Kotlin testing convention.
-      excludes: ['**/test/**']
-
-  performance:
-    SpreadOperator:
-      # `runApplication<App>(*args)` in the Spring Boot main function is the one idiomatic spread.
-      excludes: ['**/*Application.kt']
-
-  style:
-    MaxLineLength:
-      maxLineLength: 140
-    MagicNumber:
-      excludes: ['**/test/**']
-      ignorePropertyDeclaration: true
-      ignoreAnnotation: true
-    ReturnCount:
-      max: 3
-    UnusedPrivateMember:
-      # Reflection-driven members look unused to static analysis.
-      ignoreAnnotated: ['Bean', 'EventListener', 'Scheduled', 'KafkaListener']
-  ```
+  Template: `templates/kotlin/detekt.yml` — read it in full before filling placeholders
 
   (Verified: with this file the `SpreadOperator` finding on the Boot `main` is gone, and a planted magic number
   still fails the build.)
@@ -1481,23 +464,7 @@ Java writes `checkstyle.xml` and `spotbugs-exclude.xml`; Kotlin (Maven or Gradle
   `.editorconfig` at the repository root — ktlint reads its rules from here (both the Maven plugin and the Gradle
   plugin), and IntelliJ formats to the same rules:
 
-  ```ini
-  root = true
-
-  [*]
-  charset = utf-8
-  end_of_line = lf
-  insert_final_newline = true
-  trim_trailing_whitespace = true
-
-  [*.{kt,kts}]
-  indent_style = space
-  indent_size = 4
-  max_line_length = 140
-  ktlint_code_style = ktlint_official
-  # Backtick test names and Spring's @Bean factory functions.
-  ktlint_function_naming_ignore_when_annotated_with = Test, ParameterizedTest, Bean
-  ```
+  Template: `templates/kotlin/.editorconfig` — read it in full before filling placeholders
 
   An existing `.editorconfig` with other sections: on Update add only the `[*.{kt,kts}]` section if it is missing.
 
@@ -1563,116 +530,18 @@ the project's version and break it).
 
 ### `settings.gradle.kts`
 
-```kotlin
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-    }
-}
-
-dependencyResolutionManagement {
-    repositoriesMode = RepositoriesMode.PREFER_SETTINGS
-    repositories {
-        mavenCentral()
-    }
-}
-
-rootProject.name = "<artifact-id>"
-
-// One include per leaf module in the manifest's `modules:` list, `:`-path mirroring the directory, in this order.
-include(":domain")
-include(":application")
-include(":infrastructure:database:<engine>")
-include(":infrastructure:configuration")
-include(":infrastructure:clients:<name>")
-include(":infrastructure:producers")
-include(":infrastructure:metrics")
-include(":api:rest-server")
-include(":api:grpc-server")
-include(":api:graphql-server")
-include(":api:consumers")
-include(":boot")
-include(":coverage")
-```
+Template: `templates/kotlin-gradle/settings.gradle.kts` — read it in full before filling placeholders
 
 Project names are the directory names (`boot`, `rest-server`, …), not the Maven `<a>-<suffix>` artifactIds; the
 published jar names follow the project name.
 
 ### `gradle.properties`
 
-```properties
-group=<group-id>
-# Read by the deploy workflow and by every project (Gradle maps it onto project.version).
-version=<version>
-org.gradle.caching=true
-org.gradle.parallel=true
-kotlin.code.style=official
-```
+Template: `templates/kotlin-gradle/gradle.properties` — read it in full before filling placeholders
 
 ### `gradle/libs.versions.toml`
 
-```toml
-[versions]
-java = "<java-version>"
-kotlin = "<kotlin-version>"
-spring-boot = "<spring-boot-version>"
-detekt = "<latest>"
-ktlint-gradle = "<latest>"
-ktlint = "<latest>"
-dokka = "<latest>"
-jacoco = "<latest>"
-sonarqube = "<latest>"              # omit when sonar.mode: none
-mockk = "<latest>"
-springmockk = "<latest-5.x>"
-archunit = "<latest>"
-# BOM versions copied from the reference build; omit any not present there.
-spring-cloud = "<from-reference-build>"
-spring-ai = "<from-reference-build>"
-# Only what the stack uses (see Step 1's property list for the Maven equivalents).
-caffeine = "<latest>"
-flamingock = "<latest>"
-
-[libraries]
-# BOMs — applied with platform() by iru.kotlin-library; they manage every Spring, Jackson, Kotlin, JUnit,
-# coroutines and Testcontainers version.
-spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
-spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
-spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "spring-ai" }
-
-# BOM-managed: no version here on purpose. One alias per starter/driver in the reference build, named after its
-# artifactId (spring-boot-starter-webmvc -> spring-boot-starter-webmvc), plus these:
-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
-kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" }
-kotlinx-coroutines-reactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor" }
-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test" }
-jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
-spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
-spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
-spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
-spring-cloud-context = { module = "org.springframework.cloud:spring-cloud-context" }
-testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-
-# Not BOM-managed.
-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
-springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
-archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
-
-# Plugin artifacts the build-logic convention plugins compile against (versions shared with the aliases above).
-kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
-kotlin-noarg = { module = "org.jetbrains.kotlin:kotlin-noarg", version.ref = "kotlin" }
-spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
-detekt-gradle-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
-ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle:ktlint-gradle", version.ref = "ktlint-gradle" }
-dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
-
-[plugins]
-sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
-```
+Template: `templates/kotlin-gradle/gradle/libs.versions.toml` — read it in full before filling placeholders
 
 Omit every entry the stack doesn't use, exactly as the Maven root pom omits unused properties. The codegen and
 frontend pieces are **not** written here: `iru-setup-java-springboot-apis` appends its own versions, libraries and
@@ -1688,100 +557,18 @@ group, not a library, and breaks `libs.protoc.get()`).
 `build-logic/settings.gradle.kts` — shares the root catalog, so the convention plugins and the modules read one
 set of versions:
 
-```kotlin
-dependencyResolutionManagement {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-    }
-    versionCatalogs {
-        create("libs") {
-            from(files("../gradle/libs.versions.toml"))
-        }
-    }
-}
-
-rootProject.name = "build-logic"
-```
+Template: `templates/kotlin-gradle/build-logic/settings.gradle.kts` — read it in full before filling placeholders
 
 `build-logic/build.gradle.kts`:
 
-```kotlin
-plugins {
-    `kotlin-dsl`
-}
-
-dependencies {
-    implementation(libs.kotlin.gradle.plugin)
-    implementation(libs.kotlin.allopen)
-    implementation(libs.kotlin.noarg)
-    implementation(libs.spring.boot.gradle.plugin)
-    implementation(libs.detekt.gradle.plugin)
-    implementation(libs.ktlint.gradle.plugin)
-    implementation(libs.dokka.gradle.plugin)
-}
-```
+Template: `templates/kotlin-gradle/build-logic/build.gradle.kts` — read it in full before filling placeholders
 
 Precompiled script plugins can't use the type-safe `libs` accessor, so each one looks the catalog up by name.
 
 `build-logic/src/main/kotlin/iru.kotlin-library.gradle.kts` — applied by every module (directly or via
 `iru.spring-boot-app`); it applies the other three conventions, so a module build file names one plugin:
 
-```kotlin
-// Every Kotlin module: Kotlin/JVM + the Spring (all-open) and JPA (no-arg) compiler plugins, the JDK toolchain,
-// the Spring Boot BOM, the shared test stack, and the quality / integration-test / coverage conventions.
-plugins {
-    id("org.jetbrains.kotlin.jvm")
-    id("org.jetbrains.kotlin.plugin.spring")
-    id("org.jetbrains.kotlin.plugin.jpa")
-    id("iru.quality")
-    id("iru.integration-test")
-    id("iru.coverage")
-}
-
-val libs = versionCatalogs.named("libs")
-
-fun lib(alias: String) = libs.findLibrary(alias).get()
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(libs.findVersion("java").get().requiredVersion)
-    }
-}
-
-kotlin {
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
-        javaParameters = true
-    }
-}
-
-// kotlin-jpa only adds no-arg constructors; Hibernate's lazy proxies also need the entities open.
-allOpen {
-    annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.MappedSuperclass")
-    annotation("jakarta.persistence.Embeddable")
-}
-
-dependencies {
-    implementation(platform(lib("spring-boot-dependencies")))
-    // One line per other BOM in the catalog (spring-cloud-dependencies, spring-ai-bom, ...); omit when absent.
-    implementation(platform(lib("spring-cloud-dependencies")))
-    implementation(lib("kotlin-reflect"))
-    // Only when stack.concurrency is reactive or both:
-    implementation(lib("kotlinx-coroutines-core"))
-    testImplementation(lib("kotlinx-coroutines-test"))
-
-    testImplementation(lib("spring-boot-starter-test"))
-    testImplementation(lib("kotlin-test-junit5"))
-    testImplementation(lib("mockk"))
-    testRuntimeOnly(lib("junit-platform-launcher"))
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-}
-```
+Template: `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.kotlin-library.gradle.kts` — read it in full before filling placeholders
 
 The toolchain makes `./gradlew` compile and test with JDK `<java-version>` whatever JDK runs Gradle; CI's
 `setup-java` should install that same version so no toolchain download is needed. `implementation(platform(...))`
@@ -1791,116 +578,18 @@ Maven needs `mockk-jvm`).
 
 `build-logic/src/main/kotlin/iru.spring-boot-app.gradle.kts` — applied to `boot` only:
 
-```kotlin
-// Applied to `boot` only: the executable jar (bootJar), bootRun and bootBuildImage.
-plugins {
-    id("iru.kotlin-library")
-    id("org.springframework.boot")
-}
-
-val libs = versionCatalogs.named("libs")
-
-dependencies {
-    // developmentOnly (spring-boot-docker-compose) doesn't extend implementation, so it needs the BOM too.
-    "developmentOnly"(platform(libs.findLibrary("spring-boot-dependencies").get()))
-    implementation(libs.findLibrary("jackson-module-kotlin").get())
-}
-```
+Template: `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.spring-boot-app.gradle.kts` — read it in full before filling placeholders
 
 `build-logic/src/main/kotlin/iru.quality.gradle.kts`:
 
-```kotlin
-// detekt + ktlint (both fail the build on any finding, like Checkstyle/PMD/SpotBugs on the Java services)
-// and Dokka (KDoc HTML).
-import io.gitlab.arturbosch.detekt.Detekt
-import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
-
-plugins {
-    id("io.gitlab.arturbosch.detekt")
-    id("org.jlleitschuh.gradle.ktlint")
-    id("org.jetbrains.dokka")
-}
-
-val libs = versionCatalogs.named("libs")
-
-detekt {
-    buildUponDefaultConfig = true
-    config.setFrom(rootProject.file("detekt.yml"))
-    source.setFrom("src/main/kotlin", "src/test/kotlin")
-}
-
-tasks.withType<Detekt>().configureEach {
-    jvmTarget = libs.findVersion("java").get().requiredVersion
-    exclude("**/generated/**")
-    reports {
-        xml.required = true // build/reports/detekt/detekt.xml, imported by Sonar
-        html.required = true
-        sarif.required = false
-        txt.required = false
-        md.required = false
-    }
-}
-
-ktlint {
-    version = libs.findVersion("ktlint").get().requiredVersion
-    reporters {
-        reporter(ReporterType.PLAIN)
-        reporter(ReporterType.CHECKSTYLE) // build/reports/ktlint/<task>/<task>.xml, imported by Sonar
-    }
-    filter {
-        exclude { it.file.path.contains("/generated/") || it.file.path.contains("/build/") }
-    }
-}
-
-dokka {
-    dokkaSourceSets.configureEach {
-        documentedVisibilities(
-            org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier.Public,
-            org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier.Protected,
-            org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier.Internal,
-        )
-        // Generated sources (registered on the source sets by the codegen plugins) are not documented.
-        suppressedFiles.from(layout.buildDirectory.dir("generated"))
-        perPackageOption {
-            matchingRegex = ".*\\.generated(\\..*)?"
-            suppress = true
-        }
-    }
-}
-```
+Template: `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.quality.gradle.kts` — read it in full before filling placeholders
 
 `./gradlew ktlintFormat` fixes most ktlint findings; detekt findings are fixed by hand (or suppressed with a
 reason, never by raising `maxIssues`).
 
 `build-logic/src/main/kotlin/iru.integration-test.gradle.kts`:
 
-```kotlin
-// *Test classes run in `test`; *IT classes (Testcontainers-backed, slower) run in `integrationTest`, which `check`
-// depends on. Both share the test source set, mirroring Surefire/Failsafe on the Maven side.
-plugins {
-    java
-}
-
-tasks.named<Test>("test") {
-    exclude("**/*IT*")
-}
-
-val integrationTest =
-    tasks.register<Test>("integrationTest") {
-        description = "Runs the *IT integration tests."
-        group = LifecycleBasePlugin.VERIFICATION_GROUP
-        testClassesDirs = sourceSets["test"].output.classesDirs
-        classpath = sourceSets["test"].runtimeClasspath
-        include("**/*IT*")
-        // Most modules have unit tests but no *IT; Gradle 9 would otherwise fail on "no tests discovered".
-        failOnNoDiscoveredTests = false
-        shouldRunAfter(tasks.named("test"))
-    }
-
-tasks.named("check") {
-    dependsOn(integrationTest)
-}
-```
+Template: `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.integration-test.gradle.kts` — read it in full before filling placeholders
 
 Applying it to every module (through `iru.kotlin-library`) means any module that later gains an `*IT` —
 `infrastructure/database/<engine>`, `api/*`, `boot` — already has the task; `./gradlew test` never starts a
@@ -1908,74 +597,14 @@ container, which is what the unit-only coverage gate and `ci.tests: unit` rely o
 
 `build-logic/src/main/kotlin/iru.coverage.gradle.kts`:
 
-```kotlin
-// JaCoCo for every Test task (test.exec and integrationTest.exec under build/jacoco/), plus a per-module XML report.
-plugins {
-    jacoco
-}
-
-val libs = versionCatalogs.named("libs")
-
-jacoco {
-    toolVersion = libs.findVersion("jacoco").get().requiredVersion
-}
-
-tasks.named<JacocoReport>("jacocoTestReport") {
-    dependsOn(tasks.named("test"))
-    // Generated code (OpenAPI/protobuf/AVRO/GraphQL output) never counts towards coverage.
-    classDirectories.setFrom(
-        classDirectories.files.map { dir -> fileTree(dir) { exclude("**/generated/**", "**/*ApplicationKt.class") } },
-    )
-    reports {
-        xml.required = true
-        html.required = true
-    }
-}
-```
+Template: `templates/kotlin-gradle/build-logic/src/main/kotlin/iru.coverage.gradle.kts` — read it in full before filling placeholders
 
 Like the Maven template, no build-failing coverage threshold is configured here — the 80% gate is enforced by
 the coding skills (`iru-java-coverage` reads these reports).
 
 ### Root `build.gradle.kts`
 
-```kotlin
-// Root project: no sources. Puts build-logic (and with it the Kotlin, Spring Boot, detekt, ktlint and Dokka
-// Gradle plugins) on the root classpath once, aggregates Dokka into build/dokka/html, and configures Sonar.
-plugins {
-    id("iru.quality") apply false
-    alias(libs.plugins.sonarqube)
-}
-
-apply(plugin = "org.jetbrains.dokka")
-
-dependencies {
-    // One entry per Kotlin module (every leaf module except coverage), so dokkaGeneratePublicationHtml
-    // aggregates them into build/dokka/html.
-    "dokka"(project(":domain"))
-    "dokka"(project(":application"))
-    "dokka"(project(":boot"))
-}
-
-sonar {
-    properties {
-        property("sonar.organization", "<sonar-organization>")
-        property("sonar.projectKey", "<sonar-project-key>")
-        property("sonar.host.url", "<sonar-host-url>")
-        property(
-            "sonar.coverage.jacoco.xmlReportPaths",
-            "$rootDir/coverage/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml",
-        )
-        // Relative paths: each module resolves them against its own directory.
-        property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
-        property(
-            "sonar.kotlin.ktlint.reportPaths",
-            "build/reports/ktlint/ktlintMainSourceSetCheck/ktlintMainSourceSetCheck.xml," +
-                "build/reports/ktlint/ktlintTestSourceSetCheck/ktlintTestSourceSetCheck.xml",
-        )
-        property("sonar.exclusions", "**/generated/**,**/build/generated/**")
-    }
-}
-```
+Template: `templates/kotlin-gradle/build.gradle.kts` — read it in full before filling placeholders
 
 `id("iru.quality") apply false` is deliberate: it loads the convention plugins' dependencies into the root
 classloader once, so every subproject shares one copy of the Kotlin/Dokka/detekt plugins and the root can apply
@@ -1993,156 +622,21 @@ Every leaf module names one convention plugin and its own dependencies — `proj
 project exactly per the module table's "May depend on" column, catalog aliases for everything else, never a
 version:
 
-```kotlin
-// domain/build.gradle.kts — nothing Spring, nothing of this project.
-plugins {
-    id("iru.kotlin-library")
-}
-```
+Template: `templates/kotlin-gradle/domain/build.gradle.kts` — read it in full before filling placeholders
 
-```kotlin
-// application/build.gradle.kts
-plugins {
-    id("iru.kotlin-library")
-}
+Template: `templates/kotlin-gradle/application/build.gradle.kts` — read it in full before filling placeholders
 
-dependencies {
-    implementation(project(":domain"))
-}
-```
-
-```kotlin
-// infrastructure/database/<engine>/build.gradle.kts — same shape for every infrastructure/* and api/* module:
-// project() lines per the table, then that module's Step 2 dependencies by alias.
-plugins {
-    id("iru.kotlin-library")
-}
-
-dependencies {
-    implementation(project(":domain"))
-    implementation(libs.spring.boot.starter.data.mongodb) // whatever the reference build names
-    testImplementation(libs.spring.boot.testcontainers)
-    testImplementation(libs.testcontainers.junit.jupiter)
-    testImplementation(libs.testcontainers.mongodb)
-}
-```
+Template: `templates/kotlin-gradle/infrastructure/database/ENGINE/build.gradle.kts` — read it in full before filling placeholders
 
 `boot/build.gradle.kts` additionally carries the executable artifact, the image name and the same
 `build-info.properties` the Maven build writes with `groovy-maven-plugin` — generated under `build/` instead of
 `src/main/resources`, so the working tree stays clean:
 
-```kotlin
-import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Properties
-
-plugins {
-    id("iru.spring-boot-app")
-}
-
-dependencies {
-    // Every other leaf module of this project except coverage.
-    implementation(project(":domain"))
-    implementation(project(":application"))
-    implementation(libs.spring.boot.starter)
-    testImplementation(libs.springmockk)
-    testImplementation(libs.archunit.junit5)
-}
-
-springBoot {
-    // A top-level `fun main` in <ServiceName>Application.kt compiles to <ServiceName>ApplicationKt.
-    mainClass = "<base-package>.<ServiceName>ApplicationKt"
-}
-
-tasks.named<BootBuildImage>("bootBuildImage") {
-    imageName = "<image-registry>/<artifact-id>:${project.version}"
-}
-
-val buildInfoDir = layout.buildDirectory.dir("generated/build-info")
-val generateBuildInfo =
-    tasks.register("generateBuildInfo") {
-        val outputFile = buildInfoDir.map { it.file("<base-package-path>/build-info.properties") }
-
-        fun env(name: String) = providers.environmentVariable(name)
-        val values =
-            mapOf(
-                "GROUP_ID" to provider { project.group.toString() },
-                "ARTIFACT_ID" to provider { "${rootProject.name}-${project.name}" },
-                "VERSION" to provider { project.version.toString() },
-                // GitHub Actions first, then Jenkins, then GitLab — as in the Maven template.
-                "BUILD_NUMBER" to env("GITHUB_RUN_NUMBER").orElse(env("BUILD_NUMBER")).orElse(env("CI_JOB_ID")),
-                "COMMIT" to env("GITHUB_SHA").orElse(env("GIT_COMMIT")).orElse(env("CI_COMMIT_SHA")),
-                "BRANCH" to env("GITHUB_REF_NAME").orElse(env("GIT_BRANCH")).orElse(env("CI_COMMIT_REF_NAME")),
-            )
-        outputs.file(outputFile)
-        outputs.upToDateWhen { false }
-        doLast {
-            val props = Properties()
-            props.setProperty("BUILD_TIMESTAMP", SimpleDateFormat("yy-MM-dd HH:mm:ss").format(Date()))
-            values.forEach { (key, value) -> value.orNull?.let { props.setProperty(key, it) } }
-            val file = outputFile.get().asFile
-            file.parentFile.mkdirs()
-            file.writer().use { props.store(it, null) }
-        }
-    }
-
-sourceSets.main {
-    resources.srcDir(files(buildInfoDir).builtBy(generateBuildInfo))
-}
-```
+Template: `templates/kotlin-gradle/boot/build.gradle.kts` — read it in full before filling placeholders
 
 `coverage/build.gradle.kts` — no sources; one `jacocoAggregation` line per other leaf module:
 
-```kotlin
-// No sources: aggregates every module's JaCoCo data into
-// build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml (what Sonar reads).
-plugins {
-    base
-    `jacoco-report-aggregation`
-}
-
-jacoco {
-    toolVersion = libs.versions.jacoco.get()
-}
-
-dependencies {
-    jacocoAggregation(project(":domain"))
-    jacocoAggregation(project(":application"))
-    jacocoAggregation(project(":boot"))
-}
-
-reporting {
-    reports {
-        register<JacocoCoverageReport>("testCodeCoverageReport") {
-            testSuiteName = "test"
-        }
-    }
-}
-
-tasks.named<JacocoReport>("testCodeCoverageReport") {
-    // The aggregation plugin only collects the `test` suite's data; add each module's integrationTest.exec when it
-    // exists (after `./gradlew integrationTest`), without forcing the integration tests to run — the same
-    // "whatever ran" semantics as the Maven report-aggregate over jacoco*.exec.
-    val aggregated = configurations.jacocoAggregation.get().dependencies.withType<ProjectDependency>()
-    val itData =
-        aggregated.map { dep ->
-            rootProject.layout.projectDirectory.file(
-                dep.path.removePrefix(":").replace(':', '/') + "/build/jacoco/integrationTest.exec",
-            )
-        }
-    executionData.from(files(itData).filter { it.exists() })
-    mustRunAfter(aggregated.map { "${it.path}:integrationTest" })
-    // Same exclusions as each module's own report: generated code and the Boot main file class.
-    classDirectories.setFrom(
-        classDirectories.files.map { dir -> fileTree(dir) { exclude("**/generated/**", "**/*ApplicationKt.class") } },
-    )
-    reports {
-        xml.required = true
-        html.required = true
-    }
-}
-```
+Template: `templates/kotlin-gradle/coverage/build.gradle.kts` — read it in full before filling placeholders
 
 `base` (not `java`) keeps `coverage` from being a Kotlin/Java project, so `testCodeCoverageReport` must be
 registered explicitly as above. Generated code stays out of every tool on Gradle too: detekt reads only

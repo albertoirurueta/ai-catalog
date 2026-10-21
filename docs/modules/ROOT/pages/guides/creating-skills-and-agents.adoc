@@ -116,6 +116,27 @@ ship, which opens agent configuration/editing — it doesn't invoke any specific
 * Reach for **`CLAUDE.md`** instead of either when the thing isn't a procedure at all but a standing fact or
   rule that should be true in *every* session, invoked or not — see xref:guides/claude-md.adoc[].
 
+== Budgets, templates and model tiers in this catalog
+
+Beyond the general mechanics above, skills and agents added to this catalog must pass
+`python3 tools/catalog-audit.py --check` (run it before opening a pull request; CI runs it too):
+
+* *Description budget and shape.* At most 1,024 characters (an internal skill that only other skills invoke targets
+  400), with the invocation form (`/iru-<name> <args>` or "Invoked as ...") inside the first 200 characters. Claude Code
+  lists each skill by `name` and `description`, caps each listing entry at 1,536 characters and gives the whole listing a
+  small share of the context window, so a long or buried description is cut off exactly where the trigger phrases are.
+  Put detail the model needs once the skill is running in the body, not in the description.
+* *Quoted YAML values.* Write `description: "..."` (or a folded `>-` block). An unquoted `: ` inside the value is a YAML
+  error, and a skill whose frontmatter does not parse loads with no description and no model.
+* *`templates/` convention.* A scaffold or workflow skill keeps the bytes of each file it generates in
+  `templates/<variant>/<path of the generated file>` inside its own directory, with an index table in `SKILL.md`; a
+  `SKILL.md` stays under 1,000 lines (500 recommended). Guidance that is read selectively goes in `reference/`.
+* *Model tiers.* `haiku` for skills that run a tool and report, `sonnet` for skills that write code or files, `opus` only
+  for exploration, planning and review; every agent pins its `model` (`inherit` for the one that runs a whole skill).
+  See xref:guides/performance-and-token-budget.adoc[] for the reasoning.
+* *Plugin membership.* Add the skill to a plugin in `tools/plugins.json` and run `python3 tools/generate-marketplace.py`;
+  see xref:guides/plugins.adoc[].
+
 == The fastest reliable way to draft one
 
 Hand-writing a `SKILL.md` or agent definition's frontmatter and prose from a blank file is slower and more
@@ -161,5 +182,6 @@ repository's `.claude/` versus bundling it into a plugin distributed via a marke
 
 * xref:guides/claude-md.adoc[]
 * xref:guides/plugins.adoc[]
+* xref:guides/performance-and-token-budget.adoc[]
 * xref:guides/authoring-effective-instructions.adoc[]
 * xref:agents/overview.adoc[]

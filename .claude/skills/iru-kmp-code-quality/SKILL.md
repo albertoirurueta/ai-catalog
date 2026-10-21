@@ -1,28 +1,6 @@
 ---
 name: iru-kmp-code-quality
-description: >-
-  Run a Kotlin Multiplatform (Android + iOS) project's wired static-analysis tools across every KMP source set — detekt
-  (1.x `io.gitlab.arturbosch.detekt`, whose KMP tasks are per compilation: `detektMetadataCommonMain`/
-  `detektMetadataIosMain`/… plus the type-resolution `detektAndroidMain`, or a plain `detekt` task only when its
-  `source` is configured to the KMP source directories; 2.x `dev.detekt`, whose tasks are per source set:
-  `detektCommonMainSourceSet`/`detektAndroidMainSourceSet`/`detektIosMainSourceSet`/…), ktlint
-  (`org.jlleitschuh.gradle.ktlint` `ktlintCheck`, one check per source set plus `ktlintKotlinScriptCheck`, or Spotless
-  `kotlin { ktlint() }`), Android Lint (the Android app module's `lintDebug`, and the KMP module's `lint` when the
-  `com.android.lint` plugin is applied to it — the AGP KMP library plugin registers no lint task otherwise), and
-  SwiftLint on the iOS host app (`swiftlint lint --reporter json iosApp`) when `iosApp/.swiftlint.yml` exists and the
-  binary is installed — detecting the detekt generation and every task name at runtime from `./gradlew <module>:tasks
-  --all`. Parses the detekt/ktlint Checkstyle XML, the ktlint plain reports (ANSI-stripped), the Android Lint XML and
-  the SwiftLint JSON into one per-tool, per-rule-id summary (file, line, rule id, severity, message). Invoke as
-  `/iru-kmp-code-quality` for the whole project, or `/iru-kmp-code-quality <scope>` where `<scope>` is a file/class
-  name, a path, a module, or a source set — the tools always analyze whole source sets, so a scope narrows the tasks
-  run where possible and filters the report. Report-only: verifies each tool is wired before trusting a "zero issues"
-  result (a plain detekt 1.x `detekt` task on a KMP module with no `source` configured analyzes nothing and writes no
-  report — that is "not wired for KMP sources", never a clean pass), reports an unwired tool as "not wired", and never
-  changes detekt/ktlint/Lint/SwiftLint configuration or installs a tool. When the prompt supplies a baseline (per-tool,
-  per-rule-id counts or an itemized list from an earlier run), reports only the new-vs-baseline diff, matched on tool
-  + rule id + file. Equivalent to `iru-android-code-quality`/`iru-kotlin-code-quality`/`iru-swift-code-quality` for
-  KMP apps. Use whenever the user (or `iru-kmp-code-one-task-group` via `iru-gate-runner`) wants a lint/static-analysis
-  pass over a KMP codebase instead of eyeballing `./gradlew check` output.
+description: "/iru-kmp-code-quality [scope] runs a Kotlin Multiplatform project's wired detekt, ktlint, Android Lint and SwiftLint (iosApp) across every source set and reports issues per tool and rule id; scope (file, path, module, source set) narrows the run and the report. Unwired tools are reported as not wired; a supplied baseline reports only the diff. Report-only."
 model: haiku
 allowed-tools: Read Bash(./gradlew *) Bash(python3 *) Bash(swiftlint *) Bash(command -v *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(/usr/libexec/java_home *)
 ---

@@ -1,48 +1,6 @@
 ---
 name: iru-setup-repository
-description: >-
-  End-to-end bootstrap front door for this entire catalog — invoke as `/iru-setup-repository` and use
-  it as THE one entry point new users should reach for to bootstrap any repository, instead of hunting for which
-  of this catalog's stack-specific orchestrators applies. Covers every project type this catalog can scaffold —
-  `java-library`, Spring Boot services (`java-springboot`, `java-springboot-hilla`, `kotlin-springboot`,
-  `kotlin-springboot-hilla`), Quarkus services (`java-quarkus`, `kotlin-quarkus`), `typescript-library`,
-  `react-web`, `nextjs`, `angular-web`, `nestjs`, PHP (`php-laravel`, `php-wordpress-plugin`,
-  `php-wordpress-theme`, `php-prestashop-module`), Python (`python-fastapi`, `python-django`), `android-library`, `android-app`, `swift-library`, `apple-app`
-  (`ios`/`ipados`/`macos`/`watchos`/`visionos`, SwiftUI or UIKit, MVVM or MVC), `react-native-app` (`expo`/`metro` toolchain), `ionic-app` (`angular`/`react`),
-  `kmp-app` (Kotlin Multiplatform for Android + iOS, `compose`/`native` UI), and the desktop apps `macos-app`
-  (native macOS, `swiftui`/`appkit`) and `windows-app` (.NET 10, `wpf`/`winui`/`winforms`), and agent-friendly
-  command-line tools `cli-tool` (`rust`/`go`/`swift`/`dotnet`, optional terminal UI) — by surveying the
-  working directory (running `iru-explore` first when it already holds code) to detect which one applies, asking
-  only the shared, cross-cutting questions the detected/chosen type still needs, then delegating the actual
-  scaffold to the matching stack orchestrator (`iru-setup-java-library-repository`, `iru-setup-java-springboot`,
-  `iru-setup-quarkus-repository`, `iru-setup-typescript-repository`, `iru-setup-php-repository`,
-  `iru-setup-python-repository`, `iru-setup-android-repository`, `iru-setup-swift-repository`,
-  `iru-setup-kmp-repository`, `iru-setup-macos-repository`, `iru-setup-windows-repository`, or
-  `iru-setup-cli-repository`) via
-  `iru-isolated-skill-executor`. Accepts
-  `args` (`key: value` lines) to pre-resolve `project-type`, `open-source`, `visibility`
-  (`public`/`private`/`internal`, otherwise detected via `gh repo view` or asked), `ci` (`yes`/`no`), `ci-tests`
-  (`unit`/`full`), `pages` (`yes`/`no`), `publish`, `distribution`, `sonar`
-  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing`
-  (`ask`/`keep`/`update`/`replace`, scripted runs only), `flavor`, the stack-shape keys `language` (JVM
-  `java`/`kotlin`, or a command-line tool's `rust`/`go`/`swift`/`dotnet`), `build-tool`,
-  `layout`, and `frontend` (JVM services), `rolling-deployments`/`deployment-strategy`/`advance` (Spring Boot only, with `ci: yes` — forwarded, never asked here), `accessibility` (`enforce`/`report`/`off`/`none` — UI types: whether
-  accessibility and assistive-technology support is wanted and how strictly the UI tests' automated checks gate;
-  `none` opts out entirely; recorded in `.ui-quality.yml`), `python-version`, `platforms`, `framework`, `toolchain` (React Native
-  `expo`/`metro`), `native-builds`, `ui` (Kotlin Multiplatform `compose`/`native`, macOS `swiftui`/`appkit`,
-  Windows `wpf`/`winui`/`winforms`, a command-line tool's `none`/`tui`), `architecture` (desktop apps'
-  `mvvm`/`mvc`), `integration-branch`,
-  `stable-branch`, `license`, `developer-name`, `developer-email`, and `organization-url` — forwarding each only
-  to the delegated orchestrator whose own `args` contract actually accepts it, and never asking a question
-  `args` already answered or one the delegated orchestrator asks itself. Asks whether CI workflows are wanted,
-  whether Sonar receives CI reports, whether CI runs unit-only or the full test suite, and (private repos) whether
-  docs go to GitHub Pages, stating the Actions-minutes / SonarCloud / Pages cost differences between public and
-  private repositories. Announces whether it is setting up from scratch or updating an existing repository (with
-  an inventory of the prior setup it found); on an existing repository it runs `iru-explore` first and forces
-  `mode: existing`, and every delegated component then warns about each pre-existing artifact and asks whether to
-  keep, update, or replace it. Use whenever a user wants to bootstrap (or catch up) a repository and either
-  doesn't know or shouldn't have to know which of this catalog's twelve stack-specific setup orchestrators to
-  invoke directly.
+description: "/iru-setup-repository [args] is the single front door for bootstrapping any repository in this catalog. It surveys the working directory (running iru-explore first when code exists), detects or asks the project type (JVM, Web and Node, PHP, Python, Mobile and Apple, desktop, command-line tool), asks only the shared cross-cutting questions still needed (CI, Sonar, CI test scope, Pages, accessibility, with public vs private cost notes), then delegates to the matching stack orchestrator via iru-isolated-skill-executor. Announces from-scratch vs update mode; key: value args pre-resolve answers. Use to bootstrap or catch up a repository when you do not know which setup orchestrator applies."
 model: sonnet
 ---
 

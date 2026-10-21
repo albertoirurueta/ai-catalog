@@ -1,44 +1,12 @@
 ---
 name: iru-setup-java-springboot-hilla
-description: >-
-  Scaffold a Hilla (Vaadin) React frontend into one module of an existing Spring Boot hexagonal build — Java (Maven)
-  or Kotlin (Maven, or Gradle Kotlin DSL), read from `springboot-stack.yml`'s `project.language`/`project.buildTool`
-  (absent ⇒ `java`/`maven`, the unchanged Java path) — the Vaadin BOM and `hilla-spring-boot-starter`/
-  `vaadin-spring-boot-starter` dependencies, the `vaadin-maven-plugin` execution wired into that module's pom (on
-  Gradle the `com.vaadin` plugin — `vaadinPrepareFrontend`/`hillaGenerate`/`vaadinBuildFrontend` — applied to the
-  `:boot` project with the BOM, starters and plugin in `gradle/libs.versions.toml`), Kotlin `@BrowserCallable`
-  conventions (Hilla 25 maps Kotlin's own nullability to the TypeScript client natively — `String` required,
-  `String?` optional — so no `@Nonnull` annotations), `src/main/frontend/` (file-based-routing `views/@index.tsx` +
-  `views/@layout.tsx`, a customized `index.html`), the module-root `vitest.config.ts` extending Vaadin's generated
-  Vite config with `@vitest/coverage-v8` lcov output, a sample `@testing-library/react` test, `eslint.config.js`
-  (flat config, `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-config-prettier`) plus
-  `.prettierrc.json`/`.prettierignore`, `package.json` `test`/`coverage`/`lint`/`format`/`test:ui` scripts, per the
-  catalog's UI contract a Playwright component-testing setup in the web module (a standalone Vite component gallery
-  driven by Playwright's built-in `mount()` fixture, `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts`
-  helper, a `HomeView` story and a spec capturing `.ui-screenshots/screen/HomeView/` across left-to-right/right-to-left
-  × light/dark with an accessibility check) and `.ui-quality.yml` at the repository root (its `accessibility` level
-  from `args`, else the manifest's top-level `accessibility`, else `enforce`), the `.gitignore`
-  additions this frontend needs, and — only when the manifest's `sonar.mode` isn't `none` — the `sonar.sources`/
-  `sonar.tests`/`sonar.javascript.lcov.reportPaths` additions to the root pom (Gradle: the root `sonar {}` block).
-  The frontend files are identical for every language and build tool. Announces whether it is scaffolding the
-  frontend from scratch or updating an existing one, and for every frontend file/build wiring it owns that already
-  exists warns and asks Update (fill gaps) / Keep as is / Replace / Stop — or applies `on-existing` from `args`.
-  Invoke as `/iru-setup-java-springboot-hilla`, optionally with `args` (a `stack-file` line naming the manifest
-  path, default `springboot-stack.yml` at the repository root, plus optional `mode:` (`new`/`existing`),
-  `on-existing:` (`ask`/`keep`/`update`/`replace`) and `accessibility:` (`enforce`/`report`/`off`/`none`) lines). Runs standalone against any build created by
-  `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via
-  `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is
-  `hilla`. Reads `springboot-stack.yml` for the module layout, language, build tool and `sonar.mode`, and looks up
-  the Vaadin BOM version and every npm devDependency version live (Maven Central and the npm registry) rather than
-  from memory. The root pom's `vaadin.version` property, `dependencyManagement` import, `pluginManagement` entry,
-  and `production` profile (Gradle: the catalog's `vaadin` version, `vaadin-bom` library and `com.vaadin` plugin
-  alias) are primarily written by `iru-setup-java-springboot-pom` — this skill only fills that gap itself when
-  running standalone against a build where it's missing. Use whenever a Spring Boot service needs its Hilla frontend
-  module actually scaffolded, instead of hand-wiring the Vaadin/Hilla build and npm toolchains file by file.
-model: haiku
+description: "Invoked as `/iru-setup-java-springboot-hilla` (args: `stack-file`, `mode`, `on-existing`, `accessibility`), normally by `iru-setup-java-springboot`. Scaffolds a Hilla (Vaadin) React frontend into the web module of a Spring Boot build: Vaadin build wiring, `src/main/frontend/`, Vitest, ESLint/Prettier and Playwright UI tests."
+model: sonnet
 ---
 
 # Setup Java Spring Boot Hilla Frontend
+
+Runs standalone against any build created by `iru-setup-java-springboot-modules`, or is invoked by `iru-setup-java-springboot`'s Step 8 (via `iru-isolated-skill-executor`) right after `iru-setup-java-springboot-apis` whenever the manifest's `frontend` is `hilla`.
 
 Scaffold a Hilla React frontend into the module of a Spring Boot hexagonal reactor that runs the web server. Two
 things about Hilla in the Vaadin 25.x line are easy to get wrong and were confirmed empirically while writing this

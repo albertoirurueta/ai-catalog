@@ -22,6 +22,10 @@ The layout is the scaffold contract that the .NET coding and gate skills and xre
 
 xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-cli` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-cli@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

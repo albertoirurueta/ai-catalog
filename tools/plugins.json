@@ -1,0 +1,264 @@
+{
+  "marketplace": {
+    "name": "ai-catalog",
+    "description": "Reusable Claude Code skills and agents for common software engineering workflows: issue-to-PR cycle, repository bootstrap, per-stack coding, quality gates and documentation.",
+    "root_plugin": "iru-core"
+  },
+  "plugins": [
+    {
+      "name": "iru-core",
+      "category": "core",
+      "description": "Stack-independent skills: issue-to-PR cycle (issue, explore, plan, code, PR description and review), release, ticket intake, license and security checks, Antora docs, repository bootstrap front door, database tasks, and the iru-gate-runner, iru-isolated-skill-executor and iru-change-summarizer agents. Required by every other plugin.",
+      "skills": [
+        "iru-issue",
+        "iru-explore",
+        "iru-plan",
+        "iru-code",
+        "iru-code-one-task-group",
+        "iru-pr-description",
+        "iru-pr-review",
+        "iru-release",
+        "iru-create-github-issue",
+        "iru-create-jira-ticket",
+        "iru-draft-github-issue",
+        "iru-review-github-issue",
+        "iru-split-github-issue",
+        "iru-jira-custom-context",
+        "iru-check-license",
+        "iru-check-security",
+        "iru-build-docs",
+        "iru-update-docs",
+        "iru-generate-skill-docs",
+        "iru-setup-repository",
+        "iru-setup-antora",
+        "iru-setup-changelog",
+        "iru-setup-readme",
+        "iru-database-*"
+      ],
+      "agents": [
+        "iru-gate-runner",
+        "iru-isolated-skill-executor",
+        "iru-change-summarizer"
+      ]
+    },
+    {
+      "name": "iru-knowledge",
+      "category": "knowledge",
+      "description": "Knowledge-base skills: set up a project knowledge base, process the inbox, compact and complete entries, brief a session, and turn knowledge into GitHub issues or Jira tickets.",
+      "skills": [
+        "iru-knowledge-*"
+      ]
+    },
+    {
+      "name": "iru-java",
+      "category": "stack",
+      "description": "Java and Kotlin (Maven or Gradle) libraries: coding, tests, JaCoCo/Kover coverage, Checkstyle/PMD/SpotBugs and detekt/ktlint quality gates, Javadoc/KDoc audits, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-java-*",
+        "iru-kotlin-code-quality",
+        "iru-kotlin-kdoc",
+        "iru-setup-java-*"
+      ],
+      "exclude": [
+        "iru-java-springboot-*",
+        "iru-setup-java-springboot*"
+      ]
+    },
+    {
+      "name": "iru-springboot",
+      "category": "stack",
+      "description": "Spring Boot services in Java or Kotlin: multi-module reactor generation (pom, modules, APIs, Hilla, Testcontainers, platform, workflows), coding, performance tests, rolling deployments and Antora documentation.",
+      "skills": [
+        "iru-java-springboot-*",
+        "iru-kotlin-springboot-*",
+        "iru-setup-java-springboot*",
+        "iru-springboot-rolling-deployments",
+        "iru-update-java-springboot-documentation"
+      ],
+      "depends_on": [
+        "iru-java"
+      ]
+    },
+    {
+      "name": "iru-quarkus",
+      "category": "stack",
+      "description": "Quarkus services in Java or Kotlin: service scaffold, GitHub workflows, repository bootstrap and task coding.",
+      "skills": [
+        "iru-quarkus-*",
+        "iru-setup-quarkus-*"
+      ],
+      "depends_on": [
+        "iru-java"
+      ]
+    },
+    {
+      "name": "iru-dotnet",
+      "category": "stack",
+      "description": ".NET libraries, services and Windows desktop apps (WPF, WinUI 3, Windows Forms): coding, tests, coverage, StyleCop/analyzers, DocFX, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-dotnet-*",
+        "iru-windows-*",
+        "iru-setup-windows-*",
+        "iru-setup-dotnet-*"
+      ],
+      "exclude": [
+        "iru-setup-dotnet-cli"
+      ]
+    },
+    {
+      "name": "iru-typescript",
+      "category": "stack",
+      "description": "TypeScript libraries and web apps (React, Angular, Ionic, Hilla): coding, Vitest/Jest/ng tests, coverage, ESLint/Prettier quality, TSDoc, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-typescript-*",
+        "iru-setup-typescript-*",
+        "iru-setup-react-web",
+        "iru-setup-angular-web",
+        "iru-setup-ionic-app"
+      ]
+    },
+    {
+      "name": "iru-nestjs",
+      "category": "stack",
+      "description": "NestJS services: task coding and application scaffold.",
+      "skills": [
+        "iru-nestjs-*",
+        "iru-setup-nestjs-app"
+      ],
+      "depends_on": [
+        "iru-typescript"
+      ]
+    },
+    {
+      "name": "iru-nextjs",
+      "category": "stack",
+      "description": "Next.js web apps: task coding and application scaffold.",
+      "skills": [
+        "iru-nextjs-*",
+        "iru-setup-nextjs-web"
+      ],
+      "depends_on": [
+        "iru-typescript"
+      ]
+    },
+    {
+      "name": "iru-react-native",
+      "category": "stack",
+      "description": "React Native apps (Expo or bare CLI/Metro): task coding, version bumps and application scaffold.",
+      "skills": [
+        "iru-react-native-*",
+        "iru-setup-react-native-app"
+      ],
+      "depends_on": [
+        "iru-typescript"
+      ]
+    },
+    {
+      "name": "iru-php",
+      "category": "stack",
+      "description": "PHP projects (Laravel, WordPress plugins and themes, PrestaShop modules): coding, Pest/PHPUnit tests, coverage, PHPStan/Psalm/PHPCS quality, PHPDoc, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-php-*",
+        "iru-setup-php-*"
+      ]
+    },
+    {
+      "name": "iru-python",
+      "category": "stack",
+      "description": "Python projects (FastAPI and Django): coding, pytest tests, coverage, Ruff/mypy/Bandit quality, docstring audits, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-python-*",
+        "iru-fastapi-*",
+        "iru-django-*",
+        "iru-setup-python-*"
+      ]
+    },
+    {
+      "name": "iru-android",
+      "category": "stack",
+      "description": "Android libraries and Compose apps in Kotlin: coding, unit tests, coverage, Lint/detekt/ktlint quality, Dokka audits, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-android-*",
+        "iru-setup-android-*"
+      ]
+    },
+    {
+      "name": "iru-swift",
+      "category": "stack",
+      "description": "Swift packages and Apple apps (iOS, iPadOS, macOS, watchOS, visionOS): coding, tests, coverage, SwiftLint, DocC, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-swift-*",
+        "iru-setup-swift-*",
+        "iru-setup-apple-app",
+        "iru-setup-macos-*"
+      ],
+      "exclude": [
+        "iru-setup-swift-cli"
+      ]
+    },
+    {
+      "name": "iru-kmp",
+      "category": "stack",
+      "description": "Kotlin Multiplatform Android and iOS apps: coding, host tests, Kover coverage, detekt/ktlint/Lint/SwiftLint quality, Dokka audits, version bumps and repository bootstrap.",
+      "skills": [
+        "iru-kmp-*",
+        "iru-setup-kmp-*"
+      ],
+      "depends_on": [
+        "iru-android",
+        "iru-swift"
+      ]
+    },
+    {
+      "name": "iru-rust",
+      "category": "stack",
+      "description": "Rust crates and workspaces: coding, nextest/cargo test, llvm-cov coverage, clippy/rustfmt/cargo-deny quality, rustdoc audits, version bumps and gitignore scaffold.",
+      "skills": [
+        "iru-rust-*",
+        "iru-setup-rust-*"
+      ],
+      "exclude": [
+        "iru-setup-rust-cli"
+      ]
+    },
+    {
+      "name": "iru-go",
+      "category": "stack",
+      "description": "Go modules: coding, go test, coverage, golangci-lint/go vet/govulncheck quality, godoc audits, version bumps and gitignore scaffold.",
+      "skills": [
+        "iru-go-*",
+        "iru-setup-go-*"
+      ],
+      "exclude": [
+        "iru-setup-go-cli"
+      ]
+    },
+    {
+      "name": "iru-cli",
+      "category": "stack",
+      "description": "Agent-friendly command-line tools in Rust, Go, Swift or .NET: scaffolds that implement the Building CLIs for AI Agents contract, shared GitHub workflows and the repository orchestrator.",
+      "skills": [
+        "iru-setup-cli-*",
+        "iru-setup-*-cli"
+      ],
+      "depends_on": [
+        "iru-rust",
+        "iru-go",
+        "iru-swift",
+        "iru-dotnet"
+      ]
+    }
+  ],
+  "optional_calls": [
+    {
+      "from": "iru-core",
+      "to": "*",
+      "reason": "iru-setup-repository (and the iru-code dispatch table) delegate to whichever stack plugin is installed for the detected project type; a missing stack plugin degrades to a report, never a hard dependency (core is required by every stack, so a dependency would be circular)"
+    },
+    {
+      "from": "iru-typescript",
+      "to": "iru-react-native",
+      "reason": "iru-typescript-* skills route React Native tasks to iru-react-native-*; only taken when the project is React Native, and iru-react-native already depends on iru-typescript"
+    }
+  ]
+}

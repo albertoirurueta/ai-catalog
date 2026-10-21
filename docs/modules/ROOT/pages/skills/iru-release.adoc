@@ -28,6 +28,10 @@ from the same integration branch this repository's history already shows it does
 
 xref:index.adoc#group-maintenance[Repository Maintenance]
 
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -86,7 +90,7 @@ not written into any build file by this step.
 flowchart TD
     A["Start /iru-release"] --> B{"Current branch is develop?"}
     B -- no --> B1["Warn and stop:\nask user to checkout develop and retry"]
-    B -- yes --> C["Detect ecosystem (iru-explore report\nor manifests) and matching\niru-&amp;lt;key&amp;gt;-bump-version skill;\nread current pre-release version,\nlatest tag, clean tree, main/master base"]
+    B -- yes --> C["Detect ecosystem (iru-explore report\nor manifests) and matching\niru-&amp;lt;key&amp;gt;-bump-version skill\n(from the session's available skills,\nplugin-safe);\nread current pre-release version,\nlatest tag, clean tree, main/master base"]
     C --> D["Ask user for the release version"]
     D --> E["Ask user for the upcoming pre-release\nversion (skipped for Swift library)"]
     E --> F["Create release_x.y.z branch off develop"]
@@ -116,8 +120,9 @@ flowchart TD
   `gradle.properties`), Swift/Apple (a `macos-app` too), .NET (`windows-app` and `dotnet`, or a `*.slnx`/`*.sln`, `Directory.Build.props` or `*.csproj`; its bump skill owns `Directory.Build.props`' `<Version>` plus the four-part MSIX `Identity Version` in `Package.appxmanifest`/`packaging/AppxManifest.xml`), PHP/Composer/WordPress/PrestaShop, Python via `pyproject.toml`, Rust via `Cargo.toml` (`[package]` or `[workspace.package]` version), or Go via `go.mod` (the `Version` literal in `internal/version/version.go`); command-line tools resolve by their language — `cli-tool (swift)` uses the Swift bump skill and its `Version.swift` literal, `cli-tool (dotnet)` the .NET one). When the
   React Native or KMP bump skill isn't installed, detection falls back to `typescript` / `android` respectively
   and the final report warns that the store-facing or iOS `MARKETING_VERSION` must be updated by hand. The
-  installed candidates are discovered with `find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"`
-  rather than assumed, and the matching one is invoked with `sync-files: yes` so it also refreshes
+  installed candidates are read from the skills available in the session (names matching `iru-*-bump-version`, which
+  works for copied skills and for plugin installs where `.claude/skills` does not exist), corroborated with
+  `find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"` when that directory exists, rather than assumed, and the matching one is invoked with `sync-files: yes` so it also refreshes
   `README.md`/`docs/antora.yml`/Antora dependency-snippet pages itself — `iru-release` no longer does that work
   directly. If no matching skill is installed, `iru-release` falls back to bumping the version file(s) by hand and
   says so in the final report.

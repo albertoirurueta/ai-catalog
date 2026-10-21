@@ -1,35 +1,6 @@
 ---
 name: iru-setup-kmp-github-workflows
-description: >-
-  Create or update the GitHub Actions workflows plus `.github/dependabot.yml` for a Kotlin Multiplatform (Android +
-  iOS) app repository produced by `iru-setup-kmp-app` — `build.yml` (every push to the integration/stable branches,
-  every pull request, `workflow_dispatch`): a Linux `android` job (detekt, ktlint, Android Lint on `androidApp` and
-  `shared` with SARIF upload, `:shared:testAndroidHostTest` + `:androidApp:testDebugUnitTest`, root Kover
-  `koverXmlReport` + `koverVerify` at 80%, `:androidApp:assembleDebug`, optional `./gradlew sonar`), a cost-gated
-  macOS `ios` job (`ios-ci: all|stable|none` — macOS minutes cost ~10× Linux on private repositories — running the
-  Kotlin/Native `:shared:iosSimulatorArm64Test`, `xcodegen generate`, SwiftLint, and `xcodebuild build` or, with
-  `ci-tests: full`, `xcodebuild test` of the `iosApp` scheme on the newest iOS simulator) — each test job also
-  uploads the UI tests' `.ui-screenshots/` captures as a 7-day `ui-screenshots-android`/`ui-screenshots-ios`
-  artifact (`if: always()`, `if-no-files-found: ignore`, no extra job or runner) — and an Antora + Dokka
-  (`api/`) docs job deployed to GitHub Pages (`pages: yes`) or uploaded as a workflow artifact (`pages: no`);
-  `release.yml` per `distribution` (`internal`: Firebase App Distribution + TestFlight; `store`: Google Play +
-  TestFlight — a signed `:androidApp:bundleRelease` from the `SIGNING_*` env vars, and an `xcodebuild archive`/
-  `-exportArchive` signed with an App Store Connect API key); `sync.yml` + `.github/scripts/sync_versions.py`
-  (gitflow: merge the release back into `develop` and bump `VERSION_NAME` to the next `-SNAPSHOT`); and the shared
-  security block (`security.yml` with dependency-review, CodeQL `java-kotlin` (manual JVM build) and optional
-  CodeQL `swift` (macOS), OSV-Scanner, gitleaks; Dependabot for `gradle` + `github-actions`). Invoke as
-  `/iru-setup-kmp-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `branching`
-  (`gitflow`/`main-only`), `integration-branch`, `stable-branch`, `java-version` (default `17`), `runner` (macOS
-  label, default `macos-26`), `xcode-version`, `ios-ci`, `ci-tests` (`unit`/`full`), `play-track`, plus the shared
-  vocabulary — `open-source`, `visibility`, `pages`, `distribution`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `mode`, `on-existing`, and the `security-*` toggles; stand-alone it
-  resolves `visibility` itself (`gh repo view`) and asks `sonar`/`ios-ci`/`ci-tests`/`pages` with the Actions-minutes,
-  macOS-multiplier, SonarCloud and Pages cost facts for that visibility (never `ci` — invoking it means CI is wanted).
-  Announces whether it is creating the pipeline from scratch or updating an existing one; for every workflow/script/
-  Dependabot file that already exists it warns and asks Update / Keep as is / Replace / Stop, naming each concrete
-  mismatch with this run's choices, unless `on-existing` decides. Ends with the required-secrets table. Use whenever
-  a Kotlin Multiplatform app repository needs this CI/CD release and security pipeline bootstrapped or brought in
-  line with this house pattern, instead of hand-writing the YAML.
+description: "Invoke as `/iru-setup-kmp-github-workflows`, optionally with `args` (key: value lines such as `branching`, `ios-ci`, `ci-tests`, `distribution`, `pages`, `sonar`, `on-existing`); normally called by `iru-setup-kmp-repository`. Creates build, release, sync and security workflows plus Dependabot for a Kotlin Multiplatform app."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(gh *) Bash(git *) Bash(curl *) Bash(python3 *) Bash(ruby *) Bash(actionlint *) Bash(./gradlew *) Bash(xcrun *)
 ---

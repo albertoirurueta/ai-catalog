@@ -26,11 +26,17 @@ production). It resolves the target Jira project and issue type against this Jir
 rather than inventing one, drafts a summary and a structured description (Summary, Context, Acceptance criteria,
 Task details — due date, importance, and an agent-assessed estimated difficulty from very easy to impossible —
 References), and always shows the draft for explicit confirmation before filing it. Unlike GitHub, there is no
-ubiquitous Jira CLI fallback — this skill stops early if no Jira MCP tool is connected at all.
+ubiquitous Jira CLI fallback — this skill stops early if no Jira MCP tool is connected at all. It is for new tickets
+only: not for tickets that already exist (nothing to file), and not for work that should be tracked as a GitHub issue
+(use `iru-create-github-issue`).
 
 == Purpose group
 
 xref:index.adoc#group-intake[Ticket Intake]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 
@@ -79,7 +85,7 @@ xref:index.adoc#group-intake[Ticket Intake]
 [mermaid]
 ....
 flowchart TD
-    A["Start /create-jira-ticket\n(optional short description)"] --> B{Jira MCP tool\nconnected?}
+    A["Start /iru-create-jira-ticket\n(optional short description)"] --> B{Jira MCP tool\nconnected?}
     B -- no --> Z["Stop: no fallback without Jira MCP;\nsuggest create-github-issue instead"]
     B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
     C --> D["Ask user: purpose of the task\n(plain conversational question)"]

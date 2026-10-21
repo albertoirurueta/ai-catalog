@@ -1,32 +1,6 @@
 ---
 name: iru-kotlin-springboot-code-one-task-group
-description: >-
-  Implement one bucket of Kotlin Spring Boot tasks from a plan's task group end-to-end, on Maven or Gradle (Kotlin
-  DSL or Groovy, wrapper preferred), in either a DDD/hexagonal multi-module reactor or a layered/feature-packaged
-  service — detected once at runtime. Captures a single pre-change quality baseline for the whole bucket (detekt +
-  ktlint via `iru-kotlin-code-quality`, plus Checkstyle/PMD/SpotBugs via `iru-java-code-quality` when the touched
-  modules also hold Java sources), runs `iru-kotlin-springboot-code-one-task` once per task (in parallel agents
-  when the group is marked parallelizable) to implement each one and its unit tests, then validates the entire
-  bucket once, cheapest first, every check delegated to an `iru-gate-runner` agent so no raw report lands in this
-  context — license headers via `iru-check-license`, KDoc plus a Dokka build via `iru-kotlin-kdoc` (and Javadoc via
-  `iru-java-javadoc` for touched Java files), structural checks only when the repository is hexagonal and has them
-  (`maven-enforcer-plugin` banned dependencies and/or the ArchUnit test, which inspects bytecode and so covers
-  Kotlin classes too), scoped unit tests via `iru-java-test`, an 80% coverage gate via `iru-java-coverage` (JaCoCo
-  or Kover) measured from **unit tests alone**, the full unit suite, static analysis diffed against that one
-  baseline, and last the Testcontainers-backed integration stage — Maven Failsafe (`verify`) or whichever Gradle
-  integration task the build defines (`integrationTest`, a JVM test suite, or a custom `Test` task, detected) —
-  serialized repository-wide behind the same atomic `mkdir`-based `.integration-test.lock` as
-  `iru-java-springboot-code-one-task-group` (owner file, stale after 60 minutes, bounded ~45-minute wait, released
-  on every exit path, single-threaded run with no `-T`/`--parallel`). Integration tests never satisfy the coverage
-  gate; the aggregate (JaCoCo `report-aggregate`, merged execution data, or a Kover report including the
-  integration task) is reported for information only. Docker unavailable means the integration stage is reported
-  unverified, never silently skipped. Gradle builds are scoped with `:<module>:<task>` task paths where Maven uses
-  `-pl <modules> -am`. `iru-kotlin-springboot-code-one-task` checks off each task's box itself with a "group
-  validation pending" note; this skill backfills any that didn't land and replaces each note with the final
-  outcome. Invoke as `/iru-kotlin-springboot-code-one-task-group <bucket text>`, passing every task/sub-task in the
-  bucket with its own text, the group's `Parallelizable` verdict, and any relevant "Current code state" context.
-  The Kotlin counterpart to `iru-java-springboot-code-one-task-group`; used by `iru-code-one-task-group` for its
-  `kotlin-springboot`-tagged tasks.
+description: "Invoked as /iru-kotlin-springboot-code-one-task-group <bucket text> (group tasks, Parallelizable verdict, code state) via Skill. Implements one Kotlin Spring Boot (Maven or Gradle) task bucket: one baseline, iru-kotlin-springboot-code-one-task per task (parallel when allowed), then validates once (license, KDoc, tests, 80% coverage, detekt/ktlint, locked Testcontainers); finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(docker *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---

@@ -1,20 +1,6 @@
 ---
 name: iru-dotnet-code-quality
-description: >-
-  Run this .NET/C# project or solution's Roslyn analyzers — StyleCop.Analyzers for style/formatting (the .NET
-  equivalent of Checkstyle) and Microsoft.CodeAnalysis.NetAnalyzers' CA rules for
-  code-quality/design/reliability/security bug detection (the .NET equivalent of PMD + SpotBugs combined), plus
-  MSTest's own `MSTEST` analyzers when present — via a clean `dotnet build` with a SARIF diagnostic log (one log per
-  project for a multi-project solution, since a single shared `ErrorLog` path is overwritten/corrupted by parallel
-  project builds), then read the generated `.sarif` file(s) to summarize every issue found (file, line, rule,
-  message), grouped by tool. Windows-desktop aware — on a non-Windows host it passes `-p:EnableWindowsTargeting=true`
-  so WPF/Windows Forms projects are analyzed too, and reports a WinUI 3 project (whose XAML compiler only runs on
-  Windows) as "not analyzed (needs Windows)" instead of failing the run. Invoke as `/iru-dotnet-code-quality` to check
-  the whole solution, or `/iru-dotnet-code-quality <path-or-class-name>` to scope the summary to a specific
-  project/file/class — the underlying build always analyzes the whole targeted solution/project (Roslyn analyzers have
-  no per-class selector), only the reported summary is filtered; an optional `baseline: <previous issue list>` line
-  makes it report only issues not in that baseline. Use whenever the user wants a lint/static-analysis pass called out
-  separately from `iru-dotnet-test`/`iru-dotnet-coverage`, instead of eyeballing raw build warnings.
+description: "/iru-dotnet-code-quality [path-or-class] runs a .NET solution's Roslyn analyzers (StyleCop, NetAnalyzers CA rules, MSTest) via a clean dotnet build with per-project SARIF logs and reports issues by tool, file, line and rule; the argument only filters the report. Windows-desktop aware; optional `baseline:` line reports only new issues."
 model: haiku
 ---
 

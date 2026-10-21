@@ -1,0 +1,190 @@
+= Performance and token budget
+:description: Measured token and size budgets for the catalog, the model tier for every skill and agent, the prompt-cache analysis behind the routing of gates through iru-gate-runner, the evaluation of extra agents, the plugin-mode agent dispatch rule, and the optimizations that were deliberately only documented.
+:keywords: token budget, skill descriptions, listing budget, model tiers, prompt cache, subagents, plugins, catalog-audit, performance
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Every installed skill costs tokens before it is used: its `name` and `description` sit in the skill listing of every
+session, and its body is loaded in full each time it is invoked. This page records how large the catalog was, the
+budgets that now keep it small, the model assigned to each kind of skill, and the decisions taken while optimizing it
+(issue #11). Everything here was changed without altering what a skill writes, reports or asks, with one deliberate
+exception: `iru-plan` and `iru-code` gained the acceptance-criteria coverage table and the persisted
+`[NEEDS CLARIFICATION]` markers described in xref:guides/common-workflows.adoc[].
+
+The numbers come from `tools/catalog-audit.py` (see `tools/README.md`); the "before" column is the committed snapshot in
+`tools/baseline/` (`catalog-audit-before.md`, `sample-runs-before.md`), and the "after" column comes from the same script
+and the same sample runs on the finished work (`catalog-audit-after.md`, `sample-runs-after.md`).
+
+== Before and after
+
+Static audit totals (`python3 tools/catalog-audit.py --markdown`; the snapshot of the original tree is
+`tools/baseline/catalog-audit-before.md`):
+
+[cols="3,1,1",options="header"]
+|===
+| Metric | Before | After
+
+| Skills / agents | 196 / 3 | 196 / 3
+| Skill description characters (total) | 494,826 | 73,851
+| Agent description characters (total) | 5,092 | 1,459
+| Descriptions over 1,024 characters (skills and agents) | 189 | 0
+| Descriptions over 1,536 characters (the listing cap, so cut off) | 167 | 0
+| Frontmatter that fails a strict YAML parse (loads with no description and no model) | 39 | 0
+| Skills whose frontmatter `claude plugin validate` rejects | 7 | 0 (all pass)
+| `SKILL.md` bytes (total) | 6,217,277 | 5,303,911
+| `SKILL.md` lines (total) | 86,433 | 70,353
+| `SKILL.md` over 500 lines / over 1,000 lines | 39 / 11 | 36 / 0
+| Bytes inside fenced code blocks of `SKILL.md` | 997,720 | 489,768
+| Supporting files (templates and references) / bytes | 302 / 4,290,070 | 524 / 4,851,168
+| Redundant bytes in duplicate supporting files | 364,713 | 365,397 (not lower: +684 bytes)
+| Models: haiku / sonnet / opus (skills) | 85 / 108 / 3 | 58 / 135 / 3
+| Agents with a pinned `model` | 0 of 3 | 3 of 3 (two `haiku`, one explicit `inherit`)
+| Inline cross-model `Skill()` calls | 21 | 17 (all accepted)
+|===
+
+Sample runs (`claude -p --output-format json --permission-mode acceptEdits`, Claude Code 2.1.260; the commands, fixtures and
+caveats are in `tools/baseline/sample-runs-before.md`). Prompt-side tokens are `input + cache read + cache creation`:
+
+[cols="2,2,1,1,1,1,1,1",options="header"]
+|===
+| Sample | What it measures | Prompt-side tokens before | Output tokens before | Cost (USD) before | Duration before | After (tokens / cost / duration) | Output identical?
+
+| S0 | `Reply with the single word OK`: the fixed system prompt plus the skill listing | 42,787 | 4 | 0.3327 | 5.1 s | 30,278 tokens / 0.2076 / 1.8 s (12,509 fewer prompt-side tokens, -29.2 %) | n/a
+| S1 | `/iru-setup-typescript-github-workflows` on a TypeScript library fixture | 1,158,903 | 5,977 | 0.2993 | 69.0 s | 336,756 / 0.3932 / 73.6 s, on Sonnet instead of Haiku, and the run stopped to ask a question without writing files; the same prompt with the model forced back to Haiku: 1,598,692 / 0.3357 / 132.7 s (higher, it now follows the whole documented job) | Templates byte-identical (14 of 14 skills). Generated files not byte-identical: the model's own choices differ (integration branch, optional steps), see `tools/baseline/sample-runs-after.md`
+| S2 | `/iru-setup-android-gitignore` on an empty repository | 303,946 | 3,786 | 0.5287 | 58.1 s | 315,447 / 0.0999 / 31.8 s, on Haiku instead of Opus (the old frontmatter did not parse); it stopped to ask for module names. With the model line removed: 298,954 / 0.5744 / 76.0 s | Yes: the root `.gitignore` is identical (740 bytes) in the run on the default model
+| S3 | `/iru-explore` on the TypeScript library fixture | 259,764 | 3,835 | 0.6432 | 59.6 s | 257,500 / 0.6860 / 83.5 s (tokens slightly lower, cost and duration higher) | Same `Project type` and `Repository host`; the message now also carries a `Build & layout` line
+|===
+
+Cost is only comparable between the before and after run of the same sample (the samples use different models and
+different cache states). Where an after number is not lower, the table says so rather than hiding it.
+
+Read the sample table as follows. S0 is the clean measurement: the fixed prompt shrank by 12,509 tokens (29.2 %), all of it
+in the cache-creation part, because the skill listing is smaller. S1 and S2 are not like for like: the model of both skills
+changed on purpose (`iru-setup-typescript-github-workflows` went from Haiku to Sonnet; `iru-setup-android-gitignore`
+ran on the default Opus because its old frontmatter did not parse, and now runs on Haiku), so the cost columns mostly
+reflect the model. Where the after number is not lower: S1 and S3 cost, S3 duration and output, the S2 prompt side, the
+redundant duplicate bytes (+684), and S1 on the same model (Haiku), where a faithful run reads the templates and writes the
+whole file set, so it is more expensive than the old run that skipped parts of the skill. Plugin mode produced the same
+S1 files as directory mode (`sync_versions.py` differs by a two-line guard) once the headless run was allowed to read the
+plugin directory (`--add-dir`); details, every run and the S4 results (`/iru-plan` coverage table and
+`[NEEDS CLARIFICATION]` marker, `/iru-code` stopping at its gate) are in `tools/baseline/sample-runs-after.md`.
+
+== Budgets and why
+
+`python3 tools/catalog-audit.py --check` enforces the budgets in `tools/catalog-budgets.json` and exits non-zero on any
+error. CI runs it on every pull request (`.github/workflows/catalog-check.yml`).
+
+[cols="2,1,3",options="header"]
+|===
+| Budget | Level | Why
+
+| `description` at most 1,024 characters, for every skill and agent | error | Claude Code caps each entry of the skill listing at 1,536 characters and gives the whole listing about 1 % of the context window. With 196 skills the listing cannot hold long descriptions: skills that do not fit are listed by name only, so Claude cannot tell when to use them.
+| The invocation form (`/iru-...` or "Invoke as") within the first 200 characters | error | The part of a description that survives truncation must say how the skill is called.
+| Internal skills (only ever invoked by other catalog skills through `Skill()`, listed in the budgets file) target 400 characters | warning | Nobody types them, so their description only has to be unambiguous to the calling skill.
+| `SKILL.md` at most 1,000 lines | error | The whole body is read on every invocation. Large generated-file templates live in `templates/` and are read only for the variant in use.
+| `SKILL.md` at most 500 lines | warning | The recommended size for a skill body.
+| Frontmatter parses with a strict YAML parser and `claude plugin validate` | error | An unquoted `: ` inside a description made 39 skills fail to parse; Claude Code then loads the skill with no description and no model.
+| Every agent pins a `model` | error | An unpinned `iru-gate-runner` inherited the caller's (more expensive) model.
+| Shared reference files stay byte-identical | error | They are copied per skill so each skill stays self-contained.
+| `templates/` and `reference/` paths named in a `SKILL.md` exist, and every template is named | error | Moving content out of the body must not leave dangling or orphaned files.
+|===
+
+== Model tiers
+
+Each skill and agent carries one `model`. The tier follows the kind of work, not the language:
+
+[cols="1,3,1",options="header"]
+|===
+| Model | Used for | Skills now
+
+| `haiku` | Mechanical work that runs a tool and reports: test, coverage and code-quality gates, version bumps, `-gitignore` scaffolds, `iru-check-license`, `iru-check-security`, `iru-build-docs`, `iru-knowledge-complete` and `iru-knowledge-setup`. | 58
+| `sonnet` | Writing code and files: every `iru-<key>-code-one-task` and `-code-one-task-group`, the `*-generate-all-tests` skills, the doc-audit skills that generate missing doc comments, scaffolds, workflow generators, orchestrators, ticket and PR skills. | 135
+| `opus` | Judgment over an unfamiliar repository or an open-ended review: `iru-explore`, `iru-plan`, `iru-pr-review`. | 3
+|===
+
+Agents: `iru-gate-runner` and `iru-change-summarizer` are `haiku`; `iru-isolated-skill-executor` is `inherit`, because it
+runs a whole coding skill whose own `model` must decide. Before this change about 30 `iru-setup-*` scaffold and workflow
+skills were `haiku` while 32 comparable ones were `sonnet`, and no agent set a model.
+
+== Prompt-cache analysis
+
+When a skill with a `model` that differs from the current one is invoked inline through the `Skill` tool, the model
+switches for the rest of the turn. The prompt cache belongs to one model, so the conversation prefix the new model sees
+is not cached and is paid for again as a cache write; returning to the first model later can find its entry expired.
+A single inline detour is cheap, but a coding skill that ran a haiku gate inline several times per task group would
+alternate models repeatedly.
+
+The catalog avoids this in two ways:
+
+* Gates are not run inline. `iru-code`, `iru-code-one-task-group` and every `<key>-code-one-task-group` skill dispatch
+  each test, coverage, quality, license and security run to the `iru-gate-runner` agent. A subagent has its own context,
+  its own (small) prefix and its own model, so the caller's cache is untouched, and only a compact summary comes back
+  into the caller's context. Whole coding skills run through `iru-isolated-skill-executor`, which inherits the model.
+* `catalog-audit.py` reports every `Skill()` call whose caller and callee models differ and that is not inside an
+  `Agent({...})` prompt (the "inline cross-model calls" section), so a new one cannot appear unnoticed.
+
+The audit found 21 such calls in the original tree; there are now 17, all reviewed and recorded with their reason under
+`accepted_cross_model_calls` in the budgets file:
+
+* 4 are audit false positives: the `*-generate-all-tests` skills of `android`, `dotnet`, `kmp` and `swift` already run the
+  test skill through `iru-gate-runner`, and the `Skill()` call is that dispatch's prompt.
+* 10 are calls to `iru-explore` (`opus`) from skills that need its report (project type, technology stack, docs location)
+  in their own context; an agent would return only a summary, and the exploration is a one-off per run.
+* 2 are `iru-issue` calling `iru-plan` and `iru-pr-review` (`opus`): both are interactive (questions, confirmation before
+  posting comments), so they must run in the orchestrator's conversation, not in an isolated agent.
+* 1 is `iru-knowledge-compact` calling `iru-knowledge-complete` (`haiku`), a single-purpose file operation whose stop
+  message the caller reads; an agent per item would add a context for a few file edits.
+
+The remaining differences of the original list (four `*-repository` orchestrators that were `haiku` calling `sonnet`
+scaffolds) disappeared when those orchestrators moved to `sonnet`.
+
+== Additional agents: evaluated, not adopted
+
+Candidates considered were role agents such as a planner, an implementer, a reviewer and a documentation writer, in
+addition to the three existing ones. They were not added:
+
+* The three agents already cover the shapes that repeat (about 184 gate runs, 101 whole-skill runs and 2 history
+  summaries across the skills). A fourth agent adds another context window and another system prompt to every
+  invocation.
+* The roles of the issue-to-PR cycle are interactive. A subagent returns one summary and cannot hold a dialogue with
+  the user, and `iru-plan`, `iru-pr-review` and the ticket skills ask questions.
+* The model for each role is already chosen per skill (`opus` for exploration, planning and review, `sonnet` for
+  coding, `haiku` for gates). An agent pins one model, so it would duplicate that choice and remove the ability to
+  vary it by task.
+
+== Plugin-mode agent dispatch
+
+A spike (`tools/spikes/plugin-resolution.md`, Claude Code 2.1.260) showed that when the catalog is installed as plugins:
+
+* `Skill({skill: "iru-java-test"})` by bare name still resolves, as does the namespaced `iru-java:iru-java-test`, so none of
+  the 298 `Skill()` call sites needed to change.
+* `Agent({subagent_type: "iru-gate-runner"})` by bare name does *not* resolve. The agent exists only as
+  `iru-core:iru-gate-runner`, and the error lists the namespaced names as the available ones.
+* `.claude/skills` does not exist, which is why key discovery first reads the skills available in the session and uses
+  `find .claude/skills` only as a corroborating check.
+* Agents listed on a marketplace entry whose `source` is the repository root load even though `claude plugin details`
+  shows `Agents (0)`.
+
+Rewriting about 290 call sites would have broken the copy-a-directory installation, so each agent's body now starts with
+the rule "dispatch as `subagent_type: "<agent-name>"` when installed under `.claude/agents/`, or `"iru-core:<agent-name>"`
+when installed as a plugin, using whichever name appears in your available agent types", and `iru-code`,
+`iru-code-one-task-group`, `iru-issue` and `iru-setup-changelog` (the skills that explain dispatch) state it once.
+
+== Documented, not done
+
+These were considered and left as options because they change more than this work was approved to change:
+
+* *Consolidating the shared reference files.* About 357 KB of the supporting files are byte-identical copies (the UI
+  contract in 12 skills, the CLI contract in 4, and so on). One copy per plugin would remove most of it, but every skill
+  is deliberately self-contained so that copying its directory into another repository keeps working. The copies are
+  instead checked for drift.
+* *Merging the per-language gate skills.* One cross-language test, one coverage and one quality skill would shrink the
+  listing by about thirty entries, but each skill's body is specialized per toolchain, the names are part of the public
+  interface, and the gate runner and every code skill refer to them.
+* *A physical `plugins/<name>/skills/` tree.* The marketplace instead lists each plugin's skill directories over the
+  unchanged `.claude/skills/` tree (`source: "./"`). The trade-off is that each installed plugin caches a full copy of the
+  repository (about 11 MB); a physical tree would remove that but move 196 directories and change the path used when
+  copying a skill, so it needs an explicit decision.
+
+See xref:guides/plugins.adoc[] and xref:guides/packaging-and-distribution.adoc[] for installing the catalog, and
+xref:guides/catalog-architecture.adoc[] for how the skills compose.

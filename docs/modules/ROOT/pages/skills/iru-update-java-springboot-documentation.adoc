@@ -58,6 +58,10 @@ Although grouped with the Spring Boot bootstrap family — it is the last sub-sk
 is the one member of that family intended to be re-run continuously, in the same spirit as
 xref:skills/iru-update-docs.adoc[] in xref:index.adoc#group-maintenance[Repository Maintenance].
 
+== Plugin
+
+Shipped by the `iru-springboot` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-springboot@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

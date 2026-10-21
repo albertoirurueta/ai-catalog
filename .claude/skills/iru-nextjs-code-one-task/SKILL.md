@@ -1,31 +1,6 @@
 ---
 name: iru-nextjs-code-one-task
-description: >-
-  Implement a single task from a Next.js `implementation_plan.md`-style task list — the implementation, its tests,
-  and its checkbox update. First detects the project's exact profile at runtime — the installed Next.js major
-  (14, 15, or 16), App Router vs Pages Router (or both), whether `cacheComponents` is on (so the version/model
-  profile is one of `14`, `15`, `16-prev`, `16-cc`), `src/` layout, `proxy.ts` vs `middleware.ts`, `output`
-  mode (`export`/`standalone`), test runner (Vitest or Jest via `next/jest`, plus Playwright), styling approach,
-  linter, and any project `AGENTS.md`/`CLAUDE.md` guidance (including the version-matched docs bundled under
-  `node_modules/next/dist/docs/`) — then loads only the matching guidance from this skill's own `reference/`
-  directory: this catalog's TypeScript agreements plus Next-specific code style, Server vs Client Components, data
-  fetching and caching organized by version/model (applying only the detected profile's rules), Server Actions,
-  Route Handlers and the proxy, routing and rendering (special files, dynamic segments, `generateStaticParams`,
-  SSG/SSR/ISR/PPR and route segment config per model, static-export constraints), metadata and SEO, the Pages
-  Router, testing, security, and — for a task that adds or changes a page, component or list — the catalog's UI
-  contract mapped onto Next.js (`Screen › Region › Component` decomposition; interactive Client Components fed
-  serializable props by Server Components; lists through server pagination or a client `@tanstack/react-virtual`
-  virtualizer; Playwright component tests against a standalone Vite gallery plus screen/flow tests against the
-  production build, capturing `.ui-screenshots/` across left-to-right/right-to-left × light/dark with axe checks at
-  the `.ui-quality.yml` level). Re-checks the current code state, implements exactly what the task specifies
-  without changing any route's rendering mode the task didn't ask to change, writes/updates tests (does not run
-  them), then — unless it stopped on a blocker — checks off this task's own checkbox in `implementation_plan.md`
-  with a "group validation pending" note and reports the files touched, tests written, the expected `next build`
-  classification (static/SSG/dynamic/partial) of every route it touched, and any deviation from `reference/`.
-  Never runs tests, coverage, quality checks, license headers, or `next build` — those happen once per group in
-  `iru-nextjs-code-one-task-group`. Invoke as `/iru-nextjs-code-one-task <task description>`, passing the task's
-  own text including its exact `implementation_plan.md` checkbox line(s). The Next.js counterpart to
-  `iru-typescript-code-one-task`.
+description: "Invoked as /iru-nextjs-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Next.js (14/15/16, App or Pages Router) plan task and its tests, ticks the checkbox with a group-validation-pending note; reports expected route rendering modes; no baseline or full gates, which iru-nextjs-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(node -p *) Bash(npm ls *) Bash(pnpm ls *) Bash(yarn why *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

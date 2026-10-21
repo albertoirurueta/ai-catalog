@@ -1,0 +1,3 @@
+Validating components in: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills
+
+✔ Validation passed

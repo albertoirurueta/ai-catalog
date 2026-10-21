@@ -108,6 +108,13 @@ Concretely:
 * **Ask for a report, not a transcript.** When one skill invokes another, or a skill spawns an agent, specify
   what should come back ("a pass/fail plus the list of new issues", not "everything you saw") — the caller
   usually needs a conclusion, not the evidence trail that produced it.
+* **Keep the `description` within budget and the templates out of `SKILL.md`.** Every installed skill's
+  `description` is loaded into the listing of *every* session (Claude Code caps each entry at 1,536 characters
+  and gives the whole listing about 1 % of the context window, so oversized descriptions get cut mid-sentence
+  or the skill is listed name-only); this catalog enforces ≤ 1,024 characters with the invocation form in the
+  first 200, and keeps whole-file templates in a skill's `templates/<variant>/` directory so an agent reads only
+  the variant it needs rather than every fenced block in the skill body. `python3 tools/catalog-audit.py --check`
+  verifies both — see xref:guides/performance-and-token-budget.adoc[].
 * **Prune, don't just append.** A `CLAUDE.md` or `SKILL.md` that only ever grows accumulates instructions
   that stopped being true or stopped mattering; a periodic pass to delete stale content is as valuable as the
   writing that added it in the first place.

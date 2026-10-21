@@ -1,27 +1,6 @@
 ---
 name: iru-kmp-dokka
-description: >-
-  Audit given Kotlin class(es)/file(s)/package scope in a Kotlin Multiplatform (Android + iOS) project for complete
-  KDoc coverage across every source set — `commonMain`, `androidMain`, `iosMain`/`appleMain`/`nativeMain` (and
-  `jvmMain` when present) of the shared module plus the Android app module's sources — with the KMP rule that an
-  `expect` declaration carries the KDoc and its `actual`s inherit it (an `actual` gets its own KDoc only for genuinely
-  platform-specific behavior), while platform-only public API (an `iosMain`-only helper, Compose `MainViewController()`,
-  an `androidMain`-only extension) is documented where it lives. Checks type-level docs, `@property`/`@param`/
-  `@constructor`, every function/property within the discovered visibility bar, enum entries, companion and nested
-  declarations, `@return`/`@throws`/`@see`/`@sample`, `@suppress` honored, and the Dokka `module.md` (`# Module` /
-  `# Package` sections) wired via `includes.from(...)` for every module/package touched (creating them if missing);
-  generates any missing or incomplete KDoc grounded in the actual code and current changes, then runs the module's
-  Dokka 2 multiplatform build (`dokkaGeneratePublicationHtml`, else `dokkaGenerate`; Dokka 1 `dokkaHtml` fallback) to
-  confirm the KDoc is well-formed and reports its warnings — unresolved links per source set and, when the project
-  enables `reportUndocumented`, `Undocumented:` lines tagged `(common)`/`(android)`/`(ios)`. Invoke as
-  `/iru-kmp-dokka <scope>` where `<scope>` is a comma-separated list of class names, file paths, or a package glob, or
-  `/iru-kmp-dokka` with no argument to scope to Kotlin files touched by uncommitted changes plus commits on the current
-  branch not yet on the base branch. Swift code in `iosApp/` is out of scope (see `iru-swift-docc`). Discovers the
-  project's own documentation bar (detekt `comments` rules, Dokka `documentedVisibilities`/`reportUndocumented`,
-  contributor guides, observed practice) rather than assuming a fixed style. Equivalent to `iru-android-dokka`/
-  `iru-kotlin-kdoc` for KMP apps. Use whenever the user (or `iru-kmp-code-one-task-group` via `iru-gate-runner`) wants
-  KDoc completeness checked and filled in for KMP code, instead of relying on a Dokka run (which doesn't fail on
-  undocumented members by default) to surface gaps.
+description: "/iru-kmp-dokka [scope] audits Kotlin Multiplatform code for complete KDoc across every source set (expect carries the doc, actuals inherit), generates the missing KDoc, wires Dokka module.md includes and runs the Dokka build. Scope is classes, paths or a package glob; none means uncommitted and branch-only changes. Swift in iosApp is out of scope."
 model: sonnet
 allowed-tools: Read Edit Write Bash(./gradlew *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git symbolic-ref *) Bash(git branch *) Bash(find *) Bash(grep *) Bash(ls *) Bash(/usr/libexec/java_home *)
 ---

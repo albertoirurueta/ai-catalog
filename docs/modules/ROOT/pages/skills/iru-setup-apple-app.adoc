@@ -44,6 +44,10 @@ xref:skills/iru-setup-swift-library.adoc[] for a pure SwiftPM library with no ap
 
 xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-swift` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-swift@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

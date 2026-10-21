@@ -1,42 +1,6 @@
 ---
 name: iru-setup-cli-github-workflows
-description: >-
-  Create or update the GitHub Actions workflows plus `.github/dependabot.yml` for an agent-friendly command-line tool
-  repository in Rust, Go, Swift or C#/.NET — the layouts `iru-setup-rust-cli`, `iru-setup-go-cli`, `iru-setup-swift-cli`
-  and `iru-setup-dotnet-cli` produce. `build.yml` (every push to the integration/stable branches, every pull request,
-  `workflow_dispatch`): lint/format with warnings as errors on Linux (rustfmt + Clippy + rustdoc + cargo-deny;
-  golangci-lint v2 + go vet + govulncheck; SwiftLint + swift format in a `swift` container; dotnet format + analyzers),
-  tests + an 80% coverage bar on Linux (cargo-llvm-cov lcov; `-coverpkg=./...` coverprofile; `swift test` codecov on
-  `<Bin>Kit`; coverlet Cobertura on `<Tool>.Core`) with reports for Sonar, a **contract smoke test** of the built binary
-  (`--version`/`--help` exit 0, unknown command exits 2, `greet --json` → `schemaVersion: 1`, the JSON error envelope
-  with exit 3, `schema` is JSON, no ESC bytes with `NO_COLOR` or without a TTY), a macOS + Windows test matrix gated by
-  `cross-os-ci` (`all` = every push/PR, `stable` = stable branch + manual runs; Swift has no Windows leg), `ci-tests: full`
-  adding the release-mode build + smoke test on every leg and any container-backed tests, a Go GoReleaser snapshot of
-  every target, an optional Sonar job, and a docs job (Antora + rustdoc / `go doc` text / DocC / DocFX under `api/` + the
-  CLI reference regenerated from the command tree and diffed against the committed page) deployed to GitHub Pages or
-  uploaded as an artifact; `release.yml` per `distribution` (`internal`: native per-target binaries on native runners —
-  Rust musl/darwin/MSVC, Go via the scaffold's `.goreleaser.yaml`, Swift macOS universal + Static Linux SDK musl with
-  optional Developer ID notarization, .NET Native AOT per RID — flat `<bin>-<version>-<target>.tar.gz|zip` archives,
-  `SHA256SUMS`, `actions/attest-build-provenance`, `gh release upload`; `store`: plus the `channels` — crates.io
-  (trusted publishing via `rust-lang/crates-io-auth-action` or a token), Homebrew formula pushed to `<homebrew-tap>`,
-  Scoop/WinGet/Homebrew cask through GoReleaser, WinGet via `wingetcreate update`, a RID-specific Native AOT .NET tool on
-  NuGet via `NuGet/login` trusted publishing or an API key), with a `workflow_dispatch` dry run that publishes nothing;
-  `sync.yml` + `.github/scripts/sync_versions.py` (gitflow: merge the release back and move `Cargo.toml`+`Cargo.lock` /
-  `internal/version/version.go` / `Version.swift` / `Directory.Build.props` to the next `x.(y+1).0-dev`); and the shared
-  security block (`security.yml` with dependency-review, CodeQL `rust` (build-mode none) / `go` / `swift` (macOS, gated) /
-  `csharp`, OSV-Scanner, gitleaks; Dependabot for `cargo`/`gomod`/`swift`/`nuget` + `github-actions`). Invoke as
-  `/iru-setup-cli-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `language`
-  (`rust`/`go`/`swift`/`dotnet`, detected from disk when absent), `bin-name`, `branching` (`gitflow`/`main-only`),
-  `integration-branch`, `stable-branch`, `cross-os-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `open-source`,
-  `visibility`, `pages`, `distribution` (`none`/`internal`/`store`), `channels`, `homebrew-tap`, `winget-package-id`,
-  `crates-auth` (`trusted`/`token`), `nuget-auth` (`trusted`/`api-key`), `nuget-user`, `notarize`, `attestations`,
-  `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode`, `on-existing`, and the `security-*`
-  toggles; stand-alone it resolves `visibility` itself (`gh repo view`) and asks `cross-os-ci`/`ci-tests`/`pages`/
-  `sonar`/`distribution`/`channels` with the Actions-minutes (macOS ~10×, Windows ~1.7× Linux), SonarCloud and Pages cost
-  facts for that visibility (never `ci` — invoking it means CI is wanted). Announces whether it is creating the pipeline
-  from scratch or updating; for every workflow/script/Dependabot file that already exists it warns and asks Update / Keep
-  as is / Replace / Stop, naming each concrete mismatch, unless `on-existing` decides. Ends with the required-secrets
-  table. Used by `iru-setup-cli-repository`; also runs standalone.
+description: "Invoked as /iru-setup-cli-github-workflows with optional key: value args, usually by iru-setup-cli-repository. Creates or updates the build, release, sync and security GitHub Actions workflows plus Dependabot for a Rust, Go, Swift or .NET command-line tool, with a CLI-contract smoke test, an OS matrix and per-target releases."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(gh *) Bash(git *) Bash(curl *) Bash(python3 *) Bash(ruby *) Bash(actionlint *) Bash(shellcheck *) Bash(bash *) Bash(jq *) Bash(cargo *) Bash(rustup *) Bash(go *) Bash(goreleaser *) Bash(golangci-lint *) Bash(swift *) Bash(xcrun *) Bash(dotnet *) Bash(brew style *) Bash(mkdir *) Bash(ls *) Bash(find *) Bash(grep *) Bash(sed -n *)
 ---
@@ -50,6 +14,8 @@ the macOS (~10× Linux minutes on a private repository) and Windows (~1.7×) leg
 agent uses it**: every CI leg ends with a smoke test of the built executable against the catalog's CLI contract
 (streams, exit codes, JSON, no colour without a terminal), and every release target is smoke-tested on its own runner
 before it is packaged.
+
+Stand-alone, this skill never asks `ci`: invoking it means CI is wanted. It is used by `iru-setup-cli-repository` and also runs on its own.
 
 Files (templates in `reference/`; markers and placeholders are explained in `reference/shared-templates.md`):
 

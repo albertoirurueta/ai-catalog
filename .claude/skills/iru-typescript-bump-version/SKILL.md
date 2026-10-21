@@ -1,7 +1,6 @@
 ---
 name: iru-typescript-bump-version
-description: >-
-  Set an npm/TypeScript project's version to an exact value, updating `package.json` and syncing the lockfile for whichever package manager the project uses (npm, pnpm, or yarn). Invoke as `/iru-typescript-bump-version <new-version>` where `<new-version>` is the literal target version (e.g. `1.4.0` or `1.4.1-dev.0`) — this skill does not compute bumps itself, it only applies the value it's given (`iru-release` computes the release/next-dev values per the pre-release convention documented in this file and passes each one through in turn). Also accepts `args`: `package: <name-or-path>` to pick one package in an npm/pnpm/yarn workspace (asks if omitted and more than one `package.json` with a `version` field exists), and `sync-files: yes|no` (default: ask) to also update README/Antora version mentions the same way `iru-release`'s Java path does. A React Native app (`react-native` or `expo` in `dependencies`, either toolchain — Expo or a bare React Native CLI/Metro app) is handed, with the same arguments, to `iru-react-native-bump-version` when that skill is installed, since its shipped version lives in `app.json`/`app.config.*` or the native `android/`/`ios/` projects rather than `package.json` alone; only without it does this skill bump `package.json` for such an app, and it says the app's store version was not touched. Reports the old and new version and every file touched. Use whenever the user, or another skill such as `iru-release`, needs an npm-ecosystem project's version set to a specific value instead of hand-editing `package.json`.
+description: "/iru-typescript-bump-version <new-version> - sets an npm/TypeScript project's version to the exact value given in package.json and syncs the lockfile (npm, pnpm or yarn). Optional args: package (workspace member), sync-files. Hands React Native apps to iru-react-native-bump-version. Reports old/new values and files touched."
 model: haiku
 ---
 
@@ -35,8 +34,10 @@ output) or a bare React Native CLI app on the Metro toolchain — and the versio
 `package.json`'s: it's `app.json`/`app.config.*` `expo.version` (expo) or `versionName`/`versionCode` in
 `android/app/build.gradle` and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in `ios/<App>.xcodeproj` (metro).
 
-- **`iru-react-native-bump-version` installed** (`find .claude/skills -maxdepth 1 -type d -name
-  "iru-react-native-bump-version"`, run from the repository root): invoke it with exactly the arguments this skill
+- **`iru-react-native-bump-version` installed** (listed among the skills available in this session — which also
+  holds when the catalog is installed as plugins and `.claude/skills` does not exist; when it does exist,
+  corroborate with `find .claude/skills -maxdepth 1 -type d -name "iru-react-native-bump-version"`, run from the
+  repository root): invoke it with exactly the arguments this skill
   received — `Skill({skill: "iru-react-native-bump-version", args: "<new-version>\n<every args line as given>"})` —
   relay its report, and stop. It updates `package.json` + the lockfile the same way Step 4 does, plus the app/native
   version files, under the same `x.y.z-dev.N` convention (Step 5).

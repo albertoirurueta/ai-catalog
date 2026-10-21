@@ -22,6 +22,10 @@ reports explicitly rather than silently redesigning the class.
 
 xref:index.adoc#group-java[Java Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-java` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-java@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

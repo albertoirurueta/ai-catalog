@@ -69,6 +69,45 @@ Both public and private marketplaces work the same way:
   (release process, PR review conventions) once it needs to reach more than one repository — see
   xref:guides/packaging-and-distribution.adoc[] for when that step is actually worth taking.
 
+== This catalog's own marketplace
+
+This catalog is itself a marketplace named `ai-catalog` (`.claude-plugin/marketplace.json`, generated from
+`tools/plugins.json`). It splits the 196 skills into `iru-core` (the stack-independent pipeline: `iru-issue`,
+`iru-explore`, `iru-plan`, `iru-code`, PR and release skills, ticket intake, license and security checks, documentation,
+the repository bootstrap front door, and the three agents), `iru-knowledge`, and one plugin per stack (`iru-java`,
+`iru-springboot`, `iru-quarkus`, `iru-dotnet`, `iru-typescript`, `iru-nestjs`, `iru-nextjs`, `iru-react-native`,
+`iru-php`, `iru-python`, `iru-android`, `iru-swift`, `iru-kmp`, `iru-rust`, `iru-go`, `iru-cli`). Every stack plugin
+depends on `iru-core`, and a few depend on a sibling stack whose gates they reuse (`iru-springboot` and `iru-quarkus` on
+`iru-java`; `iru-nestjs`, `iru-nextjs` and `iru-react-native` on `iru-typescript`; `iru-kmp` on `iru-android` and
+`iru-swift`; `iru-cli` on `iru-rust`, `iru-go`, `iru-swift` and `iru-dotnet`).
+
+[source]
+----
+claude plugin marketplace add albertoirurueta/ai-catalog
+/plugin install iru-core@ai-catalog
+/plugin install iru-java@ai-catalog
+----
+
+Things that differ from copying the files:
+
+* *Skill names.* A skill from a plugin is listed and can be invoked in its namespaced form, for example
+  `/iru-java:iru-java-test`. The bare `/iru-java-test` (and `Skill({skill: "iru-java-test"})` inside other skills) keeps
+  working because every skill name in the catalog is unique, so none of the cross-references had to change. Keep the
+  `iru-` prefix on anything you add so that stays true.
+* *Agent names.* Agents are reachable only by their namespaced name in plugin mode: `iru-core:iru-gate-runner`,
+  `iru-core:iru-isolated-skill-executor` and `iru-core:iru-change-summarizer`. The skills that dispatch agents explain
+  this rule, and each agent's body repeats it (`subagent_type: "iru-gate-runner"` when installed under
+  `.claude/agents/`, `"iru-core:iru-gate-runner"` as a plugin).
+* *Headless mode.* `claude -p` denies the `Skill` tool for skills that declare `allowed-tools`; pass
+  `--allowedTools=Skill` (together with whatever else the run needs) when running a catalog skill non-interactively.
+* *Disk use.* Each installed plugin caches a full copy of the repository (about 11 MB), because the plugins select skills
+  from the unchanged `.claude/skills/` tree rather than from per-plugin directories.
+* *Copying still works.* Nothing about the plugins changes the files: copying a skill directory into another
+  repository's `.claude/skills/` (xref:guides/packaging-and-distribution.adoc[]) is still supported, and every skill keeps
+  all its templates and references under its own directory.
+
+See xref:guides/performance-and-token-budget.adoc[] for why the catalog is split this way.
+
 == Getting updates when a new release is published
 
 Installing a plugin is not a one-time copy — it stays linked to the marketplace it came from, and that
@@ -140,4 +179,5 @@ it.
 
 * xref:guides/creating-skills-and-agents.adoc[] — authoring the skills/agents a plugin bundles.
 * xref:guides/packaging-and-distribution.adoc[] — deciding between copying files and packaging as a plugin.
+* xref:guides/performance-and-token-budget.adoc[] — budgets, model tiers and the plugin-mode agent dispatch rule.
 * xref:guides/provider-comparison.adoc[] — where other providers do and don't have an equivalent.

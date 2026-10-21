@@ -1,30 +1,6 @@
 ---
 name: iru-setup-java-springboot-modules
-description: >-
-  Scaffold the source tree of a DDD/hexagonal Spring Boot service whose build already exists — in Java (Maven reactor,
-  unchanged) or Kotlin (Maven reactor or Gradle Kotlin DSL multi-project build), read from `springboot-stack.yml`'s
-  `project.language`/`project.buildTool` (absent ⇒ `java`/`maven`) — the package layout for every module, the ports
-  (interfaces) that `domain` defines, a worked adapter skeleton per `infrastructure`/`api` module (repository adapter
-  with MapStruct mapping in Java, refreshable `@ConfigurationProperties` beans, REST/gRPC/GraphQL/Kafka entry points, Kafka
-  producer, metrics publisher), the `@SpringBootApplication` class and component-scan wiring in `boot`,
-  `application.yml` plus per-profile overrides (including structured logging, actuator/Prometheus exposure, and the
-  dynamic-configuration binding the stack selected), the database migration/changelog directory for each engine's
-  tooling (Flamingock, Liquibase and its Couchbase/MongoDB/Neo4j extensions, or Flyway), and an ArchUnit test that
-  fails the build when the hexagonal dependency direction is violated. For Kotlin it writes
-  `src/main/kotlin`/`src/test/kotlin` sources instead — data classes for value objects, regular classes for aggregates
-  and JPA entities, hand-written extension-function mappers (no Lombok/MapStruct), constructor-bound
-  `@ConfigurationProperties` data classes with `@RefreshScope`, use cases wired as `@Bean`s in `boot`, a
-  `runApplication` entry point, a Kotlin ArchUnit test (the only boundary check on Gradle, where there is no
-  enforcer), and JUnit 5 + MockK unit tests with backtick names — verified with `mvn test` or `./gradlew test`. Reads
-  `springboot-stack.yml` for every decision and writes no version numbers. Announces whether it is scaffolding the
-  source tree from scratch or updating an existing one; never overwrites hand-written code, and for every generated
-  file it owns that already exists (profile `application*.yml` files, the ArchUnit test, migration directories, the
-  worked example) warns and asks Update / Keep as is / Replace — or applies `on-existing` from `args`. Invoke as
-  `/iru-setup-java-springboot-modules`, or with `args` (`stack-file:`, `mode:` (`new`/`existing`), `on-existing:`
-  (`ask`/`keep`/`update`/`replace`) lines) when called from `iru-setup-java-springboot`. Use after
-  `iru-setup-java-springboot-pom` has created the poms (or the Gradle build), whenever a Spring Boot service needs its
-  hexagonal source skeleton and runtime configuration generated instead of hand-writing the ports, adapters, and
-  profile files module by module.
+description: "Invoked as `/iru-setup-java-springboot-modules` (args: `stack-file`, `mode`, `on-existing`), normally by `iru-setup-java-springboot` after the pom skill. Scaffolds a hexagonal Spring Boot service's source tree: module packages, ports, adapter skeletons, boot class, `application.yml`, migrations and an ArchUnit test, for Java or Kotlin."
 model: sonnet
 ---
 

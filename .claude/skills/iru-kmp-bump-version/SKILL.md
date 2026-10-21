@@ -1,24 +1,6 @@
 ---
 name: iru-kmp-bump-version
-description: >-
-  Set a Kotlin Multiplatform (Android + iOS) app's version to an exact value across both platforms — the root
-  `gradle.properties` `VERSION_NAME` (and, only for a release value, `VERSION_CODE` incremented by one), plus, only
-  for a release value, the iOS host app's `iosApp/Configuration/Config.xcconfig` `MARKETING_VERSION` (set to the
-  release) and `CURRENT_PROJECT_VERSION` (set to the new `VERSION_CODE`) — never writing a `-SNAPSHOT` value into
-  any iOS file, since App Store Connect rejects it. Detects the layout at runtime and falls back, when the
-  `iru-setup-kmp-app` layout isn't present, to `versionName`/`versionCode` literals in the Android app module's
-  `build.gradle(.kts)` (`androidApp/`, `composeApp/`, `app/`), the `gradle/libs.versions.toml` `[versions]` entries
-  the build reads them from, XcodeGen `project.yml` settings, a literal `Info.plist`
-  `CFBundleShortVersionString`/`CFBundleVersion`, or a committed `project.pbxproj` `MARKETING_VERSION`. Invoke as
-  `/iru-kmp-bump-version <new-version>` where `<new-version>` is the literal target version (`1.2.0` or
-  `1.3.0-SNAPSHOT`) — this skill never computes a bump itself; `iru-release` computes the release/next-dev values per
-  the pre-release convention in Step 5 and passes each one through. Also accepts `args`: `sync-files: yes|no`
-  (default: ask) to also update README/Antora version mentions, `next-version: <upcoming-version>` so that sync maps
-  "Latest release" markers to `<new-version>` and "Current development version"/"Latest snapshot" markers to the
-  upcoming value, and `dry-run: yes|no` (default `no`) to print the diff without writing anything. Reports the old
-  and new values of every field and every file touched. Equivalent to `iru-android-bump-version`/
-  `iru-swift-bump-version` for a KMP app. Use whenever the user, or `iru-release`, needs a KMP app's version set to a
-  specific value instead of hand-editing Gradle properties and Xcode build settings.
+description: "/iru-kmp-bump-version <new-version> sets a Kotlin Multiplatform app's version to the literal value given: gradle.properties VERSION_NAME and, for a release only, VERSION_CODE plus the iOS MARKETING_VERSION and CURRENT_PROJECT_VERSION (never a SNAPSHOT in iOS files). Args: sync-files, next-version, dry-run. Reports old/new values and files touched."
 model: haiku
 allowed-tools: Read Bash(python3 *) Bash(./gradlew *) Bash(grep *) Bash(find *) Bash(ls *) Bash(cat *) Bash(git ls-files *) Bash(git diff *) Bash(xcodebuild *) Bash(xcodegen *) Bash(/usr/libexec/java_home *)
 ---

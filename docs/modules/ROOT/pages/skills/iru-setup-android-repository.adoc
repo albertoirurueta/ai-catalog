@@ -29,6 +29,10 @@ the workflows step entirely (security block included). It also asks the `accessi
 
 xref:index.adoc#group-android-bootstrap[Android Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-android` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-android@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

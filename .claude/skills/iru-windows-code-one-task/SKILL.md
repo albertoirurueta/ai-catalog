@@ -1,35 +1,6 @@
 ---
 name: iru-windows-code-one-task
-description: >-
-  Implement a single task from a Windows desktop app (.NET 10 / C# 14) `implementation_plan.md`-style task list — just
-  the implementation and its tests. Detects at runtime the UI stack from the app project's `*.csproj` (`UseWPF` → WPF,
-  `UseWinUI` → WinUI 3 / Windows App SDK, `UseWindowsForms` → Windows Forms), the architecture from the UI-free Core
-  project's layout (`ViewModels/` → MVVM with CommunityToolkit.Mvvm, `Controllers/` + `Views/I<X>View.cs` → MVC /
-  passive view), the test framework, and the host OS, then loads only the matching guidance from this skill's own
-  `reference/` directory (always: C# code style — file-scoped namespaces, nullable, `ArgumentNullException.ThrowIfNull`,
-  async all the way with `ConfigureAwait(false)` only in Core, no `async void` outside event handlers, StyleCop member
-  ordering — and the Core-vs-app architecture rules; as needed: XML doc comments, MVVM Toolkit source generators
-  (partial-property `[ObservableProperty]`, `[RelayCommand]`, `ObservableValidator`, messenger), WinForms MVC with a
-  passive-view interface, WPF XAML/binding/Dispatcher/Fluent theme, WinUI `x:Bind`/`NavigationView`/`AppWindow`/MSIX
-  manifest, WinForms designer/layout/high DPI/dark mode, MSTest 4 tests for view models and controllers plus FlaUI UI
-  tests marked `[TestCategory("UI")]`, the catalog's UI contract — screen › region › component decomposition,
-  `UserControl` components with dependency-property inputs and command/event outputs, virtualized recycling lists
-  over keyed view-model state, FlaUI screen/component/flow tests capturing `.ui-screenshots/` PNGs across
-  left-to-right/right-to-left × light/dark with an Axe.Windows accessibility check at the `.ui-quality.yml` level —
-  MSIX packaging and publish properties, and desktop security — DPAPI, no secrets in settings, no `XamlReader` on
-  untrusted input, `asInvoker`). Re-checks the current code state, implements
-  exactly what the task specifies, writes/updates tests in the right project (`tests/<App>.Core.Tests` for Core logic,
-  `tests/<App>.UITests` only for UI automation), compile-checks each touched project with `dotnet build` (passing
-  `-p:EnableWindowsTargeting=true` on a non-Windows host so WPF/WinForms/UI-test projects still compile; a WinUI app
-  project is compile-checked only on Windows, else reported "compile-check unavailable"), then — if the task didn't
-  stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in
-  `implementation_plan.md` with a "group validation pending" note, before handing back a short summary. Does not
-  capture a quality baseline, add license headers, audit XML docs beyond the code it writes, run tests, coverage or
-  analyzers, launch the app, or package anything — those happen once per task group in
-  `iru-windows-code-one-task-group`, which invokes this skill once per task (in parallel when the group allows it,
-  through `iru-isolated-skill-executor`). Invoke as `/iru-windows-code-one-task <task description>`, passing the
-  task's own text — including its exact `implementation_plan.md` checkbox line(s) — as the argument. The Windows
-  desktop counterpart of `iru-dotnet-code-one-task`, for plan tasks tagged `windows`.
+description: "Invoked as /iru-windows-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Windows desktop (.NET 10; WPF, WinUI 3 or Windows Forms) plan task and its tests, per-project compile-check, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-windows-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet build *) Bash(dotnet restore *) Bash(dotnet sln *) Bash(dotnet --version) Bash(dotnet --info) Bash(uname *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

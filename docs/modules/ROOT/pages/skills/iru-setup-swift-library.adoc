@@ -26,6 +26,10 @@ catalog's other ecosystems.
 
 xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-swift` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-swift@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -146,6 +150,8 @@ or updated.
   `swift build`/`swift test` succeeded; and explicit warnings (review before build/commit, `SONAR_TOKEN` and a CI
   step still needed for `sonar-project.properties` to mean anything, `.spi.yml` alone doesn't submit to the Swift
   Package Index, no `.gitignore` touched, SwiftLint/`swiftformat`/`.spi.yml` submission unverified locally).
+
+The generated files' bytes come from template files under `templates/` (and, where a template needs variant-specific notes, `reference/`) in `.claude/skills/iru-setup-swift-library/`; the skill reads only the files for the variant it resolved, not the whole set, which keeps its `SKILL.md` small.
 
 == Execution flow
 

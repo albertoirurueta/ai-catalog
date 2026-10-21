@@ -21,6 +21,10 @@ any previously-written page as a source of truth. It only ever writes documentat
 
 xref:index.adoc#group-tooling[Catalog Tooling]
 
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -38,7 +42,7 @@ xref:index.adoc#group-tooling[Catalog Tooling]
 |—
 |Takes no arguments. Everything it needs — the skill/agent inventory, their dependencies, the purpose
 groups, the workflows — is discovered fresh from `.claude/skills/`, `.claude/agents/` (if present), and the
-existing Antora module each time it runs.
+existing Antora module each time it runs (plus `tools/plugins.json` for each skill's plugin, when present).
 |Not applicable.
 |===
 
@@ -49,6 +53,9 @@ existing Antora module each time it runs.
 * One detail page per skill under `docs/modules/ROOT/pages/skills/<name>.adoc`, and per documented agent
   under `docs/modules/ROOT/pages/agents/` (an `overview.adoc` covering built-in agent types, since this
   repository has no `.claude/agents/` directory of its own to give custom agents individual pages).
+* Each skill page also names the plugin that ships it when `.claude-plugin/marketplace.json` exists, read from the
+  `tools/plugins.json` membership map the marketplace is generated from (the plugin line is omitted when that file
+  does not exist yet).
 * `docs/modules/ROOT/nav.adoc` updated with an entry for every new page.
 * No source file, `SKILL.md`, or agent definition is ever modified.
 * A verified Antora build (`npx antora <playbook-file>`) confirming every new/updated page and cross-link
@@ -63,7 +70,7 @@ flowchart TD
     B -- no --> C["Ask user: bootstrap via\nsetup-antora, or stop?"]
     C -- stop --> Z1[Stop]
     C -- bootstrap --> D
-    B -- yes --> D["Discover every SKILL.md,\ncustom agent, and built-in\nagent type actually used"]
+    B -- yes --> D["Discover every SKILL.md (filesystem scan),\ncustom agent, and built-in\nagent type actually used;\nmap each skill to its plugin\nfrom tools/plugins.json"]
     D --> E["Read + classify each via one\nsub-agent per skill/agent\n(purpose, inputs, outputs,\nstep flow, invokes/spawns)"]
     E --> F["Build the dependency graph from the\ncollected summaries (invokes / spawns,\nboth directions, external deps noted)"]
     F --> G["Group skills by purpose"]

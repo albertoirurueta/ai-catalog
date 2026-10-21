@@ -39,6 +39,10 @@ The UI contract wiring is: `.ui-quality.yml` at the repository root (`accessibil
 
 xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-react-native` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-react-native@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

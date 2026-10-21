@@ -1,24 +1,6 @@
 ---
 name: iru-dotnet-bump-version
-description: >-
-  Set a .NET project's version to an exact value in every place it must agree — a .NET library, service, or Windows
-  desktop app (WPF, WinUI 3, Windows Forms) alike. Rewrites `<Version>` (or `<VersionPrefix>` + `<VersionSuffix>`) in
-  the root `Directory.Build.props` when it declares one, otherwise in every non-test `*.csproj` that declares one, and
-  the MSIX package identity — `<Identity Version="x.y.z.0">` in every tracked `Package.appxmanifest` (WinUI
-  single-project MSIX) and `packaging/AppxManifest.xml` (WPF/WinForms MSIX) — always as the four-part numeric value
-  derived from the new version (pre-release suffix stripped, revision `0`, as the Microsoft Store requires). Follows
-  this catalog's `x.y.z-dev` development-version convention (Step 5). Uses an embedded, tested Python helper with
-  `--list` and `--dry-run` modes, preserves BOMs and CRLF line endings, never touches test projects or explicit
-  `<AssemblyVersion>`/`<FileVersion>` values (it reports them), and refuses to write when the `<Version>` locations
-  disagree until the user confirms. Invoke as `/iru-dotnet-bump-version <new-version>` where `<new-version>` is the
-  literal target (e.g. `1.4.0` or `1.5.0-dev`) — this skill never computes a bump itself (`iru-release` computes the
-  release/next-dev values per Step 5 and passes each one through). Also accepts `args` (`key: value` lines):
-  `sync-files: yes|no` (default: ask) to also update README/Antora version mentions, `next-version:
-  <upcoming-version>` so that sync maps "Latest release" markers to `<new-version>` and "Current development
-  version" markers to the upcoming value, and `dry-run: yes|no` (default `no`) to print the diff without writing
-  anything. Reports every location found with its old value, the new values, and every file touched. Use whenever
-  the user, or `iru-release` (key `dotnet`), needs a .NET project's version set to a specific value instead of
-  hand-editing MSBuild properties and MSIX manifests.
+description: "/iru-dotnet-bump-version <new-version> sets a .NET project's version (library, service or Windows desktop app) to the literal value given: Version/VersionPrefix+VersionSuffix in Directory.Build.props or the non-test csproj files, plus the four-part MSIX Identity version. Args: sync-files, next-version, dry-run. Reports old/new values and files touched."
 model: haiku
 allowed-tools: Read Bash(python3 *) Bash(dotnet msbuild *) Bash(git ls-files *) Bash(git describe *) Bash(git tag *) Bash(git diff *) Bash(grep *) Bash(find *) Bash(ls *) Bash(cat *) Bash(mkdir *)
 ---
@@ -31,6 +13,8 @@ mentions. This skill never computes a version itself: it applies exactly the str
 The "which version comes next" logic belongs to the caller (typically `iru-release`) and is defined in Step 5, the
 same contract `iru-java-bump-version`, `iru-typescript-bump-version`, `iru-php-bump-version` and the other
 `iru-<key>-bump-version` skills define for their ecosystems. It never commits, tags, builds, or packages anything.
+
+Files are rewritten in place preserving their BOM and CRLF/LF line endings.
 
 ## Step 0 — Resolve inputs
 

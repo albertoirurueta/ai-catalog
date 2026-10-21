@@ -1,35 +1,6 @@
 ---
 name: iru-setup-php-prestashop
-description: >-
-  Scaffold a PrestaShop module for PrestaShop 8.x and 9.x in the repository root (the repository is the module
-  directory, named after the module's technical name), or bring an existing module up to this catalog's toolchain:
-  main class `<module>.php` extending `Module` (name, tab, `x.y.z-dev` version, author, `need_instance`,
-  `ps_versions_compliancy` 8.0.0–9.99.99, bootstrap, install/uninstall registering hooks and `Configuration`
-  defaults, new translation system), tracked `config.xml`, a 32×32 `logo.png` placeholder, `composer.json`
-  (`type: prestashop-module`, PSR-4 `src/`, classmap of the main file, `prepend-autoloader: false`,
-  `config.platform.php` pinned to the PHP floor) with the catalog's shared composer scripts (`test`,
-  `test:coverage`, `test:integration`, `lint`, `lint:report`, `format`, `format:check`, `package`), a sample
-  `displayFooter` hook, a Symfony back-office configuration page (form type + data configuration + form handler in
-  `config/services.yml`, route in `config/routes.yml`, controller and Twig template, compatible with 8.x and 9.x),
-  `upgrade/` with a README, `translations/`, `index.php` directory guards everywhere, license headers (AFL-3.0 by
-  PrestaShop convention, OSL-3.0, MIT, proprietary, or other — asked), `prestashop/php-dev-tools` (PHP-CS-Fixer
-  config, PHPStan with `_PS_ROOT_DIR_` against a real shop) plus a stub-based PHPStan config that needs no shop,
-  a fast PHPUnit unit suite with Clover/JUnit under `build/logs/`, an optional Integration suite and Docker
-  `prestashop/prestashop` + MariaDB dev shop, `bin/package.sh` building the distributable zip for Back Office or
-  PrestaShop Addons upload, `sonar-project.properties` when Sonar is on, and browser UI tests per the catalog's UI
-  contract — `.ui-quality.yml`, a test-only `package.json` with Playwright + `@axe-core/playwright`,
-  `playwright.config.ts` against a running shop at `PS_BASE_URL` (specs skip when it is unset), the shared
-  `tests/e2e/support/ui-screenshots.ts` helper, and a `FooterMessage` spec capturing the hook template across
-  left-to-right/right-to-left × light/dark with an accessibility check, all excluded from the module zip.
-  Resolves dev-dependency versions live through `composer require --dev` under the pinned platform, then runs the unit tests, coverage, PHPStan, and
-  PHP-CS-Fixer to prove the scaffold. Invoke as `/iru-setup-php-prestashop`. Announces whether it is creating the
-  module from scratch or updating an existing one; for every file it owns that already exists, warns and asks
-  Update / Keep as is / Replace. Accepts pre-resolved inputs via `args` (`key: value` lines) — `name`, `slug`
-  (the technical name), `vendor`, `namespace`, `description`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `php-version`, `open-source`, `visibility`, `ci`, `distribution`, `sonar` (+
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `tab`, `accessibility`, `mode`, `on-existing` — so
-  `iru-setup-php-repository` can supply them without re-prompting. Use whenever a PrestaShop module repository needs
-  its module skeleton and build/test/lint/package toolchain bootstrapped from this house template.
+description: "Invoked as /iru-setup-php-prestashop with optional key: value args, usually by iru-setup-php-repository. Scaffolds a PrestaShop 8.x/9.x module (or upgrades one): module class, Composer toolchain, PHPUnit, PHPStan, PHP-CS-Fixer, Playwright UI tests, package script and optional Sonar."
 model: sonnet
 allowed-tools: Read Write Edit Glob Grep AskUserQuestion Bash(composer *) Bash(php *) Bash(npm *) Bash(npx *) Bash(vendor/bin/*) Bash(docker *) Bash(git *) Bash(gh *) Bash(bash bin/package.sh*) Bash(chmod +x bin/package.sh) Bash(mkdir *) Bash(ls *) Bash(cat *) Bash(find *) Bash(grep *) Bash(head *) Bash(test *) Bash(command -v *) Bash(date *) Bash(unzip -l *)
 ---

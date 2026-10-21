@@ -42,6 +42,10 @@ files are reported "unverified (no visionOS simulator runtime installed)" after 
 
 xref:index.adoc#group-swift[Swift Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-swift` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-swift@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

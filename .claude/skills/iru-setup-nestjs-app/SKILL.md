@@ -1,33 +1,6 @@
 ---
 name: iru-setup-nestjs-app
-description: >-
-  Scaffold a new NestJS 12 service with the Nest CLI (`nest new` for ESM + Vitest, the default, or the application
-  schematic with `--type=cjs` for CommonJS + Jest), generated in a temporary directory and copied into the
-  repository without overwriting anything, or bring an existing NestJS app up to this catalog's toolchain, then
-  post-process it — `0.1.0-dev.0` version, the shared npm script names the workflows skill calls (`lint` = Oxlint
-  `--type-aware`, `format`/`format:check` = Prettier, `typecheck` = `tsc --noEmit`, `test` = unit suite, `coverage`
-  = unit coverage with an 80% threshold, `*.module.ts`/`main.ts`/generated code excluded, lcov at
-  `coverage/lcov.info`, `test:e2e`, `build`, `start`, `docs` = Compodoc or TypeDoc), `ConfigModule` validated by a
-  Zod schema, a global `ValidationPipe` registered as `APP_PIPE`, a shared `configureApp()` (security headers,
-  shutdown hooks) used by `main.ts` and the e2e tests, `@nestjs/terminus` liveness/readiness endpoints, a tested
-  sample feature module that follows the `iru-nestjs-code-one-task` references, optional persistence (`orm`
-  TypeORM / Prisma 7 with a driver adapter / Mongoose 9 / Drizzle, with migrations) with Testcontainers-backed e2e
-  tests, a multi-stage non-root `Dockerfile` with a health check, `.env.example`, and `sonar-project.properties`
-  when Sonar is enabled. Invoke as `/iru-setup-nestjs-app`. Accepts pre-resolved inputs via `args` (`key: value`
-  lines) — `app-name`, `description`, `license`, `developer-name`, `developer-email`, `organization-url`,
-  `open-source` (`yes`/`no`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `orm` (`none`/`typeorm`/`prisma`/`mongoose`/`drizzle`), `database` (`postgresql`/`mysql`/
-  `mongodb`, only when `orm` is not `none`), `distribution` (`none`/`internal` — `internal` means the workflows
-  push the image to GHCR; the `Dockerfile` is written either way), `package-manager` (`npm`/`pnpm`/`yarn`),
-  `node-version` (the `Dockerfile` base image's Node major, default `24`), `visibility` (`public`/`private`/
-  `internal`), `ci` (`yes`/`no`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`),
-  `module-system` (`esm`/`cjs`), `http` (`express`/`fastify`), and `docs-tool` (`compodoc`/`typedoc`/`none`) — so
-  an orchestrating skill (`iru-setup-typescript-repository`) can supply them without re-prompting; invoked
-  stand-alone it asks whatever `args` didn't resolve. Announces whether it is scaffolding from scratch or updating
-  an existing app; for every artifact it owns that already exists, warns and asks Update (merge, keep
-  customizations) / Keep as is / Replace (regenerate from the template), explaining each option's consequences.
-  Use whenever a repository needs a NestJS backend service bootstrapped with its full test/lint/e2e/container
-  toolchain from this house template, instead of running `nest new` and wiring the rest by hand.
+description: "Invoke as `/iru-setup-nestjs-app`, optionally with `args` (key: value lines such as `app-name`, `orm`, `database`, `module-system`, `http`, `docs-tool`, `on-existing`); normally called by `iru-setup-typescript-repository`. Scaffolds a NestJS service (or upgrades an existing one) with lint, test, coverage, e2e, Dockerfile and optional ORM and Sonar wiring."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(npx *) Bash(npm *) Bash(pnpm *) Bash(yarn *) Bash(node *) Bash(docker *) Bash(curl *) Bash(git *) Bash(gh repo view *) Bash(mktemp *) Bash(rsync *) Bash(mv *) Bash(cp *) Bash(rm *) Bash(mkdir *) Bash(ls *) Bash(find *) Bash(grep *) Bash(cat *) Bash(test *) Bash(command -v *) Bash(head *) Bash(date *) Bash(sleep *)
 ---

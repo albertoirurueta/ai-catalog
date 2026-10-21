@@ -1,25 +1,6 @@
 ---
 name: iru-setup-dotnet-gitignore
-description: >-
-  Create or update the root `.gitignore` for a plain .NET repository — a library, a service, or a command-line tool,
-  including the layout `iru-setup-dotnet-cli` produces (`<ToolName>.slnx`, `src/<ToolName>.Core/`, `src/<ToolName>/`,
-  `tests/`, `docfx.json`) or any other `*.sln`/`*.slnx` solution — covering .NET build output (`[Bb]in/`, `[Oo]bj/`, the
-  .NET 8+ `artifacts/` layout, which also holds the CLI's Native AOT publish output, NuGet tool packages, generated man
-  page and completion scripts), `publish/` folders, Visual Studio/Rider/VS Code user state (`.vs/`, `*.user`, `*.suo`,
-  `.idea/`), test and coverage output (`TestResults/`, `*.trx`, `coverage*.xml`, `*.coverage`, `coveragereport/`),
-  analyzer SARIF logs, NuGet packages (`*.nupkg`, `*.snupkg`), signing material (`*.pfx`, `*.p12`, `*.key`; `*.snk`
-  deliberately NOT ignored), DocFX output (the `docfx.json` metadata `dest` and site `output`, only when a
-  `docfx.json` exists), the Antora docs build output, OS files, the repository-wide `.integration-test.lock/`, and —
-  for a command-line tool with a Terminal.Gui terminal UI (`ui: tui`) — the UI tests' capture directory
-  `.ui-screenshots/` (never `.ui-quality.yml`, which is committed).
-  Never ignores the generated-but-committed `docs/modules/ROOT/pages/cli-reference.adoc`. Invoke as
-  `/iru-setup-dotnet-gitignore`, optionally with `args`: `mode: new|existing` (default: detected from whether a root
-  `.gitignore` already exists) and `on-existing: ask|keep|update|replace` (default `ask`). Announces whether it is
-  creating from scratch or updating; an existing `.gitignore` is never overwritten silently — it warns, shows a diff,
-  and asks Update (merge in what's missing, keep hand-added lines) / Keep as is / Replace, unless `on-existing`
-  decides. Windows desktop apps (WPF, WinUI 3, Windows Forms — MSIX packaging, publish profiles) use
-  `iru-setup-windows-gitignore` instead. Use whenever a .NET library, service or CLI repository needs a `.gitignore`
-  bootstrapped from scratch, or an existing one checked/gap-filled against this house template.
+description: "Invoked as /iru-setup-dotnet-gitignore, optionally with args mode: new|existing and on-existing: ask|keep|update|replace. Creates or updates the root .gitignore of a plain .NET library, service or CLI repository, never overwriting an existing one without a diff and approval. Windows desktop apps use iru-setup-windows-gitignore."
 model: haiku
 ---
 

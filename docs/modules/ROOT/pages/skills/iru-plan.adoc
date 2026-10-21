@@ -15,7 +15,7 @@ free-form task description into a reviewable, checkbox-driven list of implementa
 changes begin. If `implementation_plan.md` already exists at the repository root, it determines whether that
 plan matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or
 update it while preserving already-completed work. It grounds itself in the actual codebase (via `iru-explore`),
-resolves only genuinely ambiguous decisions with the user, groups tasks into dependency-aware task groups (each
+resolves only genuinely ambiguous decisions with the user (including acceptance criteria too vague to verify), groups tasks into dependency-aware task groups (each
 marked whether its tasks can be implemented in parallel), and determines which `<key>-code-one-task` skill (e.g.
 `iru-java-code-one-task`, `iru-dotnet-code-one-task`, `iru-typescript-code-one-task`, `iru-android-code-one-task`,
 `iru-swift-code-one-task`, `iru-java-springboot-code-one-task`, `iru-kotlin-springboot-code-one-task`,
@@ -28,7 +28,11 @@ archived plan after the exact ticket it resolved, rather than falling back to a 
 the work forks from is known — typically because `xref:skills/iru-issue.adoc[]` already resolved and confirmed it
 with the user before invoking this skill — the Task summary records that too, as a `Base branch:` line, so that a
 later `/iru-pr-description` run in a separate session can recover the choice and target the pull request at the
-same base rather than the repository default. For user-interface work (screens, pages, windows, components or controls on any stack) it decomposes the design
+same base rather than the repository default. Every plan also carries an `## Acceptance criteria coverage` table
+mapping each ticket criterion (or 2-6 `derived:` statements for a free-form task) to the tasks that cover it, and any
+question that cannot be put to the user (unattended run, declined question, "decide later") is persisted as a
+plain-text `[NEEDS CLARIFICATION: ...]` marker, never guessed silently; `iru-code` refuses to start implementing
+while a marker remains. For user-interface work (screens, pages, windows, components or controls on any stack) it decomposes the design
 top-down into screens, regions and components, plans one task per component or screen with its own UI tests, groups
 them bottom-up (leaves, composites, screens, flows) and ends with a documentation task for `/iru-update-docs`; see
 xref:guides/building-user-interfaces.adoc[Building user interfaces]. Everything is written to
@@ -37,6 +41,10 @@ xref:guides/building-user-interfaces.adoc[Building user interfaces]. Everything 
 == Purpose group
 
 xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 
@@ -75,16 +83,26 @@ task.
   merged into (preserving completed tasks) if the user chose to update one, or left completely untouched if the
   user chose to skip planning and resume execution of the existing file as-is.
 * The plan is structured as: a task summary (including a `Source:` line naming the originating GitHub issue or
-  Jira ticket, if any, and a plan-wide **Language/framework** line if every task shares one key), a summary of the
+  Jira ticket, if any, a `Base branch:` line when known, a plan-wide **Language/framework** line if every task shares
+  one key, and a mandatory closing `Open clarifications:` entry listing each unresolved marker or `none`), an
+  `## Acceptance criteria coverage` table (`#` / `Criterion` / `Covered by tasks`; every row names at least one task,
+  and an uncovered criterion is fixed by adding a task or a marker on the closest task), a summary of the
   current relevant code state (concrete file paths and class/method names), and implementation steps organized
   into task groups — each group naming its `Parallelizable` verdict and containing its tasks/sub-tasks, every one
   carrying its own empty markdown checkbox (`[ ]`) for `iru-code` to check off later, numbered continuously across
   the whole plan (`Task N` / `Task N.M`) and tagged with its own language/framework key.
+* `[NEEDS CLARIFICATION: <question> — options: <a> | <b>; recommended: <a>]` markers for unanswerable ambiguities,
+  written as plain text (never in backticks or a code fence, because `grep` and the plan audit ignore those), placed
+  right after the blocked task's title and repeated under `Open clarifications:`. Planning continues around the
+  recommended option; a marker is resolved in place once the user answers, and an update run carries the coverage
+  table and markers forward (re-deriving only rows for new or unchecked tasks).
 * The distinct set of `<key>-code-one-task` keys involved. `iru-explore`'s `Project type:` is mapped to the most
   specific installed key: `java-springboot` and `kotlin-springboot` (Hilla frontends stay `typescript`), `quarkus`
   for both Java and Kotlin Quarkus, `php` for every PHP flavor (Laravel, WordPress, PrestaShop, library), and
   `nestjs`/`nextjs` — never plain `typescript` for NestJS or Next.js code — `react-native` for every `react-native-app` (Expo or Metro; never `typescript`/`android`/`swift`), `kmp` for every `kmp-app` (including the Swift code in its `iosApp/` host; never `android`), `windows` for every `windows-app (wpf|winui|winforms)` (the UI-free `src/<App>.Core` code, the app project's XAML/forms, MSIX manifests and their tests — never `dotnet`; the plan's "Current code state" states the UI stack and MVVM/MVC architecture), `swift` for a `macos-app (swiftui|appkit)` (the Swift coding skill detects the UI framework and architecture itself, also stated in "Current code state"), `rust`/`go` for Rust and Go projects and for `cli-tool (rust)`/`cli-tool (go)` (every task in the crate or module, including the command tree, terminal UI and doc generators), `swift`/`dotnet` for `cli-tool (swift)`/`cli-tool (dotnet)` (their coding skills detect the command-line shape themselves; the plan's "Current code state" names the argument parser, any terminal-UI library and which commands are read-only vs. destructive, and CLI tasks are phrased as observable contracts: stdout/stderr, `--json` schema, exit codes), and `fastapi`/`django` for `python-fastapi`/`python-django` (a `python-library` has no coding key in this catalog and is recorded as plain `python`). Keys are resolved against which such skills are actually
-  installed in this repository (`find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`) — a task
+  installed, read first from the skills available in the session (`iru-*-code-one-task`, which also works for plugin
+  installs) and corroborated with `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"` when that
+  directory exists — a task
   whose language/framework has no matching skill installed is still recorded accurately, just without a
   dispatchable tag.
 * For UI work: a `Screen › Region › Component (in: …; out: …)` tree in "Current code state" with each node marked
@@ -97,7 +115,9 @@ task.
   with a one-line rationale, rather than asked upfront.
 * No source code, configuration, or documentation outside `implementation_plan.md` is ever modified.
 * A short summary in the conversation once the plan is written — including how many task groups were formed
-  and which, if any, are non-parallelizable and why — asking the user to review it before implementation starts.
+  and which, if any, are non-parallelizable and why, any criterion left uncovered (there should be none) and every
+  open `[NEEDS CLARIFICATION: ...]` marker with its recommended option — asking the user to review and resolve them
+  before implementation starts.
 
 == Execution flow
 
@@ -117,15 +137,17 @@ flowchart TD
     G --> H
     H --> I{Anything genuinely\nambiguous?}
     I -- yes --> J["Ask user via AskUserQuestion\n(1-4 focused questions, defaults offered)"]
+    J -- unanswered or decide later --> J2["Persist NEEDS CLARIFICATION marker\non the blocked task; plan around\nthe recommended option"]
     I -- no --> K["Choose best-practice approach\nand state rationale in the plan"]
     J --> L["Find installed *-code-one-task skills;\nresolve language key per task;\ngroup tasks by dependency +\nParallelizable verdict"]
+    J2 --> L
     K --> L
     L --> UIN{"UI work?"}
     UIN -- yes --> UIP["Decompose into screens, regions, components;\none task per component or screen with UI tests;\ngroup bottom-up; end with a docs task"]
     UIN -- no --> M
     UIP --> M
-    M["Draft implementation_plan.md:\ntask summary (+ Source: ticket,\n+ language key), code state,\ntask groups with numbered\nchecklist tasks (+ key tags)\n(merging preserved completed\ntasks if updating)"]
-    M --> N["Ask user to review the plan\nbefore implementation starts"]
+    M["Draft implementation_plan.md:\ntask summary (+ Source: ticket,\n+ language key + Open clarifications),\nacceptance criteria coverage table,\ncode state,\ntask groups with numbered\nchecklist tasks (+ key tags)\n(merging preserved completed\ntasks if updating)"]
+    M --> N["Ask user to review the plan, uncovered\ncriteria and open markers before\nimplementation starts"]
 ....
 
 == Dependencies
@@ -138,6 +160,11 @@ flowchart TD
 === Invoked by
 
 * xref:skills/iru-issue.adoc[] — Step 5.2, to produce implementation_plan.md.
+
+=== Gated by
+
+* xref:skills/iru-code.adoc[] — refuses to start implementing while any `[NEEDS CLARIFICATION` marker remains in
+  the plan, so the user must resolve them first.
 
 === Related agents
 

@@ -1,6 +1,6 @@
 ---
 name: iru-plan
-description: Generate an implementation_plan.md at the repository root detailing the tasks needed to complete a piece of work, optionally grounded in a specific GitHub issue or Jira ticket. Invoke as `/iru-plan <ticket-id>` to plan for that ticket (a GitHub issue ID or Jira key, auto-detected like `iru-explore`), or `/iru-plan` with a description in the same message to plan manually described work. Runs the `iru-explore` skill first to ground the plan in the actual codebase and ticket, unless that exploration already happened earlier in this conversation. Records the source GitHub issue or Jira ticket, if any, in the plan's Task summary so later steps in the pipeline can track which tracked ticket the plan resolves, and — when the base branch the work forks from is known (e.g. `iru-issue` already confirmed it with the user) — records that too as a `Base branch:` line, so a later `/iru-pr-description` run in a separate session targets the same base. If `implementation_plan.md` already exists at the repository root, determines whether it matches the requested task and asks the user whether to resume it as-is, discard and regenerate it, or update it while preserving already-completed tasks. Groups tasks into dependency-aware task groups — each marked parallelizable or not — so a downstream `iru-code`-style skill can validate once per group instead of once per task. Records which language/framework (e.g. `java`, `java-springboot`, `kotlin-springboot`, `quarkus`, `dotnet`, `typescript`, `nestjs`, `nextjs`, `php`, `fastapi`, `django`, `android`, `swift`, `kmp`, `react-native`, `windows`, `rust`, `go`) each task and sub-task belongs to, using the same keys as this repository's installed `<language>-code-one-task` skills, so a downstream execution skill knows which one to invoke per task without re-inferring it. Use when the user wants a concrete, reviewable step-by-step plan before code changes begin.
+description: "/iru-plan <ticket-id> (GitHub issue id or Jira key, auto-detected) or /iru-plan plus a description of the work. Writes implementation_plan.md at the repository root: runs iru-explore first (unless already done this conversation), records the Source ticket and a Base branch line when known, and groups tasks into dependency-aware groups marked parallelizable or not, each task tagged with the language/framework key of an installed iru-<key>-code-one-task skill. Adds an acceptance-criteria coverage table and persists unanswerable questions as [NEEDS CLARIFICATION] markers that iru-code gates on. If a plan already exists, asks whether to resume, regenerate, or update preserving completed tasks. Use when the user wants a reviewable step-by-step plan before code changes begin."
 model: opus
 ---
 
@@ -46,7 +46,10 @@ Check whether `implementation_plan.md` already exists at the repository root bef
   - **Continue exploring/planning and update `implementation_plan.md`, preserving completed work** — continue to
     Step 3, but when drafting in Step 6, carry forward every task/sub-task already marked `[x]` (and its progress
     note) into the regenerated plan at the equivalent position, rather than re-adding it as pending. Only tasks
-    that are new or still unchecked get re-derived from this run's exploration/planning.
+    that are new or still unchecked get re-derived from this run's exploration/planning. Likewise carry the
+    existing `## Acceptance criteria coverage` table and any `[NEEDS CLARIFICATION: …]` markers forward as they
+    stand (a marker the user has since resolved stays resolved), and re-derive only the coverage rows for new or
+    unchecked tasks — rows whose tasks are all `[x]` are kept untouched.
   Respect whichever the user picks; don't guess on their behalf even if the mismatch (or match) looks obvious.
 
 ## Step 3 — Ground the plan via the `iru-explore` skill
@@ -69,12 +72,29 @@ plan must be grounded in a prior exploration, not produced from a cold start.
 After grounding, decide whether anything is genuinely ambiguous or under-specified in a way that would make the
 plan wrong or force a guess with real consequences (e.g. conflicting requirements, a choice between materially
 different architectures, a missing decision only the user can make like which library/framework to standardize
-on, or scope that could reasonably mean two very different things).
+on, or scope that could reasonably mean two very different things, or an acceptance criterion too vague to verify
+such as "documented somewhere" — do not silently pick a reading of it).
 
 - If something is ambiguous: ask the user via `AskUserQuestion`, but keep it tight — 1-4 focused questions,
   each with a recommended default option based on codebase conventions and common best practices for the
   language/framework/architecture in play. Do not ask about things you can reasonably infer or that have an
   obvious best-practice answer.
+- If something is ambiguous but **cannot be put to the user** — an unattended run, an `AskUserQuestion` the user
+  declined, or the user answering "decide later" — never guess silently. Record it as a persisted marker, in
+  exactly this form, on the task it blocks (right after that task's title line) and again in the `Open
+  clarifications:` list of the Task summary (Step 6):
+
+  ```
+  [NEEDS CLARIFICATION: <question> — options: <a> | <b>; recommended: <a>]
+  ```
+
+  Write the marker as plain text in the plan: never wrap it in backticks or put it inside a code fence (the block
+  above is fenced only to show the syntax), because `grep` and the plan audit ignore code spans and fences.
+
+  Then keep planning around the recommended option, so the plan stays complete and reviewable. When the user does
+  answer (now or at the Step 7 review), resolve the marker in place — replace it with the chosen decision, adjust
+  the affected tasks — and remove it from the list; once none remain the list says `Open clarifications: none`.
+  `iru-code` refuses to start implementing while any `[NEEDS CLARIFICATION` marker remains.
 - If nothing is genuinely ambiguous: do **not** ask the user anything. Proceed straight to drafting the plan,
   choosing the best-practice approach yourself given the language, frameworks, libraries, and existing
   architectural conventions found in Step 3 (check the repository's own `CLAUDE.md` or equivalent contributor
@@ -95,9 +115,11 @@ grouping need to be explicit and unambiguous in the plan — don't leave either 
 
 **Language/framework keys:**
 
-- Find which `*-code-one-task` skills are actually installed in this repository:
-  `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`. The directory name minus its `iru-` prefix
-  and its `-code-one-task` suffix is the key (e.g. `iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task`
+- Find which `*-code-one-task` skills are actually installed. First read them from the skills available in this
+  session (the names matching `iru-*-code-one-task`) — that works whether the skills were copied into
+  `.claude/skills/` or installed as plugins, where that directory does not exist. When `.claude/skills` exists,
+  corroborate with `find .claude/skills -maxdepth 1 -type d -name "*-code-one-task"`. The skill (directory)
+  name minus its `iru-` prefix and its `-code-one-task` suffix is the key (e.g. `iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task`
   → `dotnet`, `iru-typescript-code-one-task` → `typescript`, `iru-android-code-one-task` → `android`,
   `iru-swift-code-one-task` → `swift`, `iru-kotlin-springboot-code-one-task` → `kotlin-springboot`,
   `iru-quarkus-code-one-task` → `quarkus`, `iru-php-code-one-task` → `php`, `iru-nestjs-code-one-task` → `nestjs`,
@@ -226,10 +248,30 @@ all if the user chose to skip planning). Structure it as:
    `Base branch: develop`. A later `/iru-pr-description` run in a separate session reads this line to describe
    and target the pull request against the same base the work was branched from, instead of falling back to the
    repository's default branch. Omit the line when the base isn't known — don't guess one.
-2. **Current code state** — a brief summary of the relevant existing architecture/classes/files as found during
+   End the Task summary with an `Open clarifications:` entry: one line per unresolved marker from Step 4 (the
+   marker repeated verbatim, followed by the task it blocks), or the single line `Open clarifications: none`. The
+   entry is mandatory even when nothing is open, so a reader can tell "none" from "forgotten".
+2. **Acceptance criteria coverage** — a mandatory section placed right after the Task summary, with exactly this
+   heading and table shape:
+
+   ```
+   ## Acceptance criteria coverage
+
+   | # | Criterion | Covered by tasks |
+   |---|---|---|
+   | 1 | "<criterion quoted from the ticket>" | Task 2, Task 3.1 |
+   | 2 | derived: <verifiable statement> | Task 4 |
+   ```
+
+   List every acceptance criterion the ticket states, quoted, one row each. When the ticket states none (or the
+   task came from a free-form description), derive 2–6 verifiable statements from the request and label each one
+   `derived:`. Every row must name at least one task; a criterion that no task covers is a planning error — fix it
+   by adding a task, or, when the gap is an open question, by placing a `[NEEDS CLARIFICATION: …]` marker on the
+   row's closest task and naming that task. Keep the section up to date if the plan is edited later.
+3. **Current code state** — a brief summary of the relevant existing architecture/classes/files as found during
    exploration: what exists today, how it is structured, and where the change needs to land. Reference concrete
    file paths and class/method names from the actual repository, not vague descriptions.
-3. **Implementation steps** — organized into the task groups determined in Step 5, each group its own subsection
+4. **Implementation steps** — organized into the task groups determined in Step 5, each group its own subsection
    naming the group number and its `Parallelizable` verdict, containing that group's tasks (each broken into
    sub-tasks as needed). Every task and sub-task must be explicit and actionable, not aspirational:
    - Name the exact file(s) to create or modify.
@@ -267,4 +309,6 @@ Keep the plan concrete and skimmable: prefer nested numbered/bulleted lists over
 Once `implementation_plan.md` is written, tell the user it's ready, give a one- or two-sentence summary of the
 approach — including how many task groups were formed and which, if any, are marked non-parallelizable and why —
 and explicitly ask them to review the file and let you know if anything needs to change before implementation
-starts. Do not begin implementing the plan unless the user asks you to.
+starts. The review message also lists (a) any criterion in `## Acceptance criteria coverage` that no task covers
+(there should be none) and (b) every open `[NEEDS CLARIFICATION: …]` marker with its recommended option, and asks
+the user to resolve them now: `/iru-code` will stop at its Step 2 gate until no marker remains. Do not begin implementing the plan unless the user asks you to.

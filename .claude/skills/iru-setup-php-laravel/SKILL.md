@@ -1,34 +1,6 @@
 ---
 name: iru-setup-php-laravel
-description: >-
-  Scaffold a new Laravel application with `composer create-project laravel/laravel` (latest stable skeleton,
-  resolved live from Packagist), or bring an existing Laravel app up to this catalog's toolchain, then
-  post-process it: `config/app.php` `'version' => env('APP_VERSION', '0.1.0-dev')` (the `x.y.z-dev` convention
-  `iru-php-bump-version` maintains), `config.platform.php` pinned to the PHP floor, Pest (default; arch tests with
-  the php/security/laravel presets) or PHPUnit, `phpunit.xml` fast suites (Unit + Feature on SQLite `:memory:`),
-  Pint (`pint.json`), Larastan (`phpstan.neon`, level 9 for a new app, level 6 plus a generated baseline for an
-  existing one), composer scripts (`test`, `test:coverage` with Clover/JUnit under `build/logs/` and an 80% floor,
-  `lint`, `lint:report`, `format`, `format:check`), a sample action + Form Request + policy + resource with feature
-  tests, and — each only when chosen — a DB-backed `Integration` suite (`phpunit.integration.xml`, MySQL or
-  PostgreSQL), Laravel Sail, a production `Dockerfile` (FrankenPHP or PHP-FPM + Nginx) for `distribution: internal`,
-  `sonar-project.properties`, and Laravel Boost as a dev-only dependency — plus browser UI tests per the catalog's
-  UI contract: `.ui-quality.yml`, Playwright (`playwright.config.ts` serving `php artisan serve`) with
-  `@axe-core/playwright`, the shared `tests/e2e/support/ui-screenshots.ts` helper, and a `WelcomePage` spec capturing
-  `.ui-screenshots/screen/WelcomePage/` across left-to-right/right-to-left × light/dark with an accessibility check.
-  Invoke as `/iru-setup-php-laravel`.
-  Accepts pre-resolved inputs via `args` (`key: value` lines) — `name`, `slug`, `vendor`, `description`, `license`,
-  `developer-name`, `developer-email`, `organization-url`, `php-version`, `open-source`, `visibility`, `ci`,
-  `ci-tests` (`unit`/`full`), `distribution` (`none`/`internal`), `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `accessibility` (`enforce`/`report`/`off`/`none`), `test-framework`
-  (`pest`/`phpunit`), `integration-tests`
-  (`none`/`mysql`/`pgsql`), `sail`, `boost` (`yes`/`no`), `runtime` (`frankenphp`/`fpm`), `mode`
-  (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`) — so `iru-setup-php-repository` can drive it
-  without re-prompting; stand-alone it asks whatever `args` didn't resolve. Announces whether it is scaffolding from
-  scratch or updating an existing app and, for every artifact it owns that already exists, warns and asks Update /
-  Keep as is / Replace (or Stop). Ends by running the same commands as the `iru-php-test`, `iru-php-coverage`, and
-  `iru-php-code-quality` gates. Use whenever a repository needs a Laravel application bootstrapped with its full
-  test/coverage/static-analysis/style toolchain from this house template, instead of running `laravel new` and
-  wiring the rest by hand.
+description: "Invoked as /iru-setup-php-laravel with optional key: value args, usually by iru-setup-php-repository. Scaffolds a Laravel app via composer create-project (or upgrades an existing one) with Pest or PHPUnit, Pint, Larastan, coverage, Playwright UI tests with accessibility checks, optional Sail, Docker image and Sonar."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(composer *) Bash(php *) Bash(vendor/bin/*) Bash(./vendor/bin/*) Bash(docker *) Bash(npm *) Bash(curl *) Bash(python3 *) Bash(git *) Bash(gh repo view *) Bash(mktemp *) Bash(mv *) Bash(cp *) Bash(rm *) Bash(mkdir *) Bash(ls *) Bash(find *) Bash(grep *) Bash(cat *) Bash(test *) Bash(command -v *) Bash(head *)
 ---

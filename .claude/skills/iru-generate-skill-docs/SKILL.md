@@ -1,6 +1,6 @@
 ---
 name: iru-generate-skill-docs
-description: Analyze every Claude Code skill (`.claude/skills/*/SKILL.md`) and agent (custom definitions under `.claude/agents/*.md`, plus built-in agent types referenced from skills via the `Agent` tool) defined in this repository, and generate/update the Antora documentation describing them — a reference table and dependency graph in `index.adoc`, purpose-grouped sections for the catalog's recurring end-to-end workflows, and one detail page per skill/agent under `docs/modules/ROOT/pages/skills/` and `.../agents/` covering its purpose, inputs, outputs, execution flow, and dependencies. Invoke as `/iru-generate-skill-docs`. Idempotent — safe to re-run whenever skills/agents are added, removed, or changed; it regenerates content from the current `SKILL.md`/agent definitions rather than hand-maintaining pages that drift from them. Use whenever this catalog's own documentation needs to reflect its actual current set of skills and agents, instead of manually writing or updating each page by hand.
+description: "Invoke as `/iru-generate-skill-docs`. Regenerates this catalog's Antora docs from the skills and agents on disk: reference table and dependency graph in `index.adoc`, purpose-grouped workflow sections, one page per skill and agent. Idempotent. Use after adding, removing or changing a skill or agent."
 model: sonnet
 ---
 
@@ -28,8 +28,12 @@ Find `antora.yml` (`find . -name antora.yml -not -path '*/node_modules/*'`).
 
 ## Step 2 — Discover every skill and agent actually defined
 
-- **Skills**: `find .claude/skills -maxdepth 2 -name SKILL.md`. Each is one skill; its directory name is its
-  canonical name (should match the `name:` frontmatter field — flag any mismatch).
+- **Skills**: `find .claude/skills -maxdepth 2 -name SKILL.md` (this scan documents this repository's own
+  tree, so it stays a filesystem scan). Each is one skill; its directory name is its
+  canonical name (should match the `name:` frontmatter field — flag any mismatch). When
+  `.claude-plugin/marketplace.json` exists, each skill's page also states which plugin ships it (the plugin whose
+  `skills` list contains that skill, read from `tools/plugins.json` — the membership map the marketplace is
+  generated from; when that file does not exist yet, omit the plugin line).
 - **Custom agents**: `find .claude/agents -maxdepth 1 -name '*.md'` (the directory may not exist yet — that's
   not an error, just means there are none). Each is one custom agent definition.
 - **Built-in agent types actually used**: grep every `SKILL.md` found above for `Agent(` / `Agent tool` /

@@ -1,36 +1,7 @@
 ---
 name: iru-setup-macos-repository
-description: >-
-  End-to-end bootstrap for a native macOS desktop app repository (Swift 6, XcodeGen) — collects `ui` (`swiftui` =
-  SwiftUI scenes with Settings/Commands/MenuBarExtra, `appkit` = programmatic AppKit with
-  NSWindowController/NSViewController; asked via `AskUserQuestion` when absent and not detectable from disk),
-  `architecture` (`mvvm` for SwiftUI; `mvc` or `mvvm` for AppKit — asked only when more than one is valid),
-  `branching` (`gitflow`/`main-only`), the app's identity (`app-name`, `bundle-id`, `team-id`, plus license and
-  developer name/email/organization URL), the macOS-specific inputs (`min-macos`, `sandbox`, `category`), and the
-  shared pipeline parameters (integration branch `develop`, stable branch `main`, `runner` `macos-26`,
-  `open-source`, the repository `visibility` (detected via `gh repo view` or asked), `ci`, `macos-ci` (when the
-  ~10×-cost macOS jobs run: `all`/`stable`), `ci-tests` (`unit`, or `full` = also the XCUITest UI tests),
-  `accessibility` (`enforce`/`report`/`off`/`none` — the UI tests' automated accessibility level, written by the scaffold to
-  `.ui-quality.yml`), `pages`
-  (GitHub Pages vs. a workflow artifact for the Antora + DocC docs), `distribution` (`none`/`internal` = Developer
-  ID signed, notarized and stapled DMG on GitHub Releases/`store` = Mac App Store via App Store Connect), `sonar` plus
-  its detail keys — each question stating the Actions-minutes / macOS-multiplier / SonarCloud / Pages cost facts for
-  that visibility) once, prints a setup-mode statement (from scratch, or an inventory of the prior setup it found),
-  then orchestrates `iru-setup-macos-app` → `iru-setup-antora` → `iru-setup-swift-gitignore` →
-  `iru-setup-macos-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
-  `iru-isolated-skill-executor`, so nothing is asked twice — skipping the workflows step entirely (security block
-  included) when `ci: no`. Invoke as `/iru-setup-macos-repository`, optionally with `args` (`key: value` lines) to
-  pre-resolve `ui`, `architecture`, `branching`, `mode` (`new`/`existing`), `open-source`, `visibility`, `ci`,
-  `macos-ci`, `ci-tests`, `pages`, `accessibility`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only
-  when supplied),
-  `distribution`, `sandbox`, `min-macos`, `category`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `integration-branch`, `stable-branch`, `runner`, `xcode-version`, and every identity field,
-  skipping the matching question. On an existing repository every component sub-skill warns about the prior setup
-  it owns and asks Update / Keep as is / Replace per file (unless `on-existing` decides), and the final report states
-  the action taken per component. Use whenever bootstrapping (or catching up) a macOS-only desktop app repository's
-  full Xcode project/docs/gitignore/CI/changelog/README scaffold in one pass; for an app that also targets
-  iOS/iPadOS/watchOS use `iru-setup-swift-repository` (`flavor: app`) instead.
-model: haiku
+description: "Invoke as `/iru-setup-macos-repository`, optionally with `args` (key: value lines such as `ui`, `architecture`, `branching`, `mode`, `ci`, `macos-ci`, `distribution`, `sonar`, `on-existing`, identity fields) to skip matching questions. End-to-end bootstrap of a native macOS desktop app repository (Swift 6, XcodeGen): collects identity and pipeline choices once, then runs `iru-setup-macos-app`, `iru-setup-antora`, `iru-setup-swift-gitignore`, `iru-setup-macos-github-workflows`, `iru-setup-changelog` and `iru-setup-readme` in order. Use for macOS-only apps; for apps also targeting iOS/watchOS use `iru-setup-swift-repository` (`flavor: app`)."
+model: sonnet
 ---
 
 # Setup macOS Repository

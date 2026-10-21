@@ -20,11 +20,17 @@ It applies the same judgment `iru-setup-changelog` itself would: confirm via `gi
 touched real source at all versus being purely docs/CI/tooling, and say so plainly rather than inventing a
 feature that didn't happen.
 
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Tools
 
 `Bash`, `Read` — enough to run `git log`/`git diff`/`git diff --stat` against the range it's given and read
 whatever source it needs to understand a terse commit's real effect; no `Skill`/`Edit`/`Write` access, since this
 agent only reads history and reports a summary.
+
+The agent is pinned to `model: haiku`. Callers dispatch it as `subagent_type: "iru-change-summarizer"` when it is installed under `.claude/agents/`, or as `"iru-core:iru-change-summarizer"` when it is installed through the `iru-core` plugin (use whichever name appears in the available agent types).
 
 == Used by
 

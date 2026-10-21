@@ -31,6 +31,10 @@ to xref:skills/iru-setup-windows-gitignore.adoc[] for Windows desktop apps (WPF,
 
 xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-dotnet` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-dotnet@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

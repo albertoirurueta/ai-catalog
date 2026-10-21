@@ -1,40 +1,7 @@
 ---
 name: iru-setup-typescript-repository
-description: >-
-  End-to-end bootstrap for an npm/TypeScript repository of any of seven flavors — collects `flavor`
-  (`library`/`react`/`nextjs`/`angular`/`nestjs`/`react-native`/`ionic`, asked via `AskUserQuestion` in two short
-  rounds when absent, or pre-selected from an `iru-explore` `Project type:` line), the project's identity
-  (name/slug/scope/app-id, description, license, developer name/email/organization URL), the flavor-specific
-  choices that shape later steps (React Native `toolchain` `expo`/`metro`, NestJS `orm`/`database`, Next.js
-  `output`/`e2e`), and the shared pipeline
-  parameters (`open-source`, `publish` for libraries, `distribution` for apps and services, `sonar` plus its detail
-  keys, `visibility`, `ci`, `ci-tests`, `pages`, `integration-branch`, `stable-branch`, `node-version`,
-  `package-manager`) once, then orchestrates the flavor's scaffold skill (`iru-setup-typescript-library` /
-  `iru-setup-react-web` / `iru-setup-nextjs-web` / `iru-setup-angular-web` / `iru-setup-nestjs-app` /
-  `iru-setup-react-native-app` / `iru-setup-ionic-app`) → `iru-setup-antora` → `iru-setup-typescript-gitignore` →
-  `iru-setup-typescript-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
-  `iru-isolated-skill-executor`, so nothing is asked twice (the workflows step is skipped entirely when `ci` is
-  `no`). Invoke as `/iru-setup-typescript-repository`, optionally with `args` (`key`/`value` lines) to pre-resolve
-  `flavor`, `mode` (`new`/`existing`), `open-source`, `publish`, `distribution`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `toolchain` (react-native: `expo` — the Expo framework — or `metro` — a
-  bare React Native Community CLI app with committed `android/`/`ios/` projects; taken from `args`, else detected
-  on an existing repository, else asked with Expo recommended, then forwarded to `iru-setup-react-native-app` and
-  `iru-setup-typescript-github-workflows`), `native-builds` (react-native with `toolchain` `expo` only),
-  `framework` (ionic's own Angular/React choice), `module-system`/`orm`/`database`/`http` (nestjs), `router`/`output`/`cache-components`/`styling`/`e2e`
-  (nextjs), `integration-branch` (default `develop`), `stable-branch` (default `main`), `node-version` (default
-  `24`), `package-manager` (default `npm`), `visibility` (`public`/`private`/`internal`, detected via `gh` when
-  absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`), `accessibility`
-  (`enforce`/`report`/`off`/`none` — the automated accessibility level of the UI tests, written to `.ui-quality.yml` by the
-  UI flavors' scaffolds — react, nextjs, angular, react-native, ionic; asked once with Enforce recommended when
-  absent, never for library/nestjs), `on-existing` (`ask`/`keep`/
-  `update`/`replace`, forwarded only when supplied), and every identity field, skipping the matching question.
-  Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
-  inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
-  keep/update/replace for whatever it finds already present, and the final report lists the action taken per
-  component. Use whenever bootstrapping (or catching up) a new npm/TypeScript repository's full
-  scaffold/docs/gitignore/CI/changelog/README pipeline in one pass, whatever its flavor, instead of running five to
-  six skills separately and re-answering the same questions each time.
-model: haiku
+description: "/iru-setup-typescript-repository [args] bootstraps an npm/TypeScript repository end to end for flavor library, react, nextjs, angular, nestjs, react-native or ionic: collects flavor, identity and the shared pipeline parameters once, then runs the flavor scaffold skill, iru-setup-antora, iru-setup-typescript-gitignore, iru-setup-typescript-github-workflows (skipped when ci is no), iru-setup-changelog and iru-setup-readme via iru-isolated-skill-executor. Announces from-scratch vs update with a component inventory; key: value args pre-resolve answers. Use to bootstrap or catch up a TypeScript repository in one pass."
+model: sonnet
 ---
 
 # Setup TypeScript Repository

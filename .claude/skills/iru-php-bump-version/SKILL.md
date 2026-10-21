@@ -1,25 +1,6 @@
 ---
 name: iru-php-bump-version
-description: >-
-  Set a PHP project's version to an exact value in every place its flavor keeps one, following this catalog's
-  `x.y.z-dev` development-version convention. Detects the flavor the same way `iru-php-code-quality` does — Laravel
-  application (`config/app.php` `'version' => env('APP_VERSION', '…')`, never a `composer.json` `"version"` field),
-  WordPress plugin (main plugin file `Version:` header plus its `<PREFIX>_VERSION` constant), WordPress theme
-  (`style.css` `Version:` header, plus a `<PREFIX>_VERSION` constant in `functions.php` when present), PrestaShop
-  module (main module class `$this->version` and a tracked `config.xml` `<version>`), or plain Composer library (no
-  in-tree version — the git tag is the version, so nothing is changed and that is reported). For WordPress, `readme.txt`
-  `Stable tag:` is written only for release versions (never `-dev`), and a `package.json` `"version"` is updated with
-  `npm version --no-git-tag-version` so its lockfile follows. Uses an embedded, tested Python helper with `--list` and
-  `--dry-run` modes, and refuses to write when the locations disagree until the user confirms. Invoke as
-  `/iru-php-bump-version <new-version>` where `<new-version>` is the literal target (e.g. `1.4.0` or `1.5.0-dev`) —
-  this skill does not compute bumps itself (`iru-release` computes the release/next-dev values per the convention in
-  Step 5 and passes each one through in turn). Also accepts `args` (`key: value` lines): `sync-files: yes|no` (default:
-  ask) to also update README/Antora version mentions, `next-version: <upcoming-version>` so that sync maps
-  "Latest release" markers to `<new-version>` and "Current development version" markers to the upcoming value, and
-  `dry-run: yes|no` (default `no`) to print the diff without writing anything. Reports the flavor, the old and new
-  version, every location found and every file touched. Use whenever the user, or another skill such as
-  `iru-release`, needs a Laravel/WordPress/PrestaShop project's version set to a specific value instead of
-  hand-editing headers and constants.
+description: "/iru-php-bump-version <new-version> sets a PHP project's version (Laravel, WordPress plugin or theme, PrestaShop module; a plain library uses the git tag so nothing changes) to the literal value given, following the x.y.z-dev convention. Args: sync-files, next-version, dry-run. Reports flavor, old/new version and files touched."
 model: haiku
 allowed-tools: Read Bash(python3 *) Bash(npm version *) Bash(npm install --package-lock-only*) Bash(php -l *) Bash(git ls-files *) Bash(git describe *) Bash(git tag *) Bash(grep *) Bash(find *) Bash(ls *) Bash(cat *) Bash(mkdir *)
 ---

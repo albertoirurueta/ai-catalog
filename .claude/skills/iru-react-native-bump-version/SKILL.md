@@ -1,28 +1,6 @@
 ---
 name: iru-react-native-bump-version
-description: >-
-  Set a React Native app's version to an exact value, for both toolchains this catalog supports — `expo` (an Expo
-  app: `package.json` + lockfile, then `app.json`'s `expo.version` or the `version` literal of a dynamic
-  `app.config.ts`/`app.config.js`, with `ios.buildNumber`/`android.versionCode` left to EAS when `eas.json` makes EAS
-  own them (`cli.appVersionSource: "remote"`, or `autoIncrement` on a local source) and incremented in the app config
-  otherwise; a computed dynamic config is reported, never guessed at, and the resolved value is read back with
-  `npx expo config`) and `metro` (a bare React Native Community CLI app: `package.json` + lockfile, then
-  `versionName`/`versionCode` in `android/app/build.gradle(.kts)` and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`
-  in every build configuration of `ios/<App>.xcodeproj/project.pbxproj`, plus `CFBundleShortVersionString`/
-  `CFBundleVersion` literals in `Info.plist` when the project doesn't route them through those build settings).
-  Store-facing values only ever receive a release: a `x.y.z-dev.N` pre-release changes `package.json` (+ lockfile)
-  alone, and a release `x.y.z` also sets the app/native version and increments each build number by exactly 1.
-  Invoke as `/iru-react-native-bump-version <new-version>` where `<new-version>` is the literal target version (e.g.
-  `1.4.0` or `1.4.1-dev.0`) — this skill does not compute bumps itself, it only applies the value it's given
-  (`iru-release` discovers it as the `react-native` key, prefers it over `typescript` for React Native apps, and
-  passes the release value per the convention in Step 5). Also accepts `args`: `sync-files: yes|no` (default: ask)
-  to also update README/Antora version mentions, `next-version: <upcoming>` so those mentions never regress a
-  development marker, `dry-run: yes|no` (default `no`) to print every diff without writing, and
-  `toolchain: expo|metro` to override detection. Reports the old and new values and every file touched. Equivalent
-  to `iru-typescript-bump-version`/`iru-android-bump-version`/`iru-swift-bump-version` for React Native apps — and
-  `iru-typescript-bump-version` hands React Native apps here. Use whenever the user, or another skill such as
-  `iru-release`, needs a React Native app's version set to a specific value instead of hand-editing `app.json`,
-  Gradle, and Xcode project files.
+description: "/iru-react-native-bump-version <new-version> - sets a React Native app's version (Expo or bare Metro toolchain) to the exact value given, in package.json, the app config and the native projects. Optional args: sync-files, next-version, dry-run, toolchain. Reports old/new values and files touched."
 model: haiku
 ---
 

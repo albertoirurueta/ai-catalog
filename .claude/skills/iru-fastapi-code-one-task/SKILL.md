@@ -1,30 +1,6 @@
 ---
 name: iru-fastapi-code-one-task
-description: >-
-  Implement a single task from a FastAPI `implementation_plan.md`-style task list — the implementation, its fast
-  (and, where the task needs them, `integration`) tests, any Alembic revision the task's schema change needs, and its
-  checkbox update. Works in any FastAPI service, not only the catalog scaffold: detects at runtime the runner prefix
-  (`uv run --frozen` / `poetry run` / `pdm run` / `pipenv run` / `.venv/bin/` / bare `python -m`), the Python,
-  FastAPI and Pydantic versions, the layout (the docs' layered `app/` package with `routers/`/`services/`/`models/`/
-  `dependencies.py`, the Full Stack template's `app/api/routes` + `app/core`, a `src/<pkg>/` package, or ports and
-  adapters with `Protocol` ports), the persistence stack (SQLModel, plain SQLAlchemy 2.0, legacy 1.x style, another
-  store, or none; Alembic or not), sync vs. async (`def` + `Session` vs. `async def` + `AsyncSession`), the test style
-  (`TestClient` vs. `httpx.AsyncClient` + `ASGITransport` with AnyIO or pytest-asyncio, an `integration` marker with
-  testcontainers), and the Ruff/mypy/pyright configuration — then loads only the matching guidance from this skill's
-  own `reference/` directory (this catalog's Python agreements for FastAPI with web → service → data layering,
-  routers and `Annotated` dependencies with yield-dependency and status-code rules, Pydantic v2 request/response model
-  families with `extra="forbid"` and PATCH semantics, SQLModel/SQLAlchemy 2.0 sessions and Alembic revisions,
-  pydantic-settings and lifespan state, `def` vs. `async def`, security with PyJWT/pwdlib/scopes/ownership/CORS,
-  uploads/streaming/SSE/WebSockets, tests with `dependency_overrides` and the SQLite/testcontainers tiers, and the
-  optional ports-and-adapters layout). Re-checks the current code state, implements exactly what the task specifies,
-  writes the tests, runs only the fast test files it touched, then immediately checks off this task's checkbox (and
-  its sub-tasks') in `implementation_plan.md` with a "group validation pending" note before handing back a short
-  summary. Never runs the integration tier, coverage, Ruff/mypy gates, license headers, a docstring audit, Alembic
-  checks against a database, or the full suite — those happen once per task group in
-  `iru-fastapi-code-one-task-group`, which invokes this skill once per task (in parallel when the group allows it).
-  Invoke as `/iru-fastapi-code-one-task <task description>`, passing the task's own text including its exact
-  `implementation_plan.md` checkbox line(s). The FastAPI counterpart to `iru-nestjs-code-one-task` and
-  `iru-php-code-one-task`.
+description: "Invoked as /iru-fastapi-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one FastAPI (any layout, Alembic revisions included) plan task and its tests, compile-checks, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-fastapi-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(uv run *) Bash(poetry run *) Bash(pdm run *) Bash(pipenv run *) Bash(.venv/bin/*) Bash(python *) Bash(python3 *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

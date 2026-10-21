@@ -25,11 +25,17 @@ drafts a title and a structured body (Summary, Context, Acceptance criteria, Tas
 and an agent-assessed estimated difficulty from very easy to impossible, grounded in everything gathered —
 References), and always shows the draft for explicit confirmation before filing it — the same
 confirm-before-visible-action discipline `iru-pr-description` and `iru-pr-review` use. It is the GitHub
-counterpart to `iru-create-jira-ticket`.
+counterpart to `iru-create-jira-ticket`. It is for new issues only: not for issues that already exist
+(nothing to file), and not for repositories on Bitbucket/Azure DevOps/TFS or tracked in Jira (use
+`iru-create-jira-ticket` for Jira).
 
 == Purpose group
 
 xref:index.adoc#group-intake[Ticket Intake]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 
@@ -74,7 +80,7 @@ xref:index.adoc#group-intake[Ticket Intake]
 [mermaid]
 ....
 flowchart TD
-    A["Start /create-github-issue\n(optional short description)"] --> B{Repository hosted\non GitHub?}
+    A["Start /iru-create-github-issue\n(optional short description)"] --> B{Repository hosted\non GitHub?}
     B -- no / no remote --> Z["Stop: this skill only\nfiles GitHub issues"]
     B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
     C --> D["Ask user: purpose of the task\n(plain conversational question)"]

@@ -1,26 +1,6 @@
 ---
 name: iru-setup-rust-gitignore
-description: >-
-  Create or update the root `.gitignore` for a Rust repository — the command-line tool layout `iru-setup-rust-cli`
-  produces (`Cargo.toml` workspace with the tool package + `xtask/`, `src/`, `tests/golden/`) or any other Cargo
-  crate or workspace — covering Cargo's build directory `/target/` (which also holds the xtask outputs
-  `target/dist/{man,completions}`, rustdoc `target/doc/`, cargo-llvm-cov's `target/llvm-cov*` and
-  `target/lcov.info`, nextest JUnit reports), coverage files written outside it (`lcov.info`, `*.profraw`,
-  `*.profdata`), rustfmt backups (`**/*.rs.bk`), pending snapshot files (`*.pending-snap`, `*.snap.new`), cargo-fuzz
-  output (only when `fuzz/Cargo.toml` exists), env files (keeping `.env.example`), editor/OS files, the Antora docs
-  build output (`docs/build/`, `docs/node_modules/`), the repository-wide `.integration-test.lock/`, and — for a
-  Ratatui terminal UI — the UI tests' capture directory `.ui-screenshots/` (never `.ui-quality.yml`). Never ignores
-  `Cargo.lock` for a package with a binary target (the tool's reproducible build); for a library-only crate it asks
-  (`cargo-lock: commit|ignore`, Cargo's own default being commit). Never ignores `rust-toolchain.toml`,
-  `.cargo/config.toml`, `deny.toml`, golden files or the generated-but-committed
-  `docs/modules/ROOT/pages/cli-reference.adoc`. Invoke as `/iru-setup-rust-gitignore`, optionally with `args`
-  (`key: value` lines): `cargo-lock: commit|ignore` (pre-resolved answer for library-only crates), `mode:
-  new|existing` (default: detected from whether a root `.gitignore` already exists) and `on-existing:
-  ask|keep|update|replace` (default `ask`). Announces whether it is creating from scratch or updating; an existing
-  `.gitignore` is never overwritten silently — it warns, shows a diff, and asks Update (merge in what's missing, keep
-  hand-added lines) / Keep as is / Replace, unless `on-existing` decides. Use whenever a Rust repository (a CLI tool,
-  library, or service) needs a `.gitignore` bootstrapped, or an existing one checked/gap-filled against this house
-  template.
+description: "/iru-setup-rust-gitignore [args] creates or updates the root .gitignore for a Rust crate or workspace (CLI tool layout from iru-setup-rust-cli included). Args: cargo-lock: commit|ignore, mode, on-existing. Never overwrites silently: shows a diff and asks Update/Keep as is/Replace."
 model: haiku
 ---
 

@@ -73,6 +73,10 @@ It uses a medium model on purpose: the plan carries the hard reasoning; this ski
 
 xref:index.adoc#group-springboot[Spring Boot Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-springboot` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-springboot@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

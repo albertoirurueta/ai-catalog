@@ -1,27 +1,6 @@
 ---
 name: iru-dotnet-test
-description: >-
-  Run a .NET project or solution's test suite via the .NET CLI (`dotnet test`), optionally scoped to specific test
-  classes, methods, namespaces, or trait/category filters, and optionally targeted at a specific project (`.csproj`)
-  or solution (`.sln`/`.slnx`) file. Windows-desktop aware — detects WPF/WinUI 3/Windows Forms projects and
-  `net*-windows*` test projects, and on a non-Windows host passes `-p:EnableWindowsTargeting=true` and runs only the
-  test projects that can run there (a `net*-windows*` test project can't start its test host off Windows, and a WinUI
-  project can't build), reporting the rest as "unverified (needs Windows)" instead of letting the whole solution run
-  abort; excludes `[TestCategory("UI")]` desktop UI-automation tests from ordinary runs by default, and runs only them
-  with the `ui` selector — on Windows only, serialized repository-wide behind the shared `.integration-test.lock` (or
-  `lock: held` when the caller already holds it) — and a .NET command-line tool's Terminal.Gui view tests (also
-  `[TestCategory("UI")]`, but portable: any host, no lock). A `ui` run follows the catalog's UI contract: it sets
-  `UI_SCREENSHOTS_DIR` (default `<repo root>/.ui-screenshots`), clears it only on a full UI run, validates every
-  capture name against `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` (`.txt` for terminal captures),
-  and reports screenshot counts per kind, malformed names, accessibility violations (Axe.Windows for desktop apps,
-  the asserted `tui-*` checks for terminal UIs — count + rule ids, from `[a11y]` test failures and the
-  `a11y-report.txt` the helpers append to) and the `.ui-quality.yml` level applied. Detects the test runner (VSTest, or Microsoft.Testing.Platform via
-  `global.json`) and adapts the command shape. Invoke as `/iru-dotnet-test` to run the full suite (auto-detecting the
-  solution/project in the working directory), or `/iru-dotnet-test <selector>` where `<selector>` names a class
-  (`FooTests`), a class+method (`FooTests.TestSomething`), a wildcard/namespace pattern, a trait/category expression,
-  a project/solution path, or `ui`; optional `key: value` lines after it — `project: <path>`, `include-ui: yes`,
-  `lock: held`. Use whenever the user wants to run, re-run, or narrow down .NET unit tests (or a Windows desktop app's
-  UI tests) instead of a full `dotnet test` across every project.
+description: "/iru-dotnet-test [selector] runs a .NET project or solution's tests via dotnet test; selector is a class, Class.Method, namespace/wildcard, trait filter, project/solution path, or `ui` for UI-automation tests. Optional lines: project:, include-ui: yes, lock: held. Windows-desktop aware; reports tests that need Windows as unverified."
 model: haiku
 ---
 

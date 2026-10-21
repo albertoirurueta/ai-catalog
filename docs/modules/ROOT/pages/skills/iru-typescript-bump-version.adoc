@@ -17,12 +17,17 @@ deterministic skill that a caller (typically `iru-release`) can invoke twice per
 pre-release suffix for the release itself, once to open the next development cycle — without either caller
 having to know npm/pnpm/yarn's differing version commands or lockfile quirks. It detects the package manager
 in play, hands React Native apps (Expo or bare CLI/Metro) to `iru-react-native-bump-version` when it is
-installed, finds the right `package.json` (asking when a workspace or a Hilla-managed frontend makes that
+installed (checked against the skills available in the session, so it also works for plugin installs without
+`.claude/skills`), finds the right `package.json` (asking when a workspace or a Hilla-managed frontend makes that
 ambiguous), and runs that package manager's own `version` command so the lockfile stays consistent.
 
 == Purpose group
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
+
+== Plugin
+
+Shipped by the `iru-typescript` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-typescript@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 

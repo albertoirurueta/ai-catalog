@@ -1,5 +1,5 @@
 = AI Catalog
-:description: 193 Claude Code Skills and 3 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
+:description: 196 Claude Code Skills and 3 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
 :keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development, windows desktop apps, macos desktop apps, dotnet wpf winui winforms, rust and go development, command-line tools
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -74,8 +74,9 @@ can bundle any combination of skills, custom agents, slash commands, hooks, and 
 installable, versioned unit, published to a marketplace (a private, organization-internal one or a public
 one) and installed into a repository with `/plugin install` instead of copying files by hand.
 
-This repository does not currently package itself as a plugin — its skills are adopted by copying the
-`.claude/skills/<name>/` directories directly — but xref:guides/plugins.adoc[] and
+This repository can be adopted in either way: by copying the `.claude/skills/<name>/` directories directly, or by
+adding it as a plugin marketplace (`ai-catalog`) and installing only the plugins for the stacks in use — `iru-core`
+plus one plugin per stack, each skill page names the plugin that ships it. xref:guides/plugins.adoc[] and
 xref:guides/packaging-and-distribution.adoc[] cover when a plugin is worth the extra packaging step instead.
 
 == Further guides
@@ -127,6 +128,14 @@ structured — and how to keep the context window from filling with information 
 |xref:guides/packaging-and-distribution.adoc[]
 |Copying files into `.claude/` versus packaging as a plugin distributed via a marketplace: the tradeoffs and
 when each is the better fit.
+
+|xref:guides/catalog-architecture.adoc[]
+|How the catalog is put together: skills, agents, templates and references, plugin membership, and the pipelines that
+compose them.
+
+|xref:guides/performance-and-token-budget.adoc[]
+|Measured token and size budgets, the model tier of every skill and agent, the prompt-cache analysis, and the
+before/after sample runs of the optimization (issue #11).
 
 |xref:guides/provider-comparison.adoc[]
 |How CLAUDE.md, skills, agents, and plugins map onto GitHub Copilot's and OpenAI Codex's equivalent files and

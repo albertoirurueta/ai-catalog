@@ -1,30 +1,6 @@
 ---
 name: iru-kotlin-springboot-code-one-task
-description: >-
-  Implement a single task from a Kotlin Spring Boot `implementation_plan.md`-style task list — the implementation,
-  its unit tests, and its checkbox update — on Maven or Gradle (Kotlin DSL or Groovy, wrapper preferred), in either
-  a DDD/hexagonal multi-module reactor or a plain layered/feature-packaged service, detected at runtime. Before
-  writing any code it checks the Kotlin/Spring build plumbing the task depends on (`kotlin-spring` all-open,
-  `kotlin-jpa` no-arg plus all-open for `@Entity`/`@MappedSuperclass`/`@Embeddable`, `-Xjsr305=strict`,
-  `kotlin-reflect`, `jackson-module-kotlin`, and Maven mixed Java/Kotlin compile order) and adds whatever is
-  missing when the task needs it (e.g. the module's first `@Entity`), reporting the change. Loads only the relevant
-  guidance from this skill's own `reference/` directory — build plugins, architecture detection (hexagonal module
-  rules only when the repository is a hexagonal reactor; otherwise the existing layered/feature structure), a
-  `mandatory-rules.md` that always applies (JUnit 5 with project-consistent assertions and never AssertJ added,
-  MockK not Mockito with springmockk `@MockkBean` for slices, test names per the project's convention with
-  backticks by default, one `*Test`/`*IT` class per class, `runTest` for coroutines, `val` over `var`, immutable
-  types, no `!!`, KDoc on public API, named constants, LF line endings, pinned locales), Kotlin code style (data
-  classes for DTOs/value objects but never JPA entities, sealed results, primary-constructor injection,
-  `@ConfigurationProperties` constructor binding, extension/scope function discipline), JPA and persistence,
-  coroutines and WebFlux, testing, DDD, SOLID, and distributed patterns. Runs **unit tests only**, scoped to the
-  module it touched (`mvn -pl <module> -am test -Dtest=...` or `./gradlew :<module>:test --tests ...`) — never
-  `verify`, Failsafe, a Gradle `integrationTest`/`check`/`build` task, any `*IT`, or anything that starts Docker —
-  then checks off this task's own checkbox in `implementation_plan.md` with a "group validation pending" note and
-  hands back a short summary. Does not capture a quality baseline, add license headers, run coverage/quality
-  checks, or run the full suite — those belong to `iru-kotlin-springboot-code-one-task-group`. Invoke as
-  `/iru-kotlin-springboot-code-one-task <task description>`, passing the task's own text including its exact
-  `implementation_plan.md` checkbox line(s). The Kotlin counterpart to `iru-java-springboot-code-one-task`, for
-  plan tasks tagged `kotlin-springboot`.
+description: "Invoked as /iru-kotlin-springboot-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Kotlin Spring Boot (Maven or Gradle) plan task and its tests, compile-checks, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-kotlin-springboot-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(javap *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

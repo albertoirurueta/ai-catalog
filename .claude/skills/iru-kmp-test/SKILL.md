@@ -1,37 +1,6 @@
 ---
 name: iru-kmp-test
-description: >-
-  Run a Kotlin Multiplatform (Android + iOS) project's tests per target — the shared module's Android host (JVM) tests
-  (`testAndroidHostTest` under the AGP `com.android.kotlin.multiplatform.library` plugin, `testDebugUnitTest` under
-  `androidTarget()` + `com.android.library`, plus `jvmTest` when a `jvm()` target exists), the Android app module's
-  `testDebugUnitTest`, the Kotlin/Native iOS simulator tests (`iosSimulatorArm64Test`, or `iosX64Test` on an Intel
-  Mac), and the SwiftUI host app's XCTest bundle (`xcodebuild test` on `iosApp/iosApp.xcodeproj`) — discovering the
-  modules and exact task names at runtime from `./gradlew <module>:tasks --all` instead of assuming one plugin's
-  names, and tolerating the JetBrains wizard's single `composeApp/` layout. Invoke as `/iru-kmp-test` to run every
-  target, or `/iru-kmp-test <scope>` where `<scope>` is a test class (`GreeterTest`), class+method
-  (`GreeterTest#greets`), wildcard/package pattern, a test file path (its source set picks the targets: `commonTest`
-  → every target, `androidHostTest`/`androidUnitTest`/`androidTest` → Android only, `iosTest`/`appleTest`/
-  `nativeTest` → iOS only, `iosApp/…` → the XCTest bundle), a module (`:shared`, `androidApp`), a source-set name,
-  plus optional `key: value` lines (`target: android|ios|all`, `module:`, `destination:`, `lock: held`). Android/JVM
-  tests run on any host; iOS stages run only on macOS with a full Xcode and an iOS Simulator runtime — otherwise they
-  are reported "unverified", never "passed" — and every stage that boots or spawns a simulator is serialized
-  repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file, stale after 60 minutes,
-  released on every exit path). Parses the JUnit XML under `<module>/build/test-results/<task>/` and the
-  `.xcresult` bundle into a compact per-target pass/fail/skip summary, detects the "selector matched nothing" cases
-  (Gradle fails the JVM task with "No tests found for given includes", but a Kotlin/Native simulator task exits 0
-  and writes no XML), and never dumps raw Gradle/xcodebuild output. Report-only: never fixes a failing test or
-  modifies source/test code. A `ui` selector (`/iru-kmp-test ui [<scope>]`, or a `ui: yes` line) runs the UI tests
-  per the catalog's UI contract — Compose Multiplatform `runComposeUiTest` tests on the Android host (Robolectric)
-  and the iOS simulator, `ui: native` Robolectric Compose tests in `androidApp`, `iosApp` `ImageRenderer`/XCUITest
-  captures, device flow tests only when an emulator is attached — with `UI_SCREENSHOTS_DIR` set (default
-  `<repo root>/.ui-screenshots`, forwarded to the simulator as `SIMCTL_CHILD_`/`TEST_RUNNER_` variables), cleared only
-  at the start of a full (unscoped) UI run, every Gradle test task forced to re-run (`--rerun`, since captures are
-  side effects Gradle's up-to-date checks and build cache don't track), `.xcresult` attachments and device outputs
-  collected into the contract's `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png` layout, names validated,
-  and screenshot counts per kind and platform, malformed names, accessibility violations (count + rule ids) and the
-  `.ui-quality.yml` level reported. Equivalent to `iru-android-test`/`iru-swift-test` for KMP apps. Use whenever the user
-  (or `iru-kmp-code-one-task-group` via `iru-gate-runner`) wants to run, re-run, or narrow down KMP tests instead of
-  invoking `./gradlew allTests`/`xcodebuild test` by hand.
+description: "/iru-kmp-test [scope] runs a Kotlin Multiplatform project's Android host/JVM, Kotlin/Native iOS simulator and iosApp XCTest tests; scope is a class, Class#method, pattern, test file path, module or source set. Optional lines: target:, module:, destination:, lock: held; `ui` runs UI tests. iOS stages are unverified without macOS. Report-only."
 model: haiku
 allowed-tools: Read Write Bash(./gradlew *) Bash(python3 *) Bash(xcodebuild *) Bash(xcrun *) Bash(xcode-select *) Bash(xcodegen *) Bash(uname *) Bash(command -v *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(rm -rf *iru-kmp-test-*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(/usr/libexec/java_home *)
 ---

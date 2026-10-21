@@ -41,6 +41,10 @@ When the bucket added or changed a screen, component or list (never for a comman
 
 xref:index.adoc#group-swift[Swift Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-swift` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-swift@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

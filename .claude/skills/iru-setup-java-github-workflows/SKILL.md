@@ -1,7 +1,7 @@
 ---
 name: iru-setup-java-github-workflows
-description: Create or update the `develop.yml`, `main.yml`, `sync.yml`, and `security.yml` GitHub Actions workflows plus `.github/dependabot.yml` for a Java/Maven library repository — build and test, run Checkstyle/PMD/SpotBugs static analysis, generate JaCoCo coverage and the Maven `site` report, optionally run a SonarQube/SonarCloud scan via the `sonar-maven-plugin` (`mvn sonar:sonar`, so it runs under the same JDK the job already set up), build the Antora documentation site, publish both the Antora docs and the Maven site report to GitHub Pages (or, with `pages: no`, upload them as a workflow artifact instead), optionally publish the release artifact to Maven Central, run a Dependabot-config/dependency-review/CodeQL/OSV-Scanner/gitleaks security block, and — once a release is published — open a pull request that merges the released branch back into the integration branch and bumps the development snapshot version across `pom.xml`, `README.md`, and the Antora docs (via the companion `.github/scripts/sync_versions.py` script). Invoke as `/iru-setup-java-github-workflows`. Ships with generic example templates (derived from a real repository's workflows, genericized so they don't name any specific repository) embedded in this skill file, reusable across repositories. Announces whether it is creating the pipeline from scratch or updating an existing one; creates all workflows (and the sync/security scripts) from scratch if none exist, and for each one that already exists warns and asks whether to Update it (merge, keeping custom steps/jobs), Keep it as is, or Replace it from the template (customizations lost) — or Stop — unless `on-existing` (`ask`/`keep`/`update`/`replace`) in `args` already decides. Accepts the six pipeline parameters (integration branch, Java version, publishing server id, extras/sign profile ids, settings file), `open-source` (`yes`/`no`), `publish` (`yes`/`no` — gates the Maven Central deploy step, its `setup-java` signing inputs, and `mvnsettings.xml`), `sonar` (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url` — gates the SonarCloud analysis step), `visibility` (`public`/`private`/`internal` — drives the cost-aware recommendations), `ci-tests` (`unit`/`full` — `unit` adds `-DskipITs` so CI runs Surefire unit tests only), `pages` (`yes`/`no` — `no` replaces the GitHub Pages deploy with an artifact upload), `mode` (`new`/`existing`), `on-existing`, and `security-dependency-review`/`security-codeql`/`security-osv`/`security-gitleaks` (each `yes`/`no`, default `yes` — individually gate those `security.yml` jobs; `.github/dependabot.yml` is always generated), all pre-resolved via `args` (`key: value` lines) so an orchestrating skill like `iru-setup-java-library-repository` can supply them without re-prompting; invoked stand-alone, it resolves `visibility` itself (from `gh repo view` or by asking) and asks `sonar`/`ci-tests`/`pages` with visibility-aware recommendations. Use whenever a Java/Maven repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
-model: haiku
+description: "Invoked as /iru-setup-java-github-workflows with optional key: value args, usually by iru-setup-java-library-repository. Creates or updates the develop, main, sync and security GitHub Actions workflows plus Dependabot for a Java/Maven library: build, static analysis, JaCoCo, Sonar, docs to Pages, Maven Central publish and version sync."
+model: sonnet
 ---
 
 # Setup Java GitHub Workflows
@@ -36,6 +36,8 @@ whether to stop here or continue anyway. If they choose to continue, proceed thr
 every Maven-derived placeholder in Step 3/4 (Java version, publishing server id, signing/extras profile ids,
 `mvn` commands) as an open gap to ask the user about directly, and call this out prominently again in Step 8's
 report.
+
+**Templates.** The workflow, script and Dependabot templates of Step 3 are files under this skill's `templates/` directory, not inline text. This skill has a single variant (`common`); read the template files for the workflows being written (the index at the top of Step 3 says which), each in full, and nothing else.
 
 ## Step 1 — Survey the target repository
 
@@ -262,6 +264,17 @@ the unit is **partial**; say so).
 
 ## Step 3 — Reference templates
 
+**Templates.** Every template below is a file under `templates/common/<path of the generated file>`, holding the exact bytes of that generated file's template. Read the files for the units being written, each in full, before filling placeholders:
+
+| Generated file | Template | Applies when |
+|---|---|---|
+| `.github/workflows/develop.yml` | `templates/common/.github/workflows/develop.yml` | always: push to the integration branch pipeline |
+| `.github/workflows/main.yml` | `templates/common/.github/workflows/main.yml` | always: same pipeline, triggered by a GitHub Release being published |
+| `.github/workflows/sync.yml` | `templates/common/.github/workflows/sync.yml` | always, written together with `sync_versions.py`: opens the sync PR back into the integration branch after a release |
+| `.github/scripts/sync_versions.py` | `templates/common/.github/scripts/sync_versions.py` | always, written together with `sync.yml`: rewrites version references after a release |
+| `.github/workflows/security.yml` | `templates/common/.github/workflows/security.yml` | always; drop each whole job whose `security-*` arg resolved to `no` |
+| `.github/dependabot.yml` | `templates/common/.github/dependabot.yml` | always, regardless of the `security-*` flags |
+
 These are genericized examples — based on a real Java/Maven repository's actual `develop.yml`/`main.yml` — showing
 the full pipeline: checkout → JDK setup (with signing configured, when `publish: yes`) → test + coverage + site
 report → SonarQube scan (when `sonar` isn't `none`) → Antora docs build → merge docs with the site report →
@@ -272,124 +285,13 @@ writing the real files in Step 4, and drop or swap whichever blocks this reposit
 
 ### `develop.yml` template
 
-```yaml
-name: Develop
-
-on:
-  push:
-    branches: [ <integration-branch> ]
-
-jobs:
-  build:
-    name: Build and execute tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK <java-version>
-        uses: actions/setup-java@v6
-        with:
-          distribution: adopt
-          java-version: <java-version>
-          cache: maven
-          # The four lines below (server-id / server-username / server-password / gpg-*) are only needed to
-          # authenticate and sign the "Deploy to maven central" step further down — omit all four here if
-          # publish: no (Step 1).
-          server-id: <publishing-server-id> # Value of the distributionManagement/repository/id field of the pom.xml
-          server-username: OSSRH_USERNAME # env variable for username in deploy
-          server-password: OSSRH_PASSWORD # env variable for token in deploy
-          gpg-private-key: ${{ secrets.SIGNING_KEY }} # Value of the GPG private key to import
-          gpg-passphrase: SIGNING_PASSWORD # env variable for GPG private key passphrase
-
-      # ci-tests: unit (Step 1) appends -DskipITs to the first command so Failsafe *IT tests are skipped and only
-      # Surefire *Test unit tests run; ci-tests: full leaves it off.
-      - name: Run tests
-        run: |
-          mvn clean jacoco:prepare-agent install jacoco:report javadoc:jar source:jar -P '!<extras-profile-id>'<skip-its>
-          mvn site -Djacoco.skip -DskipTests -P '!<extras-profile-id>'
-
-      # Omit this whole step if sonar: none (Step 1)
-      - name: Run SonarCloud analysis
-        env:
-          # to get access to secrets.SONAR_TOKEN, provide GITHUB_TOKEN
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mvn sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-
-      - name: Install Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install Antora
-        run: |
-          mkdir docs && cd docs
-          npm i -D -E antora
-          npm i @antora/lunr-extension
-          npm i @sntke/antora-mermaid-extension
-          npm i @djencks/asciidoctor-mathjax
-
-      - name: Build Antora docs
-        run: cd docs && npx antora antora-playbook.yml
-
-      - name: Merge documentation
-        run: |
-          touch ./docs/build/site/.nojekyll
-          cp -r ./docs/build/site ./doc
-          cp -r ./target/site ./doc/mvn-site
-
-      # pages: yes (Step 1) — publish ./doc to the gh-pages branch. If pages: no, replace this whole step with the
-      # "Upload documentation" step below.
-      - name: Deploy to GitHub Pages
-        if: success()
-        uses: crazy-max/ghaction-github-pages@v5
-        with:
-          target_branch: gh-pages
-          build_dir: ./doc
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # pages: no (Step 1) only — use this instead of "Deploy to GitHub Pages": the docs are still built (so the
-      # build still validates them) but kept as a downloadable workflow artifact, not published.
-      - name: Upload documentation
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: documentation
-          path: ./doc
-
-      # Omit this whole step if publish: no (Step 1)
-      - name: Deploy to maven central
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-          SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
-        run: mvn deploy -P <sign-profile-id>,<extras-profile-id> --settings <settings-file> -DskipTests
-```
+Template: `templates/common/.github/workflows/develop.yml` — read it in full before filling placeholders
 
 ### `main.yml` template
 
 Identical pipeline; the only difference is the trigger — a GitHub Release being published instead of a push:
 
-```yaml
-name: Release
-
-on:
-  release:
-    # Runs this workflow when a new GitHub release is created
-    types: [released]
-
-jobs:
-  build:
-    name: Build and execute tests
-    runs-on: ubuntu-latest
-    steps:
-      # ... identical to every step under develop.yml's `build` job above, verbatim ...
-```
+Template: `templates/common/.github/workflows/main.yml` — read it in full before filling placeholders
 
 Notes on placeholders that are genuinely project-specific and must come from Step 1, not from these templates:
 
@@ -417,125 +319,7 @@ Runs once a GitHub Release is published, provided it was published from the stab
 that merges the released branch back into the integration branch and bumps the development snapshot version via
 the companion `sync_versions.py` script (below):
 
-```yaml
-name: Sync
-
-# After a release is published from <stable-branch>, open a pull request that merges it back into
-# <integration-branch> and bumps the development snapshot version, so <integration-branch> never has to wait for a
-# manual sync branch.
-on:
-  release:
-    types: [released]
-
-permissions:
-  contents: write
-  pull-requests: write
-
-jobs:
-  sync:
-    name: Open sync PR from the released branch into <integration-branch>
-    runs-on: ubuntu-latest
-    if: github.event.release.target_commitish == '<stable-branch>'
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Compute versions and branch names
-        id: versions
-        run: |
-          set -euo pipefail
-          RELEASE_VERSION="${{ github.event.release.tag_name }}"
-          RELEASE_VERSION="${RELEASE_VERSION#v}"
-
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
-          if [ -z "${MAJOR:-}" ] || [ -z "${MINOR:-}" ] || [ -z "${PATCH:-}" ]; then
-            echo "::error::Release tag '$RELEASE_VERSION' is not in X.Y.Z form; cannot compute the next snapshot."
-            exit 1
-          fi
-
-          NEXT_MINOR=$((MINOR + 1))
-          NEXT_SNAPSHOT="${MAJOR}.${NEXT_MINOR}.0-SNAPSHOT"
-          SYNC_BRANCH="sync_${MAJOR}.${NEXT_MINOR}.0"
-
-          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "next_snapshot=$NEXT_SNAPSHOT" >> "$GITHUB_OUTPUT"
-          echo "sync_branch=$SYNC_BRANCH" >> "$GITHUB_OUTPUT"
-
-      - name: Skip if this release was already synced
-        id: guard
-        run: |
-          set -euo pipefail
-          if git ls-remote --exit-code --heads origin "${{ steps.versions.outputs.sync_branch }}" >/dev/null 2>&1; then
-            echo "::notice::${{ steps.versions.outputs.sync_branch }} already exists on origin; skipping."
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Configure git identity
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Create sync branch from <integration-branch>
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git fetch origin <integration-branch> <stable-branch>
-          git checkout -b "${{ steps.versions.outputs.sync_branch }}" "origin/<integration-branch>"
-
-      - name: Merge the released branch into the sync branch
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git merge --no-ff --no-edit \
-            -m "Merge <stable-branch> (${{ steps.versions.outputs.release_version }}) into <integration-branch>" \
-            "origin/<stable-branch>"
-
-      - name: Set up Python
-        if: steps.guard.outputs.exists == 'false'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Bump the development snapshot version
-        if: steps.guard.outputs.exists == 'false'
-        env:
-          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
-          NEXT_SNAPSHOT: ${{ steps.versions.outputs.next_snapshot }}
-        run: python3 .github/scripts/sync_versions.py
-
-      - name: Commit the version bump
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git add pom.xml README.md docs/antora.yml docs/modules/ROOT/pages
-          git diff --cached --quiet || git commit -m "Sync ${{ steps.versions.outputs.next_snapshot }}"
-
-      - name: Push sync branch
-        if: steps.guard.outputs.exists == 'false'
-        run: git push origin "${{ steps.versions.outputs.sync_branch }}"
-
-      - name: Ensure the sync label exists
-        if: steps.guard.outputs.exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh label create sync --description "Sync pull request from a release branch back into <integration-branch>" --color 0e8a16 \
-            || gh label list --search sync >/dev/null
-
-      - name: Open pull request into <integration-branch>
-        if: steps.guard.outputs.exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr create \
-            --base <integration-branch> \
-            --head "${{ steps.versions.outputs.sync_branch }}" \
-            --title "Sync ${{ steps.versions.outputs.next_snapshot }}" \
-            --body "Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${{ steps.versions.outputs.release_version }}\`, and bumps the development snapshot version to \`${{ steps.versions.outputs.next_snapshot }}\` in \`pom.xml\`, \`README.md\`, and the Antora docs." \
-            --label sync
-```
+Template: `templates/common/.github/workflows/sync.yml` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -560,113 +344,7 @@ from the environment and rewrites every version reference the merge step doesn't
 `<artifact-id>` and README/Antora regexes below are placeholders — resolve them from Step 1's survey of this
 repository's actual `pom.xml` artifact id and README/Antora wording before writing the real file:
 
-```python
-#!/usr/bin/env python3
-"""Rewrites version references after a release, for the Sync workflow.
-
-Reads RELEASE_VERSION and NEXT_SNAPSHOT from the environment and updates
-pom.xml, README.md, docs/antora.yml, and any Antora page that carries the
-same "Latest release" / "Latest snapshot" dependency snippets as README.md.
-
-CHANGELOG.md is intentionally left untouched: its release section and fresh
-"[Unreleased]" heading are written before the tag is published, and arrive on
-<integration-branch> via the merge that precedes this script, not by bumping
-a version string.
-"""
-import os
-import re
-import sys
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def replace_dependency_snippets(text, release_version, next_snapshot):
-    """Replaces the <version> tag following a "Latest release"/"Latest snapshot" marker line."""
-    lines = text.splitlines(keepends=True)
-    pending = None
-    for i, line in enumerate(lines):
-        lower = line.strip().lower()
-        if lower.startswith("latest release"):
-            pending = release_version
-        elif lower.startswith("latest snapshot"):
-            pending = next_snapshot
-        elif pending and "<version>" in line:
-            lines[i] = re.sub(r"(<version>)[^<]*(</version>)", rf"\g<1>{pending}\g<2>", line)
-            pending = None
-    return "".join(lines)
-
-
-def update_pom(release_version, next_snapshot):
-    path = REPO_ROOT / "pom.xml"
-    text = path.read_text()
-    updated, count = re.subn(
-        r"(<artifactId><artifact-id></artifactId>\s*\n\s*<version>)[^<]*(</version>)",
-        rf"\g<1>{next_snapshot}\g<2>",
-        text,
-        count=1,
-    )
-    if count != 1:
-        sys.exit("pom.xml: could not find the <artifact-id> <version> element to bump")
-    path.write_text(updated)
-
-
-def update_readme(release_version, next_snapshot):
-    path = REPO_ROOT / "README.md"
-    text = path.read_text()
-    # Adjust these two row-label regexes to match this repository's actual README table wording
-    # (resolved in Step 1) if it differs from setup-readme's default "Current development version" /
-    # "Latest release" labels.
-    text = re.sub(
-        r"(\| Current development version \| `)[^`]*(` \|)",
-        rf"\g<1>{next_snapshot}\g<2>",
-        text,
-    )
-    text = re.sub(
-        r"(\| Latest release[^|]*\| `)[^`]*(` \|)",
-        rf"\g<1>{release_version}\g<2>",
-        text,
-    )
-    text = replace_dependency_snippets(text, release_version, next_snapshot)
-    path.write_text(text)
-
-
-def update_antora_component_version(release_version):
-    path = REPO_ROOT / "docs" / "antora.yml"
-    if not path.exists():
-        return
-    text = path.read_text()
-    updated, count = re.subn(r"(?m)^version:.*$", f"version: {release_version}", text, count=1)
-    if count == 1:
-        path.write_text(updated)
-
-
-def update_antora_pages(release_version, next_snapshot):
-    pages_dir = REPO_ROOT / "docs" / "modules" / "ROOT" / "pages"
-    if not pages_dir.exists():
-        return
-    for path in sorted(pages_dir.glob("*.adoc")):
-        text = path.read_text()
-        if "<version>" not in text:
-            continue
-        updated = replace_dependency_snippets(text, release_version, next_snapshot)
-        if updated != text:
-            path.write_text(updated)
-
-
-def main():
-    release_version = os.environ["RELEASE_VERSION"]
-    next_snapshot = os.environ["NEXT_SNAPSHOT"]
-
-    update_pom(release_version, next_snapshot)
-    update_readme(release_version, next_snapshot)
-    update_antora_component_version(release_version)
-    update_antora_pages(release_version, next_snapshot)
-
-
-if __name__ == "__main__":
-    main()
-```
+Template: `templates/common/.github/scripts/sync_versions.py` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -687,87 +365,7 @@ and OSV-Scanner findings don't go stale between pushes. Each job below is indivi
 `security-*` `args` key from Step 1 (default `yes`); drop that whole job's YAML — not just its `if:` — when the
 resolved value is `no`, so a skipped-and-green job doesn't sit in the workflow forever:
 
-```yaml
-name: Security
-
-on:
-  push:
-    branches: [ <integration-branch>, <stable-branch> ]
-  pull_request:
-  schedule:
-    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC
-
-permissions:
-  contents: read
-
-jobs:
-  # Omit this whole job if security-dependency-review: no (Step 1)
-  dependency-review:
-    name: Dependency review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-      - name: Dependency review
-        uses: actions/dependency-review-action@v5
-
-  # Omit this whole job if security-codeql: no (Step 1)
-  codeql:
-    name: CodeQL analysis
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-      - name: Set up JDK <java-version>
-        uses: actions/setup-java@v6
-        with:
-          distribution: adopt
-          java-version: <java-version>
-          cache: maven
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: java-kotlin
-      - name: Build
-        run: mvn -B -DskipTests -P '!<extras-profile-id>' compile
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
-
-  # Omit this whole job if security-osv: no (Step 1)
-  osv-scanner:
-    name: OSV-Scanner
-    permissions:
-      contents: read
-      security-events: write
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
-    with:
-      scan-args: |-
-        --recursive
-        ./
-
-  # Omit this whole job if security-gitleaks: no (Step 1)
-  gitleaks:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+Template: `templates/common/.github/workflows/security.yml` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -788,27 +386,7 @@ Always generated (or updated) regardless of the four `security-*` flags above �
 `maven` ecosystem (the repository's own dependencies/plugins) and for the workflows this skill itself just wrote
 (`github-actions`):
 
-```yaml
-version: 2
-updates:
-  - package-ecosystem: maven
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      maven-dependencies:
-        patterns:
-          - "*"
-
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      github-actions-dependencies:
-        patterns:
-          - "*"
-```
+Template: `templates/common/.github/dependabot.yml` — read it in full before filling placeholders
 
 If `.github/dependabot.yml` already exists with entries for other ecosystems (e.g. `npm` for `docs/`), preserve
 them — only add or update the `maven` and `github-actions` entries above (see Step 2).

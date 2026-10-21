@@ -1,34 +1,7 @@
 ---
 name: iru-setup-windows-repository
-description: >-
-  End-to-end bootstrap for a Windows desktop app repository on .NET 10 — collects `ui` (`wpf` = WPF, `winui` = WinUI 3
-  / Windows App SDK, `winforms` = Windows Forms; asked via `AskUserQuestion` when absent and not detectable from
-  disk), `architecture` (`mvvm` for WPF/WinUI; `mvc` or `mvvm` for WinForms — asked only when more than one is valid),
-  `branching` (`gitflow`/`main-only`), the app's identity (`app-name`, `display-name`, `publisher`,
-  `publisher-display-name`, `package-name`, plus license and developer name/email/organization URL), and the shared
-  pipeline parameters (integration branch `develop`, stable branch `main`, `open-source`, the repository `visibility`
-  (detected via `gh repo view` or asked), `ci`, `ci-tests` (`unit` = the Core tests on Linux + a Windows build, or
-  `full` = also the FlaUI desktop UI tests on a Windows runner), `pages` (GitHub Pages vs. a workflow artifact for the
-  Antora + DocFX docs), `distribution` (`none`/`internal` = GitHub Releases with zips + a signed MSIX + App Installer
-  file/`store` = Microsoft Store), `signing` (`artifact-signing`/`certificate`/`none`), `winget` (`yes`/`no`), `sonar`
-  plus its detail keys — each question stating the Actions-minutes / Windows-multiplier / SonarCloud / Pages cost
-  facts for that visibility) once, prints a setup-mode statement (from scratch, or an inventory of the prior setup it
-  found), then orchestrates `iru-setup-windows-app` → `iru-setup-antora` → `iru-setup-windows-gitignore` →
-  `iru-setup-windows-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
-  `iru-isolated-skill-executor`, so nothing is asked twice — skipping the workflows step entirely (security block
-  included) when `ci: no`. Invoke as `/iru-setup-windows-repository`, optionally with `args` (`key: value` lines) to
-  pre-resolve `ui`, `architecture`, `branching`, `mode` (`new`/`existing`), `open-source`, `visibility`, `ci`,
-  `ci-tests`, `pages`, `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), `distribution`,
-  `signing`, `winget`, `msix`, `ui-tests`, `rids`, `accessibility` (`enforce`/`report`/`off`/`none` — the automated
-  Axe.Windows level of the UI tests, written by the scaffold to `.ui-quality.yml`), `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `integration-branch`, `stable-branch`, and every identity field, skipping
-  the matching question.
-  On an existing repository every component sub-skill warns about the prior setup it owns and asks Update / Keep as
-  is / Replace per file (unless `on-existing` decides), and the final report states the action taken per component.
-  Use whenever bootstrapping (or catching up) a WPF, WinUI 3 or Windows Forms desktop app repository's full
-  solution/docs/gitignore/CI/changelog/README scaffold in one pass, instead of running six skills separately and
-  re-answering the same questions each time.
-model: haiku
+description: "/iru-setup-windows-repository [args] bootstraps a Windows desktop app repository on .NET 10 end to end, WPF, WinUI 3 or Windows Forms (MVVM or MVC): collects ui, architecture, identity and the shared pipeline parameters once (with Actions-minutes, Windows-multiplier, Sonar and Pages cost notes), then runs iru-setup-windows-app, iru-setup-antora, iru-setup-windows-gitignore, iru-setup-windows-github-workflows (skipped when ci: no), iru-setup-changelog and iru-setup-readme via iru-isolated-skill-executor. Announces from-scratch vs update; key: value args pre-resolve answers. Use to bootstrap or catch up a Windows app repository in one pass."
+model: sonnet
 ---
 
 # Setup Windows Repository

@@ -1,36 +1,7 @@
 ---
 name: iru-setup-swift-repository
-description: End-to-end bootstrap for a Swift repository of either flavor — collects `flavor` (`library`, a SwiftPM
-  package, or `app`, an XcodeGen/Tuist-generated native iOS/iPadOS/macOS/watchOS/visionOS app, SwiftUI or (for the
-  iOS/iPadOS target) UIKit; asked via `AskUserQuestion`
-  when absent and not detectable from disk), `branching` (`gitflow`/`main-only`), the project's identity
-  (`package-name` for a library; `app-name` + `bundle-id-prefix` for an app; plus license and developer
-  name/email/organization URL), the flavor-specific inputs (`platforms`, `min-deployment-targets`/
-  `min-deployment-target`, `generator` and `signing` for an app), and the shared pipeline parameters
-  (`integration-branch` `develop`, `stable-branch` `main`, `runner` `macos-26`, `open-source`, `publish` for
-  libraries, `distribution` for apps, `visibility`, `ci`, `ci-tests`, `pages`, `sonar` plus its detail keys — asked
-  with visibility-aware cost guidance, stressing that macOS runner minutes cost ~10× Linux on private repositories)
-  once, then orchestrates the flavor's scaffold
-  skill (`iru-setup-swift-library` / `iru-setup-apple-app`) → `iru-setup-antora` → `iru-setup-swift-gitignore` →
-  `iru-setup-swift-github-workflows` (skipped entirely when `ci: no`) → `iru-setup-changelog` → `iru-setup-readme`,
-  in that order, via
-  `iru-isolated-skill-executor`, so nothing is asked twice and no sub-skill receives a key its own Step 0 doesn't
-  accept. Invoke as `/iru-setup-swift-repository`, optionally with `args` (`key: value` lines) to pre-resolve
-  `flavor`, `branching`, `mode` (`new`/`existing`), `platforms`, `generator`, `signing`, `ui`, `architecture`,
-  `open-source`, `publish`,
-  `distribution`, `visibility`, `ci`, `ci-tests`, `pages`, `accessibility` (`app` only — the UI tests' automated
-  accessibility level the scaffold writes to `.ui-quality.yml`), `on-existing`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `integration-branch`,
-  `stable-branch`, `runner`, `xcode-version`, `release-please`, `formatter`, `min-deployment-targets`/
-  `min-deployment-target`, `package-resolved`, and every identity field, skipping the matching question. Announces
-  up front whether it is setting the repository up from scratch or updating an existing one (with an inventory of
-  every component it owns marked absent/present/partial); each sub-skill then warns about and asks Update / Keep
-  as is / Replace for every pre-existing file it owns (`on-existing` answers for all of them in scripted runs),
-  and the final report states per component whether it was created, updated, replaced, kept as is, or skipped
-  (`ci: no`). Use whenever bootstrapping (or catching up) a Swift package or Apple app
-  repository's full scaffold/docs/gitignore/CI/changelog/README pipeline in one pass, whichever flavor it is,
-  instead of running six skills separately and re-answering the same questions each time.
-model: haiku
+description: "/iru-setup-swift-repository [args] bootstraps a Swift repository end to end, library (SwiftPM package) or app (XcodeGen/Tuist iOS/iPadOS/macOS/watchOS/visionOS): collects flavor, identity and the shared pipeline parameters once (with visibility-aware cost guidance, macOS minutes ~10x Linux), then runs iru-setup-swift-library or iru-setup-apple-app, iru-setup-antora, iru-setup-swift-gitignore, iru-setup-swift-github-workflows (skipped when ci: no), iru-setup-changelog and iru-setup-readme via iru-isolated-skill-executor. Announces from-scratch vs update with a component inventory; key: value args pre-resolve answers. Use to bootstrap or catch up a Swift repository in one pass."
+model: sonnet
 ---
 
 # Setup Swift Repository

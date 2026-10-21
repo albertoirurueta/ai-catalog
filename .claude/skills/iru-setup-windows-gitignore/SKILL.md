@@ -1,24 +1,6 @@
 ---
 name: iru-setup-windows-gitignore
-description: >-
-  Create or update the root `.gitignore` for a Windows desktop app repository on .NET — the layout
-  `iru-setup-windows-app` produces (WPF, WinUI 3 or Windows Forms; `<AppName>.slnx`, `src/<AppName>.Core/`,
-  `src/<AppName>/`, `tests/`, optional `packaging/`) or any other `*.sln`/`*.slnx` desktop solution — covering .NET
-  build output (`[Bb]in/`, `[Oo]bj/`, the .NET 8+ `artifacts/` layout), Visual Studio/Rider/VS Code user state
-  (`.vs/`, `*.user`, `*.suo`, `.idea/`), test and coverage output (`TestResults/`, `*.trx`, `coverage*.xml`,
-  `*.coverage`), MSIX/App Installer build output (`AppPackages/`, `BundleArtifacts/`, `*.msix`, `*.msixbundle`,
-  `*.appxbundle`, `*.msixupload`, `*.appxupload`), signing material (`*.pfx`, `*.p12`, `*.cer`, `*.snk` is
-  deliberately NOT ignored), DocFX output (`_site/` and the `docfx.json` metadata `dest`, only when a `docfx.json`
-  exists), the Antora docs build output, `publish/` folders, the repository-wide `.integration-test.lock/` that
-  serializes desktop UI-test runs, and the UI tests' screenshot directory `.ui-screenshots/` (never `.ui-quality.yml`,
-  which is committed). Invoke as `/iru-setup-windows-gitignore`, optionally with `args`:
-  `mode: new|existing` (default: detected from whether a root `.gitignore` already exists) and
-  `on-existing: ask|keep|update|replace` (default `ask`). Announces whether it is creating from scratch or updating;
-  an existing `.gitignore` is never overwritten silently — it warns, shows a diff, and asks Update (merge in what's
-  missing, keep hand-added lines) / Keep as is / Replace, unless `on-existing` decides. Deliberately keeps
-  `Properties/PublishProfiles/*.pubxml` tracked (WinUI publish profiles carry no secrets and the build needs them),
-  unlike GitHub's VisualStudio.gitignore. Use whenever a Windows desktop (.NET) app repository needs a `.gitignore`
-  bootstrapped from scratch, or an existing one checked/gap-filled against this house template.
+description: "/iru-setup-windows-gitignore [args] creates or updates the root .gitignore for a .NET Windows desktop app repository (iru-setup-windows-app layout or any sln/slnx desktop solution): build output, IDE state, test and coverage output, MSIX output, signing material, DocFX, UI screenshots. Args: mode, on-existing. Shows a diff and asks before touching an existing file."
 model: haiku
 ---
 

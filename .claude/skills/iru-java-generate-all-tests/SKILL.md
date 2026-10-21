@@ -1,6 +1,6 @@
 ---
 name: iru-java-generate-all-tests
-description: For a Java/Maven project only, explore the whole codebase to find every class that has no corresponding unit test class, or whose measured line coverage falls below 80%, using the `iru-java-coverage` skill to get the exact percentage per class — then generate new tests (or extend existing ones) until each reaches that bar, following this project's own test framework and style. Invoke as `/iru-java-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a Java/Maven project (no `pom.xml` found). Use whenever the user wants comprehensive unit test coverage brought up across an entire Java codebase in one pass, instead of writing tests for one class or task at a time.
+description: "/iru-java-generate-all-tests finds every class of a Java/Maven project with no unit test class or under 80% line coverage per iru-java-coverage, and generates or extends tests in the project's own framework and style. Stops immediately if there is no pom.xml."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---

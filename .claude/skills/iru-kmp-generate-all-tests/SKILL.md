@@ -1,31 +1,6 @@
 ---
 name: iru-kmp-generate-all-tests
-description: >-
-  For a Kotlin Multiplatform (Android + iOS) Gradle project only, explore one KMP module's codebase (default `shared`,
-  or `composeApp` in the JetBrains wizard layout, or the Android app module `androidApp`) to find every production
-  class/file with no corresponding test, or whose measured line coverage falls below 80%, using the `iru-kmp-coverage`
-  skill to get the exact percentage per class — then generate new tests (or extend existing ones) until each reaches
-  that bar, placing each test in the source set that matches the code under test (`commonTest` for `commonMain` code,
-  which then runs on every target; the Android host-test set — `androidHostTest` or `androidUnitTest` — for
-  `androidMain`; `iosTest` for `iosMain`; `androidApp/src/test` for the app), following the project's own conventions
-  and defaulting to `kotlin.test` + kotlinx-coroutines-test `runTest` + Turbine (when present) + hand-written fakes in
-  common code (MockK is JVM-only and never used in `commonTest`; Mokkery only if already applied). Coverage is
-  measured from the JVM/Android host runs only — Kotlin/Native has no coverage tool — so
-  `iosMain`/`appleMain`/`nativeMain` classes are reported "not measurable", get tests written for their behavior only
-  when the invocation asks (`ios: yes`), and never count against the bar. Invoke as `/iru-kmp-generate-all-tests
-  [scope]`, where `[scope]` names one module (`:shared`, `androidApp`) or a comma-separated class list within it; also
-  accepts `args` as `key: value` lines (`scope:`, `ios: yes|no`, default `no`). Stops immediately, without attempting
-  anything, if the repository isn't a Kotlin Multiplatform Gradle project (no module applying
-  `org.jetbrains.kotlin.multiplatform`, no Gradle wrapper). When the module renders UI and its tests are wired for it
-  (a `commonTest` `uitest/UiScreenshots.kt` helper with the Robolectric `UiTest` base for `ui: compose`, or
-  `androidApp/src/test/…/uitest/UiScreenshots.kt` / `iosApp/iosAppTests/UIScreenshots.swift` for `ui: native`), it
-  also generates UI tests per the catalog's UI contract for every existing screen and component that has none —
-  every visual state × the `.ui-quality.yml` directions × themes captured into `.ui-screenshots/` with the
-  `--android`/`--ios` platform segment and the accessibility check — and runs them through `iru-kmp-test`'s `ui`
-  selector (iOS parts unverified without macOS/a simulator). Equivalent to
-  `iru-android-generate-all-tests`/`iru-swift-generate-all-tests` for the Kotlin Multiplatform stack. Use whenever the
-  user wants comprehensive unit test coverage brought up across a KMP module in one pass, instead of writing tests one
-  class or task at a time.
+description: "/iru-kmp-generate-all-tests [scope] finds classes of a Kotlin Multiplatform module (default shared; or :shared, androidApp, a class list) with no tests or under 80% line coverage per iru-kmp-coverage, and generates or extends tests in the matching source set, plus UI tests where wired. Args: scope:, ios: yes|no. Stops if the project is not KMP Gradle."
 model: sonnet
 allowed-tools: Read Edit Write Bash(./gradlew *) Bash(gradle *) Bash(uname *) Bash(xcode-select *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -163,8 +138,12 @@ fails only on the iOS compile. Fix compile errors in the generated tests before 
 ## Step 5a — UI tests for existing screens and components
 
 Only when the module renders UI (`@Composable` functions in `commonMain` for `ui: compose`, in `androidApp` or
-SwiftUI views in `iosApp` for `ui: native`) **and** the screenshot helper the UI contract needs is already wired (see
-the description; `iru-kmp-code-one-task/reference/ui-implementation.md` when installed). Without the wiring, list the
+SwiftUI views in `iosApp` for `ui: native`) **and** the screenshot helper the UI contract needs is already wired — a
+`commonTest` `uitest/UiScreenshots.kt` helper with the Robolectric `UiTest` base for `ui: compose`, or
+`androidApp/src/test/…/uitest/UiScreenshots.kt` / `iosApp/iosAppTests/UIScreenshots.swift` for `ui: native` (see
+`iru-kmp-code-one-task/reference/ui-implementation.md` when installed). The generated tests capture every visual
+state × the `.ui-quality.yml` directions × themes into `.ui-screenshots/` with the `--android`/`--ios` platform
+segment, plus the accessibility check. Without the wiring, list the
 screens/components that lack UI tests in the report as "needs the UI test wiring (Robolectric `UiTest` base +
 screenshot helper)" — never add Robolectric, a dependency or a test target here.
 

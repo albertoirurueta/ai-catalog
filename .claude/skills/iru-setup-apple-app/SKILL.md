@@ -1,41 +1,7 @@
 ---
 name: iru-setup-apple-app
-description: >-
-  Scaffold a new native Apple app (iOS/iPadOS/macOS/watchOS/visionOS, Swift 6) at the repository root — a generator
-  manifest (XcodeGen's `project.yml`, or Tuist's `Project.swift` + `Tuist.swift`) declaring one application target
-  `<AppName>-<Platform>` (scheme of the same name) per selected platform with `MARKETING_VERSION`/
-  `CURRENT_PROJECT_VERSION`, `SWIFT_STRICT_CONCURRENCY = complete`, Info.plist keys and a pinned test host; a shared
-  UI-framework-free `Packages/Core` local SwiftPM package (Foundation + Observation only: `Models/`, `Services/`, plus
-  `ViewModels/` for `architecture: mvvm` or `Controllers/` + a passive-view protocol for `architecture: mvc`) whose
-  Swift Testing suite covers 100% of its lines; per-platform `Targets/<Platform>/{Sources,Tests,UITests}` — SwiftUI
-  `App` + MVVM screen, or for the iOS/iPadOS target with `ui: uikit` a programmatic UIKit app (`AppDelegate` +
-  `UIWindowSceneDelegate` with a scene manifest, `UINavigationController` root, `UIViewController` laid out in code,
-  `mvc` controller core or `mvvm` with UIKit Observation tracking, `UIObservationTrackingEnabled` below iOS 26);
-  a `--uitesting` launch argument and accessibility identifiers on every control; a Swift Testing unit-test target
-  and an XCUITest UI-test target per platform — per the catalog's UI contract, a `.ui-quality.yml` at the root, the
-  shared `Tests/Support/UIScreenshots.swift` capture helper compiled into both test targets, and a UI test that
-  captures the sample screen in every left-to-right/right-to-left × light/dark cell into `.ui-screenshots/` and runs
-  `performAccessibilityAudit()` at the configured level — watchOS companion-app wiring when `ios` and `watchos` are both
-  selected, `.swiftlint.yml`, `.swift-format`, an optional `fastlane/Fastfile` with lanes gated by `signing`/
-  `distribution`, and `sonar-project.properties` (omitted when `sonar: none`). The generated `.xcodeproj`/
-  `.xcworkspace` is never committed. Invoke as `/iru-setup-apple-app`. Accepts pre-resolved inputs via `args`
-  (`key: value` lines) — `app-name`, `bundle-id-prefix`, `platforms` (multi-select: `ios`, `ipados`, `macos`,
-  `watchos`, `visionos` — `ipados` widens the iOS target's `TARGETED_DEVICE_FAMILY` rather than adding a target;
-  tvOS is not supported), `ui` (`swiftui`/`uikit`, iOS/iPadOS target only, default `swiftui`), `architecture`
-  (`mvvm`/`mvc`; `mvc` only with `uikit`), `generator` (`xcodegen`/`tuist`), `min-deployment-target`,
-  `distribution` (`none`/`internal`/`store`), `signing` (`fastlane-match`/`api-key`/`none`), `license`,
-  `developer-name`, `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `visibility`, `ci`, `accessibility` (`enforce`/`report`/`off`/`none`, default
-  `enforce`), `on-existing` (`ask`/`keep`/`update`/`replace`) and `mode` (`new`/`existing`) — so an orchestrating skill can supply them without re-prompting; stand-alone it asks
-  `open-source` first and derives the `sonar` default from it. Announces whether it is scaffolding from scratch or
-  updating; for each owned file that already exists it warns and asks Update / Keep as is / Replace / Stop (unless
-  `on-existing` decides) and never overwrites hand-written source. Versions are looked up at run time with a dated
-  October 2026 fallback table. Equivalent to `iru-setup-android-app`/`iru-setup-react-native-app` for the native
-  Apple stack; use `iru-setup-macos-app` for a macOS-only (SwiftUI or AppKit) desktop app and
-  `iru-setup-swift-library` for a pure SwiftPM library. Use whenever a new native iOS/iPadOS/macOS/watchOS/visionOS
-  application needs its project manifest, testable core, tests, lint/format config and Fastlane/Sonar tooling
-  bootstrapped from this house template.
-model: haiku
+description: "Invoked as /iru-setup-apple-app with optional key: value args, usually by iru-setup-swift-repository. Scaffolds a native iOS/iPadOS/macOS/watchOS/visionOS app (Swift 6): XcodeGen or Tuist manifest, UI-free Packages/Core, SwiftUI or UIKit targets, unit and UI tests, lint config, optional Fastlane and Sonar."
+model: sonnet
 ---
 
 # Setup Apple App
@@ -59,6 +25,8 @@ manifest, mandatory with the 27 SDK), `uikit-and-appkit-interop.adoc` (view cont
 Observation tracking, storyboards as legacy), `app-architecture.adoc` (MV vs MVVM with Observation, protocol-typed
 services and test doubles), `multiplatform-projects.adoc` (destinations, separate watchOS target, `#if os`),
 `ipados.adoc` (multiple scenes, device families) and `visionos.adoc` (native visionOS vs "Designed for iPad").
+
+Scope: this is the native Apple stack's counterpart of `iru-setup-android-app` / `iru-setup-react-native-app`. Use `iru-setup-macos-app` for a macOS-only (SwiftUI or AppKit) desktop app and `iru-setup-swift-library` for a pure SwiftPM library.
 
 This skill never commits generator output: `.xcodeproj`/`.xcworkspace` are regenerated on demand (`xcodegen
 generate` / `tuist generate`) and gitignored by the companion `iru-setup-swift-gitignore` skill — run it right after

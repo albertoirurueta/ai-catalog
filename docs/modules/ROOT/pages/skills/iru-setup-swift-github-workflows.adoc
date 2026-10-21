@@ -50,6 +50,10 @@ is written for exactly the detected `generator` (`xcodegen generate` or `tuist g
 
 xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-swift` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-swift@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -180,6 +184,8 @@ to allow GitHub Actions to create pull requests. The Pages deploy job needs Sett
 deployment" -> Source set to GitHub Actions -- only when `pages: yes`; on a private or internal repository that
 also needs a GitHub Pro, Team or Enterprise Cloud plan, and the published site is public unless Enterprise Cloud
 private access control is used.
+
+The generated files' bytes come from template files under `templates/` (and, where a template needs variant-specific notes, `reference/`) in `.claude/skills/iru-setup-swift-github-workflows/`; the skill reads only the files for the variant it resolved, not the whole set, which keeps its `SKILL.md` small.
 
 == Execution flow
 

@@ -1,26 +1,6 @@
 ---
 name: iru-python-bump-version
-description: >-
-  Set a Python project's version (FastAPI service, Django project, or plain library/package) to an exact value in every
-  place it keeps one, following this catalog's PEP 440 `X.Y.Z.dev0` development-version convention (the Python
-  counterpart of `-SNAPSHOT`/`-dev`). Rewrites `pyproject.toml` `[project].version` and/or `[tool.poetry].version`, a
-  legacy `setup.cfg` `[metadata] version`/`setup.py` `version=` literal, tracked `__version__` literals in the package's
-  `__init__.py`/`_version.py`/`__about__.py`/`version.py`, a Django settings `VERSION`/`APP_VERSION` literal or env
-  default, and a `FastAPI(version=…)` literal only when it equals the package version; follows a file-based dynamic
-  version (`[tool.hatch.version] path`, `[tool.setuptools.dynamic] version = {attr|file}`, flit's module
-  `__version__`) to its source file; and for a VCS-derived dynamic version (hatch-vcs, setuptools-scm, versioningit,
-  `*-dynamic-versioning`) reports that the git tag is the version and changes nothing. Validates the value as PEP 440
-  and warns on non-canonical forms (`1.4.0-dev` → `1.4.0.dev0`), refreshes `uv.lock` with `uv lock` when it records the
-  project's own version, and uses an embedded, tested Python helper with `--list`/`--dry-run` modes that refuses to
-  write when the locations disagree until the user confirms. Invoke as `/iru-python-bump-version <new-version>` where
-  `<new-version>` is the literal target (e.g. `1.4.0` or `1.5.0.dev0`) — this skill does not compute bumps itself
-  (`iru-release` computes the release/next-dev values per the convention in Step 5 and passes each one through in
-  turn). Also accepts `args` (`key: value` lines): `sync-files: yes|no` (default: ask) to also update `docs/antora.yml`
-  and README/Antora version mentions, `next-version: <upcoming-version>` so that sync maps "Latest release" markers to
-  `<new-version>` and "Current development version" markers to the upcoming value, and `dry-run: yes|no` (default
-  `no`) to print the diff without writing anything. Reports every location found, the old and new version, and every
-  file touched. Use whenever the user, or another skill such as `iru-release`, needs a Python project's version set to
-  a specific value instead of hand-editing `pyproject.toml` and `__version__` strings.
+description: "/iru-python-bump-version <new-version> sets a Python project's version (FastAPI, Django or library) to the literal PEP 440 value given, following the X.Y.Z.dev0 convention: pyproject.toml, setup.cfg/setup.py, __version__ literals and Django/FastAPI literals; VCS-derived versions change nothing. Args: sync-files, next-version, dry-run. Reports files touched."
 model: haiku
 allowed-tools: Read Bash(python3 *) Bash(uv lock*) Bash(uv version *) Bash(poetry check*) Bash(git ls-files *) Bash(git check-ignore *) Bash(git describe *) Bash(git tag *) Bash(grep *) Bash(find *) Bash(ls *) Bash(cat *) Bash(mkdir *)
 ---

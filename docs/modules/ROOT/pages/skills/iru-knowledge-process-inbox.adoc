@@ -34,6 +34,10 @@ or the skill not installed) never invalidates the filing work that precedes it.
 
 xref:index.adoc#group-knowledge[Knowledge Base Management]
 
+== Plugin
+
+Shipped by the `iru-knowledge` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-knowledge@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

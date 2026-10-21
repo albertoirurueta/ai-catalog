@@ -24,6 +24,10 @@ When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` 
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-typescript` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-typescript@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

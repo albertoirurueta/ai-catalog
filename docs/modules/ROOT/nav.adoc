@@ -1,6 +1,7 @@
 * xref:index.adoc[]
 * Guides
 ** xref:guides/claude-md.adoc[]
+** xref:guides/catalog-architecture.adoc[]
 ** xref:guides/common-workflows.adoc[]
 ** xref:guides/building-user-interfaces.adoc[]
 ** xref:guides/rolling-deployments.adoc[]
@@ -10,6 +11,7 @@
 ** xref:guides/plugins.adoc[]
 ** xref:guides/authoring-effective-instructions.adoc[]
 ** xref:guides/packaging-and-distribution.adoc[]
+** xref:guides/performance-and-token-budget.adoc[]
 ** xref:guides/provider-comparison.adoc[]
 * Skills
 ** xref:skills/iru-android-bump-version.adoc[]

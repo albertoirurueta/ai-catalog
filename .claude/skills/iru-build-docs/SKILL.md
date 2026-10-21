@@ -1,6 +1,6 @@
 ---
 name: iru-build-docs
-description: Build a repository's existing Antora documentation site, setting it up first (via `iru-setup-antora`) if it doesn't exist yet. Invoke as `/iru-build-docs`. Does no code exploration and makes no content edits to any existing page — it only ensures the toolchain/module exist and runs the Antora build, unlike `iru-update-docs`, which edits pages to reflect codebase changes. Use whenever the user just wants the docs site built/verified (e.g. to check it compiles, or to get the built HTML output) instead of updating its content.
+description: "Invoke as `/iru-build-docs`. Builds a repository's existing Antora documentation site, setting it up first via `iru-setup-antora` if missing. No code exploration and no page edits (that is `iru-update-docs`). Use when the user just wants the docs built or verified, or the built HTML."
 model: haiku
 ---
 

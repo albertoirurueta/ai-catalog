@@ -1,18 +1,6 @@
 ---
 name: iru-android-bump-version
-description: >-
-  Set an Android library/app project's version to an exact value, rewriting `val libraryVersion = "…"`
-  in `lib/build.gradle.kts` (when a `lib` module exists) and `versionName`/`versionCode` in `app/build.gradle.kts`
-  (when an `app` module exists), then optionally syncing `README.md` dependency snippets and Antora
-  `docs/antora.yml`/page version mentions. Invoke as `/iru-android-bump-version <new-version>` where
-  `<new-version>` is the literal target version (e.g. `1.2.0`, `1.2.0-SNAPSHOT`) — this skill does not compute
-  bumps itself, it only applies the value it's given (a future `iru-release`-style caller computes the
-  release/next-dev values per the pre-release convention documented in Step 5 and passes each one through in
-  turn, exactly as `iru-typescript-bump-version` does for npm). Also accepts `args`: `sync-files: yes|no`
-  (default: ask) to also update README/Antora version mentions, and `dry-run: yes|no` (default `no`) to print the
-  diff without writing anything. Reports the old and new version and every file touched. Use whenever the user, or
-  another skill, needs an Android project's version set to a specific value instead of hand-editing Gradle build
-  scripts.
+description: "/iru-android-bump-version <new-version> sets an Android library/app project's version to the literal value given: libraryVersion in lib/build.gradle.kts, versionName/versionCode in app/build.gradle.kts, optionally README/Antora mentions. Args: sync-files: yes|no, dry-run: yes|no. Reports old/new version and files touched."
 model: haiku
 ---
 

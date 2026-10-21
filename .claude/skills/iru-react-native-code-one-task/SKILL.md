@@ -1,37 +1,6 @@
 ---
 name: iru-react-native-code-one-task
-description: >-
-  Implement a single task from a React Native `implementation_plan.md`-style task list — the implementation, its
-  tests, and its checkbox update — for either toolchain this catalog supports: `expo` (Expo framework, Expo Router,
-  Continuous Native Generation, config plugins, Expo SDK modules, EAS) or `metro` (bare React Native Community CLI
-  app with committed `android/`/`ios/` projects, React Navigation, CocoaPods, Turbo Modules/Fabric with Codegen).
-  First detects the project profile once at runtime — toolchain (`expo` in `dependencies` → expo even when
-  `android/`/`ios/` exist as prebuild output; `react-native` without `expo` → metro), React Native/Expo SDK/React
-  versions, routing (Expo Router `app/` or `src/app/`, React Navigation static or dynamic API), Jest preset
-  (`jest-expo` or `@react-native/jest-preset`), the installed React Native Testing Library major (v14 makes
-  `render`/`fireEvent`/`renderHook` async), state/data libraries, e2e framework (Maestro or Detox), package manager,
-  and any project `AGENTS.md`/`CLAUDE.md` — then loads only the matching guidance from this skill's own `reference/`
-  directory: mandatory rules, the catalog's TypeScript agreements condensed for React Native, exactly one toolchain
-  file (`expo.md` or `metro.md`), and, as the task needs them, native modules (Turbo Module spec + Kotlin + Obj-C++
-  implementations, or the Expo Modules API), state and data (server state, AsyncStorage/MMKV, offline), UI and
-  platform (StyleSheet, safe areas, platform files, accessibility, FlatList performance, images, Reanimated), the
-  catalog's UI contract and its React Native mapping for any screen/component/list (`Screen › Region › Component`
-  decomposition, composition over inheritance, typed state props and `on…` events, `FlatList`/`SectionList` with a
-  memoized item component, a dev-only UI gallery reached by deep link, Maestro `takeScreenshot` captures per state ×
-  LTR/RTL × light/dark into `.ui-screenshots/`, `eslint-plugin-react-native-a11y` + role queries at the
-  `.ui-quality.yml` level), testing
-  (RNTL queries and userEvent, native-module mocks, timers, navigation tests, Maestro/Detox flows written but not
-  run), security (no secrets in the bundle, secure storage, deep-link/WebView/TLS hardening, logging hygiene), and
-  TSDoc. Re-checks the current code state, implements exactly what the task specifies without hand-editing
-  Expo-generated native directories or adding dependencies the task didn't ask for, writes/updates tests (does not
-  run them), then — unless it stopped on a blocker — checks off this task's own checkbox in `implementation_plan.md`
-  with a "group validation pending" note and reports the files touched (JS/TS, native, config), tests written, which
-  native side(s) changed and what rebuild they need (`pod install`, Gradle, development build, `expo prebuild`), and
-  any deviation from `reference/`. Never runs tests, coverage, lint, `tsc`, Gradle, CocoaPods, `xcodebuild`, Metro,
-  `expo prebuild`, or e2e flows — those happen once per group in `iru-react-native-code-one-task-group`. Invoke as
-  `/iru-react-native-code-one-task <task description>`, passing the task's own text including its exact
-  `implementation_plan.md` checkbox line(s). The React Native counterpart to `iru-typescript-code-one-task`, which
-  now hands React Native tasks to this `react-native` key.
+description: "Invoked as /iru-react-native-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one React Native (Expo or bare Metro toolchain) plan task and its tests, ticks the checkbox with a group-validation-pending note; reports native rebuild needs; no baseline or full gates, which iru-react-native-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(node -p *) Bash(npm ls *) Bash(pnpm ls *) Bash(yarn why *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

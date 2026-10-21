@@ -1,7 +1,7 @@
 ---
 name: iru-setup-swift-library
-description: Generate the standard Swift Package Manager toolchain for a new Swift library at the repository root — runs `swift package init --type library`, then rewrites `Package.swift` (`// swift-tools-version: 6.0`, a `platforms:` array, a `swift-docc-plugin` dependency, `swiftLanguageModes: [.v6]`), `Sources/<Name>/<Name>.swift`, and `Tests/<Name>Tests/` with both a Swift Testing `@Test` example and an XCTest example, plus `.swiftlint.yml` (opt-in strict rules, `excluded: .build`), a `.swift-format` (or `.swiftformat`) config, a DocC catalog page (`Sources/<Name>/<Name>.docc/<Name>.md`), `.spi.yml` (only when `publish: yes`), and `sonar-project.properties` (only when `sonar` is not `none`) — asks for `package-name` (the SPM package identity, e.g. `my-example-lib`; the PascalCase `<Name>` used for the target/product/type/directories is derived from it), `platforms` (a list from `ios`/`ipados`/`macos`/`watchos`/`tvos`/`visionos`/`linux`), `min-deployment-targets` per selected Apple platform, license, developer name/email/organization URL, whether the project is open source, whether it publishes (`publish`, gating `.spi.yml`), whether to wire up a SonarQube/SonarCloud scan (`sonar`: `cloud`/`self-hosted`/`none`, gating `sonar-project.properties`), and `formatter` (`swift-format`, the Swift toolchain's own bundled formatter, invoked as `swift format lint`/`swift format format` — or `swiftformat`, the third-party nicklockwood/SwiftFormat tool, with a different config-file convention). Invoke as `/iru-setup-swift-library`. Ships with explicit example templates embedded in this skill file, verified end-to-end against Swift 6.4/Xcode 27 (`swift build`, `swift test --enable-code-coverage`, `xcrun llvm-cov export -format=lcov`, `swift format lint --strict --recursive Sources`, and `swift package generate-documentation` all run clean against them — see this file's "Known quirks / verification notes"). Every dependency version (`swift-docc-plugin`) is looked up at run time from the GitHub Releases API, with this skill's own September 2026 findings as the fallback. Announces up front whether it is creating the package from scratch or updating an existing one, and for every one of its files that already exists warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate from template) / Stop, explaining each consequence (`on-existing: ask|keep|update|replace` in `args` answers for every file at once; `mode: existing` no longer means a silent gap-fill); accepts every input pre-resolved via `args` (`key: value` lines, including `visibility` — `public`/`private`/`internal`, so the Sonar recommendation keys on it — and `ci: yes|no`, so Sonar is configured build-side only when no CI will send reports) so an orchestrating skill (`iru-setup-swift-repository`) can supply them without re-prompting. Verifies with `swift build` then `swift test` through the `iru-gate-runner` agent. Equivalent to `iru-setup-java-library`/`iru-setup-typescript-library`/`iru-setup-android-library` for the Swift/SwiftPM stack. Use whenever a new Swift library repository needs its `Package.swift`/source layout/lint/format/docs toolchain scaffolded from this house template, instead of hand-writing each file.
-model: haiku
+description: "/iru-setup-swift-library [args] generates the Swift Package Manager toolchain for a new Swift library at the repository root: Package.swift, Sources and Tests, SwiftLint, swift-format, DocC, optional .spi.yml and Sonar config. Asks package-name, platforms, license and identity unless supplied via key: value args from iru-setup-swift-repository; asks Update/Keep/Replace/Stop on existing files."
+model: sonnet
 ---
 
 # Setup Swift Library
@@ -12,7 +12,8 @@ DocC catalog page, and — when opted in — `.spi.yml` and `sonar-project.prope
 `swift package init --type library`'s own scaffold (Step 5), then this skill rewrites it using explicit example
 templates embedded below (Steps 5–9), genericized (no real repo/org/person names, `<placeholder>` markers resolved
 from Steps 2–4) and verified end-to-end against Swift 6.4/Xcode 27 in `$TMPDIR/iru-verify/swift/library` while
-building this skill.
+building this skill. Equivalent to `iru-setup-java-library`/`iru-setup-typescript-library`/`iru-setup-android-library`
+for the Swift/SwiftPM stack.
 
 **`swiftLanguageModes:` requires `// swift-tools-version: 6.0` or newer** — it does not exist as a `Package`
 initializer parameter under older tools-versions (SwiftPM parses the manifest with a compiler pinned to the
@@ -69,6 +70,8 @@ this is an established repository) that this is an update rather than a from-scr
 silent gap-fill**: Step 1 still warns about and asks per already-existing file (unless `on-existing` says
 otherwise). `mode: new` or an unset `mode` follows the same Step 1 survey — the files actually on disk decide
 whether each one is created or updated.
+
+**Templates.** The file templates of Steps 5–9 are files under this skill's `templates/` directory, not inline text. Read only the template files that apply (the index at the top of Step 5 says which, including the `formatter` variant resolved in Step 2); never read the others.
 
 ## Step 1 — Survey the repository
 
@@ -250,6 +253,21 @@ manifest concern, and are out of this skill's scope).
 
 ## Step 5 — Scaffold via `swift package init`, then rewrite `Package.swift`
 
+**Templates.** Every template in Steps 5–9 is a file under `templates/<variant>/<path of the generated file>` (a `{Name}` path segment stands for the target's `<Name>`), holding the exact bytes of that generated file's template. Read only the files that apply, each in full, before filling placeholders:
+
+| Generated file | Template | Applies when |
+|---|---|---|
+| `Package.swift` | `templates/common/Package.swift` | always (Step 5) |
+| `Sources/<Name>/<Name>.swift` | `templates/common/Sources/{Name}/{Name}.swift` | always (Step 6) |
+| `Tests/<Name>Tests/<Name>Tests.swift` | `templates/common/Tests/{Name}Tests/{Name}Tests.swift` | always — Swift Testing example (Step 6) |
+| `Tests/<Name>Tests/<Name>XCTests.swift` | `templates/common/Tests/{Name}Tests/{Name}XCTests.swift` | always — XCTest example, same test target (Step 6) |
+| `Sources/<Name>/<Name>.docc/<Name>.md` | `templates/common/Sources/{Name}/{Name}.docc/{Name}.md` | always — DocC catalog landing page (Step 6) |
+| `.swiftlint.yml` | `templates/common/.swiftlint.yml` | always (Step 7) |
+| `.swift-format` | `templates/swift-format/.swift-format` | `formatter: swift-format`, the default (Step 7) |
+| `.swiftformat` | `templates/swiftformat/.swiftformat` | `formatter: swiftformat` — unverified locally (Step 7) |
+| `.spi.yml` | `templates/common/.spi.yml` | only when `publish: yes` (Step 8) |
+| `sonar-project.properties` | `templates/common/sonar-project.properties` | only when `sonar` is not `none` (Step 9) |
+
 Run, at the repository root:
 
 ```
@@ -278,39 +296,7 @@ SwiftLint's `file_header` rule fails `swiftlint lint --strict` on `Package.swift
 everything else (SwiftLint has no per-rule path exclusion — a `file_header: excluded:` key is rejected as an invalid
 configuration and the rule silently falls back to its default):
 
-```swift
-// swift-tools-version: 6.0
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
-import PackageDescription
-
-let package = Package(
-    name: "<package-name>",
-    platforms: [
-        .iOS(.v<ios-min-major>),
-        .macOS(.v<macos-min-major>),
-    ],
-    products: [
-        .library(
-            name: "<Name>",
-            targets: ["<Name>"]
-        ),
-    ],
-    dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "<swift-docc-plugin-version>"),
-    ],
-    targets: [
-        .target(
-            name: "<Name>"
-        ),
-        .testTarget(
-            name: "<Name>Tests",
-            dependencies: ["<Name>"]
-        ),
-    ],
-    swiftLanguageModes: [.v6]
-)
-```
+Template: `templates/common/Package.swift` — read it in full before filling placeholders
 
 **Argument order inside `Package(...)` is not free-form — the compiler enforces a fixed declaration order and
 rejects a manifest that violates it**, confirmed while verifying this skill: placing `dependencies:` after
@@ -369,29 +355,7 @@ nowhere in this skill's own templates).
 
 ### `Sources/<Name>/<Name>.swift`
 
-```swift
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
-
-/// Placeholder type for the `<package-name>` library.
-///
-/// Replace this with the library's real first public type — it exists so the generated
-/// build/test/lint/coverage/docs pipeline has something concrete to succeed against
-/// immediately after scaffolding.
-public struct <Name>Example: Sendable {
-    /// Creates a new example value.
-    public init() {}
-
-    /// Adds two integers together.
-    /// - Parameters:
-    ///   - a: The first addend.
-    ///   - b: The second addend.
-    /// - Returns: The sum of `a` and `b`.
-    public func add(_ a: Int, _ b: Int) -> Int {
-        a + b
-    }
-}
-```
+Template: `templates/common/Sources/{Name}/{Name}.swift` — read it in full before filling placeholders
 
 Named `<Name>Example` rather than the bare `Example` used by this catalog's Java/Android siblings' own placeholder
 type, to avoid colliding with `XCTestCase`/Swift Testing's own vocabulary and with a consumer's likely `Example`
@@ -404,27 +368,11 @@ anyway.
 
 ### `Tests/<Name>Tests/<Name>Tests.swift` — Swift Testing
 
-```swift
-import Testing
-@testable import <Name>
-
-@Test func addReturnsTheSumOfTwoIntegers() async throws {
-    #expect(<Name>Example().add(2, 2) == 4)
-}
-```
+Template: `templates/common/Tests/{Name}Tests/{Name}Tests.swift` — read it in full before filling placeholders
 
 ### `Tests/<Name>Tests/<Name>XCTests.swift` — XCTest
 
-```swift
-import XCTest
-@testable import <Name>
-
-final class <Name>XCTests: XCTestCase {
-    func testAddReturnsTheSumOfTwoIntegers() {
-        XCTAssertEqual(<Name>Example().add(2, 2), 4)
-    }
-}
-```
+Template: `templates/common/Tests/{Name}Tests/{Name}XCTests.swift` — read it in full before filling placeholders
 
 Both files live in the **same** `<Name>Tests` test target — confirmed while verifying this skill that `swift test`
 runs both frameworks together in one invocation with no extra configuration (`swift test --enable-code-coverage`'s
@@ -441,23 +389,7 @@ The same landing-page shape `iru-swift-docc`'s Step 4 requires of every target (
 heading, a one-line summary, `## Overview`, and a `## Topics` section listing the public types), so a later
 `/iru-swift-docc` run finds the catalog already complete instead of flagging it as missing:
 
-```markdown
-# ``<Name>``
-
-The `<package-name>` library.
-
-## Overview
-
-`<Name>` is scaffolded with a single placeholder type, ``<Name>Example``, so the build, test, lint, coverage
-and documentation pipeline has something concrete to succeed against immediately. Replace this paragraph with a
-short description of what the library actually provides once its first real public type lands.
-
-## Topics
-
-### Essentials
-
-- ``<Name>Example``
-```
+Template: `templates/common/Sources/{Name}/{Name}.docc/{Name}.md` — read it in full before filling placeholders
 
 A `.docc` folder containing only this one landing page is a valid, buildable DocC catalog — `swift-docc-plugin`
 auto-discovers any `.docc` directory inside the target's source folder, so nothing in `Package.swift` references
@@ -471,66 +403,7 @@ reported as a warning by `swift package generate-documentation`, not silently dr
 
 ### `.swiftlint.yml`
 
-```yaml
-opt_in_rules:
-  - array_init
-  - closure_end_indentation
-  - closure_spacing
-  - collection_alignment
-  - contains_over_filter_count
-  - contains_over_filter_is_empty
-  - contains_over_first_not_nil
-  - discouraged_optional_boolean
-  - empty_count
-  - empty_string
-  - explicit_init
-  - fatal_error_message
-  - file_header  # omit this line too if "No license" was chosen in Step 2
-  - first_where
-  - force_unwrapping
-  - implicitly_unwrapped_optional
-  - last_where
-  - legacy_random
-  - literal_expression_end_indentation
-  - multiline_arguments
-  - multiline_parameters
-  - operator_usage_whitespace
-  - overridden_super_call
-  - pattern_matching_keywords
-  - prohibited_super_call
-  - redundant_nil_coalescing
-  - redundant_type_annotation
-  - sorted_first_last
-  - strict_fileprivate
-  - toggle_bool
-  - unneeded_parentheses_in_closure_argument
-  - vertical_whitespace_closing_braces
-  - vertical_whitespace_opening_braces
-  - yoda_condition
-
-# Omit this whole `file_header` entry if "No license" was chosen in Step 2
-file_header:
-  required_pattern: |
-    \/\/
-    \/\/ Copyright \(C\) \d{4} .*
-    \/\/
-
-line_length:
-  warning: 120
-  error: 150
-
-excluded:
-  - .build
-  - Tests
-
-# `swiftlint analyze` only (needs a compiler log) — not a lint rule
-analyzer_rules:
-  - unused_import
-
-# The formatter owns layout: swift-format and SwiftFormat both add trailing commas to multi-line collections
-disabled_rules:
-  - trailing_comma
-```
+Template: `templates/common/.swiftlint.yml` — read it in full before filling placeholders
 
 **Why this shape** (verified on 2026-10-16 with SwiftLint 0.65.1 and the Swift 6.4 toolchain's `swift format`, in
 `$TMPDIR/iru-verify/swift-lint-fix/`, against a `swift package init --type library` package carrying this file and
@@ -556,60 +429,7 @@ doesn't own.
 
 ### `.swift-format` (when `formatter: swift-format`, the default)
 
-```json
-{
-  "version": 1,
-  "lineLength": 120,
-  "indentation": {
-    "spaces": 4
-  },
-  "tabWidth": 4,
-  "rules": {
-    "AllPublicDeclarationsHaveDocumentation": true,
-    "AlwaysUseLiteralForEmptyCollectionInit": true,
-    "AlwaysUseLowerCamelCase": true,
-    "AmbiguousTrailingClosureOverload": true,
-    "AvoidRetroactiveConformances": true,
-    "BeginDocumentationCommentWithOneLineSummary": true,
-    "DoNotUseSemicolons": true,
-    "DontRepeatTypeInStaticProperties": true,
-    "FileScopedDeclarationPrivacy": true,
-    "FullyIndirectEnum": true,
-    "GroupNumericLiterals": true,
-    "IdentifiersMustBeASCII": true,
-    "NeverForceUnwrap": true,
-    "NeverUseForceTry": true,
-    "NeverUseImplicitlyUnwrappedOptionals": true,
-    "NoAccessLevelOnExtensionDeclaration": true,
-    "NoAssignmentInExpressions": true,
-    "NoBlockComments": true,
-    "NoCasesWithOnlyFallthrough": true,
-    "NoEmptyTrailingClosureParentheses": true,
-    "NoLabelsInCasePatterns": true,
-    "NoLeadingUnderscores": true,
-    "NoParensAroundConditions": true,
-    "NoPlaygroundLiterals": true,
-    "NoVoidReturnOnFunctionSignature": true,
-    "OmitExplicitReturns": false,
-    "OneCasePerLine": true,
-    "OneVariableDeclarationPerLine": true,
-    "OnlyOneTrailingClosureArgument": true,
-    "OrderedImports": true,
-    "ReplaceForEachWithForLoop": true,
-    "ReturnVoidInsteadOfEmptyTuple": true,
-    "TypeNamesShouldBeCapitalized": true,
-    "UseEarlyExits": true,
-    "UseExplicitNilCheckInConditions": true,
-    "UseLetInEveryBoundCaseVariable": true,
-    "UseShorthandTypeNames": true,
-    "UseSingleLinePropertyGetter": true,
-    "UseSynthesizedInitializer": true,
-    "UseTripleSlashForDocumentationComments": true,
-    "UseWhereClausesInForLoops": true,
-    "ValidateDocumentationComments": true
-  }
-}
-```
+Template: `templates/swift-format/.swift-format` — read it in full before filling placeholders
 
 **Verified working end-to-end** against Swift 6.4/Xcode 27 (Step 10): `swift format dump-configuration` prints
 the toolchain's own default ruleset (all keys above are real, current rule ids taken straight from that output —
@@ -625,15 +445,7 @@ separate version for this skill to look up or pin (unlike `swiftlint`/`swiftform
 
 ### `.swiftformat` (when `formatter: swiftformat` — **unverified locally**, see Step 2)
 
-```
---swiftversion 6.0
---indent 4
---maxwidth 120
---self remove
---trailingcommas always
---wraparguments before-first
---wrapparameters before-first
-```
+Template: `templates/swiftformat/.swiftformat` — read it in full before filling placeholders
 
 This is the third-party nicklockwood/SwiftFormat tool's own line-based config format (distinct from Apple's
 `swift-format` JSON above, despite the similar name) — every flag here is `swiftformat`'s documented CLI option
@@ -643,12 +455,7 @@ re-verify once `swiftformat` is actually installable in the environment this sca
 
 ## Step 8 — Reference template: `.spi.yml` (only when `publish: yes`)
 
-```yaml
-version: 1
-builder:
-  configs:
-    - documentation_targets: [<Name>]
-```
+Template: `templates/common/.spi.yml` — read it in full before filling placeholders
 
 This is the Swift Package Index's own build-configuration file (https://swiftpackageindex.com) — it tells the
 index which target(s) to build DocC documentation for when the package is submitted there. It has no bearing on
@@ -660,18 +467,7 @@ answer — see Step 10's quirks for the exact command and its default output loc
 
 ## Step 9 — Reference template: `sonar-project.properties` (only when `sonar` is not `none`)
 
-```properties
-sonar.projectKey=<sonar-project-key>
-sonar.organization=<sonar-organization>
-sonar.host.url=<sonar-host-url>
-
-sonar.sources=Sources
-sonar.tests=Tests
-sonar.swift.file.suffixes=.swift
-
-sonar.coverageReportPaths=sonarqube-generic-coverage.xml
-sonar.swift.swiftLint.reportPaths=swiftlint.json
-```
+Template: `templates/common/sonar-project.properties` — read it in full before filling placeholders
 
 - `sonar.organization` is only meaningful for `sonar: cloud` (SonarCloud) — omit that line entirely for `sonar:
   self-hosted` unless the user's self-hosted server also has organizations enabled (Step 2).

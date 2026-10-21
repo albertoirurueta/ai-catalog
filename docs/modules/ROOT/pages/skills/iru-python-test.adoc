@@ -16,6 +16,10 @@ For a Django project with pytest-django and pytest-playwright it also supports a
 
 xref:index.adoc#group-python[Python Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-python` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-python@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

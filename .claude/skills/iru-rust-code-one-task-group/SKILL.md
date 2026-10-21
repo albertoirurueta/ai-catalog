@@ -1,35 +1,6 @@
 ---
 name: iru-rust-code-one-task-group
-description: >-
-  Implement one bucket of Rust tasks from a plan's task group end-to-end — in any Cargo package or workspace (an
-  agent-friendly clap / Ratatui command-line tool scaffolded by `iru-setup-rust-cli`, or any other Rust library,
-  service or CLI): detects the shape once (workspace members and lib/bin targets, edition/MSRV, features, clap,
-  ratatui, tokio, the CLI contract, `tests/cli.rs`-style end-to-end tests, golden/snapshot files, `#[ignore]`d
-  container-backed tests using testcontainers, an `xtask` docs generator, `[lints]`/`deny.toml`), captures a single
-  pre-change quality baseline for the whole bucket via `iru-rust-code-quality`, runs `iru-rust-code-one-task` once
-  per task (in parallel `iru-isolated-skill-executor` agents when the group is marked parallelizable; tasks sharing
-  `src/cli.rs`/the dispatch in `lib.rs`, a `mod` declaration file, the exit-code/output modules, `Cargo.toml`/
-  `Cargo.lock`, or a golden file always sequential) to implement each one with its tests, rustfmt of its own files and
-  a `cargo check --all-targets --locked` compile-check, then validates the entire bucket once, cheapest first, every
-  check delegated to an `iru-gate-runner` agent so no raw report lands in this context — license headers on `.rs`
-  files via `iru-check-license`, rustdoc via `iru-rust-rustdoc` (plus regenerating committed CLI docs through the
-  crate's `xtask`), scoped tests via `iru-rust-test`, an 80% line-coverage gate per changed source file via
-  `iru-rust-coverage` (cargo-llvm-cov, container-free tests only, end-to-end runs of the binary included; `xtask`/
-  `build.rs` and a truly thin `main.rs` reported "not measured" only when they aren't measurable), the full suite
-  including doctests, and clippy + rustfmt + cargo-deny via `iru-rust-code-quality` diffed against that one baseline;
-  for a bucket that added or changed terminal-UI screens/components, a UI stage checking that every one of them has
-  `.txt` captures in `.ui-screenshots/` for each of its states × `.ui-quality.yml` directions × themes and applying the
-  accessibility level (enforce → violations fail the bucket, report → listed); last, and only when the repository has
-  them, the `#[ignore]`d container-backed tests (`iru-rust-test` with
-  `ignored: only`) serialized repository-wide behind the shared atomic-`mkdir` `.integration-test.lock` (owner file,
-  stale after 60 minutes, bounded ~45-minute wait, released on every exit path, `lock: held` passed to the gate) —
-  plain CLI end-to-end tests need no lock. Docker unavailable makes that stage "unverified", never silently skipped.
-  `iru-rust-code-one-task` checks off each task's box itself with a "group validation pending" note; this skill
-  backfills any that didn't land and replaces each note with the final outcome. Invoke as
-  `/iru-rust-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
-  group's `Parallelizable` verdict, and any relevant "Current code state" context. Used by `iru-code-one-task-group`,
-  which invokes it once per plan group for its `rust`-tagged tasks; the Rust counterpart to
-  `iru-go-code-one-task-group` and `iru-windows-code-one-task-group`.
+description: "Invoked as /iru-rust-code-one-task-group <bucket text> (group tasks, Parallelizable verdict, code state) via Skill. Implements one Rust task bucket: one baseline, iru-rust-code-one-task per task (parallel when allowed), then validates once (license, rustdoc, tests, 80% coverage, clippy/deny, locked container tests); finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(cargo *) Bash(rustup show *) Bash(rustup target list *) Bash(uname *) Bash(docker info *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---

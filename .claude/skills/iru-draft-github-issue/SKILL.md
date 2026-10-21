@@ -1,6 +1,6 @@
 ---
 name: iru-draft-github-issue
-description: Interview the user and write a complete, spec-style GitHub issue - functional (Context, functional requirements, acceptance criteria, optional technical details, out of scope, dependencies, task details) or documentation (audience, technical vs. non-technical page structure, diagrams, bibliography, acceptance criteria) - then review the draft automatically in a loop with `iru-review-github-issue` (resolving gaps from the codebase first, asking the user for the rest), offer `iru-split-github-issue` when the issue is too large, show the final draft and create the issue only after confirmation. Invoke as `/iru-draft-github-issue`, `/iru-draft-github-issue functional`, `/iru-draft-github-issue documentation`, or with a short description after the optional kind (`/iru-draft-github-issue functional <short description>`). Runs `iru-explore` first. GitHub-only (stops on other hosts). Use for detailed spec-style issues; `iru-create-github-issue` remains the quick path for a simple issue. Not for issues that already exist (use `iru-review-github-issue` or `iru-split-github-issue`).
+description: "Invoke as `/iru-draft-github-issue [functional|documentation] [<short description>]`. Interviews the user and writes a complete spec-style GitHub issue, auto-reviewed with `iru-review-github-issue`, optionally split via `iru-split-github-issue`, created after confirmation. GitHub-only. Use for detailed specs; `iru-create-github-issue` is the quick path."
 model: sonnet
 ---
 
@@ -13,6 +13,9 @@ confirmation before creating anything). Body templates are in `reference/issue-t
 skill's directory); read it before Step 4.
 
 Never guess. A missing, doubtful or inconsistent point is put to the user as a question.
+
+Use this skill for detailed, spec-style issues; `iru-create-github-issue` remains the quick path for a simple issue. It is
+not for issues that already exist — use `iru-review-github-issue` or `iru-split-github-issue` for those.
 
 ## Step 1 — Confirm this repository is hosted on GitHub
 

@@ -1,33 +1,6 @@
 ---
 name: iru-rust-code-one-task
-description: >-
-  Implement a single task from a Rust `implementation_plan.md`-style task list — just the implementation and its
-  tests — in any Cargo package or workspace: an agent-friendly command-line tool scaffolded by `iru-setup-rust-cli`
-  (logic in `src/lib.rs`, thin `src/main.rs`, clap 4, optional Ratatui UI, `tests/cli.rs`, `xtask/`) or any other
-  Rust library, service or CLI. Detects at runtime, from `cargo metadata` and the manifests, the workspace vs.
-  single-crate layout, lib/bin targets, edition and `rust-version` (MSRV), `rust-toolchain.toml`, clap derive vs.
-  builder, ratatui/crossterm, tokio, the test crates (assert_cmd, predicates, snapbox/trycmd, insta, tempfile,
-  testcontainers), the `[lints]`/`clippy.toml`/`rustfmt.toml`/`deny.toml` configuration, an `xtask` member, and
-  whether the project follows the catalog's CLI contract (an exit-code enum mapped to `ExitCode`, `--format`/`--json`,
-  a JSON error envelope) — then loads only the matching guidance from this skill's own `reference/` directory
-  (always: Rust code style — edition 2024 rules, logic in the lib, naming, ownership, the lint set, no new
-  dependencies — and testing — unit tests with injected writers, `assert_cmd` end-to-end tests with a cleared
-  environment that still forwards `LLVM_PROFILE_FILE`, golden JSON, exit-code tables, no-TTY and `NO_COLOR` tests;
-  as needed: error handling with `thiserror` and one failure→exit-code mapping, rustdoc, the shared CLI contract,
-  clap, output/colour/prompts/signals/broken pipe, Ratatui with `TestBackend`, the catalog's UI contract on Ratatui
-  when a task touches the terminal UI — `Widget` components, `Action` events, lists rendering only the visible window,
-  state × direction × theme UI tests captured as `.txt` into `.ui-screenshots/`, asserted accessibility checks at the
-  `.ui-quality.yml` level —, security — argv-only processes, path
-  canonicalization, redacted secrets, `unsafe_code = "forbid"` — and async/tokio only when the project already uses
-  it). Re-checks the current code state, implements exactly what the task specifies, writes/updates its tests,
-  formats only its own files with rustfmt, compile-checks with `cargo check --all-targets --locked` (plus
-  `--all-features` when the package has features), then — if the task didn't stop on a blocker — immediately checks
-  off this task's own checkbox (and its sub-tasks') in `implementation_plan.md` with a "group validation pending"
-  note, before handing back a short summary. Does not run tests, clippy, coverage, `cargo deny`, `cargo doc`, or
-  license-header checks — those happen once per task group in `iru-rust-code-one-task-group`, which invokes this skill
-  once per task (in parallel when the group allows it, through `iru-isolated-skill-executor`). Invoke as
-  `/iru-rust-code-one-task <task description>`, passing the task's own text — including its exact
-  `implementation_plan.md` checkbox line(s) — as the argument. The coding skill for plan tasks tagged `rust`.
+description: "Invoked as /iru-rust-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Rust (Cargo package or workspace, clap/Ratatui CLI) plan task and its tests, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-rust-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(cargo check *) Bash(cargo metadata *) Bash(cargo tree *) Bash(cargo fmt *) Bash(rustfmt *) Bash(cargo --version) Bash(rustc --version) Bash(rustup show *) Bash(rustup target list *) Bash(uname *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

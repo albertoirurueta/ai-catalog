@@ -1,34 +1,6 @@
 ---
 name: iru-nextjs-code-one-task-group
-description: >-
-  Implement one bucket of Next.js tasks from a plan's task group end-to-end — detects the project profile once
-  (Next.js 14/15/16, App vs Pages Router, `cacheComponents` on or off, `src/` layout, `output` mode, Vitest or Jest,
-  Playwright, package manager), captures a single pre-change quality baseline for the whole bucket (and, when the
-  bucket modifies existing routes, a baseline `next build` route table), runs `iru-nextjs-code-one-task` once per
-  task (in parallel agents when the group is marked parallelizable), then validates the entire bucket once,
-  cheapest first, every check delegated to an `iru-gate-runner` agent so no raw report lands in this context —
-  license headers via `iru-check-license`, TSDoc via `iru-typescript-tsdoc`, scoped unit tests via
-  `iru-typescript-test`, an 80% coverage gate via `iru-typescript-coverage` measured from unit tests alone (async
-  Server Component pages/layouts that only compose data and are reachable only end-to-end are reported as named
-  exceptions, never waved through and never failed blindly), the full unit suite, ESLint/Biome plus
-  `next typegen` + `tsc --noEmit` via `iru-typescript-code-quality` diffed against the baseline, then one
-  `next build` whose route table (static/SSG/dynamic/partial-prerender symbols) is parsed for the bucket's routes and
-  compared against the baseline table and each task's declared intent, flagging any route whose rendering mode
-  changed unexpectedly, and last the Playwright end-to-end suite via `iru-typescript-test` with the `e2e` selector —
-  which, when the bucket touched UI, is also the UI stage of the catalog's UI contract: the component-gallery and
-  screen/flow specs run, every added/changed page and Client Component must have captures in `.ui-screenshots/` for
-  each visual state × `.ui-quality.yml` direction × theme, and the axe results are applied at the configured
-  `enforce`/`report`/`off`/`none` level.
-  Because `next build` refuses to run twice in one project and Playwright's web server builds and serves the same
-  app, the build and e2e stages are serialized repository-wide behind the same atomic `mkdir`-based
-  `.integration-test.lock` as `iru-java-springboot-code-one-task-group` (owner file, stale after 60 minutes, give up
-  after about 45 minutes and report the stage unverified, released on every exit path). A missing Playwright browser,
-  an occupied port, or a build that needs unavailable environment variables is reported as unverified, never as a
-  pass. `iru-nextjs-code-one-task` checks off each task's box itself with a "group validation pending" note; this
-  skill backfills any that didn't land and replaces each note with the final outcome. Invoke as
-  `/iru-nextjs-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
-  group's `Parallelizable` verdict, and any relevant "Current code state" context. The Next.js counterpart to
-  `iru-typescript-code-one-task-group`; used by `iru-code-one-task-group` for its `nextjs`-tagged tasks.
+description: "Invoked as /iru-nextjs-code-one-task-group <bucket text> (group tasks, Parallelizable verdict, code state) via Skill. Implements one Next.js task bucket: one baseline, iru-nextjs-code-one-task per task (parallel when allowed), then validates once (license, TSDoc, tests, 80% coverage, lint/tsc, next build routes, locked Playwright); finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(node -p *) Bash(perl *) Bash(lsof *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---

@@ -1,7 +1,7 @@
 ---
 name: iru-setup-android-github-workflows
-description: Create or update the `develop.yml`/`main.yml`/`sync.yml` (gitflow) or `main.yml`/`publish.yml` (main-only) GitHub Actions workflows plus `.github/dependabot.yml` and `security.yml` for an Android/Gradle repository produced by `iru-setup-android-library` or `iru-setup-android-app` — build, unit test, optional instrumented test on a `reactivecircus/android-emulator-runner` emulator, the UI tests' `.ui-screenshots/` captures (plus any device captures) uploaded as a 7-day `ui-screenshots` artifact from the same job, lint with SARIF upload, unit-test coverage via AGP's own `createDebugUnitTestCoverageReport` task (with a vendored-`jacococli.jar` fallback), an optional SonarQube/SonarCloud scan (`:lib:sonar`/`:app:sonar`), a Dokka + Antora documentation build published to GitHub Pages (or, with `pages: no`, still built and uploaded as a workflow artifact instead), and — for the `library` flavor — an optional Maven Central publish, or — for the `app` flavor — a signed release build uploaded to Google Play or Firebase App Distribution. Invoke as `/iru-setup-android-github-workflows`. Accepts pre-resolved inputs via `args` (`key: value` lines): `flavor` (`library`/`app`, required), `branching` (`gitflow`/`main-only`, default `gitflow`), `integration-branch` (default `develop`), `stable-branch` (default `main`), `java-version` (default `17`), `run-instrumented-tests` (`yes`/`no`), `api-level` (default `35`), plus this catalog's shared workflow-args vocabulary — `open-source`, `visibility` (`public`/`private`/`internal`), `ci-tests` (`unit`/`full`, mapped onto `run-instrumented-tests` unless that key is given explicitly), `pages` (`yes`/`no`), `publish` (library only), `distribution` (`none`/`internal`/`store`, app only), `sonar` (`cloud`/`self-hosted`/`none` + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`), and the four `security-*` opt-outs plus two security opt-ins — so an orchestrating skill can supply them without re-prompting; when run standalone it resolves `visibility` itself (`gh repo view`) and asks `sonar`/`ci-tests`/`pages` with the GitHub Actions-minutes, SonarCloud and Pages cost facts for that visibility. Ships with generic example templates (genericized, no real repo/org/person names) derived from a real Android library repository's actual `main.yml`/`publish.yml` (linked in Step 3) — see Step 6 for how they were adapted into the `gitflow` variant's `develop.yml`/`main.yml`/`sync.yml`. Announces whether it is creating the workflows from scratch or updating an existing pipeline; for every workflow/script/Dependabot file that already exists it warns and asks Update (merge, preserving any step/job this skill doesn't own) / Keep as is / Replace (regenerate from the template) / Stop, naming any concrete mismatch with this run's choices, unless `on-existing` decides. Use whenever an Android/Gradle repository needs this CI/CD release and security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
-model: haiku
+description: "Invoked as /iru-setup-android-github-workflows with optional key: value args (flavor: library|app is required), usually by iru-setup-android-repository. Creates or updates the GitHub Actions build, test, lint, coverage, docs, release and security workflows plus Dependabot for an Android/Gradle repository, asking Update/Keep/Replace for existing files."
+model: sonnet
 ---
 
 # Setup Android GitHub Workflows
@@ -151,6 +151,8 @@ pricing" (verified October 2026 against docs.github.com) and tell the user to do
 or other accessibility reports into the `ui-screenshots` artifacts, and drop any accessibility-only job or step;
 the UI test run and the screenshot upload are unaffected. With `enforce`, `report` or `off` the workflows are
 generated exactly as below (`off` runs no automated checks, so no accessibility report exists to upload either).
+
+**Templates.** The workflow, script and Dependabot templates of Steps 4, 5, 7 and 8 are files under this skill's `templates/` directory, not inline text. Read only the template files for the `branching` variant resolved in Step 1 (`templates/gitflow/` or `templates/main-only/`, plus `templates/common/`; the index in Step 3 says which applies); never read the other variant's files.
 
 ## Step 1 — Survey the target repository
 
@@ -302,6 +304,19 @@ in Step 4/6's templates.
 
 ## Step 3 — Reference workflows this skill's templates are derived from
 
+**Templates.** Every template of Steps 4, 5, 7 and 8 is a file under `templates/<variant>/<path of the generated file>`, holding the exact bytes of that generated file's template. Read only the files for the `branching` variant resolved in Step 1, each in full, before filling placeholders:
+
+| Generated file | Template | Applies when |
+|---|---|---|
+| `.github/workflows/develop.yml` | `templates/gitflow/.github/workflows/develop.yml` | `branching: gitflow` |
+| `.github/workflows/main.yml` | `templates/gitflow/.github/workflows/main.yml` | `branching: gitflow` (skeleton: copy `develop.yml`'s `build` job steps verbatim where marked) |
+| `.github/workflows/sync.yml` | `templates/gitflow/.github/workflows/sync.yml` | `branching: gitflow` only (written together with `sync_versions.py`) |
+| `.github/scripts/sync_versions.py` | `templates/gitflow/.github/scripts/sync_versions.py` | `branching: gitflow` only (written together with `sync.yml`) |
+| `.github/workflows/main.yml` | `templates/main-only/.github/workflows/main.yml` | `branching: main-only` |
+| `.github/workflows/publish.yml` | `templates/main-only/.github/workflows/publish.yml` | `branching: main-only` |
+| `.github/workflows/security.yml` | `templates/common/.github/workflows/security.yml` | always, for every `branching` (individual jobs gated by the `security-*` args) |
+| `.github/dependabot.yml` | `templates/common/.github/dependabot.yml` | always, for every `branching` |
+
 The `main-only` branching variant's `main.yml`/`publish.yml` templates (Step 6) are genericized directly from a
 real Android library repository's actual workflows:
 <https://github.com/albertoirurueta/irurueta-android-glutils/blob/main/.github/workflows/main.yml> and
@@ -327,206 +342,7 @@ marked below.
 
 ### `develop.yml`
 
-```yaml
-name: Develop
-
-on:
-  push:
-    branches: [ <integration-branch> ]
-  workflow_dispatch:
-
-permissions:
-  checks: write
-  pull-requests: write
-  contents: write
-  security-events: write   # required by github/codeql-action/upload-sarif (the Lint SARIF upload steps below)
-
-jobs:
-  build:
-    name: Build and execute tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      # Only when run-instrumented-tests: yes — the emulator needs hardware acceleration, which GitHub-hosted
-      # Linux runners don't expose by default.
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Set up JDK <java-version>
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '<java-version>'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          dependency-graph: generate-and-submit
-
-      # run-instrumented-tests: yes — runs the build/test/lint/docs command INSIDE the emulator so
-      # connectedAndroidTest has a device to target. flavor: library includes `<lib-module>:dokkaGenerate` in
-      # the same script (matching the reference repository exactly); flavor: app omits it (no docs module).
-      - name: Run tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: <api-level>
-          target: google_apis
-          arch: x86_64
-          script: ./gradlew clean test connectedAndroidTest lint <lib-module>:dokkaGenerate
-
-      # run-instrumented-tests: no — plain Gradle invocation, no emulator/KVM step above either.
-      - name: Run tests
-        run: ./gradlew clean test lint <lib-module>:dokkaGenerate
-
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: (!cancelled())
-        with:
-          files: |
-            <app-module>/build/test-results/**/*.xml
-            <app-module>/build/outputs/androidTest-results/**/*.xml
-            <lib-module>/build/test-results/**/*.xml
-            <lib-module>/build/outputs/androidTest-results/**/*.xml
-
-      # UI screenshots (catalog UI contract): the Robolectric/Roborazzi UI tests `test` runs write
-      # .ui-screenshots/<kind>/<Id>/<state>--<direction>--<theme>.png at the repository root; with
-      # run-instrumented-tests: yes, device captures written through AndroidX Test Storage land under each
-      # module's connected_android_test_additional_output. Evidence only — nothing is published.
-      - name: Upload UI screenshots
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ui-screenshots
-          path: |
-            .ui-screenshots/
-            */build/outputs/connected_android_test_additional_output/**/ui-screenshots/
-          retention-days: 7
-          if-no-files-found: ignore
-
-      # Preferred path — confirmed working against the AGP version iru-setup-android-library/-app resolved:
-      # createDebugUnitTestCoverageReport emits build/reports/coverage/test/debug/report.xml directly, no
-      # .exec-to-XML conversion needed. Use this form unless Step 1's survey found a vendored
-      # jacoco-*/lib/jacococli.jar (the fallback immediately below). IMPORTANT — only target the module(s)
-      # that actually set `enableUnitTestCoverage = true` in their buildTypes.debug block (Step 1's survey):
-      # `iru-setup-android-library`'s OWN sample `app/` module does NOT set it (confirmed by running this
-      # task against it — `Cannot locate tasks that match ':<app-module>:createDebugUnitTestCoverageReport'`,
-      # a hard failure, not a no-op), so for `flavor: library` this targets `<lib-module>` ONLY, even when a
-      # sample `app/` module also exists. For `flavor: app`, `iru-setup-android-app`'s own template DOES set
-      # it, so this targets `<app-module>` instead.
-      - name: Convert unit tests coverage results
-        run: ./gradlew <lib-module>:createDebugUnitTestCoverageReport
-      # flavor: app instead: run: ./gradlew <app-module>:createDebugUnitTestCoverageReport
-
-      # Fallback — only when Step 1's survey found a vendored jacoco-<ver>/lib/jacococli.jar (an older layout
-      # some repositories still carry over from before AGP emitted the XML report directly), or the user
-      # explicitly asked for it instead. Converts the raw .exec file AGP still writes alongside the XML by
-      # hand — this mirrors the reference repository's own older CI step, with paths corrected to where AGP
-      # actually writes the .exec file under the version this catalog's Android skills resolved (NOT
-      # `<lib-module>/build/jacoco/testReleaseUnitTest.exec`, which is where the reference repository's
-      # older CI looked, and is stale).
-      - name: Convert unit tests coverage results (vendored jacococli.jar fallback)
-        run: |
-          mkdir -p <lib-module>/build/reports/coverage/test/debug || true
-          java -jar jacoco-<jacoco-cli-version>/lib/jacococli.jar report \
-            <lib-module>/build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec \
-            --classfiles <lib-module>/build/tmp/kotlin-classes/debug \
-            --sourcefiles <lib-module>/src/main/java \
-            --xml <lib-module>/build/reports/coverage/test/debug/report.xml || true
-
-      - name: Upload lint SARIF results
-        if: (!cancelled())
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: <lib-module>/build/reports/lint-results-debug.sarif
-
-      # Only when app/** exists alongside lib/** (the iru-setup-android-library sample module), or flavor: app
-      - name: Upload app lint SARIF results
-        if: (!cancelled())
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: <app-module>/build/reports/lint-results-debug.sarif
-
-      # Omit this whole step if sonar: none (Step 0). flavor: library runs `:<lib-module>:sonar`; flavor: app
-      # runs `:<app-module>:sonar` instead (there is no lib module to scan).
-      - name: Run SonarCloud analysis
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew :<lib-module>:sonar
-
-      # Omit this whole block if flavor: app — no docs module to publish.
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Install Antora
-        run: |
-          mkdir -p docs-toolchain && cd docs-toolchain
-          npm i -D -E antora
-          npm i @antora/lunr-extension
-          npm i @sntke/antora-mermaid-extension
-          npm i @djencks/asciidoctor-mathjax
-
-      - name: Build Antora docs
-        run: cd docs && npx antora antora-playbook.yml
-
-      - name: Merge Dokka API docs into the Antora site
-        run: |
-          touch ./docs/build/site/.nojekyll
-          mkdir -p ./docs/build/site/api
-          cp -r ./<lib-module>/build/dokka/html/. ./docs/build/site/api/
-
-      # pages: yes — feeds the deploy-docs job below.
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: ./docs/build/site
-
-      # pages: no — replaces the step above: the docs are still built (which validates them) but only kept as a
-      # downloadable workflow artifact; nothing is published, and the deploy-docs job below is omitted.
-      - name: Upload docs artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: docs-site
-          path: ./docs/build/site
-      # End of the flavor: app omission block
-
-      # Omit this whole step if publish: no (Step 0). flavor: library only — a plain snapshot publish, no
-      # release build/signing (the version in libraryVersion is already a -SNAPSHOT string on this branch).
-      - name: Publish snapshot to Maven Central
-        run: ./gradlew <lib-module>:publishToMavenCentral --no-configuration-cache
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
-
-  # Omit this whole job if flavor: app (no docs to deploy) or pages: no (docs only uploaded as an artifact) —
-  # its pages: write / id-token: write permissions exist only for this deploy and go with it.
-  deploy-docs:
-    name: Deploy docs to GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
-```
+Template: `templates/gitflow/.github/workflows/develop.yml` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -552,81 +368,7 @@ Identical to every step under `develop.yml`'s `build` job above, verbatim — in
 `run-instrumented-tests`/vendored-jar/`sonar`/`flavor` gating — except the trigger, and the release-only
 addition appended at the end of the job:
 
-```yaml
-name: Release
-
-on:
-  release:
-    types: [released]
-  workflow_dispatch:
-
-permissions:
-  checks: write
-  pull-requests: write
-  contents: write
-  security-events: write   # required by github/codeql-action/upload-sarif (the Lint SARIF upload steps below)
-
-jobs:
-  build:
-    name: Build and execute tests
-    runs-on: ubuntu-latest
-    steps:
-      # ... identical to every step under develop.yml's `build` job above, verbatim ...
-
-      # flavor: library, publish: yes — a full release build + publish, appended after every step above
-      # (replaces develop.yml's plain snapshot-publish step with the real release path).
-      - name: Release build
-        run: ./gradlew :<lib-module>:assembleRelease
-
-      - name: Publish to Maven Central
-        run: ./gradlew <lib-module>:publishAndReleaseToMavenCentral --no-configuration-cache
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
-
-      # flavor: app, distribution != none — signs and bundles the release build, then uploads per
-      # `distribution`. iru-setup-android-app's app/build.gradle.kts reads these four EXACT env var names
-      # (SIGNING_STORE_FILE / SIGNING_STORE_PASSWORD / SIGNING_KEY_ALIAS / SIGNING_KEY_PASSWORD) via
-      # System.getenv() — map the ANDROID_KEYSTORE_*/ANDROID_KEY_* secrets onto them here.
-      - name: Decode Android keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > <app-module>/release.jks
-
-      - name: Build signed release bundle
-        run: ./gradlew :<app-module>:bundleRelease
-        env:
-          SIGNING_STORE_FILE: release.jks
-          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
-      # distribution: store, and no com.github.triplet.play plugin found in Step 1's survey — the
-      # workflow-level upload action. If that plugin WAS found instead, replace this step with
-      # `run: ./gradlew :<app-module>:publishBundle` (with the same PLAY_SERVICE_ACCOUNT_JSON-derived
-      # credentials the plugin's own `play { serviceAccountCredentials.set(...) }` block expects) and drop
-      # this action entirely.
-      - name: Upload to Google Play
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: <application-id>
-          releaseFiles: <app-module>/build/outputs/bundle/release/<app-module>-release.aab
-          track: production
-
-      # distribution: internal
-      - name: Distribute via Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_CREDENTIALS }}
-          groups: internal-testers
-          file: <app-module>/build/outputs/bundle/release/<app-module>-release.aab
-
-  # Same deploy-docs job as develop.yml (flavor: library, pages: yes only) — omitted here for brevity, copy
-  # verbatim.
-```
+Template: `templates/gitflow/.github/workflows/main.yml` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -648,127 +390,7 @@ the two stay consistent.
 
 ### `sync.yml`
 
-```yaml
-name: Sync
-
-# After a release is published from <stable-branch>, open a pull request that merges it back into
-# <integration-branch> and bumps the development -SNAPSHOT version, so <integration-branch> never has to wait
-# for a manual sync branch.
-on:
-  release:
-    types: [released]
-
-permissions:
-  contents: write
-  pull-requests: write
-
-jobs:
-  sync:
-    name: Open sync PR from the released branch into <integration-branch>
-    runs-on: ubuntu-latest
-    if: github.event.release.target_commitish == '<stable-branch>'
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Compute versions and branch names
-        id: versions
-        run: |
-          set -euo pipefail
-          RELEASE_VERSION="${{ github.event.release.tag_name }}"
-          RELEASE_VERSION="${RELEASE_VERSION#v}"
-
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
-          if [ -z "${MAJOR:-}" ] || [ -z "${MINOR:-}" ] || [ -z "${PATCH:-}" ]; then
-            echo "::error::Release tag '$RELEASE_VERSION' is not in X.Y.Z form; cannot compute the next snapshot."
-            exit 1
-          fi
-
-          NEXT_PATCH=$((PATCH + 1))
-          NEXT_SNAPSHOT="${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT"
-          SYNC_BRANCH="sync_${MAJOR}.${MINOR}.${NEXT_PATCH}"
-
-          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "next_snapshot=$NEXT_SNAPSHOT" >> "$GITHUB_OUTPUT"
-          echo "sync_branch=$SYNC_BRANCH" >> "$GITHUB_OUTPUT"
-
-      - name: Skip if this release was already synced
-        id: guard
-        run: |
-          set -euo pipefail
-          if git ls-remote --exit-code --heads origin "${{ steps.versions.outputs.sync_branch }}" >/dev/null 2>&1; then
-            echo "::notice::${{ steps.versions.outputs.sync_branch }} already exists on origin; skipping."
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Configure git identity
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Create sync branch from <integration-branch>
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git fetch origin <integration-branch> <stable-branch>
-          git checkout -b "${{ steps.versions.outputs.sync_branch }}" "origin/<integration-branch>"
-
-      - name: Merge the released branch into the sync branch
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          git merge --no-ff --no-edit \
-            -m "Merge <stable-branch> (${{ steps.versions.outputs.release_version }}) into <integration-branch>" \
-            "origin/<stable-branch>"
-
-      - name: Set up Python
-        if: steps.guard.outputs.exists == 'false'
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.x'
-
-      - name: Bump the development snapshot version
-        if: steps.guard.outputs.exists == 'false'
-        env:
-          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
-          NEXT_SNAPSHOT: ${{ steps.versions.outputs.next_snapshot }}
-        run: python3 .github/scripts/sync_versions.py
-
-      - name: Commit the version bump
-        if: steps.guard.outputs.exists == 'false'
-        run: |
-          # --ignore-errors keeps a missing README/docs tree (or module) from aborting the step with
-          # "fatal: pathspec ... did not match any files"; whatever does exist is staged.
-          git add --ignore-errors -- <lib-module>/build.gradle.kts <app-module>/build.gradle.kts README.md docs/antora.yml docs/modules/ROOT/pages || true
-          git diff --cached --quiet || git commit -m "Sync ${{ steps.versions.outputs.next_snapshot }}"
-
-      - name: Push sync branch
-        if: steps.guard.outputs.exists == 'false'
-        run: git push origin "${{ steps.versions.outputs.sync_branch }}"
-
-      - name: Ensure the sync label exists
-        if: steps.guard.outputs.exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh label create sync --description "Sync pull request from a release branch back into <integration-branch>" --color 0e8a16 \
-            || gh label list --search sync >/dev/null
-
-      - name: Open pull request into <integration-branch>
-        if: steps.guard.outputs.exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr create \
-            --base <integration-branch> \
-            --head "${{ steps.versions.outputs.sync_branch }}" \
-            --title "Sync ${{ steps.versions.outputs.next_snapshot }}" \
-            --body "Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${{ steps.versions.outputs.release_version }}\`, and bumps the development version to \`${{ steps.versions.outputs.next_snapshot }}\` in \`<lib-module>/build.gradle.kts\`/\`<app-module>/build.gradle.kts\`, \`README.md\`, and the Antora docs." \
-            --label sync
-```
+Template: `templates/gitflow/.github/workflows/sync.yml` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -799,143 +421,7 @@ environment and rewrites every version reference the merge step doesn't already 
 same rewrite targets and regex shapes as `iru-android-bump-version` (Steps 3/4/8 of that skill), so a manual
 `/iru-android-bump-version` run and this CI-driven script never drift apart:
 
-```python
-#!/usr/bin/env python3
-"""Rewrites version references after a release, for the Sync workflow.
-
-Reads RELEASE_VERSION and NEXT_SNAPSHOT from the environment and updates
-<lib-module>/build.gradle.kts's `val libraryVersion`, <app-module>/build.gradle.kts's
-`versionName` (and, only when the release itself is not a -SNAPSHOT, its `versionCode`
-— see iru-android-bump-version's Step 4 for the same rule), README.md, docs/antora.yml,
-and any Antora page that carries the same "Latest release" / "Latest snapshot"
-dependency snippets as README.md.
-
-CHANGELOG.md is intentionally left untouched: its release section and fresh
-"[Unreleased]" heading are written before the tag is published, and arrive on
-<integration-branch> via the merge that precedes this script, not by bumping a
-version string.
-"""
-import os
-import re
-import sys
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-
-def update_lib_module(next_snapshot):
-    path = REPO_ROOT / "<lib-module>" / "build.gradle.kts"
-    if not path.exists():
-        return
-    text = path.read_text()
-    updated, count = re.subn(
-        r'(val libraryVersion = )"[^"]*"',
-        lambda m: f'{m.group(1)}"{next_snapshot}"',
-        text,
-        count=1,
-    )
-    if count == 0:
-        sys.exit(f"{path}: libraryVersion pattern not found")
-    path.write_text(updated)
-
-
-def update_app_module(next_snapshot):
-    path = REPO_ROOT / "<app-module>" / "build.gradle.kts"
-    if not path.exists():
-        return
-    text = path.read_text()
-    updated, count = re.subn(
-        r'(versionName = )"[^"]*"',
-        lambda m: f'{m.group(1)}"{next_snapshot}"',
-        text,
-        count=1,
-    )
-    if count == 0:
-        sys.exit(f"{path}: versionName pattern not found")
-    path.write_text(updated)
-    # versionCode is bumped by a *release* (a non -SNAPSHOT version), never by this script, which only ever
-    # writes a -SNAPSHOT value — matching iru-android-bump-version's Step 4 rule exactly. Nothing to do here.
-
-
-def replace_dependency_snippets(text, release_version, next_snapshot):
-    """Rewrites the trailing version segment of an `implementation 'group:artifact:version'` (or Kotlin-DSL
-    `implementation("group:artifact:version")`) line, following a "Latest release"/"Latest snapshot" marker."""
-    lines = text.splitlines(keepends=True)
-    pending = None
-    for i, line in enumerate(lines):
-        lower = line.strip().lower()
-        if lower.startswith("latest release"):
-            pending = release_version
-        elif lower.startswith("latest snapshot"):
-            pending = next_snapshot
-        elif pending and re.search(r"implementation\s*\(?['\"][^:'\"]+:[^:'\"]+:", line):
-            lines[i] = re.sub(
-                r"(implementation\s*\(?['\"][^:'\"]+:[^:'\"]+:)[^'\"]+(['\"])",
-                lambda m: f"{m.group(1)}{pending}{m.group(2)}",
-                line,
-            )
-            pending = None
-    return "".join(lines)
-
-
-def update_readme(release_version, next_snapshot):
-    path = REPO_ROOT / "README.md"
-    if not path.exists():
-        return
-    text = path.read_text()
-    # Adjust these two row-label regexes to match this repository's actual README table wording (resolved in
-    # Step 1) if it differs from setup-readme's default "Current development version" / "Latest release" labels.
-    text = re.sub(
-        r"(\| Current development version \| `)[^`]*(` \|)",
-        rf"\g<1>{next_snapshot}\g<2>",
-        text,
-    )
-    text = re.sub(
-        r"(\| Latest release[^|]*\| `)[^`]*(` \|)",
-        rf"\g<1>{release_version}\g<2>",
-        text,
-    )
-    text = replace_dependency_snippets(text, release_version, next_snapshot)
-    path.write_text(text)
-
-
-def update_antora_component_version(release_version):
-    path = REPO_ROOT / "docs" / "antora.yml"
-    if not path.exists():
-        return
-    text = path.read_text()
-    updated, count = re.subn(r"(?m)^version:.*$", f"version: {release_version}", text, count=1)
-    if count == 1:
-        path.write_text(updated)
-
-
-def update_antora_pages(release_version, next_snapshot):
-    pages_dir = REPO_ROOT / "docs" / "modules" / "ROOT" / "pages"
-    if not pages_dir.exists():
-        return
-    for path in sorted(pages_dir.glob("*.adoc")):
-        text = path.read_text()
-        if "implementation" not in text:
-            continue
-        updated = replace_dependency_snippets(text, release_version, next_snapshot)
-        if updated != text:
-            path.write_text(updated)
-
-
-def main():
-    release_version = os.environ["RELEASE_VERSION"]
-    next_snapshot = os.environ["NEXT_SNAPSHOT"]
-
-    update_lib_module(next_snapshot)
-    update_app_module(next_snapshot)
-    update_readme(release_version, next_snapshot)
-    update_antora_component_version(release_version)
-    update_antora_pages(release_version, next_snapshot)
-
-
-if __name__ == "__main__":
-    main()
-```
+Template: `templates/gitflow/.github/scripts/sync_versions.py` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -997,82 +483,11 @@ publish/store step, using the exact same release-only block as gitflow's `main.y
 
 ### `main.yml`
 
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [ <stable-branch> ]
-  pull_request:
-    branches: [ <stable-branch> ]
-  workflow_dispatch:
-
-permissions:
-  checks: write
-  pull-requests: write
-  contents: write
-  security-events: write   # required by github/codeql-action/upload-sarif (the Lint SARIF upload steps below)
-
-jobs:
-  build:
-    name: Build and execute tests
-    runs-on: ubuntu-latest
-    steps:
-      # ... identical to develop.yml's `build` job steps in Step 4, up to and including the
-      # `deploy-docs`-feeding `Upload Pages artifact` step (or `Upload docs artifact` when pages: no) — NO
-      # publish/release step here, that only happens in publish.yml below ...
-
-  # Same deploy-docs job as Step 4's develop.yml (flavor: library, pages: yes only).
-```
+Template: `templates/main-only/.github/workflows/main.yml` — read it in full before filling placeholders
 
 ### `publish.yml`
 
-```yaml
-name: Publish
-
-on:
-  release:
-    types: [released]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  publish:
-    name: Release build and publish
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK <java-version>
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '<java-version>'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      # flavor: library, publish: yes
-      - name: Release build
-        run: ./gradlew :<lib-module>:assembleRelease
-
-      - name: Publish to Maven Central
-        run: ./gradlew <lib-module>:publishAndReleaseToMavenCentral --no-configuration-cache
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
-
-      # flavor: app, distribution != none — identical to gitflow's main.yml release block in Step 4
-      # (Decode Android keystore / Build signed release bundle / Upload to Google Play or Firebase).
-```
+Template: `templates/main-only/.github/workflows/publish.yml` — read it in full before filling placeholders
 
 Notes specific to this variant:
 
@@ -1091,131 +506,7 @@ stable branches (or just the stable branch for `main-only`), plus a weekly sched
 findings don't go stale between pushes. Each job is individually omittable via the matching `security-*` arg
 (Step 0); drop that whole job's YAML — not just its `if:` — when the resolved value is `no`:
 
-```yaml
-name: Security
-
-on:
-  push:
-    branches: [ <integration-branch>, <stable-branch> ] # gitflow; main-only: just [ <stable-branch> ]
-  pull_request:
-  schedule:
-    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC
-
-permissions:
-  contents: read
-
-jobs:
-  # Omit this whole job if security-dependency-review: no (Step 0)
-  dependency-review:
-    name: Dependency review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-      - name: Dependency review
-        uses: actions/dependency-review-action@v5.0.0
-
-  # Omit this whole job if security-codeql: no (Step 0)
-  codeql:
-    name: CodeQL analysis
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-      - name: Set up JDK <java-version>
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '<java-version>'
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: java-kotlin
-          build-mode: autobuild
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
-
-  # Omit this whole job if security-osv: no (Step 0)
-  osv-scanner:
-    name: OSV-Scanner
-    permissions:
-      contents: read
-      security-events: write
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
-    with:
-      scan-args: |-
-        --recursive
-        ./
-
-  # Omit this whole job if security-gitleaks: no (Step 0)
-  gitleaks:
-    name: gitleaks
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Opt-in — only when security-owasp-dependency-check: yes (default no). Unverified locally: the exact
-  # action id/version below was not exercised during this skill's own verification pass; confirm it
-  # still resolves before relying on it.
-  owasp-dependency-check:
-    name: OWASP Dependency-Check
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-      - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: <artifact-id>
-          path: .
-          format: SARIF
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-      - name: Upload Dependency-Check SARIF results
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: reports/dependency-check-report.sarif
-
-  # Opt-in, app flavor only — only when security-mobsfscan: yes (default no). Unverified locally.
-  mobsfscan:
-    name: MobSF mobsfscan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.x'
-      - name: Install mobsfscan
-        run: pip install mobsfscan
-      - name: Run mobsfscan
-        run: mobsfscan --sarif --output mobsfscan-results.sarif <app-module>/ || true
-      - name: Upload mobsfscan SARIF results
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: mobsfscan-results.sarif
-```
+Template: `templates/common/.github/workflows/security.yml` — read it in full before filling placeholders
 
 Notes specific to this template:
 
@@ -1240,27 +531,7 @@ Always generated (or updated) regardless of the `security-*` args — grouped we
 ecosystem (the repository's own dependencies/plugins) and for the workflows this skill itself just wrote
 (`github-actions`):
 
-```yaml
-version: 2
-updates:
-  - package-ecosystem: gradle
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      gradle-dependencies:
-        patterns:
-          - "*"
-
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      github-actions-dependencies:
-        patterns:
-          - "*"
-```
+Template: `templates/common/.github/dependabot.yml` — read it in full before filling placeholders
 
 If `.github/dependabot.yml` already exists with entries for other ecosystems (e.g. `npm` for `docs/`),
 preserve them — only add or update the `gradle` and `github-actions` entries above (see Step 1's Update

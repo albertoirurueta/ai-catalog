@@ -33,6 +33,10 @@ framework, or boot a simulator — all of that happens once per bucket in `iru-k
 
 xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-kmp` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-kmp@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

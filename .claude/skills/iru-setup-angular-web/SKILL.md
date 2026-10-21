@@ -1,36 +1,7 @@
 ---
 name: iru-setup-angular-web
-description: Scaffold a new Angular web application with `npx -p @angular/cli@latest ng new <name> --standalone
-  --style=scss --routing --skip-git --package-manager=npm --defaults --ssr=false` (Angular 22's own defaults
-  already give a zoneless, Vitest-backed, standalone-component workspace — the flags above only make every prompt
-  non-interactive), then wires up the full toolchain on top of it: confirms `angular.json`'s `test` target uses the
-  `@angular/build:unit-test` builder with `runner: vitest`, adds `coverageReporters: ["text","lcov"]` and an
-  80%-lines `coverageThresholds` gate, installs a matching-major `@vitest/coverage-v8`; `ng add angular-eslint`
-  (auto-pins its major to the installed Angular major) plus `eslint-config-prettier`; normalizes the CLI's own
-  scaffold with the `.prettierrc` it already ships (adding a `.prettierignore`); Stylelint 17 for SCSS
-  (`stylelint-config-standard-scss`); Playwright via `ng add playwright-ng-schematics` (and fixes the schematic's
-  own hardcoded `/MyApp/` title assertion) — plus, per the catalog's UI contract, a Playwright component-testing
-  project driven by Playwright's built-in `mount()` fixture against a component gallery served by a `gallery`
-  configuration in `angular.json`, `@axe-core/playwright`, the shared `e2e/support/ui-screenshots.ts` helper, a
-  sample screen spec capturing `.ui-screenshots/screen/App/` across left-to-right/right-to-left × light/dark with an
-  accessibility check, and a `.ui-quality.yml` at the repository root; Compodoc (`@compodoc/compodoc`, a `docs` script into `docs/api`);
-  optional Storybook (`@storybook/angular-vite`, asked); and, when `sonar` ≠ `none`, `sonar-project.properties`
-  (`sonar.sources=src`, `sonar.tests=src`, `sonar.test.inclusions=**/*.spec.ts`,
-  `sonar.javascript.lcov.reportPaths=coverage/<project>/lcov.info`). Invoke as `/iru-setup-angular-web`. Accepts
-  pre-resolved inputs via `args` (`key: value` lines) — `name`, `directory`, `license`, `developer-name`,
-  `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `storybook`, `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
-  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar),
-  `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce` — written to `.ui-quality.yml`), `on-existing`
-  (`ask`/`keep`/`update`/`replace`, default `ask`), `mode` (`new`/`existing`) — so an orchestrating skill can supply
-  them without re-prompting; invoked stand-alone, it asks `open-source` first and derives the `sonar` question's
-  default from that answer. Announces whether it is scaffolding from scratch or updating an existing workspace; for
-  every artifact it owns that already exists (`angular.json` test options, ESLint, Prettier, Stylelint, Playwright,
-  the component gallery and UI-test helper, `.ui-quality.yml`, Compodoc script, Storybook, `sonar-project.properties`), warns and asks Update (merge, keep customizations) / Keep
-  as is / Replace (regenerate from the template), explaining each option's consequences. Use whenever a new Angular web application needs its scaffold, test/coverage
-  config, lint/format/style tooling, e2e tests, API docs, and Sonar wiring bootstrapped from this house template,
-  instead of hand-running each `ng add`/`npm install` separately.
-model: haiku
+description: "Invoked as /iru-setup-angular-web with optional key: value args, usually by iru-setup-typescript-repository. Scaffolds an Angular web app with ng new, then wires Vitest with an 80% coverage gate, ESLint, Prettier, Stylelint, Playwright UI tests with accessibility checks, Compodoc, optional Storybook and Sonar."
+model: sonnet
 ---
 
 # Setup Angular Web

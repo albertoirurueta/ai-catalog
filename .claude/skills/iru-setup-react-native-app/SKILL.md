@@ -1,57 +1,12 @@
 ---
 name: iru-setup-react-native-app
-description: >-
-  Scaffold a new React Native app at the repository root (or a chosen subdirectory) on either toolchain
-  (`toolchain`, asked up front — `expo` recommended for most new apps, or `metro` for a bare React Native Community
-  CLI project; Expo also bundles with Metro under the hood, the arg names the two toolchains users choose between).
-  `expo` — runs `npx create-expo-app@latest <dir> --template blank-typescript`, then adds a `jest-expo` +
-  `@testing-library/react-native` test setup (`jest.config.js` with `collectCoverage`/`coverageReporters:
-  ["text","lcov"]`, a working async-render test skeleton), an `eslint-config-expo` flat config generated
-  non-interactively via `npx expo lint` plus Prettier, an `eas.json` with `development`/`preview`/`production`
-  build profiles, and asks how native builds should run (`native-builds`: `eas`/`local` — explains the EAS free
-  tier's 15-builds-per-platform-per-month cap versus `eas build --local`/`npx expo prebuild`). `metro` — runs `npx
-  @react-native-community/cli@latest init <AppName> --directory <dir> --package-name <app-id> --skip-install
-  --install-pods false --skip-git-init --pm npm` (committed `android/` + `ios/` projects, CocoaPods, React
-  Navigation instead of Expo Router, no EAS), fixes the identity values the CLI gets wrong, keeps the template's
-  `@react-native/jest-preset`/`.eslintrc.js`/`.prettierrc.js`, and layers React Native Testing Library, Jest lcov
-  coverage with a safe-area mock, the shared `test`/`coverage`/`lint`/`format`/`typecheck` scripts, ESLint/Prettier
-  ignores for native build output, then runs `npm install`, `./gradlew assembleDebug` and, on macOS, `bundle exec
-  pod install` + a simulator `xcodebuild`. Both toolchains get a Maestro smoke flow (`.maestro/smoke.yaml`), the
-  catalog's UI contract wiring — `.ui-quality.yml` at the repository root (`accessibility: enforce|report|off|none`,
-  directions, themes), `eslint-plugin-react-native-a11y` in the ESLint config at that level, a dev-only UI gallery
-  (`src/dev/ui-gallery/`, reached by a `<app-slug>://ui-gallery?…` deep link, stripped from production bundles by
-  `__DEV__`) with its Jest test, and the Maestro screenshot helper (`.maestro/subflows/ui-capture.yaml`) plus a
-  capture flow for the root screen writing `.ui-screenshots/screen/App/default--<ltr|rtl>--<light|dark>--<platform>.png`
-  — and, when opted in, `sonar-project.properties` (TypeScript only — native `android/`/`ios/` excluded). Asks for the app
-  name/slug/directory, the bundle id / application id (`app-id`, required for `metro`), license, developer
-  name/email/organization URL, whether the project is open source, the automated accessibility level of the UI
-  tests (`accessibility`), whether to wire up a SonarQube/SonarCloud scan
-  (`sonar`: `cloud`/`self-hosted`/`none`), and the distribution target (`distribution`: `none`/`internal`/`store`
-  — gates `eas.json`'s `submit` block on expo, and names the signing/store secrets the workflows skill will need).
-  Invoke as `/iru-setup-react-native-app`. Templates live in `reference/expo-templates.md` and
-  `reference/metro-templates.md`, genericized with `<placeholder>` markers and verified end-to-end for both
-  toolchains. Announces whether it is scaffolding from scratch or updating an existing app; for every tooling file
-  it owns that already exists warns and asks Update (merge, keep customizations) / Keep as is / Replace (regenerate
-  from the template), explaining each option's consequences; never touches application source; a project whose
-  detected toolchain disagrees with the `toolchain` arg is warned about and asked, and a non-React-Native project
-  still stops. Accepts pre-resolved inputs via `args` (`key: value` lines) — `toolchain`, `app-name`, `app-slug`,
-  `app-directory`, `app-id`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`,
-  `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `native-builds` (expo only),
-  `distribution`, `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for a public
-  open-source repository), `ci` (`yes`/`no` — with `ci: no`, `none` is recommended for Sonar), `on-existing`
-  (`ask`/`keep`/`update`/`replace`, default `ask`), and `mode` (`new`/`existing`) — so an orchestrating skill can
-  supply them without re-prompting; invoked stand-alone, it asks `toolchain` and `open-source` first and derives the
-  `sonar` question's default from that answer. Targets React Native's New Architecture only (Expo SDK 57 /
-  React Native 0.87) and produces no Cordova/Capacitor artifacts — for a Capacitor-based hybrid app use
-  `iru-setup-ionic-app` instead. Use whenever a new Expo or bare React Native mobile app needs its scaffold, test,
-  lint, build, and Maestro/Sonar tooling bootstrapped from this house template, instead of hand-configuring each
-  piece.
-model: haiku
+description: "Invoked as /iru-setup-react-native-app with optional key: value args (toolchain: expo|metro), usually by iru-setup-typescript-repository. Scaffolds a React Native app on Expo or the bare CLI/Metro toolchain with Jest, ESLint, Prettier, Maestro UI flows, accessibility checks and optional Sonar and EAS."
+model: sonnet
 ---
 
 # Setup React Native App
 
-Scaffold a new React Native app (New Architecture only, Cordova-free) on one of two toolchains, then layer on this
+Scaffold a new React Native app (New Architecture only, Cordova-free; for a Capacitor-based hybrid app use `iru-setup-ionic-app` instead) on one of two toolchains, then layer on this
 catalog's standard test/lint/build/Sonar tooling using explicit example templates kept in this skill's
 `reference/` directory and verified end-to-end while building it:
 

@@ -1,31 +1,6 @@
 ---
 name: iru-fastapi-code-one-task-group
-description: >-
-  Implement one bucket of FastAPI tasks from a plan's task group end-to-end — in any FastAPI service, not only the
-  catalog scaffold: detects once the runner prefix (`uv run --frozen` / `poetry run` / `pdm run` / `pipenv run` /
-  `.venv/bin/` / bare `python -m`), the layout (layered `app/`, the Full Stack template, `src/<pkg>/`, or ports and
-  adapters), the persistence stack (SQLModel, SQLAlchemy 2.0, other, none) and whether it is sync or async, Alembic,
-  and the fast vs. `integration` test split (marker, `tests/integration/`, testcontainers). Captures a single
-  pre-change quality baseline for the whole bucket, runs `iru-fastapi-code-one-task` once per task (in parallel
-  agents when the group is marked parallelizable; tasks sharing `main.py`/`dependencies.py`/a model module or each
-  adding an Alembic revision always sequential) to implement each one with its fast tests, then validates the entire
-  bucket once, cheapest first, every check delegated to an `iru-gate-runner` agent so no raw report lands in this
-  context — license headers via `iru-check-license`, docstrings via `iru-python-docstrings`, scoped fast tests via
-  `iru-python-test`, an 80% coverage gate via `iru-python-coverage` measured from **container-free tests alone**,
-  the full fast suite, Ruff lint/format + mypy/pyright (+ Bandit when configured) via `iru-python-code-quality`
-  diffed against that one baseline, an app-import + OpenAPI-build smoke check, a single-head Alembic check, and last
-  the container-backed stage — `iru-python-test integration` plus, when the bucket touched models or migrations,
-  `alembic upgrade head` / `alembic check` / `downgrade base` round trip against a throwaway PostgreSQL — serialized
-  repository-wide behind the same atomic `mkdir`-based `.integration-test.lock` as the other `*-code-one-task-group`
-  skills (owner file, stale after 60 minutes, bounded ~45-minute wait, released on every exit path, `lock: held`
-  passed to the gate it delegates to). Integration results never count toward the coverage gate, and a stage that
-  needs Docker when Docker is unavailable is reported as unverified, never silently skipped.
-  `iru-fastapi-code-one-task` checks off each task's box itself with a "group validation pending" note; this skill
-  backfills any that didn't land and replaces each note with the final outcome. Invoke as
-  `/iru-fastapi-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
-  group's `Parallelizable` verdict, and any relevant "Current code state" context. The FastAPI counterpart to
-  `iru-nestjs-code-one-task-group` and `iru-php-code-one-task-group`; used by `iru-code-one-task-group`, which
-  invokes it once per plan group for its `fastapi`-tagged tasks.
+description: "Invoked as /iru-fastapi-code-one-task-group <bucket text> (the group's tasks, Parallelizable verdict, code-state context) via Skill. Implements one FastAPI task bucket: one quality baseline, iru-fastapi-code-one-task per task (parallel when allowed), then validates the bucket once (license, docstrings, tests, 80% coverage, Ruff/mypy, Alembic, locked integration stage) and finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(uv run *) Bash(poetry run *) Bash(pdm run *) Bash(pipenv run *) Bash(.venv/bin/*) Bash(python *) Bash(python3 *) Bash(docker *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---

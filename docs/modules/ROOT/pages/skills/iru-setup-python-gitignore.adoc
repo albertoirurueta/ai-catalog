@@ -29,6 +29,10 @@ Update (merge, keep hand-added entries) / Keep as is / Replace (template only).
 
 xref:index.adoc#group-python-bootstrap[Python Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-python` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-python@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

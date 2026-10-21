@@ -27,6 +27,10 @@ item, leaving `iru-knowledge-complete` as the deliberate, later step that closes
 
 xref:index.adoc#group-knowledge[Knowledge Base Management]
 
+== Plugin
+
+Shipped by the `iru-knowledge` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-knowledge@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

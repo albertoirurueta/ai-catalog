@@ -28,6 +28,10 @@ year.
 
 xref:index.adoc#group-maintenance[Repository Maintenance]
 
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
