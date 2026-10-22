@@ -1,20 +1,6 @@
 ---
 name: iru-dotnet-coverage
-description: >-
-  Generate a code coverage report for a .NET project or solution via `dotnet test --collect:"XPlat Code Coverage"`
-  (the Coverlet collector) — or, for test projects on Microsoft.Testing.Platform, the platform's `--coverage`
-  extension — scoped to the test selector given (same selector syntax as the `iru-dotnet-test` skill), then read the
-  generated `coverage.cobertura.xml` to report the exact line-coverage percentage for the specific class(es) touched —
-  using that same file's per-line `hits` data to show which lines/branches are still uncovered. Uses the repository's
-  `tests/coverlet.runsettings` (Cobertura + OpenCover formats, attribute exclusions) when present. Windows-desktop
-  aware — on a non-Windows host it passes `-p:EnableWindowsTargeting=true` and measures only test projects that can
-  run there, always excludes `[TestCategory("UI")]` UI-automation tests (they never count toward coverage), and for a
-  Windows desktop app (WPF/WinUI 3/Windows Forms) measures the UI-free Core project while reporting the app/UI
-  assemblies as "not measured" rather than 0%. Invoke as `/iru-dotnet-coverage <selector>
-  [TargetClass1,TargetClass2,...]`, or `/iru-dotnet-coverage` with no argument to run the full suite and report
-  whole-solution coverage; optional `key: value` lines — `project: <test-project>`, `bar: <percent>`. Use whenever the
-  user wants to check, or verify a coverage bar (e.g. "at least 80% line coverage") for a class or set of classes,
-  instead of eyeballing `dotnet test` output.
+description: "/iru-dotnet-coverage [selector] [TargetClass1,...] reports .NET line coverage and uncovered lines per class from Coverlet (or Microsoft.Testing.Platform) Cobertura output, using the iru-dotnet-test selector syntax; none means the full solution. Optional `project:` and `bar:` lines. Windows-desktop aware: UI tests excluded, UI assemblies reported not measured."
 model: haiku
 ---
 

@@ -34,6 +34,10 @@ It announces whether it is creating the pipeline from scratch or updating one, a
 
 xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-quarkus` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-quarkus@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -108,6 +112,8 @@ xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
 `ci-tests`, `pages`, `sonar`, `distribution`, `native`, security jobs included, open gaps (no Antora setup, missing
 JaCoCo or Sonar plugin, README wording the sync script won't match), the required-secrets table, repository settings
 to check, and a warning to review every workflow before pushing.
+
+The generated files' bytes come from template files under `templates/` (and, where a template needs variant-specific notes, `reference/`) in `.claude/skills/iru-setup-quarkus-github-workflows/`; the skill reads only the files for the variant it resolved, not the whole set, which keeps its `SKILL.md` small.
 
 == Execution flow
 

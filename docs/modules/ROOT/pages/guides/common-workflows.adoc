@@ -57,7 +57,13 @@ a|
   to skip planning (resume as-is), discard and regenerate, or update while preserving completed tasks
 * Reuses the exploration above rather than repeating it
 * Asks the user up to four focused questions only where something is genuinely ambiguous; otherwise picks a
-  best-practice approach and states the rationale directly in the plan
+  best-practice approach and states the rationale directly in the plan. A question that cannot be put to the
+  user (unattended run, declined, "decide later") is never guessed silently: it is persisted as a
+  `[NEEDS CLARIFICATION: <question> — options: <a> \| <b>; recommended: <a>]` marker on the task it blocks and in
+  the Task summary's `Open clarifications:` list, and planning continues around the recommended option
+* Writes an `## Acceptance criteria coverage` table right after the Task summary, mapping every criterion (quoted
+  from the ticket, or labelled `derived` when the ticket states none) to the tasks that cover it; a criterion with
+  no task is a planning error that the skill fixes before finishing
 * Groups tasks into dependency-aware task groups, each marked whether its tasks can be implemented in parallel
 * Tags each task (and sub-task) with the language/framework key a later `<key>-code-one-task-group` skill should
   handle it with
@@ -74,6 +80,8 @@ a|
 |Code implementation
 |xref:skills/iru-code.adoc[`iru-code`]
 a|
+* Refuses to start implementing while the plan still contains a `[NEEDS CLARIFICATION` marker: it lists each one
+  with the task it blocks and asks the user to resolve them (recommended option first) before any task runs
 * Captures a project-wide code-quality baseline per plan key (`iru-java-code-quality`, `iru-kotlin-code-quality`,
   `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-php-code-quality`, `iru-python-code-quality`,
   `iru-android-code-quality`, `iru-kmp-code-quality`,
@@ -112,7 +120,8 @@ a|
   e2e, Next.js Playwright, WordPress `wp-env`, the FastAPI/Django PostgreSQL integration tier) run serialized behind one repository-wide `.integration-test.lock`
   and never count toward the coverage gate
 * Re-checks the quality and security baselines at the end (a security regression is a hard stop, unlike a
-  quality regression, which the user can accept or turn into follow-up tasks), runs a full local build, and
+  quality regression, which the user can accept or turn into follow-up tasks), verifies that every row of the plan's
+  acceptance-criteria coverage table maps to checked tasks (an uncovered row blocks archiving), runs a full local build, and
   updates the Antora documentation via `iru-update-docs` (which also proposes matching updates to a connected
   documentation MCP, if one exists, for the user to approve)
 * Archives `implementation_plan.md` to `.archive/` on success and asks for a review — `iru-code` never commits,

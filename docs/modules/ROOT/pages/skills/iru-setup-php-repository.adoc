@@ -28,6 +28,10 @@ Composer libraries (`php-library`) are out of scope and stop the run.
 
 xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-php` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-php@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

@@ -29,6 +29,10 @@ choice.
 
 xref:index.adoc#group-quarkus-bootstrap[Quarkus Service Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-quarkus` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-quarkus@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

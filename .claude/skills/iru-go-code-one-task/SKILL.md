@@ -1,31 +1,6 @@
 ---
 name: iru-go-code-one-task
-description: >-
-  Implement a single task from a Go `implementation_plan.md`-style task list — just the implementation and its tests
-  — in any Go module: an agent-friendly command-line tool (Cobra, optional Bubble Tea v2 terminal UI) scaffolded by
-  `iru-setup-go-cli`, or any other Go library, service or CLI. Detects at runtime the module path and `go` version
-  from `go.mod` (and a `go.work` workspace), the `cmd/<bin>/` vs root-`main.go` layout and the `internal/` packages,
-  the CLI framework (Cobra, urfave/cli, kong, or none), Bubble Tea/Lip Gloss and their import paths, the test harness
-  (standard `testing`, testscript `testdata/script/*.txtar` driven by `TestMain`, teatest, testify/go-cmp if already
-  used, container tests behind the `integration` build tag), the golangci-lint config, and `//go:generate`
-  directives, then loads only the matching guidance from this skill's own `reference/` directory (always: Go code
-  style — Effective Go/Code Review Comments, package naming, `internal/`, small consumer-side interfaces,
-  `context.Context` first — and errors — `%w` wrapping, `errors.Is`/`As`/`AsType`, sentinel vs typed errors, exit-code
-  mapping in one place; as needed: testing — table tests, `t.Parallel` caveats, golden files with `-update`,
-  testscript, Cobra in-process tests, teatest —, the shared CLI contract, Cobra, output/TTY/colour/signals/EPIPE,
-  Bubble Tea v2, the catalog's UI contract on Bubble Tea when a task touches the terminal UI — composed sub-models,
-  typed intent messages, Bubbles lists/tables rendering only what fits, state × direction × theme UI tests captured as
-  `.txt` into `.ui-screenshots/`, asserted accessibility checks at the `.ui-quality.yml` level —, doc comments, security — argv-only `exec.CommandContext`, `--` before operands, `os.Root` —, and
-  concurrency — errgroup, cancellation, no leaks). Re-checks the current code state, implements exactly what the task
-  specifies, writes/updates the tests next to the code, formats the touched files (`gofmt`/`goimports`) and
-  compile-checks with `go build ./...` plus `go vet` on the touched packages (test files included), then — if the
-  task didn't stop on a blocker — immediately checks off this task's own checkbox (and its sub-tasks') in
-  `implementation_plan.md` with a "group validation pending" note, before handing back a short summary. Does not
-  capture a quality baseline, add license headers, audit doc comments beyond the code it writes, or run tests,
-  coverage, golangci-lint or govulncheck — those happen once per task group in `iru-go-code-one-task-group`, which
-  invokes this skill once per task (in parallel when the group allows it, through `iru-isolated-skill-executor`).
-  Invoke as `/iru-go-code-one-task <task description>`, passing the task's own text — including its exact
-  `implementation_plan.md` checkbox line(s) — as the argument. For plan tasks tagged `go`.
+description: "Invoked as /iru-go-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Go module (Cobra CLI, optional Bubble Tea UI, library or service) plan task and its tests, compile-checks, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-go-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(go build *) Bash(go vet *) Bash(go version) Bash(go env *) Bash(go list *) Bash(go doc *) Bash(go mod tidy*) Bash(go get *) Bash(go generate *) Bash(gofmt *) Bash(goimports *) Bash(golangci-lint fmt *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

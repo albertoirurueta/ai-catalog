@@ -1,37 +1,6 @@
 ---
 name: iru-update-java-springboot-documentation
-description: >-
-  Set up and keep current the Antora documentation site for a DDD/hexagonal Spring Boot service — Java (Maven) or
-  Kotlin (Maven or Gradle Kotlin DSL), read from `springboot-stack.yml`'s `project.language`/`project.buildTool`
-  (absent ⇒ Java + Maven, unchanged) — bootstraps the site via `iru-setup-antora` if absent, adds the Kroki extension
-  alongside Mermaid, and creates or refreshes the service's full page set from the codebase as it actually is: service
-  overview, service architecture (with dependency diagrams and the reactive-versus-blocking rationale), one section
-  per use case (flow diagram, dependencies touched, exceptions raised), the database model (entities, fields, types,
-  indexes, mandatory fields, constraints, relationships, plus generated diagrams), REST/gRPC/GraphQL/messaging API
-  pages derived from the contracts in `apis/` (versions, entities and fields with descriptions and constraints,
-  deprecations, endpoints with methods/paths/headers/authorization and every documented error, and a prominent link
-  from each API page to its own generated reference published on GitHub Pages — OpenAPI HTML from `apis/rest.adoc`,
-  protobuf HTML from `apis/grpc.adoc`, AsyncAPI HTML from `apis/messaging.adoc`, and the SpectaQL reference plus
-  optional Voyager schema graph from `apis/graphql.adoc` — resolved through a single `api-docs-url` attribute in
-  `docs/antora.yml`; for Kotlin the overview also links the Dokka KDoc reference published under the same `api/` tree
-  — `api/kdoc/` from `build/dokka/html` on Gradle or per module from `target/dokka` on Maven — instead of Javadoc), a
-  configuration property table (default, dynamically-changeable, criticality flags), and a metrics table (type, tags,
-  meaning), and — with a Hilla frontend — a User interface section (navigation flows, one page per view and
-  component, illustrated with the UI tests' screenshots per `reference/ui-docs.md`). For Kotlin, pages quote code as `[source,kotlin]`, say KDoc where Java says Javadoc, describe Gradle
-  module boundaries (ArchUnit plus `project(":…")` dependencies, no enforcer) and name `./gradlew` commands (`build`,
-  `test`, `integrationTest`, `:boot:bootRun`) when the build is Gradle. Reads `springboot-stack.yml`, the module
-  sources, the `apis/` contracts, and the `@ConfigurationProperties`/Micrometer code rather than inventing content,
-  and marks anything it cannot derive as an explicit TODO instead of filling it with plausible prose. Idempotent —
-  safe to re-run after any change, and intended to be re-run as part of the normal change cycle. Announces whether it
-  is creating the page set from scratch or updating existing pages, and when pages already exist warns and asks Update
-  (refresh derived parts, keep hand-written prose) / Keep as is (only create missing pages) / Replace (regenerate,
-  losing hand-written prose) — or applies `on-existing` from `args`. Honours the manifest's `ci.enabled`/`ci.pages`:
-  when the docs aren't deployed to GitHub Pages, API pages point at the CI `documentation` workflow artifact (or the
-  local build output) instead of dead github.io links. Invoke as `/iru-update-java-springboot-documentation` to cover
-  the whole service, or `/iru-update-java-springboot-documentation <page-or-area>` to refresh one page, optionally
-  with `mode` (`new`/`existing`) and `on-existing` (`ask`/`keep`/`update`/`replace`) as key/value lines. Use whenever
-  a Spring Boot service's documentation needs creating or bringing back in line with its code, instead of
-  hand-maintaining ten interdependent pages.
+description: "/iru-update-java-springboot-documentation [<page-or-area>] [mode:, on-existing: lines] - creates or refreshes the Antora docs site of a DDD/hexagonal Spring Boot service (Java or Kotlin, per springboot-stack.yml) from the code: overview, architecture, use cases, database model, REST/gRPC/GraphQL/messaging API pages with generated-reference links, configuration and metrics tables, and a User interface section with a Hilla frontend. Bootstraps via iru-setup-antora, adds Kroki, marks underivable facts as TODO, asks Update/Keep as is/Replace on existing pages. Idempotent. Use to create or re-sync a service's docs with its code."
 model: sonnet
 ---
 

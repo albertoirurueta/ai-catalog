@@ -1,37 +1,6 @@
 ---
 name: iru-django-code-one-task-group
-description: >-
-  Implement one bucket of Django tasks from a plan's task group end-to-end — in any Django project, not only the
-  catalog scaffold: detects once the runner prefix (`uv run` / `poetry run` / `pdm run` / `pipenv run` / `.venv/bin/`
-  / bare `python -m`), the `manage.py` location and Django version, the test settings module, the app layout
-  (`apps/<x>`, root-level apps, or a project-slug package), the API style (DRF with or without drf-spectacular,
-  Django Ninja, plain views), the test runner (pytest-django or `manage.py test`), and the fast vs. integration split
-  (an `integration` marker/tag, testcontainers, or test settings that need a PostgreSQL server). Captures a single
-  pre-change quality baseline for the whole bucket, runs `iru-django-code-one-task` once per task (in parallel agents
-  when the group is marked parallelizable; tasks that change models in the same app, or share a `urls.py`/settings
-  module/`admin.py`, always sequential so their migrations and edits can't collide) to implement each one with its
-  fast tests and generated migrations, then validates the entire bucket once, cheapest first, every check delegated
-  to an `iru-gate-runner` agent so no raw report lands in this context — license headers via `iru-check-license`,
-  docstrings via `iru-python-docstrings`, the Django framework checks (`manage.py check`, `makemigrations --check
-  --dry-run` including migration-conflict detection, `spectacular --validate --fail-on-warn` when DRF +
-  drf-spectacular are installed, `check --deploy` against the production settings as information), scoped fast tests
-  via `iru-python-test`, an 80% coverage gate via `iru-python-coverage` measured from **container-free tests alone**,
-  the full fast suite, Ruff lint/format + mypy/pyright (+ Bandit/djLint/django-upgrade when configured) via
-  `iru-python-code-quality` diffed against that one baseline, and last the integration tier (`iru-python-test
-  integration`, testcontainers PostgreSQL or a database server), serialized repository-wide behind the same atomic
-  `mkdir`-based `.integration-test.lock` as the other `*-code-one-task-group` skills (owner file, stale after 60
-  minutes, bounded ~45-minute wait, released on every exit path, `lock: held` passed to the gate so it doesn't
-  re-acquire), then — for a bucket that touched templates, static assets, template tags or HTML-rendering views —
-  the browser UI stage under the same lock (`iru-python-test ui`: pytest-playwright + `live_server`, every changed
-  screen/component checked for its states × `.ui-quality.yml` directions × themes in `.ui-screenshots/`, axe
-  accessibility at the configured level — `enforce` violations fail the bucket, `report` ones are listed). Docker
-  unavailable makes the integration stage **unverified**, a missing Playwright browser the UI stage, never silently
-  skipped, and the coverage verdict never depends on either. `iru-django-code-one-task` checks off each task's box itself with a "group validation
-  pending" note; this skill backfills any that didn't land and replaces each note with the final outcome. Invoke as
-  `/iru-django-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
-  group's `Parallelizable` verdict, and any relevant "Current code state" context. The Django counterpart to
-  `iru-php-code-one-task-group` and `iru-nestjs-code-one-task-group`; used by `iru-code-one-task-group`, which invokes
-  it once per plan group for its `django`-tagged tasks.
+description: "Invoked as /iru-django-code-one-task-group <bucket text> (the group's tasks, Parallelizable verdict, code-state context) via Skill. Implements one Django task bucket: one quality baseline, iru-django-code-one-task per task (parallel when allowed), then validates the bucket once (license, docstrings, Django checks, 80% coverage, Ruff/mypy, locked integration and UI stages) and finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(uv run *) Bash(poetry run *) Bash(pdm run *) Bash(pipenv run *) Bash(.venv/bin/*) Bash(python *) Bash(python3 *) Bash(DJANGO_SETTINGS_MODULE=* *) Bash(DJANGO_SECRET_KEY=* *) Bash(docker info *) Bash(docker ps *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir -p build*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---
@@ -61,6 +30,8 @@ Four things shape the validation order:
    a shared database, and only one such run may be in flight repository-wide (Step 3.9a).
 
 It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Read this before running anything container-backed
 

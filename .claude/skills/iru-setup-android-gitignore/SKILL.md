@@ -1,24 +1,6 @@
 ---
 name: iru-setup-android-gitignore
-description: Create or update the root `.gitignore` (Gradle/Android Studio noise, `local.properties`, keystores,
-  `google-services.json`, Antora docs build output, the UI tests' `.ui-screenshots/` capture directory) plus a per-module `.gitignore` (`/build`) for each Gradle
-  module in an Android library/app project — `lib`, `app`, or whatever `settings.gradle.kts` actually includes.
-  Invoke as `/iru-setup-android-gitignore`, optionally with `args`: `mode: new|existing` (default: detected from
-  whether a root `.gitignore` already exists) and `modules: <comma/space-separated list>` (default: every
-  `include(":…")` entry in `settings.gradle.kts`, falling back to `lib`/`app` when neither exists) and
-  `on-existing: ask|keep|update|replace` (default `ask`). Announces whether it is creating from scratch or updating
-  existing files; if a root or per-module `.gitignore` already exists it never overwrites it silently — it warns,
-  shows a diff, and asks per file whether to Update (merge in what's missing, keep hand-added lines), Keep as is,
-  or Replace (regenerate from the template, dropping customizations), unless `on-existing` decides. Templates are genericized from
-  https://github.com/albertoirurueta/irurueta-android-glutils's own `.gitignore`, `lib/.gitignore` and
-  `app/.gitignore`. Always ignores the Kotlin 2.x compiler's root-level `.kotlin/` cache directory, and deliberately
-  does **not** ignore a vendored `jacoco-<ver>/` JaCoCo CLI directory if the repository vendors one (as the
-  reference repository does, for `iru-setup-android-github-workflows`' opt-in coverage-conversion fallback) — it
-  must stay tracked so CI can convert coverage without a network dependency. Mirrors `iru-setup-java-gitignore`'s
-  diff-and-approve contract for
-  the Android/Gradle ecosystem. Use whenever an Android library or app project needs a `.gitignore` bootstrapped
-  from scratch, or an existing one checked/gap-filled against this house template without touching it unless the
-  user approves.
+description: "Invoked as /iru-setup-android-gitignore with optional key: value args, usually by iru-setup-android-repository. Creates or updates the root and per-module .gitignore files of an Android/Gradle project, never overwriting an existing one without a diff and approval."
 model: haiku
 ---
 
@@ -31,6 +13,8 @@ has no project-specific names inside these three files to strip in the first pla
 Android/Gradle boilerplate). Never overwrite an existing `.gitignore` without showing the user exactly what would
 change and getting explicit approval first — a `.gitignore` can carry hand-added, project-specific entries that
 must not be silently dropped.
+
+This mirrors `iru-setup-java-gitignore`'s diff-and-approve contract for the Android/Gradle ecosystem.
 
 ## Step 0 — Resolve inputs
 

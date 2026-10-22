@@ -1,6 +1,6 @@
 ---
 name: iru-setup-changelog
-description: Bootstrap a root `CHANGELOG.md` for a repository that doesn't have one yet, by exploring its actual release history (git tags and, if hosted on GitHub, GitHub Releases) and backfilling one entry per past release in Keep a Changelog format. Invoke as `/iru-setup-changelog`, optionally with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace` (scripted runs; default `ask`). Announces whether it is creating the changelog from scratch or updating an existing one; if `CHANGELOG.md` (or an equivalent `HISTORY.md`/`CHANGELOG.rst`/`CHANGELOG.txt`) already exists it warns and asks whether to Keep it as is (the old skip behaviour), Update it (append only the releases/tags missing from it, never rewriting existing entries), or Replace it (rebuild from history, losing hand-written entries). Use whenever a repository has release history but no changelog file yet and the user wants one backfilled from that real history instead of started blank.
+description: "Invoked as /iru-setup-changelog, optionally with an args line on-existing: ask|keep|update|replace. Backfills a root CHANGELOG.md in Keep a Changelog format from the repository's git tags and GitHub Releases; if a changelog exists it asks Keep, Update (append missing releases) or Replace."
 model: sonnet
 ---
 
@@ -12,6 +12,8 @@ makes no assumptions about language or build system. It is primarily a bootstrap
 existing changelog may already follow its own format and cadence, so when one exists this skill never touches it
 without asking first (Step 1) — and even on **Update** it only appends releases missing from it, never rewriting
 an existing entry.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Resolve inputs
 

@@ -25,6 +25,10 @@ write when version locations disagree until the user confirms. Step 5 documents 
 
 xref:index.adoc#group-rust[Rust Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-rust` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-rust@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

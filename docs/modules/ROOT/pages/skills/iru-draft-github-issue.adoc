@@ -16,11 +16,17 @@ technical vs. non-technical page structure, diagrams, bibliography, acceptance c
 draft to a file and then loops (at most five rounds) with xref:skills/iru-review-github-issue.adoc[], resolving
 findings from the codebase first and asking the user for the rest. When the issue looks too large it offers
 xref:skills/iru-split-github-issue.adoc[]. Nothing is created on GitHub until the user confirms the final draft.
-It stops on non-GitHub hosts and is not meant for issues that already exist.
+It stops on non-GitHub hosts. Use it for detailed, spec-style issues (xref:skills/iru-create-github-issue.adoc[] stays the
+quick path for a simple one); for issues that already exist use xref:skills/iru-review-github-issue.adoc[] or
+xref:skills/iru-split-github-issue.adoc[] instead.
 
 == Purpose group
 
 xref:index.adoc#group-intake[Ticket Intake]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 

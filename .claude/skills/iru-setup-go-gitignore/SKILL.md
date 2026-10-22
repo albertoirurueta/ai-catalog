@@ -1,22 +1,6 @@
 ---
 name: iru-setup-go-gitignore
-description: >-
-  Create or update the root `.gitignore` for a Go repository — the command-line tool layout `iru-setup-go-cli`
-  produces (`go.mod`, `cmd/<bin>/`, `internal/`, `tools/gendocs`, `testdata/script/`) or any other Go module —
-  covering the binary `go build` leaves at the root (`/<bin>`, `/<bin>.exe`, root-anchored so `cmd/<bin>/` stays
-  tracked), test binaries and profiles (`*.test`, `*.pprof`), coverage output (`coverage.out`, `*.coverprofile`,
-  `coverage.html`, a `/covdata/` GOCOVERDIR), the `build/` report/docs-generator directory (`build/coverage/cover.out`,
-  `build/gendocs/`), GoReleaser's `dist/`, per-developer `go.work`/`go.work.sum` (unless the repository deliberately
-  tracks a workspace), `/vendor/` only when dependencies are not vendored (asked), env files (keeping `.env.example`),
-  the Antora docs build output, editor/OS files, the repository-wide `.integration-test.lock/`, and — for a Bubble Tea
-  terminal UI — the UI tests' capture directory `.ui-screenshots/` (never `.ui-quality.yml`). Never ignores
-  `go.mod`, `go.sum`, `testdata/` or `.secrets.baseline`. Invoke as `/iru-setup-go-gitignore`, optionally with `args`
-  (`key: value` lines): `bin-name` (default: every `cmd/<name>/` directory, else the module path's last element),
-  `vendor: yes|no`, `mode: new|existing` (default: detected) and `on-existing: ask|keep|update|replace` (default
-  `ask`). Announces whether it is creating from scratch or updating; an existing `.gitignore` is never overwritten
-  silently — it warns, shows a diff, and asks Update (merge in what's missing, keep hand-added lines) / Keep as is /
-  Replace, unless `on-existing` decides. Use whenever a Go repository needs a `.gitignore` bootstrapped from scratch,
-  or an existing one checked and gap-filled against this house template.
+description: "Invoked as /iru-setup-go-gitignore, optionally with args bin-name, vendor, mode and on-existing. Creates or updates the root .gitignore of a Go repository (including the layout iru-setup-go-cli produces), never overwriting an existing one without a diff and approval."
 model: haiku
 ---
 

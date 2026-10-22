@@ -1,31 +1,6 @@
 ---
 name: iru-django-code-one-task
-description: >-
-  Implement a single task from a Django `implementation_plan.md`-style task list — the implementation, its tests,
-  any migration the task's model change needs, and its checkbox update. Detects the project's shape at runtime
-  instead of assuming the catalog scaffold: the runner prefix (`uv run` / `poetry run` / `pdm run` / `pipenv run` /
-  `.venv/bin/` / bare `python -m`), the Django version, the settings module for tests and for `manage.py` (split
-  `config/settings/{base,local,test,production}.py` or a single `settings.py`, read from `manage.py`, the pytest
-  config, or `[tool.django-stubs]`), the app layout (`apps/<x>` with `AppConfig.name = "apps.<x>"`, root-level apps,
-  or a cookiecutter project-slug package), the API style (Django REST Framework with or without drf-spectacular,
-  Django Ninja, or plain views), the test runner (pytest-django or `manage.py test`), factories (factory_boy or
-  model_bakery), the type checker (mypy with django-stubs, or pyright), the docstring convention, and which tests
-  are fast (SQLite in memory, no service) versus integration (`integration` marker / tag, testcontainers or a real
-  PostgreSQL) — then loads only the matching guidance from this skill's own `reference/` directory (Python code
-  style for Django, testing with pytest-django/factory_boy/query-count assertions, models and the ORM with
-  `makemigrations`-generated migrations, `select_related`/`prefetch_related` and `transaction.atomic`/`on_commit`,
-  views/URLs/templates, server-rendered UI per the catalog's UI contract — screens/regions/components decomposed
-  first, inclusion-tag/partial components, paginated lists with one item partial per row, pytest-playwright UI
-  tests with an LTR/RTL × light/dark screenshot matrix and axe accessibility checks —, forms and validation, DRF,
-  Ninja, admin, settings, background tasks/Celery/commands, authentication and authorization, and security). Re-checks the current code state, implements exactly what the
-  task specifies, generates (never hand-writes or edits an applied) migration with `manage.py makemigrations` when
-  the task changes a model, writes the tests, runs only the fast test files it touched, then checks off this task's
-  checkbox in `implementation_plan.md` with a "group validation pending" note and hands back a short summary. Never
-  runs coverage, the full suite, integration tests, mypy, license headers, a docstring audit, or the Django system
-  checks — those happen once per task group in `iru-django-code-one-task-group`, which invokes this skill once per
-  task. Invoke as `/iru-django-code-one-task <task description>`, passing the task's own text including its exact
-  `implementation_plan.md` checkbox line(s). The Django counterpart to `iru-php-code-one-task` and
-  `iru-nestjs-code-one-task`.
+description: "Invoked as /iru-django-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one Django (any project shape, migrations included) plan task and its tests, compile-checks, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-django-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(uv run *) Bash(poetry run *) Bash(pdm run *) Bash(pipenv run *) Bash(.venv/bin/*) Bash(python *) Bash(python3 *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(mkdir -p build*)
 ---

@@ -28,6 +28,10 @@ created ticket's key/URL back onto the pending file and a note on the agreement 
 
 xref:index.adoc#group-knowledge[Knowledge Base Management]
 
+== Plugin
+
+Shipped by the `iru-knowledge` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-knowledge@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

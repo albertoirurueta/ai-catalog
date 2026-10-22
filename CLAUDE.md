@@ -19,11 +19,23 @@ cd docs && npx antora antora-playbook.yml  # build the site into docs/build/site
 ```
 
 CI (`.github/workflows/docs.yml`) runs the same build and publishes `docs/build/site` to the `gh-pages`
-branch on every push to `main`. There is no separate lint/test command for this repository.
+branch on every push to `main`. There is no separate lint/test command for the docs; the skills and agents themselves are checked by the scripts below.
 
-## Architecture
+## Checks to run before opening a pull request
 
-### Skills (`.claude/skills/<name>/SKILL.md`)
+The `tools/` scripts guard the skills and agents themselves (see `tools/README.md`); CI runs them in
+`.github/workflows/catalog-check.yml`:
+
+```bash
+python3 tools/catalog-audit.py --check          # budgets: description size and shape, SKILL.md lines, frontmatter, model tiers, shared files, asset paths
+python3 tools/generate-marketplace.py --check   # .claude-plugin/marketplace.json is current (also runs `claude plugin validate` when the CLI is installed)
+claude plugin validate .                        # marketplace manifest; also `claude plugin validate .claude/skills`
+python3 -m unittest discover -s tools/tests     # tests of the two scripts
+```
+
+`pip install pyyaml` is the only dependency. `python3 tools/catalog-audit.py --markdown` prints the full report.
+
+## Conventions
 
 Every skill and agent in this catalog carries an `iru-` prefix (directory name, frontmatter `name`, and every
 cross-reference to it) so its slash command can't collide with a same-named skill installed from another
@@ -38,271 +50,26 @@ instructions written for an agent to follow. A skill is adopted by another repos
 directory into that repository's `.claude/skills/` — skills must not assume they're running inside
 `ai-catalog` itself (they detect language/platform/tooling at runtime rather than hardcoding it).
 
-Skills compose into a few recurring pipelines rather than each standing alone:
+Conventions enforced by the tools (`tools/catalog-audit.py --check`):
 
-- **Issue-to-PR cycle**: `iru-issue` → `iru-explore` → `iru-plan` → `iru-code` → `iru-pr-description` → `iru-pr-review`. `iru-plan` groups
-  `implementation_plan.md`'s tasks into dependency-aware groups; `iru-code` doesn't implement anything itself — it
-  dispatches each group, in order, to `iru-code-one-task-group`, which resolves each task's language and delegates
-  to the matching `iru-<key>-code-one-task-group` skill. Installed keys: `java`, `java-springboot`,
-  `kotlin-springboot`, `quarkus` (Java or Kotlin, detected inside), `dotnet`, `typescript`, `nestjs`, `nextjs`,
-  `php` (Laravel / WordPress plugin or theme / PrestaShop module, detected inside), `fastapi`, `django`, `android`,
-  `swift`, `kmp` (Kotlin Multiplatform Android + iOS apps — shared `commonMain`/`androidMain`/`iosMain` code, Compose
-  Multiplatform or native UI, and the `iosApp/` Swift host), `react-native` (Expo or bare React Native CLI/Metro
-  toolchain, detected inside — the `expo` dependency decides), `windows` (Windows desktop apps on .NET 10 — WPF,
-  WinUI 3 or Windows Forms, detected inside from the app csproj, with MVVM `ViewModels/` or MVC `Controllers/` in a
-  UI-free `net10.0` Core project; plain .NET libraries/services stay `dotnet`, and macOS desktop apps use `swift`),
-  `rust` (Rust crates — clap command-line tools with an optional Ratatui terminal UI, workspaces, `xtask`), `go`
-  (Go modules — Cobra command-line tools with an optional Bubble Tea terminal UI, testscript e2e), `database`
-  — each key `<key>` has an `iru-<key>-code-one-task-group` + `iru-<key>-code-one-task` pair (keys are discovered
-  from the installed directories, never hardcoded). The group skill captures one quality baseline for the whole
-  group, runs `iru-<key>-code-one-task` once per task — in parallel when the group allows it (`database` is always
-  sequential) — and validates the group once (license → doc comments → tests → 80% coverage → quality diff vs
-  baseline), instead of once per task. Coding skills detect build tool (Maven / Gradle KTS / Gradle Groovy,
-  npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip, Cargo, Go modules) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
-  container-backed or server-starting stage (Spring Testcontainers, Quarkus Dev Services, NestJS e2e, Next.js
-  Playwright, WordPress `wp-env`, Python testcontainers `integration`-marked pytest tests, React Native Maestro/Detox
-  e2e with Metro on port 8081, KMP iOS simulator test runs, Windows FlaUI desktop UI tests, Rust `#[ignore]`d and Go
-  `integration`-tagged container tests) is serialized repository-wide behind one shared atomic-`mkdir` lock directory,
-  `.integration-test.lock` (owner file, stale after 60 min, released on every exit path, gitignored); Docker
-  unavailable makes that stage "unverified", never silently skipped, and the coverage gate counts only tests
-  that need no containers. The same rule covers devices: no booted simulator/emulator (or no macOS host for an iOS
-  stage) makes a mobile e2e/iOS stage "unverified", and KMP coverage is measured on JVM/Android host tests only
-  (Kotlin/Native iOS code is reported "not measurable"). Desktop apps follow the same rule: the 80% bar is measured
-  on the UI-free core (`src/<App>.Core` on Windows, the local `Packages/Core` package on macOS — via `swift test` +
-  `llvm-cov`, since the app scheme's `xccov` can't see it) and the UI layer is reported "not measured"; on a
-  non-Windows host every Windows app-run/WinUI/UI-test/packaging stage is "unverified (needs Windows)" while the
-  Core tests and the `EnableWindowsTargeting` compile of WPF/WinForms still run; macOS XCUITest runs drive the real
-  desktop and stay behind the Swift gates' `.simulator-test.lock`. Command-line tools need no lock for their
-  end-to-end tests (they run the real binary or command tree in-process, with no containers or devices): the 80% bar
-  is measured on the library unit the scaffolds keep the logic in (`src/lib.rs`, `internal/`, `<Bin>Kit`,
-  `src/<Tool>.Core`), and a Swift or .NET CLI keeps the `swift`/`dotnet` key — those coding skills detect the CLI
-  shape (an ArgumentParser `.executableTarget`; a System.CommandLine `Exe`) themselves.
-- **Repository bootstrap**: `iru-setup-repository` is the front door — it detects a non-empty repository (via
-  `iru-explore`, reading its `Project type:` and `Accessibility:` lines to pre-select), otherwise asks the project type over up to six
-  `AskUserQuestion` rounds of up to three options each (JVM services & libraries, Web & Node, PHP, Python, Mobile & Apple,
-  Desktop & command line — macOS app / Windows app / command-line tool), every round ending in a "Something in the next group" escape hatch (the last in
-  "None of these"); an option bundling
-  several types (Web app → React/Next.js/Angular, WordPress → plugin/block theme, Android, Apple, cross-platform
-  mobile → React Native/Kotlin Multiplatform/Ionic, command-line tool → Rust/Go/Swift/C# .NET) gets one bounded follow-up (React Native's `toolchain:
-  expo|metro` is then asked by the front door because it changes the macOS CI cost picture), while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
-  `layout`/`frontend`, NestJS `orm`, Next.js `output`, Python `database`/`orm`/`api`/`python-version`, KMP `ui`) are left to the orchestrator, asks the shared inputs once, and delegates to the
-  matching stack orchestrator via `iru-isolated-skill-executor`; on an existing repository it forces `mode: existing`
-  so every sub-skill takes its update path instead of assuming a brand-new repo. The front door and every
-  orchestrator first announce the **setup mode** — "from scratch" or "updating an existing repository" plus an
-  inventory of each owned component (build manifest, sources, Antora docs, `.gitignore`, each workflow file,
-  Dependabot, Sonar config, `CHANGELOG.md`, `README.md`, `LICENSE`) marked absent/present/partial — and every
-  component skill that finds a prior artifact it owns warns and asks **Update** (merge, keep customizations) /
-  **Keep as is** (report mismatches with this run's choices) / **Replace** (regenerate, customizations lost), with
-  a **Stop** option where it makes sense; `mode: existing` alone never means "update silently" — only an explicit
-  `on-existing` does. Final reports repeat the mode and the per-component action (created / updated / replaced /
-  kept as is / skipped (ci: no)). The eleven `*-repository`
-  stack orchestrators — `iru-setup-java-library-repository`, `iru-setup-quarkus-repository`,
-  `iru-setup-typescript-repository`, `iru-setup-php-repository`, `iru-setup-python-repository`,
-  `iru-setup-android-repository`, `iru-setup-swift-repository`, `iru-setup-kmp-repository`,
-  `iru-setup-macos-repository`, `iru-setup-windows-repository`, `iru-setup-cli-repository` — each also run
-  standalone, and each chains the
-  same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → `iru-setup-antora` →
-  `iru-setup-<stack>-gitignore` → `iru-setup-<stack>-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`
-  (Quarkus reuses `iru-setup-java-gitignore`, macOS reuses `iru-setup-swift-gitignore`; the CLI orchestrator picks
-  the scaffold and gitignore skill by `language` and shares one workflows skill). Flavors: `iru-setup-typescript-repository`'s `flavor` picks `library`,
-  `react`, `angular`, `react-native`, `ionic`, `nestjs` (`iru-setup-nestjs-app`), or `nextjs` (`iru-setup-nextjs-web`),
-  and its `react-native` flavor takes `toolchain: expo|metro` (forwarded to `iru-setup-react-native-app` and
-  `iru-setup-typescript-github-workflows`: Expo framework with EAS/CNG and `native-builds: eas|local`, or a bare React
-  Native CLI project with committed `android/`/`ios/`, CocoaPods, Gradle/Xcode CI jobs and store release);
-  `iru-setup-kmp-repository` (via `iru-setup-kmp-app`, `iru-setup-kmp-gitignore`, `iru-setup-kmp-github-workflows`)
-  scaffolds a Kotlin Multiplatform app — `shared/` + `androidApp/` + XcodeGen `iosApp/` — with `ui: compose|native`;
-  `iru-setup-swift-repository`'s `app` flavor (via `iru-setup-apple-app`) targets `ios`/`ipados`/`macos`/`watchos`/
-  `visionos` (no tvOS), with `ui: swiftui|uikit` for the iOS/iPadOS target (programmatic UIKit, scene delegate, no
-  storyboards; watchOS/visionOS stay SwiftUI) and `architecture: mvvm|mvc` over the same UI-free `Packages/Core`
-  layout the macOS desktop scaffold uses — its optional Fastlane lanes are an intentional difference from the
-  macOS skills' plain `xcodebuild`/`notarytool` pipeline;
-  the two desktop orchestrators take `ui` plus `architecture: mvvm|mvc` (offered only where the UI framework
-  supports both — SwiftUI, WPF and WinUI are MVVM-only; AppKit, UIKit and Windows Forms offer MVC or MVVM):
-  `iru-setup-macos-repository` (via `iru-setup-macos-app`, `iru-setup-macos-github-workflows`) scaffolds a macOS-only
-  XcodeGen app with `ui: swiftui|appkit`, a UI-free `Packages/Core`, the App Sandbox/hardened runtime, and a
-  Developer ID notarized DMG (`distribution: internal`) or App Store Connect upload (`store`) release;
-  `iru-setup-windows-repository` (via `iru-setup-windows-app`, `iru-setup-windows-gitignore`,
-  `iru-setup-windows-github-workflows`) scaffolds a .NET 10 `<App>.slnx` with `ui: wpf|winui|winforms`, a UI-free
-  `net10.0` Core project, MSTest + coverlet, StyleCop/.NET analyzers, DocFX, optional FlaUI UI tests and MSIX, with
-  Linux CI for everything that can run there and Windows runners for the app build, UI tests and per-RID
-  zip/MSIX/App Installer releases (signed with Azure Artifact Signing or a `.pfx`; optional WinGet; or a Microsoft
-  Store submission);
-  `iru-setup-cli-repository` scaffolds one agent-friendly command-line tool with `language: rust|go|swift|dotnet`
-  (via `iru-setup-rust-cli` / `iru-setup-go-cli` / `iru-setup-swift-cli` / `iru-setup-dotnet-cli`, then
-  `iru-setup-rust-gitignore` / `iru-setup-go-gitignore` / `iru-setup-swift-gitignore` `flavor: cli` /
-  `iru-setup-dotnet-gitignore`, and `iru-setup-cli-github-workflows` for all four) and `ui: none|tui` (Ratatui, Bubble
-  Tea, or a .NET terminal UI; never offered for Swift, whose only TUI library is dormant). Every scaffold implements the
-  same contract from the author's *Building CLIs for AI Agents* guide — stdout for data / stderr for messages, exit
-  codes 0–7 plus 130/143, `--format text|json|jsonl` with a `schemaVersion` and a JSON error envelope, TTY- and
-  `NO_COLOR`-aware colour, no prompt without a terminal (`--no-input`/`--yes`), `--dry-run` for mutations, generated
-  `completion` and a machine-readable `schema`, a CLI reference + man page generated from the command tree — and the
-  coding skills' `reference/cli-contract.md` repeats it verbatim per language; `cross-os-ci: all|stable` schedules the
-  macOS/Windows test legs, and `distribution: internal` (release binaries + `SHA256SUMS` + build-provenance
-  attestations) / `store` (plus `channels`: crates.io, Homebrew tap, Scoop, WinGet, a NuGet .NET tool) drive
-  `release.yml`;
-  `iru-setup-php-repository`'s picks `laravel`, `wordpress-plugin`, `wordpress-theme` (block theme), or
-  `prestashop-module` (`iru-setup-php-laravel` / `-wordpress` / `-prestashop`); `iru-setup-python-repository`'s picks
-  `fastapi` (`iru-setup-python-fastapi`) or `django` (`iru-setup-python-django`), sharing
-  `iru-setup-python-gitignore`/`iru-setup-python-github-workflows`; `iru-setup-quarkus-repository`
-  (via `iru-setup-quarkus-service`, `quarkus-stack.yml` manifest) takes `language: java|kotlin`,
-  `build-tool: maven|gradle` (Gradle = Kotlin DSL), and `layout: single|hexagonal`.
-  `iru-setup-java-springboot` is the twelfth orchestrator but follows its own manifest-driven chain instead: it
-  interviews the user once, writes a `springboot-stack.yml` manifest, delegates the reactor's generation to its
-  `iru-setup-java-springboot-*` sub-skills (pom, modules, apis, optional hilla, testcontainers, platform,
-  github-workflows) plus `iru-update-java-springboot-documentation` for the Antora site, and only then fills the
-  remaining repository-level files (`iru-setup-java-gitignore`, `iru-setup-readme`, `iru-setup-changelog`) directly.
-  Its `language: java|kotlin` and `build-tool: maven|gradle` args (manifest `project.language`/`buildTool`; Gradle
-  only with Kotlin) switch the same module tree to Kotlin — detekt/ktlint + Dokka instead of Checkstyle/PMD/SpotBugs
-  + Javadoc, and for Gradle a Kotlin DSL build with `gradle/libs.versions.toml` and `build-logic/` convention
-  plugins; the Java path stays Maven-only and unchanged.
-  Rolling deployments are an opt-in Spring Boot capability (asked in `iru-setup-java-springboot`'s Step 3c only with
-  `ci: yes`; the front door merely forwards `rolling-deployments`/`deployment-strategy`/`advance`): the manifest's
-  optional `deploy.rolling` block (`enabled`, `strategy: rolling|blue-green|canary|linear`, `advance:
-  auto|manual|hybrid`, `steps`, `bakeMinutes`) makes `iru-setup-java-springboot-github-workflows` generate a staged
-  `deploy.yml` (green deployed at 0 % traffic → smoke test on the candidate URL → shift) plus a `promote.yml`
-  `workflow_dispatch` workflow that a human uses to advance, roll back or abort, and makes
-  `iru-setup-java-springboot-platform` generate the rollout infrastructure (ECS weighted target groups, Cloud Run
-  revision tags, Argo Rollouts on EKS/GKE). The rule: the **workflow drives the shifting and the rollout state lives
-  in the cloud** (listener weights / Cloud Run traffic / `Rollout` status), never in GitHub, so `promote.yml` is
-  stateless; GitHub Environment required reviewers are deliberately not the mechanism (private repositories need
-  Enterprise). The `rolling` strategy keeps the single-job `deploy.yml` and generates no `promote.yml`.
-  `iru-springboot-rolling-deployments` (`enable`/`disable`) switches it on an existing repository and never runs
-  `tofu apply`/`destroy`. See `docs/modules/ROOT/pages/guides/rolling-deployments.adoc`.
-- **Shared bootstrap inputs**: the front door and the orchestrators share one `args` vocabulary —
-  `open-source: yes|no`, `visibility: public|private|internal`, `ci: yes|no`, `ci-tests: unit|full`, `pages: yes|no`,
-  `publish: yes|no` (libraries), `distribution: none|internal|store` (apps), `sonar: cloud|self-hosted|none`
-  (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `accessibility: enforce|report|off|none` (UI project
-  types only — asked once by the front door or the orchestrator, written by the UI scaffold to `.ui-quality.yml`;
-  `none` = opted out entirely, `off` = rules apply but checks don't run; on an existing repository `iru-explore`'s
-  `Accessibility: present|partial|absent` line, produced from the shared `reference/accessibility-detection.md`,
-  pre-selects the answer; a missing `.ui-quality.yml` means `enforce` only in a repository with no UI code yet —
-  otherwise the coding group skills ask once with that same pre-selection and write the file before any UI work),
-  `mode: new|existing`, and
-  `on-existing: ask|keep|update|replace` — so a value collected once by a front door or orchestrator never needs
-  re-asking downstream; each downstream scaffold/workflows skill parses only the subset of those keys its own Step 0
-  lists and ignores the rest. `visibility` comes from `args`, else `gh repo view --json visibility`, else is asked
-  (Public recommended when open source); `internal` counts as `private` for every cost decision, and open source +
-  private is flagged as contradictory. Because GitHub Actions minutes (free on public repos; included-minutes budget
-  on private, macOS ~10×), SonarCloud (free only for public/open-source projects), and GitHub Pages (private repos
-  need Pro/Team/Enterprise Cloud, and the site is public unless Enterprise Cloud private Pages) cost differently, the
-  entry point asks, in order: `ci` (Yes recommended; `ci: no` skips the whole workflows step including the shared
-  security block), `sonar` ("send CI reports to SonarCloud/SonarQube?" — `cloud` recommended only for a public,
-  open-source repo, otherwise `none`; with `ci: no`, `none` is recommended since nothing would send reports),
-  `ci-tests` (only with `ci: yes`; `unit` recommended for private repos, `full` for public), and `pages` (only with
-  `ci: yes`; defaulted to `yes` for public repos, asked with `no` recommended for private — `pages: no` keeps the
-  docs build but uploads it as a workflow artifact). A standalone workflows skill resolves `visibility` and asks
-  `ci-tests`/`pages`/`sonar` itself (never `ci`). `on-existing` defaults to `ask` and is only for scripted runs —
-  orchestrators forward it only when their own `args` received it. Defaults: `publish`/`distribution` default to
-  `yes`/`store` only when the project is open source.
-- **Ticket intake**: `iru-create-github-issue` / `iru-create-jira-ticket` ground a draft in the codebase via
-  `iru-explore` before filing.
-  `iru-create-github-issue` stays the quick path. The detailed, spec-style path (GitHub only) is
-  `iru-draft-github-issue` (interview → functional or documentation draft) → `iru-review-github-issue` loop (classified
-  gap/pending/inconsistency/doubt findings, report-only on existing issues) → optional `iru-split-github-issue`.
-  A split creates a root issue, sub-issues (GitHub sub-issues API) and a milestone; dependencies are recorded as a
-  `Blocked by: #N` line and a `Parallel group: <n>` line in each sub-issue (same group = parallelizable) plus an
-  ordered group table in the root.
-- **Release**: `iru-release` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
-  it discovers the installed `iru-<key>-bump-version` skills (`find .claude/skills -maxdepth 1 -type d -name
-  "iru-*-bump-version"`, currently `java` (Java or Kotlin, Maven or Gradle), `typescript`, `react-native`
-  (`package.json` + Expo `expo.version` or Metro `versionName`/`MARKETING_VERSION`, store values only on a release),
-  `android`, `kmp` (`gradle.properties` `VERSION_NAME`/`VERSION_CODE` + `iosApp` `MARKETING_VERSION`), `swift`,
-  `php` (Laravel `config/app.php`, WordPress plugin/theme headers, PrestaShop module class; `x.y.z-dev`
-  convention), `python` (`pyproject.toml` `[project].version` + `__version__` literals; PEP 440 `x.y.z.dev0`
-  convention; VCS-derived versions left to the git tag), `dotnet` (`Directory.Build.props` `<Version>` + the
-  four-part MSIX `Identity Version` of a Windows app; `x.y.z-dev` convention; macOS desktop apps use `swift`),
-  `rust` (`Cargo.toml` `[package]`/`[workspace.package]` version + the `Cargo.lock` entry; `x.y.z-dev`), `go` (the
-  `Version` literal in `internal/version/version.go`, overridden by `-ldflags -X` at release; `x.y.z-dev`; a major
-  ≥ 2 needs the `/vN` module path), and `swift` also owns a Swift CLI's `Version.swift`) and delegates the actual version-file edit to whichever key matches the detected project, keeping
-  its own branch/PR/label/changelog steps ecosystem-agnostic.
-- **Android reference repository**: every `iru-*android*` skill's embedded templates are genericized from a single
-  real repository, https://github.com/albertoirurueta/irurueta-android-glutils (`lib/` + Compose `app/`,
-  `gradle/libs.versions.toml`, JUnit 4 + MockK + Robolectric + AndroidX test + Espresso, AGP JaCoCo, inline
-  `sonar {}`, Dokka to gh-pages) — keep new Android skills consistent with it, with the decided departures (Antora
-  site + Dokka under `api/`, `develop`/`main` branching with `-SNAPSHOT` on `develop` and a `sync.yml`) documented
-  in each skill rather than silently reintroduced.
-- **Guidance sources for the newer stacks**: the Kotlin, Spring Boot (Java/Kotlin), Quarkus, PHP/Laravel, NestJS,
-  Next.js, FastAPI, and Django coding references (each `iru-<key>-code-one-task/reference/` routing table) and their setup skills
-  are grounded in the author's docs repository, https://github.com/albertoirurueta/docs (cited in each
-  `reference/README.md` Sources as "irurueta docs: <page path>"); WordPress and PrestaShop aren't covered there,
-  so those references/scaffolds follow the official docs (developer.wordpress.org handbooks + WordPress Coding
-  Standards, devdocs.prestashop-project.org). Keep new guidance for these stacks consistent with those sources.
-  Kotlin Multiplatform (`kmp`) and React Native (`react-native`, both toolchains) follow the official docs
-  (kotlinlang.org multiplatform docs + JetBrains KMP/Compose Multiplatform docs; reactnative.dev, docs.expo.dev,
-  reactnavigation.org, React Native Testing Library), cited the same way in their `reference/README.md` Sources;
-  the KMP Android side stays consistent with the Android reference repository's conventions above. macOS desktop
-  guidance (`iru-swift-code-one-task`'s `macos.md`/`appkit.md`/`architecture.md`, `iru-setup-macos-app`, its
-  workflows) is grounded in the docs repository's `apps/apple/` pages; the Windows desktop stack (`windows` key,
-  `iru-setup-windows-*`) follows the official Microsoft Learn docs (WPF, WinUI 3/Windows App SDK, Windows Forms,
-  CommunityToolkit.Mvvm, MSIX, Store, WinGet) plus the docs repository's C# pages, because the docs repository's
-  own Windows Apps section (albertoirurueta/docs issue 191) isn't written yet — switch the citations once it is.
-  Command-line tools in every language follow the docs repository's `ai/cli-for-agents/` section (*Building CLIs for
-  AI Agents* — https://www.irurueta.com/ai/cli-for-agents/index.html: streams and exit codes, TTY/colour, machine
-  output, safety, frameworks, TUIs, packaging, testing, documenting); Rust guidance also cites its
-  `programming-languages/rust/` pages, while Go has no pages there, so the Go skills cite the official docs
-  (go.dev, Cobra, Bubble Tea, golangci-lint, GoReleaser). Keep new CLI guidance consistent with that section.
-- **UI contract**: every skill that builds, tests, scaffolds or documents a user interface (web, server-rendered
-  templates, Android, Apple, React Native, KMP, Windows desktop, terminal UIs) follows one contract, repeated
-  verbatim as `reference/ui-contract.md` in each UI coding skill (`android`, `swift`, `kmp`, `typescript`,
-  `nextjs`, `react-native`, `php`, `django`, `windows`, and the `rust`/`go`/`dotnet` terminal UIs) next to a
-  per-stack `reference/ui-implementation.md`: decompose a design into screens › regions › components before coding
-  (`iru-plan` writes that tree and plans one task per component, bottom-up); composition over inheritance;
-  components take an immutable UI state and emit typed intent events (two-way binding only for form fields);
-  data-driven or long collections use the platform's virtualizing/recycling container (RecyclerView/ListAdapter/
-  DiffUtil, Lazy*, `List`/`UICollectionView`, `FlatList`, web virtualizers, virtualizing WPF/WinUI lists, …) with
-  one reusable item component and the whole list in the view model; UI tests (component, screen, flow) on the
-  desktop/JVM, a simulator/emulator or a real browser (Playwright) over every state and data set, LTR+RTL ×
-  light+dark, writing `.ui-screenshots/<kind>/<Id>/<state>--<dir>--<theme>[--<variant>…].png` (gitignored,
-  `UI_SCREENSHOTS_DIR` overrides, cleared by the test gate on a full UI run, uploaded as a CI artifact) and running
-  automated accessibility checks at the `.ui-quality.yml` level (`accessibility: enforce|report|off|none`; §8 also carries platform assistive-technology
-  rules and visual-comfort extras, all skipped with `none`). Docs:
-  `iru-setup-antora`, `iru-update-docs` and `iru-update-java-springboot-documentation` carry a verbatim
-  `reference/ui-docs.md` — a **User interface** section (`ui/index.adoc`, `ui/navigation.adoc`, one page per screen
-  and per component) illustrated with the tests' screenshots, of which only the referenced ones are copied into
-  `images/ui/` (the only committed copies, replaced when a component changes, deleted with it), the rest discarded.
-  The shared files — `ui-contract.md`, `ui-docs.md`, and `accessibility-detection.md` (in `iru-explore` and
-  `iru-setup-repository`) — must stay byte-identical across the skills that carry them. Hand-maintained overview:
-  `docs/modules/ROOT/pages/guides/building-user-interfaces.adoc`.
-- **Template verification**: every scaffold/workflows/gate skill's embedded templates are meant to be exercised
-  against the real tooling in a throwaway directory *outside* this repository (`$TMPDIR/iru-verify/<stack>/<skill>/`)
-  before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can't be
-  verified locally is reported rather than assumed to work. Every `-github-workflows` skill also embeds the same
-  security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table;
-  a stack may add opt-in scanners beyond those shared four (e.g. MobSF for Android) as long as the shared block stays.
+- **Descriptions** are budgeted: at most 1,024 characters (internal skills target 400), the invocation form within the
+  first 200, values quoted in YAML. **Model tiers** (one `model:` per skill, enforced): `haiku` for mechanical gates,
+  version bumps and gitignore scaffolds; `sonnet` for coding skills and scaffold/workflow generators; `opus` only for
+  `iru-explore`, `iru-plan` and `iru-pr-review`; the agents pin their own (`iru-gate-runner` and
+  `iru-change-summarizer` `haiku`, `iru-isolated-skill-executor` `inherit`).
+- **Templates**: a skill's embedded file templates live in `.claude/skills/<skill>/templates/<variant>/<path of the
+  generated file>`; its `SKILL.md` keeps an index table and tells the agent to read only the variant it needs.
+  Guidance goes in `reference/`. Keep all of a skill's files under its own directory so copying it still works.
+- **Shared byte-identical files**: `ui-contract.md`, `cli-contract.md`, `ui-docs.md` and `accessibility-detection.md`
+  exist as one copy per skill that needs them and must stay byte-identical (`catalog-audit.py --check` fails on drift).
+  Change one, copy it to all.
+- **Plugins**: the catalog is also a plugin marketplace, `ai-catalog` (`iru-core` plus one plugin per stack, over the
+  unchanged `.claude/` tree). `.claude-plugin/marketplace.json` is generated by `tools/generate-marketplace.py` from
+  `tools/plugins.json`: never edit it by hand, and add every new skill or agent to a plugin there.
+- **Agent dispatch**: skills dispatch `subagent_type: "iru-gate-runner"` (and the other two agents); installed as a
+  plugin the name is `iru-core:iru-gate-runner`, and each caller explains the rule.
 
-### Agents (`.claude/agents/<name>.md`)
-
-This repository defines three custom agents for its most-duplicated sub-agent shapes:
-
-- **`iru-gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
-  headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
-  reports back only a compact summary. Gate skills it runs: `iru-<lang>-test`/`-coverage`/`-code-quality` for
-  `java` (Maven or Gradle, Java or Kotlin sources; coverage from JaCoCo, `quarkus-jacoco`, or Kover), `dotnet`,
-  `typescript` (incl. NestJS/Next.js/React Native — both the Expo and Metro toolchains —, `e2e` selector incl.
-  Maestro/Detox), `php` (Pest/PHPUnit, Clover, PHPStan/Psalm/PHPCS),
-  `python` (pytest incl. pytest-django, `integration` selector; coverage.py Cobertura; Ruff/mypy/Bandit — shared by
-  the `fastapi` and `django` keys), `android`, `swift` (incl. a `package-path` coverage mode for an app's local
-  `Packages/Core`), `kmp` (Kover coverage; detekt/ktlint/Android Lint/SwiftLint); the `dotnet` gates also serve the
-  `windows` key (WPF/WinUI/WinForms awareness, `EnableWindowsTargeting` off Windows, a `ui` selector for FlaUI tests);
-  `iru-kotlin-code-quality` (detekt/ktlint); doc audits `iru-java-javadoc`, `iru-kotlin-kdoc`, `iru-kmp-dokka`,
-  `iru-dotnet-docfx`, `iru-typescript-tsdoc`, `iru-php-phpdoc`, `iru-python-docstrings` (Ruff `D` + Sphinx build), `iru-android-dokka`, `iru-swift-docc`,
-  `iru-rust-rustdoc` (rustdoc + doctests), `iru-go-godoc`; the Rust gates `iru-rust-test` (nextest or `cargo test`) /
-  `-coverage` (cargo-llvm-cov) / `-code-quality` (clippy, rustfmt, cargo-deny) and the Go gates `iru-go-test` /
-  `-coverage` (coverprofile; Go has no branch coverage) / `-code-quality` (golangci-lint v2, go vet, govulncheck); plus
-  `iru-check-license`/`iru-check-security`. Used throughout `iru-code`, `iru-code-one-task-group`, and every
-  `iru-<key>-code-one-task-group` that validates (all but `database`), and recommended by `iru-plan` for the scoped
-  test-run step it writes into generated plans.
-- **`iru-isolated-skill-executor`** — runs one named skill end-to-end in a completely fresh context so an earlier
-  exploration/planning transcript can't bias it, while the caller keeps running afterward. Used by `iru-issue` to
-  delegate the entire `iru-code` run for a ticket.
-- **`iru-change-summarizer`** — fans out over a git commit/tag range and returns only the user-facing changes.
-  Used by `iru-setup-changelog` to summarize one release at a time when backfilling a long tag history.
-
-Skills that need ad hoc context isolation beyond these three shapes still use Claude Code's *built-in* agent
-types via the `Agent` tool: `iru-explore` uses the `Explore` agent explicitly; one-off cases like bootstrapping
-`iru-setup-antora` mid-run (`iru-generate-skill-docs`, `iru-update-docs`) use `general-purpose`, the default.
-
-### Documentation (`docs/`)
+## Documentation (`docs/`)
 
 An Antora site (`docs/antora.yml`, `docs/antora-playbook.yml`) with two kinds of pages under
 `docs/modules/ROOT/pages/`, which matters because they're maintained differently:
@@ -319,3 +86,12 @@ An Antora site (`docs/antora.yml`, `docs/antora-playbook.yml`) with two kinds of
 `iru-generate-skill-docs` skill handles this for generated pages automatically).
 
 `docs/build/` is gitignored — never hand-edit generated site output.
+
+## Where the detail lives
+
+Under `docs/modules/ROOT/pages/guides/`: `catalog-architecture.adoc` (the pipelines, repository bootstrap and shared
+inputs, ticket intake, release, the Android reference repository, guidance sources, the UI contract, template
+verification and the three custom agents — moved here from this file), `performance-and-token-budget.adoc` (budgets,
+model tiers, prompt-cache analysis, before/after numbers), `plugins.adoc` and `packaging-and-distribution.adoc`
+(installing the catalog), `creating-skills-and-agents.adoc`, `extending-the-catalog.adoc`, `common-workflows.adoc`,
+`building-user-interfaces.adoc`, `rolling-deployments.adoc` and `creating-tickets.adoc`.

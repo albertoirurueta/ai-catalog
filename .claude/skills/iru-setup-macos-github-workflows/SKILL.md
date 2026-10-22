@@ -1,35 +1,6 @@
 ---
 name: iru-setup-macos-github-workflows
-description: >-
-  Create or update the GitHub Actions workflows plus `.github/dependabot.yml` for a native macOS desktop app repository
-  produced by `iru-setup-macos-app` (XcodeGen `project.yml` → gitignored `<AppName>.xcodeproj`, one scheme `<AppName>`,
-  UI-free `Packages/Core`, `ExportOptions-*.plist`, `scripts/make-dmg.sh`) — `build.yml` (every push to the
-  integration/stable branches, every pull request, `workflow_dispatch`): a Linux `lint` job in a `swift` container
-  (SwiftLint `--strict` + `swift format lint --strict`) on every change, a cost-gated macOS job (`macos-ci: all|stable`
-  — macOS minutes cost ~10× Linux on private repositories; `needs: lint`) running the Core `swift test` with
-  `llvm-cov` coverage and an 80% line bar, `xcodegen generate`, `xcodebuild test` with ad-hoc signing (`ci-tests: unit`
-  skips `<AppName>UITests`; `full` also runs the XCUITest UI tests after an Automation Mode check), the UI tests'
-  `.ui-screenshots/` captures recovered from the `.xcresult` and uploaded as a 7-day artifact, the xcresult
-  artifact and DocC (`--warnings-as-errors`, static hosting under `api/`), an optional Linux SonarQube job fed by the
-  converted lcov and the SwiftLint report, and an Antora docs job merged with the DocC archive and deployed to GitHub
-  Pages (`pages: yes`) or uploaded as an artifact (`pages: no`); `release.yml` per `distribution` (`internal`: import
-  the Developer ID Application certificate, archive, export `developer-id`, notarize + staple the app, build the DMG
-  with `scripts/make-dmg.sh`, sign + notarize + staple the DMG, Gatekeeper check, attach it to the GitHub Release;
-  `store`: archive and `-exportArchive` with `destination: upload` to App Store Connect via the API key and
-  `-allowProvisioningUpdates`); `sync.yml` + `.github/scripts/sync_versions.py` (gitflow: merge the release back and
-  move `MARKETING_VERSION` to the next patch with `CURRENT_PROJECT_VERSION` + 1); and the shared security block
-  (`security.yml` with dependency-review, CodeQL `swift` on macOS, OSV-Scanner, gitleaks; Dependabot for `swift` +
-  `github-actions`). Invoke as `/iru-setup-macos-github-workflows`. Accepts pre-resolved inputs via `args`
-  (`key: value` lines): `branching` (`gitflow`/`main-only`), `integration-branch`, `stable-branch`, `runner` (default
-  `macos-26`), `xcode-version`, `macos-ci` (`all`/`stable`), `ci-tests` (`unit`/`full`), `open-source`, `visibility`,
-  `pages`, `distribution` (`none`/`internal`/`store`), `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `mode`, `on-existing`, and the `security-*` toggles; stand-alone it resolves `visibility` itself
-  (`gh repo view`) and asks `macos-ci`/`ci-tests`/`pages`/`sonar` with the Actions-minutes, macOS-multiplier,
-  SonarCloud and Pages cost facts for that visibility (never `ci` — invoking it means CI is wanted). Announces whether
-  it is creating the pipeline from scratch or updating; for every workflow/script/Dependabot file that already exists
-  it warns and asks Update / Keep as is / Replace / Stop, naming each concrete mismatch, unless `on-existing` decides.
-  Ends with the required-secrets table. Use whenever a macOS desktop app repository needs this CI/CD, release and
-  security pipeline bootstrapped or brought in line with this house pattern, instead of hand-writing the YAML.
+description: "Invoke as `/iru-setup-macos-github-workflows`, optionally with `args` (key: value lines such as `branching`, `macos-ci`, `ci-tests`, `distribution`, `pages`, `sonar`, `on-existing`); normally called by `iru-setup-macos-repository`. Creates build, release, sync and security workflows plus Dependabot for a macOS desktop app."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(gh *) Bash(git *) Bash(curl *) Bash(python3 *) Bash(ruby *) Bash(actionlint *) Bash(xcodegen *) Bash(xcodebuild *) Bash(xcrun *) Bash(swift *) Bash(swiftlint *) Bash(plutil *) Bash(mkdir *)
 ---

@@ -58,6 +58,10 @@ SonarCloud pricing, Pages availability) before asking about `sonar`, `ci-tests`,
 
 xref:index.adoc#group-typescript-bootstrap[TypeScript/Node Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-typescript` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-typescript@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -137,6 +141,8 @@ and the repository, asking the user for anything that can't be inferred. Unresol
 |`security.yml` |Yes |Yes |Yes |Yes (`metro`: CodeQL also scans `actions`, `java-kotlin`, and `swift` on public repos) |Yes |Yes (CodeQL also scans `actions`) |Yes (CodeQL also scans `actions`)
 |`.github/dependabot.yml` |Yes |Yes |Yes |Yes (`metro`: plus `gradle` and `bundler`) |Yes |Yes (plus `docker` with a `Dockerfile`) |Yes (plus `docker` with a `Dockerfile`)
 |===
+
+The generated files' bytes come from template files under `templates/` (and, where a template needs variant-specific notes, `reference/`) in `.claude/skills/iru-setup-typescript-github-workflows/`; the skill reads only the files for the variant it resolved, not the whole set, which keeps its `SKILL.md` small.
 
 == Execution flow
 

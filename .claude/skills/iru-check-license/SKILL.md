@@ -1,6 +1,6 @@
 ---
 name: iru-check-license
-description: Check for a license file (LICENSE, LICENSE.txt, LICENSE.md, COPYING, etc.) in the repository root, and if one exists, verify every source and test file carries a header consistent with it. Learns the header format from files that already have one; if none carry a header yet, generates a standard header for that license type. Invoke as `/iru-check-license` to scan the whole repository, or `/iru-check-license <path-or-glob>` to scope the check to specific files/directories. Use whenever the user wants license-header compliance checked or backfilled, instead of eyeballing individual files.
+description: "Invoke as `/iru-check-license` (whole repository) or `/iru-check-license <path-or-glob>`. Checks the repository's license file (LICENSE, COPYING, etc.) and verifies every source and test file carries a consistent header, learning the format from existing headers or generating a standard one. Use for license-header compliance checks or backfills."
 model: haiku
 ---
 

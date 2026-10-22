@@ -1,6 +1,6 @@
 ---
 name: iru-code
-description: Execute the tasks in implementation_plan.md at the repository root, one task group at a time — implement every task in a group (in parallel where the plan marks the group parallelizable), validate the whole group once (tests, coverage, code quality), and check off each task's checkbox directly in implementation_plan.md before moving to the next group. Dispatches each group to the `iru-code-one-task-group` skill, which in turn resolves the language/framework-specific `<key>-code-one-task-group` skill declared by the plan (e.g. `iru-java-code-one-task-group`, `iru-java-springboot-code-one-task-group`, `iru-kotlin-springboot-code-one-task-group`, `iru-quarkus-code-one-task-group`, `iru-php-code-one-task-group`, `iru-dotnet-code-one-task-group`, `iru-typescript-code-one-task-group`, `iru-nestjs-code-one-task-group`, `iru-nextjs-code-one-task-group`, `iru-fastapi-code-one-task-group`, `iru-django-code-one-task-group`, `iru-android-code-one-task-group`, `iru-swift-code-one-task-group`, `iru-kmp-code-one-task-group`, `iru-react-native-code-one-task-group`, `iru-windows-code-one-task-group`, `iru-rust-code-one-task-group`, `iru-go-code-one-task-group`) — falling back to implementing a task directly when the plan names no matching key. Runs autonomously — user intervention is limited to unresolved errors, decisions only the user can make, or permissions the allowed-tools list doesn't cover. Warns the user up front if implementation_plan.md already exists at the repository root (expected only when resuming an interrupted prior run). On successful completion, updates the project's Antora documentation (via the `iru-update-docs` skill) to reflect all the changes the plan made, archives the plan to .archive/, asks the user whether to open follow-up tasks or new tickets (on whichever tracker the plan originated from — a GitHub issue via `gh issue create`, or a Jira ticket via the `iru-create-jira-ticket` skill) if overall code quality isn't excellent, and asks for a final review of all code and documentation changes. Invoke as `/iru-code` once implementation_plan.md exists (e.g. produced by the `iru-plan` skill).
+description: "Invoke as `/iru-code` once `implementation_plan.md` exists (e.g. from `iru-plan`). Executes the plan one task group at a time via `iru-code-one-task-group`, validating each group once and checking off tasks as it goes. Runs autonomously, then updates docs via `iru-update-docs`, archives the plan to `.archive/`, offers follow-up tickets and asks for a final review. Warns if a plan already exists (resuming)."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(npm *) Bash(composer *) Bash(vendor/bin/*) Bash(detect-secrets *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(date *) Bash(gh issue create *) TaskCreate TaskUpdate TaskList TaskGet Skill Agent
 ---
@@ -15,6 +15,8 @@ counterpart to the `iru-plan` skill. It uses a medium model on purpose: the plan
 that plan, not to re-derive it. On successful completion it brings the project's documentation in line with
 everything the plan changed (Step 8) and archives the plan file (Step 9) so the root only ever holds the plan for
 work that is still outstanding.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 1 — Load the plan, and warn if one already exists
 
@@ -38,7 +40,7 @@ Read `implementation_plan.md` at the repository root.
 - Otherwise, read the plan in full, including the "Task summary" and "Current code state" sections for context,
   and the numbered "Implementation steps" (organized into task groups) for the actual work list.
 
-## Step 2 — Verify checkbox placeholders and task groups
+## Step 2 — Verify checkbox placeholders, task groups and open clarifications
 
 The `iru-plan` skill gives every top-level task and every sub-task its own empty markdown checkbox (`[ ]`), organized
 into task groups each marked `Parallelizable: yes`/`Parallelizable: no`. Track completion by checking those boxes
@@ -54,6 +56,22 @@ into task groups each marked `Parallelizable: yes`/`Parallelizable: no`. Track c
 - Treat any task or sub-task whose checkbox is already `[x]` (from a prior run of this skill) as already done —
   this makes the skill resumable across interrupted runs. A group where every task is already `[x]` is itself
   done; skip it entirely in Step 4.
+- Scan the whole plan for the literal text `[NEEDS CLARIFICATION` outside inline code spans and fenced code blocks
+  (the same rule as `catalog-audit.py --plan`, so a plan that merely documents the syntax in backticks is not
+  blocked). It is the marker `iru-plan` persists when it could not ask, in the form
+  `[NEEDS CLARIFICATION: <question> — options: <a> | <b>; recommended: <a>]`, written on the task it blocks and
+  repeated verbatim under `Open clarifications:` in the Task summary. **No implementation starts on an unresolved
+  marker.** If any remain, list each one with the task it blocks and ask the user to resolve them via
+  `AskUserQuestion` — one question per distinct marker (the `Open clarifications:` entries repeat the task markers,
+  so never ask twice), the recorded recommended option first. Apply each answer to the plan in place: replace the
+  marker (both copies) with the chosen decision, adjust the affected tasks if the decision changes them, remove it
+  from the `Open clarifications:` list (which reads `Open clarifications: none` once empty), and save the file; only
+  then continue. If the user declines some or all of them, or no one can be asked (an unattended run), the answers
+  already given are applied and saved as above, only the declined markers stay open: stop per Step 6's interrupt
+  rules and report the markers that are still open.
+- Check that the plan has the `## Acceptance criteria coverage` section (a table mapping each criterion to the
+  tasks that cover it). If it is absent — a plan written by an older `iru-plan` — warn the user once that the
+  coverage check in Step 7 will be skipped, and continue; this keeps older plans executable.
 
 ## Step 3 — Track progress, and capture project-wide quality and security baselines
 
@@ -181,6 +199,8 @@ Stop and use `AskUserQuestion` (or plain text if no real choice is being offered
 - A tool call needs a permission outside this skill's `allowed-tools` list and the underlying action is risky or
   irreversible (e.g. anything beyond the scoped `mvn`/read-only `git` commands this skill is pre-approved for) —
   in this case the harness will already prompt; just make the case for why it's needed if asked.
+- Step 2 found `[NEEDS CLARIFICATION` markers the user declined to resolve, or could not be asked about — stop
+  before any implementation and report them.
 - `implementation_plan.md` already has every checkbox checked when a run starts — handled in Step 1, not here;
   don't redo finished work.
 
@@ -281,7 +301,7 @@ key found in the plan:
    via `iru-gate-runner` keeps the full reports out of the main context window. Compare each returned counts/per-file
    list against that same key's Step 3 baseline.
 2. If, across every key checked, the total issue count did not increase and is zero (or was already zero at
-   baseline and still is), overall quality is excellent — proceed to Step 8.
+   baseline and still is), overall quality is excellent — continue with the security assessment below.
 3. Otherwise — one or more keys leave the project with more issues than it started with, or a nonzero count
    persists for one or more of them — do not silently proceed. Use `AskUserQuestion` to tell the user what
    remains (counts and a short summary per tool, grouped by language/framework key if more than one is involved)
@@ -308,7 +328,7 @@ key found in the plan:
        (`AskUserQuestion`) which tracker to file to rather than guessing.
      or
    - leave it as-is and proceed to archive without further action.
-   Respect whichever the user picks; only proceed to Step 8 once this choice has been acted on (issues filed, or
+   Respect whichever the user picks; only continue once this choice has been acted on (issues filed, or
    explicit acknowledgment to proceed as-is).
 4. If no language/framework key could be determined for the plan, or none of the keys involved have their resolved
    quality skill installed in this repository, skip this quality assessment entirely and proceed
@@ -326,7 +346,7 @@ repository):
    lacking a triage label)."})`. Running this via `iru-gate-runner` keeps the raw scan output out of the main context
    window. Compare the returned count/per-file list against the Step 3 baseline.
 2. If the count did not increase (zero flagged secrets beyond what Step 3 already recorded), security is
-   clean — proceed to Step 8.
+   clean — continue with the coverage check below.
 3. If the count increased — this run's tasks introduced a new secret, or left one newly unaudited — treat this
    as a hard stop, unlike the quality gate above: there is no "leave as-is and proceed" option here, since that
    risks committing a real credential. Use `AskUserQuestion` to show the user exactly what's new (file, line,
@@ -340,11 +360,20 @@ repository):
    up after it (e.g. `iru-pr-description`, `iru-issue`, or the user's own next `git commit`), could commit, push, or
    include in a pull request.
 4. If the `iru-check-security` skill is unavailable in this repository, or Step 3 recorded that scanning was skipped
-   for this run, skip this security assessment and proceed to Step 8 directly.
+   for this run, skip this security assessment and continue with the coverage check below.
+
+Finally, verify acceptance-criteria coverage before anything is archived (skip it when Step 2 found no `## Acceptance
+criteria coverage` section). Re-read `implementation_plan.md` and, for every row of that table, confirm it names at
+least one task and that every task it names (with its sub-tasks) is now checked `[x]`. Treat any uncovered row (no
+task named) or unchecked row (a named task still `[ ]`) as a blocker, on the same footing as a failed quality or
+security gate: do not proceed to Step 8 or archive. Tell the user which rows are affected via `AskUserQuestion` and
+offer to add follow-up task(s) for them to `implementation_plan.md` (as a new group, with empty checkboxes, then
+return to Step 4) or, if the user says the criterion is out of scope, to edit the row in the plan accordingly. Only
+when every row is covered and checked proceed to Step 8.
 
 ## Step 8 — Update documentation
 
-Once Step 7 passes clean (healthy build, and the quality and security gates both resolved), bring the project's
+Once Step 7 passes clean (healthy build, the quality and security gates both resolved, and every coverage row covered and checked), bring the project's
 Antora documentation in line with everything this run actually changed, by delegating to the `iru-update-docs` skill:
 `Skill({skill: "iru-update-docs"})`. Invoked with no argument, `iru-update-docs` covers uncommitted changes plus any
 commits already made on the current branch that aren't on the base branch — which is exactly this run's surface,
@@ -363,8 +392,9 @@ Then continue to Step 9.
 
 ## Step 9 — Archive the plan and ask for review
 
-Only after Step 7 passes clean, with every task's checkbox checked, both the quality and security gates above
-resolved, and Step 8's documentation update done:
+Only after Step 7 passes clean, with every task's checkbox checked, the quality and security gates above
+resolved, the acceptance-criteria coverage check passed (or skipped for a plan without that section), and Step 8's
+documentation update done:
 
 1. Determine an identifier for the archived filename:
    - If the plan was grounded in a tracked ticket, check the "Task summary" section for a `Source:` line (per
@@ -386,7 +416,8 @@ resolved, and Step 8's documentation update done:
 3. Summarize for the user: which groups/tasks were completed, the files touched overall, the coverage achieved
    per task/class, the final code-quality outcome (excellent / follow-up filed / issues left as-is per Step 7),
    the final security outcome (clean / not run, since a resolved-but-triggered gate is otherwise indistinguishable
-   from clean once Step 7 passes), what Step 8 updated in the documentation (or that there was no documentation
+   from clean once Step 7 passes), the acceptance-criteria coverage outcome (all rows covered and checked / skipped
+   because the plan has no coverage section) and any clarification markers resolved in Step 2, what Step 8 updated in the documentation (or that there was no documentation
    site to update), and where the plan was archived to.
 4. Explicitly ask the user to review the code and documentation changes (e.g. `git diff` / `git status`) before
    anything is committed. Do not commit, push, or open a PR — this skill's job ends at working, tested, reviewable

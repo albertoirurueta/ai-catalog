@@ -24,6 +24,10 @@ The generated code is the first exemplar of the `iru-django-code-one-task` conve
 
 xref:index.adoc#group-python-bootstrap[Python Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-python` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-python@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

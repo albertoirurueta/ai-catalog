@@ -1,6 +1,6 @@
 ---
 name: iru-dotnet-generate-all-tests
-description: For a .NET/C# project or solution only, explore the whole codebase to find every class that has no corresponding unit test class, or whose measured line coverage falls below 80%, using the `iru-dotnet-coverage` skill to get the exact percentage per class — then generate new tests (or extend existing ones) until each reaches that bar, following this project's own test framework and style. Invoke as `/iru-dotnet-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a .NET/C# project (no `.sln`/`.csproj` found). For a Windows desktop app (WPF, WinUI 3, Windows Forms — plan key `windows`) the coverage pass targets only the UI-free Core project and its portable test project, reporting app-project/UI-layer classes as excluded ("not measured") rather than writing UI-thread unit tests for them; per-task Windows work goes through `iru-windows-code-one-task(-group)`. When the repository already has a UI-test project (FlaUI for a Windows app, or Terminal.Gui view tests for a `ui` = `tui` command-line tool) it also generates UI tests per the catalog's UI contract for every existing screen and component that has none — every visual state × the `.ui-quality.yml` directions × themes, captured into `.ui-screenshots/` with the accessibility check — and runs them through `iru-dotnet-test`'s `ui` selector (Windows-only for desktop apps, otherwise reported "unverified (needs Windows)"). Use whenever the user wants comprehensive unit test coverage brought up across an entire .NET codebase in one pass, instead of writing tests for one class or task at a time.
+description: "/iru-dotnet-generate-all-tests finds every class in a .NET/C# solution with no unit test class or under 80% line coverage per iru-dotnet-coverage, and generates or extends tests in the project's own framework and style. Stops if there is no .sln/.csproj. Windows apps cover only the Core project; existing UI-test projects get UI tests via iru-dotnet-test ui."
 model: sonnet
 allowed-tools: Read Edit Write Bash(dotnet *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -13,6 +13,8 @@ each until it clears it. This skill is .NET/C# only — it never runs against, o
 language. It only adds/extends test code; it does not add license headers, doc comments, or run a code-quality
 pass (those are separate skills' jobs), and it only touches production source code if a class is genuinely
 untestable as written (see Step 5) — which it reports rather than silently "fixing" by redesigning the class.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 1 — Confirm this is a .NET project
 
@@ -160,7 +162,8 @@ generated" (this skill doesn't scaffold one; `iru-setup-windows-app`/`iru-setup-
    `reference/ui-implementation.md` when installed, otherwise the existing tests' helpers (`UiQuality`,
    `UiScreenshots`, `AccessibilityCheck`). Each test renders every applicable visual state with minimal/typical/
    many-items data (an Arabic or Hebrew fixture for `rtl`), asserts behaviour once (`ltr`, `light`), captures every
-   state × `.ui-quality.yml` direction × theme (terminal: `.txt`, theme `no-color`) through the shared helper, and
+   state × `.ui-quality.yml` direction × theme (terminal: `.txt`, theme `no-color`) through the shared helper into
+   `.ui-screenshots/`, and
    runs the accessibility check after each capture (Axe.Windows on the desktop, the asserted `tui-*` checks in a
    terminal UI). Add an automation id (`AutomationProperties.AutomationId`
    / `Control.Name`) to a view only when a test can't find an element otherwise, and say so. A component that can't

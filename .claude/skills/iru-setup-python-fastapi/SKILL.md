@@ -1,30 +1,6 @@
 ---
 name: iru-setup-python-fastapi
-description: >-
-  Scaffold a new FastAPI service with uv (`uv init --bare` + `uv add` with the pinned ranges of the author's docs:
-  `fastapi[standard]>=0.142.2,<0.143.0`, Pydantic 2, pydantic-settings, SQLModel or plain SQLAlchemy 2.0 async on
-  asyncpg/aiosqlite, Alembic), or bring an existing FastAPI service up to this catalog's toolchain, then lay down a
-  real, tested skeleton: the layered `app/` package (`main.py` app factory + lifespan, `settings.py` with
-  `env_prefix="APP_"` and `SecretStr`, `dependencies.py` `Annotated` aliases, `db.py`, `routers/`, `services/` with a
-  `Protocol` port, `data/` adapters, `models/`), `/healthz` + `/readyz`, one sample CRUD resource (router → service →
-  repository) with fast tests on in-memory SQLite and a testcontainers PostgreSQL integration tier
-  (`@pytest.mark.integration`), Alembic with an async `env.py`, a naming convention and a reviewed initial
-  revision, optional PyJWT + pwdlib[argon2] auth, `scripts/export_openapi.py`, Sphinx API docs sources in
-  `docs/api/`, a multi-stage non-root uv `Dockerfile` + `.dockerignore` + `compose.yaml` (postgres:18, one-shot
-  `migrate`, app), `.env.example`, `sonar-project.properties` when Sonar is enabled, and every tool config in
-  `pyproject.toml` (Ruff, mypy strict + pydantic plugin, pytest markers, coverage 80% with XML at
-  `build/coverage/coverage.xml`) exactly as the Python scaffold contract the `iru-python-*` gates and
-  `iru-setup-python-github-workflows` rely on. Invoke as `/iru-setup-python-fastapi`. Accepts pre-resolved inputs via
-  `args` (`key: value` lines) — `name`, `package`, `description`, `license`, `developer-name`, `developer-email`,
-  `organization-url`, `python-version`, `database` (`postgresql`/`sqlite`/`none`), `orm` (`sqlmodel`/`sqlalchemy`),
-  `auth` (`yes`/`no`), `open-source`, `visibility`, `ci`, `distribution`, `sonar` (+ `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `mode` (`new`/`existing`), `on-existing` (`ask`/`keep`/`update`/`replace`)
-  — so `iru-setup-python-repository` can drive it without re-prompting; stand-alone it asks whatever `args` didn't
-  resolve. Announces whether it is scaffolding from scratch or updating an existing service and, for every artifact
-  it owns that already exists, warns and asks Update / Keep as is / Replace (or Stop). Ends by running the contract's
-  canonical commands (uv sync, ruff, mypy, fast + integration pytest, coverage, Alembic checks, Sphinx, OpenAPI
-  export, uv build, docker build). Use whenever a repository needs a FastAPI service bootstrapped with its full
-  test/lint/type/migration/container toolchain from this house template, instead of wiring it by hand.
+description: "Invoked as /iru-setup-python-fastapi with optional key: value args, usually by iru-setup-python-repository. Scaffolds a FastAPI service with uv (or upgrades one): layered app package, sample CRUD resource, SQLModel or SQLAlchemy with Alembic, optional JWT auth, pytest tiers, Ruff, mypy, Sphinx, Dockerfile and optional Sonar."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(uv *) Bash(uvx *) Bash(docker *) Bash(curl *) Bash(python3 *) Bash(openssl *) Bash(git *) Bash(gh repo view *) Bash(mktemp *) Bash(mv *) Bash(cp *) Bash(rm *) Bash(mkdir *) Bash(touch *) Bash(ls *) Bash(find *) Bash(grep *) Bash(cat *) Bash(test *) Bash(command -v *) Bash(head *) Bash(date *) Bash(sleep *)
 ---

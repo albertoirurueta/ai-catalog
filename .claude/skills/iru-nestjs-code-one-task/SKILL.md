@@ -1,25 +1,6 @@
 ---
 name: iru-nestjs-code-one-task
-description: >-
-  Implement a single task from a NestJS `implementation_plan.md`-style task list — the implementation, its unit
-  (and, where the task needs them, e2e) tests, and its checkbox update. Detects the project's flavor at runtime —
-  ESM (`"type": "module"`, `.js` relative-import suffix) vs. CommonJS, Vitest vs. Jest, Express vs. Fastify, the ORM
-  (TypeORM, Prisma, Mongoose, Drizzle, MikroORM), the Nest major version, class-validator vs. Standard Schema
-  validation, standard vs. monorepo mode (`nest-cli.json` projects), and whether the repository follows ports and
-  adapters — then loads only the matching guidance from this skill's own `reference/` directory (this catalog's
-  TypeScript agreements restated for Nest, decorator metadata and DTO classes imported as values, modules and DI,
-  validation and DTOs, guards/interceptors/pipes/filters with single `APP_*` registration, configuration,
-  persistence with transactions and migrations and never `synchronize`, testing with `Test.createTestingModule`,
-  overrides, supertest e2e through a shared `configureApp`, the `nest g` generators, and security). Re-checks the
-  current code state, implements exactly what the task specifies (generating skeletons with the project's own
-  `nest g` where that matches its conventions, then replacing every placeholder and registering every enhancer),
-  writes the tests, runs only the unit spec files it touched, then immediately checks off this task's checkbox
-  (and its sub-tasks') in `implementation_plan.md` with a "group validation pending" note before handing back a
-  short summary. Never runs e2e tests, coverage, lint/type-check gates, license headers, a TSDoc audit, `nest build`,
-  or the full suite — those happen once per task group in `iru-nestjs-code-one-task-group`, which invokes this skill
-  once per task (in parallel when the group allows it). Invoke as `/iru-nestjs-code-one-task <task description>`,
-  passing the task's own text including its exact `implementation_plan.md` checkbox line(s). The NestJS
-  counterpart to `iru-typescript-code-one-task`.
+description: "Invoked as /iru-nestjs-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one NestJS (ESM or CommonJS, any ORM, standard or monorepo) plan task and its tests, unit/e2e specs written, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-nestjs-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(node *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *)
 ---

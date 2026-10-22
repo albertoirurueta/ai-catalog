@@ -1,34 +1,6 @@
 ---
 name: iru-php-code-one-task-group
-description: >-
-  Implement one bucket of PHP tasks from a plan's task group end-to-end — Laravel application, WordPress plugin or
-  theme, PrestaShop module, or plain Composer library, detected once with the same markers as `iru-explore` and
-  `iru-php-code-quality`. Captures a single pre-change quality baseline for the whole bucket, runs
-  `iru-php-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement
-  each one and its tests, then validates the entire bucket once, cheapest first, every check delegated to an
-  `iru-gate-runner` agent so no raw report lands in this context — license headers via `iru-check-license`, PHPDoc
-  via `iru-php-phpdoc`, `composer validate` and `composer audit` (informational), scoped fast tests via
-  `iru-php-test`, an 80% line-coverage gate via `iru-php-coverage` measured from **fast tests only**, the full fast
-  suite, PHPStan/Psalm/Pint/PHP-CS-Fixer/PHPCS via `iru-php-code-quality` diffed against that one baseline (Rector
-  findings reported as informational, never as regressions), and last the integration stage — only for suites
-  that genuinely need Docker or a database (`WP_UnitTestCase` suites under wp-env or the WordPress test library,
-  Laravel tests wired to MySQL/PostgreSQL/Redis through Sail, PrestaShop shop-backed tests). Laravel feature tests
-  on SQLite `:memory:` and Brain Monkey/WP_Mock WordPress tests are fast tests, not integration tests. The
-  integration stage is serialized repository-wide behind the same atomic `mkdir`-based `.integration-test.lock` as
-  the other `*-code-one-task-group` skills (owner file, stale after 60 minutes, bounded ~45-minute wait, released
-  on every exit path); if Docker is unavailable, the environment isn't running, or the wait times out, the stage
-  is reported **unverified**, never silently skipped, and the coverage verdict never depends on it. Buckets that
-  touched UI (Blade/Livewire views and components, blocks, patterns, template parts, `.tpl`/`.twig` templates,
-  their CSS/JS assets) also get a browser UI stage — `iru-php-test` with the `ui` selector (Playwright +
-  `@axe-core/playwright`, or `wp-scripts test-playwright` for WordPress) behind the same lock — followed by a check
-  that `.ui-screenshots/` holds every added/changed screen and component's states × `.ui-quality.yml` directions ×
-  themes, with the accessibility level applied (`enforce` fails the bucket on violations, `report` lists them); no
-  browser, Docker, wp-env or shop makes it **unverified**, never skipped.
-  `iru-php-code-one-task` checks off each task's box itself with a "group validation pending" note; this skill
-  backfills any that didn't land and replaces each note with the final outcome. Invoke as
-  `/iru-php-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket with its own text, the
-  group's `Parallelizable` verdict, and any relevant "Current code state" context. Used by
-  `iru-code-one-task-group`, which invokes it once per plan group for its `php`-tagged tasks.
+description: "Invoked as /iru-php-code-one-task-group <bucket text> (group tasks, Parallelizable verdict, code state) via Skill. Implements one PHP task bucket: one baseline, iru-php-code-one-task per task (parallel when allowed), then validates once (license, PHPDoc, fast tests, 80% coverage, static analysis, locked integration/UI); finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(php *) Bash(vendor/bin/*) Bash(./vendor/bin/*) Bash(composer *) Bash(npx wp-env *) Bash(ddev *) Bash(docker *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---
@@ -59,6 +31,8 @@ Three things shape the validation order:
    may be in flight repository-wide (Step 3.8a).
 
 It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Read this before running anything container-backed
 

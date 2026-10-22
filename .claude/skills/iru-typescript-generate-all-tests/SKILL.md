@@ -1,6 +1,6 @@
 ---
 name: iru-typescript-generate-all-tests
-description: For a TypeScript/npm project only, explore the whole codebase to find every source file that has no corresponding unit test, or whose measured line coverage falls below 80%, using the `iru-typescript-coverage` skill to get the exact percentage per file — then generate new tests (or extend existing ones) until each reaches that bar, using the project's own framework's testing library and following its existing test-file convention and style. Invoke as `/iru-typescript-generate-all-tests`. Stops immediately, without attempting anything, if the repository isn't a TypeScript/npm project (no `package.json` found, or no TypeScript toolchain). Use whenever the user wants comprehensive unit test coverage brought up across an entire TypeScript codebase (library, React, Angular, React Native — `expo` with `jest-expo` or bare CLI/`metro` with `@react-native/jest-preset`, React Native Testing Library 14's async `render`/`fireEvent` honored and native modules mocked at their JS boundary — Ionic, or Hilla frontend) in one pass, instead of writing tests for one file or task at a time. For a web UI project with Playwright wired (React/Vite, Angular, Ionic, Next.js, Hilla) it also generates UI tests per the catalog's UI contract for every existing screen and component that has none — a story per visual state, Playwright component specs through the project's component gallery (`mount()`), screen specs against the built app, each capturing the `.ui-quality.yml` directions × themes into `.ui-screenshots/` through the shared `ui-screenshots.ts` helper with the axe check — and runs them once through `iru-typescript-test`'s `ui` selector (missing browser or web server → unverified, never passed).
+description: "/iru-typescript-generate-all-tests - for a TypeScript/npm project only, finds every source file with no unit test or under 80% line coverage (via iru-typescript-coverage) and generates or extends tests; for Playwright-wired web UIs it also generates UI tests for screens and components that have none."
 model: sonnet
 allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -13,6 +13,8 @@ for each until it clears it. This skill is TypeScript/npm only — it never runs
 other language. It only adds/extends test code; it does not add license headers, TSDoc, or run a lint/code-quality
 pass (those are separate skills' jobs), and it only touches production source code if a file is genuinely
 untestable as written (see Step 5) — which it reports rather than silently "fixing" by redesigning the module.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 1 — Confirm this is a TypeScript/npm project
 

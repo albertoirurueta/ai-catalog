@@ -1,6 +1,6 @@
 ---
 name: iru-java-code-one-task-group
-description: Implement one bucket of Java tasks from a plan's task group end-to-end — captures a single pre-change quality baseline for the whole bucket, runs `iru-java-code-one-task` once per task (in parallel agents when the group is marked parallelizable) to implement each one and its tests, then validates the entire bucket once: license headers, Javadoc, scoped tests, an 80% coverage check, a full-suite run, and a code-quality regression check against that one baseline. `iru-java-code-one-task` itself checks off each task/sub-task's box in `implementation_plan.md` the moment that task finishes (with a "group validation pending" note), so an interrupted run doesn't re-attempt already-finished tasks; this skill backfills any checkbox that didn't land — a rare concurrent-write race when several tasks finish at nearly the same moment — and replaces each task's pending note with the final coverage/quality outcome once group validation passes, notifying the user as each phase completes rather than waiting until the whole bucket is done. If group validation surfaces a regression traceable to a specific task, that task's implementation is revised and the affected checks re-run, instead of re-validating the whole bucket per task. Invoke as `/iru-java-code-one-task-group <bucket text>`, passing every task/sub-task in the bucket, each with its own text, plus the group's `Parallelizable` verdict and any relevant "Current code state" context. Equivalent to `iru-dotnet-code-one-task-group` for Java/Maven projects; used by `iru-code-one-task-group`, which invokes this once per plan group for its Java-tagged tasks.
+description: "Invoked as /iru-java-code-one-task-group <bucket text> (the group's tasks, Parallelizable verdict, code-state context) via Skill. Implements one Java/Maven task bucket: one quality baseline, iru-java-code-one-task per task (parallel when allowed), then validates the bucket once (license, Javadoc, tests, 80% coverage, quality) and finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent
 ---
@@ -13,6 +13,8 @@ consolidated pass instead of once per task — this is what cuts the token cost 
 per-task validation used to spend redundantly. It is the Java/Maven counterpart to `iru-dotnet-code-one-task-group` —
 same shape, but built on `iru-java-code-quality`, `iru-java-test`, `iru-java-coverage`, and `iru-java-javadoc`. It uses a medium
 model on purpose: the plan already carries the hard reasoning; this skill drives execution of it.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 1 — Capture one pre-change quality baseline for the whole bucket
 

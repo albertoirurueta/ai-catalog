@@ -1,39 +1,6 @@
 ---
 name: iru-setup-go-cli
-description: >-
-  Scaffold an agent-friendly Go command-line tool at the repository root — `go.mod` (`go <minor>.0` + `toolchain
-  go<latest patch>`), a thin `cmd/<bin>/main.go` that only calls `cli.Main`, `internal/cli` (Cobra root with
-  `SilenceUsage`/`SilenceErrors`, global `--format text|json|jsonl`/`--json`/`--no-color`/`--no-input`/`-q`/`-v`/
-  `--log-format`; one exit-code table 0–7/130/143 mapped in exactly one place from a typed `*cli.Error`, Cobra
-  flag/argument errors → 2, a recovered panic → 1; the JSON error envelope on stderr; canonical sorted-key JSON;
-  colour per stream via `golang.org/x/term` + `NO_COLOR`/`FORCE_COLOR`/`TERM=dumb`/`--no-color`; prompts only on a
-  terminal and never with `--no-input`/`<BIN>_NO_INPUT`/`CI`; flags → env → `config.toml` → defaults precedence;
-  SIGINT/SIGTERM → 130/143 with a second-signal immediate exit; EPIPE as a clean stop), the sample commands `greet`,
-  `schema` (the command tree as JSON with exit codes and per-command safety annotations), `version` and Cobra's
-  `completion`, `internal/version` (version/commit/date via ldflags, `0.1.0-dev` in-tree), with `ui: tui` a Bubble Tea
-  v2 + Lip Gloss v2 `browse` command (TTY-gated, exit 2 otherwise) in `internal/tui` tested with unit tests and teatest
-  v2, rendering only the names that fit the window, and — per the catalog's UI contract — a `.ui-quality.yml` at the
-  repository root, an `internal/tui/ui_screenshots_test.go` helper and UI tests capturing every list state in each
-  direction as `.ui-screenshots/screen/Model/<state>--<direction>--no-color.txt` with the asserted accessibility checks; unit tests plus testscript end-to-end scripts (`testdata/script/*.txtar`, run in-process from `TestMain` so they
-  count toward coverage, asserting exact exit codes and JSON golden output); a golangci-lint v2 `.golangci.yml`
-  (revive `exported`/`package-comments`, gosec, godot, misspell, gofmt + goimports); a GoReleaser v2
-  `.goreleaser.yaml` (CGO-free linux/darwin/windows × amd64/arm64, `tar.gz`/`zip` archives named
-  `<bin>-<version>-<os>-<arch>`, `SHA256SUMS`, no generated changelog, Homebrew cask / Scoop / WinGet only for
-  `distribution: store` with the requested `channels`); and `tools/gendocs` (man pages, Markdown, completion scripts and
-  the Antora `cli-reference.adoc` from the command tree). Invoke as `/iru-setup-go-cli`. Accepts pre-resolved inputs via
-  `args` (`key: value` lines) — `bin-name`, `module-path`, `description`, `ui` (`none`/`tui`), `go-version`, `owner`,
-  `version`, `license`, `developer-name`, `developer-email`, `organization-url`, `open-source`, `visibility`, `ci`,
-  `sonar` (+ `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `distribution` (`none`/`internal`/`store`),
-  `channels` (`homebrew,scoop,winget`), `homebrew-tap`, `scoop-bucket`, `accessibility` (`enforce`/`report`/`off`/`none`, `ui: tui`
-  only), `mode` (`new`/`existing`) and `on-existing`
-  (`ask`/`keep`/`update`/`replace`) — so `iru-setup-cli-repository` can drive it without re-prompting. Announces
-  whether it is scaffolding from scratch or updating; for every file group it owns that already exists it warns and
-  asks Update / Keep as is / Replace / Stop (unless `on-existing` decides) and never overwrites hand-written code.
-  Every module version is looked up live (proxy.golang.org, go.dev) with a verified 2026-10-16 fallback table, and the
-  run ends by building, testing (race + coverage ≥ 80%), linting, vulnerability-scanning, generating docs, smoke-testing
-  the binary against the CLI contract and (when configured) `goreleaser check` + a snapshot release. Use whenever a
-  repository needs a Go CLI bootstrapped from this house template instead of wiring Cobra, testscript, golangci-lint and
-  GoReleaser by hand.
+description: "Invoked as /iru-setup-go-cli with optional key: value args, usually by iru-setup-cli-repository. Scaffolds an agent-friendly Go command-line tool: Cobra CLI, optional Bubble Tea UI, testscript end-to-end tests, golangci-lint, GoReleaser and generated docs, ending with build, test, lint and smoke verification."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(go *) Bash(gofmt *) Bash(golangci-lint *) Bash(govulncheck *) Bash(gotestsum *) Bash(goreleaser *) Bash(curl *) Bash(git *) Bash(gh repo view *) Bash(python3 *) Bash(jq *) Bash(bash *) Bash(mkdir *) Bash(ls *) Bash(find *) Bash(grep *) Bash(cat *) Bash(test *) Bash(command -v *) Agent
 ---

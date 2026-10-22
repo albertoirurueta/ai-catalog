@@ -29,6 +29,10 @@ Test files, `testdata/`, `vendor/` and generated files are never edited.
 
 xref:index.adoc#group-go[Go Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-go` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-go@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

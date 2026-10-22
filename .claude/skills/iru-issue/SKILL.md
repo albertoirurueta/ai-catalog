@@ -1,6 +1,6 @@
 ---
 name: iru-issue
-description: End-to-end kickoff for a tracked ticket — a GitHub issue or a Jira ticket, auto-detected like `iru-explore` — requires a ticket ID, unlike `iru-explore`/`iru-plan` this skill stops if none is given. Fetches the ticket, classifies it as a feature or a hotfix from its labels/issue-type/content, detects whether it is running locally or in a Claude Code cloud/web session, resolves the base branch accordingly (the current branch when local; the repository's default branch — never the `claude/*` session branch — when in the cloud) and always confirms that base with the user before branching, creates a `feature/<ticket-id>-<slug>` or `hotfix/<ticket-id>-<slug>` branch off it (`<slug>` being a short kebab-case summary of the ticket title, e.g. `feature/42-add-csv-export` or `hotfix/PROJ-123-login-fails-after-timeout`), records it in the plan's Task summary as a `Base branch:` line so a later session can recover the choice, then runs the `iru-explore` and `iru-plan` skills for that ticket. Once a reviewable `implementation_plan.md` exists, asks whether to hand off implementation to the `iru-code` skill (run in an isolated sub-agent) or stop for manual review; once implementation is done, attaches the archived implementation plan back onto the original ticket (as a GitHub issue comment, or a Jira attachment/comment) for future context if one was actually archived, skipping that step otherwise, then pushes the branch, opens a pull request (using whichever tooling matches the repository's host — GitHub, Bitbucket, Azure DevOps, or TFS — as detected by `iru-explore`) back to that same confirmed base branch, uses the `iru-pr-description` skill (passing the base branch to it) to fill in its description, then runs the `iru-pr-review` skill (passing both the new PR's id and the ticket id) to leave review comments on it. If `iru-code`'s security gate (`iru-check-security`) ever flags a new or newly-unaudited secret during implementation, this skill stops instead — it warns the user with the specifics and never pushes the branch or opens a PR for that run, even if `iru-code` itself went on to resolve the gate and finish. Invoke as `/iru-issue <ticket-id>` where `<ticket-id>` is either a GitHub issue ID (e.g. `42`) or a Jira key (e.g. `PROJ-123`). Use when starting work on a tracked ticket and you want branch creation, exploration, planning, implementation, PR creation, and an initial code review done in one pass.
+description: "Invoke as `/iru-issue <ticket-id>` (GitHub issue ID or Jira key; a ticket ID is required, it stops without one). End-to-end kickoff for a ticket: classifies feature or hotfix, confirms the base branch, creates the branch, runs `iru-explore` and `iru-plan`, optionally hands off to `iru-code`, then opens the PR with `iru-pr-description` and `iru-pr-review`. Use to take a ticket from branch to reviewed PR in one pass."
 model: sonnet
 ---
 
@@ -10,6 +10,8 @@ Take a tracked ticket — a GitHub issue or a Jira ticket — from "just filed" 
 review comments already left" in one pass. This skill orchestrates `iru-explore`, `iru-plan`, `iru-code`, `iru-pr-description`, and
 `iru-pr-review` — it does not duplicate their logic, it sequences them around branch creation, ticket triage, and PR
 creation.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 1 — Resolve the ticket ID and its type (required)
 
@@ -199,8 +201,14 @@ assuming GitHub.
 skips re-running `iru-explore` if so — since Step 5.1 just did that exploration, `iru-plan` should detect and reuse it
 rather than duplicating the work. That's expected; don't intervene.
 
-If either skill reports it cannot proceed (e.g. `iru-plan` needed a clarification the user declined to resolve), stop
-here and surface that to the user rather than pushing ahead to Step 6 with an incomplete plan.
+If either skill reports it cannot proceed, stop here and surface that to the user rather than pushing ahead to
+Step 6 with an incomplete plan. A question the user declined to answer is not such a case: `iru-plan` persists it
+in the plan as a `[NEEDS CLARIFICATION: <question> — options: <a> | <b>; recommended: <a>]` marker (also listed
+under `Open clarifications:` in the Task summary) and carries on.
+
+Once the plan exists, read it and note any open `[NEEDS CLARIFICATION` markers (each with the task it blocks and
+its recommended option) — they feed the Step 6 question and the Step 9 report. `Open clarifications: none` means
+there are none.
 
 Once `implementation_plan.md` exists, make sure its "Task summary" section carries the base branch resolved in
 Step 4.2, as its own line alongside the `Source: …` line `iru-plan` writes:
@@ -217,7 +225,11 @@ base branch instead of falling back to the repository default.
 
 ## Step 6 — Choose how to proceed with implementation
 
-Once `implementation_plan.md` exists at the repository root, ask the user via `AskUserQuestion`:
+Once `implementation_plan.md` exists at the repository root, ask the user via `AskUserQuestion`. When Step 5 found
+open `[NEEDS CLARIFICATION` markers, say so in the question and list them: an automatic `iru-code` run stops at its
+Step 2 gate until they are resolved, so "Review manually first" is the natural choice unless the user answers them
+now (in which case update the plan in place, replacing each marker with the decision and setting `Open
+clarifications: none`, before handing off).
 
 - **Proceed automatically with the `iru-code` skill** — hands off implementation now; a pull request is opened
   automatically once it finishes cleanly (Step 8) — unless `iru-code`'s security gate ever fires during the run, in
@@ -370,7 +382,9 @@ push or open a PR off the back of a run where `iru-check-security` ever flagged 
 Summarize for the user: the ticket ID and title, the classification (feature/hotfix) and why, the execution
 environment detected in Step 4.1 (local or cloud) and which signal decided it, the branch created, its base
 branch and where that base came from (current branch, repository default, or the user's explicit choice), and the
-final outcome — one of:
+final outcome — preceded, whenever Step 5 found open `[NEEDS CLARIFICATION` markers that are still unresolved, by
+the list of those markers (task blocked, question, recommended option) and the reminder that `/iru-code` will not
+start implementing until they are resolved — one of:
 
 - manual review pending (Step 6), or
 - the security gate fired during implementation (Step 6): the sub-agent's implementation summary, what

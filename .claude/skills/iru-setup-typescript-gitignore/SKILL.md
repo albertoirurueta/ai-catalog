@@ -1,24 +1,6 @@
 ---
 name: iru-setup-typescript-gitignore
-description: >-
-  Create or update the root `.gitignore` file for a TypeScript/npm project — `node_modules/`, build/output
-  directories (`dist/`, `build/`, `out/`), test/coverage output, TypeScript incremental-build info, lint caches, env
-  files (keeping `.env.example`), OS and editor noise — and, when detected, framework-specific generated paths for
-  Angular, React (Vite/Storybook), NestJS (logs, runtime/diagnostic files, test reports), Next.js (`.next/`,
-  `next-env.d.ts`, `.vercel`, matching `create-next-app`'s own template), a Prisma client generated inside the
-  source tree, the repository-wide `.integration-test.lock/` used by the NestJS/Next.js/React Native coding and e2e skills, React
-  Native (Expo, or a bare React Native CLI/Metro app — Gradle/Xcode/CocoaPods/Bundler outputs, keeping the
-  template's committed `debug.keystore`), Ionic/Capacitor native projects, Playwright, the UI tests' screenshot
-  directory `.ui-screenshots/` for every UI project (React, Angular, Ionic, Next.js, React Native, Hilla), Antora docs, TypeDoc/Compodoc
-  API docs, and a Spring Boot + Vaadin Hilla frontend embedded in a Maven project. Invoke as
-  `/iru-setup-typescript-gitignore`, optionally with an `args` line setting `on-existing` to
-  `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs.
-  Announces whether it is creating `.gitignore` from scratch or updating an existing one; if one already exists it
-  never overwrites it silently — it warns, shows the proposed merge as a diff, and asks Update (merge, keeping
-  hand-added entries) / Keep as is / Replace (template only, hand-added entries lost). Mirrors the
-  `iru-setup-java-gitignore` skill's contract for the npm/TypeScript ecosystem. Use whenever a TypeScript, React,
-  Angular, NestJS, Next.js, React Native, or Ionic project needs a `.gitignore` bootstrapped from scratch, or an
-  existing one checked against this house template without touching it unless the user approves.
+description: "/iru-setup-typescript-gitignore [args] creates or updates the root .gitignore for a TypeScript/npm project, adding framework-specific paths when detected (Angular, React, NestJS, Next.js, React Native, Ionic, Hilla, Playwright, docs). Optional on-existing arg. Shows a diff and asks Update/Keep as is/Replace before touching an existing file."
 model: haiku
 ---
 
@@ -26,7 +8,8 @@ model: haiku
 
 Create or refresh the root `.gitignore` for a TypeScript/npm project. Never overwrite an existing `.gitignore`
 without showing the user exactly what would change and getting explicit approval first — a `.gitignore` can carry
-hand-added, project-specific entries that must not be silently dropped.
+hand-added, project-specific entries that must not be silently dropped. Mirrors the `iru-setup-java-gitignore`
+skill's contract for the npm/TypeScript ecosystem.
 
 ## Step 0 — Parse `args`
 

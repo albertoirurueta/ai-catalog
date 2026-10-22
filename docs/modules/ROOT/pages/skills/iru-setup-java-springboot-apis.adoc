@@ -112,6 +112,10 @@ so explicitly and is never recommended.
 
 xref:index.adoc#group-service-bootstrap[Spring Boot Service Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-springboot` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-springboot@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -217,6 +221,8 @@ inline in a module `build.gradle.kts`.
   protobuf, GraphQL Inspector or `graphql-schema-linter` for the SDL, the Confluent schema-registry Maven plugin's
   `test-compatibility` for AVRO, and `asyncapi validate` wired into the build (with `asyncapi diff` recommended for
   breaking-change detection) for the AsyncAPI specification.
+
+The generated files' bytes come from template files under `templates/` (and, where a template needs variant-specific notes, `reference/`) in `.claude/skills/iru-setup-java-springboot-apis/`; the skill reads only the files for the variant it resolved, not the whole set, which keeps its `SKILL.md` small.
 
 == Execution flow
 

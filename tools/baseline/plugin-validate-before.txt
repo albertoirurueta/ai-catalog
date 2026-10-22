@@ -1,0 +1,46 @@
+Validating components in: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-setup-android-gitignore/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-knowledge-process-inbox/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-setup-angular-web/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-setup-swift-gitignore/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-setup-android-app/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-setup-swift-repository/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+Validating skill: /Users/albertoirurueta/repositories/common/ai-catalog/.claude/skills/iru-setup-android-repository/SKILL.md
+
+✘ Found 1 error:
+
+  ❯ frontmatter: YAML frontmatter failed to parse: YAML Parse error: Unexpected token. At runtime this skill loads with empty metadata (all frontmatter fields silently dropped).
+
+✘ Validation failed
+exit=1

@@ -36,8 +36,10 @@ detection work or the forking."
 This is the catalog's most fully-built extension point, and the template to copy for any similar registry.
 
 `iru-plan` (xref:skills/iru-plan.adoc[]) tags every task with a language/framework **key** by checking which
-`*-code-one-task` skills are actually installed: `find .claude/skills -maxdepth 1 -type d -name
-"*-code-one-task"` — the directory name minus its `iru-` prefix and the suffix is the key
+`*-code-one-task` skills are actually installed: first from the skills available in the session (names matching
+`iru-*-code-one-task`), then — when a `.claude/skills` directory exists — corroborated with `find .claude/skills
+-maxdepth 1 -type d -name "*-code-one-task"`, so the lookup also works when the catalog is installed as plugins
+(see xref:guides/plugins.adoc[]) and no such directory exists. The skill name minus its `iru-` prefix and the suffix is the key
 (`iru-java-code-one-task` → `java`, `iru-dotnet-code-one-task` → `dotnet`, `iru-database-code-one-task` →
 `database`); the `iru-` prefix is only this catalog's marketplace-collision namespace, not part of the key
 itself. `iru-code-one-task-group`
@@ -161,10 +163,11 @@ delegating the changelog summary to the `iru-change-summarizer` agent
 (xref:skills/iru-pr-description.adoc[]) — stay the same for every ecosystem, and only the version-bump mechanics
 are pluggable: which file carries the version, what "current pre-release" looks like in that ecosystem, and what
 command (if any) applies the bump. That pluggable piece is now a registry, the same shape as
-xref:_language_framework_backends_for_the_code_pipeline[]: `iru-release` runs `find .claude/skills -maxdepth 1
--type d -name "iru-*-bump-version"` and delegates the actual edit to whichever `iru-<key>-bump-version` skill
-matches the project it detected (today: `java` (Maven or Gradle, Java or Kotlin), `typescript`, `react-native`,
-`android`, `kmp`, `swift`, `php`, `python`, `dotnet`), falling back to asking the
+xref:_language_framework_backends_for_the_code_pipeline[]: `iru-release` discovers the installed
+`iru-*-bump-version` skills from the session's available skills (corroborated with `find .claude/skills -maxdepth 1
+-type d -name "iru-*-bump-version"` when that directory exists) and delegates the actual edit to whichever
+`iru-<key>-bump-version` skill matches the project it detected (today: `java` (Maven or Gradle, Java or Kotlin),
+`typescript`, `react-native`, `android`, `kmp`, `swift`, `php`, `python`, `dotnet`, `rust`, `go`), falling back to asking the
 user which file to edit by hand if none is installed.
 
 To add a new ecosystem, create `iru-<key>-bump-version` following the sibling contract every existing one
@@ -276,14 +279,26 @@ order it's usually easiest to work through:
   `actions/upload-artifact` step, and have every file-writing skill announce scratch vs update and ask
   Update / Keep as is / Replace for each pre-existing artifact it owns. Add a `flavor` key only when the stack itself has more than one shape
   (library vs. app, or several app frameworks) the way `iru-setup-typescript-repository` does.
-. **Model tier** — pick the frontmatter `model` by what the skill actually does, matching this catalog's existing
-  split: `haiku` for setup/gitignore/workflows/orchestrator/test/coverage/code-quality/bump-version skills (their
-  work is templated and mechanical); `sonnet` for `<key>-code-one-task`/`<key>-code-one-task-group`, doc-comment
-  audits, and `<key>-generate-all-tests` (they read and reason about arbitrary source).
-. **Embedded, genericized templates** — every scaffold/workflows skill carries its own templates inline (no
-  external template repo), genericized from a real reference project when one exists (see the Android reference
-  repository rule in `CLAUDE.md`), with dependency/tool versions looked up at run time rather than hardcoded, so
-  the skill doesn't go stale as the ecosystem moves.
+. **Description and frontmatter budget** — write the `description` within the catalog's budget: at most 1,024 characters
+  (an internal skill that only other skills call targets 400), starting with the invocation form (`/iru-<name> ...` or
+  "Invoked as ...") within the first 200 characters, then what it does and when to use it, as a double-quoted YAML
+  value (an unquoted `: ` inside a description makes the frontmatter unparsable and the skill loads with no
+  description and no model). Add a skill that only other skills invoke to `internal_skills` in
+  `tools/catalog-budgets.json`. See xref:guides/performance-and-token-budget.adoc[].
+. **Model tier** — pick the frontmatter `model` by what the skill actually does, matching this catalog's tiers:
+  `haiku` for skills that run a tool and report (test, coverage, code-quality, version-bump, `-gitignore`); `sonnet`
+  for everything that writes code or files (`<key>-code-one-task`/`<key>-code-one-task-group`, doc-comment audits that
+  generate missing comments, `<key>-generate-all-tests`, scaffolds, `-github-workflows`, orchestrators); `opus` only for
+  open-ended judgment (`iru-explore`, `iru-plan`, `iru-pr-review`). Gates are dispatched through `iru-gate-runner`
+  rather than invoked inline, so a model switch never happens inside the caller's context.
+. **Embedded, genericized templates** — every scaffold/workflows skill carries its own templates (no external
+  template repo): the exact bytes of each generated file live in `.claude/skills/<skill>/templates/<variant>/<path of
+  the generated file>`, and the `SKILL.md` keeps a "Templates" index table (generated file, template path, when it
+  applies) and tells the agent to read only the variant it resolved. They are genericized from a real reference
+  project when one exists (see the Android reference repository rule in
+  xref:guides/catalog-architecture.adoc[]), with dependency/tool versions looked up at run time rather than hardcoded,
+  so the skill doesn't go stale as the ecosystem moves. Keep the skill self-contained: everything it needs lives
+  under its own directory so copying that directory still works.
 . **Sonar/publishing gating** — wire the `sonar`/`publish`/`distribution` args into the actual workflow and pom/
   manifest content generated, the same way the existing stacks do (a Sonar step only appears in CI when
   `sonar` isn't `none`; a publish/release job only appears when `publish`/`distribution` says so).
@@ -307,6 +322,11 @@ order it's usually easiest to work through:
 
 Once a new skill following one of the shapes above is in place:
 
+* Add the new skill or agent to a plugin in `tools/plugins.json`, then run `python3 tools/generate-marketplace.py` so
+  `.claude-plugin/marketplace.json` lists it (a new stack gets its own plugin entry, depending on `iru-core`).
+* Run `python3 tools/catalog-audit.py --check` (and `python3 tools/generate-marketplace.py --check`) before opening a
+  pull request: it enforces the description budget, the quoted-YAML frontmatter, the `SKILL.md` size limits, the model
+  rules, the byte-identical shared files and the `templates/`/`reference/` paths.
 * Re-run `iru-generate-skill-docs` (xref:skills/iru-generate-skill-docs.adoc[]) so the reference table, dependency
   graph, and the new skill's own detail page are generated from it — don't hand-write that page.
 * If it introduces a new key used by `iru-plan`/`iru-code-one-task-group` (or a new stack/tracker/host), sanity-check

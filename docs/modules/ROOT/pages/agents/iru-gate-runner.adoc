@@ -63,10 +63,16 @@ unverified with its reason.
 
 When `.ui-quality.yml` says `accessibility: none` (opted out entirely) or `off` (rules apply, checks not run), accessibility checks are not applicable: it skips them and reports "accessibility: opted out" (`none`) or "accessibility checks off" (`off`) — never "unverified" and never a failure.
 
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Tools
 
 `Skill`, `Bash`, `Read` — enough to invoke a skill (or fall back to a raw command) and read whatever report file
 it produces; no `Edit`/`Write` access, since this agent only runs and reports, it never modifies files itself.
+
+The agent is pinned to `model: haiku`. Callers dispatch it as `subagent_type: "iru-gate-runner"` when it is installed under `.claude/agents/`, or as `"iru-core:iru-gate-runner"` when it is installed through the `iru-core` plugin (use whichever name appears in the available agent types).
 
 == Used by
 
@@ -142,6 +148,10 @@ it produces; no `Edit`/`Write` access, since this agent only runs and reports, i
 * xref:skills/iru-setup-quarkus-service.adoc[] — Step 9, runs each verification gate with a compact result.
 * xref:skills/iru-dotnet-generate-all-tests.adoc[] — Steps 3, 6, and 7, to run `iru-dotnet-coverage`/`iru-dotnet-test` and report back only a compact summary instead of a raw coverage/test log.
 * xref:skills/iru-java-generate-all-tests.adoc[] — Steps 3, 6, and 7, to run `iru-java-coverage`/`iru-java-test` and report back only a compact summary instead of a raw coverage/test log.
+* xref:skills/iru-plan.adoc[] — recommends this agent for the scoped test-run step it writes into generated plans.
+* xref:skills/iru-setup-cli-github-workflows.adoc[], xref:skills/iru-setup-kmp-app.adoc[], xref:skills/iru-setup-kmp-github-workflows.adoc[], xref:skills/iru-setup-macos-app.adoc[],
+  xref:skills/iru-setup-macos-github-workflows.adoc[], xref:skills/iru-setup-python-github-workflows.adoc[], xref:skills/iru-setup-windows-app.adoc[] and
+  xref:skills/iru-setup-windows-github-workflows.adoc[] — the local verification pass that closes out each scaffold or workflows skill (build, lint, tests), run through this agent because the logs are long.
 * xref:skills/iru-java-springboot-performance-tests.adoc[] — spawned for each of Step 9's verification commands, since a load-test log is enormous.
 
 == Why this one specifically

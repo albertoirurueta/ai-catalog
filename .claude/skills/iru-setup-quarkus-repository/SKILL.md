@@ -1,33 +1,7 @@
 ---
 name: iru-setup-quarkus-repository
-description: >-
-  End-to-end bootstrap for a Quarkus service repository — Java or Kotlin, Maven or Gradle (Kotlin DSL),
-  single-module or DDD/hexagonal multi-module. Collects the shared inputs once — the project's identity (groupId,
-  artifactId, base package, description, developer name/email/organizationUrl, license), its shape (`language`
-  `java`/`kotlin`, `build-tool` `maven`/`gradle`, `layout` `single`/`hexagonal`, Java version), the pipeline
-  parameters (integration branch, default `develop`; stable branch, default `main`), and whether the project is open
-  source, the repository's visibility, whether CI workflows are wanted, which tests CI runs, whether docs go to GitHub
-  Pages, whether a container image is published, and which SonarCloud/self-hosted SonarQube/no Sonar analysis it
-  runs, each with visibility-aware cost guidance (free Actions minutes and SonarCloud for public repositories, Pages
-  restrictions and minute budgets for private ones) — then orchestrates `iru-setup-quarkus-service` (interviews the
-  technology choices, writes `quarkus-stack.yml`, scaffolds and post-processes the build), `iru-setup-antora`
-  (documentation site), `iru-setup-java-gitignore` (root `.gitignore`), `iru-setup-quarkus-github-workflows`
-  (build/release/sync/security workflows + Dependabot; skipped entirely when `ci` is `no`), `iru-setup-changelog`
-  (root `CHANGELOG.md`), and `iru-setup-readme` (root `README.md`), in that order, each via
-  `iru-isolated-skill-executor`, so nothing is asked twice. Invoke as `/iru-setup-quarkus-repository`, optionally
-  with `args` (`key: value` lines) pre-resolving `mode` (`new`/`existing`), `open-source` (`yes`/`no`), `visibility`
-  (`public`/`private`/`internal`), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`), `pages` (`yes`/`no`),
-  `distribution` (`none`/`registry`), `sonar` (`cloud`/`self-hosted`/`none`, plus `sonar-organization`/
-  `sonar-project-key`/`sonar-host-url`), `on-existing` (`ask`/`keep`/`update`/`replace`, forwarded only when
-  supplied), `language`, `build-tool`, `layout`, `java-version`, `integration-branch`, `stable-branch`, and the
-  identity keys `group-id`, `artifact-id`, `version`, `package`, `description`, `developer-name`, `developer-email`,
-  `organization-url`, `license` — skipping the matching questions. Announces up front whether it is setting up from
-  scratch or updating an existing repository (with an inventory of every component it owns marked
-  absent/present/partial); each sub-skill then warns and asks keep/update/replace for what it finds, and the final
-  report lists the action taken per component. Use when bootstrapping (or catching up) a Quarkus service
-  repository's full build/docs/gitignore/CI/changelog/README scaffold in one pass, instead of running six skills
-  separately and re-answering the same questions.
-model: haiku
+description: "Invoke as /iru-setup-quarkus-repository, optionally with args (key: value lines: language, build-tool, layout, java-version, mode, open-source, visibility, ci, ci-tests, pages, distribution, sonar, branches, on-existing, identity keys) to skip matching questions. End-to-end bootstrap of a Quarkus service repository (Java or Kotlin, Maven or Gradle, single or hexagonal): asks the shared inputs once, then runs iru-setup-quarkus-service, iru-setup-antora, iru-setup-java-gitignore, iru-setup-quarkus-github-workflows, iru-setup-changelog and iru-setup-readme in order. Use to bootstrap or catch up a Quarkus repository in one pass."
+model: sonnet
 ---
 
 # Setup Quarkus Repository
@@ -45,6 +19,8 @@ directly: every sub-skill re-derives what it needs from the files the previous s
 `iru-setup-quarkus-github-workflows` reads `quarkus-stack.yml`), so only a short completion summary has to come back,
 keeping six sub-skills' transcripts out of this orchestrator's context. `AskUserQuestion`s raised inside a sub-skill
 still reach the user — tell the executor to let them through rather than answering them itself.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Resolve inputs
 

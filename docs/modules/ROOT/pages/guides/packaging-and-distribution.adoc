@@ -43,6 +43,26 @@ Tradeoff: real packaging overhead — a manifest to maintain, a marketplace to s
 a submission process to go through (for a public one), and namespacing to be mindful of
 (`/plugin-name:skill-name` instead of a bare `/skill-name`).
 
+== This catalog ships both ways
+
+The catalog documents copying (Option 1) and also publishes itself as a plugin marketplace (Option 2), so either path
+works for its skills:
+
+[source]
+----
+claude plugin marketplace add albertoirurueta/ai-catalog
+/plugin install iru-core@ai-catalog
+/plugin install iru-java@ai-catalog
+----
+
+installs the stack-independent `iru-core` plugin and the Java plugin; the other stacks are separate plugins (see
+xref:guides/plugins.adoc[]). Differences to expect compared with copying: skills are also reachable under their
+namespace (`/iru-java:iru-java-test` as well as the bare `/iru-java-test`), agents must be dispatched as
+`iru-core:iru-gate-runner` (and likewise for the other two), `claude -p` needs `--allowedTools=Skill` to run skills that
+declare `allowed-tools`, and each installed plugin caches a full copy of the repository. Copying a skill directory into
+a repository's `.claude/skills/` still works exactly as before, because every skill keeps its templates and references
+under its own directory.
+
 == Choosing
 
 [cols="2,3,3", options="header"]
@@ -76,3 +96,4 @@ person needs to copy or install at all.
 * xref:guides/plugins.adoc[]
 * xref:guides/creating-skills-and-agents.adoc[]
 * xref:guides/claude-md.adoc[]
+* xref:guides/performance-and-token-budget.adoc[]

@@ -24,6 +24,10 @@ equivalent of xref:skills/iru-android-coverage.adoc[] and the Kover path of xref
 
 xref:index.adoc#group-kmp[Kotlin Multiplatform Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-kmp` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-kmp@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

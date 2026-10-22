@@ -14,6 +14,10 @@ Run Clippy, rustfmt and, when a `deny.toml` exists, cargo-deny on a Rust crate o
 
 xref:index.adoc#group-rust[Rust Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-rust` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-rust@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

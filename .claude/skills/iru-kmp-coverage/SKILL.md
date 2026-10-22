@@ -1,26 +1,6 @@
 ---
 name: iru-kmp-coverage
-description: >-
-  Generate a Kotlin Multiplatform (Android + iOS) project's unit-test line/branch coverage with the Kover Gradle
-  plugin (`org.jetbrains.kotlinx.kover`) — the root-aggregated `./gradlew koverXmlReport` (`build/reports/kover/report.xml`,
-  covering every module listed in the root `dependencies { kover(project(":x")) }`) when the root aggregates, else
-  each module's own report (`:<kmp-module>:koverXmlReport` → `<module>/build/reports/kover/report.xml`, or the
-  Android-only `koverXmlReportAndroid` → `reportAndroid.xml`; an Android app module's `koverXmlReportDebug` →
-  `reportDebug.xml`) — then parses the JaCoCo-format XML into exact totals, per-module and per-class line/branch
-  percentages (each class mapped back to its module and source set — `commonMain`, `androidMain`, the app's `main`),
-  and uncovered line numbers for classes under the bar. Coverage comes from the JVM test runs only (Android host
-  tests, `jvmTest`, the Android app's `testDebugUnitTest`, which Kover runs itself): Kotlin/Native has no coverage
-  tool, so `iosMain`/`appleMain`/`nativeMain` code is listed as "not measurable" and never fails the gate, and
-  `commonMain` code is measured through the JVM targets' runs of `commonTest`. Invoke as `/iru-kmp-coverage [scope]`,
-  where `[scope]` is one or more comma-separated class simple names, source paths, or a module (`:shared`), or with
-  no argument for the whole project; optional `key: value` lines: `tests: <pattern>` to narrow the test run (the
-  same `--tests` syntax as `iru-kmp-test`), `bar: <percent>` (default 80), `module:`, and `ios-app: yes` to also
-  collect informational Xcode coverage of the SwiftUI host app's Swift code (`xcodebuild test -enableCodeCoverage
-  YES` + `xccov`, behind the shared `.integration-test.lock`). Detects whether Kover is applied before running
-  anything and reports "coverage not wired" (naming what's missing) instead of a false 0%/100% or a clean pass.
-  Report-only: never adds tests or changes build files. Equivalent to `iru-android-coverage`/`iru-java-coverage`'s
-  Kover path for KMP apps. Use whenever the user (or `iru-kmp-code-one-task-group` via `iru-gate-runner`) wants to
-  check, or verify a bar (e.g. "at least 80% line coverage") for, KMP classes or modules.
+description: "/iru-kmp-coverage [scope] reports a Kotlin Multiplatform project's line/branch coverage from Kover (JVM and Android host runs only; iOS source sets are not measurable) with uncovered lines; scope is class names, source paths or a module. Optional lines: tests:, bar: (default 80), module:, ios-app: yes. Reports 'coverage not wired' rather than a false 0%. Report-only."
 model: haiku
 allowed-tools: Read Write Bash(./gradlew *) Bash(python3 *) Bash(xcodebuild *) Bash(xcrun *) Bash(uname *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(rm -rf *iru-kmp-coverage-*) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Bash(/usr/libexec/java_home *)
 ---
@@ -29,7 +9,10 @@ allowed-tools: Read Write Bash(./gradlew *) Bash(python3 *) Bash(xcodebuild *) B
 
 Run the Kover coverage a KMP project has wired and report exact, measured line/branch coverage for the scope the
 user cares about — per class, per module, and for the whole project. This skill only measures and reports; it never
-adds tests or modifies source, test, or build files.
+adds tests or modifies source, test, or build files. Coverage comes from the JVM test runs only (Android host tests,
+`jvmTest`, the Android app's `testDebugUnitTest`): `commonMain` code is measured through the JVM targets' runs of
+`commonTest`, while Kotlin/Native `iosMain`/`appleMain`/`nativeMain` code is listed as "not measurable" and never fails
+the gate.
 
 ## Step 0 — Resolve inputs
 

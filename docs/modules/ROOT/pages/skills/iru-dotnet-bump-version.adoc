@@ -17,7 +17,7 @@ Windows Forms) alike. An embedded, tested Python helper (with `--list` and `--dr
 `Directory.Build.props` when it declares a version, otherwise every non-test `*.csproj` that does, plus the
 `<Identity Version="x.y.z.0">` of every tracked `Package.appxmanifest` and `packaging/AppxManifest.xml` -- always the
 four-part numeric value derived from the new version (pre-release suffix stripped, revision `0`, as the Microsoft
-Store requires). It preserves BOMs and CRLF line endings, never touches test projects, reports but never rewrites
+Store requires). It rewrites files in place preserving their BOM and CRLF/LF line endings, never touches test projects, reports but never rewrites
 explicit `<AssemblyVersion>`/`<FileVersion>` values, and refuses to write when the `<Version>` locations disagree
 until the user confirms. Projects whose version comes from git (MinVer, Nerdbank.GitVersioning, GitVersion) are
 reported and left unchanged. Step 5 of the skill is the authoritative statement of this catalog's `x.y.z-dev`
@@ -26,6 +26,10 @@ development-version convention for callers such as `iru-release`.
 == Purpose group
 
 xref:index.adoc#group-dotnet[.NET Development Tooling]
+
+== Plugin
+
+Shipped by the `iru-dotnet` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-dotnet@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 

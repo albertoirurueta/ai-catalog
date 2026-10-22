@@ -1,26 +1,6 @@
 ---
 name: iru-setup-python-gitignore
-description: >-
-  Create or update the root `.gitignore` file for a Python project — bytecode (`__pycache__/`, `*.py[cod]`), build
-  and packaging output (`build/` holding `build/coverage/coverage.xml`, `build/test-results/`, `build/api-docs/`;
-  `dist/` from `uv build`; `*.egg-info/`), virtual environments (`.venv/`, `venv/`), test/coverage caches
-  (`.pytest_cache/`, `.coverage`, `.coverage.*`, `htmlcov/`, `.hypothesis/`, `.tox/`, `.nox/`), type-checker and
-  linter caches (`.mypy_cache/`, `.dmypy.json`, `.ruff_cache/`, `.pyre/`, `.pytype/`), env files (keeping
-  `.env.example`), PyPI credentials (`.pypirc`), OS and editor noise, the repository-wide `.integration-test.lock/`
-  directory — and, when detected, flavor-specific paths for a Django project (`STATIC_ROOT` such as `staticfiles/`,
-  `MEDIA_ROOT` such as `media/`, `db.sqlite3`, Celery beat files), browser UI test output (the UI tests' screenshot
-  directory `.ui-screenshots/` and pytest-playwright's `test-results/` — a Django project, or any project with
-  `pytest-playwright`), a FastAPI service (a file-based SQLite database
-  its settings default to), Sphinx/MkDocs build output, Jupyter checkpoints, PDM's local files, a root Node toolchain,
-  and an Antora docs build. Never ignores `uv.lock` (or `poetry.lock`/`pdm.lock`), `.python-version`, or
-  `.secrets.baseline` — all committed. Invoke as `/iru-setup-python-gitignore`, optionally with an `args` line setting
-  `on-existing` to `ask`/`keep`/`update`/`replace` (default `ask`) for scripted runs. Announces whether it is creating
-  `.gitignore` from scratch or updating an existing one; if one already exists it never overwrites it silently — it
-  warns, shows the proposed merge as a diff, and asks Update (merge, keeping hand-added entries) / Keep as is /
-  Replace (template only, hand-added entries lost). Mirrors `iru-setup-php-gitignore` and
-  `iru-setup-typescript-gitignore` for the Python ecosystem. Use whenever a FastAPI, Django, or plain Python project
-  needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this house template without
-  touching it unless the user approves.
+description: "Invoked as /iru-setup-python-gitignore, optionally with args on-existing: ask|keep|update|replace. Creates or updates the root .gitignore of a Python project (FastAPI, Django, plain package), never overwriting an existing one without a diff and approval."
 model: haiku
 ---
 
@@ -29,6 +9,7 @@ model: haiku
 Create or refresh the root `.gitignore` for a Python project. Never overwrite an existing `.gitignore` without
 showing the user exactly what would change and getting explicit approval first — a `.gitignore` can carry
 hand-added, project-specific entries that must not be silently dropped.
+Mirrors `iru-setup-php-gitignore` and `iru-setup-typescript-gitignore` for the Python ecosystem.
 
 ## Step 0 — Parse `args`
 

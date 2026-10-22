@@ -1,33 +1,6 @@
 ---
 name: iru-php-code-one-task
-description: >-
-  Implement a single task from a PHP `implementation_plan.md`-style task list — the implementation, its tests, and
-  its checkbox update. Detects the project's flavor with the same markers as `iru-explore` and
-  `iru-php-code-quality` (Laravel application, WordPress plugin, WordPress theme including block themes,
-  PrestaShop module, or plain Composer library), its PHP floor, its style tooling (Pint, PHP-CS-Fixer, PHPCS with
-  WordPressCS), and its test runner (Pest or PHPUnit, and which suites are fast vs. integration), then loads only
-  the matching guidance from this skill's own `reference/` directory — this catalog's PHP code agreements
-  (PER-CS 3.0 unless the project's formatter says otherwise, `declare(strict_types=1)` where the project uses it,
-  PSR-4, native types, enums/`match`/readonly, `final` by default, no closing tag, PHPDoc only for what native
-  types can't express), testing rules (follow the project's Pest-or-PHPUnit choice, attributes, `assertSame`,
-  fakes over mocks, one test class per class, data providers), security rules (escape on output, prepared
-  statements, allow-lists, password hashing, CSRF, uploads, SSRF), and exactly one flavor file (Laravel thin
-  controllers/Form Requests/policies/actions/Eloquent/queues; WordPress prefixing, hooks, nonces plus
-  capabilities, sanitize/escape, `$wpdb->prepare`, REST `permission_callback`, i18n, enqueueing, block themes and
-  `theme.json`; PrestaShop module class, hooks, `Configuration`, `pSQL`/`DbQuery`, upgrade scripts, Symfony
-  controllers, translations), plus — when the task adds or changes a screen, component, list or other UI — the
-  catalog's UI contract and its server-rendered mapping (screen › region › component decomposition, Blade/Livewire
-  components, blocks, Smarty/Twig partials, paginated collections with one item component, Playwright UI tests
-  with a left-to-right/right-to-left × light/dark screenshot matrix and axe checks, written but never run here).
-  Re-checks the current code state, implements exactly what the task specifies,
-  writes or updates tests, runs only the fast tests it touched (never coverage, the full suite, or anything that
-  needs Docker, a database server, wp-env, or a PrestaShop shop), then checks off this task's own checkbox in
-  `implementation_plan.md` with a "group validation pending" note and hands back a short summary. Does not
-  capture a quality baseline, add license headers, audit PHPDoc, or run coverage/quality checks — those happen
-  once per task group in `iru-php-code-one-task-group`, which invokes this skill once per task. Invoke as
-  `/iru-php-code-one-task <task description>`, passing the task's own text including its exact
-  `implementation_plan.md` checkbox line(s). The PHP counterpart to `iru-typescript-code-one-task` and
-  `iru-java-springboot-code-one-task`.
+description: "Invoked as /iru-php-code-one-task <task description> (the task's text with its implementation_plan.md checkbox lines) via Skill. Implements one PHP (Laravel, WordPress plugin/theme, PrestaShop module, Composer library) plan task and its tests, ticks the checkbox with a group-validation-pending note; no baseline or full gates, which iru-php-code-one-task-group runs."
 model: sonnet
 allowed-tools: Read Edit Write Bash(php *) Bash(vendor/bin/*) Bash(./vendor/bin/*) Bash(composer dump-autoload*) Bash(composer show *) Bash(./vendor/bin/sail ps*) Bash(./vendor/bin/sail test *) Bash(./vendor/bin/sail bin *) Bash(ddev exec *) Bash(docker info *) Bash(command -v *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(mkdir -p build*) Bash(rm -f build/iru-php-*)
 ---

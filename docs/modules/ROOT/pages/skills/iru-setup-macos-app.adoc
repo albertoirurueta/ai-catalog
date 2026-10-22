@@ -34,6 +34,10 @@ up toolchain versions at run time with a dated fallback table.
 
 xref:index.adoc#group-swift-bootstrap[Swift/Apple Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-swift` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-swift@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

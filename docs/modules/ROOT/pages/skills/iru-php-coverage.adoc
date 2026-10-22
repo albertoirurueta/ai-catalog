@@ -14,6 +14,10 @@ Run a PHP project's tests with a coverage driver enabled and report the exact, m
 
 xref:index.adoc#group-php[PHP Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-php` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-php@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

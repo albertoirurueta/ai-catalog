@@ -1,29 +1,6 @@
 ---
 name: iru-java-bump-version
-description: >-
-  Set a JVM (Java or Kotlin) project's version to an exact value, for Maven or Gradle builds. Maven — for a
-  single-module `pom.xml`, rewrites the root artifact's own `<version>` element in place (the first `<version>` that
-  is a direct child of `<project>`, never the `<parent>`'s version or a dependency/plugin's version); for a Maven
-  reactor (the root `pom.xml` declares `<modules>`), instead runs `mvn versions:set -DnewVersion=<new-version>
-  -DgenerateBackupPoms=false` so every module and parent reference updates consistently in one step. Gradle (Kotlin
-  DSL or Groovy, wrapper preferred — e.g. a Kotlin Spring Boot or Quarkus service, or a plain JVM library) — finds
-  every place the project version is declared as a literal (`version=` in `gradle.properties`, `version = "…"` /
-  `version '…'` in any module's `build.gradle(.kts)`, a `gradle.properties` key or `gradle/libs.versions.toml`
-  `[versions]` entry the build script reads it from), refuses to write when modules disagree until the user
-  confirms, and rewrites them all to the new value. Android Gradle projects are out of scope — see
-  `iru-android-bump-version`. Invoke as
-  `/iru-java-bump-version <new-version>` where `<new-version>` is the literal target version (e.g. `1.4.0` or
-  `1.4.1-SNAPSHOT`) — this skill does not compute bumps itself, it only applies the value it's given (`iru-release`
-  computes the release/next-dev values per the pre-release convention documented in this file and passes each one
-  through in turn). Also accepts `args`: `sync-files: yes|no` (default: ask) to also update README/Antora version
-  mentions, `next-version: <upcoming-version>` so that sync maps "Latest release" markers to `<new-version>` and
-  "Latest snapshot"/"Current development version" markers to the upcoming pre-release value instead of rewriting
-  every marker to the single value, and `dry-run: yes|no` (default `no`) to print the diff/command without writing
-  or running anything.
-  Reports the old and new version, the build tool and whether the project was treated as a reactor/multi-module
-  build or a single module, and every file touched. Use whenever the user, or another skill such as `iru-release`,
-  needs a Maven or Gradle JVM project's version set to a specific value instead of hand-editing `pom.xml` or Gradle
-  build files.
+description: "/iru-java-bump-version <new-version> sets a Java or Kotlin Maven/Gradle project's version to the literal value given (pom.xml, mvn versions:set for reactors, or Gradle version literals); Android is out of scope, see iru-android-bump-version. Args: sync-files, next-version, dry-run. Reports old/new version, build tool and files touched."
 model: haiku
 allowed-tools: Read Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(python3 *) Bash(grep *) Bash(find *) Bash(ls *) Bash(cat *) Bash(mkdir *)
 ---

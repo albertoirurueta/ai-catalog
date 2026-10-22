@@ -40,6 +40,10 @@ action versions are looked up at run time with a recorded fallback table.
 
 xref:index.adoc#group-kmp-bootstrap[Kotlin Multiplatform Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-kmp` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-kmp@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

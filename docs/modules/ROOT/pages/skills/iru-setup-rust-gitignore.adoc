@@ -29,6 +29,10 @@ update, shows the merged draft as a diff, and asks Update / Keep as is / Replace
 
 xref:index.adoc#group-cli-bootstrap[Command-Line Tool Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-rust` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-rust@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

@@ -1,0 +1,51 @@
+name: Catalog check
+
+# Guards the skills and agents of this catalog on every pull request and every push to main: the size and shape
+# budgets in tools/catalog-budgets.json (python3 tools/catalog-audit.py --check), that the committed
+# .claude-plugin/marketplace.json is what tools/generate-marketplace.py would generate from tools/plugins.json
+# (which also runs `claude plugin validate .` through the pinned Claude Code CLI installed just before it), the
+# unit tests of both scripts, and `claude plugin validate .claude/skills`. Every step gates the workflow: the CLI
+# and PyYAML are pinned so a new release of either cannot change the outcome on its own.
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-check:
+    name: Audit skills and marketplace
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install the Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.260
+
+      - name: Audit skills and agents against the budgets
+        run: python3 tools/catalog-audit.py --check
+
+      - name: Check the plugin marketplace is up to date and valid
+        run: python3 tools/generate-marketplace.py --check
+
+      - name: Validate the skills with the Claude Code CLI
+        run: claude plugin validate .claude/skills
+
+      - name: Run the tools' unit tests
+        run: python3 -m unittest discover -s tools/tests

@@ -1,45 +1,7 @@
 ---
 name: iru-setup-android-app
-description: Scaffold a new single-module Android application (Gradle Kotlin DSL, `com.android.application`) at
-  the repository root — Gradle wrapper, root `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`,
-  `gradle/libs.versions.toml`, and an `app/` module with `applicationId`/`namespace`, `versionCode`/`versionName`,
-  `BUILD_NUMBER`/`BUILD_TIMESTAMP`/`GIT_COMMIT`/`GIT_BRANCH` `buildConfigField`s, a `signingConfigs { release {…} }`
-  block that reads `SIGNING_STORE_FILE`/`SIGNING_STORE_PASSWORD`/`SIGNING_KEY_ALIAS`/`SIGNING_KEY_PASSWORD` from the
-  environment and leaves the release build type unsigned (never failing configuration) when any is absent, a
-  Compose-by-default UI (`ui: compose`, or `ui: views` for an AppCompat + ViewBinding variant), Robolectric + MockK
-  + JUnit 4 unit-test tooling, an instrumented-test skeleton, and an inline `sonar { properties {…} } }` block
-  (omitted when `sonar: none`), plus UI tests per the catalog's UI contract — a `.ui-quality.yml` at the repository
-  root (`accessibility` from the `accessibility` arg, `directions: [ltr, rtl]`, `themes: [light, dark]`), Roborazzi +
-  the Accessibility Test Framework on Robolectric, the shared `app/src/test/java/<package>/testing/UiScreenshots.kt`
-  helper, and a sample screen test capturing `.ui-screenshots/` across left-to-right/right-to-left × light/dark with
-  the accessibility check. No Maven Central publishing block is ever generated — this skill is for
-  distributable *applications*, not libraries (use `iru-setup-android-library` for the latter). Invoke as
-  `/iru-setup-android-app`. Accepts pre-resolved inputs via `args` (`key: value` lines) — `application-id`,
-  `namespace`, `app-name`, `min-sdk` (default `26`), `compile-sdk`/`target-sdk` (default the current stable API
-  level), `version-name` (default `1.0.0`), `version-code` (default `1`), `license`, `developer-name`,
-  `developer-email`, `organization-url`, `open-source`, `sonar` (+ `sonar-organization`/`sonar-project-key`/
-  `sonar-host-url`), `ui` (`compose`/`views`), `distribution` (`none`/`internal`/`store`), `built-in-kotlin`
-  (`no`/`yes`), `junit` (`4`/`5`), `coverage-tool` (`jacoco`/`kover`), `static-analysis`
-  (`lint`/`lint+detekt+ktlint`), `accessibility` (`enforce`/`report`/`off`/`none`, default `enforce`), `visibility` (`public`/`private`/`internal` — SonarCloud is only recommended for
-  a public open-source repository), `ci` (`yes`/`no` — with `ci: no`, `sonar: none` is recommended since no CI
-  would send reports), `mode` (`new`/`existing`), and `on-existing` (`ask`/`keep`/`update`/`replace`, default
-  `ask`) — so an orchestrating skill can supply them without re-prompting; invoked stand-alone, it asks
-  `open-source` first and derives the `sonar` question's default from that answer. `distribution: internal` wires the Firebase App Distribution Gradle plugin
-  (`com.google.firebase.appdistribution`, `google-services.json` gitignored); `distribution: store` asks via
-  `AskUserQuestion` whether to add the Gradle Play Publisher plugin (`com.github.triplet.play`) to the build or
-  leave the upload to the workflow-level `r0adkll/upload-google-play@v1` action that `iru-setup-android-github-workflows`
-  generates (default: leave it to the workflow). Announces whether it is scaffolding from scratch or updating an
-  existing Gradle project; for every file group it owns that already exists (each build file, the wrapper, the
-  `app/` skeleton, `detekt.yml`) it warns and asks Update (merge the template in, keeping custom dependencies/
-  flavors/build types) / Keep as is / Replace (regenerate, losing customizations) / Stop — even under
-  `mode: existing`, unless `on-existing` decides — and never overwrites hand-edited application source. Every Gradle/Kotlin/plugin version is looked up at run time
-  (Google Maven, Maven Central, the Gradle plugin portal, the Gradle releases API), falling back to the versions
-  recorded in this file when a lookup fails. Templates are genericized from a real Android repository's actual
-  toolchain and CI-verified `app/` module (see Step 5's header for the link) — no real repository/org/person names
-  remain, only `<placeholder>` markers. Use whenever a new standalone Android application repository (or the
-  application half of a mixed library+app repository) needs its Gradle project, signing, distribution, and test
-  tooling bootstrapped from this house template, instead of hand-configuring each Gradle file.
-model: haiku
+description: "Invoked as /iru-setup-android-app with optional key: value args, usually by iru-setup-android-repository. Scaffolds a single-module Android application (Gradle Kotlin DSL, Compose or Views, signing, BuildConfig fields, unit-test and UI-test tooling, optional Sonar). Never generates Maven Central publishing; libraries use iru-setup-android-library."
+model: sonnet
 ---
 
 # Setup Android App
@@ -131,6 +93,8 @@ With `enforce`, `report` or `off`: include the assistive-technology attributes f
 subsections in every generated template — `contentDescription` (or `Modifier.semantics`) on icon buttons and images, `sp` font sizes, 48dp touch targets, TalkBack-friendly traversal — and, for `enforce`/`report` only, the automated checks. In
 `mode: existing`, a prior `.ui-quality.yml` follows this skill's existing Update / Keep / Replace prompt and its
 `accessibility` value is never silently flipped (**Update** sets it only when `args` supplied it).
+
+**Templates.** The file templates of Step 5 are files under this skill's `templates/` directory, not inline text. Read only the template files for the `ui` variant resolved in Step 2 (`templates/common/` for both variants, plus `templates/compose/` or `templates/views/`; the index at the top of Step 5 says which applies); never read the other variant's files. The opt-in snippets (distribution, Detekt/Spotless, Kover, JUnit 5) stay inline in Step 5.
 
 ## Step 1 — Survey the repository
 
@@ -343,6 +307,41 @@ direct `maven-metadata.xml`/group-index fetch when precision matters (as it does
 
 ## Step 5 — Reference templates
 
+**Templates.** Every template below is a file under `templates/<variant>/<path of the generated file>` (`<package-path>` appears as `__package-path__` in directory names), holding the exact bytes of that generated file's template. Read only the files for the `ui` variant resolved in Step 2, each in full, before filling placeholders:
+
+| Generated file | Template | Applies when |
+|---|---|---|
+| `gradle/wrapper/gradle-wrapper.properties` | `templates/common/gradle/wrapper/gradle-wrapper.properties` | always |
+| `build.gradle.kts` | `templates/common/build.gradle.kts` | always |
+| `settings.gradle.kts` | `templates/common/settings.gradle.kts` | always |
+| `gradle.properties` | `templates/common/gradle.properties` | always |
+| `gradle/libs.versions.toml (`[versions]` section)` | `templates/common/gradle/libs.versions.toml.versions` | always |
+| `gradle/libs.versions.toml (`[libraries]` section)` | `templates/common/gradle/libs.versions.toml.libraries` | always |
+| `gradle/libs.versions.toml (`[plugins]` section)` | `templates/common/gradle/libs.versions.toml.plugins` | always |
+| `app/build.gradle.kts` | `templates/common/app/build.gradle.kts` | always (gated blocks inside it follow `ui`, `sonar`, `distribution`, `coverage-tool`) |
+| `app/proguard-rules.pro` | `templates/common/app/proguard-rules.pro` | always |
+| `app/src/main/AndroidManifest.xml` | `templates/common/app/src/main/AndroidManifest.xml` | always |
+| `app/src/main/res/values/colors.xml` | `templates/common/app/src/main/res/values/colors.xml` | always |
+| `app/src/main/res/values/strings.xml` | `templates/common/app/src/main/res/values/strings.xml` | always |
+| `app/src/main/res/values/themes.xml (and, with darker colors, `values-night/themes.xml`)` | `templates/views/app/src/main/res/values/themes.xml` | `ui: views` |
+| `app/src/main/res/values/themes.xml` | `templates/compose/app/src/main/res/values/themes.xml` | `ui: compose` |
+| `app/src/main/java/<package-path>/ui/theme/Theme.kt` | `templates/compose/app/src/main/java/__package-path__/ui/theme/Theme.kt` | `ui: compose` |
+| `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml and ic_launcher_round.xml (same content)` | `templates/common/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | both `ui` variants |
+| `app/src/main/res/drawable/ic_launcher_background.xml` | `templates/common/app/src/main/res/drawable/ic_launcher_background.xml` | both `ui` variants |
+| `app/src/main/res/drawable/ic_launcher_foreground.xml` | `templates/common/app/src/main/res/drawable/ic_launcher_foreground.xml` | both `ui` variants |
+| `app/src/main/java/<package-path>/MainActivity.kt` | `templates/compose/app/src/main/java/__package-path__/MainActivity.kt` | `ui: compose` (default) |
+| `app/src/main/res/layout/activity_main.xml` | `templates/views/app/src/main/res/layout/activity_main.xml` | `ui: views` |
+| `app/src/main/java/<package-path>/MainActivity.kt` | `templates/views/app/src/main/java/__package-path__/MainActivity.kt` | `ui: views` |
+| `app/src/test/resources/<package-path>/robolectric.properties` | `templates/common/app/src/test/resources/__package-path__/robolectric.properties` | always |
+| `app/src/test/java/<package-path>/MainActivityTest.kt` | `templates/common/app/src/test/java/__package-path__/MainActivityTest.kt` | always |
+| `app/src/androidTest/java/<package-path>/MainActivityInstrumentedTest.kt` | `templates/compose/app/src/androidTest/java/__package-path__/MainActivityInstrumentedTest.kt` | `ui: compose` |
+| `app/src/androidTest/java/<package-path>/MainActivityInstrumentedTest.kt` | `templates/views/app/src/androidTest/java/__package-path__/MainActivityInstrumentedTest.kt` | `ui: views` |
+| `.ui-quality.yml` | `templates/common/.ui-quality.yml` | always |
+| `app/src/test/java/<package-path>/testing/UiScreenshots.kt` | `templates/common/app/src/test/java/__package-path__/testing/UiScreenshots.kt` | both `ui` variants |
+| `app/src/test/java/<package-path>/GreetingTest.kt` | `templates/compose/app/src/test/java/__package-path__/GreetingTest.kt` | `ui: compose` |
+| `app/src/test/java/<package-path>/MainActivityScreenTest.kt` | `templates/views/app/src/test/java/__package-path__/MainActivityScreenTest.kt` | `ui: views` |
+| `app/.gitignore` | `templates/common/app/.gitignore` | always |
+
 These templates are genericized from **https://github.com/albertoirurueta/irurueta-android-glutils**'s actual
 toolchain files and `app/` module — kept as close to verbatim as possible, with only project-identity fields turned
 into `<placeholder>` markers. Substitute using Steps 2–4; keep everything else exactly as shown unless a step below
@@ -367,14 +366,7 @@ says an opt-in changes it.
 
 ### Gradle wrapper — `gradle/wrapper/gradle-wrapper.properties`
 
-```properties
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-<gradle-version>-bin.zip
-distributionSha256Sum=<gradle-distribution-sha256>
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-```
+Template: `templates/common/gradle/wrapper/gradle-wrapper.properties` — read it in full before filling placeholders
 
 The reference project's own `gradle-wrapper.properties` predates `distributionSha256Sum` being set (it has none) —
 this skill adds it anyway, since Gradle has supported wrapper checksum verification for years and it's a cheap
@@ -391,19 +383,7 @@ binaries/scripts unfit for a Markdown template — obtain them one of two ways (
 
 ### Root `build.gradle.kts`
 
-```kotlin
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-plugins {
-    alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
-    // Omit the next line entirely when `ui: views` was chosen in Step 2.
-    alias(libs.plugins.kotlin.compose) apply false
-}
-
-project.delete {
-    delete(rootProject.layout.buildDirectory)
-}
-```
+Template: `templates/common/build.gradle.kts` — read it in full before filling placeholders
 
 The trailing `project.delete { … }` block is copied verbatim from the reference project — it runs at Gradle
 *configuration* time (not as a `clean` task), deleting the root project's own (normally-empty) build directory on
@@ -412,32 +392,7 @@ every invocation. Harmless and intentional in the source repository; keep it for
 
 ### `settings.gradle.kts`
 
-```kotlin
-pluginManagement {
-    repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-        maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
-    }
-}
-
-rootProject.name = "<project-name>"
-include(":app")
-```
+Template: `templates/common/settings.gradle.kts` — read it in full before filling placeholders
 
 **Departure from the reference repository:** the reference lists `https://oss.sonatype.org/content/repositories/snapshots`
 as its snapshots repository, but OSSRH (and that host with it) was decommissioned in mid-2025 — `-SNAPSHOT`
@@ -453,40 +408,7 @@ declares repositories itself.
 
 ### `gradle.properties`
 
-```properties
-# Project-wide Gradle settings.
-# IDE (e.g. Android Studio) users:
-# Gradle settings configured through the IDE *will override*
-# any settings specified in this file.
-# For more details on how to configure your build environment visit
-# http://www.gradle.org/docs/current/userguide/build_environment.html
-# Specifies the JVM arguments used for the daemon process.
-# The setting is particularly useful for tweaking memory settings.
-org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-# AndroidX package structure to make it clearer which packages are bundled with the
-# Android operating system, and which are packaged with your app"s APK
-# https://developer.android.com/topic/libraries/support-library/androidx-rn
-android.useAndroidX=true
-# Kotlin code style for this project: "official" or "obsolete":
-kotlin.code.style=official
-# Enables namespacing of each library's R class so that its R class includes only the
-# resources declared in the library itself and none from the library's dependencies,
-# thereby reducing the size of the R class for that library
-android.nonTransitiveRClass=true
-org.jetbrains.dokka.experimental.gradle.pluginMode=V2Enabled
-org.jetbrains.dokka.experimental.gradle.pluginMode.noWarn=true
-org.gradle.configuration-cache=true
-android.defaults.buildfeatures.resvalues=true
-android.sdk.defaultTargetSdkToCompileSdkIfUnset=false
-android.enableAppCompileTimeRClass=false
-android.usesSdkInManifest.disallowed=false
-android.uniquePackageNames=false
-android.dependency.useConstraints=true
-android.r8.strictFullModeForKeepRules=false
-android.r8.optimizedResourceShrinking=false
-android.builtInKotlin=<built-in-kotlin-flag>
-android.newDsl=<built-in-kotlin-flag>
-```
+Template: `templates/common/gradle.properties` — read it in full before filling placeholders
 
 `<built-in-kotlin-flag>` is `false` unless Step 2's `built-in-kotlin` answer was `yes`, in which case **both**
 lines become `true` — the same coupling `iru-setup-android-library`'s `gradle.properties` template uses, since
@@ -496,53 +418,9 @@ repository/org names appear in this file, so nothing else needed genericizing).
 
 ### `gradle/libs.versions.toml`
 
-```toml
-[versions]
-agp = "<agp-version>"
-kotlin = "<kotlin-version>"
-junit = "<junit-version>"
-junitVersion = "<androidx-junit-version>"
-espressoCore = "<espresso-version>"
-material = "<material-version>"
-dokka = "<dokka-version>"
-sonarqube = "<sonarqube-plugin-version>"
-mockk = "<mockk-version>"
-testCoreKtx = "<test-core-ktx-version>"
-robolectric = "<robolectric-version>"
-kotlinReflect = "<kotlin-version>"
-iruruetaTestUtils = "<irurueta-test-utils-version>"
-roborazzi = "<roborazzi-version>"
-# Only when `ui: compose` (Step 2):
-composeBom = "<compose-bom-version>"
-activityCompose = "<activity-compose-version>"
-```
+Template: `templates/common/gradle/libs.versions.toml.versions` — read it in full before filling placeholders
 
-```toml
-[libraries]
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
-androidx-test-core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "testCoreKtx" }
-androidx-test-ext-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "junitVersion" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
-robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlinReflect" }
-irurueta-test-utils = { group = "com.irurueta", name = "irurueta-android-test-utils", version.ref = "iruruetaTestUtils" }
-roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
-roborazzi-accessibility-check = { group = "io.github.takahirom.roborazzi", name = "roborazzi-accessibility-check", version.ref = "roborazzi" }
-# Only when `ui: views`:
-androidx-espresso-accessibility = { group = "androidx.test.espresso", name = "espresso-accessibility", version.ref = "espressoCore" }
-# Only when `ui: compose`:
-roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
-androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-ui-test-junit4-accessibility = { group = "androidx.compose.ui", name = "ui-test-junit4-accessibility" }
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-```
+Template: `templates/common/gradle/libs.versions.toml.libraries` — read it in full before filling placeholders
 
 **Both of the last two are required, not optional — confirmed while verifying this skill:** the Compose BOM
 (`platform(libs.androidx.compose.bom)`) only pins versions; it doesn't pull either artifact in transitively via
@@ -553,15 +431,7 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 group at all, so it needs its own version (Step 4) even though `ui-tooling-preview` is covered by the BOM's
 version pin once the artifact itself is declared.
 
-```toml
-[plugins]
-android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
-sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
-# Only when `ui: compose`:
-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-```
+Template: `templates/common/gradle/libs.versions.toml.plugins` — read it in full before filling placeholders
 
 Aliases match the reference project's naming exactly (`android-application`, `kotlin-android`, `kotlin-compose`,
 `dokka`, `sonarqube`, plus the library dependency names) so a repository that later also runs
@@ -572,186 +442,7 @@ entries — see the "Opt-ins" subsection below.
 
 ### `app/build.gradle.kts`
 
-```kotlin
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.text.SimpleDateFormat
-import java.util.Date
-
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    // Omit when `ui: views`:
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.dokka)
-    // Omit the whole line when `sonar: none`:
-    alias(libs.plugins.sonarqube)
-}
-
-// Read once, at configuration time — used both for signingConfigs below and Step 8's report.
-val signingStoreFile: String? = System.getenv("SIGNING_STORE_FILE")
-val signingStorePassword: String? = System.getenv("SIGNING_STORE_PASSWORD")
-val signingKeyAlias: String? = System.getenv("SIGNING_KEY_ALIAS")
-val signingKeyPassword: String? = System.getenv("SIGNING_KEY_PASSWORD")
-val hasReleaseSigning: Boolean =
-    !signingStoreFile.isNullOrBlank() &&
-        !signingStorePassword.isNullOrBlank() &&
-        !signingKeyAlias.isNullOrBlank() &&
-        !signingKeyPassword.isNullOrBlank()
-
-android {
-    namespace = "<namespace>"
-    compileSdk = <compile-sdk>
-
-    defaultConfig {
-        applicationId = "<application-id>"
-        minSdk = <min-sdk>
-        targetSdk = <target-sdk>
-        versionCode = <version-code>
-        versionName = "<version-name>"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        val buildNumber = System.getenv("BUILD_NUMBER") ?: ""
-        buildConfigField("String", "BUILD_NUMBER", "\"$buildNumber\"")
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-        buildConfigField("String", "BUILD_TIMESTAMP", "\"" + dateFormatter.format(Date()) + "\"")
-        val gitCommit = System.getenv("GIT_COMMIT")
-        buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
-        val gitBranch = System.getenv("GIT_BRANCH")
-        buildConfigField("String", "GIT_BRANCH", "\"$gitBranch\"")
-
-        val apkPrefixLabels = listOf("<project-name>", versionName, buildNumber)
-        base.archivesName = apkPrefixLabels.filter { it != "" }.joinToString("-")
-    }
-
-    // Never references signingConfigs["release"] when it wasn't created below — an app can always be configured
-    // and `assembleDebug`'d even with zero signing secrets present (e.g. a fresh clone, or a contributor's laptop).
-    signingConfigs {
-        if (hasReleaseSigning) {
-            create("release") {
-                storeFile = file(signingStoreFile!!)
-                storePassword = signingStorePassword
-                keyAlias = signingKeyAlias
-                keyPassword = signingKeyPassword
-            }
-        }
-    }
-
-    buildTypes {
-        debug {
-            enableUnitTestCoverage = true
-        }
-        release {
-            isMinifyEnabled = false
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    buildFeatures {
-        buildConfig = true
-        // Only when `ui: compose`:
-        compose = true
-        // Only when `ui: views`:
-        viewBinding = true
-    }
-    testOptions {
-        unitTests {
-            // Robolectric UI tests need the merged resources (strings, themes) and render with them.
-            isIncludeAndroidResources = true
-        }
-    }
-}
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
-    }
-}
-
-// Omit this entire block when `sonar: none`.
-sonar {
-    properties {
-        property("sonar.scanner.skipJreProvisioning", true)
-        property("sonar.projectKey", "<sonar-project-key>")
-        property("sonar.projectName", "<project-name>")
-        property("sonar.organization", "<sonar-organization>")
-        property("sonar.host.url", "<sonar-host-url>")
-
-        property("sonar.tests", listOf("src/test/java", "src/androidTest/java"))
-        property("sonar.test.inclusions",
-            listOf("**/*Test*/**", "src/androidTest/**", "src/test/**"))
-        property("sonar.test.exclusions",
-            listOf("**/*Test*/**", "src/androidTest/**", "src/test/**"))
-        property("sonar.sourceEncoding", "UTF-8")
-        property("sonar.sources", "src/main/java")
-        property("sonar.exclusions", "**/*Test*/**,*.json,'**/*test*/**,**/.gradle/**,**/R.class")
-
-        val androidJar = project.android.sdkDirectory.path + "/platforms/android-<compile-sdk>/android.jar"
-        property("sonar.libraries", androidJar)
-        property("sonar.java.libraries", androidJar)
-        property("sonar.java.test.libraries", androidJar)
-        property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
-        property("sonar.java.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
-
-        // Departure from the reference: AGP writes the unit-test XML under test/debug/, and the key names below
-        // (reportPaths / androidLint.reportPaths) are the ones the Sonar analyzer actually reads
-        property("sonar.coverage.jacoco.xmlReportPaths",
-            listOf("build/reports/coverage/androidTest/debug/connected/report.xml",
-                "build/reports/coverage/test/debug/report.xml"))
-        property("sonar.java.coveragePlugin", "jacoco")
-        property("sonar.junit.reportPaths",
-            listOf("build/test-results/testDebugUnitTest",
-                "build/outputs/androidTest-results/connected/debug"))
-        property("sonar.androidLint.reportPaths", "build/reports/lint-results-debug.xml")
-    }
-}
-
-dependencies {
-    implementation(libs.material)
-    // Only when `ui: compose`:
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.ui.tooling.preview)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk.android)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core.ktx)
-    testImplementation(libs.kotlin.reflect)
-    testImplementation(libs.irurueta.test.utils)
-    // UI tests (catalog UI contract): Roborazzi captures + Accessibility Test Framework checks on Robolectric.
-    testImplementation(libs.roborazzi)
-    testImplementation(libs.roborazzi.accessibility.check)
-    // Only when `ui: compose`:
-    testImplementation(platform(libs.androidx.compose.bom))
-    testImplementation(libs.androidx.ui.test.junit4)
-    testImplementation(libs.roborazzi.compose)
-    debugImplementation(libs.androidx.ui.test.manifest)
-    // Only when `ui: views`:
-    testImplementation(libs.androidx.espresso.core)
-
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.test.core.ktx)
-    androidTestImplementation(libs.androidx.test.ext.junit.ktx)
-    androidTestImplementation(libs.mockk.android)
-    // Only when `ui: compose`:
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    androidTestImplementation(libs.androidx.ui.test.junit4.accessibility)
-    // Only when `ui: views`:
-    androidTestImplementation(libs.androidx.espresso.accessibility)
-}
-```
+Template: `templates/common/app/build.gradle.kts` — read it in full before filling placeholders
 
 **Departures from the reference repository inside the `sonar {}` block** (mirroring `iru-setup-android-library`'s
 templates — don't copy the reference's originals back):
@@ -834,55 +525,11 @@ as the base template above.
 
 ### `app/proguard-rules.pro`
 
-```proguard
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-```
+Template: `templates/common/app/proguard-rules.pro` — read it in full before filling placeholders
 
 ### `app/src/main/AndroidManifest.xml`
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.App">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-
-</manifest>
-```
+Template: `templates/common/app/src/main/AndroidManifest.xml` — read it in full before filling placeholders
 
 **No `package="<application-id>"` attribute on `<manifest>`, deliberately** — confirmed while verifying this skill:
 current AGP no longer reads the application id/namespace from the manifest's `package` attribute at all; leaving
@@ -900,42 +547,15 @@ exactly `Theme.App` so the two always match; rename both together if the user wa
 
 `values/colors.xml`:
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="primary">#FF6200EE</color>
-    <color name="primary_variant">#FF3700B3</color>
-    <color name="secondary">#FF03DAC5</color>
-    <color name="secondary_variant">#FF018786</color>
-    <color name="on_primary">#FFFFFFFF</color>
-    <color name="on_secondary">#FF000000</color>
-</resources>
-```
+Template: `templates/common/app/src/main/res/values/colors.xml` — read it in full before filling placeholders
 
 `values/strings.xml`:
 
-```xml
-<resources>
-    <string name="app_name"><app-name></string>
-    <string name="greeting">Hello, %1$s!</string>
-</resources>
-```
+Template: `templates/common/app/src/main/res/values/strings.xml` — read it in full before filling placeholders
 
 **`ui: views`** — `values/themes.xml`:
 
-```xml
-<resources>
-    <style name="Theme.App" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorPrimaryVariant">@color/primary_variant</item>
-        <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="colorSecondary">@color/secondary</item>
-        <item name="colorSecondaryVariant">@color/secondary_variant</item>
-        <item name="colorOnSecondary">@color/on_secondary</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-</resources>
-```
+Template: `templates/views/app/src/main/res/values/themes.xml` — read it in full before filling placeholders
 
 (and the same block, with darker color values swapped in, under `values-night/themes.xml` — mirrors the reference
 project's day/night pair exactly.)
@@ -943,82 +563,24 @@ project's day/night pair exactly.)
 **`ui: compose`** — no XML theme is required; the manifest's `android:theme="@style/Theme.App"` still needs *some*
 style to resolve at inflation time before Compose takes over, so write a minimal one:
 
-```xml
-<resources>
-    <style name="Theme.App" parent="Theme.Material3.DayNight.NoActionBar" />
-</resources>
-```
+Template: `templates/compose/app/src/main/res/values/themes.xml` — read it in full before filling placeholders
 
 (no `values-night` variant needed — `DayNight` already switches automatically) and a Kotlin Compose theme wrapper,
 `app/src/main/java/<package-path>/ui/theme/Theme.kt`:
 
-```kotlin
-package <namespace>.ui.theme
-
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF6200EE),
-    secondary = Color(0xFF03DAC5),
-)
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFFBB86FC),
-    secondary = Color(0xFF03DAC5),
-)
-
-@Composable
-fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
-    val colorScheme = if (darkTheme) DarkColors else LightColors
-    MaterialTheme(colorScheme = colorScheme, content = content)
-}
-```
+Template: `templates/compose/app/src/main/java/__package-path__/ui/theme/Theme.kt` — read it in full before filling placeholders
 
 **Launcher icon (both `ui` variants)** — `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml`:
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
-</adaptive-icon>
-```
+Template: `templates/common/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` — read it in full before filling placeholders
 
 `drawable/ic_launcher_background.xml` (flat brand-color fill):
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="@color/primary"
-        android:pathData="M0,0h108v108h-108z" />
-</vector>
-```
+Template: `templates/common/app/src/main/res/drawable/ic_launcher_background.xml` — read it in full before filling placeholders
 
 `drawable/ic_launcher_foreground.xml` (a simple centered monogram placeholder — replace with real brand art):
 
-```xml
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="@color/on_primary"
-        android:pathData="M44,34h20v10h-20z M44,49h20v10h-20z M44,64h20v10h-20z" />
-</vector>
-```
+Template: `templates/common/app/src/main/res/drawable/ic_launcher_foreground.xml` — read it in full before filling placeholders
 
 **No raster (`.webp`/`.png`) launcher icons are generated, and none are needed.** `min-sdk` defaults to `26` — the
 exact API level `<adaptive-icon>` was introduced at — so every device this app installs on resolves the vector
@@ -1031,99 +593,17 @@ this skill deliberately doesn't attempt to rasterize vector art itself.
 
 **`ui: compose`** (default):
 
-```kotlin
-package <namespace>
-
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import <namespace>.ui.theme.AppTheme
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            AppTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    Greeting(stringResource(R.string.app_name))
-                }
-            }
-        }
-    }
-}
-
-/**
- * Greets [name] — the sample component of the UI contract (state: `name`; events: none; visual states: `default`).
- *
- * @param name the name shown inside the localized greeting.
- * @param modifier modifier applied to the text.
- */
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(text = stringResource(R.string.greeting, name), modifier = modifier)
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AppTheme {
-        Greeting("<app-name>")
-    }
-}
-```
+Template: `templates/compose/app/src/main/java/__package-path__/MainActivity.kt` — read it in full before filling placeholders
 
 **`ui: views`** (ViewBinding-based alternative — write this instead when Step 2 chose `views`):
 
 `res/layout/activity_main.xml`:
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
-
-    <TextView
-        android:id="@+id/greetingText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_name"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
-```
+Template: `templates/views/app/src/main/res/layout/activity_main.xml` — read it in full before filling placeholders
 
 `MainActivity.kt`:
 
-```kotlin
-package <namespace>
-
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import <namespace>.databinding.ActivityMainBinding
-
-class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-    }
-}
-```
+Template: `templates/views/app/src/main/java/__package-path__/MainActivity.kt` — read it in full before filling placeholders
 
 The constraints use `Start`/`End`, never `Left`/`Right`, so the layout mirrors in right-to-left locales (UI
 contract §4). `viewBinding = true` (already in the `buildFeatures {}` block above) generates `ActivityMainBinding` from
@@ -1135,9 +615,7 @@ upstream, add `androidx.appcompat:appcompat` and `androidx.constraintlayout:cons
 
 ### `app/src/test/resources/<package-path>/robolectric.properties`
 
-```properties
-sdk=<compile-sdk-minus-one-or-matching-supported-value>
-```
+Template: `templates/common/app/src/test/resources/__package-path__/robolectric.properties` — read it in full before filling placeholders
 
 The reference project pins this one minor step behind its own `compileSdk` (`compileSdk = 36` → `sdk=35`) because
 Robolectric's shipped Android SDK jars lag the very latest platform release by a few months after each Android
@@ -1147,22 +625,7 @@ records which value actually worked.
 
 ### `app/src/test/java/<package-path>/MainActivityTest.kt` — placeholder unit test
 
-```kotlin
-package <namespace>
-
-import org.junit.Test
-import org.junit.Assert.assertEquals
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-
-@RunWith(RobolectricTestRunner::class)
-class MainActivityTest {
-    @Test
-    fun `placeholder arithmetic check`() {
-        assertEquals(4, 2 + 2)
-    }
-}
-```
+Template: `templates/common/app/src/test/java/__package-path__/MainActivityTest.kt` — read it in full before filling placeholders
 
 A genuine first test exercises `MainActivity`'s `onCreate` via `Robolectric.buildActivity(MainActivity::class.java)`
 — this skill ships only the arithmetic placeholder above (mirroring the reference project's own
@@ -1172,95 +635,11 @@ A genuine first test exercises `MainActivity`'s `onCreate` via `Robolectric.buil
 
 **`ui: compose`**:
 
-```kotlin
-package <namespace>
-
-import android.os.Build
-import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.tryPerformAccessibilityChecks
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import com.google.android.apps.common.testing.accessibility.framework.integrations.espresso.AccessibilityValidator
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-
-@RunWith(AndroidJUnit4::class)
-class MainActivityInstrumentedTest {
-    @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
-
-    @Before
-    fun enableAccessibilityChecks() {
-        // Level from the `uiAccessibility` runner argument iru-android-test passes (.ui-quality.yml); API 34+ only.
-        val level = InstrumentationRegistry.getArguments().getString("uiAccessibility", "enforce")
-        if (level != "off" && level != "none" && Build.VERSION.SDK_INT >= 34) {
-            composeRule.enableAccessibilityChecks(
-                AccessibilityValidator().setRunChecksFromRootView(true).apply {
-                    if (level == "report") setThrowExceptionFor(null)
-                },
-            )
-        }
-    }
-
-    @Test
-    fun useAppContext() {
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("<application-id>", appContext.packageName)
-    }
-
-    @Test
-    fun greeting_isShown_andAccessible() {
-        val appName = composeRule.activity.getString(R.string.app_name)
-        composeRule.onNodeWithText(composeRule.activity.getString(R.string.greeting, appName))
-            .tryPerformAccessibilityChecks()
-    }
-}
-```
+Template: `templates/compose/app/src/androidTest/java/__package-path__/MainActivityInstrumentedTest.kt` — read it in full before filling placeholders
 
 **`ui: views`** — the same `useAppContext` test plus Espresso's Accessibility Test Framework integration:
 
-```kotlin
-package <namespace>
-
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.accessibility.AccessibilityChecks
-import androidx.test.espresso.matcher.ViewMatchers.isRoot
-import androidx.test.ext.junit.rules.ActivityScenarioRule
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Assert.assertEquals
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-
-@RunWith(AndroidJUnit4::class)
-class MainActivityInstrumentedTest {
-    @get:Rule
-    val scenarioRule = ActivityScenarioRule(MainActivity::class.java)
-
-    @Test
-    fun useAppContext() {
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("<application-id>", appContext.packageName)
-    }
-
-    @Test
-    fun mainActivity_isAccessible() {
-        // Level from the `uiAccessibility` runner argument iru-android-test passes (.ui-quality.yml).
-        val level = InstrumentationRegistry.getArguments().getString("uiAccessibility", "enforce")
-        if (level == "off" || level == "none") return
-        AccessibilityChecks.enable().setRunChecksFromRootView(true).apply {
-            if (level == "report") setThrowExceptionFor(null)
-        }
-        onView(isRoot()).check(AccessibilityChecks.accessibilityAssertion())
-    }
-}
-```
+Template: `templates/views/app/src/androidTest/java/__package-path__/MainActivityInstrumentedTest.kt` — read it in full before filling placeholders
 
 Runs only via `./gradlew :app:connectedAndroidTest` against a running emulator/device — Step 7 doesn't run this
 (no emulator available in this skill's own verification environment); it was compile-checked
@@ -1268,12 +647,7 @@ Runs only via `./gradlew :app:connectedAndroidTest` against a running emulator/d
 
 ### `.ui-quality.yml` — UI test settings at the repository root
 
-```yaml
-# .ui-quality.yml — at the repository root; written by the iru-setup-* scaffolds, read by the coding and test skills.
-accessibility: <accessibility>      # enforce: violations fail the UI tests | report: listed, never failing | off: not run | none: opted out entirely
-directions: [ltr, rtl]      # screenshot matrix directions
-themes: [light, dark]       # screenshot matrix themes
-```
+Template: `templates/common/.ui-quality.yml` — read it in full before filling placeholders
 
 `<accessibility>` is Step 2's answer (default `enforce`). Exactly this shape — the catalog's UI contract §8 — read
 by `UiScreenshots.kt` below, `iru-android-test`'s `ui` run, and the coding skills.
@@ -1284,189 +658,11 @@ Resolves `UI_SCREENSHOTS_DIR` (else `<repository root>/.ui-screenshots`), reads 
 capture matrix and the contract's file names, forces Roborazzi to record (its captures are no-ops otherwise), and
 maps the accessibility level onto Roborazzi's ATF options. Identical for both `ui` variants:
 
-```kotlin
-package <namespace>.testing
-
-import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
-import com.github.takahirom.roborazzi.RoborazziATFAccessibilityCheckOptions
-import com.github.takahirom.roborazzi.RoborazziATFAccessibilityChecker
-import com.github.takahirom.roborazzi.RoborazziOptions
-import com.github.takahirom.roborazzi.RoborazziTaskType
-import java.io.File
-
-/**
- * Shared UI-test helper: screenshot paths, the `.ui-quality.yml` settings and the capture matrix.
- *
- * Screenshots go to `UI_SCREENSHOTS_DIR` when set, otherwise to `<repository root>/.ui-screenshots`, as
- * `<kind>/<Id>/<state>--<direction>--<theme>[--<variant>…].png`.
- */
-object UiScreenshots {
-    /** What a capture shows. */
-    enum class Kind { COMPONENT, SCREEN, FLOW }
-
-    /** Layout direction of a capture. */
-    enum class Direction { LTR, RTL }
-
-    /** Theme of a capture. */
-    enum class Theme { LIGHT, DARK, HIGH_CONTRAST }
-
-    /** Level of the automated accessibility checks. */
-    enum class Accessibility { ENFORCE, REPORT, OFF, NONE }
-
-    /** One cell of the capture matrix. */
-    data class Variant(val direction: Direction, val theme: Theme) {
-        /** Whether this cell renders right-to-left. */
-        val isRtl: Boolean get() = direction == Direction.RTL
-
-        /** Whether this cell renders the dark theme. */
-        val isDark: Boolean get() = theme == Theme.DARK
-    }
-
-    private val segment = Regex("[a-z0-9]+(-[a-z0-9]+)*")
-    private val setting = Regex("""^\s*(accessibility|directions|themes)\s*:\s*([^#]*)""")
-
-    /** Repository root: the nearest ancestor holding `.git`, else `settings.gradle(.kts)`, else the working dir. */
-    val repositoryRoot: File by lazy {
-        val start = File(System.getProperty("user.dir") ?: ".").absoluteFile
-        generateSequence(start) { it.parentFile }.firstOrNull { File(it, ".git").exists() }
-            ?: generateSequence(start) { it.parentFile }.firstOrNull {
-                File(it, "settings.gradle.kts").exists() || File(it, "settings.gradle").exists()
-            }
-            ?: start
-    }
-
-    /** Directory every capture is written under. */
-    val rootDir: File by lazy {
-        System.getenv("UI_SCREENSHOTS_DIR")?.takeIf { it.isNotBlank() }?.let(::File)
-            ?: File(repositoryRoot, ".ui-screenshots")
-    }
-
-    private val settings: Map<String, String> by lazy {
-        val file = File(repositoryRoot, ".ui-quality.yml")
-        if (!file.isFile) emptyMap()
-        else file.readLines().mapNotNull { setting.find(it) }.associate { it.groupValues[1] to it.groupValues[2].trim() }
-    }
-
-    private fun list(key: String): List<String>? =
-        settings[key]?.trim('[', ']', ' ')?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
-
-    /** Accessibility level from `.ui-quality.yml` (default `enforce`). */
-    val accessibility: Accessibility by lazy {
-        settings["accessibility"]?.let { Accessibility.valueOf(it.uppercase()) } ?: Accessibility.ENFORCE
-    }
-
-    /** Directions × themes to capture, from `.ui-quality.yml` (default `[ltr, rtl]` × `[light, dark]`). */
-    val matrix: List<Variant> by lazy {
-        val directions = list("directions")?.map { Direction.valueOf(it.uppercase()) } ?: Direction.entries
-        val themes = list("themes")?.map { Theme.valueOf(it.uppercase().replace('-', '_')) }
-            ?: listOf(Theme.LIGHT, Theme.DARK)
-        directions.flatMap { d -> themes.map { t -> Variant(d, t) } }
-    }
-
-    /**
-     * Returns (and creates the parent of) the PNG file for one capture.
-     *
-     * @param kind component, screen or flow.
-     * @param id type name exactly as in code (`OrderRow`), or a kebab-case flow name.
-     * @param state kebab-case visual state (`default`, `loading`, `01-cart`, …).
-     * @param variant direction and theme of the capture.
-     * @param extra optional further variants (`phone`, `large-text`, …).
-     * @return the file to write.
-     * @throws IllegalArgumentException if a segment is not kebab-case.
-     */
-    fun file(kind: Kind, id: String, state: String, variant: Variant, vararg extra: String): File {
-        require(id.isNotBlank() && !id.contains('/')) { "Invalid id '$id'" }
-        (listOf(state) + extra).forEach { require(segment.matches(it)) { "'$it' is not kebab-case" } }
-        val name = (listOf(state, variant.direction.slug(), variant.theme.slug()) + extra).joinToString("--")
-        return File(rootDir, "${kind.slug()}/$id/$name.png").also { it.parentFile?.mkdirs() }
-    }
-
-    /** Roborazzi options that always write the capture, whatever the `roborazzi.test.*` properties say. */
-    @OptIn(ExperimentalRoborazziApi::class)
-    val recordOptions: RoborazziOptions = RoborazziOptions(taskType = RoborazziTaskType.Record)
-
-    /** Roborazzi ATF options for the configured level, or `null` when the checks are `off`. */
-    @OptIn(ExperimentalRoborazziApi::class)
-    val accessibilityOptions: RoborazziATFAccessibilityCheckOptions? by lazy {
-        when (accessibility) {
-            Accessibility.ENFORCE -> RoborazziATFAccessibilityCheckOptions(
-                failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.Error,
-            )
-            Accessibility.REPORT -> RoborazziATFAccessibilityCheckOptions(
-                failureLevel = RoborazziATFAccessibilityChecker.CheckLevel.LogOnly,
-            )
-            Accessibility.OFF, Accessibility.NONE -> null
-        }
-    }
-
-    private fun Enum<*>.slug(): String = name.lowercase().replace('_', '-')
-}
-```
+Template: `templates/common/app/src/test/java/__package-path__/testing/UiScreenshots.kt` — read it in full before filling placeholders
 
 ### `app/src/test/java/<package-path>/GreetingTest.kt` (`ui: compose`) — sample UI test
 
-```kotlin
-package <namespace>
-
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.unit.LayoutDirection
-import <namespace>.testing.UiScreenshots
-import <namespace>.ui.theme.AppTheme
-import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
-import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.checkRoboAccessibility
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
-
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w360dp-h640dp-xxhdpi")
-class GreetingTest {
-    @get:Rule
-    val composeRule = createComposeRule()
-
-    @Test
-    fun greeting_showsLocalizedName() {
-        composeRule.setContent { AppTheme { Greeting("Ada") } }
-
-        composeRule.onNodeWithText("Hello, Ada!").assertIsDisplayed()
-    }
-
-    @OptIn(ExperimentalRoborazziApi::class)
-    @Test
-    fun greeting_capturesEveryDirectionAndTheme() {
-        var cell by mutableStateOf(UiScreenshots.matrix.first())
-        composeRule.setContent {
-            val direction = if (cell.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                AppTheme(darkTheme = cell.isDark) {
-                    Surface { Greeting(if (cell.isRtl) "عائشة" else "Ada") }
-                }
-            }
-        }
-        for (variant in UiScreenshots.matrix) {
-            cell = variant
-            composeRule.waitForIdle()
-            val file = UiScreenshots.file(UiScreenshots.Kind.COMPONENT, "Greeting", "default", variant)
-            composeRule.onRoot().captureRoboImage(file.path, roborazziOptions = UiScreenshots.recordOptions)
-            UiScreenshots.accessibilityOptions?.let { composeRule.onRoot().checkRoboAccessibility(it) }
-        }
-    }
-}
-```
+Template: `templates/compose/app/src/test/java/__package-path__/GreetingTest.kt` — read it in full before filling placeholders
 
 With a Compose BOM whose UI test artifacts are 1.11 or newer, `createComposeRule` is deprecated in favour of
 `androidx.compose.ui.test.junit4.v2.createComposeRule` (same use) — switch the import then; the fallback BOM in
@@ -1474,49 +670,11 @@ Step 4 predates it.
 
 ### `app/src/test/java/<package-path>/MainActivityScreenTest.kt` (`ui: views`) — sample UI test
 
-```kotlin
-package <namespace>
-
-import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.matcher.ViewMatchers.isRoot
-import <namespace>.testing.UiScreenshots
-import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
-import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.checkRoboAccessibility
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
-
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w360dp-h640dp-xxhdpi")
-class MainActivityScreenTest {
-    @OptIn(ExperimentalRoborazziApi::class)
-    @Test
-    fun mainActivity_capturesEveryDirectionAndTheme() {
-        for (variant in UiScreenshots.matrix) {
-            val direction = if (variant.isRtl) "ldrtl" else "ldltr"
-            val night = if (variant.isDark) "night" else "notnight"
-            RuntimeEnvironment.setQualifiers("+$direction-$night")
-            ActivityScenario.launch(MainActivity::class.java).use {
-                val file = UiScreenshots.file(UiScreenshots.Kind.SCREEN, "MainActivity", "default", variant)
-                onView(isRoot()).captureRoboImage(file.path, roborazziOptions = UiScreenshots.recordOptions)
-                UiScreenshots.accessibilityOptions?.let { onView(isRoot()).checkRoboAccessibility(it) }
-            }
-        }
-    }
-}
-```
+Template: `templates/views/app/src/test/java/__package-path__/MainActivityScreenTest.kt` — read it in full before filling placeholders
 
 ### `app/.gitignore`
 
-```gitignore
-/build
-```
+Template: `templates/common/app/.gitignore` — read it in full before filling placeholders
 
 ### `local.properties` guidance
 

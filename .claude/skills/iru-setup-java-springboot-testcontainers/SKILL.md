@@ -1,33 +1,6 @@
 ---
 name: iru-setup-java-springboot-testcontainers
-description: >-
-  Set up the local-execution and integration-test infrastructure for a Spring Boot service — a `compose.yaml` at the
-  repository root with one pinned service per technology the stack uses (MongoDB, Couchbase, PostgreSQL/pgvector,
-  MariaDB, Elasticsearch, Neo4j, Qdrant, Redis, Kafka, Confluent Schema Registry) plus Prometheus and Grafana for
-  viewing metrics during local development, and a Testcontainers integration-test harness that launches that same
-  compose file via `ComposeContainer` so integration tests and local runs share one definition of the environment.
-  Whenever the service has REST, gRPC or GraphQL clients, also adds an API mocking service to that same compose stack,
-  driven by the contracts already in `apis/rest-client/<name>/`, `apis/grpc-client/<name>/` and
-  `apis/graphql-client/<name>/` — Microcks (the default when any gRPC client exists, since it mocks gRPC and REST from
-  the same contracts in one container) or WireMock (the default when the service has REST clients only, with its gRPC
-  extension noted as the upgrade path) — so integration tests never call a real downstream service. Writes the shared
-  `*IT` base class (Java, or Kotlin when `springboot-stack.yml`'s `project.language` is `kotlin` — a `companion
-  object` with `@JvmStatic` members, Testcontainers 2.x package names, `ComposeContainer` and `@ServiceConnection`
-  narrow per-adapter bases), the `@DynamicPropertySource`/`ServiceConnection` wiring that points Spring at the started
-  containers and each client's base URL at the mock, health-check-based readiness gating, and the Maven
-  Failsafe/JaCoCo hookup — or, when `project.buildTool` is `gradle`, checks the `integrationTest` task the build-logic
-  convention plugin already defines (never redefining it) and adds any mock Testcontainers test dependencies through
-  `gradle/libs.versions.toml` — and verifies the whole thing by running `mvn verify` or `./gradlew integrationTest`.
-  Also wires Spring Boot's own `spring-boot-docker-compose` support so `local` runs start the stack automatically.
-  Reads `springboot-stack.yml` for which services are needed and their pinned image tags. Announces whether it is
-  creating the compose stack and IT harness from scratch or updating existing ones, and for every file it owns that
-  already exists (`compose.yaml`/`docker-compose.yml`, the `*IT` base class, the Prometheus/Grafana provisioning, the
-  mock's configuration) warns and asks Update / Keep as is / Replace — or applies `on-existing` from `args`. Notes
-  that with the manifest's `ci.tests` set to `unit` (or `ci.enabled` set to `false`) the integration tests it
-  generates run locally only. Invoke as `/iru-setup-java-springboot-testcontainers`, or with `args` (`stack-file:`,
-  `mode:` (`new`/`existing`), `on-existing:` (`ask`/`keep`/`update`/`replace`) lines) when called from
-  `iru-setup-java-springboot`. Use whenever a Spring Boot service needs reproducible integration tests and a runnable
-  local environment instead of hand-wiring containers per test class.
+description: "Invoked as `/iru-setup-java-springboot-testcontainers` (args: `stack-file`, `mode`, `on-existing`), normally by `iru-setup-java-springboot`. Sets up `compose.yaml` (stack services, Prometheus/Grafana, API mocks) and a Testcontainers integration-test harness for a Spring Boot service, verified with the build's integration tests."
 model: sonnet
 ---
 

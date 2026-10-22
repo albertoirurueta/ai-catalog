@@ -1,6 +1,6 @@
 ---
 name: iru-swift-generate-all-tests
-description: For a Swift package or Xcode app/library project only, explore the whole codebase to find every production type (struct, class, enum, actor) that has no corresponding test at all, or whose measured line coverage falls below 80%, using the `iru-swift-coverage` skill to get the exact percentage per type — then generate new tests (or extend existing ones) until each reaches that bar, defaulting to Swift Testing (`@Suite`, `@Test`, `#expect`, `#require`) for unit tests and falling back to XCTest only for UI automation (`XCUITest`) and performance (`measure`), following this project's own test framework and style. When the target renders UI (SwiftUI, UIKit or AppKit) it also generates UI tests per the catalog's UI contract for every existing screen and component that has none — `ImageRenderer`/native component captures and XCUITest screen captures across the `.ui-quality.yml` directions × themes into `.ui-screenshots/` through the shared `UIScreenshots.swift` helper, with a `performAccessibilityAudit()` test at the configured level — and runs them through `iru-swift-test`'s `ui` selector (unverified without a simulator runtime or macOS desktop session). Invoke as `/iru-swift-generate-all-tests [scope]`, where `[scope]` names one Swift package target/Xcode app target (default: the project's primary library/app target) or a comma-separated type list within it; also accepts `args` as `key: value` lines, currently just `scope: <target-or-type-list>`. Stops immediately, without attempting anything, if the repository isn't a Swift project (no `Package.swift` and no `.xcodeproj`/`.xcworkspace` found). Equivalent to `iru-java-generate-all-tests`/`iru-typescript-generate-all-tests`/`iru-android-generate-all-tests` for the Swift/Apple-platform stack. Use whenever the user wants comprehensive unit test coverage brought up across an entire Swift codebase in one pass, instead of writing tests for one type or task at a time.
+description: "/iru-swift-generate-all-tests [scope] - for a Swift package or Xcode project only, finds every type with no test or under 80% line coverage (via iru-swift-coverage) and generates or extends tests, plus UI tests for existing screens and components. Optional scope: <target-or-type-list>."
 model: sonnet
 allowed-tools: Read Edit Write Bash(swift *) Bash(xcodebuild *) Bash(xcrun *) Bash(git status *) Bash(git diff *) Bash(find *) Bash(grep *) Bash(ls *) Skill Agent AskUserQuestion
 ---
@@ -14,6 +14,8 @@ or falls back to, any other language. It only adds/extends test code; it does no
 comments, or run a code-quality pass (those are `iru-check-license`, `iru-swift-docc`, and `iru-swift-code-quality`'s
 jobs), and it only touches production source code if a type is genuinely untestable as written (see Step 5) —
 which it reports rather than silently "fixing" by redesigning the type.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Resolve inputs
 

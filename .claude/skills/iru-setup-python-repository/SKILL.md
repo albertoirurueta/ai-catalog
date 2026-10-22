@@ -1,35 +1,7 @@
 ---
 name: iru-setup-python-repository
-description: >-
-  End-to-end bootstrap for a Python web repository of either of two flavors — a FastAPI service or a Django
-  project. Resolves `flavor` (`fastapi`/`django`) from `args`, from an `iru-explore` `Project type:` line
-  (`python-fastapi`, `python-django`; `python-library` is out of scope) or the same on-disk markers (`fastapi` /
-  `django` in `pyproject.toml` or `requirements*.txt`, a root `manage.py`), or asks; then collects the project's
-  identity (name, import package, description, license, developer name/email/organization URL), the flavor's shape
-  (`database`, plus `orm` for FastAPI or `api` for Django) and the shared pipeline parameters (`open-source`,
-  `visibility`, `ci`, `ci-tests`, `pages`, `distribution` as a GHCR container image, `sonar` plus its detail keys,
-  `python-version`, `integration-branch`, `stable-branch`, and — `django` only — `accessibility`, the automated
-  accessibility level of the browser UI tests the Django scaffold writes to `.ui-quality.yml`) once, each with
-  visibility-aware cost guidance, and
-  orchestrates the flavor's scaffold skill (`iru-setup-python-fastapi` / `iru-setup-python-django`) →
-  `iru-setup-antora` → `iru-setup-python-gitignore` → `iru-setup-python-github-workflows` → `iru-setup-changelog` →
-  `iru-setup-readme`, in that order, via `iru-isolated-skill-executor`, so nothing is asked twice (the workflows
-  step is skipped entirely when `ci` is `no`). Invoke as `/iru-setup-python-repository`, optionally with `args`
-  (`key: value` lines) pre-resolving `flavor`, `mode` (`new`/`existing`), `open-source`, `visibility`
-  (`public`/`private`/`internal`, detected via `gh` when absent), `ci` (`yes`/`no`), `ci-tests` (`unit`/`full`),
-  `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar` (`cloud`/`self-hosted`/`none`, +
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `python-version` (default `3.13`), `database`
-  (`postgresql`/`sqlite`/`none`), `orm` (FastAPI: `sqlmodel`/`sqlalchemy`), `api` (Django: `drf`/`ninja`/`none`),
-  `integration-branch` (default `develop`), `stable-branch` (default `main`), `accessibility`
-  (`enforce`/`report`/`off`/`none`, Django only), `on-existing`
-  (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), and every identity key, skipping the matching
-  question. Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
-  inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
-  keep/update/replace for whatever it finds, and the final report lists the action taken per component. Use
-  whenever bootstrapping (or catching up) a FastAPI or Django repository's full scaffold/docs/gitignore/CI/
-  changelog/README pipeline in one pass instead of running six skills separately and re-answering the same
-  questions.
-model: haiku
+description: "Invoke as /iru-setup-python-repository, optionally with args (key: value lines: flavor fastapi|django, mode, open-source, visibility, ci, ci-tests, pages, distribution, sonar, python-version, database, orm, api, accessibility, branches, on-existing, identity keys) to skip matching questions. End-to-end bootstrap of a FastAPI or Django repository: asks the shared inputs once, then runs the flavor scaffold, iru-setup-antora, iru-setup-python-gitignore, iru-setup-python-github-workflows, iru-setup-changelog and iru-setup-readme in order. Use to bootstrap or catch up a Python web repository in one pass."
+model: sonnet
 ---
 
 # Setup Python Repository
@@ -54,6 +26,8 @@ Python web frameworks (Flask, Litestar, …) are out of scope: there is no scaff
 that's what the repository is (or what the user wants), say so and stop — the gate skills (`iru-python-test`,
 `iru-python-coverage`, `iru-python-code-quality`, `iru-python-docstrings`) and `iru-setup-antora`,
 `iru-setup-python-gitignore`, `iru-setup-changelog`, `iru-setup-readme` can still be run individually.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Resolve inputs
 

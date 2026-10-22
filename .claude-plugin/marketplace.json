@@ -1,0 +1,433 @@
+{
+  "name": "ai-catalog",
+  "owner": {
+    "name": "Alberto Irurueta Carro",
+    "email": "albertoirurueta@gmail.com"
+  },
+  "description": "Reusable Claude Code skills and agents for common software engineering workflows: issue-to-PR cycle, repository bootstrap, per-stack coding, quality gates and documentation.",
+  "plugins": [
+    {
+      "name": "iru-core",
+      "description": "Stack-independent skills: issue-to-PR cycle (issue, explore, plan, code, PR description and review), release, ticket intake, license and security checks, Antora docs, repository bootstrap front door, database tasks, and the iru-gate-runner, iru-isolated-skill-executor and iru-change-summarizer agents. Required by every other plugin.",
+      "category": "core",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./.claude/skills/iru-build-docs",
+        "./.claude/skills/iru-check-license",
+        "./.claude/skills/iru-check-security",
+        "./.claude/skills/iru-code",
+        "./.claude/skills/iru-code-one-task-group",
+        "./.claude/skills/iru-create-github-issue",
+        "./.claude/skills/iru-create-jira-ticket",
+        "./.claude/skills/iru-database-code-one-task",
+        "./.claude/skills/iru-database-code-one-task-group",
+        "./.claude/skills/iru-draft-github-issue",
+        "./.claude/skills/iru-explore",
+        "./.claude/skills/iru-generate-skill-docs",
+        "./.claude/skills/iru-issue",
+        "./.claude/skills/iru-jira-custom-context",
+        "./.claude/skills/iru-plan",
+        "./.claude/skills/iru-pr-description",
+        "./.claude/skills/iru-pr-review",
+        "./.claude/skills/iru-release",
+        "./.claude/skills/iru-review-github-issue",
+        "./.claude/skills/iru-setup-antora",
+        "./.claude/skills/iru-setup-changelog",
+        "./.claude/skills/iru-setup-readme",
+        "./.claude/skills/iru-setup-repository",
+        "./.claude/skills/iru-split-github-issue",
+        "./.claude/skills/iru-update-docs"
+      ],
+      "agents": [
+        "./.claude/agents/iru-change-summarizer.md",
+        "./.claude/agents/iru-gate-runner.md",
+        "./.claude/agents/iru-isolated-skill-executor.md"
+      ]
+    },
+    {
+      "name": "iru-knowledge",
+      "description": "Knowledge-base skills: set up a project knowledge base, process the inbox, compact and complete entries, brief a session, and turn knowledge into GitHub issues or Jira tickets.",
+      "category": "knowledge",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-knowledge-briefing",
+        "./.claude/skills/iru-knowledge-compact",
+        "./.claude/skills/iru-knowledge-complete",
+        "./.claude/skills/iru-knowledge-process-inbox",
+        "./.claude/skills/iru-knowledge-setup",
+        "./.claude/skills/iru-knowledge-to-issue",
+        "./.claude/skills/iru-knowledge-to-jira"
+      ]
+    },
+    {
+      "name": "iru-java",
+      "description": "Java and Kotlin (Maven or Gradle) libraries: coding, tests, JaCoCo/Kover coverage, Checkstyle/PMD/SpotBugs and detekt/ktlint quality gates, Javadoc/KDoc audits, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-java-bump-version",
+        "./.claude/skills/iru-java-code-one-task",
+        "./.claude/skills/iru-java-code-one-task-group",
+        "./.claude/skills/iru-java-code-quality",
+        "./.claude/skills/iru-java-coverage",
+        "./.claude/skills/iru-java-generate-all-tests",
+        "./.claude/skills/iru-java-javadoc",
+        "./.claude/skills/iru-java-test",
+        "./.claude/skills/iru-kotlin-code-quality",
+        "./.claude/skills/iru-kotlin-kdoc",
+        "./.claude/skills/iru-setup-java-github-workflows",
+        "./.claude/skills/iru-setup-java-gitignore",
+        "./.claude/skills/iru-setup-java-library",
+        "./.claude/skills/iru-setup-java-library-repository"
+      ]
+    },
+    {
+      "name": "iru-springboot",
+      "description": "Spring Boot services in Java or Kotlin: multi-module reactor generation (pom, modules, APIs, Hilla, Testcontainers, platform, workflows), coding, performance tests, rolling deployments and Antora documentation.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core",
+        "iru-java"
+      ],
+      "skills": [
+        "./.claude/skills/iru-java-springboot-code-one-task",
+        "./.claude/skills/iru-java-springboot-code-one-task-group",
+        "./.claude/skills/iru-java-springboot-performance-tests",
+        "./.claude/skills/iru-kotlin-springboot-code-one-task",
+        "./.claude/skills/iru-kotlin-springboot-code-one-task-group",
+        "./.claude/skills/iru-setup-java-springboot",
+        "./.claude/skills/iru-setup-java-springboot-apis",
+        "./.claude/skills/iru-setup-java-springboot-github-workflows",
+        "./.claude/skills/iru-setup-java-springboot-hilla",
+        "./.claude/skills/iru-setup-java-springboot-modules",
+        "./.claude/skills/iru-setup-java-springboot-platform",
+        "./.claude/skills/iru-setup-java-springboot-pom",
+        "./.claude/skills/iru-setup-java-springboot-testcontainers",
+        "./.claude/skills/iru-springboot-rolling-deployments",
+        "./.claude/skills/iru-update-java-springboot-documentation"
+      ]
+    },
+    {
+      "name": "iru-quarkus",
+      "description": "Quarkus services in Java or Kotlin: service scaffold, GitHub workflows, repository bootstrap and task coding.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core",
+        "iru-java"
+      ],
+      "skills": [
+        "./.claude/skills/iru-quarkus-code-one-task",
+        "./.claude/skills/iru-quarkus-code-one-task-group",
+        "./.claude/skills/iru-setup-quarkus-github-workflows",
+        "./.claude/skills/iru-setup-quarkus-repository",
+        "./.claude/skills/iru-setup-quarkus-service"
+      ]
+    },
+    {
+      "name": "iru-dotnet",
+      "description": ".NET libraries, services and Windows desktop apps (WPF, WinUI 3, Windows Forms): coding, tests, coverage, StyleCop/analyzers, DocFX, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-dotnet-bump-version",
+        "./.claude/skills/iru-dotnet-code-one-task",
+        "./.claude/skills/iru-dotnet-code-one-task-group",
+        "./.claude/skills/iru-dotnet-code-quality",
+        "./.claude/skills/iru-dotnet-coverage",
+        "./.claude/skills/iru-dotnet-docfx",
+        "./.claude/skills/iru-dotnet-generate-all-tests",
+        "./.claude/skills/iru-dotnet-test",
+        "./.claude/skills/iru-setup-dotnet-gitignore",
+        "./.claude/skills/iru-setup-windows-app",
+        "./.claude/skills/iru-setup-windows-github-workflows",
+        "./.claude/skills/iru-setup-windows-gitignore",
+        "./.claude/skills/iru-setup-windows-repository",
+        "./.claude/skills/iru-windows-code-one-task",
+        "./.claude/skills/iru-windows-code-one-task-group"
+      ]
+    },
+    {
+      "name": "iru-typescript",
+      "description": "TypeScript libraries and web apps (React, Angular, Ionic, Hilla): coding, Vitest/Jest/ng tests, coverage, ESLint/Prettier quality, TSDoc, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-setup-angular-web",
+        "./.claude/skills/iru-setup-ionic-app",
+        "./.claude/skills/iru-setup-react-web",
+        "./.claude/skills/iru-setup-typescript-github-workflows",
+        "./.claude/skills/iru-setup-typescript-gitignore",
+        "./.claude/skills/iru-setup-typescript-library",
+        "./.claude/skills/iru-setup-typescript-repository",
+        "./.claude/skills/iru-typescript-bump-version",
+        "./.claude/skills/iru-typescript-code-one-task",
+        "./.claude/skills/iru-typescript-code-one-task-group",
+        "./.claude/skills/iru-typescript-code-quality",
+        "./.claude/skills/iru-typescript-coverage",
+        "./.claude/skills/iru-typescript-generate-all-tests",
+        "./.claude/skills/iru-typescript-test",
+        "./.claude/skills/iru-typescript-tsdoc"
+      ]
+    },
+    {
+      "name": "iru-nestjs",
+      "description": "NestJS services: task coding and application scaffold.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core",
+        "iru-typescript"
+      ],
+      "skills": [
+        "./.claude/skills/iru-nestjs-code-one-task",
+        "./.claude/skills/iru-nestjs-code-one-task-group",
+        "./.claude/skills/iru-setup-nestjs-app"
+      ]
+    },
+    {
+      "name": "iru-nextjs",
+      "description": "Next.js web apps: task coding and application scaffold.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core",
+        "iru-typescript"
+      ],
+      "skills": [
+        "./.claude/skills/iru-nextjs-code-one-task",
+        "./.claude/skills/iru-nextjs-code-one-task-group",
+        "./.claude/skills/iru-setup-nextjs-web"
+      ]
+    },
+    {
+      "name": "iru-react-native",
+      "description": "React Native apps (Expo or bare CLI/Metro): task coding, version bumps and application scaffold.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core",
+        "iru-typescript"
+      ],
+      "skills": [
+        "./.claude/skills/iru-react-native-bump-version",
+        "./.claude/skills/iru-react-native-code-one-task",
+        "./.claude/skills/iru-react-native-code-one-task-group",
+        "./.claude/skills/iru-setup-react-native-app"
+      ]
+    },
+    {
+      "name": "iru-php",
+      "description": "PHP projects (Laravel, WordPress plugins and themes, PrestaShop modules): coding, Pest/PHPUnit tests, coverage, PHPStan/Psalm/PHPCS quality, PHPDoc, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-php-bump-version",
+        "./.claude/skills/iru-php-code-one-task",
+        "./.claude/skills/iru-php-code-one-task-group",
+        "./.claude/skills/iru-php-code-quality",
+        "./.claude/skills/iru-php-coverage",
+        "./.claude/skills/iru-php-phpdoc",
+        "./.claude/skills/iru-php-test",
+        "./.claude/skills/iru-setup-php-github-workflows",
+        "./.claude/skills/iru-setup-php-gitignore",
+        "./.claude/skills/iru-setup-php-laravel",
+        "./.claude/skills/iru-setup-php-prestashop",
+        "./.claude/skills/iru-setup-php-repository",
+        "./.claude/skills/iru-setup-php-wordpress"
+      ]
+    },
+    {
+      "name": "iru-python",
+      "description": "Python projects (FastAPI and Django): coding, pytest tests, coverage, Ruff/mypy/Bandit quality, docstring audits, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-django-code-one-task",
+        "./.claude/skills/iru-django-code-one-task-group",
+        "./.claude/skills/iru-fastapi-code-one-task",
+        "./.claude/skills/iru-fastapi-code-one-task-group",
+        "./.claude/skills/iru-python-bump-version",
+        "./.claude/skills/iru-python-code-quality",
+        "./.claude/skills/iru-python-coverage",
+        "./.claude/skills/iru-python-docstrings",
+        "./.claude/skills/iru-python-test",
+        "./.claude/skills/iru-setup-python-django",
+        "./.claude/skills/iru-setup-python-fastapi",
+        "./.claude/skills/iru-setup-python-github-workflows",
+        "./.claude/skills/iru-setup-python-gitignore",
+        "./.claude/skills/iru-setup-python-repository"
+      ]
+    },
+    {
+      "name": "iru-android",
+      "description": "Android libraries and Compose apps in Kotlin: coding, unit tests, coverage, Lint/detekt/ktlint quality, Dokka audits, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-android-bump-version",
+        "./.claude/skills/iru-android-code-one-task",
+        "./.claude/skills/iru-android-code-one-task-group",
+        "./.claude/skills/iru-android-code-quality",
+        "./.claude/skills/iru-android-coverage",
+        "./.claude/skills/iru-android-dokka",
+        "./.claude/skills/iru-android-generate-all-tests",
+        "./.claude/skills/iru-android-test",
+        "./.claude/skills/iru-setup-android-app",
+        "./.claude/skills/iru-setup-android-github-workflows",
+        "./.claude/skills/iru-setup-android-gitignore",
+        "./.claude/skills/iru-setup-android-library",
+        "./.claude/skills/iru-setup-android-repository"
+      ]
+    },
+    {
+      "name": "iru-swift",
+      "description": "Swift packages and Apple apps (iOS, iPadOS, macOS, watchOS, visionOS): coding, tests, coverage, SwiftLint, DocC, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-setup-apple-app",
+        "./.claude/skills/iru-setup-macos-app",
+        "./.claude/skills/iru-setup-macos-github-workflows",
+        "./.claude/skills/iru-setup-macos-repository",
+        "./.claude/skills/iru-setup-swift-github-workflows",
+        "./.claude/skills/iru-setup-swift-gitignore",
+        "./.claude/skills/iru-setup-swift-library",
+        "./.claude/skills/iru-setup-swift-repository",
+        "./.claude/skills/iru-swift-bump-version",
+        "./.claude/skills/iru-swift-code-one-task",
+        "./.claude/skills/iru-swift-code-one-task-group",
+        "./.claude/skills/iru-swift-code-quality",
+        "./.claude/skills/iru-swift-coverage",
+        "./.claude/skills/iru-swift-docc",
+        "./.claude/skills/iru-swift-generate-all-tests",
+        "./.claude/skills/iru-swift-test"
+      ]
+    },
+    {
+      "name": "iru-kmp",
+      "description": "Kotlin Multiplatform Android and iOS apps: coding, host tests, Kover coverage, detekt/ktlint/Lint/SwiftLint quality, Dokka audits, version bumps and repository bootstrap.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-kmp-bump-version",
+        "./.claude/skills/iru-kmp-code-one-task",
+        "./.claude/skills/iru-kmp-code-one-task-group",
+        "./.claude/skills/iru-kmp-code-quality",
+        "./.claude/skills/iru-kmp-coverage",
+        "./.claude/skills/iru-kmp-dokka",
+        "./.claude/skills/iru-kmp-generate-all-tests",
+        "./.claude/skills/iru-kmp-test",
+        "./.claude/skills/iru-setup-kmp-app",
+        "./.claude/skills/iru-setup-kmp-github-workflows",
+        "./.claude/skills/iru-setup-kmp-gitignore",
+        "./.claude/skills/iru-setup-kmp-repository"
+      ]
+    },
+    {
+      "name": "iru-rust",
+      "description": "Rust crates and workspaces: coding, nextest/cargo test, llvm-cov coverage, clippy/rustfmt/cargo-deny quality, rustdoc audits, version bumps and gitignore scaffold.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-rust-bump-version",
+        "./.claude/skills/iru-rust-code-one-task",
+        "./.claude/skills/iru-rust-code-one-task-group",
+        "./.claude/skills/iru-rust-code-quality",
+        "./.claude/skills/iru-rust-coverage",
+        "./.claude/skills/iru-rust-rustdoc",
+        "./.claude/skills/iru-rust-test",
+        "./.claude/skills/iru-setup-rust-gitignore"
+      ]
+    },
+    {
+      "name": "iru-go",
+      "description": "Go modules: coding, go test, coverage, golangci-lint/go vet/govulncheck quality, godoc audits, version bumps and gitignore scaffold.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core"
+      ],
+      "skills": [
+        "./.claude/skills/iru-go-bump-version",
+        "./.claude/skills/iru-go-code-one-task",
+        "./.claude/skills/iru-go-code-one-task-group",
+        "./.claude/skills/iru-go-code-quality",
+        "./.claude/skills/iru-go-coverage",
+        "./.claude/skills/iru-go-godoc",
+        "./.claude/skills/iru-go-test",
+        "./.claude/skills/iru-setup-go-gitignore"
+      ]
+    },
+    {
+      "name": "iru-cli",
+      "description": "Agent-friendly command-line tools in Rust, Go, Swift or .NET: scaffolds that implement the Building CLIs for AI Agents contract, shared GitHub workflows and the repository orchestrator.",
+      "category": "stack",
+      "source": "./",
+      "strict": false,
+      "dependencies": [
+        "iru-core",
+        "iru-rust",
+        "iru-go",
+        "iru-swift",
+        "iru-dotnet"
+      ],
+      "skills": [
+        "./.claude/skills/iru-setup-cli-github-workflows",
+        "./.claude/skills/iru-setup-cli-repository",
+        "./.claude/skills/iru-setup-dotnet-cli",
+        "./.claude/skills/iru-setup-go-cli",
+        "./.claude/skills/iru-setup-rust-cli",
+        "./.claude/skills/iru-setup-swift-cli"
+      ]
+    }
+  ]
+}

@@ -25,6 +25,10 @@ catalog's CLI scaffold keeps the logic in `lib.rs`. Test code, benches, examples
 
 xref:index.adoc#group-rust[Rust Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-rust` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-rust@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

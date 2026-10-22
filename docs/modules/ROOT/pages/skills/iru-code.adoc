@@ -11,7 +11,9 @@ skill orchestrates the actual implementation work; it is the execution counterpa
 == Purpose
 
 `iru-code` is the autonomous orchestration engine of the catalog. Given a plan produced by `iru-plan` (or by `iru-issue`,
-which runs `iru-plan` internally), it determines which language/framework key(s) are in play, captures a
+which runs `iru-plan` internally), it first gates on open questions: no implementation starts while the plan still
+contains an unresolved `[NEEDS CLARIFICATION` marker (the form `iru-plan` persists when it could not ask), so each one is
+put to the user via `AskUserQuestion` and the answer is written back into the plan. It then determines which language/framework key(s) are in play, captures a
 project-wide code-quality baseline (via `iru-java-code-quality`, `iru-kotlin-code-quality`, `iru-php-code-quality`, `iru-python-code-quality`,
 `iru-dotnet-code-quality`, `iru-typescript-code-quality`, `iru-android-code-quality`, `iru-kmp-code-quality`, `iru-swift-code-quality`, `iru-rust-code-quality`, `iru-go-code-quality`, resolved
 per key: framework keys share their language's gate, e.g. `java-springboot` uses the Java one, `kotlin-springboot` the
@@ -22,16 +24,26 @@ each task's language and delegates to the matching `<key>-code-one-task-group` s
 and validating the whole group once), checking off the plan's checkboxes and notifying the user as it goes so
 the run is resumable if interrupted and progress is visible group by group. On successful completion it runs a
 full local verification build, re-checks the quality and security baselines (the security gate is a hard stop
-on any increase, unlike the quality gate) — if quality regressed, the user can choose to file the remaining
+on any increase, unlike the quality gate), and verifies acceptance-criteria coverage (every row of the plan's
+`## Acceptance criteria coverage` table must name at least one task, and all named tasks must be checked, else the
+run is blocked) — if quality regressed, the user can choose to file the remaining
 issues as new tickets on whichever tracker the plan itself originated from (a GitHub issue via `gh issue create`,
 or a Jira ticket via the `iru-create-jira-ticket` skill, detected from the plan's own `Source:` line) — updates
 the project's Antora documentation via `iru-update-docs`, archives the plan to `.archive/` under a filename that
 embeds the originating GitHub issue number or Jira key (falling back to a timestamp with no identifiable
 ticket), and asks the user for a final review; it never commits, pushes, or opens a PR itself.
 
+Catalog agents are dispatched by their plugin-safe name: `subagent_type: "<agent-name>"` (for example
+`"iru-gate-runner"`) when installed under `.claude/agents/`, or `"iru-core:<agent-name>"` when installed as a plugin,
+whichever appears in the available agent types.
+
 == Purpose group
 
 xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
 
 == Invocation
 
@@ -50,7 +62,10 @@ xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
 |—
 |`iru-code` takes no arguments. It always reads `implementation_plan.md` from the repository root — the file
 produced by the `iru-plan` skill (directly, or via `iru-issue`) — including its task groups, each with a
-`Parallelizable` verdict and its tasks' language/framework key(s).
+`Parallelizable` verdict and its tasks' language/framework key(s). It also scans the plan for unresolved
+`[NEEDS CLARIFICATION` markers (and asks the user to resolve them) and, when present, uses the
+`## Acceptance criteria coverage` table for the final coverage check; plans from an older `iru-plan` without that
+table remain executable, with a one-time warning that the check is skipped.
 |Not applicable — if `implementation_plan.md` is missing or empty, the skill tells the user there is
 nothing to execute and suggests running `/iru-plan` first, then stops.
 |===
@@ -67,6 +82,9 @@ nothing to execute and suggests running `/iru-plan` first, then stops.
 * `implementation_plan.md` with each completed task's (and sub-task's) checkbox checked (`[ ]` → `[x]`) and a
   progress note — updated live by `iru-code-one-task-group` as each task lands, confirmed by `iru-code` once the whole
   group clears.
+* Resolved clarifications: every `[NEEDS CLARIFICATION` marker is replaced in place by the user's decision (affected
+  tasks adjusted, `Open clarifications:` reduced to `none`) before any implementation; if the user declines or cannot be
+  asked, the run stops with the plan untouched and the open markers reported.
 * A user-facing progress notification after every completed group, in addition to the plan file already
   reflecting it.
 * A project-wide quality baseline (Step 3) compared against the final state (Step 7) per language/framework key
@@ -76,12 +94,15 @@ nothing to execute and suggests running `/iru-plan` first, then stops.
 * A project-wide security baseline (Step 3, via `iru-check-security`) compared against the final state (Step 7) — any
   increase is a hard stop: the user must resolve it (remove/rotate the secret, or audit a false positive
   themselves) before the run can proceed to archiving.
+* An acceptance-criteria coverage check (Step 7): each row of the plan's coverage table names at least one task and all
+  its tasks are checked `[x]`; an uncovered or unchecked row blocks archiving until follow-up tasks are added or the
+  user rules the criterion out of scope. Skipped for a plan without that section.
 * A full local verification build confirmed healthy before archiving.
 * The project's Antora documentation brought up to date via `iru-update-docs` (Step 8), covering everything this run
   changed — or a plain note that there's no Antora module to update.
 * On success: `implementation_plan.md` moved to `.archive/implementation_plan_<ticket-id-or-timestamp>.md` — the
   bare GitHub issue number, the Jira key as-is (e.g. `PROJ-123`), or a timestamp with no identifiable ticket — a
-  summary of groups/tasks completed/files touched/coverage/quality/security outcome/documentation updates, and a
+  summary of groups/tasks completed/files touched/coverage/quality/security/acceptance-criteria coverage outcome/documentation updates (and any clarifications resolved), and a
   request for the user to review the code changes — no commit, push, or PR is ever made by this skill.
 * On an unresolved blocker: the plan stays unchecked and at the repository root (not archived) so a later run can
   resume it.
@@ -95,7 +116,11 @@ flowchart TD
     B -- missing/empty --> Z["Stop: suggest running /iru-plan first"]
     B -- present --> C["Warn if plan already exists\n(fresh / resumed / all-checked)"]
     C --> D["Verify every task/sub-task has a\n[ ]/[x] checkbox and groups exist\n(flat plans treated as single-task groups)"]
-    D --> E["Mirror pending groups into\nsession task list (TaskCreate)"]
+    D --> D2{"Unresolved NEEDS CLARIFICATION\nmarkers in the plan?"}
+    D2 -- yes, user declines or not askable --> Z2["Stop: report open markers,\nplan left untouched"]
+    D2 -- yes, resolved via AskUserQuestion --> E
+    D2 -- no --> E
+    E["Mirror pending groups into\nsession task list (TaskCreate)"]
     E --> F["Determine language/framework key(s);\ncapture per-key quality baseline via\n&amp;lt;key&amp;gt;-code-quality + security\nbaseline via check-security (sub-agents)"]
     F --> G{Next unchecked\ntask group?}
     G -- none left --> P["Step 7: full build verification\n+ quality/security baseline comparison"]
@@ -110,7 +135,10 @@ flowchart TD
     Q -- no / resolved --> S{Security count\nincreased?}
     S -- yes --> T["Hard stop: ask user to\nremove/rotate or audit;\nre-check until resolved"]
     T --> S
-    S -- no --> U["Step 8: update-docs skill\n(Antora documentation)"]
+    S -- no --> CV{"Every acceptance-criteria row\ncovered and its tasks checked?"}
+    CV -- no --> CW["Ask user: add follow-up group\nor mark criterion out of scope"]
+    CW -- follow-up group added --> G
+    CV -- yes / no coverage section --> U["Step 8: update-docs skill\n(Antora documentation)"]
     U --> V["Archive plan to .archive/,\nsummarize, ask for final review"]
 ....
 

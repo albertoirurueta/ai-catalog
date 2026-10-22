@@ -34,6 +34,10 @@ model on purpose, since the plan carries the hard reasoning.
 
 xref:index.adoc#group-typescript[TypeScript Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-react-native` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-react-native@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

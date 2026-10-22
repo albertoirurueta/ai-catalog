@@ -35,6 +35,10 @@ or shop makes it unverified, never skipped; see xref:guides/building-user-interf
 
 xref:index.adoc#group-php[PHP Development Tooling]
 
+== Plugin
+
+Shipped by the `iru-php` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-php@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]

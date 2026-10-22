@@ -1,7 +1,7 @@
 ---
 name: iru-setup-antora
-description: Set up an Antora documentation site in a repository that doesn't have one yet — installs Node.js/Antora prerequisites, scaffolds `docs/antora.yml` and `docs/antora-playbook.yml`, and builds a minimal ROOT module with `index.adoc`, `installation.adoc`, and `reference.adoc` pages wired into `nav.adoc`. Invoke as `/iru-setup-antora`, optionally with an `args` line setting `on-existing` to `ask`/`keep`/`update`/`replace` (scripted runs; default `ask`). Announces whether it is creating the site from scratch or updating an existing one; when `docs/antora.yml`/the playbook/the ROOT module already exist it warns and asks whether to Update (fill gaps only, never overwriting existing pages, config, or nav entries — safe to re-run), Keep the site as is, or Replace `antora.yml` + the playbook from its template (existing pages kept unless the user explicitly confirms otherwise). For a repository with a user interface it also adds the **User interface** skeleton (`ui/index.adoc`, `ui/navigation.adoc`, an `images/ui/` directory and their nav entries, per `reference/ui-docs.md`) that `iru-update-docs` later fills with one page per screen and component illustrated by the UI tests' screenshots. Use whenever a repository needs Antora documentation bootstrapped from scratch, instead of hand-wiring `antora.yml`/`antora-playbook.yml`/the module skeleton one file at a time.
-model: haiku
+description: "Invoked as /iru-setup-antora, optionally with an args line on-existing: ask|keep|update|replace. Sets up an Antora documentation site (docs/antora.yml, playbook, ROOT module with index/installation/reference pages, plus a User interface skeleton for UI projects); on an existing site it asks Update, Keep or Replace."
+model: sonnet
 ---
 
 # Antora Setup

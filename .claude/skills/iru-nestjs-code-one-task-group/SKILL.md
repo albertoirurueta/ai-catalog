@@ -1,28 +1,6 @@
 ---
 name: iru-nestjs-code-one-task-group
-description: >-
-  Implement one bucket of NestJS tasks from a plan's task group end-to-end — detects the project's flavor once
-  (ESM/Vitest or CommonJS/Jest, Express or Fastify, ORM, Prisma, standard or monorepo mode, whether the e2e suite
-  needs Docker), captures a single pre-change quality baseline for the whole bucket, runs `iru-nestjs-code-one-task`
-  once per task (in parallel agents when the group is marked parallelizable) to implement each one with its unit
-  specs, then validates the entire bucket once, cheapest first, every check delegated to an `iru-gate-runner` agent
-  so no raw report lands in this context — `npx prisma generate` first when the project uses Prisma, license headers
-  via `iru-check-license`, TSDoc via `iru-typescript-tsdoc`, any configured architecture-boundary check, scoped unit
-  tests (`*.spec.ts`) via `iru-typescript-test`, an 80% coverage gate via `iru-typescript-coverage` measured from
-  **unit tests alone** with `*.module.ts`, `main.ts`, and generated clients excluded, the full unit suite,
-  Oxlint/ESLint + `tsc --noEmit` + Prettier via `iru-typescript-code-quality` diffed against that one baseline (the
-  type-check matters because SWC builds and both test runners strip types without checking them), a single
-  `nest build`, and last the e2e stage (`iru-typescript-test` with the `e2e` selector) — which boots the whole
-  application, may bind ports, and may start Testcontainers or a database, so it always runs serialized
-  repository-wide behind the same atomic `mkdir`-based `.integration-test.lock` as
-  `iru-java-springboot-code-one-task-group` (owner file, stale after 60 minutes, bounded ~45-minute wait, released
-  on every exit path). E2E results never count toward the coverage gate, and an e2e stage that needs Docker when
-  Docker is unavailable is reported as unverified, never silently skipped. `iru-nestjs-code-one-task` checks off
-  each task's box itself with a "group validation pending" note; this skill backfills any that didn't land and
-  replaces each note with the final outcome. Invoke as `/iru-nestjs-code-one-task-group <bucket text>`, passing every
-  task/sub-task in the bucket with its own text, the group's `Parallelizable` verdict, and any relevant "Current code
-  state" context. The NestJS counterpart to `iru-typescript-code-one-task-group`; used by `iru-code-one-task-group`,
-  which invokes it once per plan group for its `nestjs`-tagged tasks.
+description: "Invoked as /iru-nestjs-code-one-task-group <bucket text> (group tasks, Parallelizable verdict, code state) via Skill. Implements one NestJS task bucket: one baseline, iru-nestjs-code-one-task per task (parallel when allowed), then validates once (license, TSDoc, unit tests, 80% coverage, lint/tsc, nest build, locked e2e stage); finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(yarn *) Bash(node *) Bash(docker *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git rev-parse *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---
@@ -53,6 +31,8 @@ Three differences from the plain TypeScript group skill shape the validation ord
    error in a spec, so it is never skipped.
 
 It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Read this before running anything e2e
 

@@ -1,34 +1,7 @@
 ---
 name: iru-setup-php-repository
-description: >-
-  End-to-end bootstrap for a PHP repository of any of four flavors — a Laravel application, a WordPress plugin, a
-  WordPress block theme, or a PrestaShop module. Resolves `flavor` (`laravel`/`wordpress-plugin`/`wordpress-theme`/
-  `prestashop-module`) from `args`, from an `iru-explore` `Project type:` line (`php-laravel`,
-  `php-wordpress-plugin`, `php-wordpress-theme`, `php-prestashop-module`) or the same on-disk markers, or asks; then
-  collects the project's identity (name, slug, Composer vendor, PHP namespace, description, license, developer
-  name/email/organization URL) and the shared pipeline parameters (`open-source`, `visibility`, `ci`, `ci-tests`,
-  `pages`, `distribution` with its flavor-specific meaning, `sonar` plus its detail keys, `accessibility` — the
-  automated accessibility level of the browser UI tests every flavor's scaffold writes to `.ui-quality.yml` —,
-  `php-version`, `integration-branch`, `stable-branch`) once, each with visibility-aware cost guidance, and
-  orchestrates the flavor's scaffold skill (`iru-setup-php-laravel` / `iru-setup-php-wordpress` with
-  `flavor: plugin|theme` / `iru-setup-php-prestashop`) → `iru-setup-antora` → `iru-setup-php-gitignore` →
-  `iru-setup-php-github-workflows` → `iru-setup-changelog` → `iru-setup-readme`, in that order, via
-  `iru-isolated-skill-executor`, so nothing is asked twice (the workflows step is skipped entirely when `ci` is
-  `no`). Invoke as `/iru-setup-php-repository`,
-  optionally with `args` (`key: value` lines) pre-resolving `flavor`, `mode` (`new`/`existing`), `open-source`,
-  `visibility` (`public`/`private`/`internal`, detected via `gh` when absent), `ci` (`yes`/`no`), `ci-tests`
-  (`unit`/`full`), `pages` (`yes`/`no`), `distribution` (`none`/`internal`/`store`), `sonar`
-  (`cloud`/`self-hosted`/`none`, + `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `accessibility`
-  (`enforce`/`report`/`off`/`none`, default `enforce`), `php-version`, `integration-branch` (default `develop`),
-  `stable-branch` (default `main`), `on-existing`
-  (`ask`/`keep`/`update`/`replace`, forwarded only when supplied), and every identity key, skipping the matching
-  question. Starts by announcing whether it is setting up from scratch or updating an existing repository (with an
-  inventory of every component it owns marked absent/present/partial); each sub-skill then warns and asks
-  keep/update/replace for whatever it finds, and the final report lists the action taken per component. Use
-  whenever bootstrapping (or catching up) a Laravel, WordPress, or PrestaShop repository's full
-  scaffold/docs/gitignore/CI/changelog/README pipeline in one pass instead of running six skills separately and
-  re-answering the same questions.
-model: haiku
+description: "Invoke as /iru-setup-php-repository, optionally with args (key: value lines: flavor, mode, open-source, visibility, ci, ci-tests, pages, distribution, sonar, accessibility, php-version, branches, on-existing, identity keys) to skip matching questions. End-to-end bootstrap of a Laravel, WordPress plugin, WordPress block theme or PrestaShop module repository: asks the shared inputs once, then runs the flavor scaffold, iru-setup-antora, iru-setup-php-gitignore, iru-setup-php-github-workflows, iru-setup-changelog and iru-setup-readme in order. Use to bootstrap or catch up a PHP repository in one pass."
+model: sonnet
 ---
 
 # Setup PHP Repository
@@ -52,6 +25,8 @@ than answering them itself.
 this catalog. If that's what the repository is (or what the user wants), say so and stop — the gate skills
 (`iru-php-test`, `iru-php-coverage`, `iru-php-code-quality`, `iru-php-phpdoc`) and `iru-setup-antora`,
 `iru-setup-php-gitignore`, `iru-setup-changelog`, `iru-setup-readme` can still be run individually.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Resolve inputs
 

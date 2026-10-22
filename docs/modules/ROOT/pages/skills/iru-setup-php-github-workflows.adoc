@@ -44,6 +44,10 @@ contain are run locally first, so nothing is a guess.
 
 xref:index.adoc#group-php-bootstrap[PHP Bootstrap]
 
+== Plugin
+
+Shipped by the `iru-php` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-php@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Invocation
 
 [source]
@@ -134,6 +138,8 @@ Any other key (including `ci`) is ignored — invoking the skill means CI is wan
   settings to check, the choices made, per-unit created / updated / replaced / kept as is, and every open gap
   (missing composer scripts, no Antora setup, unverified integration jobs and browser UI test steps), including whether
   the integration jobs run the browser UI tests and upload `.ui-screenshots/`.
+
+The generated files' bytes come from template files under `templates/` (and, where a template needs variant-specific notes, `reference/`) in `.claude/skills/iru-setup-php-github-workflows/`; the skill reads only the files for the variant it resolved, not the whole set, which keeps its `SKILL.md` small.
 
 == Execution flow
 

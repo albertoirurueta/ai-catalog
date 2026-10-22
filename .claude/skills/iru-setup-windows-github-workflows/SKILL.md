@@ -1,37 +1,6 @@
 ---
 name: iru-setup-windows-github-workflows
-description: >-
-  Create or update the GitHub Actions workflows plus `.github/dependabot.yml` for a Windows desktop app repository on
-  .NET produced by `iru-setup-windows-app` (WPF, WinUI 3 or Windows Forms; `<AppName>.slnx`, UI-free
-  `src/<AppName>.Core`, MSTest + coverlet Core tests, optional FlaUI UI tests, DocFX, MSIX packaging) — `build.yml`
-  (every push to the integration/stable branches, every pull request, `workflow_dispatch`): a Linux `core` job (restore,
-  warnings-as-errors build — WPF/WinForms compile on Linux through `EnableWindowsTargeting`, WinUI only Core —,
-  `dotnet format --verify-no-changes`, Core tests with Cobertura/OpenCover coverage and an 80% line bar), a
-  `windows-latest` job (solution build, non-UI tests, and with `ci-tests: full` the FlaUI desktop UI tests — a WinUI
-  app is first packaged with a throwaway certificate and installed so FlaUI can start it by AUMID — the UI tests'
-  `.ui-screenshots/` captures uploaded from the same job as a 7-day `ui-screenshots` artifact), an optional
-  SonarScanner for .NET job (Linux for WPF/WinForms, Windows for WinUI), and an Antora + DocFX (`api/`) docs job
-  deployed to GitHub Pages (`pages: yes`) or uploaded as an artifact (`pages: no`); `release.yml` per `distribution`
-  (`internal`: per-RID self-contained single-file zips + MSIX signed with Azure Artifact Signing (OIDC) or a `.pfx`
-  certificate + one App Installer 2021 `.appinstaller` per architecture on the GitHub Release, optional `wingetcreate
-  update` PR to `microsoft/winget-pkgs`; `store`: an `.msixbundle` submitted with the Microsoft Store Developer CLI,
-  which re-signs it); `sync.yml` + `.github/scripts/sync_versions.py` (gitflow: merge the release back into the
-  integration branch and move `Directory.Build.props` `<Version>` to the next `x.(y+1).0-dev`, MSIX identities to
-  `x.(y+1).0.0`); and the shared security block (`security.yml` with dependency-review, CodeQL `csharp` (`manual` build
-  for WPF/WinForms, `none` for WinUI — both on Linux), OSV-Scanner, gitleaks; Dependabot for `nuget` +
-  `github-actions`). Keeps everything Linux-capable on `ubuntu-latest` because Windows minutes cost ~1.7× Linux on
-  private repositories. Invoke as `/iru-setup-windows-github-workflows`. Accepts pre-resolved inputs via `args`
-  (`key: value` lines): `branching` (`gitflow`/`main-only`), `integration-branch`, `stable-branch`, `ci-tests`
-  (`unit`/`full`), `open-source`, `visibility`, `pages`, `distribution` (`none`/`internal`/`store`), `signing`
-  (`artifact-signing`/`certificate`/`none`), `winget` (`yes`/`no`), `winget-package-id`, `java-version`, `sonar` (+
-  `sonar-organization`/`sonar-project-key`/`sonar-host-url`), `mode`, `on-existing`, and the `security-*` toggles;
-  stand-alone it resolves `visibility` itself (`gh repo view`) and asks `sonar`/`ci-tests`/`pages`/`distribution`/
-  `signing`/`winget` with the Actions-minutes, Windows-multiplier, SonarCloud and Pages cost facts for that visibility
-  (never `ci` — invoking it means CI is wanted). Announces whether it is creating the pipeline from scratch or
-  updating; for every workflow/script/Dependabot file that already exists it warns and asks Update / Keep as is /
-  Replace / Stop, naming each concrete mismatch, unless `on-existing` decides. Ends with the required-secrets table.
-  Use whenever a Windows desktop app repository needs this CI/CD, release and security pipeline bootstrapped or
-  brought in line with this house pattern, instead of hand-writing the YAML.
+description: "/iru-setup-windows-github-workflows [args] creates or updates build.yml, release.yml, sync.yml, security.yml and dependabot.yml for a .NET Windows desktop app repository from iru-setup-windows-app, keeping Linux-capable jobs on ubuntu-latest. Args: ci-tests, pages, distribution, signing, winget, sonar, on-existing. Asks Update/Keep/Replace/Stop on existing files."
 model: sonnet
 allowed-tools: Read Write Edit AskUserQuestion Bash(gh *) Bash(git *) Bash(curl *) Bash(python3 *) Bash(ruby *) Bash(actionlint *) Bash(dotnet *) Bash(pwsh *) Bash(docfx *) Bash(mkdir *)
 ---

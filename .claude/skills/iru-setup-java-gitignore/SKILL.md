@@ -1,21 +1,6 @@
 ---
 name: iru-setup-java-gitignore
-description: >-
-  Create or update the root `.gitignore` file for a JVM project (Java or Kotlin, Maven or Gradle, plain, Spring
-  Boot or Quarkus) — compiled classes, logs, packaged artifacts (jar/war/ear/zip), JVM crash logs, the build
-  tool's output directories (Maven `target/`; Gradle `build/`/`.gradle/` with the wrapper jar kept tracked),
-  IntelliJ/.idea entries, and, when detected, Kotlin compiler caches (`.kotlin/`), Quarkus leftovers
-  (`.quarkus/`, `quarkus.log`, stray `jacoco.exec`), the repository-wide `.integration-test.lock/` directory used to
-  serialize container-backed test runs, and project-specific generated files such as a build-info properties file
-  written by a Groovy/Maven plugin or an Antora docs build output directory. Invoke as
-  `/iru-setup-java-gitignore`, optionally with `args` carrying `on-existing: ask|keep|update|replace` (default `ask`)
-  for scripted runs. Announces whether it is creating `.gitignore` from scratch or updating an existing one; if one
-  already exists, it never overwrites it silently: it warns, shows the proposed version as a diff, and asks whether to
-  Update (merge, keeping hand-added entries), Keep it as is, or Replace it with the template (hand-added entries lost)
-  — unless `on-existing` already decides. Ships with this repository's own `.gitignore` as the concrete reference
-  template (genericized so its Hermes-specific paths don't leak into other repositories), reused across repositories.
-  Use whenever a Java or Kotlin JVM project needs a `.gitignore` bootstrapped from scratch, or an existing one checked against this
-  house template without touching it unless the user approves.
+description: "Invoked as /iru-setup-java-gitignore, optionally with an args line on-existing: ask|keep|update|replace. Creates or updates the root .gitignore of a JVM project (Java or Kotlin, Maven or Gradle), never overwriting an existing one without a diff and approval."
 model: haiku
 ---
 

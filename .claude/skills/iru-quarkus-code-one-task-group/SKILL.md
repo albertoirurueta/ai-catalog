@@ -1,31 +1,6 @@
 ---
 name: iru-quarkus-code-one-task-group
-description: >-
-  Implement one bucket of Quarkus tasks from a plan's task group end-to-end, for a Quarkus service in Java or
-  Kotlin on Maven or Gradle (Kotlin DSL or Groovy, wrapper preferred), single-module or DDD/hexagonal
-  multi-module — detected once at runtime. Captures a single pre-change quality baseline for the whole bucket
-  (Checkstyle/PMD/SpotBugs via `iru-java-code-quality` for Java, detekt + ktlint via `iru-kotlin-code-quality` for
-  Kotlin), classifies every test class by annotation into a no-container **unit stage** (plain JUnit,
-  `@QuarkusComponentTest`, and `@QuarkusTest` classes whose module has no Dev-Services-backed service) and a
-  **container stage** (`@QuarkusTest` classes that start Dev Services or Testcontainers, plus
-  `@QuarkusIntegrationTest`/`*IT`), runs `iru-quarkus-code-one-task` once per task (in parallel agents when the
-  group is marked parallelizable), then validates the entire bucket once, cheapest first, every check delegated
-  to an `iru-gate-runner` agent so no raw report lands in this context — license headers via `iru-check-license`,
-  Javadoc via `iru-java-javadoc` (Java) and KDoc + Dokka via `iru-kotlin-kdoc` (Kotlin), structural checks only
-  when the repository is hexagonal and has them (`maven-enforcer-plugin` banned dependencies, ArchUnit), scoped
-  unit-stage tests via `iru-java-test` with Dev Services disabled, an 80% coverage gate via `iru-java-coverage`
-  measured from the **unit stage alone** (JaCoCo, with `quarkus-jacoco`'s component-test data folded in where the
-  extension is present, or Kover), the full unit-stage suite, static analysis diffed against the baseline, and
-  last the container stage — Maven `verify -DskipITs=false` (container `@QuarkusTest` classes plus Failsafe
-  `@QuarkusIntegrationTest`) or Gradle `test` + `quarkusIntTest` — serialized repository-wide behind the same
-  atomic `mkdir`-based `.integration-test.lock` as `iru-java-springboot-code-one-task-group` (owner file, stale
-  after 60 minutes, give up after ~45 minutes as "unverified", released on every exit path, gitignored). Docker
-  unavailable → the container stage is reported unverified, never silently skipped; the `quarkus-jacoco`
-  aggregate it produces is reported for information, never as the gate. `iru-quarkus-code-one-task` checks off
-  each task's box with a "group validation pending" note; this skill backfills any that didn't land and replaces
-  each note with the final outcome. Invoke as `/iru-quarkus-code-one-task-group <bucket text>`, passing every
-  task/sub-task in the bucket with its own text, the group's `Parallelizable` verdict, and any relevant "Current
-  code state" context. Used by `iru-code-one-task-group` for `quarkus`-tagged tasks.
+description: "Invoked as /iru-quarkus-code-one-task-group <bucket text> (group tasks, Parallelizable verdict, code state) via Skill. Implements one Quarkus (Java or Kotlin) task bucket: one baseline, iru-quarkus-code-one-task per task (parallel when allowed), then validates once (license, docs, unit-stage tests, 80% coverage, analysis, locked container stage); finalizes checkboxes."
 model: sonnet
 allowed-tools: Read Edit Write Bash(mvn *) Bash(./mvnw *) Bash(./gradlew *) Bash(gradle *) Bash(QUARKUS_DEVSERVICES_ENABLED=false *) Bash(docker *) Bash(git status *) Bash(git diff *) Bash(git log *) Bash(find *) Bash(grep *) Bash(ls *) Bash(cat *) Bash(date *) Bash(mkdir .integration-test.lock*) Bash(rmdir .integration-test.lock*) Bash(rm -f .integration-test.lock/owner) Skill Agent
 ---
@@ -63,6 +38,8 @@ Four Quarkus facts shape the whole validation order:
    silently started outside the lock.
 
 It uses a medium model on purpose: the plan carries the hard reasoning; this skill drives execution of it.
+
+Agent dispatch: call the catalog agents as `subagent_type: "<agent-name>"` (for example `"iru-gate-runner"`) when installed under `.claude/agents/`, or as `"iru-core:<agent-name>"` when installed as a plugin — use whichever name appears in your available agent types. Every `subagent_type` below is written in the first form.
 
 ## Step 0 — Read this before running anything container-backed
 

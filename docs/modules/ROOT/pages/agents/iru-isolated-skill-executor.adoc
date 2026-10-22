@@ -23,11 +23,17 @@ security gate, backed by `iru-check-security`, ever fired during the run) and re
 field, separate from ordinary completion or failure — since the caller may need to treat it as disqualifying
 even if the delegated skill went on to resolve it and finish cleanly.
 
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
 == Tools
 
 Inherits full tool access (no restriction) — the delegated skill may itself need anything from `Bash` and
 `Edit`/`Write` to further `Skill`/`Agent` delegation, so this agent cannot be scoped narrower than the skills it
 might be asked to run.
+
+The agent is pinned to `model: inherit`. Callers dispatch it as `subagent_type: "iru-isolated-skill-executor"` when it is installed under `.claude/agents/`, or as `"iru-core:iru-isolated-skill-executor"` when it is installed through the `iru-core` plugin (use whichever name appears in the available agent types).
 
 == Used by
 
@@ -69,6 +75,9 @@ might be asked to run.
 * xref:skills/iru-quarkus-code-one-task-group.adoc[] — Step 2, one agent per task.
 * xref:skills/iru-setup-php-repository.adoc[] — Step 5-10, runs each sub-skill in a fresh context.
 * xref:skills/iru-setup-quarkus-repository.adoc[] — Step 3-8, one per sub-skill to keep transcripts out of context.
+* xref:skills/iru-django-code-one-task-group.adoc[], xref:skills/iru-fastapi-code-one-task-group.adoc[] and xref:skills/iru-windows-code-one-task-group.adoc[] — Step 2, once per task in a bucket, to invoke the matching `<key>-code-one-task` skill in a fresh context, in parallel when allowed.
+* xref:skills/iru-setup-macos-repository.adoc[], xref:skills/iru-setup-python-repository.adoc[] and xref:skills/iru-setup-windows-repository.adoc[] — run each bootstrap sub-skill in a fresh context.
+* xref:skills/iru-springboot-rolling-deployments.adoc[] — delegates each enable/disable sub-step in order, keeping their output out of the caller's context.
 * xref:skills/iru-setup-android-repository.adoc[] — spawned once per sub-skill (Steps 4–9), so all six sub-skills' own exploration/file-read transcripts don't accumulate in this orchestrator's context over the course of a single bootstrap run.
 * xref:skills/iru-setup-swift-repository.adoc[] — spawned once per sub-skill (Steps 5–10), so all six sub-skills' own exploration/file-read transcripts don't accumulate in this orchestrator's context over the course of a single bootstrap run.
 
