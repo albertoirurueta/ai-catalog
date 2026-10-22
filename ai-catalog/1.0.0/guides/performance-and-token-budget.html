@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Performance and token budget :: AI Catalog</title>
+    <meta name="description" content="Measured token and size budgets for the catalog, the model tier for every skill and agent, the prompt-cache analysis behind the routing of gates through iru-gate-runner, the evaluation of extra agents, the plugin-mode agent dispatch rule, and the optimizations that were deliberately only documented.">
+    <meta name="keywords" content="token budget, skill descriptions, listing budget, model tiers, prompt cache, subagents, plugins, catalog-audit, performance">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="catalog-architecture.html">Catalog architecture</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="building-user-interfaces.html">Building user interfaces</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="rolling-deployments.html">Rolling deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="performance-and-token-budget.html">Performance and token budget</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-django-code-one-task.html">Django Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-django-code-one-task-group.html">Django Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-bump-version.html">.NET Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-draft-github-issue.html">Draft GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-fastapi-code-one-task.html">FastAPI Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-fastapi-code-one-task-group.html">FastAPI Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-bump-version.html">Go Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-code-one-task.html">Go Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-code-one-task-group.html">Go Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-code-quality.html">Go Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-coverage.html">Go Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-godoc.html">Go Godoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-test.html">Go Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-bump-version.html">KMP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-code-one-task.html">KMP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-code-one-task-group.html">KMP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-code-quality.html">KMP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-coverage.html">KMP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-dokka.html">KMP Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-generate-all-tests.html">KMP Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-test.html">KMP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-code-quality.html">Kotlin Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-kdoc.html">Kotlin KDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-springboot-code-one-task.html">Kotlin Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-springboot-code-one-task-group.html">Kotlin Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nestjs-code-one-task.html">NestJS Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nestjs-code-one-task-group.html">NestJS Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nextjs-code-one-task.html">Next.js Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nextjs-code-one-task-group.html">Next.js Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-bump-version.html">PHP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-code-one-task.html">PHP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-code-one-task-group.html">PHP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-code-quality.html">PHP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-coverage.html">PHP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-phpdoc.html">PHP PHPDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-test.html">PHP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-bump-version.html">Python Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-code-quality.html">Python Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-coverage.html">Python Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-docstrings.html">Python Docstrings</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-test.html">Python Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-quarkus-code-one-task.html">Quarkus Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-quarkus-code-one-task-group.html">Quarkus Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-react-native-bump-version.html">React Native Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-react-native-code-one-task.html">React Native Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-react-native-code-one-task-group.html">React Native Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-review-github-issue.html">Review GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-bump-version.html">Rust Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-code-one-task.html">Rust Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-code-one-task-group.html">Rust Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-code-quality.html">Rust Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-coverage.html">Rust Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-rustdoc.html">Rust Rustdoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-test.html">Rust Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-cli-github-workflows.html">Setup CLI GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-cli-repository.html">Setup CLI Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-dotnet-cli.html">Setup Dotnet Cli</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-dotnet-gitignore.html">Setup Dotnet Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-go-cli.html">Setup Go CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-go-gitignore.html">Setup Go Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-app.html">Setup KMP App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-github-workflows.html">Setup KMP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-gitignore.html">Setup KMP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-repository.html">Setup KMP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-macos-app.html">Setup macOS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-macos-github-workflows.html">Setup macOS GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-macos-repository.html">Setup macOS Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-nestjs-app.html">Setup NestJS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-nextjs-web.html">Setup Next.js Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-github-workflows.html">Setup PHP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-gitignore.html">Setup PHP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-laravel.html">Setup PHP Laravel</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-prestashop.html">Setup PHP PrestaShop</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-repository.html">Setup PHP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-wordpress.html">Setup PHP WordPress</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-django.html">Setup Python Django</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-fastapi.html">Setup Python FastAPI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-github-workflows.html">Setup Python GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-gitignore.html">Setup Python Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-repository.html">Setup Python Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-quarkus-github-workflows.html">Setup Quarkus GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-quarkus-repository.html">Setup Quarkus Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-quarkus-service.html">Setup Quarkus Service</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-rust-cli.html">Setup Rust CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-rust-gitignore.html">Setup Rust Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-cli.html">Setup Swift CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-app.html">Setup Windows App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-github-workflows.html">Setup Windows GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-gitignore.html">Setup Windows Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-repository.html">Setup Windows Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-split-github-issue.html">Split GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-springboot-rolling-deployments.html">Spring Boot Rolling Deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-windows-code-one-task.html">Windows Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-windows-code-one-task-group.html">Windows Code One Task Group</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="performance-and-token-budget.html">Performance and token budget</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/performance-and-token-budget.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Performance and token budget</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Every installed skill costs tokens before it is used: its <code>name</code> and <code>description</code> sit in the skill listing of every
+session, and its body is loaded in full each time it is invoked. This page records how large the catalog was, the
+budgets that now keep it small, the model assigned to each kind of skill, and the decisions taken while optimizing it
+(issue #11). Everything here was changed without altering what a skill writes, reports or asks, with one deliberate
+exception: <code>iru-plan</code> and <code>iru-code</code> gained the acceptance-criteria coverage table and the persisted
+<code>[NEEDS CLARIFICATION]</code> markers described in <a href="common-workflows.html" class="xref page">Common workflows</a>.</p>
+</div>
+<div class="paragraph">
+<p>The numbers come from <code>tools/catalog-audit.py</code> (see <code>tools/README.md</code>); the "before" column is the committed snapshot in
+<code>tools/baseline/</code> (<code>catalog-audit-before.md</code>, <code>sample-runs-before.md</code>), and the "after" column comes from the same script
+and the same sample runs on the finished work (<code>catalog-audit-after.md</code>, <code>sample-runs-after.md</code>).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_before_and_after"><a class="anchor" href="#_before_and_after"></a>Before and after</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Static audit totals (<code>python3 tools/catalog-audit.py --markdown</code>; the snapshot of the original tree is
+<code>tools/baseline/catalog-audit-before.md</code>):</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 60%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Metric</th>
+<th class="tableblock halign-left valign-top">Before</th>
+<th class="tableblock halign-left valign-top">After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skills / agents</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">196 / 3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">196 / 3</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skill description characters (total)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">494,826</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">73,851</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Agent description characters (total)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5,092</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,459</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Descriptions over 1,024 characters (skills and agents)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">189</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Descriptions over 1,536 characters (the listing cap, so cut off)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">167</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontmatter that fails a strict YAML parse (loads with no description and no model)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">39</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Skills whose frontmatter <code>claude plugin validate</code> rejects</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0 (all pass)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SKILL.md</code> bytes (total)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">6,217,277</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5,303,911</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SKILL.md</code> lines (total)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">86,433</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">70,353</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SKILL.md</code> over 500 lines / over 1,000 lines</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">39 / 11</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">36 / 0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bytes inside fenced code blocks of <code>SKILL.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">997,720</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">489,768</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Supporting files (templates and references) / bytes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">302 / 4,290,070</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">524 / 4,851,168</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Redundant bytes in duplicate supporting files</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">364,713</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">365,397 (not lower: +684 bytes)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Models: haiku / sonnet / opus (skills)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">85 / 108 / 3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">58 / 135 / 3</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Agents with a pinned <code>model</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0 of 3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3 of 3 (two <code>haiku</code>, one explicit <code>inherit</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Inline cross-model <code>Skill()</code> calls</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">17 (all accepted)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Sample runs (<code>claude -p --output-format json --permission-mode acceptEdits</code>, Claude Code 2.1.260; the commands, fixtures and
+caveats are in <code>tools/baseline/sample-runs-before.md</code>). Prompt-side tokens are <code>input + cache read + cache creation</code>:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 10%;">
+<col style="width: 10%;">
+<col style="width: 10%;">
+<col style="width: 10%;">
+<col style="width: 10%;">
+<col style="width: 10%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Sample</th>
+<th class="tableblock halign-left valign-top">What it measures</th>
+<th class="tableblock halign-left valign-top">Prompt-side tokens before</th>
+<th class="tableblock halign-left valign-top">Output tokens before</th>
+<th class="tableblock halign-left valign-top">Cost (USD) before</th>
+<th class="tableblock halign-left valign-top">Duration before</th>
+<th class="tableblock halign-left valign-top">After (tokens / cost / duration)</th>
+<th class="tableblock halign-left valign-top">Output identical?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Reply with the single word OK</code>: the fixed system prompt plus the skill listing</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">42,787</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.3327</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5.1 s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">30,278 tokens / 0.2076 / 1.8 s (12,509 fewer prompt-side tokens, -29.2 %)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n/a</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>/iru-setup-typescript-github-workflows</code> on a TypeScript library fixture</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1,158,903</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5,977</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.2993</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">69.0 s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">336,756 / 0.3932 / 73.6 s, on Sonnet instead of Haiku, and the run stopped to ask a question without writing files; the same prompt with the model forced back to Haiku: 1,598,692 / 0.3357 / 132.7 s (higher, it now follows the whole documented job)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Templates byte-identical (14 of 14 skills). Generated files not byte-identical: the model&#8217;s own choices differ (integration branch, optional steps), see <code>tools/baseline/sample-runs-after.md</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>/iru-setup-android-gitignore</code> on an empty repository</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">303,946</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3,786</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.5287</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">58.1 s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">315,447 / 0.0999 / 31.8 s, on Haiku instead of Opus (the old frontmatter did not parse); it stopped to ask for module names. With the model line removed: 298,954 / 0.5744 / 76.0 s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes: the root <code>.gitignore</code> is identical (740 bytes) in the run on the default model</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>/iru-explore</code> on the TypeScript library fixture</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">259,764</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3,835</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.6432</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">59.6 s</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">257,500 / 0.6860 / 83.5 s (tokens slightly lower, cost and duration higher)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same <code>Project type</code> and <code>Repository host</code>; the message now also carries a <code>Build &amp; layout</code> line</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Cost is only comparable between the before and after run of the same sample (the samples use different models and
+different cache states). Where an after number is not lower, the table says so rather than hiding it.</p>
+</div>
+<div class="paragraph">
+<p>Read the sample table as follows. S0 is the clean measurement: the fixed prompt shrank by 12,509 tokens (29.2 %), all of it
+in the cache-creation part, because the skill listing is smaller. S1 and S2 are not like for like: the model of both skills
+changed on purpose (<code>iru-setup-typescript-github-workflows</code> went from Haiku to Sonnet; <code>iru-setup-android-gitignore</code>
+ran on the default Opus because its old frontmatter did not parse, and now runs on Haiku), so the cost columns mostly
+reflect the model. Where the after number is not lower: S1 and S3 cost, S3 duration and output, the S2 prompt side, the
+redundant duplicate bytes (+684), and S1 on the same model (Haiku), where a faithful run reads the templates and writes the
+whole file set, so it is more expensive than the old run that skipped parts of the skill. Plugin mode produced the same
+S1 files as directory mode (<code>sync_versions.py</code> differs by a two-line guard) once the headless run was allowed to read the
+plugin directory (<code>--add-dir</code>); details, every run and the S4 results (<code>/iru-plan</code> coverage table and
+<code>[NEEDS CLARIFICATION]</code> marker, <code>/iru-code</code> stopping at its gate) are in <code>tools/baseline/sample-runs-after.md</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_budgets_and_why"><a class="anchor" href="#_budgets_and_why"></a>Budgets and why</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>python3 tools/catalog-audit.py --check</code> enforces the budgets in <code>tools/catalog-budgets.json</code> and exits non-zero on any
+error. CI runs it on every pull request (<code>.github/workflows/catalog-check.yml</code>).</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0001%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Budget</th>
+<th class="tableblock halign-left valign-top">Level</th>
+<th class="tableblock halign-left valign-top">Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>description</code> at most 1,024 characters, for every skill and agent</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claude Code caps each entry of the skill listing at 1,536 characters and gives the whole listing about 1 % of the context window. With 196 skills the listing cannot hold long descriptions: skills that do not fit are listed by name only, so Claude cannot tell when to use them.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The invocation form (<code>/iru-&#8230;&#8203;</code> or "Invoke as") within the first 200 characters</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The part of a description that survives truncation must say how the skill is called.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Internal skills (only ever invoked by other catalog skills through <code>Skill()</code>, listed in the budgets file) target 400 characters</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">warning</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Nobody types them, so their description only has to be unambiguous to the calling skill.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SKILL.md</code> at most 1,000 lines</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The whole body is read on every invocation. Large generated-file templates live in <code>templates/</code> and are read only for the variant in use.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SKILL.md</code> at most 500 lines</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">warning</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The recommended size for a skill body.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontmatter parses with a strict YAML parser and <code>claude plugin validate</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An unquoted `: ` inside a description made 39 skills fail to parse; Claude Code then loads the skill with no description and no model.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Every agent pins a <code>model</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An unpinned <code>iru-gate-runner</code> inherited the caller&#8217;s (more expensive) model.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Shared reference files stay byte-identical</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">They are copied per skill so each skill stays self-contained.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>templates/</code> and <code>reference/</code> paths named in a <code>SKILL.md</code> exist, and every template is named</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">error</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Moving content out of the body must not leave dangling or orphaned files.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_model_tiers"><a class="anchor" href="#_model_tiers"></a>Model tiers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Each skill and agent carries one <code>model</code>. The tier follows the kind of work, not the language:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 60%;">
+<col style="width: 20%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Model</th>
+<th class="tableblock halign-left valign-top">Used for</th>
+<th class="tableblock halign-left valign-top">Skills now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>haiku</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Mechanical work that runs a tool and reports: test, coverage and code-quality gates, version bumps, <code>-gitignore</code> scaffolds, <code>iru-check-license</code>, <code>iru-check-security</code>, <code>iru-build-docs</code>, <code>iru-knowledge-complete</code> and <code>iru-knowledge-setup</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">58</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sonnet</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Writing code and files: every <code>iru-&lt;key&gt;-code-one-task</code> and <code>-code-one-task-group</code>, the <code>*-generate-all-tests</code> skills, the doc-audit skills that generate missing doc comments, scaffolds, workflow generators, orchestrators, ticket and PR skills.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">135</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>opus</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Judgment over an unfamiliar repository or an open-ended review: <code>iru-explore</code>, <code>iru-plan</code>, <code>iru-pr-review</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Agents: <code>iru-gate-runner</code> and <code>iru-change-summarizer</code> are <code>haiku</code>; <code>iru-isolated-skill-executor</code> is <code>inherit</code>, because it
+runs a whole coding skill whose own <code>model</code> must decide. Before this change about 30 <code>iru-setup-*</code> scaffold and workflow
+skills were <code>haiku</code> while 32 comparable ones were <code>sonnet</code>, and no agent set a model.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prompt_cache_analysis"><a class="anchor" href="#_prompt_cache_analysis"></a>Prompt-cache analysis</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When a skill with a <code>model</code> that differs from the current one is invoked inline through the <code>Skill</code> tool, the model
+switches for the rest of the turn. The prompt cache belongs to one model, so the conversation prefix the new model sees
+is not cached and is paid for again as a cache write; returning to the first model later can find its entry expired.
+A single inline detour is cheap, but a coding skill that ran a haiku gate inline several times per task group would
+alternate models repeatedly.</p>
+</div>
+<div class="paragraph">
+<p>The catalog avoids this in two ways:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Gates are not run inline. <code>iru-code</code>, <code>iru-code-one-task-group</code> and every <code>&lt;key&gt;-code-one-task-group</code> skill dispatch
+each test, coverage, quality, license and security run to the <code>iru-gate-runner</code> agent. A subagent has its own context,
+its own (small) prefix and its own model, so the caller&#8217;s cache is untouched, and only a compact summary comes back
+into the caller&#8217;s context. Whole coding skills run through <code>iru-isolated-skill-executor</code>, which inherits the model.
+One accepted exception remains inside the gate runner: the 11 doc-comment audit skills (<code>iru-java-javadoc</code>,
+<code>iru-kotlin-kdoc</code>, <code>iru-android-dokka</code>, <code>iru-kmp-dokka</code>, <code>iru-dotnet-docfx</code>, <code>iru-typescript-tsdoc</code>, <code>iru-php-phpdoc</code>,
+<code>iru-python-docstrings</code>, <code>iru-swift-docc</code>, <code>iru-rust-rustdoc</code>, <code>iru-go-godoc</code>) are <code>sonnet</code>, because they write the
+missing doc comments, and every group skill dispatches them through the <code>haiku</code> <code>iru-gate-runner</code>, so the model still
+switches once inside that subagent. The switch stays out of the caller&#8217;s context and cache, and the subagent&#8217;s prefix
+is small, which is why it is accepted rather than fixed; the audit does not report it because the call sits inside an
+<code>Agent({&#8230;&#8203;})</code> prompt.</p>
+</li>
+<li>
+<p><code>catalog-audit.py</code> reports every <code>Skill()</code> call whose caller and callee models differ and that is not delegated to an
+agent (the "inline cross-model calls" section), so a new one cannot appear unnoticed. A call counts as delegated
+when it sits inside an <code>Agent({&#8230;&#8203;})</code> prompt or within 250 characters after a mention of <code>iru-gate-runner</code> or
+<code>iru-isolated-skill-executor</code>: the <code>*-generate-all-tests</code> skills describe the dispatch in a sentence and write the
+<code>Skill()</code> call as the prompt it carries.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The audit found 21 such calls in the original tree. Four of them (the <code>*-generate-all-tests</code> skills of <code>android</code>, <code>dotnet</code>,
+<code>kmp</code> and <code>swift</code>, which already run the test skill through <code>iru-gate-runner</code>) are recognised as delegated by the rule
+above and no longer reported. The 13 call sites that remain (12 caller/callee pairs) were all reviewed and are recorded
+with their reason under <code>accepted_cross_model_calls</code> in the budgets file:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>10 are calls to <code>iru-explore</code> (<code>opus</code>) from skills that need its report (project type, technology stack, docs location)
+in their own context; an agent would return only a summary, and the exploration is a one-off per run.</p>
+</li>
+<li>
+<p>2 are <code>iru-issue</code> calling <code>iru-plan</code> and <code>iru-pr-review</code> (<code>opus</code>): both are interactive (questions, confirmation before
+posting comments), so they must run in the orchestrator&#8217;s conversation, not in an isolated agent.</p>
+</li>
+<li>
+<p>1 is <code>iru-knowledge-compact</code> calling <code>iru-knowledge-complete</code> (<code>haiku</code>), a single-purpose file operation whose stop
+message the caller reads; an agent per item would add a context for a few file edits.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The remaining differences of the original list (four <code>*-repository</code> orchestrators that were <code>haiku</code> calling <code>sonnet</code>
+scaffolds) disappeared when those orchestrators moved to <code>sonnet</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="splitting-the-catalog"><a class="anchor" href="#splitting-the-catalog"></a>Splitting the catalog</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Ask (5) of the issue was to evaluate splitting the catalog by purpose or by technology. The marketplace implements a split
+by technology: <code>iru-core</code> (25 skills, the stack-independent pipeline and the three agents), <code>iru-knowledge</code> (7) and one
+plugin per stack, from <code>iru-nestjs</code> (3 skills) to <code>iru-swift</code> (16). The alternative, a split by purpose, was evaluated and
+not taken:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>By purpose</strong> would give a <code>setup</code> plugin (70 scaffold and workflow skills, 26,401 description characters), a <code>gates</code>
+plugin (59 test, coverage, quality, doc-audit, version-bump and test-generation skills, 19,422 characters) and a
+<code>code</code> plugin (39 <code><strong>-code-one-task</code> and <code></strong>-code-one-task-group</code> skills, 14,360 characters) besides the core. A
+repository uses one or two stacks, so every one of those plugins would still carry the other sixteen stacks' skills:
+installing "gates" for a Java library lists 59 skills of which 5 apply. The per-purpose split also crosses the dependency
+graph the wrong way: a stack&#8217;s code skill calls that stack&#8217;s gates and scaffolds, so the three purpose plugins would
+depend on each other and install together in practice.</p>
+</li>
+<li>
+<p><strong>By technology</strong> matches how the skills call each other: every <code>Skill()</code> edge is inside a stack or from a stack to
+<code>iru-core</code> (or to a sibling the stack really reuses, such as <code>iru-springboot</code> to <code>iru-java</code>), which is what lets
+<code>tools/generate-marketplace.py</code> derive the plugin dependencies from the audit&#8217;s call graph and fail on an uncovered
+edge.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The effect on the skill listing is the point of the split. The listing is the part of the fixed prompt that grows with
+the number of installed skills (every description, capped per entry, inside about 1 % of the context window):</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 60%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Installed</th>
+<th class="tableblock halign-left valign-top">Skills listed</th>
+<th class="tableblock halign-left valign-top">Description characters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Everything (copying the whole <code>.claude/skills/</code> tree)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">196</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">73,851</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-core</code> + <code>iru-java</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">39</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">15,750</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-core</code> + <code>iru-typescript</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16,297</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iru-core</code> + <code>iru-springboot</code> (pulls in <code>iru-java</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">54</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21,967</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>So a single-stack repository that installs its plugin carries about a fifth of the listing a full copy would, roughly
+4,000 tokens of the 30,278-token fixed prompt measured in S0 instead of the full listing&#8217;s share. The split does not
+change what any skill does: the plugins select directories from the unchanged tree, and copying a skill directory keeps
+working.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_additional_agents_evaluated_not_adopted"><a class="anchor" href="#_additional_agents_evaluated_not_adopted"></a>Additional agents: evaluated, not adopted</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Candidates considered were role agents such as a planner, an implementer, a reviewer and a documentation writer, in
+addition to the three existing ones. They were not added:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The three agents already cover the shapes that repeat (about 184 gate runs, 101 whole-skill runs and 2 history
+summaries across the skills). A fourth agent adds another context window and another system prompt to every
+invocation.</p>
+</li>
+<li>
+<p>The roles of the issue-to-PR cycle are interactive. A subagent returns one summary and cannot hold a dialogue with
+the user, and <code>iru-plan</code>, <code>iru-pr-review</code> and the ticket skills ask questions.</p>
+</li>
+<li>
+<p>The model for each role is already chosen per skill (<code>opus</code> for exploration, planning and review, <code>sonnet</code> for
+coding, <code>haiku</code> for gates). An agent pins one model, so it would duplicate that choice and remove the ability to
+vary it by task.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_plugin_mode_agent_dispatch"><a class="anchor" href="#_plugin_mode_agent_dispatch"></a>Plugin-mode agent dispatch</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A spike (<code>tools/spikes/plugin-resolution.md</code>, Claude Code 2.1.260) showed that when the catalog is installed as plugins:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>Skill({skill: "iru-java-test"})</code> by bare name still resolves, as does the namespaced <code>iru-java:iru-java-test</code>, so none of
+the 298 <code>Skill()</code> call sites needed to change.</p>
+</li>
+<li>
+<p><code>Agent({subagent_type: "iru-gate-runner"})</code> by bare name does <strong>not</strong> resolve. The agent exists only as
+<code>iru-core:iru-gate-runner</code>, and the error lists the namespaced names as the available ones.</p>
+</li>
+<li>
+<p><code>.claude/skills</code> does not exist, which is why key discovery first reads the skills available in the session and uses
+<code>find .claude/skills</code> only as a corroborating check.</p>
+</li>
+<li>
+<p>Agents listed on a marketplace entry whose <code>source</code> is the repository root load even though <code>claude plugin details</code>
+shows <code>Agents (0)</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Rewriting about 290 call sites would have broken the copy-a-directory installation, so every skill that dispatches an
+agent itself (<code>iru-code</code>, <code>iru-code-one-task-group</code>, <code>iru-issue</code>, <code>iru-release</code>, <code>iru-setup-changelog</code>,
+<code>iru-setup-repository</code> and the <code><strong>-repository</code> orchestrators, every <code></strong>-code-one-task-group</code> and <code>*-generate-all-tests</code>
+skill, and the few others that use <code>iru-isolated-skill-executor</code> or <code>iru-gate-runner</code> directly) states the rule once at
+the top of its body: dispatch as <code>subagent_type: "&lt;agent-name&gt;"</code> when installed under <code>.claude/agents/</code>, or
+<code>"iru-core:&lt;agent-name&gt;"</code> when installed as a plugin, using whichever name appears in your available agent types. Each
+agent&#8217;s body repeats the same line as documentation; the dispatching caller never reads it, which is why the rule has to
+live in the callers.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_documented_not_done"><a class="anchor" href="#_documented_not_done"></a>Documented, not done</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>These were considered and left as options because they change more than this work was approved to change:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Consolidating the shared reference files.</strong> About 357 KB of the supporting files are byte-identical copies (the UI
+contract in 12 skills, the CLI contract in 4, and so on). One copy per plugin would remove most of it, but every skill
+is deliberately self-contained so that copying its directory into another repository keeps working. The copies are
+instead checked for drift.</p>
+</li>
+<li>
+<p><strong>Merging the per-language gate skills.</strong> One cross-language test, one coverage and one quality skill would shrink the
+listing by about thirty entries, but each skill&#8217;s body is specialized per toolchain, the names are part of the public
+interface, and the gate runner and every code skill refer to them.</p>
+</li>
+<li>
+<p><strong>A physical <code>plugins/&lt;name&gt;/skills/</code> tree.</strong> The marketplace instead lists each plugin&#8217;s skill directories over the
+unchanged <code>.claude/skills/</code> tree (<code>source: "./"</code>). The trade-off is that each installed plugin caches a full copy of the
+repository (231 MB measured for two plugins from a directory marketplace, see <a href="plugins.html" class="xref page">Plugins</a>); a physical
+tree would remove that but move 196 directories and change the path used when
+copying a skill, so it needs an explicit decision.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>See <a href="plugins.html" class="xref page">Plugins</a> and <a href="packaging-and-distribution.html" class="xref page">Packaging and distributing skills, agents, and CLAUDE.md</a> for installing the catalog, and
+<a href="catalog-architecture.html" class="xref page">Catalog architecture</a> for how the skills compose.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

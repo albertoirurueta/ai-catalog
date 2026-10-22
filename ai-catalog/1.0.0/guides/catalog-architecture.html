@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Catalog architecture :: AI Catalog</title>
+    <meta name="description" content="How the catalog's skills compose into pipelines, how repository bootstrap and the shared inputs work, the UI contract, template verification, the custom agents and the documentation layout. Moved here from CLAUDE.md.">
+    <meta name="keywords" content="architecture, skill pipelines, repository bootstrap, shared bootstrap inputs, ui contract, template verification, agents, documentation">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="catalog-architecture.html">Catalog architecture</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="building-user-interfaces.html">Building user interfaces</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="rolling-deployments.html">Rolling deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="performance-and-token-budget.html">Performance and token budget</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-django-code-one-task.html">Django Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-django-code-one-task-group.html">Django Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-bump-version.html">.NET Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-draft-github-issue.html">Draft GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-fastapi-code-one-task.html">FastAPI Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-fastapi-code-one-task-group.html">FastAPI Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-bump-version.html">Go Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-code-one-task.html">Go Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-code-one-task-group.html">Go Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-code-quality.html">Go Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-coverage.html">Go Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-godoc.html">Go Godoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-go-test.html">Go Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-bump-version.html">KMP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-code-one-task.html">KMP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-code-one-task-group.html">KMP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-code-quality.html">KMP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-coverage.html">KMP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-dokka.html">KMP Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-generate-all-tests.html">KMP Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kmp-test.html">KMP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-code-quality.html">Kotlin Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-kdoc.html">Kotlin KDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-springboot-code-one-task.html">Kotlin Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-kotlin-springboot-code-one-task-group.html">Kotlin Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nestjs-code-one-task.html">NestJS Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nestjs-code-one-task-group.html">NestJS Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nextjs-code-one-task.html">Next.js Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-nextjs-code-one-task-group.html">Next.js Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-bump-version.html">PHP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-code-one-task.html">PHP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-code-one-task-group.html">PHP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-code-quality.html">PHP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-coverage.html">PHP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-phpdoc.html">PHP PHPDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-php-test.html">PHP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-bump-version.html">Python Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-code-quality.html">Python Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-coverage.html">Python Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-docstrings.html">Python Docstrings</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-python-test.html">Python Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-quarkus-code-one-task.html">Quarkus Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-quarkus-code-one-task-group.html">Quarkus Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-react-native-bump-version.html">React Native Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-react-native-code-one-task.html">React Native Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-react-native-code-one-task-group.html">React Native Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-review-github-issue.html">Review GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-bump-version.html">Rust Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-code-one-task.html">Rust Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-code-one-task-group.html">Rust Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-code-quality.html">Rust Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-coverage.html">Rust Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-rustdoc.html">Rust Rustdoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-rust-test.html">Rust Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-cli-github-workflows.html">Setup CLI GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-cli-repository.html">Setup CLI Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-dotnet-cli.html">Setup Dotnet Cli</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-dotnet-gitignore.html">Setup Dotnet Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-go-cli.html">Setup Go CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-go-gitignore.html">Setup Go Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-app.html">Setup KMP App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-github-workflows.html">Setup KMP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-gitignore.html">Setup KMP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-kmp-repository.html">Setup KMP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-macos-app.html">Setup macOS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-macos-github-workflows.html">Setup macOS GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-macos-repository.html">Setup macOS Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-nestjs-app.html">Setup NestJS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-nextjs-web.html">Setup Next.js Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-github-workflows.html">Setup PHP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-gitignore.html">Setup PHP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-laravel.html">Setup PHP Laravel</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-prestashop.html">Setup PHP PrestaShop</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-repository.html">Setup PHP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-php-wordpress.html">Setup PHP WordPress</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-django.html">Setup Python Django</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-fastapi.html">Setup Python FastAPI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-github-workflows.html">Setup Python GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-gitignore.html">Setup Python Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-python-repository.html">Setup Python Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-quarkus-github-workflows.html">Setup Quarkus GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-quarkus-repository.html">Setup Quarkus Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-quarkus-service.html">Setup Quarkus Service</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-rust-cli.html">Setup Rust CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-rust-gitignore.html">Setup Rust Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-cli.html">Setup Swift CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-app.html">Setup Windows App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-github-workflows.html">Setup Windows GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-gitignore.html">Setup Windows Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-setup-windows-repository.html">Setup Windows Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-split-github-issue.html">Split GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-springboot-rolling-deployments.html">Spring Boot Rolling Deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-windows-code-one-task.html">Windows Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../skills/iru-windows-code-one-task-group.html">Windows Code One Task Group</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Guides</li>
+    <li><a href="catalog-architecture.html">Catalog architecture</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/guides/catalog-architecture.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Catalog architecture</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This page is the detailed architecture reference for the catalog. It used to be the "Architecture" section of the
+repository&#8217;s <code>CLAUDE.md</code>, which loads into every session of this repository; the prose was moved here unchanged so the
+always-loaded file can stay short. <code>CLAUDE.md</code> keeps the commands, the <code>iru-</code> naming convention, the generated versus
+hand-maintained documentation split and the checks to run, and points here for everything else. See also
+<a href="performance-and-token-budget.html" class="xref page">Performance and token budget</a> for the budgets, model tiers and plugin packaging that were added
+alongside this move, and <a href="plugins.html" class="xref page">Plugins</a> for installing the catalog as plugins.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_skills_claudeskillsnameskill_md"><a class="anchor" href="#_skills_claudeskillsnameskill_md"></a>Skills (<code>.claude/skills/&lt;name&gt;/SKILL.md</code>)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Every skill and agent in this catalog carries an <code>iru-</code> prefix (directory name, frontmatter <code>name</code>, and every
+cross-reference to it) so its slash command can&#8217;t collide with a same-named skill installed from another
+marketplace once both sit side by side in a consuming repository&#8217;s <code>.claude/skills/</code>. Any new skill or agent
+added to this catalog must follow the same convention — see
+<code>docs/modules/ROOT/pages/guides/creating-skills-and-agents.adoc</code>.</p>
+</div>
+<div class="paragraph">
+<p>Each skill is a single, self-contained <code>SKILL.md</code> file: YAML frontmatter with <code>name</code> and <code>description</code> (the
+description is what Claude Code uses to decide when the skill is relevant — it should state the exact
+invocation form, e.g. <code>/iru-check-license</code> or <code>/iru-check-license &lt;path-or-glob&gt;</code>), followed by step-by-step
+instructions written for an agent to follow. A skill is adopted by another repository by copying its
+directory into that repository&#8217;s <code>.claude/skills/</code> — skills must not assume they&#8217;re running inside
+<code>ai-catalog</code> itself (they detect language/platform/tooling at runtime rather than hardcoding it).</p>
+</div>
+<div class="paragraph">
+<p>Skills compose into a few recurring pipelines rather than each standing alone:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Issue-to-PR cycle</strong>: <code>iru-issue</code> → <code>iru-explore</code> → <code>iru-plan</code> → <code>iru-code</code> → <code>iru-pr-description</code> → <code>iru-pr-review</code>. <code>iru-plan</code> groups
+<code>implementation_plan.md&#8217;s tasks into dependency-aware groups; `iru-code</code> doesn&#8217;t implement anything itself — it
+dispatches each group, in order, to <code>iru-code-one-task-group</code>, which resolves each task&#8217;s language and delegates
+to the matching <code>iru-&lt;key&gt;-code-one-task-group</code> skill. Installed keys: <code>java</code>, <code>java-springboot</code>,
+<code>kotlin-springboot</code>, <code>quarkus</code> (Java or Kotlin, detected inside), <code>dotnet</code>, <code>typescript</code>, <code>nestjs</code>, <code>nextjs</code>,
+<code>php</code> (Laravel / WordPress plugin or theme / PrestaShop module, detected inside), <code>fastapi</code>, <code>django</code>, <code>android</code>,
+<code>swift</code>, <code>kmp</code> (Kotlin Multiplatform Android &#43; iOS apps — shared <code>commonMain</code>/<code>androidMain</code>/<code>iosMain</code> code, Compose
+Multiplatform or native UI, and the <code>iosApp/</code> Swift host), <code>react-native</code> (Expo or bare React Native CLI/Metro
+toolchain, detected inside — the <code>expo</code> dependency decides), <code>windows</code> (Windows desktop apps on .NET 10 — WPF,
+WinUI 3 or Windows Forms, detected inside from the app csproj, with MVVM <code>ViewModels/</code> or MVC <code>Controllers/</code> in a
+UI-free <code>net10.0</code> Core project; plain .NET libraries/services stay <code>dotnet</code>, and macOS desktop apps use <code>swift</code>),
+<code>rust</code> (Rust crates — clap command-line tools with an optional Ratatui terminal UI, workspaces, <code>xtask</code>), <code>go</code>
+(Go modules — Cobra command-line tools with an optional Bubble Tea terminal UI, testscript e2e), <code>database</code>
+— each key <code>&lt;key&gt;</code> has an <code>iru-&lt;key&gt;-code-one-task-group</code> &#43; <code>iru-&lt;key&gt;-code-one-task</code> pair (keys are discovered
+from the installed directories, never hardcoded). The group skill captures one quality baseline for the whole
+group, runs <code>iru-&lt;key&gt;-code-one-task</code> once per task — in parallel when the group allows it (<code>database</code> is always
+sequential) — and validates the group once (license → doc comments → tests → 80% coverage → quality diff vs
+baseline), instead of once per task. Coding skills detect build tool (Maven / Gradle KTS / Gradle Groovy,
+npm/pnpm/yarn, Composer, uv/Poetry/PDM/pip, Cargo, Go modules) and architecture (hexagonal multi-module vs layered/feature) at runtime. Every
+container-backed or server-starting stage (Spring Testcontainers, Quarkus Dev Services, NestJS e2e, Next.js
+Playwright, WordPress <code>wp-env</code>, Python testcontainers <code>integration</code>-marked pytest tests, React Native Maestro/Detox
+e2e with Metro on port 8081, KMP iOS simulator test runs, Windows FlaUI desktop UI tests, Rust <code>#[ignore]`d and Go
+`integration</code>-tagged container tests) is serialized repository-wide behind one shared atomic-<code>mkdir</code> lock directory,
+<code>.integration-test.lock</code> (owner file, stale after 60 min, released on every exit path, gitignored); Docker
+unavailable makes that stage "unverified", never silently skipped, and the coverage gate counts only tests
+that need no containers. The same rule covers devices: no booted simulator/emulator (or no macOS host for an iOS
+stage) makes a mobile e2e/iOS stage "unverified", and KMP coverage is measured on JVM/Android host tests only
+(Kotlin/Native iOS code is reported "not measurable"). Desktop apps follow the same rule: the 80% bar is measured
+on the UI-free core (<code>src/&lt;App&gt;.Core</code> on Windows, the local <code>Packages/Core</code> package on macOS — via <code>swift test</code> &#43;
+<code>llvm-cov</code>, since the app scheme&#8217;s <code>xccov</code> can&#8217;t see it) and the UI layer is reported "not measured"; on a
+non-Windows host every Windows app-run/WinUI/UI-test/packaging stage is "unverified (needs Windows)" while the
+Core tests and the <code>EnableWindowsTargeting</code> compile of WPF/WinForms still run; macOS XCUITest runs drive the real
+desktop and stay behind the Swift gates' <code>.simulator-test.lock</code>. Command-line tools need no lock for their
+end-to-end tests (they run the real binary or command tree in-process, with no containers or devices): the 80% bar
+is measured on the library unit the scaffolds keep the logic in (<code>src/lib.rs</code>, <code>internal/</code>, <code>&lt;Bin&gt;Kit</code>,
+<code>src/&lt;Tool&gt;.Core</code>), and a Swift or .NET CLI keeps the <code>swift</code>/<code>dotnet</code> key — those coding skills detect the CLI
+shape (an ArgumentParser <code>.executableTarget</code>; a System.CommandLine <code>Exe</code>) themselves.</p>
+</li>
+<li>
+<p><strong>Repository bootstrap</strong>: <code>iru-setup-repository</code> is the front door — it detects a non-empty repository (via
+<code>iru-explore</code>, reading its <code>Project type:</code> and <code>Accessibility:</code> lines to pre-select), otherwise asks the project type over up to six
+<code>AskUserQuestion</code> rounds of up to three options each (JVM services &amp; libraries, Web &amp; Node, PHP, Python, Mobile &amp; Apple,
+Desktop &amp; command line — macOS app / Windows app / command-line tool), every round ending in a "Something in the next group" escape hatch (the last in
+"None of these"); an option bundling
+several types (Web app → React/Next.js/Angular, WordPress → plugin/block theme, Android, Apple, cross-platform
+mobile → React Native/Kotlin Multiplatform/Ionic, command-line tool → Rust/Go/Swift/C# .NET) gets one bounded follow-up (React Native&#8217;s <code>toolchain:
+expo|metro</code>+ is then asked by the front door because it changes the macOS CI cost picture), while stack-shape questions (Spring Boot/Quarkus `language`/`build-tool`/
+`+layout<code>/</code>frontend<code>, NestJS `orm</code>, Next.js <code>output</code>, Python <code>database</code>/<code>orm</code>/<code>api</code>/<code>python-version</code>, KMP <code>ui</code>) are left to the orchestrator, asks the shared inputs once, and delegates to the
+matching stack orchestrator via <code>iru-isolated-skill-executor</code>; on an existing repository it forces <code>mode: existing</code>
+so every sub-skill takes its update path instead of assuming a brand-new repo. The front door and every
+orchestrator first announce the <strong>setup mode</strong> — "from scratch" or "updating an existing repository" plus an
+inventory of each owned component (build manifest, sources, Antora docs, <code>.gitignore</code>, each workflow file,
+Dependabot, Sonar config, <code>CHANGELOG.md</code>, <code>README.md</code>, <code>LICENSE</code>) marked absent/present/partial — and every
+component skill that finds a prior artifact it owns warns and asks <strong>Update</strong> (merge, keep customizations) /
+<strong>Keep as is</strong> (report mismatches with this run&#8217;s choices) / <strong>Replace</strong> (regenerate, customizations lost), with
+a <strong>Stop</strong> option where it makes sense; <code>mode: existing</code> alone never means "update silently" — only an explicit
+<code>on-existing</code> does. Final reports repeat the mode and the per-component action (created / updated / replaced /
+kept as is / skipped (ci: no)). The eleven <code>*-repository</code>
+stack orchestrators — <code>iru-setup-java-library-repository</code>, <code>iru-setup-quarkus-repository</code>,
+<code>iru-setup-typescript-repository</code>, <code>iru-setup-php-repository</code>, <code>iru-setup-python-repository</code>,
+<code>iru-setup-android-repository</code>, <code>iru-setup-swift-repository</code>, <code>iru-setup-kmp-repository</code>,
+<code>iru-setup-macos-repository</code>, <code>iru-setup-windows-repository</code>, <code>iru-setup-cli-repository</code> — each also run
+standalone, and each chains the
+same six-step shape in order: scaffold (the language/flavor-specific library or app skill) → <code>iru-setup-antora</code> →
+<code>iru-setup-&lt;stack&gt;-gitignore</code> → <code>iru-setup-&lt;stack&gt;-github-workflows</code> → <code>iru-setup-changelog</code> → <code>iru-setup-readme</code>
+(Quarkus reuses <code>iru-setup-java-gitignore</code>, macOS reuses <code>iru-setup-swift-gitignore</code>; the CLI orchestrator picks
+the scaffold and gitignore skill by <code>language</code> and shares one workflows skill). Flavors: <code>iru-setup-typescript-repository&#8217;s `flavor</code> picks <code>library</code>,
+<code>react</code>, <code>angular</code>, <code>react-native</code>, <code>ionic</code>, <code>nestjs</code> (<code>iru-setup-nestjs-app</code>), or <code>nextjs</code> (<code>iru-setup-nextjs-web</code>),
+and its <code>react-native</code> flavor takes <code>toolchain: expo|metro</code> (forwarded to <code>iru-setup-react-native-app</code> and
+<code>iru-setup-typescript-github-workflows</code>: Expo framework with EAS/CNG and <code>native-builds: eas|local</code>, or a bare React
+Native CLI project with committed <code>android/</code>/<code>ios/</code>, CocoaPods, Gradle/Xcode CI jobs and store release);
+<code>iru-setup-kmp-repository</code> (via <code>iru-setup-kmp-app</code>, <code>iru-setup-kmp-gitignore</code>, <code>iru-setup-kmp-github-workflows</code>)
+scaffolds a Kotlin Multiplatform app — <code>shared/</code> &#43; <code>androidApp/</code> &#43; XcodeGen <code>iosApp/</code> — with <code>ui: compose|native</code>;
+<code>iru-setup-swift-repository&#8217;s `app</code> flavor (via <code>iru-setup-apple-app</code>) targets <code>ios</code>/<code>ipados</code>/<code>macos</code>/<code>watchos</code>/
+<code>visionos</code> (no tvOS), with <code>ui: swiftui|uikit</code> for the iOS/iPadOS target (programmatic UIKit, scene delegate, no
+storyboards; watchOS/visionOS stay SwiftUI) and <code>architecture: mvvm|mvc</code> over the same UI-free <code>Packages/Core</code>
+layout the macOS desktop scaffold uses — its optional Fastlane lanes are an intentional difference from the
+macOS skills' plain <code>xcodebuild</code>/<code>notarytool</code> pipeline;
+the two desktop orchestrators take <code>ui</code> plus <code>architecture: mvvm|mvc</code> (offered only where the UI framework
+supports both — SwiftUI, WPF and WinUI are MVVM-only; AppKit, UIKit and Windows Forms offer MVC or MVVM):
+<code>iru-setup-macos-repository</code> (via <code>iru-setup-macos-app</code>, <code>iru-setup-macos-github-workflows</code>) scaffolds a macOS-only
+XcodeGen app with <code>ui: swiftui|appkit</code>, a UI-free <code>Packages/Core</code>, the App Sandbox/hardened runtime, and a
+Developer ID notarized DMG (<code>distribution: internal</code>) or App Store Connect upload (<code>store</code>) release;
+<code>iru-setup-windows-repository</code> (via <code>iru-setup-windows-app</code>, <code>iru-setup-windows-gitignore</code>,
+<code>iru-setup-windows-github-workflows</code>) scaffolds a .NET 10 <code>&lt;App&gt;.slnx</code> with <code>ui: wpf|winui|winforms</code>, a UI-free
+<code>net10.0</code> Core project, MSTest &#43; coverlet, StyleCop/.NET analyzers, DocFX, optional FlaUI UI tests and MSIX, with
+Linux CI for everything that can run there and Windows runners for the app build, UI tests and per-RID
+zip/MSIX/App Installer releases (signed with Azure Artifact Signing or a <code>.pfx</code>; optional WinGet; or a Microsoft
+Store submission);
+<code>iru-setup-cli-repository</code> scaffolds one agent-friendly command-line tool with <code>language: rust|go|swift|dotnet</code>
+(via <code>iru-setup-rust-cli</code> / <code>iru-setup-go-cli</code> / <code>iru-setup-swift-cli</code> / <code>iru-setup-dotnet-cli</code>, then
+<code>iru-setup-rust-gitignore</code> / <code>iru-setup-go-gitignore</code> / <code>iru-setup-swift-gitignore</code> <code>flavor: cli</code> /
+<code>iru-setup-dotnet-gitignore</code>, and <code>iru-setup-cli-github-workflows</code> for all four) and <code>ui: none|tui</code> (Ratatui, Bubble
+Tea, or a .NET terminal UI; never offered for Swift, whose only TUI library is dormant). Every scaffold implements the
+same contract from the author&#8217;s <em>Building CLIs for AI Agents</em> guide — stdout for data / stderr for messages, exit
+codes 0–7 plus 130/143, <code>--format text|json|jsonl</code> with a <code>schemaVersion</code> and a JSON error envelope, TTY- and
+<code>NO_COLOR</code>-aware colour, no prompt without a terminal (<code>--no-input</code>/<code>--yes</code>), <code>--dry-run</code> for mutations, generated
+<code>completion</code> and a machine-readable <code>schema</code>, a CLI reference &#43; man page generated from the command tree — and the
+coding skills' <code>reference/cli-contract.md</code> repeats it verbatim per language; <code>cross-os-ci: all|stable</code> schedules the
+macOS/Windows test legs, and <code>distribution: internal</code> (release binaries &#43; <code>SHA256SUMS</code> &#43; build-provenance
+attestations) / <code>store</code> (plus <code>channels</code>: crates.io, Homebrew tap, Scoop, WinGet, a NuGet .NET tool) drive
+<code>release.yml</code>;
+<code>iru-setup-php-repository&#8217;s picks `laravel</code>, <code>wordpress-plugin</code>, <code>wordpress-theme</code> (block theme), or
+<code>prestashop-module</code> (<code>iru-setup-php-laravel</code> / <code>-wordpress</code> / <code>-prestashop</code>); <code>iru-setup-python-repository&#8217;s picks
+`fastapi</code> (<code>iru-setup-python-fastapi</code>) or <code>django</code> (<code>iru-setup-python-django</code>), sharing
+<code>iru-setup-python-gitignore</code>/<code>iru-setup-python-github-workflows</code>; <code>iru-setup-quarkus-repository</code>
+(via <code>iru-setup-quarkus-service</code>, <code>quarkus-stack.yml</code> manifest) takes <code>language: java|kotlin</code>,
+<code>build-tool: maven|gradle</code> (Gradle = Kotlin DSL), and <code>layout: single|hexagonal</code>.
+<code>iru-setup-java-springboot</code> is the twelfth orchestrator but follows its own manifest-driven chain instead: it
+interviews the user once, writes a <code>springboot-stack.yml</code> manifest, delegates the reactor&#8217;s generation to its
+<code>iru-setup-java-springboot-*</code> sub-skills (pom, modules, apis, optional hilla, testcontainers, platform,
+github-workflows) plus <code>iru-update-java-springboot-documentation</code> for the Antora site, and only then fills the
+remaining repository-level files (<code>iru-setup-java-gitignore</code>, <code>iru-setup-readme</code>, <code>iru-setup-changelog</code>) directly.
+Its <code>language: java|kotlin</code> and <code>build-tool: maven|gradle</code> args (manifest <code>project.language</code>/<code>buildTool</code>; Gradle
+only with Kotlin) switch the same module tree to Kotlin — detekt/ktlint &#43; Dokka instead of Checkstyle/PMD/SpotBugs
+&#43; Javadoc, and for Gradle a Kotlin DSL build with <code>gradle/libs.versions.toml</code> and <code>build-logic/</code> convention
+plugins; the Java path stays Maven-only and unchanged.
+Rolling deployments are an opt-in Spring Boot capability (asked in <code>iru-setup-java-springboot&#8217;s Step 3c only with
+`ci: yes</code>; the front door merely forwards <code>rolling-deployments</code>/<code>deployment-strategy</code>/<code>advance</code>): the manifest&#8217;s
+optional <code>deploy.rolling</code> block (<code>enabled</code>, <code>strategy: rolling|blue-green|canary|linear</code>, <code>advance:
+auto|manual|hybrid</code>, +`steps`, `bakeMinutes`) makes `iru-setup-java-springboot-github-workflows` generate a staged
+`+deploy.yml` (green deployed at 0 % traffic → smoke test on the candidate URL → shift) plus a <code>promote.yml</code>
+<code>workflow_dispatch</code> workflow that a human uses to advance, roll back or abort, and makes
+<code>iru-setup-java-springboot-platform</code> generate the rollout infrastructure (ECS weighted target groups, Cloud Run
+revision tags, Argo Rollouts on EKS/GKE). The rule: the <strong>workflow drives the shifting and the rollout state lives
+in the cloud</strong> (listener weights / Cloud Run traffic / <code>Rollout</code> status), never in GitHub, so <code>promote.yml</code> is
+stateless; GitHub Environment required reviewers are deliberately not the mechanism (private repositories need
+Enterprise). The <code>rolling</code> strategy keeps the single-job <code>deploy.yml</code> and generates no <code>promote.yml</code>.
+<code>iru-springboot-rolling-deployments</code> (<code>enable</code>/<code>disable</code>) switches it on an existing repository and never runs
+<code>tofu apply</code>/<code>destroy</code>. See <code>docs/modules/ROOT/pages/guides/rolling-deployments.adoc</code>.</p>
+</li>
+<li>
+<p><strong>Shared bootstrap inputs</strong>: the front door and the orchestrators share one <code>args</code> vocabulary —
+<code>open-source: yes|no</code>, <code>visibility: public|private|internal</code>, <code>ci: yes|no</code>, <code>ci-tests: unit|full</code>, <code>pages: yes|no</code>,
+<code>publish: yes|no</code> (libraries), <code>distribution: none|internal|store</code> (apps), <code>sonar: cloud|self-hosted|none</code>
+(&#43; <code>sonar-organization</code>/<code>sonar-project-key</code>/<code>sonar-host-url</code>), <code>accessibility: enforce|report|off|none</code> (UI project
+types only — asked once by the front door or the orchestrator, written by the UI scaffold to <code>.ui-quality.yml</code>;
+<code>none</code> = opted out entirely, <code>off</code> = rules apply but checks don&#8217;t run; on an existing repository <code>iru-explore&#8217;s
+`Accessibility: present|partial|absent</code> line, produced from the shared <code>reference/accessibility-detection.md</code>,
+pre-selects the answer; a missing <code>.ui-quality.yml</code> means <code>enforce</code> only in a repository with no UI code yet —
+otherwise the coding group skills ask once with that same pre-selection and write the file before any UI work),
+<code>mode: new|existing</code>, and
+<code>on-existing: ask|keep|update|replace</code> — so a value collected once by a front door or orchestrator never needs
+re-asking downstream; each downstream scaffold/workflows skill parses only the subset of those keys its own Step 0
+lists and ignores the rest. <code>visibility</code> comes from <code>args</code>, else <code>gh repo view --json visibility</code>, else is asked
+(Public recommended when open source); <code>internal</code> counts as <code>private</code> for every cost decision, and open source &#43;
+private is flagged as contradictory. Because GitHub Actions minutes (free on public repos; included-minutes budget
+on private, macOS ~10×), SonarCloud (free only for public/open-source projects), and GitHub Pages (private repos
+need Pro/Team/Enterprise Cloud, and the site is public unless Enterprise Cloud private Pages) cost differently, the
+entry point asks, in order: <code>ci</code> (Yes recommended; <code>ci: no</code> skips the whole workflows step including the shared
+security block), <code>sonar</code> ("send CI reports to SonarCloud/SonarQube?" — <code>cloud</code> recommended only for a public,
+open-source repo, otherwise <code>none</code>; with <code>ci: no</code>, <code>none</code> is recommended since nothing would send reports),
+<code>ci-tests</code> (only with <code>ci: yes</code>; <code>unit</code> recommended for private repos, <code>full</code> for public), and <code>pages</code> (only with
+<code>ci: yes</code>; defaulted to <code>yes</code> for public repos, asked with <code>no</code> recommended for private — <code>pages: no</code> keeps the
+docs build but uploads it as a workflow artifact). A standalone workflows skill resolves <code>visibility</code> and asks
+<code>ci-tests</code>/<code>pages</code>/<code>sonar</code> itself (never <code>ci</code>). <code>on-existing</code> defaults to <code>ask</code> and is only for scripted runs —
+orchestrators forward it only when their own <code>args</code> received it. Defaults: <code>publish</code>/<code>distribution</code> default to
+<code>yes</code>/<code>store</code> only when the project is open source.</p>
+</li>
+<li>
+<p><strong>Ticket intake</strong>: <code>iru-create-github-issue</code> / <code>iru-create-jira-ticket</code> ground a draft in the codebase via
+<code>iru-explore</code> before filing.
+<code>iru-create-github-issue</code> stays the quick path. The detailed, spec-style path (GitHub only) is
+<code>iru-draft-github-issue</code> (interview → functional or documentation draft) → <code>iru-review-github-issue</code> loop (classified
+gap/pending/inconsistency/doubt findings, report-only on existing issues) → optional <code>iru-split-github-issue</code>.
+A split creates a root issue, sub-issues (GitHub sub-issues API) and a milestone; dependencies are recorded as a
+<code>Blocked by: #N</code> line and a <code>Parallel group: &lt;n&gt;</code> line in each sub-issue (same group = parallelizable) plus an
+ordered group table in the root.</p>
+</li>
+<li>
+<p><strong>Release</strong>: <code>iru-release</code> converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
+it discovers the installed <code>iru-&lt;key&gt;-bump-version</code> skills (from the skills available in the session, corroborated
+with <code>find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"</code> when that directory exists — the plugin-safe
+dual discovery every key registry in the catalog uses), currently +`java` (Java or Kotlin, Maven or Gradle), `typescript`, `react-native`
+(`+package.json` &#43; Expo <code>expo.version</code> or Metro <code>versionName</code>/<code>MARKETING_VERSION</code>, store values only on a release),
+<code>android</code>, <code>kmp</code> (<code>gradle.properties</code> <code>VERSION_NAME</code>/<code>VERSION_CODE</code> &#43; <code>iosApp</code> <code>MARKETING_VERSION</code>), <code>swift</code>,
+<code>php</code> (Laravel <code>config/app.php</code>, WordPress plugin/theme headers, PrestaShop module class; <code>x.y.z-dev</code>
+convention), <code>python</code> (<code>pyproject.toml</code> <code>[project].version</code> &#43; <code>__version__</code> literals; PEP 440 <code>x.y.z.dev0</code>
+convention; VCS-derived versions left to the git tag), <code>dotnet</code> (<code>Directory.Build.props</code> <code>&lt;Version&gt;</code> &#43; the
+four-part MSIX <code>Identity Version</code> of a Windows app; <code>x.y.z-dev</code> convention; macOS desktop apps use <code>swift</code>),
+<code>rust</code> (<code>Cargo.toml</code> <code>[package]</code>/<code>[workspace.package]</code> version &#43; the <code>Cargo.lock</code> entry; <code>x.y.z-dev</code>), <code>go</code> (the
+<code>Version</code> literal in <code>internal/version/version.go</code>, overridden by <code>-ldflags -X</code> at release; <code>x.y.z-dev</code>; a major
+≥ 2 needs the <code>/vN</code> module path), and <code>swift</code> also owns a Swift CLI&#8217;s <code>Version.swift</code>) and delegates the actual version-file edit to whichever key matches the detected project, keeping
+its own branch/PR/label/changelog steps ecosystem-agnostic.</p>
+</li>
+<li>
+<p><strong>Android reference repository</strong>: every <code>iru-*android*</code> skill&#8217;s embedded templates are genericized from a single
+real repository, <a href="https://github.com/albertoirurueta/irurueta-android-glutils" class="bare">https://github.com/albertoirurueta/irurueta-android-glutils</a> (<code>lib/</code> &#43; Compose <code>app/</code>,
+<code>gradle/libs.versions.toml</code>, JUnit 4 &#43; MockK &#43; Robolectric &#43; AndroidX test &#43; Espresso, AGP JaCoCo, inline
+<code>sonar {}</code>, Dokka to gh-pages) — keep new Android skills consistent with it, with the decided departures (Antora
+site &#43; Dokka under <code>api/</code>, <code>develop</code>/<code>main</code> branching with <code>-SNAPSHOT</code> on <code>develop</code> and a <code>sync.yml</code>) documented
+in each skill rather than silently reintroduced.</p>
+</li>
+<li>
+<p><strong>Guidance sources for the newer stacks</strong>: the Kotlin, Spring Boot (Java/Kotlin), Quarkus, PHP/Laravel, NestJS,
+Next.js, FastAPI, and Django coding references (each <code>iru-&lt;key&gt;-code-one-task/reference/</code> routing table) and their setup skills
+are grounded in the author&#8217;s docs repository, <a href="https://github.com/albertoirurueta/docs" class="bare">https://github.com/albertoirurueta/docs</a> (cited in each
+<code>reference/README.md</code> Sources as "irurueta docs: &lt;page path&gt;"); WordPress and PrestaShop aren&#8217;t covered there,
+so those references/scaffolds follow the official docs (developer.wordpress.org handbooks &#43; WordPress Coding
+Standards, devdocs.prestashop-project.org). Keep new guidance for these stacks consistent with those sources.
+Kotlin Multiplatform (<code>kmp</code>) and React Native (<code>react-native</code>, both toolchains) follow the official docs
+(kotlinlang.org multiplatform docs &#43; JetBrains KMP/Compose Multiplatform docs; reactnative.dev, docs.expo.dev,
+reactnavigation.org, React Native Testing Library), cited the same way in their <code>reference/README.md</code> Sources;
+the KMP Android side stays consistent with the Android reference repository&#8217;s conventions above. macOS desktop
+guidance (<code>iru-swift-code-one-task&#8217;s `macos.md</code>/<code>appkit.md</code>/<code>architecture.md</code>, <code>iru-setup-macos-app</code>, its
+workflows) is grounded in the docs repository&#8217;s <code>apps/apple/</code> pages; the Windows desktop stack (<code>windows</code> key,
+<code>iru-setup-windows-*</code>) follows the official Microsoft Learn docs (WPF, WinUI 3/Windows App SDK, Windows Forms,
+CommunityToolkit.Mvvm, MSIX, Store, WinGet) plus the docs repository&#8217;s C# pages, because the docs repository&#8217;s
+own Windows Apps section (albertoirurueta/docs issue 191) isn&#8217;t written yet — switch the citations once it is.
+Command-line tools in every language follow the docs repository&#8217;s <code>ai/cli-for-agents/</code> section (<strong>Building CLIs for
+AI Agents</strong> — <a href="https://www.irurueta.com/ai/cli-for-agents/index.html" class="bare">https://www.irurueta.com/ai/cli-for-agents/index.html</a>: streams and exit codes, TTY/colour, machine
+output, safety, frameworks, TUIs, packaging, testing, documenting); Rust guidance also cites its
+<code>programming-languages/rust/</code> pages, while Go has no pages there, so the Go skills cite the official docs
+(go.dev, Cobra, Bubble Tea, golangci-lint, GoReleaser). Keep new CLI guidance consistent with that section.</p>
+</li>
+<li>
+<p><strong>UI contract</strong>: every skill that builds, tests, scaffolds or documents a user interface (web, server-rendered
+templates, Android, Apple, React Native, KMP, Windows desktop, terminal UIs) follows one contract, repeated
+verbatim as <code>reference/ui-contract.md</code> in each UI coding skill (<code>android</code>, <code>swift</code>, <code>kmp</code>, <code>typescript</code>,
+<code>nextjs</code>, <code>react-native</code>, <code>php</code>, <code>django</code>, <code>windows</code>, and the <code>rust</code>/<code>go</code>/<code>dotnet</code> terminal UIs) next to a
+per-stack <code>reference/ui-implementation.md</code>: decompose a design into screens › regions › components before coding
+(<code>iru-plan</code> writes that tree and plans one task per component, bottom-up); composition over inheritance;
+components take an immutable UI state and emit typed intent events (two-way binding only for form fields);
+data-driven or long collections use the platform&#8217;s virtualizing/recycling container (RecyclerView/ListAdapter/
+DiffUtil, Lazy*, <code>List</code>/<code>UICollectionView</code>, <code>FlatList</code>, web virtualizers, virtualizing WPF/WinUI lists, …) with
+one reusable item component and the whole list in the view model; UI tests (component, screen, flow) on the
+desktop/JVM, a simulator/emulator or a real browser (Playwright) over every state and data set, LTR&#43;RTL ×
+light&#43;dark, writing <code>.ui-screenshots/&lt;kind&gt;/&lt;Id&gt;/&lt;state&gt;--&lt;dir&gt;--&lt;theme&gt;[--&lt;variant&gt;…].png</code> (gitignored,
+<code>UI_SCREENSHOTS_DIR</code> overrides, cleared by the test gate on a full UI run, uploaded as a CI artifact) and running
+automated accessibility checks at the <code>.ui-quality.yml</code> level (<code>accessibility: enforce|report|off|none</code>; §8 also carries platform assistive-technology
+rules and visual-comfort extras, all skipped with <code>none</code>). Docs:
+<code>iru-setup-antora</code>, <code>iru-update-docs</code> and <code>iru-update-java-springboot-documentation</code> carry a verbatim
+<code>reference/ui-docs.md</code> — a <strong>User interface</strong> section (<code>ui/index.adoc</code>, <code>ui/navigation.adoc</code>, one page per screen
+and per component) illustrated with the tests' screenshots, of which only the referenced ones are copied into
+<code>images/ui/</code> (the only committed copies, replaced when a component changes, deleted with it), the rest discarded.
+The shared files — <code>ui-contract.md</code>, <code>ui-docs.md</code>, and <code>accessibility-detection.md</code> (in <code>iru-explore</code> and
+<code>iru-setup-repository</code>) — must stay byte-identical across the skills that carry them. Hand-maintained overview:
+<code>docs/modules/ROOT/pages/guides/building-user-interfaces.adoc</code>.</p>
+</li>
+<li>
+<p><strong>Template verification</strong>: every scaffold/workflows/gate skill&#8217;s embedded templates are meant to be exercised
+against the real tooling in a throwaway directory <em>outside</em> this repository (<code>$TMPDIR/iru-verify/&lt;stack&gt;/&lt;skill&gt;/</code>)
+before being trusted — nothing inside this repository is ever deleted for that purpose, and whatever can&#8217;t be
+verified locally is reported rather than assumed to work. Every <code>-github-workflows</code> skill also embeds the same
+security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table;
+a stack may add opt-in scanners beyond those shared four (e.g. MobSF for Android) as long as the shared block stays.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_agents_claudeagentsname_md"><a class="anchor" href="#_agents_claudeagentsname_md"></a>Agents (<code>.claude/agents/&lt;name&gt;.md</code>)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This repository defines three custom agents for its most-duplicated sub-agent shapes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong><code>iru-gate-runner</code></strong> — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
+headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
+reports back only a compact summary. Gate skills it runs: <code>iru-&lt;lang&gt;-test</code>/<code>-coverage</code>/<code>-code-quality</code> for
+<code>java</code> (Maven or Gradle, Java or Kotlin sources; coverage from JaCoCo, <code>quarkus-jacoco</code>, or Kover), <code>dotnet</code>,
+<code>typescript</code> (incl. NestJS/Next.js/React Native — both the Expo and Metro toolchains —, <code>e2e</code> selector incl.
+Maestro/Detox), <code>php</code> (Pest/PHPUnit, Clover, PHPStan/Psalm/PHPCS),
+<code>python</code> (pytest incl. pytest-django, <code>integration</code> selector; coverage.py Cobertura; Ruff/mypy/Bandit — shared by
+the <code>fastapi</code> and <code>django</code> keys), <code>android</code>, <code>swift</code> (incl. a <code>package-path</code> coverage mode for an app&#8217;s local
+<code>Packages/Core</code>), <code>kmp</code> (Kover coverage; detekt/ktlint/Android Lint/SwiftLint); the <code>dotnet</code> gates also serve the
+<code>windows</code> key (WPF/WinUI/WinForms awareness, <code>EnableWindowsTargeting</code> off Windows, a <code>ui</code> selector for FlaUI tests);
+<code>iru-kotlin-code-quality</code> (detekt/ktlint); doc audits <code>iru-java-javadoc</code>, <code>iru-kotlin-kdoc</code>, <code>iru-kmp-dokka</code>,
+<code>iru-dotnet-docfx</code>, <code>iru-typescript-tsdoc</code>, <code>iru-php-phpdoc</code>, <code>iru-python-docstrings</code> (Ruff <code>D</code> &#43; Sphinx build), <code>iru-android-dokka</code>, <code>iru-swift-docc</code>,
+<code>iru-rust-rustdoc</code> (rustdoc &#43; doctests), <code>iru-go-godoc</code>; the Rust gates <code>iru-rust-test</code> (nextest or <code>cargo test</code>) /
+<code>-coverage</code> (cargo-llvm-cov) / <code>-code-quality</code> (clippy, rustfmt, cargo-deny) and the Go gates <code>iru-go-test</code> /
+<code>-coverage</code> (coverprofile; Go has no branch coverage) / <code>-code-quality</code> (golangci-lint v2, go vet, govulncheck); plus
+<code>iru-check-license</code>/<code>iru-check-security</code>. Used throughout <code>iru-code</code>, <code>iru-code-one-task-group</code>, and every
+<code>iru-&lt;key&gt;-code-one-task-group</code> that validates (all but <code>database</code>), and recommended by <code>iru-plan</code> for the scoped
+test-run step it writes into generated plans.</p>
+</li>
+<li>
+<p><strong><code>iru-isolated-skill-executor</code></strong> — runs one named skill end-to-end in a completely fresh context so an earlier
+exploration/planning transcript can&#8217;t bias it, while the caller keeps running afterward. Used by <code>iru-issue</code> to
+delegate the entire <code>iru-code</code> run for a ticket.</p>
+</li>
+<li>
+<p><strong><code>iru-change-summarizer</code></strong> — fans out over a git commit/tag range and returns only the user-facing changes.
+Used by <code>iru-setup-changelog</code> to summarize one release at a time when backfilling a long tag history.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Skills that need ad hoc context isolation beyond these three shapes still use Claude Code&#8217;s <em>built-in</em> agent
+types via the <code>Agent</code> tool: <code>iru-explore</code> uses the <code>Explore</code> agent explicitly; one-off cases like bootstrapping
+<code>iru-setup-antora</code> mid-run (<code>iru-generate-skill-docs</code>, <code>iru-update-docs</code>) use <code>general-purpose</code>, the default.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_documentation_docs"><a class="anchor" href="#_documentation_docs"></a>Documentation (<code>docs/</code>)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>An Antora site (<code>docs/antora.yml</code>, <code>docs/antora-playbook.yml</code>) with two kinds of pages under
+<code>docs/modules/ROOT/pages/</code>, which matters because they&#8217;re maintained differently:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Generated</strong>: <code>index.adoc</code>, every <code>skills/*.adoc</code>, and <code>agents/*.adoc</code> are regenerated by the
+<code>iru-generate-skill-docs</code> skill (<code>/iru-generate-skill-docs</code>) directly from the
+<code>SKILL.md</code> files and agent usage actually on disk, including the reference table, dependency graph, and
+purpose groups. Re-run it after adding, removing, or materially changing a skill — hand edits to these
+pages are overwritten on the next run.</p>
+</li>
+<li>
+<p><strong>Hand-maintained</strong>: everything under <code>guides/</code> (<code>claude-md.adoc</code>, <code>common-workflows.adoc</code>,
+<code>creating-skills-and-agents.adoc</code>, etc.) is regular prose, edited directly like any other doc.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><code>nav.adoc</code> lists every page and must gain an entry when a new skill or guide page is added (the
+<code>iru-generate-skill-docs</code> skill handles this for generated pages automatically).</p>
+</div>
+<div class="paragraph">
+<p><code>docs/build/</code> is gitignored — never hand-edit generated site output.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup Java Spring Boot GitHub Workflows :: AI Catalog</title>
+    <meta name="description" content="Creates or updates build, deploy, promote, undeploy and security GitHub Actions workflows for a Java or Kotlin Spring Boot service on Maven or Gradle.">
+    <meta name="keywords" content="iru-setup-java-springboot-github-workflows, claude code skill, github actions, ci cd, github oidc, opentofu deploy, testcontainers ci, sonarcloud, github pages, api docs publishing, buildpacks, hilla, vaadin, codeql, dependabot, osv-scanner, gitleaks, kotlin, gradle, blue green deployment, canary, rolling deployment, promote workflow">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/catalog-architecture.html">Catalog architecture</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/building-user-interfaces.html">Building user interfaces</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/rolling-deployments.html">Rolling deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/performance-and-token-budget.html">Performance and token budget</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task.html">Django Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task-group.html">Django Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-bump-version.html">.NET Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-draft-github-issue.html">Draft GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task.html">FastAPI Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task-group.html">FastAPI Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-bump-version.html">Go Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task.html">Go Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task-group.html">Go Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-quality.html">Go Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-coverage.html">Go Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-godoc.html">Go Godoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-test.html">Go Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-bump-version.html">KMP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task.html">KMP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task-group.html">KMP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-quality.html">KMP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-coverage.html">KMP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-dokka.html">KMP Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-generate-all-tests.html">KMP Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-test.html">KMP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-code-quality.html">Kotlin Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-kdoc.html">Kotlin KDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task.html">Kotlin Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task-group.html">Kotlin Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task.html">NestJS Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task-group.html">NestJS Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task.html">Next.js Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task-group.html">Next.js Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-bump-version.html">PHP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task.html">PHP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task-group.html">PHP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-quality.html">PHP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-coverage.html">PHP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-phpdoc.html">PHP PHPDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-test.html">PHP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-bump-version.html">Python Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-code-quality.html">Python Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-coverage.html">Python Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-docstrings.html">Python Docstrings</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-test.html">Python Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task.html">Quarkus Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task-group.html">Quarkus Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-bump-version.html">React Native Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task.html">React Native Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task-group.html">React Native Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-review-github-issue.html">Review GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-bump-version.html">Rust Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task.html">Rust Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task-group.html">Rust Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-quality.html">Rust Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-coverage.html">Rust Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-rustdoc.html">Rust Rustdoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-test.html">Rust Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-github-workflows.html">Setup CLI GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-repository.html">Setup CLI Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-cli.html">Setup Dotnet Cli</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-gitignore.html">Setup Dotnet Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-cli.html">Setup Go CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-gitignore.html">Setup Go Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-app.html">Setup KMP App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-github-workflows.html">Setup KMP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-gitignore.html">Setup KMP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-repository.html">Setup KMP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-app.html">Setup macOS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-github-workflows.html">Setup macOS GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-repository.html">Setup macOS Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nestjs-app.html">Setup NestJS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nextjs-web.html">Setup Next.js Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-github-workflows.html">Setup PHP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-gitignore.html">Setup PHP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-laravel.html">Setup PHP Laravel</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-prestashop.html">Setup PHP PrestaShop</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-repository.html">Setup PHP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-wordpress.html">Setup PHP WordPress</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-django.html">Setup Python Django</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-fastapi.html">Setup Python FastAPI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-github-workflows.html">Setup Python GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-gitignore.html">Setup Python Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-repository.html">Setup Python Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-github-workflows.html">Setup Quarkus GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-repository.html">Setup Quarkus Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-service.html">Setup Quarkus Service</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-cli.html">Setup Rust CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-gitignore.html">Setup Rust Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-cli.html">Setup Swift CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-app.html">Setup Windows App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-github-workflows.html">Setup Windows GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-gitignore.html">Setup Windows Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-repository.html">Setup Windows Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-split-github-issue.html">Split GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-springboot-rolling-deployments.html">Spring Boot Rolling Deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task.html">Windows Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task-group.html">Windows Code One Task Group</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-setup-java-springboot-github-workflows.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup Java Spring Boot GitHub Workflows</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Creates the GitHub Actions workflows a Spring Boot service needs: one that builds, tests, analyses, and publishes
+documentation (optionally running a Hilla frontend&#8217;s tests too); one that deploys (as a staged rollout when rolling deployments are enabled, with a further <code>promote.yml</code> to advance
+or roll it back); one that stops or destroys an environment; and one that runs dependency/code/secret security scans, plus a Dependabot config.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-setup-java-springboot-github-workflows</code> is the service-shaped counterpart to
+<a href="iru-setup-java-github-workflows.html" class="xref page">Setup Java GitHub Workflows</a>. A service is not published to Maven Central and is not
+GPG-signed — it is built into a container image and deployed — so the publish, sign, and version-sync stages are
+replaced by image build, OpenTofu apply, and teardown. The shared stages (test, analyse, Sonar, Antora, GitHub
+Pages) follow the same house pattern, so the two remain recognisably related.</p>
+</div>
+<div class="paragraph">
+<p>The skill announces whether it is creating the workflows from scratch or updating existing ones, and asks per
+existing file whether to Update, Keep as is, Replace, or Stop (or applies <code>on-existing</code>). It also resolves
+visibility-aware CI choices: <code>visibility</code>, <code>sonar</code>, <code>ci-tests</code> (<code>unit</code> runs Surefire only with <code>-DskipITs</code>; <code>full</code>
+also runs Failsafe against Testcontainers) and <code>pages</code> (<code>no</code> uploads the built docs as a workflow artifact instead of
+publishing to GitHub Pages). For private or internal repositories it states the Actions-minutes cost
+(2,000/month on Free, 3,000 on Pro and Team, 50,000 on Enterprise Cloud; Linux 2-core $0.006/min) and that GitHub
+Pages needs Pro, Team or Enterprise Cloud and is public on the internet unless Enterprise Cloud access control is
+used.</p>
+</div>
+<div class="paragraph">
+<p>The <code>build.yml</code> Sonar step is no longer offered reactively: it reads the manifest&#8217;s <code>sonar.mode</code>
+(<code>cloud</code>/<code>self-hosted</code>/<code>none</code>, defaulting to <code>cloud</code> for a manifest written before the field existed) as the source
+of truth and drops the step entirely — rather than disabling it with a permanently-false condition — when
+<code>sonar.mode: none</code>. When the manifest&#8217;s <code>frontend</code> field is <code>hilla</code>, <code>build.yml</code> also sets up Node, runs the
+frontend&#8217;s Vitest suite with coverage (after the Maven build, since the frontend&#8217;s generated config imports
+compiled helpers that only exist once Maven has reached <code>vaadin:prepare-frontend</code>), and packages with
+<code>-Pproduction -Dvaadin.ci.build=true</code>.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 33.3333%;">
+<col style="width: 50.0001%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Workflow</th>
+<th class="tableblock halign-left valign-top">Trigger</th>
+<th class="tableblock halign-left valign-top">Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Push to the integration/main branch, and every pull request</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build, unit tests (Surefire), Testcontainers integration tests (Failsafe, only when <code>ci.tests: full</code>), static
+analysis, aggregated coverage, Sonar (when <code>sonar.mode</code> isn&#8217;t <code>none</code>), frontend Vitest tests and coverage (when
+<code>frontend: hilla</code>), and — on the main branch only — the Antora site plus the generated OpenAPI, protobuf, GraphQL and
+AsyncAPI HTML, published to GitHub Pages when <code>ci.pages: yes</code>, otherwise uploaded as a <code>documentation</code> workflow
+artifact</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>deploy.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>workflow_dispatch</code> with an environment input, optionally on release published</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build and push the container image, authenticate via keyless OIDC, <code>tofu plan</code> then apply <strong>that plan file</strong>, then a
+smoke check that fails the deploy if the service never becomes healthy</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>promote.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>workflow_dispatch</code> with environment and target inputs; only with rolling deployments, and not for strategy <code>rolling</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Advance a rollout one step, or roll it back or abort it. Stateless: it reads the current traffic split from the cloud
+(ECS weighted target groups, Cloud Run traffic tags, Argo Rollouts) and sets the next one. It needs no GitHub
+Environment reviewers, so it works on any GitHub plan</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>undeploy.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>workflow_dispatch</code> only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Scale to zero (the reversible default) or destroy an environment, behind a typed-confirmation check and a protected
+GitHub Environment</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>security.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Push to the main branch, every pull request, and a weekly schedule</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Dependency review, CodeQL (with a <code>javascript-typescript</code> matrix leg when <code>frontend: hilla</code>), OSV-Scanner, and
+gitleaks — each job individually omittable via its own <code>args</code> flag</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.github/dependabot.yml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n/a — configuration, not a workflow</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Grouped weekly updates for the <code>maven</code> (or <code>gradle</code>), <code>docker</code>, and <code>github-actions</code> ecosystems, plus <code>npm</code> (pointed at the real
+web module) when the manifest&#8217;s <code>frontend</code> isn&#8217;t <code>none</code>; always generated regardless of the <code>security-*</code> flags</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>No credential is ever written into a workflow file: cloud access is keyless via OIDC, and everything else is a
+repository or environment secret referenced by name. Where the registry supports it, even the registry credential is
+derived from the OIDC session (<code>amazon-ecr-login</code>, <code>gcloud auth configure-docker</code>) rather than stored.</p>
+</div>
+<div class="paragraph">
+<p>The guards on <code>undeploy.yml</code> are the feature rather than ceremony: <code>stop</code> is the default and is reversible, data-bearing
+resources are expected to carry deletion protection so <code>destroy</code> <strong>fails</strong> on them rather than silently deleting a
+production database, and the skill recommends restricting <code>prod</code> to required reviewers plus a deployment branch rule
+— and considering omitting <code>prod</code> from the destroy path entirely.</p>
+</div>
+<div class="sect2">
+<h3 id="_language_and_build_tool"><a class="anchor" href="#_language_and_build_tool"></a>Language and build tool</h3>
+<div class="paragraph">
+<p><code>project.language</code> (<code>java</code>/<code>kotlin</code>, absent means <code>java</code>) and <code>project.buildTool</code> (<code>maven</code>/<code>gradle</code>, absent means
+<code>maven</code>; Gradle only ever appears with Kotlin) select one of three variants, confirmed against the disk (<code>pom.xml</code>,
+<code>settings.gradle.kts</code> plus <code>gradlew</code>, <code>src/main/kotlin</code>) — if the manifest and the disk disagree, the disk wins for
+the run and the report says so.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Variant</th>
+<th class="tableblock halign-left valign-top">What changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>java</code> + <code>maven</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The base templates, unchanged.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kotlin</code> + <code>maven</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Static analysis is detekt plus ktlint instead of Checkstyle/PMD/SpotBugs, and code documentation is Dokka instead of
+Javadoc; every <code>mvn</code> build, test, Sonar and image command is unchanged.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kotlin</code> + <code>gradle</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Every job uses <code>gradle/actions/setup-gradle</code> (open-source <code>basic</code> cache provider) and <code>./gradlew</code>, never a
+runner-installed <code>gradle</code>: <code>test</code>/<code>integrationTest</code>, <code>:coverage:testCodeCoverageReport</code>, <code>detekt ktlintCheck</code>,
+<code>dokkaGeneratePublicationHtml</code>, and the image built with <code>bootBuildImage</code> tagged from the <code>gradle.properties</code> version
+(<code>&lt;version&gt;-&lt;short sha&gt;</code>). No Maven site is published (the test and coverage reports travel in the <code>test-reports</code>
+artifact), <code>security.yml</code> gains a <code>dependency-submission</code> job feeding the graph dependency review compares, CodeQL
+compiles manually with <code>./gradlew</code> instead of autobuild, and Dependabot uses the <code>gradle</code> ecosystem. The Hilla steps
+use <code>-Pvaadin.productionMode=true -Pvaadin.ci.build=true</code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_rolling_deployments"><a class="anchor" href="#_rolling_deployments"></a>Rolling deployments</h3>
+<div class="paragraph">
+<p>When the manifest&#8217;s <code>deploy.rolling.enabled</code> is true (or <code>rolling: yes</code> arrives in <code>args</code>), <code>deploy.yml</code> becomes a
+staged rollout instead of one job: build and push the image, deploy the new version ("green") at 0 % traffic, smoke-test
+its candidate URL, shift traffic in the configured steps behind a metric gate, and roll back automatically on a breach.
+How far it goes unattended depends on <code>advance</code>: <code>auto</code> runs the gate alone, <code>hybrid</code> adds a human confirmation through
+<code>promote.yml</code> on <code>prod</code> (auto-advancing on <code>dev</code>), and <code>manual</code> ends the run once green is deployed so a human runs
+<code>promote.yml</code> for each step. Strategy <code>blue-green</code> is a single cutover (<code>steps: [100]</code>), <code>canary</code> and <code>linear</code> use the
+manifest&#8217;s steps with <code>bakeMinutes</code> of soak, and strategy <code>rolling</code> keeps the single-job <code>deploy.yml</code> (the runtime&#8217;s
+native rolling update) and generates no <code>promote.yml</code>. The first deploy of an environment, which has no rollout outputs
+yet, is applied at 100 % and the staged jobs are skipped.</p>
+</div>
+<div class="paragraph">
+<p>The rollout shell functions are runtime-specific (ECS Fargate, Cloud Run, or Argo Rollouts on EKS/GKE) and embedded in
+<code>deploy.yml</code>, <code>promote.yml</code> and <code>undeploy.yml</code>; the workflows rely on the <code>rollout_*</code> outputs and resource naming that
+<a href="iru-setup-java-springboot-platform.html" class="xref page">Setup Java Spring Boot Platform</a> produces. <code>deploy.yml</code>, <code>promote.yml</code> and <code>undeploy.yml</code> share one
+concurrency group per environment so a deploy, a promotion and a teardown never interleave, and <code>undeploy.yml</code> resets
+the traffic split first. Rolling disabled or absent keeps today&#8217;s single-job <code>deploy.yml</code> unchanged, with no
+<code>promote.yml</code>; with <code>ci: no</code> there are no workflows at all, hence no rolling. Because a rollout in flight must not be
+orphaned, replacing or updating an existing <code>deploy.yml</code> across this behavioural change needs an explicit yes. The
+report also advises who may dispatch <code>promote.yml</code>, since a <code>workflow_dispatch</code> workflow is open to anyone with write
+access. See <a href="iru-springboot-rolling-deployments.html" class="xref page">Spring Boot Rolling Deployments</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-service-bootstrap" class="xref page">Spring Boot Service Bootstrap</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_plugin"><a class="anchor" href="#_plugin"></a>Plugin</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Shipped by the <code>iru-springboot</code> plugin of the <code>ai-catalog</code> marketplace (install with <code>/plugin install iru-springboot@ai-catalog</code>; see <a href="../guides/plugins.html" class="xref page">Plugins</a>).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-setup-java-springboot-github-workflows
+/iru-setup-java-springboot-github-workflows &lt;args: key: value lines&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stack-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> line giving the manifest path. Read for the cloud, the Java version, <code>visibility</code>, the <code>ci:</code>
+block (<code>ci.tests</code>, <code>ci.pages</code>), <code>sonar.mode</code> (and its <code>organization</code>/<code>projectKey</code>/<code>hostUrl</code>), <code>frontend</code>
+(<code>none</code>/<code>hilla</code>), and the technologies in play.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>springboot-stack.yml</code> at the repository root</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>integration-branch</code>, <code>main-branch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> lines. Otherwise confirmed against <code>git branch -a</code> rather than assumed to be gitflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>develop</code>, <code>main</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>security-dependency-review</code>, <code>security-codeql</code>, <code>security-osv</code>, <code>security-gitleaks</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> lines, each <code>yes</code>/<code>no</code>. Individually gate the matching job in <code>security.yml</code>. Any not supplied
+via <code>args</code> is asked with <code>AskUserQuestion</code>, except when this skill runs unattended as part of
+<a href="iru-setup-java-springboot.html" class="xref page">Setup Java Spring Boot</a>'s Step 8, where the default stands without asking.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>yes</code> for all four</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>visibility</code>, <code>ci-tests</code>, <code>pages</code>, <code>sonar</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> lines overriding the manifest&#8217;s <code>visibility</code> (<code>public</code>/<code>private</code>/<code>internal</code>), <code>ci.tests</code>
+(<code>unit</code>/<code>full</code>), <code>ci.pages</code> (<code>yes</code>/<code>no</code>) and <code>sonar.mode</code> (<code>cloud</code>/<code>self-hosted</code>/<code>none</code>). Resolution order is <code>args</code>,
+then manifest, then (for <code>visibility</code>) <code>gh repo view --json visibility</code>, then asking. Public repositories get
+<code>pages: yes</code> without asking; private/internal ones are asked, with No recommended. Values resolved by asking are
+offered back to the manifest; an <code>args</code> override applies to this run only unless the user agrees.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manifest values</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rolling</code>, <code>deployment-strategy</code>, <code>advance</code>, <code>steps</code>, <code>bake-minutes</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code> <code>key: value</code> lines: <code>rolling</code> is <code>yes</code>/<code>no</code>, <code>deployment-strategy</code> is <code>rolling</code>/<code>blue-green</code>/<code>canary</code>/<code>linear</code>,
+<code>advance</code> is <code>auto</code>/<code>manual</code>/<code>hybrid</code>, <code>steps</code> a comma list of percentages, <code>bake-minutes</code> a number. The manifest&#8217;s
+<code>deploy.rolling</code> block is the source of truth; the lines apply when there is no block or the caller passes them.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Rolling disabled</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mode</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>new</code> or <code>existing</code>. Informational only: <code>mode: existing</code> does not mean "update silently" — existing files are
+still asked about.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>on-existing</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ask</code>, <code>keep</code>, <code>update</code> or <code>replace</code>. Applied to every pre-existing workflow/config file without asking (the
+warning is still printed).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ask</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">On-disk survey</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The workflows must match reality, so the skill reads: the reactor&#8217;s modules and the <code>boot</code> directory, where
+<code>report-aggregate</code> writes, whether the Sonar plugin and properties exist (only when <code>sonar.mode</code> isn&#8217;t <code>none</code>), the
+Antora config and which extensions <code>docs/package.json</code> lists, where the API doc generators write, whether
+<code>apis/messaging/</code> and <code>apis/graphql-server/</code> hold their contracts and committed <code>docs/package-lock.json</code> toolchains
+(and whether the GraphQL one pins <code>graphql-voyager</code> as well as <code>spectaql</code>), which module carries the Hilla frontend
+and its <code>package-lock.json</code> path (only when <code>frontend: hilla</code>), which <code>infra/envs/&lt;env&gt;</code> directories exist, whether
+GitHub Environments exist, and how heavy the compose stack is.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — derived</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Existing workflow files</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Covers <code>build.yml</code>, <code>deploy.yml</code>, <code>promote.yml</code> (only with rolling deployments), <code>undeploy.yml</code>, <code>security.yml</code> and <code>.github/dependabot.yml</code>. For each that exists,
+the skill warns, states where it contradicts this run&#8217;s choices, and asks (unless <code>on-existing</code> is set): <strong>Update</strong>
+(merge, keeping steps this skill doesn&#8217;t own such as a Slack notification or an extra matrix leg), <strong>Keep as is</strong>,
+<strong>Replace</strong> (regenerate from the template, losing customizations), or <strong>Stop</strong>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — user must choose</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><code>.github/workflows/build.yml</code> — a <code>build</code> job (checkout with full history for Sonar blame, JDK with Maven cache,
+<code>mvn clean verify</code> — or <code>mvn clean verify -DskipITs</code> with <code>ci.tests: unit</code> — the site report, the Sonar scan skipped on fork pull requests, and test reports uploaded even
+on failure) plus a <code>docs</code> job gated to main-branch pushes (renamed <code>Build documentation</code> and ending in an artifact upload rather
+than a <code>gh-pages</code> deploy when <code>ci.pages: no</code>, in which case it also drops <code>contents: write</code> and the <code>.nojekyll</code> touch). The <code>docs</code> job generates the Maven site and the
+OpenAPI/protobuf documentation, then runs the two npm-driven generators as their own steps against the
+toolchains committed in <code>apis/messaging/docs</code> and <code>apis/graphql-server/docs</code> — validating and rendering the
+AsyncAPI specification, and rendering the GraphQL SDL through SpectaQL and (optionally) Voyager. It then builds
+the Antora site and merges everything: a "Merge documentation" step copies the contents of every
+<code>target/generated-docs</code> directory in the reactor under <code>doc/api/</code>, so <code>rest-server/</code>, <code>grpc-server/</code>,
+<code>graphql-server/</code> and <code>messaging/</code> land side by side without the workflow needing to know which module produced
+which. The published result includes <code>doc/api/messaging/v1/index.html</code> and <code>doc/api/graphql-server/v1/index.html</code>
+with the Voyager graph beneath it. Both npm generators are skipped in Maven
+(<code>-Dasyncapi.docs.skip=true -Dgraphql.docs.skip=true</code>) in this job so the work isn&#8217;t done twice — the <code>build</code>
+job&#8217;s <code>mvn clean verify</code> still exercises the <code>frontend-maven-plugin</code> wiring — and each step is guarded by
+<code>hashFiles(&#8230;&#8203;)</code>, so deleting a contract directory doesn&#8217;t require a workflow edit. Their loops over
+<code><strong>-async-api-v</strong>.yaml</code> and <code><strong>-v</strong>.graphqls</code> mean a new contract version needs no workflow change either.</p>
+<div class="literalblock">
+<div class="content">
+<pre>One detail the merge step protects by accident and would break if simplified: Voyager's page loads
+`voyager.standalone.js` and `voyager.css` by relative path, so those files must travel with `index.html`. Copying
+whole directories preserves that; copying only `index.html` files would publish a blank graph.</pre>
+</div>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>  When `frontend: hilla`, `ci.tests` is `full` and the web module has a `playwright.config.ts` (written by
+  xref:skills/iru-setup-java-springboot-hilla.adoc[]), the `build` job also gets a `Frontend UI tests` step (installs
+  Chromium and runs `npx playwright test` in the web module with `UI_SCREENSHOTS_DIR` pointing at the workspace's
+  `.ui-screenshots/`) and an `Upload UI screenshots` step (`if: always()`, 7-day `ui-screenshots` artifact,
+  `if-no-files-found: ignore`), per the catalog's UI contract (see
+  xref:guides/building-user-interfaces.adoc[Building user interfaces]). When `.ui-quality.yml` sets `accessibility: none`, no accessibility report is collected or uploaded and no accessibility-only job or step is emitted. Both steps are dropped otherwise; with
+  `ci.tests: unit` the UI tests stay a local stage so no Chromium download is paid on every run.
+* `.github/workflows/deploy.yml` — with `id-token: write`, a concurrency group per environment that never cancels
+  in progress, the GitHub Environment as the approval gate, buildpack image build and push, and `tofu apply` of the
+  previously produced plan file.
+* `.github/workflows/deploy.yml` when rolling deployments are enabled (and the strategy is not `rolling`) — jobs
+  `build-image`, `deploy-green` (apply at 0 % traffic), `smoke-candidate` (health-check the candidate URL), `shift`
+  (step through the manifest's percentages with the metric gate; omitted for `advance: manual`) and `rollback`
+  (return traffic to the stable version on any failure), in the same per-environment concurrency group as
+  `promote.yml` and `undeploy.yml`. Per-runtime variants authenticate and drive ECS (weighted target groups on the ALB
+  listener), Cloud Run (revision tags and traffic percentages) or Argo Rollouts (`kubectl argo rollouts`).
+* `.github/workflows/promote.yml` — only with rolling deployments and a strategy other than `rolling`: a `promote`
+  job that advances the rollout one step or rolls it back or aborts it, deliberately without Environment reviewers.
+* `.github/workflows/undeploy.yml` — with the typed-confirmation check, the same concurrency group as `deploy.yml`
+  so the two can never run at once, and separate `stop` and `destroy` paths; with rolling deployments it resets the
+  traffic split first.
+* `.github/workflows/security.yml` — a `dependency-review` job (pull requests only), on Gradle a
+  `dependency-submission` job, a `codeql` job (matrix
+  `java-kotlin`, plus `javascript-typescript` when `frontend: hilla`), an `osv-scanner` job (the
+  `google/osv-scanner-action` reusable workflow), and a `gitleaks` job (full checkout history) — each job present
+  only when its `security-*` flag is `yes`. If all four flags are `no`, the file is skipped entirely rather than
+  written with no jobs.
+* `.github/dependabot.yml` — always generated: grouped weekly updates for `maven` (or `gradle`), `docker`, and `github-actions`,
+  plus an `npm` entry (directory set to the real web module, normally `/boot`) whenever the manifest's `frontend`
+  isn't `none`, and a further `npm` entry per documentation toolchain (`docs/`, `apis/messaging/docs/`,
+  `apis/graphql-server/docs/`) that already has its own committed `package-lock.json`.
+* A report including the full table of required repository secrets, environment secrets, environment variables, and
+  GitHub Environments — plus the settings that are easy to miss: GitHub Pages served from `gh-pages` (only when `ci.pages: yes`), an OIDC trust
+  policy scoped to the repository *and* the environment, and (for `security.yml`) Code scanning and Dependency
+  graph enabled in repository settings so CodeQL and dependency review have somewhere to report into. The report also
+  states whether rolling deployments were enabled (strategy, advance, steps, bake minutes), whether the run created or updated the workflows, the action taken per file (created / updated / replaced /
+  kept as is, with each mismatch for kept files), how `visibility`, `ci.tests` and `ci.pages` were resolved, and the
+  Actions-minutes note for private/internal repositories.</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The generated files' bytes come from template files under <code>templates/</code> (and, where a template needs variant-specific notes, <code>reference/</code>) in <code>.claude/skills/iru-setup-java-springboot-github-workflows/</code>; the skill reads only the files for the variant it resolved, not the whole set, which keeps its <code>SKILL.md</code> small.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-setup-java-springboot-github-workflows"] --> B["Step 0: Read the manifest; survey the reactor,\nSonar config, Antora setup, infra/envs,\nGitHub Environments, compose stack weight"]
+    B --> BL["Resolve language and build tool:\njava+maven, kotlin+maven or kotlin+gradle\n(the disk wins over the manifest)"]
+    BL --> B2["Resolve CI choices (visibility, sonar,\nci-tests, pages); announce scratch vs update"]
+    B2 -- compose stack too heavy and ci-tests full --> C["Flag now; offer a larger runner\nor a per-module IT matrix"]
+    B2 -- a workflow file already exists --> D{"Per file: Update /\nKeep as is / Replace / Stop?\n(or on-existing)"}
+    D -- stop --> STOP[Stop without changing any file]
+    D -- update, keep or replace --> E
+    B2 --> E["Step 1: Write build.yml\n(unit vs full tests, Pages vs artifact)\n(build job + main-branch-only docs job:\nMaven site, OpenAPI/protobuf docs, AsyncAPI\nand GraphQL html, Antora, merge into ./doc)"]
+    C --> E
+    E --> F["Step 2: Write deploy.yml\n(OIDC, image build, plan then apply, smoke check;\nwhen rolling is enabled: Step 2b staged rollout\nwith build, deploy at 0 percent, smoke test,\nshift with metric gate, automatic rollback)"]
+    F -- "rolling enabled and strategy is not rolling" --> F2["Step 2c: Write promote.yml\n(advance, roll back or abort a rollout;\nstate read from the cloud)"]
+    F -- "rolling disabled or strategy rolling" --> G
+    F2 --> G["Step 3: Write undeploy.yml\n(typed confirmation, stop vs destroy;\nresets the traffic split first when rolling)"]
+    G --> G2["Step 3b: Write security.yml\n(dependency-review, CodeQL, OSV-Scanner,\ngitleaks - each gated by a security-* flag)\nand always write dependabot.yml"]
+    G2 --> H["Step 4: Assemble the secrets,\nvariables, and environments table"]
+    H --> I["Step 5: Validate — YAML parses, actionlint,\naction versions current, secret names consistent;\nMaven or Gradle commands verified locally via iru-gate-runner"]
+    I --> J["Step 6: Report files, gaps,\nand review warnings"]</div></div>
+<div class="paragraph">
+<p><code>deploy.yml</code> and <code>undeploy.yml</code> are deliberately never triggered as a test. The skill instead recommends a dry run of
+<code>build.yml</code> on a throwaway branch, and a first <code>deploy.yml</code> run against <code>dev</code> only, watched to completion.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-setup-java-springboot-pom.html" class="xref page">Setup Java Spring Boot Poms</a> — Step 0 (conditional), only offered when the survey finds the
+pom&#8217;s (or Gradle build&#8217;s) Sonar wiring missing although <code>sonar.mode</code> isn&#8217;t <code>none</code>; the skill reports the drift and
+offers to re-run it rather than generating a Sonar step that is certain to fail.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Otherwise it reads <code>springboot-stack.yml</code> and surveys the repository, then writes workflow YAML.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-springboot-rolling-deployments.html" class="xref page">Spring Boot Rolling Deployments</a> — when enabling or disabling rolling deployments on an existing
+service, it re-runs this skill so <code>deploy.yml</code> is regenerated and <code>promote.yml</code> added or removed.</p>
+</li>
+<li>
+<p><a href="iru-setup-java-springboot.html" class="xref page">Setup Java Spring Boot</a> — Step 8, build/deploy/promote/undeploy/security workflows, skipped when ci is no, via the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> agent.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also runs standalone (<code>/iru-setup-java-springboot-github-workflows</code>).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="../agents/iru-gate-runner.html" class="xref page"><code>iru-gate-runner</code></a> — spawned in Step 5 to run the workflow&#8217;s Maven (or
+Gradle) commands locally first, on the principle that a workflow whose commands were never run locally is a guess.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-setup-java-springboot-github-workflows/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Swift Code One Task :: AI Catalog</title>
+    <meta name="description" content="Implements one Swift task from a plan in a package, Apple app or swift-argument-parser CLI, applying Swift 6 conventions, then checking it off.">
+    <meta name="keywords" content="iru-swift-code-one-task, claude code skill, swift, ios, uikit, visionos, macos appkit, swiftui mvvm mvc, swift cli tool, argument parser, xcodebuild compile check, implement plan task">
+    <meta name="generator" content="Antora 3.1.15">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+<link rel="icon" type="image/svg+xml" href="../../../_/img/logo.svg">
+  </head>
+  <body class="article">
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true}); </script><header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="../../.."><img src="../../../_/img/logo.svg" alt="AI Catalog" class="navbar-brand-logo">AI Catalog</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu" style="display: none;">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="ai-catalog" data-version="1.0.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="../index.html">AI Catalog</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">AI Catalog</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Guides</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/claude-md.html">The CLAUDE.md file</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/catalog-architecture.html">Catalog architecture</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/common-workflows.html">Common workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/building-user-interfaces.html">Building user interfaces</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/rolling-deployments.html">Rolling deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-skills-and-agents.html">Creating and updating skills and agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/creating-tickets.html">Creating GitHub issues and Jira tickets</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/extending-the-catalog.html">Extending the skills and agents catalog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/plugins.html">Plugins</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/authoring-effective-instructions.html">Authoring effective instructions</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/packaging-and-distribution.html">Packaging and distributing skills, agents, and CLAUDE.md</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/performance-and-token-budget.html">Performance and token budget</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../guides/provider-comparison.html">Claude Code vs. GitHub Copilot vs. OpenAI Codex</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Skills</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-bump-version.html">Android Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task.html">Android Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-one-task-group.html">Android Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-code-quality.html">Android Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-coverage.html">Android Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-dokka.html">Android Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-generate-all-tests.html">Android Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-android-test.html">Android Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-build-docs.html">Build Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-license.html">Check License</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-check-security.html">Check Security</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code.html">Code</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-code-one-task-group.html">Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-github-issue.html">Create GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-create-jira-ticket.html">Create Jira Ticket</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task.html">Database Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-database-code-one-task-group.html">Database Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task.html">Django Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-django-code-one-task-group.html">Django Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-bump-version.html">.NET Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task.html">.NET Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-one-task-group.html">.NET Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-code-quality.html">.NET Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-coverage.html">.NET Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-docfx.html">.NET DocFX</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-generate-all-tests.html">.NET Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-dotnet-test.html">.NET Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-draft-github-issue.html">Draft GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-explore.html">Explore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task.html">FastAPI Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-fastapi-code-one-task-group.html">FastAPI Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-generate-skill-docs.html">Generate Skill Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-bump-version.html">Go Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task.html">Go Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-one-task-group.html">Go Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-code-quality.html">Go Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-coverage.html">Go Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-godoc.html">Go Godoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-go-test.html">Go Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-issue.html">Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-bump-version.html">Java Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task.html">Java Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-one-task-group.html">Java Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-code-quality.html">Java Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-coverage.html">Java Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-generate-all-tests.html">Java Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-javadoc.html">Java Javadoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task.html">Java Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-code-one-task-group.html">Java Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-springboot-performance-tests.html">Java Spring Boot Performance Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-java-test.html">Java Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-jira-custom-context.html">Jira Custom Context</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-bump-version.html">KMP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task.html">KMP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-one-task-group.html">KMP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-code-quality.html">KMP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-coverage.html">KMP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-dokka.html">KMP Dokka</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-generate-all-tests.html">KMP Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kmp-test.html">KMP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-briefing.html">Knowledge Briefing</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-compact.html">Knowledge Compact</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-complete.html">Knowledge Complete</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-process-inbox.html">Knowledge Process Inbox</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-setup.html">Knowledge Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-issue.html">Knowledge to Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-knowledge-to-jira.html">Knowledge to Jira</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-code-quality.html">Kotlin Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-kdoc.html">Kotlin KDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task.html">Kotlin Spring Boot Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-kotlin-springboot-code-one-task-group.html">Kotlin Spring Boot Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task.html">NestJS Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nestjs-code-one-task-group.html">NestJS Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task.html">Next.js Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-nextjs-code-one-task-group.html">Next.js Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-bump-version.html">PHP Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task.html">PHP Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-one-task-group.html">PHP Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-code-quality.html">PHP Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-coverage.html">PHP Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-phpdoc.html">PHP PHPDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-php-test.html">PHP Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-plan.html">Plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-description.html">PR Description</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-pr-review.html">PR Review</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-bump-version.html">Python Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-code-quality.html">Python Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-coverage.html">Python Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-docstrings.html">Python Docstrings</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-python-test.html">Python Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task.html">Quarkus Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-quarkus-code-one-task-group.html">Quarkus Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-bump-version.html">React Native Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task.html">React Native Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-react-native-code-one-task-group.html">React Native Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-release.html">Release</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-review-github-issue.html">Review GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-bump-version.html">Rust Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task.html">Rust Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-one-task-group.html">Rust Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-code-quality.html">Rust Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-coverage.html">Rust Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-rustdoc.html">Rust Rustdoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-rust-test.html">Rust Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-app.html">Setup Android App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-github-workflows.html">Setup Android GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-gitignore.html">Setup Android Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-library.html">Setup Android Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-android-repository.html">Setup Android Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-angular-web.html">Setup Angular Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-antora.html">Setup Antora</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-apple-app.html">Setup Apple App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-changelog.html">Setup Changelog</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-github-workflows.html">Setup CLI GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-cli-repository.html">Setup CLI Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-cli.html">Setup Dotnet Cli</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-dotnet-gitignore.html">Setup Dotnet Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-cli.html">Setup Go CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-go-gitignore.html">Setup Go Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-ionic-app.html">Setup Ionic App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-github-workflows.html">Setup Java GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-gitignore.html">Setup Java Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library.html">Setup Java Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-library-repository.html">Setup Java Library Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot.html">Setup Java Spring Boot</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-apis.html">Setup Java Spring Boot APIs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-github-workflows.html">Setup Java Spring Boot GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-hilla.html">Setup Java Spring Boot Hilla</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-modules.html">Setup Java Spring Boot Modules</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-platform.html">Setup Java Spring Boot Platform</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-pom.html">Setup Java Spring Boot Poms</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-java-springboot-testcontainers.html">Setup Java Spring Boot Testcontainers</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-app.html">Setup KMP App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-github-workflows.html">Setup KMP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-gitignore.html">Setup KMP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-kmp-repository.html">Setup KMP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-app.html">Setup macOS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-github-workflows.html">Setup macOS GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-macos-repository.html">Setup macOS Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nestjs-app.html">Setup NestJS App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-nextjs-web.html">Setup Next.js Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-github-workflows.html">Setup PHP GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-gitignore.html">Setup PHP Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-laravel.html">Setup PHP Laravel</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-prestashop.html">Setup PHP PrestaShop</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-repository.html">Setup PHP Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-php-wordpress.html">Setup PHP WordPress</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-django.html">Setup Python Django</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-fastapi.html">Setup Python FastAPI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-github-workflows.html">Setup Python GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-gitignore.html">Setup Python Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-python-repository.html">Setup Python Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-github-workflows.html">Setup Quarkus GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-repository.html">Setup Quarkus Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-quarkus-service.html">Setup Quarkus Service</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-native-app.html">Setup React Native App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-react-web.html">Setup React Web</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-readme.html">Setup Readme</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-repository.html">Setup Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-cli.html">Setup Rust CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-rust-gitignore.html">Setup Rust Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-cli.html">Setup Swift CLI</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-github-workflows.html">Setup Swift GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-gitignore.html">Setup Swift Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-library.html">Setup Swift Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-swift-repository.html">Setup Swift Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-github-workflows.html">Setup TypeScript GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-gitignore.html">Setup TypeScript Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-library.html">Setup TypeScript Library</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-typescript-repository.html">Setup TypeScript Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-app.html">Setup Windows App</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-github-workflows.html">Setup Windows GitHub Workflows</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-gitignore.html">Setup Windows Gitignore</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-setup-windows-repository.html">Setup Windows Repository</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-split-github-issue.html">Split GitHub Issue</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-springboot-rolling-deployments.html">Spring Boot Rolling Deployments</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-bump-version.html">Swift Bump Version</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task.html">Swift Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-one-task-group.html">Swift Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-code-quality.html">Swift Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-coverage.html">Swift Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-docc.html">Swift DocC</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-generate-all-tests.html">Swift Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-swift-test.html">Swift Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-bump-version.html">TypeScript Bump Version</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task.html">TypeScript Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-one-task-group.html">TypeScript Code One Task Group</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-code-quality.html">TypeScript Code Quality</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-coverage.html">TypeScript Coverage</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-generate-all-tests.html">TypeScript Generate All Tests</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-test.html">TypeScript Test</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-typescript-tsdoc.html">TypeScript TSDoc</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-docs.html">Update Docs</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-update-java-springboot-documentation.html">Update Java Spring Boot Documentation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task.html">Windows Code One Task</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="iru-windows-code-one-task-group.html">Windows Code One Task Group</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Agents</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/overview.html">Agents</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-gate-runner.html">Gate Runner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-isolated-skill-executor.html">Isolated Skill Executor</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../agents/iru-change-summarizer.html">Change Summarizer</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../reference.html">Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">AI Catalog</span>
+    <span class="version">1.0.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="../index.html">AI Catalog</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">AI Catalog</a></li>
+    <li>Skills</li>
+    <li><a href="iru-swift-code-one-task.html">Swift Code One Task</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/albertoirurueta/ai-catalog/edit/main/docs/modules/ROOT/pages/skills/iru-swift-code-one-task.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Swift Code One Task</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This documentation was generated with the assistance of AI. Please report any inaccuracies.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Carry out a single task&#8217;s implementation, tests, and checkbox update against the real codebase — nothing else.
+This is the narrowest execution unit in the <code>iru-code</code> pipeline: <code>iru-swift-code-one-task-group</code> calls it once
+per task in a bucket (potentially many at once, in parallel agents via <code>iru-isolated-skill-executor</code>).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose"><a class="anchor" href="#_purpose"></a>Purpose</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>iru-swift-code-one-task</code> is the Swift-specific implementation worker <code>iru-swift-code-one-task-group</code> calls once
+per task. Given one task&#8217;s own text (what to build, its exact <code>implementation_plan.md</code> checkbox line(s), and any
+sub-tasks), it first detects the repository&#8217;s Swift project shape and the target the task belongs to, loads only
+the matching guidance from its own bundled <code>reference/</code> directory, re-checks the current code state, implements
+exactly what&#8217;s specified, and writes/updates tests. If the task didn&#8217;t stop on a blocker, it compile-checks the
+touched target, then immediately checks off that task&#8217;s own checkbox (and its sub-tasks') in
+<code>implementation_plan.md</code> with a "group validation pending" note, before reporting back — so an interrupted run
+doesn&#8217;t re-attempt work that already landed. License headers, DocC audits, the full test suite, coverage, and
+code-quality checks all happen once per bucket in <code>iru-swift-code-one-task-group</code>, not here. It uses a medium
+model on purpose: the plan already carries the hard reasoning, so this skill only executes one task&#8217;s
+implementation against code agreements that live in <code>reference/</code> rather than being re-derived per task.</p>
+</div>
+<div class="paragraph">
+<p>For a task that adds or changes a screen, component or list in an app it also applies the catalog&#8217;s UI contract (see <a href="../guides/building-user-interfaces.html" class="xref page">Building user interfaces</a>): it writes the <code>Screen &gt; Region &gt; Component</code> decomposition first, builds leaves first with value-type state plus closures and virtualized collections over keyed view-model state, and writes the UI tests that capture every <code>.ui-quality.yml</code> direction x theme combination and run the accessibility audit. A command-line tool has no UI, so none of this applies there.</p>
+</div>
+<div class="sect2">
+<h3 id="_package_vs_app_shape_and_target_detection"><a class="anchor" href="#_package_vs_app_shape_and_target_detection"></a>Package-vs-app shape and target detection</h3>
+<div class="paragraph">
+<p>Before reading anything, Step 1 works out which of two shapes the repository is:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>A plain Swift Package</strong> — a <code>Package.swift</code> at or near the root with no <code>.xcodeproj</code>/generator manifest
+alongside it. Code lives under <code>Sources/&lt;Target&gt;/</code> and <code>Tests/&lt;Target&gt;Tests/</code>, one pair per <code>Package.swift</code>
+target.
+A <strong>command-line tool</strong> is a plain package whose <code>Package.swift</code> declares an <code>.executableTarget</code> depending on
+<code>ArgumentParser</code> (reported by <code>iru-explore</code> as <code>Project type: cli-tool (swift)</code>). In the <code>iru-setup-swift-cli</code>
+layout the logic lives in a <code>Sources/&lt;Bin&gt;Kit/</code> library, <code>Sources/&lt;Bin&gt;/</code> holds thin swift-argument-parser
+commands, and the tests are <code>Tests/&lt;Bin&gt;KitTests/</code> (in-process) plus <code>Tests/&lt;Bin&gt;CLITests/</code> (runs the built binary).</p>
+</li>
+<li>
+<p><strong>An Apple app project</strong> — an <code>.xcodeproj</code> exists or is generated, via <code>project.yml</code> (XcodeGen), <code>Project.swift</code>
+(Tuist), or, with neither manifest, a hand-maintained <code>*.xcodeproj</code> whose <code>project.pbxproj</code> is the source of
+truth. An app project frequently also has a local <code>Packages/Core</code> package holding testable logic behind thin,
+per-platform UI targets.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For an app project it also detects, once from the repository:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>The layout and the touched target&#8217;s platform</strong> — <code>App/Sources/</code> with a single macOS app target is the
+<code>iru-setup-macos-app</code> layout (a <strong>macOS-only desktop app</strong>, compile-checked with <code>platform=macOS</code>, no simulator);
+<code>Targets/&lt;Platform&gt;/Sources/</code> is the <code>iru-setup-apple-app</code> multiplatform layout, where the folder names the target
+(<code>Targets/iOS/</code> covers iPhone <strong>and</strong> iPad, plus <code>Targets/macOS/</code>, <code>Targets/watchOS/</code>, <code>Targets/visionOS/</code>). The
+platform is confirmed against the manifest (XcodeGen <code>platform:</code>/<code>supportedDestinations:</code>, Tuist <code>destinations:</code>)
+or the target&#8217;s <code>SDKROOT</code>. iPadOS is an iOS target whose destinations include iPad; a visionOS destination on an
+iOS target, or a standalone <code>xros</code> target, is visionOS.</p>
+</li>
+<li>
+<p><strong>The UI framework</strong> of the touched target — <code>swiftui</code> (a <code>@main struct &#8230;&#8203;: App</code> with <code>some Scene</code>), <code>uikit</code> (a
+<code>UIApplicationDelegate</code>/<code>UIWindowSceneDelegate</code> with <code>UIViewController</code> subclasses and no SwiftUI <code>App</code>) or
+<code>appkit</code> (an <code>NSApplicationDelegate</code> with <code>NSWindowController</code>/<code>NSViewController</code> subclasses). Hosted content in
+the other framework doesn&#8217;t change the answer; visionOS and watchOS targets are SwiftUI.</p>
+</li>
+<li>
+<p><strong>The architecture</strong> from the layout contract (<code>Packages/Core/Sources/Core/ViewModels/</code> → MVVM,
+<code>&#8230;&#8203;/Controllers/</code> → MVC; neither → MV for SwiftUI, MVC for UIKit/AppKit; both → decided per target, UIKit/AppKit
+targets in <code>Controllers/</code> and SwiftUI targets in <code>ViewModels/</code>, the scaffolded UIKit-MVC + SwiftUI-platforms mix).
+SwiftUI uses MVVM or MV, UIKit/AppKit MVC or MVVM; a task never switches it. The 80% coverage bar covers
+<code>Packages/Core</code> only; the app targets are "not measured".</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Logic an app task adds goes to <code>Packages/Core</code> (Foundation + Observation only, no SwiftUI/UIKit/AppKit import) in the
+detected architecture&#8217;s folder; only views, view controllers, window/scene controllers, menus/commands, the
+composition root (<code>App</code>, <code>AppDelegate</code>, <code>SceneDelegate</code>), background-task/notification registration, and protocol
+implementations that must touch a UI or platform framework belong in the app target.</p>
+</div>
+<div class="paragraph">
+<p>In a command-line tool, logic, output and errors go to <code>&lt;Bin&gt;Kit</code>; a new subcommand&#8217;s thin struct (flags, command
+metadata and one call into the Kit) goes to <code>Sources/&lt;Bin&gt;/</code> and is registered in the root&#8217;s <code>subcommands:</code>.</p>
+</div>
+<div class="paragraph">
+<p>It then works out which <strong>target</strong> the task&#8217;s file paths or description name — a path under <code>Sources/&lt;Target&gt;/</code>
+or <code>Packages/Core/Sources/&lt;Target&gt;/</code> names that target directly; a path under a per-platform app target directory
+(read from the manifest&#8217;s <code>targets:</code>/<code>Target(&#8230;&#8203;)</code> list rather than guessed) names that target; otherwise the
+skill infers from the described behavior (reusable logic with no UI import vs. a SwiftUI/UIKit/AppKit view for
+one platform), defaulting to the package&#8217;s main target (or <code>Packages/Core</code>) when genuinely ambiguous. This
+package/app choice, plus the target, decides both which <code>reference/</code> files apply and Step 5&#8217;s compile-check
+command (<code>swift build --build-tests</code> vs. <code>xcodebuild build-for-testing -scheme &lt;AppName&gt;-&lt;Platform&gt;</code> with
+<code>-destination 'generic/platform=&lt;P&gt; Simulator'</code> for an iOS/iPadOS, watchOS or visionOS target, or <code>platform=macOS</code>
+for a macOS one). The generic destination needs no installed simulator runtime, so a missing visionOS runtime never
+makes the compile-check "unavailable".</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_the_bundled_reference_library"><a class="anchor" href="#_the_bundled_reference_library"></a>The bundled reference library</h3>
+<div class="paragraph">
+<p>This skill ships a <code>reference/</code> directory alongside its <code>SKILL.md</code>, holding this catalog&#8217;s <strong>general Swift 6
+code agreements</strong>. It is read by <strong>progressive disclosure</strong>: <code>reference/README.md</code> routes to the rest,
+<code>reference/code-style.md</code> is always read, and the others only when the task&#8217;s shape calls for them.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0001%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">File</th>
+<th class="tableblock halign-left valign-top">Read when</th>
+<th class="tableblock halign-left valign-top">Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>code-style.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Always</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Swift 6 strict concurrency (<code>Sendable</code>, actors, <code>@MainActor</code>, structured concurrency, <code>nonisolated</code>, avoiding
+<code>@unchecked Sendable</code>), value types first, <code>guard</code> early exits, access control (<code>public</code>/<code>package</code>/<code>internal</code>),
+typed throws with <code>enum: Error</code> error types, naming per the Swift API Design Guidelines, and member ordering
+(<code>// MARK:</code> sections).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>docc.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds or changes a type, or any <code>public</code>/<code>package</code>/<code>internal</code> member</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DocC documentation comment conventions.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>testing.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task writes or updates tests — nearly every task</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Swift Testing/XCTest conventions: Swift Testing by default, XCTest only for XCUITest and <code>measure</code>; logic tests in <code>Packages/Core</code> with fake services and passive views; macOS XCUITest on the real desktop session; iOS/iPadOS/visionOS XCUITest on a simulator (<code>--uitesting</code> launch arguments, accessibility identifiers, SpringBoard permission alerts, <code>performAccessibilityAudit</code>).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>swiftui.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds or changes a SwiftUI <code>View</code> or view model</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SwiftUI view composition conventions, plus pointers to <code>macos.md</code>, <code>ios.md</code>, <code>visionos.md</code> and <code>architecture.md</code> for platform scenes and view-model placement.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds or changes a view model, an MVC controller or its view protocol, a service protocol/test double, or decides whether logic goes in <code>Packages/Core</code> or the app target — every app task (macOS, iOS/iPadOS, visionOS) not confined to one existing function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Layout/platform detection table, MVVM vs. MVC contract, the UI-free <code>Packages/Core</code> boundary, fakes and passive views for testing.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>macos.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task touches a macOS app target: scenes/windows, menus/commands/shortcuts, Settings, <code>MenuBarExtra</code>, file access (panels, sandbox, security-scoped bookmarks), entitlements/hardened runtime</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Mac-only scene, menu, file-access and sandbox conventions.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>appkit.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds or changes AppKit code: <code>NSWindowController</code>/<code>NSViewController</code>/<code>NSView</code>, target-action, delegates/data sources, <code>NSMenu</code>, Auto Layout in code, AppKit MVVM via Observation tracking, <code>NSHostingView</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AppKit conventions for macOS apps.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ios.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task touches an iOS/iPadOS app target: <code>scenePhase</code>/lifecycle, background tasks, notifications, permission prompts, the privacy manifest, widgets/App Intents, iPad windows/menu bar/pointer/keyboard, size classes, Dynamic Type, Keychain secrets</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">iOS/iPadOS conventions: suspension model, <code>BGTaskScheduler</code>/background <code>URLSession</code>, <code>Info.plist</code> usage-description keys, <code>PrivacyInfo.xcprivacy</code> required-reason APIs, accessibility.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uikit.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds or changes UIKit code: app/scene delegates, <code>UIViewController</code>/<code>UIView</code>, Auto Layout in code, navigation/tab/split containers, diffable collection views, traits, UIKit MVVM via Observation tracking, <code>UIHostingController</code> interop</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Programmatic scene-based UIKit conventions, diffable data sources with compositional layout, <code>UIAction</code>, MVC over a UI-free Core controller and MVVM via Observation tracking (<code>updateProperties()</code> on iOS 26+, <code>UIObservationTrackingEnabled</code> on iOS 18).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>visionos.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task touches a visionOS target or destination: windows, volumes, immersive spaces, ornaments, hover effects, <code>RealityView</code>/<code>Model3D</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SwiftUI-only visionOS conventions: <code>ImmersiveSpace</code>/<code>openImmersiveSpace</code>, ornaments, hover effects, <code>RealityView</code> basics.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cli.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The package is a command-line tool and the task adds or changes a command, flag, output, error/exit code, prompt, signal/cleanup, child process or the CLI tests</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Where code goes (<code>&lt;Bin&gt;Kit</code> vs thin commands), swift-argument-parser patterns, implementing the contract in a new command, testing the executable, Linux portability.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cli-contract.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">With <code>cli.md</code>, whenever a CLI task changes what a caller observes: stdout/stderr, exit codes, <code>--format</code>/JSON, colour, prompts, <code>--dry-run</code>/<code>--yes</code>, <code>schema</code>/help</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The catalog&#8217;s shared, language-agnostic CLI contract (streams, exit codes, TTY/colour, machine output, safety and idempotency, configuration, self-description, startup).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ui-contract.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds or changes a screen, component, list or other UI (any UI framework)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The catalog-wide UI rules: decomposition, composition, inputs/events, virtualized collections, UI tests, screenshots and accessibility.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ui-implementation.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">With <code>ui-contract.md</code>, always for UI tasks; never for a command-line tool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The contract mapped onto SwiftUI/UIKit/AppKit, XCUITest and the shared <code>UIScreenshots.swift</code> helper.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-api.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task changes a <code>public</code> declaration in a library package&#8217;s target</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Semver-stable package API conventions, availability, <code>Package.swift</code> hygiene.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>app-structure.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task adds a new app target, touches the generator manifest, or wires shared logic between <code>Packages/Core</code>
+and a platform target</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Per-platform app structure conventions.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>A new screen in a SwiftUI macOS app reads <code>architecture.md</code> + <code>macos.md</code> + <code>swiftui.md</code>; one in an AppKit app reads <code>architecture.md</code> + <code>macos.md</code> + <code>appkit.md</code> (plus <code>swiftui.md</code> only when it hosts SwiftUI content). A new screen in a SwiftUI iOS app reads <code>architecture.md</code> + <code>ios.md</code> + <code>swiftui.md</code>; in a UIKit iOS app <code>architecture.md</code> + <code>ios.md</code> + <code>uikit.md</code> (plus <code>swiftui.md</code> only when it hosts SwiftUI); a visionOS scene reads <code>architecture.md</code> + <code>visionos.md</code> + <code>swiftui.md</code>. A new command in a command-line tool reads <code>cli.md</code> + <code>cli-contract.md</code> + <code>testing.md</code> (and <code>docc.md</code> for its Kit types), never the app files.</p>
+</div>
+<div class="paragraph">
+<p>Every file states the same override: the rules are the default for <strong>new</strong> code, and a file that consistently
+does something else wins — the divergence is reported in Step 8 rather than silently restyled. If <code>reference/</code>
+is missing entirely, the skill falls back to this repository&#8217;s own <code>CLAUDE.md</code> conventions and the surrounding
+code&#8217;s style, and says so in its report.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_purpose_group"><a class="anchor" href="#_purpose_group"></a>Purpose group</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="../index.html#group-swift" class="xref page">Swift Development Tooling</a></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_plugin"><a class="anchor" href="#_plugin"></a>Plugin</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Shipped by the <code>iru-swift</code> plugin of the <code>ai-catalog</code> marketplace (install with <code>/plugin install iru-swift@ai-catalog</code>; see <a href="../guides/plugins.html" class="xref page">Plugins</a>).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_invocation"><a class="anchor" href="#_invocation"></a>Invocation</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/iru-swift-code-one-task &lt;task description&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_inputs"><a class="anchor" href="#_inputs"></a>Inputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 14.2857%;">
+<col style="width: 42.8571%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Argument</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>task description</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The task&#8217;s full text as written in <code>implementation_plan.md</code> — what to build, the named file(s)/type(s)/
+function(s), the described behavior, its exact <code>implementation_plan.md</code> checkbox line(s) for itself and its
+sub-tasks, and any sub-tasks, plus any relevant "Current code state" context. Normally supplied by
+<code>iru-swift-code-one-task-group</code> dispatching one task in a bucket at a time.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None — this skill has nothing to do without a task description.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>reference/</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The skill&#8217;s own bundled reference directory (<code>README.md</code>, <code>code-style.md</code>, <code>docc.md</code>, <code>testing.md</code>,
+<code>swiftui.md</code>, <code>package-api.md</code>, <code>app-structure.md</code>, <code>architecture.md</code>, <code>macos.md</code>, <code>appkit.md</code>, <code>ios.md</code>,
+<code>uikit.md</code>, <code>visionos.md</code>, <code>cli.md</code>, <code>cli-contract.md</code>, <code>ui-contract.md</code>, <code>ui-implementation.md</code>). If missing, the skill falls back to <code>CLAUDE.md</code> and the
+surrounding code&#8217;s style, and says so in its report rather than guessing at what the reference would have said.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bundled with the skill</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Source and test files created/modified per the task, following the bundled <code>reference/</code> agreements —
+strict-concurrency-clean Swift 6, value types first, narrow access control, typed throws, <code>// MARK:</code>-grouped
+member order, full DocC on public/package members — plus this repository&#8217;s own <code>CLAUDE.md</code> conventions where
+they are more specific, and the surrounding file&#8217;s existing style wherever it consistently differs.</p>
+</li>
+<li>
+<p>Swift Testing (or XCTest where warranted) tests added/updated covering the new/changed behavior, including a
+case per documented <code>- Throws:</code> — not run by this skill; the caller runs the suite once for the whole bucket.</p>
+</li>
+<li>
+<p>For a UI task: component tests per visual state capturing each <code>.ui-quality.yml</code> direction x theme (<code>UIScreenshots.render</code>/<code>capture</code>), screen/flow XCUITests with <code>--fixture</code> data and captures, and the screen&#8217;s <code>performAccessibilityAudit()</code> test honouring the configured level; the shared <code>UIScreenshots.swift</code> helper is added to the test target when missing. Captures land under <code>.ui-screenshots/&lt;kind&gt;/&lt;Id&gt;/&lt;state&gt;--&lt;direction&gt;--&lt;theme&gt;.png</code> when the group&#8217;s UI stage runs them.</p>
+</li>
+<li>
+<p>A compile-check of the touched target (<code>swift build --build-tests</code> — also for a command-line tool, or <code>xcodebuild build-for-testing</code> against
+<code>platform=macOS</code> or a generic <code>generic/platform=&lt;P&gt; Simulator</code> destination for iOS/visionOS/watchOS, after regenerating the project if the manifest changed) — passed, fixed, found unrelated to this task, or reported
+unavailable.</p>
+</li>
+<li>
+<p><code>implementation_plan.md</code> with this task&#8217;s own checkbox (and its sub-tasks') checked off and a "group validation
+pending" note, written immediately once the task finishes cleanly — before this skill reports back. Left
+untouched if the task stopped on a blocker.</p>
+</li>
+<li>
+<p>A short summary handed back to the caller: project shape and target detected (plus, for an app, the layout, the target&#8217;s platform — macOS / iOS-iPadOS /
+visionOS —, its UI framework and the architecture), reference file(s) read, file(s)
+touched, tests added/updated, compile-check result, for a UI task the decomposition (one line per component: inputs, events, new or reused) and the UI tests and screenshot paths added, whether the run stopped on a blocker, and any deliberate
+deviation from <code>reference/</code>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_execution_flow"><a class="anchor" href="#_execution_flow"></a>Execution flow</h2>
+<div class="sectionbody">
+<div class="imageblock"><div class="mermaid content" style=" ">flowchart TD
+    A["Start /iru-swift-code-one-task\n(task description)"] --> B["Step 1: detect package vs. app shape\nand target (app: layout, platform macOS/iOS/\nvisionOS, SwiftUI/UIKit/AppKit, MVVM/MVC);\nread only needed reference/ files"]
+    B -- "reference/ missing" --> B2["Fall back to CLAUDE.md +\nsurrounding style; report it"]
+    B2 --> C
+    B --> C["Step 2: re-check current code state;\nnote existing concurrency/access/ordering style"]
+    C --> D["Step 3: implement exactly what the task\nspecifies (concurrency, access control, DocC, order;\nUI task: write the decomposition first)"]
+    D --> E["Step 4: write/update Swift Testing/XCTest\ntests (UI task: capture and accessibility\ntests too; not run here)"]
+    E --> F["Step 5: compile-check the touched target\n(swift build / xcodebuild build-for-testing)"]
+    F -- "fails on this task's own code" --> F2["Fix it"]
+    F2 --> G
+    F -- "fails outside task scope,\nor unavailable" --> F3["Note it; don't fix unrelated code"]
+    F3 --> G
+    F -- "passes" --> G{"Step 6: ambiguous, infeasible,\nor genuinely ambiguous shape?"}
+    G -- yes --> H["Stop; leave checkbox\nunchecked; report blocker to caller"]
+    G -- no --> I["Step 7: check off this task's\ncheckbox + 'validation pending' note"]
+    I --> J["Step 8: report outcome to caller:\nshape/target, files, tests, compile result, deviations"]</div></div>
+<div class="paragraph">
+<p>A conflict between <code>reference/</code> and the surrounding code is deliberately <strong>not</strong> a stop condition — the skill
+follows the surrounding code and reports the divergence in Step 8.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dependencies"><a class="anchor" href="#_dependencies"></a>Dependencies</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_invokes"><a class="anchor" href="#_invokes"></a>Invokes</h3>
+<div class="paragraph">
+<p>None — <code>iru-swift-code-one-task</code> is a leaf skill; it does not call any other skill in this catalog. It reads its
+own <code>reference/</code> directory and edits the code and test files the task names. License headers, DocC audits, the
+full test suite, coverage, and quality checks all happen once per bucket in <code>iru-swift-code-one-task-group</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_invoked_by"><a class="anchor" href="#_invoked_by"></a>Invoked by</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="iru-swift-code-one-task-group.html" class="xref page">Swift Code One Task Group</a> — Step 2, once per task in a bucket (concurrently, in a
+single batch of <code>Agent</code> calls, when the group is marked <code>Parallelizable: yes</code>; one at a time otherwise), via
+the <a href="../agents/iru-isolated-skill-executor.html" class="xref page"><code>iru-isolated-skill-executor</code></a> agent, passing that task&#8217;s
+full text including its exact checkbox line(s). That caller re-reads <code>implementation_plan.md</code> afterward to
+confirm the checkbox this skill already flipped landed, then replaces the "pending" note with the final
+validation outcome once the whole bucket&#8217;s validation passes.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_related_agents"><a class="anchor" href="#_related_agents"></a>Related agents</h3>
+<div class="paragraph">
+<p><code>iru-swift-code-one-task</code> itself does not spawn any Agent — it only reads its <code>reference/</code> files and edits the
+code/test files the task names.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_source"><a class="anchor" href="#_source"></a>Source</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-swift-code-one-task/SKILL.md"><code>SKILL.md</code> on GitHub</a> — the file this page was generated from. The bundled Swift code agreements live alongside it under <a href="https://github.com/albertoirurueta/ai-catalog/tree/main/.claude/skills/iru-swift-code-one-task/reference"><code>reference/</code></a>.</p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Made with ♥ from <strong>BCN</strong></p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+  </body>
+</html>
