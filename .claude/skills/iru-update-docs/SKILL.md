@@ -188,8 +188,11 @@ Report any Antora/Asciidoctor errors (broken `xref:`, malformed tables, bad Merm
 before finishing. Then, when a page you touched has a `[mermaid]` block, run the Mermaid check of
 `reference/mermaid.md` (`npm i --no-save mermaid@11 jsdom@31 puppeteer@25`, then `npm run validate:mermaid` or the
 repository's `scripts/mermaid/validate-mermaid.mjs modules --render`): the build does not parse Mermaid, so a broken
-diagram ships silently. Fix every diagram it reports in a page you touched; list failures in pages you did not touch
-without fixing them. When puppeteer cannot run, drop `--render` and say so. If Node isn't available or the build can't be run, say so explicitly and note the pages were
+diagram ships silently. When the repository has neither the script nor `scripts/mermaid/`, run the copy of an installed
+`iru-setup-antora`, `iru-update-antora` or `iru-build-docs` from `docs/`; with none installed, skip the check, open the
+touched pages of the built site to confirm every diagram drew, and recommend `/iru-update-antora` (it copies
+`scripts/mermaid/` into the repository). Fix every diagram it reports in a page you touched; list failures in pages you
+did not touch without fixing them. When puppeteer cannot run, drop `--render` and say so. If Node isn't available or the build can't be run, say so explicitly and note the pages were
 updated but not locally verified against a real build.
 
 ## Step 7 — Report
