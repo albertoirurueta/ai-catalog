@@ -37,6 +37,9 @@ jobs:
         working-directory: docs
         run: npx antora -v
 
+      - name: Show Python version (the Antora collector runs tools/build-packages.py, standard library only)
+        run: python3 --version
+
       - name: Build Antora docs
         working-directory: docs
         run: npx antora antora-playbook.yml
@@ -52,6 +55,13 @@ jobs:
           echo "build/site is ${size} KiB"
           if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
           if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
+
+      - name: Show attachments size
+        working-directory: docs
+        run: |
+          echo "Download packages (zips):"
+          find build/site -path '*/_attachments/*.zip' -exec du -k {} + | sort -n
+          echo "Total attachments: $(find build/site -path '*/_attachments/*.zip' -exec du -ck {} + | tail -1 | cut -f1) KiB"
 
       - name: Add .nojekyll
         run: touch ./docs/build/site/.nojekyll

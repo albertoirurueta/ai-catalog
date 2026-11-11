@@ -10,6 +10,10 @@ superseding the other.
 
 == Option 1 — copy the files directly
 
+For this catalog, the zip below is the copy path without cloning the repository.
+
+include::partial$download-catalog.adoc[]
+
 Drop the relevant `.claude/skills/<name>/`, `.claude/agents/<name>.md`, or `CLAUDE.md` content straight into
 the target repository, the way this catalog's own README already describes adopting one of its skills
 (xref:index.adoc[]: "copy the ones you need into another repository's `.claude/skills/` directory").
@@ -23,6 +27,24 @@ Best fit when:
 
 Tradeoff: there is no update mechanism. A fix or improvement made in one copy doesn't reach the others unless
 someone notices and re-copies it — this scales fine to a few repositories and poorly to dozens.
+
+== Option 1b — download the zip from the documentation
+
+Without cloning the repository, the documentation site offers ready-made zips:
+
+* `ai-catalog-skills-agents.zip`: every skill and agent of the catalog. It contains the `skills/` and `agents/`
+  folders, to be unzipped into the target repository's `.claude/` directory.
+* One zip per plugin (18 plugins, listed in xref:guides/plugins.adoc[]): the skills and agents of that plugin only,
+  with the same `skills/` and `agents/` layout.
+
+To install, unzip into `.claude/` of the repository (for example `unzip ai-catalog-skills-agents.zip -d .claude`) and
+commit the result, exactly as in Option 1.
+
+The zips are not committed. The Antora collector extension (`ext.collector` in `docs/antora.yml`) runs
+`tools/build-packages.py` during every documentation build and writes them into `modules/ROOT/attachments`, so they always
+reflect the catalog on the published branch (`main`). GitHub Pages is republished on every push to `main`; the
+`albertoirurueta/docs` site that includes this repository rebuilds nightly (03:00 UTC) and on demand, so its zips are at
+most about a day behind. To build them by hand: `python3 tools/build-packages.py --out <dir>`.
 
 == Option 2 — package as a plugin, distribute via a marketplace
 
@@ -44,6 +66,10 @@ a submission process to go through (for a public one), and namespacing to be min
 (`/plugin-name:skill-name` instead of a bare `/skill-name`).
 
 == This catalog ships both ways
+
+The zip is the copy path without cloning: download it and unzip it into `.claude/`.
+
+include::partial$download-catalog.adoc[]
 
 The catalog documents copying (Option 1) and also publishes itself as a plugin marketplace (Option 2), so either path
 works for its skills:
