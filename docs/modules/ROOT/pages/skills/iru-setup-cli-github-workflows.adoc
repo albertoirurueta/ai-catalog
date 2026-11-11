@@ -213,6 +213,7 @@ scaffolds (whose layout contract the templates assume), `iru-setup-windows-githu
 `iru-setup-macos-github-workflows` (where a desktop app belongs; the latter's `lcov_to_sonar_generic.py` is copied for
 Swift), the bump-version skills whose `x.(y+1).0-dev` convention `sync.yml` follows, and `iru-setup-readme` (told the
 workflow names and release asset names).
+It also recommends xref:skills/iru-update-antora.adoc[] (not called) when `docs/` exists without a committed `docs/package-lock.json`, since the docs job's `npm ci` and the `actions/setup-node` npm cache fail without one.
 
 === Invoked by
 

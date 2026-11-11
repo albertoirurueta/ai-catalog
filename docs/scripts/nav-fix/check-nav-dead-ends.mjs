@@ -12,24 +12,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { extractNav } from '../nav-html.mjs'
+
+export { extractNav }
 
 const SAMPLE_DEPTH = 3
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'])
 
-// The HTML of the first <nav class="nav-menu"> of a page, or null.
-export function extractNav (html) {
-  const start = html.search(/<nav class="nav-menu"[^>]*>/)
-  if (start < 0) return null
-  const re = /<\/?nav\b[^>]*>/g
-  re.lastIndex = start
-  let depth = 0
-  let m
-  while ((m = re.exec(html))) {
-    depth += m[0].startsWith('</') ? -1 : 1
-    if (depth === 0) return html.slice(start, m.index + m[0].length)
-  }
-  return null
-}
 
 function classesOf (attrs) {
   const m = attrs.match(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)')/)
@@ -105,7 +94,9 @@ export function sampleFiles (root, files) {
 // The file a nav href points to from the page `pageFile`, or null for an external or non-page link.
 export function targetFile (root, pageFile, href) {
   if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return null
-  const path = href.split('#')[0].split('?')[0]
+  let path = href.split('#')[0].split('?')[0]
+  // hrefs are percent-encoded (spaces, non-ASCII page names); the files on disk are not
+  try { path = decodeURIComponent(path) } catch { /* malformed escape: keep it literal */ }
   if (path === '') return pageFile
   let target = path.startsWith('/') ? join(root, path) : resolve(dirname(pageFile), path)
   if (path.endsWith('/')) target = join(target, 'index.html')

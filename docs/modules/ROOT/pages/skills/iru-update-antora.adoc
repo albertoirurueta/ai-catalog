@@ -40,7 +40,7 @@ Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `
 
 |`version`
 |No
-|An Antora version (or `latest`), resolved with `npm view`. The extension versions stay pinned.
+|An Antora version, resolved with `npm view`; `latest` takes the newest. The extension versions stay pinned.
 |The pinned set in `reference/toolchain.md`.
 |===
 
@@ -83,7 +83,11 @@ None. The skill dispatches no catalog agent and calls no other skill.
 === Invoked by
 
 None. It is a top-level entry point, recommended by xref:skills/iru-setup-antora.adoc[], xref:skills/iru-build-docs.adoc[]
-and xref:skills/iru-update-docs.adoc[] when they find a site on an older Antora or still on Lunr.
+and xref:skills/iru-update-docs.adoc[] when they find a site on an older Antora or still on Lunr, and by the GitHub
+workflow skills (xref:skills/iru-setup-android-github-workflows.adoc[], xref:skills/iru-setup-cli-github-workflows.adoc[],
+xref:skills/iru-setup-java-github-workflows.adoc[], xref:skills/iru-setup-kmp-github-workflows.adoc[],
+xref:skills/iru-setup-macos-github-workflows.adoc[], xref:skills/iru-setup-swift-github-workflows.adoc[] and
+xref:skills/iru-setup-windows-github-workflows.adoc[]) when `docs/` has no committed lockfile.
 
 === Related agents
 

@@ -115,6 +115,9 @@ generated exactly as below (`off` runs no automated checks, so no accessibility 
 - `applicationId` from `androidApp/build.gradle.kts` (for `r0adkll/upload-google-play`'s `packageName`).
 - `docs/antora.yml`/`docs/antora-playbook.yml` — missing → recommend running `iru-setup-antora` first (the docs job
   has nothing to build otherwise).
+- `docs/package-lock.json` — the docs job runs `npm ci` with the setup-node npm cache keyed on it, so it fails at
+  `actions/setup-node` without a committed lockfile. `docs/` present without one (a site from the old per-package
+  install) → recommend `/iru-update-antora` first; no `docs/` → `iru-setup-antora`, which commits it.
 - Branch names (`git branch -a`).
 - Existing files: `.github/workflows/build.yml`, `release.yml`, `sync.yml`, `security.yml`,
   `.github/scripts/sync_versions.py`, `.github/dependabot.yml`; also note sibling-named files (`develop.yml`,

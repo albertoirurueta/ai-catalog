@@ -205,7 +205,7 @@ update:
   '...'`, not a silent no-op) — never emit a coverage task against a module that doesn't enable it.
 - **`docs/antora.yml` / `docs/antora-playbook.yml`** (library flavor, or app flavor if it happens to have
   docs): if either is missing, the Antora build step has nothing to build against — recommend running
-  `iru-setup-antora` first, or confirm the user will do so before merging this workflow. The docs steps also need `docs/package.json` and the committed `docs/package-lock.json` (CI runs `npm ci` in `docs/`, then `npx pagefind --site build/site`).
+  `iru-setup-antora` first, or confirm the user will do so before merging this workflow. The docs steps also need `docs/package.json` and the committed `docs/package-lock.json` (CI runs `npm ci` in `docs/`, then `npx pagefind --site build/site`). If `docs/` exists but has no lockfile (a site from the old per-package install), recommend `/iru-update-antora` instead: `actions/setup-node`'s npm cache fails the job without it.
 - **Branch names** (skip if supplied via `args`): confirm the integration/stable branch names actually match
   this repository's branching model (`git branch -a`) rather than assuming gitflow defaults; for
   `branching: main-only`, only `stable-branch` matters.

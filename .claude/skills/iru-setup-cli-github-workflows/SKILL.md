@@ -158,6 +158,9 @@ Swift (no Windows binary); a channel without `distribution: store`.
   doesn't configure → recommend re-running the scaffold with that `channels`.
 - `docs/antora.yml`/`docs/antora-playbook.yml` — missing → recommend running `iru-setup-antora` first (the docs job
   fails without them).
+- `docs/package-lock.json` — the docs job runs `npm ci` with the setup-node npm cache keyed on it, so it fails at
+  `actions/setup-node` without a committed lockfile. `docs/` present without one (a site from the old per-package
+  install) → recommend `/iru-update-antora` first; no `docs/` → `iru-setup-antora`, which commits it.
 - `<repo>`/`<owner>` from `git remote get-url origin`; branch names (`git branch -a`).
 - Existing files: every file in the table above; also sibling-named files (`ci.yml`, `rust.yml`, `go.yml`, `release.yaml`,
   `codeql.yml`, `goreleaser.yml`, `.github/workflows/*cargo-dist*`) that would duplicate this pipeline.

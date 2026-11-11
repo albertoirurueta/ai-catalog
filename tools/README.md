@@ -138,7 +138,8 @@ The thresholds `--check` enforces:
 | `agent_description_max` | maximum agent `description` characters |
 | `require_agent_model` | every agent must pin a `model` |
 | `allowed_models` / `agent_allowed_models` | accepted `model` values for skills / for agents (agents may also say `inherit`) |
-| `shared_identical_files` | file names whose copies must stay byte-identical across skills |
+| `shared_identical_files` | files whose copies must stay byte-identical across skills: a bare name matches by basename, a name with a `/` (e.g. `ui-overrides/partials/article.hbs`) by its path inside the skill directory, so generic names never collide with unrelated files |
+| `mirrored_directories` | `{source, copy}` directory pairs (relative to the repository root) that must hold the same files with the same contents, e.g. `docs/ui-overrides` copied from `iru-setup-antora` (`mirror-drift` error); a pair whose source is absent is skipped |
 | `internal_skills` | skills only ever invoked by other catalog skills through `Skill()` |
 | `inline_cross_model_level` | `warning` or `error` for inline cross-model `Skill()` calls |
 | `asset_path_ignore` | per skill, `templates/...` or `reference/...` paths its `SKILL.md` mentions that live in the target repository, not in the skill (exempt from `asset-path-missing`) |

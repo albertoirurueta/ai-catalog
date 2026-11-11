@@ -47,6 +47,11 @@ Commit `docs/package.json` and `docs/package-lock.json`; never commit `docs/node
 
 Every step runs in `docs/`. No per-package install, no `mkdir docs`, no `docs-toolchain`.
 
+Prerequisite: a committed `docs/package-lock.json`. `cache: npm` keys the setup-node cache on it and fails the job at
+that step when it is missing, before `npm ci` runs. A workflow skill that writes this snippet checks the lockfile
+first: with `docs/` but no lockfile (a site from the old per-package install) it points to `/iru-update-antora`, with
+no `docs/` to `iru-setup-antora`.
+
 ```yaml
       - uses: actions/setup-node@v4
         with:

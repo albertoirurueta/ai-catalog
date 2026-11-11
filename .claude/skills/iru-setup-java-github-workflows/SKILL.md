@@ -187,7 +187,7 @@ a real answer, not guessed. If `pom.xml` is missing and the user chose to contin
   redundant (nothing reads it once `pom.xml` carries the same settings) and offer to remove it.
 - **Antora docs**: check for `docs/antora.yml` and `docs/antora-playbook.yml`. If either is missing, the docs step
   in Step 3 has nothing to build against — tell the user to run the `iru-setup-antora` skill first (the docs step runs `npm ci` in `docs/`, so `docs/package.json` and the committed `docs/package-lock.json` are needed too), or confirm they'll
-  do so before merging this workflow.
+  do so before merging this workflow. If `docs/` exists but has no lockfile (a site from the old per-package install), recommend `/iru-update-antora` instead: `actions/setup-node`'s npm cache fails the job without it.
 - **Maven settings file used for deploy** (skip if `settings-file` supplied via `args`): check for an XML file
   referenced by a `--settings` flag in any existing deploy step, defaulting to `mvnsettings.xml` at the repository
   root if none is referenced yet. If it doesn't exist, this skill creates it (Step 6).

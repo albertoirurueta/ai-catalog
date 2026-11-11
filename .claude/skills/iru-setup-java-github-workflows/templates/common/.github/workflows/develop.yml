@@ -74,13 +74,12 @@ jobs:
           cp -r ./docs/build/site ./doc
           cp -r ./target/site ./doc/mvn-site
 
-      # Optional size guard (GitHub Pages rejects a site over 1 GB): uncomment; keep it after the last step that
-      # writes into build/site.
+      # Optional size guard (GitHub Pages rejects a site over 1 GB): uncomment; it measures ./doc, the directory that
+      # is published (Antora site plus mvn-site), so keep it after "Merge documentation".
       # - name: Check site size
-      #   working-directory: docs
       #   run: |
-      #     size=$(du -sk build/site | cut -f1)
-      #     echo "build/site is ${size} KiB"
+      #     size=$(du -sk doc | cut -f1)
+      #     echo "doc is ${size} KiB"
       #     if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
       #     if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
 

@@ -17,6 +17,9 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { extractNav } from '../nav-html.mjs'
+
+export { extractNav }
 
 export const THRESHOLDS = { navEntries: 300, navFraction: 0.3, siteKiB: 500000 }
 export const AUTO_SAMPLES = { largest: 3, spread: 4 }
@@ -40,19 +43,6 @@ export function walk (dir) {
   return { html: html.sort((a, b) => (a.file < b.file ? -1 : 1)), htmlBytes, totalBytes }
 }
 
-export function extractNav (html) {
-  const start = html.search(/<nav class="nav-menu"[^>]*>/)
-  if (start < 0) return null
-  const re = /<\/?nav\b[^>]*>/g
-  re.lastIndex = start
-  let depth = 0
-  let m
-  while ((m = re.exec(html))) {
-    depth += m[0].startsWith('</') ? -1 : 1
-    if (depth === 0) return html.slice(start, m.index + m[0].length)
-  }
-  return null
-}
 
 export function extractGenerator (html) {
   const m = html.match(/<meta name="generator" content="([^"]*)"/)

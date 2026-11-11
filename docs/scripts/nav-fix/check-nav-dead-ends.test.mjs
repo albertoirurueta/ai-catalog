@@ -56,6 +56,9 @@ test('targetFile: relative, absolute, fragment, directory and external links', (
   assert.equal(targetFile(root, from, 'https://example.com/x.html'), null)
   assert.equal(targetFile(root, from, 'mailto:a@b.c'), null)
   assert.equal(targetFile(root, from, '//cdn.example.com/x'), null)
+  assert.equal(targetFile(root, from, 'my%20page.html'), '/site/c/1.0/my page.html')
+  assert.equal(targetFile(root, from, 'caf%C3%A9.html#x'), '/site/c/1.0/café.html')
+  assert.equal(targetFile(root, from, 'bad%E0.html'), '/site/c/1.0/bad%E0.html')
 })
 
 test('check: a healthy site passes', () => {

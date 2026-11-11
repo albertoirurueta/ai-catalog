@@ -79,7 +79,7 @@ and the current `docs/` layout).
   `reference/toolchain.md`) installed under `docs/` with `docs/package.json` scripts and a `docs/package-lock.json` to commit.
   Search is Pagefind; the Lunr extension is never installed.
 * `docs/ui-overrides/` (Pagefind search and slim-nav partials, helper and CSS) registered in the playbook, and `docs/scripts/`
-  (nav helper tests, built-HTML dead-end check, site-metrics measure).
+  (the shared `nav-html.mjs` nav-menu extraction, nav helper tests, built-HTML dead-end check, site-metrics measure).
 * `git rm -r --cached docs/node_modules` offered when dependencies are tracked.
 * For a repository with a UI (Step 9b): `pages/ui/index.adoc` (screens and components tables from a quick inventory),
   `pages/ui/navigation.adoc` (a Mermaid navigation graph, no screenshots yet), `images/ui/.gitkeep`, and a **User

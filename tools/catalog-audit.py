@@ -275,6 +275,50 @@ def entry_common(kind, rel_path, text):
     }
 
 
+def shared_name_matches(name, item):
+    """True when the support file ``item`` is a copy of the shared file ``name`` (basename, or a path inside the skill)."""
+    if "/" in name:
+        path = item.get("skill_path", "")
+        return path == name or path.endswith("/" + name)
+    return item["basename"] == name
+
+
+def list_files(directory):
+    """``{relative posix path: md5}`` of every file under ``directory`` (empty when it does not exist)."""
+    found = {}
+    if not os.path.isdir(directory):
+        return found
+    for dirpath, dirnames, filenames in os.walk(directory):
+        dirnames.sort()
+        for filename in sorted(filenames):
+            full = os.path.join(dirpath, filename)
+            if os.path.isfile(full):
+                rel = os.path.relpath(full, directory).replace(os.sep, "/")
+                found[rel] = file_digests(full)["md5"]
+    return found
+
+
+def compare_mirrors(root, mirrors):
+    """For each ``{source, copy}`` pair of directories (relative to ``root``), the files missing from the copy, the files
+    only in the copy and the files whose contents differ. A pair whose source does not exist is skipped."""
+    results = []
+    for pair in mirrors:
+        source = list_files(os.path.join(root, pair["source"]))
+        if not source:
+            continue
+        copy = list_files(os.path.join(root, pair["copy"]))
+        results.append(
+            {
+                "source": pair["source"],
+                "copy": pair["copy"],
+                "missing": sorted(set(source) - set(copy)),
+                "extra": sorted(set(copy) - set(source)),
+                "different": sorted(p for p in set(source) & set(copy) if source[p] != copy[p]),
+            }
+        )
+    return results
+
+
 def collect_skills(root):
     skills_dir = os.path.join(root, ".claude", "skills")
     skills = {}
@@ -307,6 +351,7 @@ def collect_skills(root):
                         "skill": name,
                         "path": os.path.relpath(full, root),
                         "basename": filename,
+                        "skill_path": os.path.relpath(full, skill_dir).replace(os.sep, "/"),
                         "bytes": size,
                         **file_digests(full),
                     }
@@ -371,11 +416,13 @@ def analyse(root, budgets=None):
             )
     duplicate_groups.sort(key=lambda g: (-g["redundant_bytes"], g["files"][0]))
 
-    # md5 set per shared file name (names come from the budgets file when present, else the known four).
+    # md5 set per shared file name (names come from the budgets file when present, else the known four). A bare file
+    # name matches by basename; a name with a "/" (e.g. "ui-overrides/partials/article.hbs") matches by the path inside
+    # the skill directory, so generic file names do not collide with unrelated files of other skills.
     names = sorted(set(budgets.get("shared_identical_files", DEFAULT_SHARED)))
     shared = {}
     for name in names:
-        copies = [i for i in support_files if i["basename"] == name]
+        copies = [i for i in support_files if shared_name_matches(name, i)]
         md5s = sorted({i["md5"] for i in copies})
         shared[name] = {
             "copies": len(copies),
@@ -475,6 +522,7 @@ def analyse(root, budgets=None):
         "agents": agents,
         "duplicate_support_files": duplicate_groups,
         "shared_files": shared,
+        "mirrors": compare_mirrors(root, budgets.get("mirrored_directories", [])),
         "external_skill_targets": dict(sorted(external.items())),
         "missing_skill_targets": sorted(
             missing, key=lambda m: (m["caller"], m["target"], m["line"])
@@ -721,6 +769,20 @@ def run_checks(data, budgets):
                 "{} copies but {} distinct contents".format(
                     shared["copies"], len(shared["distinct_md5"])
                 ),
+            )
+
+    for mirror in data.get("mirrors", []):
+        problems = (
+            ["missing: " + p for p in mirror["missing"]]
+            + ["only in copy: " + p for p in mirror["extra"]]
+            + ["differs: " + p for p in mirror["different"]]
+        )
+        if problems:
+            add(
+                "error",
+                "mirror-drift",
+                mirror["copy"],
+                "not byte-identical to {} ({})".format(mirror["source"], "; ".join(problems)),
             )
 
     for item in data["missing_skill_targets"]:

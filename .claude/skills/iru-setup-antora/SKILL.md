@@ -458,5 +458,6 @@ and `docs/package-lock.json` should be committed.
 | `reference/ui-docs.md` | User interface section guidance. Read in Step 9b. |
 | `ui-bundle.zip` | The shared UI bundle, copied to `docs/` in Step 5. |
 | `ui-overrides/` | Pagefind search and slim-nav partials, helper and CSS, plus a README; copied to `docs/ui-overrides/` in Step 5. |
+| `scripts/nav-html.mjs` | Nav-menu extraction shared by both scripts below; copied to `docs/scripts/` with them. |
 | `scripts/nav-fix/` | Nav helper unit tests and the built-HTML dead-end check; copied to `docs/scripts/`. |
 | `scripts/site-metrics/` | `measure.mjs` and its tests: site and nav size verdict; copied to `docs/scripts/`. |
