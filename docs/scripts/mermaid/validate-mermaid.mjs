@@ -2,7 +2,8 @@
 // Validates every Mermaid diagram of an Antora module: a green Antora build proves nothing about them, because
 // `@sntke/antora-mermaid-extension` only copies the source into the page and Mermaid renders it in the reader's browser.
 //
-//   static   `<` followed by a letter, `/`, `!` or `?` (parsed by the browser as an HTML tag); no install needed
+//   static   `<` followed by a letter, `/`, `!` or `?` (parsed by the browser as an HTML tag), and single-escaped
+//            `&lt;` in label text, which Mermaid drops silently (rules in blocks.mjs); no install needed
 //   parse    mermaid.parse() of the text the browser hands to Mermaid (after HTML parsing and entity decoding)
 //   render   (--render) mermaid.render() of each diagram in headless Chrome: catches layout crashes that parse
 //            accepts, e.g. "Cannot set properties of undefined (setting 'order')" on a very large flowchart with

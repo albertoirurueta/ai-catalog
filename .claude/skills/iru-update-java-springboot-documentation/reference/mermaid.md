@@ -20,8 +20,12 @@ Every diagram written or changed must therefore be validated on its own.
     into an `<interface>` element whose closing tag lands after the diagram's last line, and the diagram fails.
   - **Label text** that must show `<…>` (a placeholder such as `<timestamp>` or `<key>`) is written double-escaped:
     `"iru-&amp;lt;key&amp;gt;-bump-version"`. Single-escaped (`&lt;key&gt;`) it reaches Mermaid as `<key>` and the label
-    drops it silently (`iru--bump-version`), with no error anywhere. Rewording the label without angle brackets is
-    also fine.
+    drops it silently (`iru--bump-version`), with no error anywhere. This holds for every label form, quoted or not:
+    `["…"]`, `[…]`, `(…)`, `{…}`, `|…|` and `-- … -->` edge labels, class members (`+List&amp;lt;String&amp;gt;`),
+    class and ER relationship labels. Rewording the label without angle brackets is also fine.
+  - Two diagram types differ (verified by rendering). **`sequenceDiagram`** renders its text without HTML, so there
+    `&lt;key&gt;` is right and the double-escaped form fails to parse. **`stateDiagram`** drops `&lt;key&gt;` and
+    garbles `&amp;lt;key&amp;gt;` (the entity's `;` ends the statement), so reword the label instead.
   - Arrows (`-->`, `-.->`, `==>`, `<-->`, `<|--`, `<<->>`) and the label formatting tags Mermaid supports (`<br>`,
     `<b>`, `<i>`, `<sub>`, `<sup>`) stay as they are. Do not use Mermaid's `#60;`/`#62;` codes: they work in `["…"]`
     and `{"…"}` nodes but throw `Invalid character` in stadium (`(["…"])`) and subroutine (`[["…"]]`) shapes.
@@ -45,7 +49,8 @@ npm i --no-save mermaid@11 jsdom@31 puppeteer@25
 node scripts/mermaid/validate-mermaid.mjs modules --render     # npm run validate:mermaid when the script is wired
 ```
 
-- **static**: raw tag-like text, and single-escaped `&lt;` inside a quoted label; no install needed.
+- **static**: raw tag-like text, and single-escaped `&lt;` in label text of any form (any escaping in a `stateDiagram`
+  label); no install needed.
 - **parse**: `mermaid.parse()` of the text the browser hands to Mermaid (after HTML parsing and entity decoding); a
   plain `mermaid.parse()` of the source misses the tag problem above.
 - **render** (`--render`): `mermaid.render()` of each diagram in headless Chrome; the only check that catches layout
