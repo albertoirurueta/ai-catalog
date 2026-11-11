@@ -1,0 +1,27 @@
+<svg width="640" height="128" viewBox="0 0 640 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d">
+  <title id="t">Download skills &amp; agents (zip)</title>
+  <desc id="d">Button that downloads a zip with all catalog skills and agents, ready to unzip into a .claude directory.</desc>
+  <defs>
+    <linearGradient id="btnGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6ec4"/>
+      <stop offset="50%" stop-color="#7873f5"/>
+      <stop offset="100%" stop-color="#2fbf71"/>
+    </linearGradient>
+    <linearGradient id="btnGloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0.22"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="632" height="120" rx="60" ry="60" fill="url(#btnGradient)"/>
+  <rect x="4" y="4" width="632" height="120" rx="60" ry="60" fill="url(#btnGloss)"/>
+  <rect x="5.5" y="5.5" width="629" height="117" rx="58.5" ry="58.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="3"/>
+  <circle cx="72" cy="64" r="40" fill="#FFFFFF" opacity="0.2"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" transform="translate(72,64)">
+    <path d="M0 -22 V10"/><path d="M-12 -2 L0 10 L12 -2"/><path d="M-18 14 V20 H18 V14"/>
+  </g>
+  <text x="136" y="58" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="32" fill="#FFFFFF">Download skills &amp; agents</text>
+  <text x="136" y="94" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="22" fill="#FFFFFF" opacity="0.95">Unzip into your .claude/ directory</text>
+  <rect x="540" y="44" width="72" height="40" rx="20" ry="20" fill="#FFFFFF"/>
+  <text x="576" y="65" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="20" fill="#4c46c9">ZIP</text>
+</svg>
