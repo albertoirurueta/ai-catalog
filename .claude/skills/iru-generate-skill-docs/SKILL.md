@@ -22,8 +22,8 @@ Find `antora.yml` (`find . -name antora.yml -not -path '*/node_modules/*'`).
   decline, stop here — there's nothing for this skill to write into.
 - **Found**: read it for the component name and the `nav:` file(s) it declares, then read that `nav.adoc` to
   get the current page list. Note the antora playbook (commonly `antora-playbook.yml`) and confirm it wires
-  up a Mermaid extension — every diagram this skill produces is a `[mermaid]` block, and it's silently
-  useless if the extension isn't configured. If it isn't, tell the user and either stop or fall back to
+  up a Mermaid extension — every diagram this skill produces is a `[mermaid]` block, written and validated per
+  `reference/mermaid.md`, and it's silently useless if the extension isn't configured. If it isn't, tell the user and either stop or fall back to
   plain bulleted/tabular descriptions instead of diagrams, per their choice.
 
 ## Step 2 — Discover every skill and agent actually defined
@@ -158,10 +158,24 @@ order:
 3. **Purpose groups**: one subsection per group from Step 5, each with its own anchor (`[[group-<slug>]]`
    immediately above the `===` heading) matching what the table links to, a short description, and the
    skills it contains.
-4. **A dependency graph**: a single `[mermaid]` `flowchart` (subgraphs per purpose group keep a catalog of
-   more than a handful of skills readable) showing every "invokes" edge as a solid arrow and every "spawns
-   an agent" edge as a dotted arrow, per Step 4. Name any external dependency in the diagram (e.g. as a
-   dashed/external-looking node) without linking it anywhere.
+4. **A dependency graph** section, as several small `[mermaid]` `flowchart`s rather than one: a single
+   flowchart of the whole catalog with a subgraph per purpose group parses but crashes Mermaid's layout once
+   the catalog is large (`reference/mermaid.md`, "Size"). Write, in order:
+   - a short legend (solid arrow: invokes directly via the `Skill` tool; dotted arrow: invokes inside a
+     sub-agent; dotted arrow labeled "spawns"/"uses": the agent type itself, via the `Agent` tool), and a
+     note naming any external dependency;
+   - an **overview** flowchart with one node per purpose group (the group title as label) and one edge per
+     pair of groups where a skill of the first calls a skill of the second: solid when at least one such call
+     is direct, dotted when all go through a sub-agent. No self-edges, no agent or external nodes;
+   - one `=== <Group title> dependencies` subsection per purpose group from Step 5, each with a flowchart of
+     that group's skills (no subgraph), every edge whose caller is in the group per Step 4 (solid "invokes",
+     dotted sub-agent invocations, dotted "spawns"/"uses" edges to agent-type nodes drawn as circles
+     `(("…\nagent"))`), and the called skills of other groups as nodes with a dashed border
+     (`:::other` plus `classDef other stroke-dasharray: 4 3`). Name any external dependency as a
+     subroutine-shaped node (`[["…"]]`) without linking it anywhere. A group whose skills call nothing gets a
+     one-line sentence instead of a diagram.
+   If one group's own flowchart still exceeds the size rule of thumb in `reference/mermaid.md`, split its
+   callers into two diagrams.
 5. **Common workflows**: one subsection per workflow from Step 6, each with a short `[mermaid]` flowchart of
    its skill sequence and prose noting any decision points and which skills also work standalone.
 
@@ -235,39 +249,15 @@ if any agent pages exist, an "Agents" heading (matching whatever nesting style `
 elsewhere in this module). Preserve the order and content of existing entries; remove entries only for pages
 Step 8 determined no longer exist.
 
-## Step 9b — Angle brackets in Mermaid labels
+## Step 9b — Angle brackets and quotes in Mermaid labels
 
-Applies to every `[mermaid]` block written in Steps 7 and 8. Placeholder names are written `<timestamp>`,
-`<task-id>`, `<key>` and so on throughout this catalog's prose — but inside a Mermaid **node or edge label**
-that spelling is silently destroyed, and the failure is invisible in the build:
-
-- An AsciiDoc literal block (`....`) escapes `<` to `&lt;` in the HTML, and Asciidoctor passes an entity
-  reference already in the source (`&lt;`) straight through unchanged. Both spellings therefore reach the
-  browser as `&lt;…&gt;`, and `textContent` hands Mermaid a literal `<timestamp>`.
-- Mermaid renders labels as HTML (`htmlLabels`, on by default), so `<timestamp>` is parsed as an unknown tag
-  and **dropped from the diagram entirely** — `meeting-<timestamp>/meeting.md` renders as
-  `meeting-/meeting.md`. Setting `htmlLabels: false` does not help; the text is lost either way.
-
-So write the placeholder **double-escaped** in the AsciiDoc source — `&amp;lt;timestamp&amp;gt;` — which
-reaches Mermaid as `&lt;timestamp&gt;` and renders as the intended `<timestamp>`:
-
-```
-F --> G["Create meeting-&amp;lt;timestamp&amp;gt;/meeting.md\n(Summary + Full transcription)"]
-```
-
-Do **not** use Mermaid's `#60;`/`#62;` entity codes for this. They work in `["…"]` and `{"…"}` nodes but throw
-`Invalid character` in the stadium (`(["…"])`) and subroutine (`[["…"]]`) shapes this catalog's diagrams use,
-which kills the whole diagram. Rewording the label to avoid angle brackets altogether is also fine.
-
-Only label *text* is affected. Never touch link syntax — `-->`, `-.->`, `==>`, `<-->` are Mermaid operators and
-must stay literal. `\n` inside a label is fine and does produce a line break.
-
-The same care applies to **double quotes inside a quoted label**. Mermaid has no backslash escape: a label
-written `G["Report \"coverage not wired\""]` ends the string at the first inner quote and the parser then fails
-on the rest, which — unlike the angle-bracket case — kills the whole diagram with a syntax error. Either reword
-the label so it needs no inner quotes (`G["Report: coverage not wired"]`, `H["run dotnet test --collect:\nXPlat
-Code Coverage"]`), or use single quotes inside the double-quoted label. Don't reach for `#quot;` for the same
-reason `#60;`/`#62;` are avoided above.
+Applies to every `[mermaid]` block written in Steps 7 and 8. Follow the writing rules in `reference/mermaid.md`:
+placeholder names such as `<timestamp>`, `<task-id>` or `<key>` inside a node or edge label are written
+double-escaped (`&amp;lt;timestamp&amp;gt;`), because a single-escaped or raw one is dropped from the label without
+any error (`meeting-<timestamp>/meeting.md` renders as `meeting-/meeting.md`); never Mermaid's `#60;`/`#62;`/`#quot;`
+codes, which throw in the stadium and subroutine shapes this catalog's diagrams use; no double quote inside a quoted
+label (reword, or use single quotes). Link syntax (`-->`, `-.->`, `==>`, `<-->`) stays literal, and `\n` inside a
+label is a line break.
 
 ## Step 10 — Verify the site builds
 
@@ -282,14 +272,17 @@ invalid Mermaid syntax before finishing — don't report success against a build
 warned about content this skill just wrote.
 
 A clean Antora build proves nothing about the diagrams: the extension emits the block as a `<div class="mermaid">`
-and the browser renders it, so a diagram that throws a syntax error or quietly drops a swallowed label still
-builds without a single warning. Check the diagrams themselves — grep the `[mermaid]` blocks just written for
-raw `<…>` placeholders per Step 9b, and confirm each one still says what it should.
+and the browser renders it, so a diagram that throws a syntax error, crashes the layout or quietly drops a
+swallowed label still builds without a single warning. Run the Mermaid check of `reference/mermaid.md` from the
+docs module directory — `npm i --no-save mermaid@11 jsdom@31 puppeteer@25`, then `npm run validate:mermaid` (or the
+repository's `scripts/mermaid/validate-mermaid.mjs modules --render`) — and fix every diagram it reports before
+finishing. When puppeteer cannot run, drop `--render`, say so in the report, and open the built index page to confirm
+every diagram drew. Then confirm each diagram still says what it should.
 
 ## Step 11 — Report
 
 Summarize: how many skills and agents were found and documented, the purpose groups and workflows
 identified (name them), any external dependency named but not linked, any page added/updated/removed versus
-the previous run (if this is a re-run), whether the download-button include was kept, created or skipped, and the build result from Step 10. Remind the user to review the
+the previous run (if this is a re-run), whether the download-button include was kept, created or skipped, and the build and Mermaid check results from Step 10. Remind the user to review the
 generated pages themselves, particularly the dependency graph and any workflow this skill inferred rather
 than found spelled out explicitly in an orchestrator skill's own steps.

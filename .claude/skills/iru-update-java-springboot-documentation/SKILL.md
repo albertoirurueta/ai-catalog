@@ -569,7 +569,12 @@ Then verify what the build won't catch:
 - **Kotlin only: the KDoc link(s) on the overview resolve the same way** — no literal `{api-docs-url}` in the built
   HTML, and the path matches where the workflow publishes Dokka (`doc/api/kdoc/…`).
 - **Every Mermaid and Kroki diagram actually rendered** — open the built HTML and check. A Kroki block with a
-  syntax error, or with the extension unregistered, renders as a literal code block without failing the build.
+  syntax error, or with the extension unregistered, renders as a literal code block without failing the build. For
+  Mermaid, also run the check of `reference/mermaid.md` (`npm i --no-save mermaid@11 jsdom@31 puppeteer@25`, then
+  `npm run validate:mermaid` or the repository's `scripts/mermaid/validate-mermaid.mjs modules --render`) and fix every
+  diagram it reports: write class-diagram stereotypes and placeholders in labels per its rules. When the repository has
+  neither, run the copy of an installed `iru-setup-antora`, `iru-update-antora` or `iru-build-docs` from `docs/`; with
+  none installed, rely on the visual check above and recommend `/iru-update-antora` (it copies `scripts/mermaid/`).
 - **Each of `apis/rest.adoc`, `apis/grpc.adoc` and `apis/messaging.adoc` that exists carries its generated-reference
   link, and the link resolved.** Two distinct checks, because neither fails the build:
   - Grep the build log for `skipping reference to missing attribute: api-docs-url`. Antora logs that warning,

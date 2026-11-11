@@ -40,6 +40,10 @@ jobs:
       - name: Show Python version (the Antora collector runs tools/build-packages.py, standard library only)
         run: python3 --version
 
+      - name: Validate Mermaid diagrams (static, parse and headless-browser render)
+        working-directory: docs
+        run: npm i --no-save mermaid@11 jsdom@31 puppeteer@25 && npm run validate:mermaid
+
       - name: Build Antora docs
         working-directory: docs
         run: npx antora antora-playbook.yml

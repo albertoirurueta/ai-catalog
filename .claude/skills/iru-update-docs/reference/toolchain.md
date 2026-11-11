@@ -34,14 +34,24 @@ Commit `docs/package.json` and `docs/package-lock.json`; never commit `docs/node
   "scripts": {
     "build": "antora antora-playbook.yml",
     "search:index": "pagefind --site build/site",
-    "test:nav": "node --test \"scripts/nav-fix/*.test.mjs\" \"scripts/site-metrics/*.test.mjs\"",
-    "test:nav:site": "node scripts/nav-fix/check-nav-dead-ends.mjs build/site"
+    "test:nav": "node --test \"scripts/nav-fix/*.test.mjs\" \"scripts/site-metrics/*.test.mjs\" \"scripts/mermaid/*.test.mjs\"",
+    "test:nav:site": "node scripts/nav-fix/check-nav-dead-ends.mjs build/site",
+    "validate:mermaid": "node scripts/mermaid/validate-mermaid.mjs modules --render"
   },
   "engines": { "node": ">=20" }
 }
 ```
 
 `test:nav` and `test:nav:site` exist only when the nav override and its scripts are installed in the repository.
+`validate:mermaid` exists when `scripts/mermaid/` is installed (every site that uses Mermaid). Its three dependencies are
+validation-only and stay out of `package.json` and the lockfile; install them on demand, without saving:
+
+```bash
+cd docs && npm i --no-save mermaid@11 jsdom@31 puppeteer@25 && npm run validate:mermaid
+```
+
+`mermaid@11` matches the `mermaid_library_url` the playbook loads in the browser (`mermaid@11`). Puppeteer downloads a
+headless Chrome on install; the `--render` check needs it. Guidance: `reference/mermaid.md`.
 
 ## CI snippet
 
@@ -90,6 +100,14 @@ Optional size guard (GitHub Pages rejects a site over 1 GB), placed after the la
 
 Warn above 900,000 KiB, fail above 960,000 KiB.
 
+Mermaid check, for a site with `scripts/mermaid/` (place it before the build, so a broken diagram fails fast):
+
+```yaml
+      - name: Validate Mermaid diagrams
+        working-directory: docs
+        run: npm i --no-save mermaid@11 jsdom@31 puppeteer@25 && npm run validate:mermaid
+```
+
 ## When the nav needs the slimming override
 
 Recommend the generic nav-tree override (`ui-overrides/`, see `ui-overrides/README.md`) when any of these holds:
@@ -131,6 +149,12 @@ Observed in a scratch build, not assumed from documentation.
   navigation, header or footer text and no page without the attribute. The hidden component-filter span adds the
   `component` filter. Pagefind prints a notice that the Default UI (`pagefind-ui.js`) is supported but that the Component
   UI is recommended for new integrations; it is not a warning of the run and the exit code is 0.
+- Mermaid: a diagram can pass `mermaid.parse()` and still fail in the browser. The 721-line dependency graph of this
+  catalog's home page (31 subgraphs, 428 edges, Mermaid 11.17.2) parsed, but `mermaid.render()` threw "Cannot set
+  properties of undefined (setting 'order')" in the dagre layout, so the page showed Mermaid's error graphic while the
+  Antora build and a parse-only check were clean. Removing any one of several subgraphs, or all of them, made it render:
+  it is a size limit, not a syntax error. `validate-mermaid.mjs --render` reports it; keep each flowchart small (see
+  `reference/mermaid.md`).
 - The old `docs-toolchain` CI pattern (`mkdir -p docs-toolchain && cd docs-toolchain`, `npm i` the packages there, then
   `cd docs && npx antora antora-playbook.yml`) does not work as a toolchain. `npx` run in `docs/` does not see
   `docs-toolchain/node_modules` (a sibling is not on the module resolution path), so it downloads `antora` from the

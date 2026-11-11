@@ -18,7 +18,13 @@ cd docs && npm ci                          # install Antora + extensions (only n
 cd docs && npx antora antora-playbook.yml  # build the site into docs/build/site (gitignored, generated)
 cd docs && npx pagefind --site build/site  # write the search index into the built site (replaces Lunr)
 cd docs && npm run test:nav && npm run test:nav:site  # nav override unit tests and the built-HTML dead-end check
+cd docs && npm i --no-save mermaid@11 jsdom@31 puppeteer@25 && npm run validate:mermaid  # every diagram: static, parse, headless render
 ```
+
+A green Antora build proves nothing about Mermaid diagrams (the extension only copies them into the page; the browser
+renders them), so run `validate:mermaid` after touching any `[mermaid]` block. Rules (label escaping, size limit):
+`.claude/skills/iru-setup-antora/reference/mermaid.md`, shared byte-identical by the six Antora documentation skills.
+`docs/scripts/mermaid/` is mirrored from `iru-setup-antora` like the rest of `docs/scripts/`.
 
 The documentation build also produces the downloadable zips: the Antora collector (`ext.collector` in `docs/antora.yml`) runs
 `tools/build-packages.py`, which writes the catalog and per-plugin zips to `docs/build/packages` (ignored with the rest
