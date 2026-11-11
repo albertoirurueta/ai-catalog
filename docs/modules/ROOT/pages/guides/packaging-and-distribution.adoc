@@ -41,7 +41,8 @@ To install, unzip into `.claude/` of the repository (for example `unzip ai-catal
 commit the result, exactly as in Option 1.
 
 The zips are not committed. The Antora collector extension (`ext.collector` in `docs/antora.yml`) runs
-`tools/build-packages.py` during every documentation build and writes them into `modules/ROOT/attachments`, so they always
+`tools/build-packages.py` during every documentation build, which writes them to `docs/build/packages`; the collector then
+adds them to the module's attachments in memory (nothing is written under `modules/`), so they always
 reflect the catalog on the published branch (`main`). GitHub Pages is republished on every push to `main`; the
 `albertoirurueta/docs` site that includes this repository rebuilds nightly (03:00 UTC) and on demand, so its zips are at
 most about a day behind. To build them by hand: `python3 tools/build-packages.py --out <dir>`.

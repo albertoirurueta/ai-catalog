@@ -10,12 +10,15 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
+# limitations under the License.
 """Unit tests for tools/build-packages.py. Run with: python3 -m unittest discover -s tools/tests"""
 
 import contextlib
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -155,6 +158,57 @@ class EquivalenceTest(unittest.TestCase):
             self.assertEqual(got_skills, expected_skills[plugin["name"]])
             self.assertEqual(got_agents, expected_agents[plugin["name"]])
 
+
+
+
+
+class BuildHygieneTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name) / "repo"
+        self.out = Path(self._tmp.name) / "out"
+        make_repo(self.root)
+
+    def test_stale_zips_removed(self):
+        self.out.mkdir(parents=True)
+        (self.out / "iru-renamed.zip").write_bytes(b"old")
+        (self.out / "keep.txt").write_text("x", encoding="utf-8")
+        bp.build(self.root, self.out)
+        self.assertFalse((self.out / "iru-renamed.zip").exists())
+        self.assertTrue((self.out / "keep.txt").exists())
+
+    def test_modes_are_regular_files_and_keep_executable_bit(self):
+        script = self.root / ".claude" / "skills" / "iru-plan" / "templates" / "run.sh"
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        os.chmod(script, 0o755)
+        bp.build(self.root, self.out)
+        with zipfile.ZipFile(self.out / bp.FULL_ZIP) as archive:
+            modes = {info.filename: info.external_attr >> 16 for info in archive.infolist()}
+        self.assertEqual(modes["skills/iru-plan/templates/run.sh"], 0o100755)
+        self.assertEqual(modes["skills/iru-plan/SKILL.md"], 0o100644)
+
+    def test_local_junk_excluded_without_git(self):
+        skill = self.root / ".claude" / "skills" / "iru-plan"
+        (skill / ".DS_Store").write_bytes(b"junk")
+        (skill / "__pycache__").mkdir()
+        (skill / "__pycache__" / "x.pyc").write_bytes(b"junk")
+        bp.build(self.root, self.out)
+        listing = names(self.out / bp.FULL_ZIP)
+        self.assertFalse(any(".DS_Store" in n or "__pycache__" in n for n in listing))
+        self.assertIn("skills/iru-plan/SKILL.md", listing)
+
+    def test_git_ignored_files_excluded(self):
+        try:
+            subprocess.run(["git", "init", "-q"], cwd=self.root, check=True, capture_output=True)
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("git is not available")
+        (self.root / ".gitignore").write_text("*.log\n", encoding="utf-8")
+        (self.root / ".claude" / "skills" / "iru-plan" / "debug.log").write_text("x", encoding="utf-8")
+        bp.build(self.root, self.out)
+        listing = names(self.out / bp.FULL_ZIP)
+        self.assertNotIn("skills/iru-plan/debug.log", listing)
+        self.assertIn("skills/iru-plan/templates/t.txt", listing)
 
 if __name__ == "__main__":
     unittest.main()

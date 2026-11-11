@@ -21,8 +21,9 @@ cd docs && npm run test:nav && npm run test:nav:site  # nav override unit tests 
 ```
 
 The documentation build also produces the downloadable zips: the Antora collector (`ext.collector` in `docs/antora.yml`) runs
-`tools/build-packages.py` and writes the catalog and per-plugin zips into `docs/modules/ROOT/attachments` (generated, not
-committed). Run it by hand with `python3 tools/build-packages.py --out <dir>`.
+`tools/build-packages.py`, which writes the catalog and per-plugin zips to `docs/build/packages` (ignored with the rest
+of `docs/build/`); the collector adds them to the `ROOT` module's attachments in memory, so nothing lands in
+`docs/modules/`. Run it by hand with `python3 tools/build-packages.py --out <dir>`.
 
 The toolchain is pinned exactly in `docs/package.json` and `docs/package-lock.json` (Antora 3.2.2, Pagefind 1.6.0; source
 of truth `.claude/skills/iru-setup-antora/reference/toolchain.md`). `docs/node_modules/` is never committed.

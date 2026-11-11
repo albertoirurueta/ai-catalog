@@ -1,4 +1,5 @@
 image::download-catalog-zip.svg["Download the catalog skills and agents (zip)",width=320,xref=attachment$ai-catalog-skills-agents.zip]
 
-Unzip it into your repository's `.claude/` directory (it contains the `skills/` and `agents/` folders). See
-xref:guides/plugins.adoc[] for per-plugin zips and the marketplace.
+Unzip it into your repository's `.claude/` directory (it contains the `skills/` and `agents/` folders). Per-plugin zips
+are listed in xref:guides/plugins.adoc#_downloading_a_plugin_as_a_zip[Downloading a plugin as a zip], next to the
+marketplace instructions.
