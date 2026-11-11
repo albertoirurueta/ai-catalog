@@ -14,7 +14,7 @@ first `/iru-` or `Invoke as` in the description, bytes inside fenced code blocks
 `yaml.safe_load` (when it does not, `model` and `description` are read leniently so the metrics still exist).
 Across the catalog it also computes duplicate supporting files by SHA-256 (groups and redundant bytes), the md5
 set of each shared byte-identical file (`ui-contract.md`, `cli-contract.md`, `ui-docs.md`,
-`accessibility-detection.md`), `Skill()` targets that do not exist, and **inline cross-model calls**: a `Skill()`
+`accessibility-detection.md`, plus the Antora set: `toolchain.md`, the `ui-overrides` partials/helper/CSS, the nav and site-metrics scripts and their tests; a generic name such as `README.md` is deliberately not listed), `Skill()` targets that do not exist, and **inline cross-model calls**: a `Skill()`
 call whose caller `model` differs from the callee's and that is not inside an `Agent({...})` prompt string (the
 cache-hit penalty case). The report flags calls whose preceding prose already mentions `iru-gate-runner` or
 `iru-isolated-skill-executor`, which usually are delegated and need a manual look.

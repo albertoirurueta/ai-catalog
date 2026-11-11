@@ -362,7 +362,7 @@ detekt/ktlint/Dokka instead of Checkstyle/PMD/SpotBugs/Javadoc:
   `Upload test reports` artifact paths, so a failing lint run leaves its findings attached.
 - In the `docs` job, keep `mvn -B -ntp site -DskipTests -Djacoco.skip` (Surefire/JaCoCo/JXR reports — the pom no
   longer configures Javadoc/Checkstyle/PMD/SpotBugs reports, so the site simply doesn't have those sections) and add
-  the Dokka build as its own step before `Install Antora`:
+  the Dokka build as its own step before `Install docs toolchain`:
 
   ```yaml
       - name: Generate KDoc (Dokka)

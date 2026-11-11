@@ -317,6 +317,20 @@ class CheckTests(CatalogTestCase):
         violations = audit.run_checks(data, budgets or self.BUDGETS)
         return {(v["level"], v["rule"], v["subject"]) for v in violations}
 
+    def test_toolchain_md_drift_fails_the_check(self):
+        for name in ("iru-setup-antora", "iru-update-antora"):
+            self.skill(name, model="sonnet")
+        self.write(".claude/skills/iru-setup-antora/reference/toolchain.md", "pins A")
+        self.write(".claude/skills/iru-update-antora/reference/toolchain.md", "pins A")
+        budgets = dict(self.BUDGETS, shared_identical_files=["toolchain.md"])
+        self.assertNotIn(
+            ("error", "shared-file-drift", "toolchain.md"), self.rules(budgets)
+        )
+        self.write(".claude/skills/iru-update-antora/reference/toolchain.md", "pins B")
+        self.assertIn(
+            ("error", "shared-file-drift", "toolchain.md"), self.rules(budgets)
+        )
+
     def test_clean_catalog_has_no_violations(self):
         self.skill("iru-ok", model="haiku")
         self.agent(
@@ -803,15 +817,20 @@ class MainTests(CatalogTestCase):
         ) as handle:
             budgets = json.load(handle)
         self.assertEqual(budgets["description_max"], 1024)
-        self.assertEqual(
-            sorted(budgets["shared_identical_files"]),
-            [
+        shared = set(budgets["shared_identical_files"])
+        self.assertTrue(
+            {
                 "accessibility-detection.md",
                 "cli-contract.md",
                 "ui-contract.md",
                 "ui-docs.md",
-            ],
+                "toolchain.md",
+                "nav-tree.hbs",
+                "measure.mjs",
+            }
+            <= shared
         )
+        self.assertNotIn("README.md", shared)
         self.assertEqual(budgets["internal_skills"], sorted(budgets["internal_skills"]))
         repo = os.path.dirname(TOOLS_DIR)
         for name in budgets["internal_skills"]:

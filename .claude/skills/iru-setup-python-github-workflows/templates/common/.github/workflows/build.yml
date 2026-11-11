@@ -289,18 +289,37 @@ jobs:
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
-      - name: Install Antora
+      - name: Install docs toolchain
         working-directory: docs
         run: npm ci
+
+      - name: Show Antora version
+        working-directory: docs
+        run: npx antora -v
 
       - name: Build Antora docs
         working-directory: docs
         run: npx antora antora-playbook.yml
 
+      # Search index. Runs before the API docs are merged below, so only the Antora pages are indexed; move this
+      # step after the merge if the API pages should be searchable.
+      - name: Index the site for search
+        working-directory: docs
+        run: npx pagefind --site build/site
+
       - name: Merge documentation
         run: |
           touch docs/build/site/.nojekyll
           mkdir -p docs/build/site/api && cp -r build/api-docs/. docs/build/site/api/    # sphinx | openapi only
+
+      # Optional size guard (GitHub Pages rejects a site over 1 GB): uncomment; keep it after the last step that
+      # writes into the site directory.
+      # - name: Check site size
+      #   run: |
+      #     size=$(du -sk docs/build/site | cut -f1)
+      #     echo "site is ${size} KiB"
+      #     if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
+      #     if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
 
       # pages: yes
       - name: Upload Pages artifact

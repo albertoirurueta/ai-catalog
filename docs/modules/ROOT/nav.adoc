@@ -206,6 +206,7 @@
 ** xref:skills/iru-typescript-generate-all-tests.adoc[]
 ** xref:skills/iru-typescript-test.adoc[]
 ** xref:skills/iru-typescript-tsdoc.adoc[]
+** xref:skills/iru-update-antora.adoc[]
 ** xref:skills/iru-update-docs.adoc[]
 ** xref:skills/iru-update-java-springboot-documentation.adoc[]
 ** xref:skills/iru-windows-code-one-task.adoc[]

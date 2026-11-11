@@ -26,12 +26,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
 
-      - name: Install Antora
-        run: cd docs && npm ci
+      - name: Install docs toolchain
+        working-directory: docs
+        run: npm ci
+
+      - name: Show Antora version
+        working-directory: docs
+        run: npx antora -v
 
       - name: Build Antora docs
-        run: cd docs && npx antora antora-playbook.yml
+        working-directory: docs
+        run: npx antora antora-playbook.yml
+
+      - name: Index the site for search
+        working-directory: docs
+        run: npx pagefind --site build/site
+
+      - name: Check site size
+        working-directory: docs
+        run: |
+          size=$(du -sk build/site | cut -f1)
+          echo "build/site is ${size} KiB"
+          if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
+          if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
 
       - name: Add .nojekyll
         run: touch ./docs/build/site/.nojekyll

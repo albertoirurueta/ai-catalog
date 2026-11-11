@@ -25,7 +25,20 @@
     "ui-contract.md",
     "cli-contract.md",
     "ui-docs.md",
-    "accessibility-detection.md"
+    "accessibility-detection.md",
+    "toolchain.md",
+    "article.hbs",
+    "footer-scripts.hbs",
+    "head-styles.hbs",
+    "header-content.hbs",
+    "nav-tree.hbs",
+    "nav-item-state.js",
+    "pagefind-site.css",
+    "check-nav-dead-ends.mjs",
+    "measure.mjs",
+    "nav-item-state.test.mjs",
+    "check-nav-dead-ends.test.mjs",
+    "measure.test.mjs"
   ],
   "internal_skills": [
     "iru-android-bump-version",

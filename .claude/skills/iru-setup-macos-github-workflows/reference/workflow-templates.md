@@ -301,17 +301,26 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
 
-      - name: Install Antora
-        run: |
-          mkdir -p docs-toolchain && cd docs-toolchain
-          npm i -D -E antora
-          npm i @antora/lunr-extension
-          npm i @sntke/antora-mermaid-extension
-          npm i @djencks/asciidoctor-mathjax
+      - name: Install docs toolchain
+        working-directory: docs
+        run: npm ci
+
+      - name: Show Antora version
+        working-directory: docs
+        run: npx antora -v
 
       - name: Build Antora docs
-        run: cd docs && npx antora antora-playbook.yml
+        working-directory: docs
+        run: npx antora antora-playbook.yml
+
+      # Search index. The DocC archive is merged later (site job), so only the Antora pages are indexed; to make the
+      # API pages searchable, run `npx pagefind --site site` in the site job after the merge instead.
+      - name: Index the site for search
+        working-directory: docs
+        run: npx pagefind --site build/site
 
       - name: Upload the Antora site
         uses: actions/upload-artifact@v7
@@ -343,6 +352,15 @@ jobs:
 
       - name: Disable Jekyll
         run: touch site/.nojekyll
+
+      # Optional size guard (GitHub Pages rejects a site over 1 GB): uncomment; it must run after the last step that
+      # writes into the site directory (here, after the DocC archive is merged).
+      # - name: Check site size
+      #   run: |
+      #     size=$(du -sk site | cut -f1)
+      #     echo "site is ${size} KiB"
+      #     if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
+      #     if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
       # >>> pages: yes
 
       - name: Upload Pages artifact

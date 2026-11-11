@@ -31,6 +31,7 @@
         "iru-generate-skill-docs",
         "iru-setup-repository",
         "iru-setup-antora",
+        "iru-update-antora",
         "iru-setup-changelog",
         "iru-setup-readme",
         "iru-database-*"

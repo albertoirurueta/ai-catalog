@@ -16,10 +16,21 @@ The only buildable artifact is the Antora documentation site under `docs/`:
 ```bash
 cd docs && npm ci                          # install Antora + extensions (only needed once / after changes)
 cd docs && npx antora antora-playbook.yml  # build the site into docs/build/site (gitignored, generated)
+cd docs && npx pagefind --site build/site  # write the search index into the built site (replaces Lunr)
+cd docs && npm run test:nav && npm run test:nav:site  # nav override unit tests and the built-HTML dead-end check
 ```
 
-CI (`.github/workflows/docs.yml`) runs the same build and publishes `docs/build/site` to the `gh-pages`
-branch on every push to `main`. There is no separate lint/test command for the docs; the skills and agents themselves are checked by the scripts below.
+The toolchain is pinned exactly in `docs/package.json` and `docs/package-lock.json` (Antora 3.2.2, Pagefind 1.6.0; source
+of truth `.claude/skills/iru-setup-antora/reference/toolchain.md`). `docs/node_modules/` is never committed.
+`docs/ui-overrides/` and `docs/scripts/` are byte-identical copies from `iru-setup-antora`.
+
+Nav override decision (measured with `docs/scripts/site-metrics/measure.mjs build/site`): the nav is 58-69% of a typical
+skill page (threshold 30%; 219 nav entries, below the 300 threshold; site about 13 MiB), so the slimming nav override
+(`nav-tree.hbs`, `nav-item-state.js`) is enabled alongside the Pagefind overrides, with the default knobs. With only two
+nav levels the default expand depth removes little (nav about 29 KB per page before and after); revisit if the nav grows.
+
+CI (`.github/workflows/docs.yml`) runs the same build, indexes it with Pagefind and publishes `docs/build/site` to the
+`gh-pages` branch on every push to `main`. The skills and agents themselves are checked by the scripts below.
 
 ## Checks to run before opening a pull request
 

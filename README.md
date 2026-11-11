@@ -64,7 +64,7 @@ it's documented, e.g. `/iru-plan` or `/iru-pr-review`.
 The catalog currently includes:
 
 - **🏗️ Repository bootstrap** — `iru-setup-java-library-repository`, `iru-setup-java-library`,
-  `iru-setup-java-github-workflows`, `iru-setup-java-gitignore`, `iru-setup-readme`, `iru-setup-changelog`, `iru-setup-antora`.
+  `iru-setup-java-github-workflows`, `iru-setup-java-gitignore`, `iru-setup-readme`, `iru-setup-changelog`, `iru-setup-antora`, `iru-update-antora`.
 - **☕ Java quality** — `iru-java-test`, `iru-java-coverage`, `iru-java-code-quality`, `iru-java-javadoc`.
 - **🔄 Issue-to-PR workflow** — `iru-issue`, `iru-explore`, `iru-plan`, `iru-code`.
 - **🔀 Pull request lifecycle** — `iru-pr-description`, `iru-pr-review`.

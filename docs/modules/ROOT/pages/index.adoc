@@ -1,5 +1,5 @@
 = AI Catalog
-:description: 196 Claude Code Skills and 3 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
+:description: 197 Claude Code Skills and 3 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
 :keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development, windows desktop apps, macos desktop apps, dotnet wpf winui winforms, rust and go development, command-line tools
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -700,7 +700,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-setup-antora`
 |xref:index.adoc#group-bootstrap[Repository Bootstrap]
-|Creates or updates a working Antora docs site (Node.js/Antora, antora.yml, starter pages), adding a User interface section for UI projects.
+|Creates or updates a working Antora docs site on the pinned toolchain with Pagefind search, adding a User interface section for UI projects.
 |xref:skills/iru-setup-antora.adoc[]
 
 |`iru-setup-apple-app`
@@ -1107,6 +1107,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-typescript[TypeScript Development Tooling]
 |Audits and fills TSDoc on exported TypeScript symbols, then verifies with TypeDoc or Compodoc, incl. NestJS/Next.js.
 |xref:skills/iru-typescript-tsdoc.adoc[]
+
+|`iru-update-antora`
+|xref:index.adoc#group-maintenance[Repository Maintenance]
+|Upgrade an existing Antora toolchain to the pinned set, replace Lunr with Pagefind and npm ci workflows, and prove it with a build diff.
+|xref:skills/iru-update-antora.adoc[]
 
 |`iru-update-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
@@ -2165,6 +2170,8 @@ and scanning for accidentally committed secrets.
   changes already made to the code.
 * xref:skills/iru-build-docs.adoc[`iru-build-docs`] — builds the existing Antora documentation site as-is (no content
   edits), scaffolding it first via `iru-setup-antora` if it doesn't exist yet.
+* xref:skills/iru-update-antora.adoc[`iru-update-antora`] — upgrades an existing Antora toolchain to the pinned set
+  (Pagefind instead of Lunr, `npm ci` workflows) and proves the result with a before/after build diff.
 * xref:skills/iru-check-license.adoc[`iru-check-license`] — verifies (and backfills) license headers against the
   repository's actual license.
 * xref:skills/iru-check-security.adoc[`iru-check-security`] — scans for accidentally committed secrets via
@@ -2557,6 +2564,7 @@ flowchart LR
         CHECK_LICENSE["iru-check-license"]
         CHECK_SECURITY["iru-check-security"]
         RELEASE["iru-release"]
+        UPDATE_ANTORA["iru-update-antora"]
         UPDATE_DOCS["iru-update-docs"]
     end
 
