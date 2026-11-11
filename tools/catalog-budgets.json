@@ -25,7 +25,32 @@
     "ui-contract.md",
     "cli-contract.md",
     "ui-docs.md",
-    "accessibility-detection.md"
+    "accessibility-detection.md",
+    "reference/toolchain.md",
+    "ui-overrides/README.md",
+    "ui-overrides/partials/article.hbs",
+    "ui-overrides/partials/footer-scripts.hbs",
+    "ui-overrides/partials/head-styles.hbs",
+    "ui-overrides/partials/header-content.hbs",
+    "ui-overrides/partials/nav-tree.hbs",
+    "ui-overrides/helpers/nav-item-state.js",
+    "ui-overrides/css/pagefind-site.css",
+    "scripts/nav-html.mjs",
+    "scripts/nav-fix/check-nav-dead-ends.mjs",
+    "scripts/nav-fix/check-nav-dead-ends.test.mjs",
+    "scripts/nav-fix/nav-item-state.test.mjs",
+    "scripts/site-metrics/measure.mjs",
+    "scripts/site-metrics/measure.test.mjs"
+  ],
+  "mirrored_directories": [
+    {
+      "source": ".claude/skills/iru-setup-antora/ui-overrides",
+      "copy": "docs/ui-overrides"
+    },
+    {
+      "source": ".claude/skills/iru-setup-antora/scripts",
+      "copy": "docs/scripts"
+    }
   ],
   "internal_skills": [
     "iru-android-bump-version",

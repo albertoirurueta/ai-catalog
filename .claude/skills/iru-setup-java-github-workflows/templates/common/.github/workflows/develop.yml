@@ -47,23 +47,41 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
 
-      - name: Install Antora
-        run: |
-          mkdir docs && cd docs
-          npm i -D -E antora
-          npm i @antora/lunr-extension
-          npm i @sntke/antora-mermaid-extension
-          npm i @djencks/asciidoctor-mathjax
+      - name: Install docs toolchain
+        working-directory: docs
+        run: npm ci
+
+      - name: Show Antora version
+        working-directory: docs
+        run: npx antora -v
 
       - name: Build Antora docs
-        run: cd docs && npx antora antora-playbook.yml
+        working-directory: docs
+        run: npx antora antora-playbook.yml
+
+      # Search index. Runs before the API docs are merged below, so only the Antora pages are indexed; move this
+      # step after the merge if the API pages should be searchable.
+      - name: Index the site for search
+        working-directory: docs
+        run: npx pagefind --site build/site
 
       - name: Merge documentation
         run: |
           touch ./docs/build/site/.nojekyll
           cp -r ./docs/build/site ./doc
           cp -r ./target/site ./doc/mvn-site
+
+      # Optional size guard (GitHub Pages rejects a site over 1 GB): uncomment; it measures ./doc, the directory that
+      # is published (Antora site plus mvn-site), so keep it after "Merge documentation".
+      # - name: Check site size
+      #   run: |
+      #     size=$(du -sk doc | cut -f1)
+      #     echo "doc is ${size} KiB"
+      #     if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
+      #     if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
 
       # pages: yes (Step 1) — publish ./doc to the gh-pages branch. If pages: no, replace this whole step with the
       # "Upload documentation" step below.

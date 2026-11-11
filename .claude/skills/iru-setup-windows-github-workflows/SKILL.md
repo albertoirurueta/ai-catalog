@@ -149,6 +149,9 @@ generated exactly as below (`off` runs no automated checks, so no accessibility 
   certificate's subject or the Artifact Signing certificate profile's subject — remind the user).
 - `docs/antora.yml`/`docs/antora-playbook.yml` — missing → recommend running `iru-setup-antora` first (the docs job
   fails without them).
+- `docs/package-lock.json` — the docs job runs `npm ci` with the setup-node npm cache keyed on it, so it fails at
+  `actions/setup-node` without a committed lockfile. `docs/` present without one (a site from the old per-package
+  install) → recommend `/iru-update-antora` first; no `docs/` → `iru-setup-antora`, which commits it.
 - Branch names (`git branch -a`).
 - Existing files: `.github/workflows/build.yml`, `release.yml`, `sync.yml`, `security.yml`,
   `.github/scripts/sync_versions.py`, `.github/scripts/make_appinstaller.py`, `.github/dependabot.yml`; also note

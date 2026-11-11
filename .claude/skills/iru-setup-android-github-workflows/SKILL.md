@@ -205,7 +205,7 @@ update:
   '...'`, not a silent no-op) — never emit a coverage task against a module that doesn't enable it.
 - **`docs/antora.yml` / `docs/antora-playbook.yml`** (library flavor, or app flavor if it happens to have
   docs): if either is missing, the Antora build step has nothing to build against — recommend running
-  `iru-setup-antora` first, or confirm the user will do so before merging this workflow.
+  `iru-setup-antora` first, or confirm the user will do so before merging this workflow. The docs steps also need `docs/package.json` and the committed `docs/package-lock.json` (CI runs `npm ci` in `docs/`, then `npx pagefind --site build/site`). If `docs/` exists but has no lockfile (a site from the old per-package install), recommend `/iru-update-antora` instead: `actions/setup-node`'s npm cache fails the job without it.
 - **Branch names** (skip if supplied via `args`): confirm the integration/stable branch names actually match
   this repository's branching model (`git branch -a`) rather than assuming gitflow defaults; for
   `branching: main-only`, only `stable-branch` matters.
@@ -274,8 +274,7 @@ How each choice is applied in Step 12:
 
 **Versions are looked up at run time, not hardcoded from this file.** Use the GitHub Releases/tags API
 (`gh api repos/<owner>/<action>/releases/latest`, or `.../tags` — see the "Floating major tag" column below,
-since not every action publishes one) for every `uses:` action major, and the npm registry
-(`npm view antora version`, etc.) for the Antora toolchain packages `build.yml`'s Antora step installs. If a
+since not every action publishes one) for every `uses:` action major, (the Antora toolchain carries no versions in the workflow: it runs `npm ci` from the committed `docs/package-lock.json`, see `iru-setup-antora`'s `reference/toolchain.md`). If a
 lookup is unreachable, fall back to the versions confirmed current as of **September 2026**, listed here
 (all confirmed to resolve as an actual `git ls-remote --tags` ref during this skill's own
 verification pass — see Step 12 for the two that don't have a floating major tag):
@@ -291,7 +290,7 @@ verification pass — see Step 12 for the two that don't have a floating major t
 | `actions/upload-pages-artifact` | `v5` | yes | only when `pages: yes` |
 | `actions/deploy-pages` | `v5` | yes | only when `pages: yes` |
 | `actions/upload-artifact` | `v7` | yes | always for the `Upload UI screenshots` step, and also for `Upload docs artifact` when `pages: no` (replaces the Pages upload/deploy); fallback matches the TypeScript/Swift siblings' — not part of this skill's own September 2026 `git ls-remote` pass, so resolve it live |
-| `actions/setup-node` | `v7` | yes | used only for the Antora build step |
+| `actions/setup-node` | `v7` | yes | used only for the Antora build and Pagefind index steps (Node 24, which satisfies Antora's Node 20 minimum) |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
 | `actions/dependency-review-action` | **`v5.0.0`** | **no** | this action has never published a floating `v5` tag — only exact-version tags (`v5.0.0`, `v4.9.0`, …); pin the exact version and re-check at generation time whether a floating major now exists |
 | `google/osv-scanner-action` (reusable workflow) | **`v2.6.0`** | **no** | same situation — pin the workflow ref to the exact tag, e.g. `google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0` |
@@ -615,14 +614,11 @@ change was warranted:
   `git ls-remote --tags https://github.com/<owner>/<repo> v2` confirmed the floating `v2` ref does exist for
   both. Prefer `git ls-remote --tags` over the REST `/tags` listing when confirming whether a floating major
   tag exists — the REST endpoint's pagination/ordering isn't reliable for this.
-- **`develop.yml`/`main.yml`'s `Install Antora` step uses `mkdir -p docs-toolchain && cd docs-toolchain`
-  (matching the TypeScript sibling), not the Java sibling's bare `mkdir docs && cd docs`.** The bare form
-  would fail outright (`mkdir: cannot create directory 'docs': File exists`, and GitHub Actions `run:` steps
-  default to `bash -eo pipefail` on Linux runners) against any repository that already has `docs/antora.yml`
-  committed — which every repository this skill targets does, since the Antora build step immediately after
-  depends on it. Confirmed by inspecting the Java sibling's own template rather than by running it (this
-  skill's verification pass used a throwaway repo that already had `docs/`, and `mkdir -p` succeeded as
-  expected).
+- **`develop.yml`/`main.yml`'s docs steps run in `docs/` from the committed lockfile.** `Install docs toolchain` is
+  `npm ci` with `working-directory: docs`, followed by `npx antora -v`, the build and `npx pagefind --site build/site`
+  (the single CI snippet in `iru-setup-antora`'s `reference/toolchain.md`). The old `mkdir -p docs-toolchain` install
+  does not work as a toolchain: `npx` in `docs/` does not see a sibling directory's `node_modules`, so the playbook's
+  extensions are not found and the Antora version is whatever `latest` is that day.
 - **YAML-validated every rendered file** (all four `branching`×`flavor` combinations, `run-instrumented-tests:
   yes` for the library variant, `no` for the app variant, `sonar: cloud`, `publish: yes`/`distribution:
   store`) with `python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))"` — every file parsed cleanly.

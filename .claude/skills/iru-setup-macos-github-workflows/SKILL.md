@@ -130,6 +130,9 @@ generated exactly as below (`off` runs no automated checks, so no accessibility 
   `scripts/make-dmg.sh` (required for `internal`), `sonar-project.properties`, `.swiftlint.yml`/`.swift-format`.
 - `docs/antora.yml`/`docs/antora-playbook.yml` — missing → recommend running `iru-setup-antora` first (the docs job
   fails without them).
+- `docs/package-lock.json` — the docs job runs `npm ci` with the setup-node npm cache keyed on it, so it fails at
+  `actions/setup-node` without a committed lockfile. `docs/` present without one (a site from the old per-package
+  install) → recommend `/iru-update-antora` first; no `docs/` → `iru-setup-antora`, which commits it.
 - `<repo>` from `git remote get-url origin` (DocC's `--hosting-base-path <repo>/api`; GitHub project Pages serve at
   `https://<owner>.github.io/<repo>/`).
 - Branch names (`git branch -a`).

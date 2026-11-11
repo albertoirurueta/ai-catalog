@@ -271,8 +271,8 @@ format, treat everything as unset and gather every fact below as usual.
   needs a paid plan), otherwise recommend `none` and offer self-hosted SonarQube (Community Build is free, but
   you run the server) as the alternative.
 - **Antora docs**: check for `docs/antora.yml`, `docs/antora-playbook.yml`, **and** `docs/package.json` +
-  `docs/package-lock.json`. `iru-setup-antora` produces all four (its Step 3 installs Antora and the
-  lunr/mermaid/mathjax extensions into `docs/package.json`, and its Step 11 keeps `docs/package.json` and
+  `docs/package-lock.json`. `iru-setup-antora` produces all four (its Step 3 installs Antora, the
+  mermaid/mathjax extensions and Pagefind (pinned) into `docs/package.json`, and its Step 11 keeps `docs/package.json` and
   `docs/package-lock.json` committed precisely so CI can `cd docs && npm ci`). If any is missing, the docs
   steps in Step 3 have nothing to build against — `actions/setup-node`'s `cache-dependency-path:
   docs/package-lock.json` fails outright without the lockfile — so tell the user to run the `iru-setup-antora`

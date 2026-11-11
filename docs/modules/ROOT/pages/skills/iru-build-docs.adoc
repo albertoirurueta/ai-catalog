@@ -43,8 +43,11 @@ None — no arguments are accepted or needed.
   scaffolded Antora module (via `iru-setup-antora`), then the build proceeds against it.
 * No `.adoc` page content, `nav.adoc`, or `antora.yml` is ever edited by this skill itself (only `iru-setup-antora`,
   when delegated to, may write those as part of scaffolding).
+* After a successful build: the Pagefind index (when `pagefind` is a dependency), the nav dead-end check (when the nav override is
+  installed) and the size and nav measure, each reported only when it applies.
 * A report stating whether the module already existed or was just set up, whether the build succeeded or
-  failed, and the path to the built `index.html` or the build error — nothing else.
+  failed, and the path to the built `index.html` or the build error, plus the Pagefind, dead-end and nav size results, an
+  outdated-Antora warning pointing to xref:skills/iru-update-antora.adoc[], and the reminder that search needs the site served over HTTP.
 
 == Execution flow
 
@@ -62,9 +65,10 @@ flowchart TD
     C -- yes --> G["Locate playbook file;\nconfirm Node.js/npm usable"]
     G --> H{Node.js usable?}
     H -- no --> H1[Stop; point at setup-antora's\ninstall instructions]
-    H -- yes --> I["npm ci (or npm install\nif no lockfile) && npx antora &amp;lt;playbook&amp;gt;"]
+    H -- yes --> I["npm ci (or npm install\nif no lockfile) && npx antora -v\n&& npx antora &amp;lt;playbook&amp;gt;"]
     I --> J{Build succeeds?}
-    J -- yes --> K[Report built index.html path]
+    J -- yes --> J2["Step 3b: Pagefind index, dead-end check,\nsize and nav measure"]
+    J2 --> K[Report built index.html path\nand the check results]
     J -- no --> L[Report Antora/Asciidoctor error verbatim;\nno content fix attempted]
 ....
 

@@ -243,6 +243,7 @@ xref:agents/iru-gate-runner.adoc[`iru-gate-runner`] agent to confirm that task n
 the workflows exist; it references `iru-setup-kmp-app` (task-name contract), `iru-setup-antora`,
 `iru-setup-android-github-workflows` and `iru-setup-swift-github-workflows` only as conventions, never invoking
 them.
+It also recommends xref:skills/iru-update-antora.adoc[] (not called) when `docs/` exists without a committed `docs/package-lock.json`, since the docs job's `npm ci` and the `actions/setup-node` npm cache fail without one.
 
 === Invoked by
 

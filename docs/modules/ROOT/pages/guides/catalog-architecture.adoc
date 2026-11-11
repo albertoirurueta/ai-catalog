@@ -308,3 +308,13 @@ pages are overwritten on the next run.
 `+iru-generate-skill-docs+` skill handles this for generated pages automatically).
 
 `+docs/build/+` is gitignored — never hand-edit generated site output.
+
+The site builds on a pinned toolchain, declared once in `+iru-setup-antora+`'s `+reference/toolchain.md+` and shared by
+the setup, build, update and workflow skills: Antora 3.2.2 with exact extension versions, Pagefind 1.6.0 for search (it
+replaces the Lunr extension; the index is built after Antora with `+npx pagefind --site build/site+`), a committed
+`+docs/package-lock.json+` installed in CI with `+npm ci+`, and an untracked `+docs/node_modules/+`. This repository
+carries the Pagefind search overrides and the slim navigation override under `+docs/ui-overrides/+` (registered in the
+playbook's `+ui.supplemental_files+`), with their tests and the built-HTML dead-end check under `+docs/scripts/+`
+(`+npm run test:nav+`, `+npm run test:nav:site+`). A repository whose site is still on Antora 3.1 or Lunr is upgraded
+with `+iru-update-antora+`, which builds before and after and reports the difference. Search needs the site served over
+HTTP, not opened from `+file://+`.

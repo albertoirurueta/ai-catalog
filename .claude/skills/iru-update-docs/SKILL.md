@@ -51,8 +51,13 @@ file(s) in the repository (`find . -name antora.yml -not -path '*/node_modules/*
   a page called `overview.adoc` in one repo might be called `index.adoc` or `intro.adoc` in another.
 - Note the antora playbook file (commonly `antora-playbook.yml` or `site.yml`, usually near the docs module root
   or repository root) and read it once to check which Asciidoctor/Antora extensions are already wired up (e.g. a
-  Mermaid extension, a MathJax/stem extension, `lunr` search) — this determines what's actually safe to use in
+  Mermaid extension, a MathJax/stem extension, search) — this determines what's actually safe to use in
   Step 4, since a diagram/equation macro with no matching extension configured just renders as literal text.
+  Search is **Pagefind** when `docs/package.json` has a `pagefind` dependency or the playbook registers the
+  `ui-overrides` search partials (`partials/header-content.hbs`, `partials/footer-scripts.hbs`); older sites use the
+  `@antora/lunr-extension`. Pagefind needs no page markup, but it indexes only the article body, so keep content in the
+  page, not in nav or header. `reference/toolchain.md` (next to this skill) lists the pinned toolchain; if the site is on an
+  older Antora or still on Lunr, tell the user `/iru-update-antora` upgrades it, and do not upgrade it here.
 
 ## Step 3 — Understand what changed, in code terms
 
@@ -94,12 +99,20 @@ When editing:
   genuinely clearer as a diagram than prose — don't add one for something a short sentence already covers
   clearly, and don't introduce the syntax at all if the extension isn't configured (it would render as literal
   text) unless you also wire up the extension or explicitly flag the gap to the user.
-- **MathJax equations** (raw LaTeX delimited by `\( ... \)` inline or `\[ ... \]` block, rendered client-side):
-  only use these if Step 2 confirmed a MathJax/stem extension is wired in. Add one only if the change actually
+- **MathJax equations** (`stem:[...]` inline or a `[stem]` block with `:stem: latexmath` in the page header, rendered
+  to SVG at build time; never bare `\( \)` or `\[ \]`, which stay literal text with no build error, see
+  `reference/toolchain.md` "Verified behaviors"): only use these if Step 2 confirmed a MathJax/stem extension is wired in. Add one only if the change actually
   introduces math worth stating precisely (e.g. a complexity bound or a formal definition); most changes won't
   need one, so don't force one in.
 - If a change needs an entirely new page, create it in the same directory as the module's other pages, add an
   `xref:` entry to the relevant `nav.adoc` in a sensible position, and link to/from related existing pages.
+- **Nav authoring rules** for every `nav.adoc` edit: each entry is an `xref:` link or a text-only group heading
+  **with children** (never an empty group heading); never link an entry to a `#fragment` (the bundle's script then
+  collapses the nav); a group renamed here that is listed in the playbook's `site.keys.nav_open_groups` is renamed
+  there too; prefer a section `index.adoc` link over a text-only heading for a group whose pages should be reachable
+  from other sections. After changing `nav.adoc`, when `ui-overrides/partials/nav-tree.hbs` exists, build the site and
+  run `node scripts/nav-fix/check-nav-dead-ends.mjs build/site --sample` from the docs module; fix any dead end or broken
+  nav link it reports.
 - Preserve any existing disclaimers/notices (e.g. an AI-generated-content notice) already present on a page
   unless the change specifically concerns them.
 

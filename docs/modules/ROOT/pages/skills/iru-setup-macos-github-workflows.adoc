@@ -142,6 +142,7 @@ None -- `iru-setup-macos-github-workflows` invokes no other catalog skill; it wr
 `reference/workflow-templates.md` and runs `gh`, `git`, `actionlint`, `xcodegen`, `xcodebuild` and `python3` directly.
 The generated `sync.yml` follows the version convention of xref:skills/iru-swift-bump-version.adoc[] and the layout
 contract of xref:skills/iru-setup-macos-app.adoc[], but neither is called.
+It also recommends xref:skills/iru-update-antora.adoc[] (not called) when `docs/` exists without a committed `docs/package-lock.json`, since the docs job's `npm ci` and the `actions/setup-node` npm cache fail without one.
 
 === Invoked by
 

@@ -1,11 +1,11 @@
 = Setup Antora
-:description: Creates or updates a working Antora docs site: installs Node.js/Antora, scaffolds antora.yml and starter pages, asks how to treat an existing site.
-:keywords: iru-setup-antora, claude code skill, antora, asciidoc, nodejs, documentation site, nav.adoc, static site build
+:description: Creates or updates a working Antora docs site on the pinned toolchain with Pagefind search, scaffolds antora.yml and pages, asks how to treat an existing site.
+:keywords: iru-setup-antora, claude code skill, antora, asciidoc, nodejs, pagefind, pinned toolchain, documentation site, nav.adoc, static site build
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
 
 Bootstrap a minimal, working Antora documentation site for a repository: verify/install the Node.js toolchain,
-install Antora plus its extensions, scaffold `antora.yml`/`antora-playbook.yml` and a `ROOT` module with three
+install the pinned Antora toolchain (versions from its `reference/toolchain.md`, installed from a lockfile), scaffold `antora.yml`/`antora-playbook.yml` and a `ROOT` module with three
 starter pages, and confirm the site actually builds. The component name is derived from the project identifier (Maven `artifactId`, npm package `name`, `pyproject.toml` `[project].name`, the root `Cargo.toml` `[package] name`, the last element of the `go.mod` `module` path (a `/vN` suffix skipped), a Swift package's executable product name, a .NET solution's `*.slnx`/`*.sln` file name, or an XcodeGen `project.yml`'s `name:`), a Python `.dev0` or .NET/PHP `-dev` pre-release suffix is stripped from the starting version like `-SNAPSHOT` (for an Apple app the version comes from `MARKETING_VERSION` in `project.yml`/`Project.swift`/`*.xcconfig`; for a command-line tool from `Cargo.toml`, `internal/version/version.go`, `Version.swift` or `Directory.Build.props`), and for Python projects the optional API-docs entry in the starter pages points at the Sphinx build (`docs/api/`, published under the site's `api/`).
 
 == Purpose
@@ -17,7 +17,7 @@ or **updating an existing one**. When `docs/antora.yml`, the playbook, or the `R
 repository, `ai-catalog`, already does), it warns and asks whether to **Update** (fill gaps only — no page, config
 entry, or nav entry already present is overwritten or reordered), **Keep as is** (touch nothing; only the
 `.gitignore` check and the build verification still run), **Replace** (rewrite `antora.yml` and the playbook from
-its template; existing pages and `nav.adoc` are kept unless the user separately confirms otherwise), or **Stop**.
+its template; an existing site on an older Antora or on Lunr is not patched in place: the skill recommends xref:skills/iru-update-antora.adoc[] instead; existing pages and `nav.adoc` are kept unless the user separately confirms otherwise), or **Stop**.
 A scripted caller can pre-answer that question with `on-existing`. It also copies its own bundled `ui-bundle.zip` into
 `docs/`, so the generated `antora-playbook.yml` points `ui.bundle.url` at that local file instead of depending
 on the upstream GitLab CI artifact URL at build time. For a repository with a user interface it also creates a small
@@ -75,14 +75,18 @@ and the current `docs/` layout).
   `index.adoc` (repository overview), `installation.adoc` (install guide), and `reference.adoc` (links to
   generated reports/dashboards) — skipped for any of the three roles already covered by an existing page under a
   different name.
-* Antora, `@antora/lunr-extension`, `@sntke/antora-mermaid-extension`, and `@djencks/asciidoctor-mathjax`
-  installed under `docs/` (as dev/regular dependencies in `docs/package.json`).
+* The pinned Antora set (Antora 3.2.2, the Mermaid and MathJax extensions and the Pagefind CLI, exact versions from
+  `reference/toolchain.md`) installed under `docs/` with `docs/package.json` scripts and a `docs/package-lock.json` to commit.
+  Search is Pagefind; the Lunr extension is never installed.
+* `docs/ui-overrides/` (Pagefind search and slim-nav partials, helper and CSS) registered in the playbook, and `docs/scripts/`
+  (the shared `nav-html.mjs` nav-menu extraction, nav helper tests, built-HTML dead-end check, site-metrics measure).
+* `git rm -r --cached docs/node_modules` offered when dependencies are tracked.
 * For a repository with a UI (Step 9b): `pages/ui/index.adoc` (screens and components tables from a quick inventory),
   `pages/ui/navigation.adoc` (a Mermaid navigation graph, no screenshots yet), `images/ui/.gitkeep`, and a **User
   interface** section in `nav.adoc`. Existing `ui/` pages are kept as is on **Update**; the user is told to run
   `/iru-update-docs` once the UI tests have produced `.ui-screenshots/`.
 * A `docs/build/` entry added to the root `.gitignore` if missing.
-* A built static site at `docs/build/site` (from `npx antora antora-playbook.yml`), or a fixed build error if one
+* A built static site at `docs/build/site` (from `npx antora antora-playbook.yml`, then `npx pagefind --site build/site`), or a fixed build error if one
   occurred — this skill does not report success on a broken build.
 * A report that starts by restating the mode ("created from scratch" or "updated an existing site"), the option
   applied (updated / kept as is / replaced, and whether it came from the user or from `on-existing`, or that the
@@ -105,7 +109,7 @@ flowchart TD
     D -- something exists --> D2["Announce: updating existing site;\nwarn and ask Update / Keep / Replace / Stop\n(or apply on-existing)"]
     D2 -- Stop --> Z["End without changes"]
     D2 -- Keep as is --> M
-    D2 -- Update or Replace --> E["Step 3: Install Antora + lunr/mermaid/\nmathjax extensions under docs/"]
+    D2 -- Update or Replace --> E["Step 3: Install the pinned toolchain\n(reference/toolchain.md) under docs/"]
     E --> F["Step 4: Write or correct docs/antora.yml"]
     F --> G["Step 5: Write or fill docs/antora-playbook.yml;\ncopy ui-bundle.zip into docs/"]
     G --> H["Step 6: Create ROOT module skeleton\n(nav.adoc, pages/)"]
@@ -115,7 +119,7 @@ flowchart TD
     K --> K2["Step 9b: UI skeleton (ui/index, ui/navigation,\nimages/ui/.gitkeep) when the repository has a UI"]
     K2 --> L["Step 10: Update nav.adoc\nwith new page entries"]
     L --> M["Step 11: Add docs/build/\nto .gitignore if missing"]
-    M --> N["Step 12: Build site via\nnpx antora antora-playbook.yml"]
+    M --> N["Step 12: npm ci, build via npx antora,\nPagefind index, nav dead-end check"]
     N -- build fails --> O[Fix offending file before finishing]
     O --> N
     N -- build succeeds --> P["Step 13: Restate mode and option applied;\nreport already-present vs created/corrected\n(and gaps left under Keep as is)"]

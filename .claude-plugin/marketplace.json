@@ -37,6 +37,7 @@
         "./.claude/skills/iru-setup-readme",
         "./.claude/skills/iru-setup-repository",
         "./.claude/skills/iru-split-github-issue",
+        "./.claude/skills/iru-update-antora",
         "./.claude/skills/iru-update-docs"
       ],
       "agents": [

@@ -63,6 +63,9 @@ branch (`git diff <base-branch>...HEAD` plus `git diff`).
 
 * Updated `.adoc` pages reflecting only what the scoped diff actually changed — new/removed/renamed public
   APIs, behavioral changes, new variants of an existing abstraction, or changed documented commands.
+* Search is detected as Pagefind or Lunr; an older Antora or Lunr is reported with a pointer to xref:skills/iru-update-antora.adoc[], never upgraded here.
+  MathJax is written as `stem:[...]` or `[stem]` blocks (never bare `\( \)`), and `nav.adoc` follows the nav rules (no empty group headings, no `#fragment`
+  entries); the dead-end check runs after a nav change when the nav override is installed.
 * `nav.adoc`/`antora.yml` updated only if a page was added, removed, or renamed, or the component version should
   track a source version bump.
 * Mermaid diagrams (`[mermaid]`) or MathJax equations added only where the Antora playbook already has the
@@ -119,7 +122,7 @@ flowchart TD
     M5 --> Q{Node.js + Antora playbook available?}
     M1 --> Q
     M1C --> Q
-    Q -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors]
+    Q -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors;\ndead-end check after nav changes]
     Q -- no --> O[Note build was not locally verified]
     N --> P["Report per-page changes, unchanged pages,\nnoted doc gaps, and MCP doc outcome"]
     O --> P

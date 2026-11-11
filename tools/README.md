@@ -14,7 +14,7 @@ first `/iru-` or `Invoke as` in the description, bytes inside fenced code blocks
 `yaml.safe_load` (when it does not, `model` and `description` are read leniently so the metrics still exist).
 Across the catalog it also computes duplicate supporting files by SHA-256 (groups and redundant bytes), the md5
 set of each shared byte-identical file (`ui-contract.md`, `cli-contract.md`, `ui-docs.md`,
-`accessibility-detection.md`), `Skill()` targets that do not exist, and **inline cross-model calls**: a `Skill()`
+`accessibility-detection.md`, plus the Antora set: `toolchain.md`, the `ui-overrides` partials/helper/CSS, the nav and site-metrics scripts and their tests; a generic name such as `README.md` is deliberately not listed), `Skill()` targets that do not exist, and **inline cross-model calls**: a `Skill()`
 call whose caller `model` differs from the callee's and that is not inside an `Agent({...})` prompt string (the
 cache-hit penalty case). The report flags calls whose preceding prose already mentions `iru-gate-runner` or
 `iru-isolated-skill-executor`, which usually are delegated and need a manual look.
@@ -138,7 +138,8 @@ The thresholds `--check` enforces:
 | `agent_description_max` | maximum agent `description` characters |
 | `require_agent_model` | every agent must pin a `model` |
 | `allowed_models` / `agent_allowed_models` | accepted `model` values for skills / for agents (agents may also say `inherit`) |
-| `shared_identical_files` | file names whose copies must stay byte-identical across skills |
+| `shared_identical_files` | files whose copies must stay byte-identical across skills: a bare name matches by basename, a name with a `/` (e.g. `ui-overrides/partials/article.hbs`) by its path inside the skill directory, so generic names never collide with unrelated files |
+| `mirrored_directories` | `{source, copy}` directory pairs (relative to the repository root) that must hold the same files with the same contents, e.g. `docs/ui-overrides` copied from `iru-setup-antora` (`mirror-drift` error); a pair whose source is absent is skipped |
 | `internal_skills` | skills only ever invoked by other catalog skills through `Skill()` |
 | `inline_cross_model_level` | `warning` or `error` for inline cross-model `Skill()` calls |
 | `asset_path_ignore` | per skill, `templates/...` or `reference/...` paths its `SKILL.md` mentions that live in the target repository, not in the skill (exempt from `asset-path-missing`) |

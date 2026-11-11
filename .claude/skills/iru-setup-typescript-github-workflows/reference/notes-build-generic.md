@@ -9,10 +9,14 @@ Notes specific to this template:
   `iru-setup-angular-web` Step 12 rely on Storybook's own installer, which writes `storybook`/`build-storybook`
   scripts and nothing named `docs`).
 - The Antora steps assume `iru-setup-antora`'s layout — `docs/package.json` listing `antora` plus the
-  lunr/mermaid/mathjax extensions, and a committed `docs/package-lock.json` — so `npm ci` resolves every
+  mermaid/mathjax extensions and `pagefind`, and a committed `docs/package-lock.json` — so `npm ci` resolves every
   extension the playbook names from `docs/node_modules/` and `setup-node` can cache it. Never install the
   toolchain into some other directory (e.g. an ad hoc `docs-site/`): `antora` resolves playbook extensions
   relative to the playbook's own directory, so they'd be "not found" at build time.
+- The docs steps run `npm ci`, `npx antora -v`, the build and `npx pagefind --site build/site` in `docs/` (the CI snippet in
+  `iru-setup-antora`'s `reference/toolchain.md`); the Pagefind index covers the Antora pages only, since the API
+  reference is merged afterwards. The Node used must be 20 or later. The commented "Check site size" step is an optional
+  guard against GitHub Pages' 1 GB limit.
 - `actions/upload-pages-artifact`/`actions/deploy-pages` need the repository's Settings → Pages → "Build and
   deployment" → Source set to **GitHub Actions** (not "Deploy from a branch") — `deploy-pages` fails outright
   if that setting still points at a branch. Call this out in Step 7/8.

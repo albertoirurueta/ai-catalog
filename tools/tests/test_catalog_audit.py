@@ -317,6 +317,58 @@ class CheckTests(CatalogTestCase):
         violations = audit.run_checks(data, budgets or self.BUDGETS)
         return {(v["level"], v["rule"], v["subject"]) for v in violations}
 
+    def test_toolchain_md_drift_fails_the_check(self):
+        for name in ("iru-setup-antora", "iru-update-antora"):
+            self.skill(name, model="sonnet")
+        self.write(".claude/skills/iru-setup-antora/reference/toolchain.md", "pins A")
+        self.write(".claude/skills/iru-update-antora/reference/toolchain.md", "pins A")
+        budgets = dict(self.BUDGETS, shared_identical_files=["toolchain.md"])
+        self.assertNotIn(
+            ("error", "shared-file-drift", "toolchain.md"), self.rules(budgets)
+        )
+        self.write(".claude/skills/iru-update-antora/reference/toolchain.md", "pins B")
+        self.assertIn(
+            ("error", "shared-file-drift", "toolchain.md"), self.rules(budgets)
+        )
+
+    def test_path_keyed_shared_file_ignores_same_basename_elsewhere(self):
+        for name in ("iru-setup-antora", "iru-update-antora", "iru-web"):
+            self.skill(name, model="sonnet")
+        self.write(".claude/skills/iru-setup-antora/ui-overrides/partials/article.hbs", "A")
+        self.write(".claude/skills/iru-update-antora/ui-overrides/partials/article.hbs", "A")
+        self.write(".claude/skills/iru-web/templates/app/partials/article.hbs", "unrelated")
+        budgets = dict(
+            self.BUDGETS, shared_identical_files=["ui-overrides/partials/article.hbs"]
+        )
+        rule = ("error", "shared-file-drift", "ui-overrides/partials/article.hbs")
+        self.assertNotIn(rule, self.rules(budgets))
+        data = audit.analyse(self.root, budgets)
+        self.assertEqual(data["shared_files"]["ui-overrides/partials/article.hbs"]["copies"], 2)
+        self.write(".claude/skills/iru-update-antora/ui-overrides/partials/article.hbs", "B")
+        self.assertIn(rule, self.rules(budgets))
+
+    def test_mirrored_directory_drift_fails_the_check(self):
+        self.skill("iru-setup-antora", model="sonnet")
+        self.write(".claude/skills/iru-setup-antora/ui-overrides/a.hbs", "A")
+        self.write(".claude/skills/iru-setup-antora/ui-overrides/b/c.js", "C")
+        self.write("docs/ui-overrides/a.hbs", "A")
+        self.write("docs/ui-overrides/b/c.js", "C")
+        budgets = dict(
+            self.BUDGETS,
+            mirrored_directories=[
+                {"source": ".claude/skills/iru-setup-antora/ui-overrides", "copy": "docs/ui-overrides"},
+                {"source": ".claude/skills/absent/scripts", "copy": "docs/scripts"},
+            ],
+        )
+        rule = ("error", "mirror-drift", "docs/ui-overrides")
+        self.assertNotIn(rule, self.rules(budgets))
+        self.write("docs/ui-overrides/b/c.js", "changed")
+        self.assertIn(rule, self.rules(budgets))
+        self.write("docs/ui-overrides/b/c.js", "C")
+        self.write("docs/ui-overrides/extra.css", "x")
+        self.assertIn(rule, self.rules(budgets))
+        self.assertNotIn(("error", "mirror-drift", "docs/scripts"), self.rules(budgets))
+
     def test_clean_catalog_has_no_violations(self):
         self.skill("iru-ok", model="haiku")
         self.agent(
@@ -803,15 +855,24 @@ class MainTests(CatalogTestCase):
         ) as handle:
             budgets = json.load(handle)
         self.assertEqual(budgets["description_max"], 1024)
-        self.assertEqual(
-            sorted(budgets["shared_identical_files"]),
-            [
+        shared = set(budgets["shared_identical_files"])
+        self.assertTrue(
+            {
                 "accessibility-detection.md",
                 "cli-contract.md",
                 "ui-contract.md",
                 "ui-docs.md",
-            ],
+                "reference/toolchain.md",
+                "ui-overrides/partials/nav-tree.hbs",
+                "scripts/site-metrics/measure.mjs",
+            }
+            <= shared
         )
+        self.assertEqual(
+            {m["copy"] for m in budgets["mirrored_directories"]},
+            {"docs/ui-overrides", "docs/scripts"},
+        )
+        self.assertNotIn("README.md", shared)
         self.assertEqual(budgets["internal_skills"], sorted(budgets["internal_skills"]))
         repo = os.path.dirname(TOOLS_DIR)
         for name in budgets["internal_skills"]:

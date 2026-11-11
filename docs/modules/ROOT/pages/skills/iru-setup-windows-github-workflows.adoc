@@ -149,6 +149,7 @@ None -- `iru-setup-windows-github-workflows` invokes no other catalog skill; it 
 `sync.yml` follows the `x.y.z-dev` convention of xref:skills/iru-dotnet-bump-version.adoc[] and the layout contract of
 xref:skills/iru-setup-windows-app.adoc[], and the generated docs job builds the site created by
 xref:skills/iru-setup-antora.adoc[], but none of these is called.
+It also recommends xref:skills/iru-update-antora.adoc[] (not called) when `docs/` exists without a committed `docs/package-lock.json`, since the docs job's `npm ci` and the `actions/setup-node` npm cache fail without one.
 
 === Invoked by
 

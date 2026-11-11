@@ -1,13 +1,13 @@
 ---
 name: iru-setup-antora
-description: "Invoked as /iru-setup-antora, optionally with an args line on-existing: ask|keep|update|replace. Sets up an Antora documentation site (docs/antora.yml, playbook, ROOT module with index/installation/reference pages, plus a User interface skeleton for UI projects); on an existing site it asks Update, Keep or Replace."
+description: "Invoked as /iru-setup-antora, optionally with an args line on-existing: ask|keep|update|replace. Sets up an Antora documentation site (antora.yml, playbook, ROOT module pages, User interface skeleton for UI projects) on the pinned toolchain with Pagefind search; on an existing site it asks Update, Keep or Replace."
 model: sonnet
 ---
 
 # Antora Setup
 
 Bootstrap a minimal, working Antora documentation site for a repository: verify/install the Node.js toolchain,
-install Antora plus its supported extensions under `docs/`, write `antora.yml` and `antora-playbook.yml`, create
+install the pinned Antora toolchain under `docs/`, write `antora.yml` and `antora-playbook.yml`, create
 the `ROOT` module with three starter pages, and confirm the site actually builds. This skill makes no assumptions
 about the repository's language or build system — discover the project name, version, and install instructions
 fresh each run. Its default update path is additive: if some or all of this already exists (as it does in this very
@@ -58,10 +58,16 @@ Don't assume a clean slate. Before creating anything, check:
 - Does `docs/antora-playbook.yml` (or another playbook file referenced from `docs/package.json` scripts) exist?
 - Does `docs/ui-bundle.zip` already exist next to it?
 - Does `docs/modules/ROOT/` exist, and if so what pages does `docs/modules/ROOT/nav.adoc` already list?
-- Is `docs/package.json` already tracking `antora` and the three extensions from Step 3 as dependencies?
+- Is `docs/package.json` already tracking `antora` and the extensions from Step 3 as dependencies, and at which
+  versions? Does the playbook still require `@antora/lunr-extension`, or does `docs/ui-overrides/` already exist?
 
 Build a concrete gap list from this survey (e.g. "antora.yml missing", "playbook exists but has no mermaid
 extension", "ROOT module exists with 5 pages already, no page covers installation").
+
+If the existing site is on an Antora older than the pinned version in `reference/toolchain.md`, or still requires
+`@antora/lunr-extension`, do not patch versions in place: tell the user to run `/iru-update-antora`, which upgrades
+the toolchain, replaces Lunr with Pagefind, fixes the workflows and proves the result with a before/after build diff.
+Under **Update** this skill then only fills the gaps that do not concern versions or search.
 
 Then tell the user which of the two this run is doing:
 
@@ -88,29 +94,35 @@ Every later step acts only on genuine gaps (or, under **Replace**, on the two co
 fully-set-up repository answered with **Update** should result in Step 13 reporting "already set up," not in
 duplicated or overwritten files.
 
-## Step 3 — Install Antora and its extensions
+## Step 3 — Install the pinned toolchain
 
-If `docs/` doesn't exist yet, create it (`mkdir docs`). From inside `docs/`:
+Read `reference/toolchain.md` (next to this file): it is the single source of truth for the versions, the Node
+minimum, the install command and the `package.json` scripts. Do not restate or invent versions here. If `docs/`
+doesn't exist yet, create it (`mkdir docs`). From inside `docs/`:
 
 ```bash
 cd docs
 [ -f package.json ] || npm init -y >/dev/null   # npm otherwise walks up and installs into the ROOT package.json
-npm i -D -E antora
-npm i @antora/lunr-extension
-npm i @sntke/antora-mermaid-extension
-npm i @djencks/asciidoctor-mathjax
+npm i -E <the pinned set from reference/toolchain.md>
 ```
 
 - **`docs/package.json` must exist before the first `npm i`** (verified against a pipeline-generated repository): with no manifest in
   `docs/`, npm resolves the nearest ancestor `package.json` — the library/app's own root manifest — and installs
-  Antora and the three extensions there, polluting the project's real dependencies. The `npm init -y` guard above
-  creates a minimal manifest first (set `"private": true` in it afterwards so it can never be published).
-- `npm i -D -E antora` pins an exact Antora version as a dev dependency (`-E` = exact, no `^`/`~` range) —
-  matching how this repo pins it in `docs/package.json`.
-- The three extensions add: full-text search (`@antora/lunr-extension`), Mermaid diagram rendering
-  (`@sntke/antora-mermaid-extension`), and MathJax equation rendering (`@djencks/asciidoctor-mathjax`).
-- If `docs/package.json` already lists a package from Step 2's survey, skip reinstalling it — `npm i` is safe to
-  re-run regardless, but there's no need to if the dependency is already present at a working version.
+  Antora and the extensions there, polluting the project's real dependencies. The `npm init -y` guard above
+  creates a minimal manifest first; set `"private": true` in it afterwards so it can never be published.
+- One `npm i -E` command with `name@version` for every package: exact versions (no `^`/`~`), saved in `dependencies`,
+  and `package-lock.json` written in the same run.
+- The set adds Mermaid diagram rendering (`@sntke/antora-mermaid-extension`), MathJax equation rendering
+  (`@djencks/asciidoctor-mathjax`) and the Pagefind CLI (`pagefind`, the search index). Search is Pagefind, not the
+  Lunr extension: never install `@antora/lunr-extension`.
+- Add `@antora/collector-extension` only when a component descriptor uses `ext.collector` (grep the repository's
+  `antora.yml` files); otherwise leave it out.
+- Edit `docs/package.json` after the install: `"engines": {"node": ">=20"}` and the `scripts` from
+  `reference/toolchain.md` (`build`, `search:index`, `test:nav`, `test:nav:site`; the two `test:nav*` scripts belong
+  with the override copied in Step 5).
+- **Commit `docs/package.json` and `docs/package-lock.json`**: CI runs `npm ci` from the lockfile.
+- If `docs/package.json` already lists a package from Step 2's survey at the pinned version, skip reinstalling it.
+  `npm i -E <name>@<version>` is safe to re-run.
 
 ## Step 4 — Write `docs/antora.yml`
 
@@ -161,7 +173,7 @@ nav:
 ## Step 5 — Write `docs/antora-playbook.yml`
 
 The `site`/`content` sections are project-specific; the `ui`/`antora.extensions`/`asciidoc` sections are fixed
-boilerplate this skill applies as-is (they wire up the three extensions installed in Step 3) — don't improvise
+boilerplate this skill applies as-is (they wire up the extensions installed in Step 3 and the search/nav overrides) — don't improvise
 alternatives for them. If the file already exists and Step 2's answer was **Update**, only add missing pieces (e.g.
 an extension block) rather than rewriting sections that already match this shape; under **Replace**, rewrite the
 whole file from the template below.
@@ -181,6 +193,9 @@ whole file from the template below.
 site:
   title: <Human Readable Project Title>
   start_page: <project-slug>::index.adoc
+  # keys:                          # optional nav knobs, see ui-overrides/README.md
+  #   nav_open_groups: 'Group A, Group B'
+  #   nav_expand_depth: 1
 content:
   sources:
     - url: ..
@@ -196,9 +211,22 @@ ui:
         static_files:
         - .nojekyll
     - path: .nojekyll
+    - path: partials/article.hbs
+      contents: ./ui-overrides/partials/article.hbs
+    - path: partials/footer-scripts.hbs
+      contents: ./ui-overrides/partials/footer-scripts.hbs
+    - path: partials/head-styles.hbs
+      contents: ./ui-overrides/partials/head-styles.hbs
+    - path: partials/header-content.hbs
+      contents: ./ui-overrides/partials/header-content.hbs
+    - path: partials/nav-tree.hbs
+      contents: ./ui-overrides/partials/nav-tree.hbs
+    - path: helpers/nav-item-state.js
+      contents: ./ui-overrides/helpers/nav-item-state.js
+    - path: css/pagefind-site.css
+      contents: ./ui-overrides/css/pagefind-site.css
 antora:
   extensions:
-    - require: "@antora/lunr-extension"
     - require: '@sntke/antora-mermaid-extension'
       mermaid_library_url: https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs
       script_stem: header-scripts
@@ -211,6 +239,19 @@ asciidoc:
   extensions:
     - '@djencks/asciidoctor-mathjax'
 ```
+
+Also, in this step:
+
+- **Remove the Lunr extension**: no `@antora/lunr-extension` entry in `antora.extensions`. Search is the Pagefind index
+  that Step 12 writes after the build, served by the `ui.supplemental_files` entries above. Add
+  `@antora/collector-extension` to `antora.extensions` only when Step 3 installed it.
+- **Copy the overrides and checks into `docs/`**: this skill's `ui-overrides/` directory to `docs/ui-overrides/` and its
+  `scripts/` directory to `docs/scripts/`, byte-identical (`cp -R`). Read `ui-overrides/README.md` for what each file does. The
+  `test:nav` and `test:nav:site` scripts from Step 3 run the override's unit tests and a built-HTML dead-end check.
+- **Nav knobs**: the optional `site.keys.nav_open_groups` (comma-separated group titles whose children open by default,
+  default none) and `site.keys.nav_expand_depth` (default 1) tune the slim nav. With neither set the override is a no-op
+  on a small nav, so it is always written; set them only when the nav grows (thresholds in `reference/toolchain.md`).
+  A group renamed in `nav.adoc` must be renamed in `nav_open_groups` too.
 
 Concrete example, from this repository (`docs/antora-playbook.yml`), differs from the template above only in the
 `site` block (`title: <Name-of-repository>`, `start_page: name-of-repository::index.adoc`) — every other section is copied verbatim, including the local `ui-bundle.zip` copied into `docs/`.
@@ -245,8 +286,10 @@ structural search) to build a picture of module layout and the small number of t
 newcomer would actually care about, and read only those specific files directly once identified. This page should
 give a newcomer: what the project is, why it exists, the core concept(s) it's built around, and a pointer to the
 other two starter pages. Use a Mermaid diagram (`[mermaid]` block) if a flow or architecture is genuinely clearer
-as a diagram, and a MathJax equation (`\( ... \)` / `\[ ... \]`) only if the project's core logic involves
-something worth stating precisely as math — most projects won't need one, don't force it.
+as a diagram, and a MathJax equation only if the project's core logic involves something worth stating precisely as
+math — most projects won't need one, don't force it. Write math as `stem:[...]` inline or a `[stem]` block with
+`:stem: latexmath` in the page header (verified in `reference/toolchain.md`, "Verified behaviors"); never write bare `\( \)` or
+`\[ \]`, which render as literal text and make no build error.
 
 Every generated page from this skill (`index.adoc`, `installation.adoc`, `reference.adoc`) must carry this exact
 disclaimer, placed right after the page's `= Title` heading:
@@ -258,6 +301,20 @@ NOTE: This documentation was generated with the assistance of AI. Please report 
 This repository's own `docs/modules/ROOT/pages/index.adoc` is a concrete example of the shape to aim for: a short
 overview, a Mermaid flowchart of the core algorithm, a couple of concept sections, and closing pointers to the
 next pages.
+
+### Nav authoring rules
+
+Write these rules into the generated repository's `docs/README.adoc` or `docs/README.md` (create it if missing) and into
+its `CLAUDE.md` docs section when one exists, so every later edit of `nav.adoc` follows them:
+
+- Every nav entry is an `xref:` link or a text-only group heading **with children**. Never add an empty group heading.
+- Nav entries never link to a `#fragment`: it renders as `href="#..."` and the bundle's script then strips every
+  `is-active` class and collapses the default-open groups.
+- A group renamed in `nav.adoc` that is listed in `site.keys.nav_open_groups` must be renamed there too.
+- Prefer a section `index.adoc` link over a text-only heading for a group whose pages should be reachable from other
+  sections: a linked entry's subtree may be pruned, a text-only heading's never is, so it costs HTML on every page of
+  its parent.
+- Run `npm run test:nav:site` (from `docs/`, after a build) after any `nav.adoc` change.
 
 ## Step 8 — Write `installation.adoc` (installation guide)
 
@@ -305,7 +362,7 @@ Otherwise create, when missing, the skeleton its §2 describes — and nothing m
   tables from §3 filled from a quick inventory (the `Explore` agent: screens/pages/activities/windows and reusable
   components, with the purpose their doc comments state). Link no per-screen page yet.
 - `pages/ui/navigation.adoc`: the disclaimer and the navigation graph from the app's navigation definition
-  (Mermaid `flowchart` — the playbook from Step 5 always wires Mermaid), without screenshots.
+  (Mermaid `flowchart` — the playbook from Step 5 always wires Mermaid; any math there follows Step 7's `stem:[...]` rule), without screenshots.
 - `images/ui/.gitkeep`, so the committed screenshot tree exists.
 
 Per-screen and per-component pages and every screenshot are `iru-update-docs`' job (its UI step builds the whole
@@ -336,22 +393,35 @@ an existing one is like any other existing page and nav entry — kept as is.
 Check the repository's `.gitignore` for entries covering `docs/build/` **and** `docs/node_modules/`. If either
 is missing, add it — every `iru-setup-<stack>-gitignore` skill in this catalog writes both, and CI reinstalls the
 toolchain with `cd docs && npm ci` from the committed lockfile. Do **not** gitignore `docs/package.json` or
-`docs/package-lock.json` — those must stay committed for `npm ci` to work. (This catalog's own repository
-historically committed `docs/node_modules/`; that is a legacy quirk, not the convention to reproduce.)
+`docs/package-lock.json` — those must stay committed for `npm ci` to work.
+
+Then check whether `docs/node_modules/` is tracked anyway (`git ls-files docs/node_modules | head -1`). Tracked
+dependencies are a defect, not a quirk to leave alone: they bloat the repository and defeat the lockfile. If any file is
+tracked, offer `git rm -r --cached docs/node_modules` (index only, the files stay on disk) and apply it only after the
+user agrees; never commit it yourself.
 
 ## Step 12 — Build the site
 
-From `docs/`:
+From `docs/`, install from the lockfile when it exists, then build, index and check (`reference/toolchain.md` has the
+same commands):
 
 ```bash
 cd docs
+npm ci                                  # only when a lockfile exists; otherwise Step 3 already installed
 npx antora antora-playbook.yml
+npx pagefind --site build/site
+node scripts/nav-fix/check-nav-dead-ends.mjs build/site --sample
 ```
 
 - **Build succeeds**: the static site lands at `docs/build/site`; note the path to `docs/build/site/index.html`
-  for the report.
+  for the report. Antora exits with code 2 when a message reaches the failure level: treat that as a failed build.
 - **Build fails**: read the Antora/Asciidoctor error (broken `xref:`, bad YAML, malformed AsciiDoc table, invalid
   Mermaid/MathJax syntax) and fix the offending file before finishing — don't report success with a broken build.
+- **Pagefind** writes `docs/build/site/pagefind/`; it must finish with exit code 0 and report the pages it indexed.
+- **Dead-end check** (exit 0 clean, 1 defects, 2 no nav): fix a defect (empty group heading, broken nav link) in
+  `nav.adoc` before finishing.
+- **Search needs HTTP.** It works only when the site is served over HTTP, not from `file://`. Tell the user to try
+  `python3 -m http.server 8090 --directory docs/build/site` and open `http://localhost:8090`.
 
 ## Step 13 — Report
 
@@ -360,13 +430,18 @@ existing site, the option applied (**updated** / **kept as is** / **replaced**, 
 or from `on-existing`; or that the user chose **Stop**, in which case report only that). Then summarize, grouped by
 what Step 2 found already present vs. what this run created or filled in:
 
-- Node.js/Antora/extensions: already present vs. newly installed.
+- Node.js/Antora/extensions: already present vs. newly installed, listing the pinned versions installed (from
+  `reference/toolchain.md`) and whether `docs/package-lock.json` was written (to be committed). An existing site on an
+  older Antora or on Lunr: that `/iru-update-antora` was recommended.
+- `docs/ui-overrides/` and `docs/scripts/`: copied, already present, or left out; the Pagefind index and dead-end check
+  results from Step 12, and the reminder that search needs the site served over HTTP.
 - `antora.yml` / `antora-playbook.yml`: already present and correct, corrected, or newly written.
 - `ui-bundle.zip`: already present at `docs/` vs. newly copied in from this skill's directory.
 - Each of the three starter pages: newly created, or already covered by an existing page under a different name
   (name it).
 - The **User interface** skeleton from Step 9b: created, already present, or not applicable (no UI).
-- `nav.adoc` and `.gitignore`: entries added, if any.
+- `nav.adoc` and `.gitignore`: entries added, if any; whether tracked `docs/node_modules/` was found and untracked.
+- The nav authoring rules from Step 7: where they were written.
 - Build result from Step 12, with the path to the built `index.html`.
 - Under **Keep as is**: every gap from Step 2's list that was left unfilled (missing extension, missing starter
   page role, missing `ui-bundle.zip`, …), so the user can re-run with **Update** later.
@@ -374,3 +449,15 @@ what Step 2 found already present vs. what this run created or filled in:
 Remind the user to review the generated `index.adoc`/`installation.adoc`/`reference.adoc` content themselves
 before trusting it, and that `docs/build/` and `docs/node_modules/` should stay untracked while `docs/package.json`,
 and `docs/package-lock.json` should be committed.
+
+## Supporting files
+
+| Path | Purpose |
+|---|---|
+| `reference/toolchain.md` | Pinned versions, Node minimum, install command, scripts, CI snippet, size guard, nav thresholds, Antora 3.2 notes, verified behaviors. Read in Step 3. |
+| `reference/ui-docs.md` | User interface section guidance. Read in Step 9b. |
+| `ui-bundle.zip` | The shared UI bundle, copied to `docs/` in Step 5. |
+| `ui-overrides/` | Pagefind search and slim-nav partials, helper and CSS, plus a README; copied to `docs/ui-overrides/` in Step 5. |
+| `scripts/nav-html.mjs` | Nav-menu extraction shared by both scripts below; copied to `docs/scripts/` with them. |
+| `scripts/nav-fix/` | Nav helper unit tests and the built-HTML dead-end check; copied to `docs/scripts/`. |
+| `scripts/site-metrics/` | `measure.mjs` and its tests: site and nav size verdict; copied to `docs/scripts/`. |

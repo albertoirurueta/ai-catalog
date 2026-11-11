@@ -224,6 +224,7 @@ flowchart TD
 === Invokes
 
 None — `iru-setup-swift-github-workflows` is a leaf skill; it does not call any other skill in this catalog.
+It also recommends xref:skills/iru-update-antora.adoc[] (not called) when `docs/` exists without a committed `docs/package-lock.json`, since the docs job's `npm ci` and the `actions/setup-node` npm cache fail without one.
 
 === Invoked by
 

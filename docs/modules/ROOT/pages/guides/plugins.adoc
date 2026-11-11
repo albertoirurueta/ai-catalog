@@ -72,7 +72,7 @@ Both public and private marketplaces work the same way:
 == This catalog's own marketplace
 
 This catalog is itself a marketplace named `ai-catalog` (`.claude-plugin/marketplace.json`, generated from
-`tools/plugins.json`). It splits the 196 skills into `iru-core` (the stack-independent pipeline: `iru-issue`,
+`tools/plugins.json`). It splits the 197 skills into `iru-core` (the stack-independent pipeline: `iru-issue`,
 `iru-explore`, `iru-plan`, `iru-code`, PR and release skills, ticket intake, license and security checks, documentation,
 the repository bootstrap front door, and the three agents), `iru-knowledge`, and one plugin per stack (`iru-java`,
 `iru-springboot`, `iru-quarkus`, `iru-dotnet`, `iru-typescript`, `iru-nestjs`, `iru-nextjs`, `iru-react-native`,

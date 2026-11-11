@@ -233,7 +233,8 @@ update:
   `iru-swift-bump-version`'s own "don't create one unless something reads it" rule).
 - **`docs/antora.yml`/`docs/antora-playbook.yml`**: if either is missing, the Antora build step in `build.yml`
   has nothing to build against — recommend running `iru-setup-antora` first, or confirm the user will do so
-  before merging this workflow.
+  before merging this workflow. The docs job runs `npm ci` in `docs/` and then Pagefind, so `docs/package.json` and the
+  committed `docs/package-lock.json` are needed as well. If `docs/` exists but has no lockfile (a site from the old per-package install), recommend `/iru-update-antora` instead: `actions/setup-node`'s npm cache fails the job without it.
 - **Branch names** (skip whichever is supplied via `args`): confirm the integration/stable branch names actually
   match this repository's branching model (`git branch -a`) rather than assuming gitflow defaults; for
   `branching: main-only`, only `stable-branch` matters.
@@ -297,7 +298,7 @@ own verification):
 |---|---|---|---|
 | `actions/checkout` | `v7` | yes | |
 | `maxim-lobanov/setup-xcode` | `v1` | yes | |
-| `actions/setup-node` | `v7` | yes | used only for the Antora build step |
+| `actions/setup-node` | `v7` | yes | used only for the Antora build and Pagefind index steps (Node 24) |
 | `actions/setup-python` | `v7` | yes | used only by `sync.yml`, `branching: gitflow` only |
 | `actions/upload-artifact` | `v7` | yes | uploads each `.xcresult` bundle, the Core coverage/SwiftLint reports, the Antora site and DocC archive (app flavor `build.yml`) and the notarized macOS `.zip` (app flavor `release.yml`) |
 | `actions/download-artifact` | `v8` | yes | app flavor `build.yml` only — the `sonar` and `site` jobs (same as `iru-setup-macos-github-workflows`) |
