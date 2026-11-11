@@ -142,7 +142,14 @@ order:
 
 1. Whatever introductory/conceptual material already exists (what this repository is, why it exists) —
    preserve it; only add a short "core concepts" note about agents if Step 2 found any custom or built-in
-   agent usage and the page doesn't already explain the skill/agent distinction.
+   agent usage and the page doesn't already explain the skill/agent distinction. Right after the opening
+   paragraph (before the first `==` section), keep (or add) `include::partial$download-catalog.adoc[]` when
+   `docs/modules/ROOT/partials/download-catalog.adoc` exists; if it is missing but the repository has
+   `tools/build-packages.py`, create it following the packaging convention (a `download-catalog-zip.svg` image
+   with `xref=attachment$ai-catalog-skills-agents.zip` plus a short unzip-into-`.claude/` note); otherwise skip
+   silently. Keep every other include of that partial inside the preserved material too — in particular the
+   one at the end of the core-concepts adoption text (copying the files vs. installing plugins), with its
+   lead-in sentence — and add it there when missing. Never drop an existing include.
 2. **A reference table**: one row per skill and per documented agent, with columns for name, purpose group
    (linking to that group's section via an anchor, e.g. `xref:index.adoc#group-<slug>[]`), a one-line
    purpose, and a link to its detail page (`xref:skills/<name>.adoc[]` or `xref:agents/<name>.adoc[]`).
@@ -283,6 +290,6 @@ raw `<…>` placeholders per Step 9b, and confirm each one still says what it sh
 
 Summarize: how many skills and agents were found and documented, the purpose groups and workflows
 identified (name them), any external dependency named but not linked, any page added/updated/removed versus
-the previous run (if this is a re-run), and the build result from Step 10. Remind the user to review the
+the previous run (if this is a re-run), whether the download-button include was kept, created or skipped, and the build result from Step 10. Remind the user to review the
 generated pages themselves, particularly the dependency graph and any workflow this skill inferred rather
 than found spelled out explicitly in an orchestrator skill's own steps.

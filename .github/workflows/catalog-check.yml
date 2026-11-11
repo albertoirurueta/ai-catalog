@@ -49,3 +49,8 @@ jobs:
 
       - name: Run the tools' unit tests
         run: python3 -m unittest discover -s tools/tests
+
+      - name: Check the download packages build
+        run: |
+          python3 tools/build-packages.py --out "$RUNNER_TEMP/packages"
+          test -s "$RUNNER_TEMP/packages/ai-catalog-skills-agents.zip" || { echo "::error::no full-catalog zip produced"; exit 1; }

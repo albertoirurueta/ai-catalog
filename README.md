@@ -58,6 +58,10 @@ cp -R ai-catalog/.claude/skills/iru-plan .claude/skills/
 cp -R ai-catalog/.claude/skills/iru-pr-review .claude/skills/
 ```
 
+To adopt the whole catalog without cloning it, download the zip of all skills and agents from the
+[download page](https://albertoirurueta.github.io/ai-catalog/) and unzip it into your repository's `.claude/` directory
+(it contains the `skills/` and `agents/` folders).
+
 Claude Code picks up any skill under `.claude/skills/<name>/SKILL.md` automatically — invoke it the same way
 it's documented, e.g. `/iru-plan` or `/iru-pr-review`.
 

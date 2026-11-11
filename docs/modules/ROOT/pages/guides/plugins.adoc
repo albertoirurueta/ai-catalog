@@ -71,6 +71,8 @@ Both public and private marketplaces work the same way:
 
 == This catalog's own marketplace
 
+include::partial$download-catalog.adoc[]
+
 This catalog is itself a marketplace named `ai-catalog` (`.claude-plugin/marketplace.json`, generated from
 `tools/plugins.json`). It splits the 197 skills into `iru-core` (the stack-independent pipeline: `iru-issue`,
 `iru-explore`, `iru-plan`, `iru-code`, PR and release skills, ticket intake, license and security checks, documentation,
@@ -124,6 +126,13 @@ Things that differ from copying the files:
 
 See xref:guides/performance-and-token-budget.adoc#splitting-the-catalog[Splitting the catalog] in the performance guide
 for why the catalog is split by stack rather than by purpose, and what one stack's install saves in the skill listing.
+
+== Downloading a plugin as a zip
+
+Each plugin is also published as a zip of its skills and agents, for repositories that prefer copying files to
+installing from the marketplace:
+
+include::partial$plugin-downloads.adoc[]
 
 == Getting updates when a new release is published
 

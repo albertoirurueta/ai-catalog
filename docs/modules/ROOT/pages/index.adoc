@@ -10,6 +10,8 @@ the same process to Claude in every project (how this team bootstraps a Java lib
 should be reviewed, how release notes get written), each workflow is captured once as a `SKILL.md` file and
 invoked on demand with a slash command such as `/iru-plan` or `/iru-pr-review`.
 
+include::partial$download-catalog.adoc[]
+
 == Why this exists
 
 Prompting an AI assistant to repeat a multi-step process consistently is hard: the steps drift between
@@ -78,6 +80,10 @@ This repository can be adopted in either way: by copying the `.claude/skills/<na
 adding it as a plugin marketplace (`ai-catalog`) and installing only the plugins for the stacks in use — `iru-core`
 plus one plugin per stack, each skill page names the plugin that ships it. xref:guides/plugins.adoc[] and
 xref:guides/packaging-and-distribution.adoc[] cover when a plugin is worth the extra packaging step instead.
+
+To adopt the whole catalog without cloning or installing a plugin, download the zip:
+
+include::partial$download-catalog.adoc[]
 
 == Further guides
 

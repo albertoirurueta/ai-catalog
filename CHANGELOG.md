@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Downloadable zips on the documentation site (#34): the whole catalog and one zip per plugin, built at documentation
+  build time by the Antora collector with `tools/build-packages.py`, with a download button on the home page, the
+  packaging guide and the plugins guide; `iru-generate-skill-docs` preserves the button include.
 - Skills for detailed, spec-style GitHub issues (#23): `iru-draft-github-issue` (interview, functional or
   documentation draft, review loop, create), `iru-review-github-issue` (classified gap/pending/inconsistency/doubt
   findings) and `iru-split-github-issue` (sub-issues ordered by dependency, tracked by a milestone).

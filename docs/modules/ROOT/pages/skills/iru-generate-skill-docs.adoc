@@ -49,7 +49,11 @@ existing Antora module each time it runs (plus `tools/plugins.json` for each ski
 == Outputs
 
 * `docs/modules/ROOT/pages/index.adoc` updated with a skills-and-agents reference table, purpose-group
-  sections, a Mermaid dependency graph, and one subsection per recurring end-to-end workflow.
+  sections, a Mermaid dependency graph, and one subsection per recurring end-to-end workflow. The page keeps
+  `include::partial$download-catalog.adoc[]` right after the introduction (and at the end of the core-concepts
+  adoption text) when
+  `docs/modules/ROOT/partials/download-catalog.adoc` exists (created when the repository has
+  `tools/build-packages.py`, skipped silently otherwise).
 * One detail page per skill under `docs/modules/ROOT/pages/skills/<name>.adoc`, and per documented agent
   under `docs/modules/ROOT/pages/agents/` (an `overview.adoc` covering built-in agent types, since this
   repository has no `.claude/agents/` directory of its own to give custom agents individual pages).
