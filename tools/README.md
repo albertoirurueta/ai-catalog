@@ -116,6 +116,24 @@ script refreshes the file.
 Run the script after adding, removing or renaming a skill or agent (a new skill must also be added to a plugin in
 `plugins.json`), then also run `claude plugin validate .` and `claude plugin validate . --strict`.
 
+## `build-packages.py`
+
+Builds the downloadable zip packages of the catalog: `ai-catalog-skills-agents.zip` (every skill directory and agent
+file under `.claude/`) and one `<plugin-name>.zip` per plugin of `plugins.json` (its skills, plus its agents, which
+only `iru-core` lists). Zip paths are relative to `.claude/` (`skills/iru-plan/SKILL.md`, `agents/iru-gate-runner.md`)
+and the output is deterministic (sorted entries, fixed 1980-01-01 timestamp, fixed permissions), so two runs are
+byte-identical. Standard library only.
+
+```bash
+python3 tools/build-packages.py --out <dir> [--root <repo>] [--partial <file>]
+```
+
+`--partial` also writes an AsciiDoc table fragment (plugin, skill count, agent count, size, compact download button) for
+the plugins page. The script exits 1 with a clear message when a `plugins.json` pattern matches nothing or a listed agent
+is missing, and never writes inside `.claude/` or outside `--out`/`--partial`. The docs build calls it through the
+Antora collector extension, so the zips are generated at build time and never committed. Tests:
+`tools/tests/test_build_packages.py`, including an equivalence check against `generate-marketplace.py`.
+
 ## Tests
 
 ```bash

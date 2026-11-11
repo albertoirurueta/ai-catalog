@@ -26,6 +26,11 @@ renders them), so run `validate:mermaid` after touching any `[mermaid]` block. R
 `.claude/skills/iru-setup-antora/reference/mermaid.md`, shared byte-identical by the six Antora documentation skills.
 `docs/scripts/mermaid/` is mirrored from `iru-setup-antora` like the rest of `docs/scripts/`.
 
+The documentation build also produces the downloadable zips: the Antora collector (`ext.collector` in `docs/antora.yml`) runs
+`tools/build-packages.py`, which writes the catalog and per-plugin zips to `docs/build/packages` (ignored with the rest
+of `docs/build/`); the collector adds them to the `ROOT` module's attachments in memory, so nothing lands in
+`docs/modules/`. Run it by hand with `python3 tools/build-packages.py --out <dir>`.
+
 The toolchain is pinned exactly in `docs/package.json` and `docs/package-lock.json` (Antora 3.2.2, Pagefind 1.6.0; source
 of truth `.claude/skills/iru-setup-antora/reference/toolchain.md`). `docs/node_modules/` is never committed.
 `docs/ui-overrides/` and `docs/scripts/` are byte-identical copies from `iru-setup-antora` (enforced by

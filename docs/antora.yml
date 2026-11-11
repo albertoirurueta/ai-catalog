@@ -3,3 +3,18 @@ version: 1.0.0
 title: AI Catalog
 nav:
   - modules/ROOT/nav.adoc
+ext:
+  collector:
+    # Builds the downloadable zips (full catalog plus one per plugin) from .claude/ and tools/plugins.json. The
+    # command runs from the root of the worktree (the repository root, even though start_path is docs), so every
+    # path below is relative to the repository root.
+    - run:
+        command: python3 tools/build-packages.py --out docs/build/packages --partial docs/build/packages/plugin-downloads.adoc
+      scan:
+        dir: docs/build/packages
+        files: '*.zip'
+        into: modules/ROOT/attachments
+    - scan:
+        dir: docs/build/packages
+        files: plugin-downloads.adoc
+        into: modules/ROOT/partials

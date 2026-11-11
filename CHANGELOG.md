@@ -9,17 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Downloadable zips on the documentation site (#34): the whole catalog and one zip per plugin, built at documentation
+  build time by the Antora collector with `tools/build-packages.py`, with a download button on the home page, the
+  packaging guide and the plugins guide; `iru-generate-skill-docs` preserves the button include.
 - Mermaid diagram validation for the Antora documentation skills: a shared `reference/mermaid.md` (writing rules,
   size limit) and `scripts/mermaid/validate-mermaid.mjs` (static, parse and headless-browser render checks) in
   `iru-setup-antora`, `iru-update-antora` and `iru-build-docs`, wired into `iru-update-docs`, `iru-generate-skill-docs`
   and `iru-update-java-springboot-documentation`, this repository's `docs.yml` and `npm run validate:mermaid`.
-
-### Fixed
-
-- The home page dependency graph rendered as Mermaid's error graphic (a 721-line flowchart crashed the layout):
-  `iru-generate-skill-docs` now writes an overview of the purpose groups plus one graph per group.
-- The release workflow diagram dropped `<key>` from `iru-<key>-bump-version`.
-
 - Skills for detailed, spec-style GitHub issues (#23): `iru-draft-github-issue` (interview, functional or
   documentation draft, review loop, create), `iru-review-github-issue` (classified gap/pending/inconsistency/doubt
   findings) and `iru-split-github-issue` (sub-issues ordered by dependency, tracked by a milestone).
@@ -64,3 +60,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Guides `creating-skills-and-agents`, `extending-the-catalog`, `plugins` and `packaging-and-distribution`, and the README,
   document the description budget, the `templates/` convention, model tiers, the audit command and installing the catalog
   as plugins (#11).
+
+### Fixed
+
+- The home page dependency graph rendered as Mermaid's error graphic (a 721-line flowchart crashed the layout):
+  `iru-generate-skill-docs` now writes an overview of the purpose groups plus one graph per group.
+- The release workflow diagram dropped `<key>` from `iru-<key>-bump-version`.

@@ -11,9 +11,10 @@
     "node": ">=20"
   },
   "dependencies": {
-    "antora": "3.2.2",
-    "@sntke/antora-mermaid-extension": "0.0.13",
+    "@antora/collector-extension": "1.0.3",
     "@djencks/asciidoctor-mathjax": "0.0.9",
+    "@sntke/antora-mermaid-extension": "0.0.13",
+    "antora": "3.2.2",
     "pagefind": "1.6.0"
   }
 }

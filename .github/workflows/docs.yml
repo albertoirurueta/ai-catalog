@@ -37,6 +37,9 @@ jobs:
         working-directory: docs
         run: npx antora -v
 
+      - name: Show Python version (the Antora collector runs tools/build-packages.py, standard library only)
+        run: python3 --version
+
       - name: Validate Mermaid diagrams (static, parse and headless-browser render)
         working-directory: docs
         run: npm i --no-save mermaid@11 jsdom@31 puppeteer@25 && npm run validate:mermaid
@@ -56,6 +59,18 @@ jobs:
           echo "build/site is ${size} KiB"
           if [ "$size" -gt 960000 ]; then echo "::error::site over 960,000 KiB"; exit 1; fi
           if [ "$size" -gt 900000 ]; then echo "::warning::site over 900,000 KiB"; fi
+
+      - name: Check download packages
+        working-directory: docs
+        run: |
+          zips=$(find build/site -path '*/_attachments/*.zip')
+          if ! printf '%s\n' "$zips" | grep -q '/ai-catalog-skills-agents\.zip$'; then
+            echo "::error::no ai-catalog-skills-agents.zip in build/site: the collector did not produce the download packages"
+            exit 1
+          fi
+          echo "Download packages (zips):"
+          printf '%s\n' "$zips" | xargs du -k | sort -n
+          echo "Total attachments: $(printf '%s\n' "$zips" | xargs du -ck | tail -1 | cut -f1) KiB"
 
       - name: Add .nojekyll
         run: touch ./docs/build/site/.nojekyll
