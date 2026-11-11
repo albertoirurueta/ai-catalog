@@ -122,7 +122,7 @@ flowchart TD
     M5 --> Q{Node.js + Antora playbook available?}
     M1 --> Q
     M1C --> Q
-    Q -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors;\ndead-end check after nav changes]
+    Q -- yes --> N[npm install && npx antora;\nfix any build/xref/Mermaid errors;\ndead-end check after nav changes;\nMermaid validator on touched pages]
     Q -- no --> O[Note build was not locally verified]
     N --> P["Report per-page changes, unchanged pages,\nnoted doc gaps, and MCP doc outcome"]
     O --> P

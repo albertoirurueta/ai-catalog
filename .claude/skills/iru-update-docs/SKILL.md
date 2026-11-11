@@ -98,7 +98,8 @@ When editing:
   already wired into the playbook. Add one when a decision process, data flow, or before/after transformation is
   genuinely clearer as a diagram than prose — don't add one for something a short sentence already covers
   clearly, and don't introduce the syntax at all if the extension isn't configured (it would render as literal
-  text) unless you also wire up the extension or explicitly flag the gap to the user.
+  text) unless you also wire up the extension or explicitly flag the gap to the user. Write every diagram per
+  `reference/mermaid.md` (`&lt;` for tag-like text, no unescaped quotes in labels, small enough for the layout).
 - **MathJax equations** (`stem:[...]` inline or a `[stem]` block with `:stem: latexmath` in the page header, rendered
   to SVG at build time; never bare `\( \)` or `\[ \]`, which stay literal text with no build error, see
   `reference/toolchain.md` "Verified behaviors"): only use these if Step 2 confirmed a MathJax/stem extension is wired in. Add one only if the change actually
@@ -184,7 +185,11 @@ npx antora <playbook-file>
 ```
 
 Report any Antora/Asciidoctor errors (broken `xref:`, malformed tables, bad Mermaid/MathJax syntax) and fix them
-before finishing. If Node isn't available or the build can't be run, say so explicitly and note the pages were
+before finishing. Then, when a page you touched has a `[mermaid]` block, run the Mermaid check of
+`reference/mermaid.md` (`npm i --no-save mermaid@11 jsdom@31 puppeteer@25`, then `npm run validate:mermaid` or the
+repository's `scripts/mermaid/validate-mermaid.mjs modules --render`): the build does not parse Mermaid, so a broken
+diagram ships silently. Fix every diagram it reports in a page you touched; list failures in pages you did not touch
+without fixing them. When puppeteer cannot run, drop `--render` and say so. If Node isn't available or the build can't be run, say so explicitly and note the pages were
 updated but not locally verified against a real build.
 
 ## Step 7 — Report
@@ -197,5 +202,6 @@ declined/skipped by the user, and if none was connected, say so briefly.
 
 End the report by reminding the user to check the generated documentation themselves before trusting it — point
 them at the built site's start page under the module's build output directory (from Step 5, if the build ran),
-since rendered Mermaid diagrams, MathJax equations, and cross-page links can look fine in source but render
-wrong, and this skill's own build check does not visually inspect the output.
+since MathJax equations and cross-page links can look fine in source but render wrong, and this skill's own build
+check does not visually inspect the output. State the Mermaid check result (passed, failures left in untouched pages,
+or skipped and why).

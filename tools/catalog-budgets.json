@@ -40,7 +40,11 @@
     "scripts/nav-fix/check-nav-dead-ends.test.mjs",
     "scripts/nav-fix/nav-item-state.test.mjs",
     "scripts/site-metrics/measure.mjs",
-    "scripts/site-metrics/measure.test.mjs"
+    "scripts/site-metrics/measure.test.mjs",
+    "reference/mermaid.md",
+    "scripts/mermaid/blocks.mjs",
+    "scripts/mermaid/blocks.test.mjs",
+    "scripts/mermaid/validate-mermaid.mjs"
   ],
   "mirrored_directories": [
     {

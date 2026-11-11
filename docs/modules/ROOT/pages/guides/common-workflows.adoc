@@ -375,7 +375,7 @@ flowchart TD
     C --> D["Ask user: release version\n(3 computed candidates + free text)"]
     D --> E["Ask user: next pre-release version\n(3 computed candidates + free text)"]
     E --> F["Create release_x.y.z\nbranch off develop"]
-    F --> G["Delegate the version edit to\niru-&lt;key&gt;-bump-version;\nupdate README.md (via iru-setup-readme),\ndocs/antora.yml, Antora version snippets"]
+    F --> G["Delegate the version edit to\niru-&amp;lt;key&amp;gt;-bump-version;\nupdate README.md (via iru-setup-readme),\ndocs/antora.yml, Antora version snippets"]
     G --> H["Write whats-new.adoc +\nCHANGELOG.md sections"]
     H --> I["Commit changes on the release branch"]
     I --> J{"User confirms\npush + PR?"}

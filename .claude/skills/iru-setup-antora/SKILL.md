@@ -118,8 +118,8 @@ npm i -E <the pinned set from reference/toolchain.md>
 - Add `@antora/collector-extension` only when a component descriptor uses `ext.collector` (grep the repository's
   `antora.yml` files); otherwise leave it out.
 - Edit `docs/package.json` after the install: `"engines": {"node": ">=20"}` and the `scripts` from
-  `reference/toolchain.md` (`build`, `search:index`, `test:nav`, `test:nav:site`; the two `test:nav*` scripts belong
-  with the override copied in Step 5).
+  `reference/toolchain.md` (`build`, `search:index`, `test:nav`, `test:nav:site`, `validate:mermaid`; the two
+  `test:nav*` scripts belong with the override and `validate:mermaid` with `scripts/mermaid/`, all copied in Step 5).
 - **Commit `docs/package.json` and `docs/package-lock.json`**: CI runs `npm ci` from the lockfile.
 - If `docs/package.json` already lists a package from Step 2's survey at the pinned version, skip reinstalling it.
   `npm i -E <name>@<version>` is safe to re-run.
@@ -247,7 +247,8 @@ Also, in this step:
   `@antora/collector-extension` to `antora.extensions` only when Step 3 installed it.
 - **Copy the overrides and checks into `docs/`**: this skill's `ui-overrides/` directory to `docs/ui-overrides/` and its
   `scripts/` directory to `docs/scripts/`, byte-identical (`cp -R`). Read `ui-overrides/README.md` for what each file does. The
-  `test:nav` and `test:nav:site` scripts from Step 3 run the override's unit tests and a built-HTML dead-end check.
+  `test:nav` and `test:nav:site` scripts from Step 3 run the override's unit tests and a built-HTML dead-end check;
+  `validate:mermaid` runs `scripts/mermaid/validate-mermaid.mjs` (see `reference/mermaid.md`).
 - **Nav knobs**: the optional `site.keys.nav_open_groups` (comma-separated group titles whose children open by default,
   default none) and `site.keys.nav_expand_depth` (default 1) tune the slim nav. With neither set the override is a no-op
   on a small nav, so it is always written; set them only when the nav grows (thresholds in `reference/toolchain.md`).
@@ -285,7 +286,7 @@ every file directly: use the `Explore` agent (the same one the `iru-explore` ski
 structural search) to build a picture of module layout and the small number of top-level public types/exports a
 newcomer would actually care about, and read only those specific files directly once identified. This page should
 give a newcomer: what the project is, why it exists, the core concept(s) it's built around, and a pointer to the
-other two starter pages. Use a Mermaid diagram (`[mermaid]` block) if a flow or architecture is genuinely clearer
+other two starter pages. Use a Mermaid diagram (`[mermaid]` block, written per `reference/mermaid.md`) if a flow or architecture is genuinely clearer
 as a diagram, and a MathJax equation only if the project's core logic involves something worth stating precisely as
 math — most projects won't need one, don't force it. Write math as `stem:[...]` inline or a `[stem]` block with
 `:stem: latexmath` in the page header (verified in `reference/toolchain.md`, "Verified behaviors"); never write bare `\( \)` or
@@ -411,6 +412,7 @@ npm ci                                  # only when a lockfile exists; otherwise
 npx antora antora-playbook.yml
 npx pagefind --site build/site
 node scripts/nav-fix/check-nav-dead-ends.mjs build/site --sample
+npm i --no-save mermaid@11 jsdom@31 puppeteer@25 && npm run validate:mermaid   # when any page has a [mermaid] block
 ```
 
 - **Build succeeds**: the static site lands at `docs/build/site`; note the path to `docs/build/site/index.html`
@@ -420,6 +422,9 @@ node scripts/nav-fix/check-nav-dead-ends.mjs build/site --sample
 - **Pagefind** writes `docs/build/site/pagefind/`; it must finish with exit code 0 and report the pages it indexed.
 - **Dead-end check** (exit 0 clean, 1 defects, 2 no nav): fix a defect (empty group heading, broken nav link) in
   `nav.adoc` before finishing.
+- **Mermaid check** (`reference/mermaid.md`; exit 0 clean, 1 failures, 2 missing dependency or no diagram): the build
+  does not parse Mermaid, so fix every `file:line` it reports before finishing. When puppeteer cannot run, run it
+  without `--render` and say so in the report.
 - **Search needs HTTP.** It works only when the site is served over HTTP, not from `file://`. Tell the user to try
   `python3 -m http.server 8090 --directory docs/build/site` and open `http://localhost:8090`.
 
@@ -434,7 +439,8 @@ what Step 2 found already present vs. what this run created or filled in:
   `reference/toolchain.md`) and whether `docs/package-lock.json` was written (to be committed). An existing site on an
   older Antora or on Lunr: that `/iru-update-antora` was recommended.
 - `docs/ui-overrides/` and `docs/scripts/`: copied, already present, or left out; the Pagefind index and dead-end check
-  results from Step 12, and the reminder that search needs the site served over HTTP.
+  results from Step 12, the Mermaid check result (or why it was skipped), and the reminder that search needs the site
+  served over HTTP.
 - `antora.yml` / `antora-playbook.yml`: already present and correct, corrected, or newly written.
 - `ui-bundle.zip`: already present at `docs/` vs. newly copied in from this skill's directory.
 - Each of the three starter pages: newly created, or already covered by an existing page under a different name
@@ -456,8 +462,10 @@ and `docs/package-lock.json` should be committed.
 |---|---|
 | `reference/toolchain.md` | Pinned versions, Node minimum, install command, scripts, CI snippet, size guard, nav thresholds, Antora 3.2 notes, verified behaviors. Read in Step 3. |
 | `reference/ui-docs.md` | User interface section guidance. Read in Step 9b. |
+| `reference/mermaid.md` | Writing and validating Mermaid diagrams (tag-like text, size limit, the three checks). Read before writing a diagram and in Step 12. |
 | `ui-bundle.zip` | The shared UI bundle, copied to `docs/` in Step 5. |
 | `ui-overrides/` | Pagefind search and slim-nav partials, helper and CSS, plus a README; copied to `docs/ui-overrides/` in Step 5. |
 | `scripts/nav-html.mjs` | Nav-menu extraction shared by both scripts below; copied to `docs/scripts/` with them. |
 | `scripts/nav-fix/` | Nav helper unit tests and the built-HTML dead-end check; copied to `docs/scripts/`. |
 | `scripts/site-metrics/` | `measure.mjs` and its tests: site and nav size verdict; copied to `docs/scripts/`. |
+| `scripts/mermaid/` | `validate-mermaid.mjs` (static, parse and headless-render checks), `blocks.mjs` and its tests; copied to `docs/scripts/`. |

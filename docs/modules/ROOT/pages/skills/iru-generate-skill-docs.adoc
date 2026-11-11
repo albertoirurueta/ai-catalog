@@ -49,7 +49,9 @@ existing Antora module each time it runs (plus `tools/plugins.json` for each ski
 == Outputs
 
 * `docs/modules/ROOT/pages/index.adoc` updated with a skills-and-agents reference table, purpose-group
-  sections, a Mermaid dependency graph, and one subsection per recurring end-to-end workflow.
+  sections, a Mermaid dependency graph (an overview of the purpose groups plus one small graph per group, since one
+  large graph crashes Mermaid's layout), and one subsection per recurring end-to-end workflow. Every diagram is checked
+  with the Mermaid validator (`reference/mermaid.md`), including a headless-browser render.
 * One detail page per skill under `docs/modules/ROOT/pages/skills/<name>.adoc`, and per documented agent
   under `docs/modules/ROOT/pages/agents/` (an `overview.adoc` covering built-in agent types, since this
   repository has no `.claude/agents/` directory of its own to give custom agents individual pages).
@@ -79,7 +81,7 @@ flowchart TD
     I --> J["Write/update one detail page\nper skill and per agent"]
     J --> K["Update nav.adoc\n(add new, remove stale)"]
     K --> L["npx antora — verify the\nsite builds cleanly"]
-    L -- broken xref/mermaid --> M[Fix and rebuild]
+    L -- broken xref/mermaid, or validate:mermaid fails --> M[Fix and rebuild]
     M --> L
     L -- clean --> N[Report]
 ....

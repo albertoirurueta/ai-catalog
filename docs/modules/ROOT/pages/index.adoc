@@ -2284,6 +2284,11 @@ how agents differ from skills in how they're triggered.
 
 == Dependency graph
 
+The first graph shows how the purpose groups depend on each other: a solid line when at least one skill of
+a group runs a skill of the other directly, a dotted line when every such call goes through a sub-agent.
+Agent types and the external `code-review` skill are left out of it. Below it, one graph per group shows its
+skills and every skill or agent they call; a skill of another group is drawn with a dashed border.
+
 An unlabeled edge means "invokes": a solid line when the caller runs the target directly via the `Skill` tool, a
 dotted line when it runs the target inside a sub-agent (`iru-gate-runner`, `iru-isolated-skill-executor`, or
 `general-purpose`). A dotted line labeled "spawns"/"uses" points at the agent type itself, via the `Agent` tool. `code-review` is an external skill this catalog does not define — `iru-pr-review` uses it only when it
@@ -2292,305 +2297,579 @@ happens to be available in the current session.
 [mermaid]
 ....
 flowchart LR
-    subgraph GROUP_BOOTSTRAP["Repository Bootstrap"]
-        SETUP_ANTORA["iru-setup-antora"]
-        SETUP_CHANGELOG["iru-setup-changelog"]
-        SETUP_JAVA_GITHUB_WORKFLOWS["iru-setup-java-github-workflows"]
-        SETUP_JAVA_GITIGNORE["iru-setup-java-gitignore"]
-        SETUP_JAVA_LIBRARY["iru-setup-java-library"]
-        SETUP_JAVA_LIBRARY_REPOSITORY["iru-setup-java-library-repository"]
-        SETUP_README["iru-setup-readme"]
-        SETUP_REPOSITORY["iru-setup-repository"]
-    end
+    GROUP_BOOTSTRAP["Repository Bootstrap"]
+    GROUP_SERVICE_BOOTSTRAP["Spring Boot Service Bootstrap"]
+    GROUP_QUARKUS_BOOTSTRAP["Quarkus Service Bootstrap"]
+    GROUP_TYPESCRIPT_BOOTSTRAP["TypeScript/Node Bootstrap"]
+    GROUP_PHP_BOOTSTRAP["PHP Bootstrap"]
+    GROUP_PYTHON_BOOTSTRAP["Python Bootstrap"]
+    GROUP_ANDROID_BOOTSTRAP["Android Bootstrap"]
+    GROUP_KMP_BOOTSTRAP["Kotlin Multiplatform Bootstrap"]
+    GROUP_SWIFT_BOOTSTRAP["Swift/Apple Bootstrap"]
+    GROUP_WINDOWS_BOOTSTRAP["Windows Desktop Bootstrap"]
+    GROUP_CLI_BOOTSTRAP["Command-Line Tool Bootstrap"]
+    GROUP_INTAKE["Ticket Intake"]
+    GROUP_CYCLE["Issue-to-PR Development Cycle"]
+    GROUP_JAVA["Java Development Tooling"]
+    GROUP_KOTLIN["Kotlin Development Tooling"]
+    GROUP_TYPESCRIPT["TypeScript Development Tooling"]
+    GROUP_ANDROID["Android Development Tooling"]
+    GROUP_KMP["Kotlin Multiplatform Development Tooling"]
+    GROUP_SWIFT["Swift Development Tooling"]
+    GROUP_SPRINGBOOT["Spring Boot Development Tooling"]
+    GROUP_QUARKUS["Quarkus Development Tooling"]
+    GROUP_PHP["PHP Development Tooling"]
+    GROUP_PYTHON["Python Development Tooling"]
+    GROUP_DOTNET[".NET Development Tooling"]
+    GROUP_RUST["Rust Development Tooling"]
+    GROUP_GO["Go Development Tooling"]
+    GROUP_DATABASE["Database Development Tooling"]
+    GROUP_PR["Pull Request Lifecycle"]
+    GROUP_MAINTENANCE["Repository Maintenance"]
+    GROUP_KNOWLEDGE["Knowledge Base Management"]
+    GROUP_TOOLING["Catalog Tooling"]
+    GROUP_ANDROID -.-> GROUP_MAINTENANCE
+    GROUP_MAINTENANCE --> GROUP_BOOTSTRAP
+    GROUP_CYCLE --> GROUP_ANDROID
+    GROUP_CYCLE --> GROUP_MAINTENANCE
+    GROUP_CYCLE --> GROUP_INTAKE
+    GROUP_CYCLE --> GROUP_DOTNET
+    GROUP_CYCLE --> GROUP_JAVA
+    GROUP_CYCLE -.-> GROUP_KOTLIN
+    GROUP_CYCLE --> GROUP_PHP
+    GROUP_CYCLE --> GROUP_PYTHON
+    GROUP_CYCLE --> GROUP_SWIFT
+    GROUP_CYCLE --> GROUP_TYPESCRIPT
+    GROUP_CYCLE --> GROUP_DATABASE
+    GROUP_CYCLE --> GROUP_SPRINGBOOT
+    GROUP_CYCLE --> GROUP_QUARKUS
+    GROUP_INTAKE --> GROUP_CYCLE
+    GROUP_DATABASE --> GROUP_CYCLE
+    GROUP_DOTNET -.-> GROUP_MAINTENANCE
+    GROUP_CYCLE --> GROUP_PR
+    GROUP_JAVA -.-> GROUP_MAINTENANCE
+    GROUP_SPRINGBOOT -.-> GROUP_MAINTENANCE
+    GROUP_SPRINGBOOT -.-> GROUP_JAVA
+    GROUP_SPRINGBOOT --> GROUP_CYCLE
+    GROUP_KNOWLEDGE --> GROUP_INTAKE
+    GROUP_KNOWLEDGE --> GROUP_CYCLE
+    GROUP_SPRINGBOOT -.-> GROUP_KOTLIN
+    GROUP_TYPESCRIPT -.-> GROUP_MAINTENANCE
+    GROUP_PHP -.-> GROUP_MAINTENANCE
+    GROUP_PYTHON -.-> GROUP_MAINTENANCE
+    GROUP_PR --> GROUP_CYCLE
+    GROUP_QUARKUS -.-> GROUP_MAINTENANCE
+    GROUP_QUARKUS -.-> GROUP_JAVA
+    GROUP_QUARKUS -.-> GROUP_KOTLIN
+    GROUP_MAINTENANCE --> GROUP_ANDROID
+    GROUP_MAINTENANCE --> GROUP_JAVA
+    GROUP_MAINTENANCE --> GROUP_PHP
+    GROUP_MAINTENANCE --> GROUP_PYTHON
+    GROUP_MAINTENANCE --> GROUP_PR
+    GROUP_MAINTENANCE --> GROUP_SWIFT
+    GROUP_MAINTENANCE --> GROUP_TYPESCRIPT
+    GROUP_ANDROID_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_SERVICE_BOOTSTRAP --> GROUP_BOOTSTRAP
+    GROUP_PHP_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_PYTHON_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_QUARKUS_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_QUARKUS_BOOTSTRAP -.-> GROUP_JAVA
+    GROUP_QUARKUS_BOOTSTRAP -.-> GROUP_KOTLIN
+    GROUP_BOOTSTRAP --> GROUP_CYCLE
+    GROUP_BOOTSTRAP -.-> GROUP_ANDROID_BOOTSTRAP
+    GROUP_BOOTSTRAP -.-> GROUP_SERVICE_BOOTSTRAP
+    GROUP_BOOTSTRAP -.-> GROUP_PHP_BOOTSTRAP
+    GROUP_BOOTSTRAP -.-> GROUP_PYTHON_BOOTSTRAP
+    GROUP_BOOTSTRAP -.-> GROUP_QUARKUS_BOOTSTRAP
+    GROUP_BOOTSTRAP -.-> GROUP_SWIFT_BOOTSTRAP
+    GROUP_BOOTSTRAP -.-> GROUP_TYPESCRIPT_BOOTSTRAP
+    GROUP_SWIFT_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_TYPESCRIPT_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_SWIFT -.-> GROUP_MAINTENANCE
+    GROUP_CYCLE --> GROUP_KMP
+    GROUP_KMP -.-> GROUP_MAINTENANCE
+    GROUP_TYPESCRIPT -.-> GROUP_ANDROID
+    GROUP_MAINTENANCE --> GROUP_KMP
+    GROUP_BOOTSTRAP -.-> GROUP_KMP_BOOTSTRAP
+    GROUP_KMP_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_MAINTENANCE --> GROUP_DOTNET
+    GROUP_BOOTSTRAP -.-> GROUP_WINDOWS_BOOTSTRAP
+    GROUP_WINDOWS_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_CYCLE --> GROUP_RUST
+    GROUP_CYCLE --> GROUP_GO
+    GROUP_RUST -.-> GROUP_MAINTENANCE
+    GROUP_GO -.-> GROUP_MAINTENANCE
+    GROUP_MAINTENANCE --> GROUP_RUST
+    GROUP_MAINTENANCE --> GROUP_GO
+    GROUP_BOOTSTRAP -.-> GROUP_CLI_BOOTSTRAP
+    GROUP_CLI_BOOTSTRAP -.-> GROUP_BOOTSTRAP
+    GROUP_CLI_BOOTSTRAP -.-> GROUP_SWIFT_BOOTSTRAP
+    GROUP_CLI_BOOTSTRAP -.-> GROUP_SWIFT
+....
 
-    subgraph GROUP_SERVICE_BOOTSTRAP["Spring Boot Service Bootstrap"]
-        SETUP_JAVA_SPRINGBOOT["iru-setup-java-springboot"]
-        SETUP_JAVA_SPRINGBOOT_APIS["iru-setup-java-springboot-apis"]
-        SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS["iru-setup-java-springboot-github-workflows"]
-        SETUP_JAVA_SPRINGBOOT_HILLA["iru-setup-java-springboot-hilla"]
-        SETUP_JAVA_SPRINGBOOT_MODULES["iru-setup-java-springboot-modules"]
-        SETUP_JAVA_SPRINGBOOT_PLATFORM["iru-setup-java-springboot-platform"]
-        SETUP_JAVA_SPRINGBOOT_POM["iru-setup-java-springboot-pom"]
-        SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS["iru-setup-java-springboot-testcontainers"]
-        SPRINGBOOT_ROLLING_DEPLOYMENTS["iru-springboot-rolling-deployments"]
-        UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION["iru-update-java-springboot-documentation"]
-    end
+=== Repository Bootstrap dependencies
 
-    subgraph GROUP_QUARKUS_BOOTSTRAP["Quarkus Service Bootstrap"]
-        SETUP_QUARKUS_GITHUB_WORKFLOWS["iru-setup-quarkus-github-workflows"]
-        SETUP_QUARKUS_REPOSITORY["iru-setup-quarkus-repository"]
-        SETUP_QUARKUS_SERVICE["iru-setup-quarkus-service"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_ANTORA["iru-setup-antora"]
+    SETUP_CHANGELOG["iru-setup-changelog"]
+    SETUP_JAVA_GITHUB_WORKFLOWS["iru-setup-java-github-workflows"]
+    SETUP_JAVA_GITIGNORE["iru-setup-java-gitignore"]
+    SETUP_JAVA_LIBRARY["iru-setup-java-library"]
+    SETUP_JAVA_LIBRARY_REPOSITORY["iru-setup-java-library-repository"]
+    SETUP_README["iru-setup-readme"]
+    SETUP_REPOSITORY["iru-setup-repository"]
+    EXPLORE["iru-explore"]:::other
+    SETUP_ANDROID_REPOSITORY["iru-setup-android-repository"]:::other
+    SETUP_JAVA_SPRINGBOOT["iru-setup-java-springboot"]:::other
+    SETUP_PHP_REPOSITORY["iru-setup-php-repository"]:::other
+    SETUP_PYTHON_REPOSITORY["iru-setup-python-repository"]:::other
+    SETUP_QUARKUS_REPOSITORY["iru-setup-quarkus-repository"]:::other
+    SETUP_SWIFT_REPOSITORY["iru-setup-swift-repository"]:::other
+    SETUP_TYPESCRIPT_REPOSITORY["iru-setup-typescript-repository"]:::other
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_CS(("iru-change-summarizer\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    SETUP_KMP_REPOSITORY["iru-setup-kmp-repository"]:::other
+    SETUP_MACOS_REPOSITORY["iru-setup-macos-repository"]:::other
+    SETUP_WINDOWS_REPOSITORY["iru-setup-windows-repository"]:::other
+    SETUP_CLI_REPOSITORY["iru-setup-cli-repository"]:::other
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_GITHUB_WORKFLOWS
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_LIBRARY
+    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_README
+    SETUP_README --> EXPLORE
+    SETUP_REPOSITORY --> EXPLORE
+    SETUP_REPOSITORY -.-> SETUP_ANDROID_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_JAVA_LIBRARY_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_JAVA_SPRINGBOOT
+    SETUP_REPOSITORY -.-> SETUP_PHP_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_PYTHON_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_QUARKUS_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_SWIFT_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_TYPESCRIPT_REPOSITORY
+    SETUP_JAVA_LIBRARY_REPOSITORY -.->|spawns| AGT_ISE
+    SETUP_REPOSITORY -.->|spawns| AGT_ISE
+    SETUP_CHANGELOG -.->|spawns| AGT_CS
+    SETUP_ANTORA -.->|uses| AGT_EXPLORE
+    SETUP_README -.->|uses| AGT_EXPLORE
+    SETUP_REPOSITORY -.-> SETUP_KMP_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_MACOS_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_WINDOWS_REPOSITORY
+    SETUP_REPOSITORY -.-> SETUP_CLI_REPOSITORY
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_TYPESCRIPT_BOOTSTRAP["TypeScript/Node Bootstrap"]
-        SETUP_ANGULAR_WEB["iru-setup-angular-web"]
-        SETUP_IONIC_APP["iru-setup-ionic-app"]
-        SETUP_NESTJS_APP["iru-setup-nestjs-app"]
-        SETUP_NEXTJS_WEB["iru-setup-nextjs-web"]
-        SETUP_REACT_NATIVE_APP["iru-setup-react-native-app"]
-        SETUP_REACT_WEB["iru-setup-react-web"]
-        SETUP_TYPESCRIPT_GITHUB_WORKFLOWS["iru-setup-typescript-github-workflows"]
-        SETUP_TYPESCRIPT_GITIGNORE["iru-setup-typescript-gitignore"]
-        SETUP_TYPESCRIPT_LIBRARY["iru-setup-typescript-library"]
-        SETUP_TYPESCRIPT_REPOSITORY["iru-setup-typescript-repository"]
-    end
+=== Spring Boot Service Bootstrap dependencies
 
-    subgraph GROUP_PHP_BOOTSTRAP["PHP Bootstrap"]
-        SETUP_PHP_GITHUB_WORKFLOWS["iru-setup-php-github-workflows"]
-        SETUP_PHP_GITIGNORE["iru-setup-php-gitignore"]
-        SETUP_PHP_LARAVEL["iru-setup-php-laravel"]
-        SETUP_PHP_PRESTASHOP["iru-setup-php-prestashop"]
-        SETUP_PHP_REPOSITORY["iru-setup-php-repository"]
-        SETUP_PHP_WORDPRESS["iru-setup-php-wordpress"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_JAVA_SPRINGBOOT["iru-setup-java-springboot"]
+    SETUP_JAVA_SPRINGBOOT_APIS["iru-setup-java-springboot-apis"]
+    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS["iru-setup-java-springboot-github-workflows"]
+    SETUP_JAVA_SPRINGBOOT_HILLA["iru-setup-java-springboot-hilla"]
+    SETUP_JAVA_SPRINGBOOT_MODULES["iru-setup-java-springboot-modules"]
+    SETUP_JAVA_SPRINGBOOT_PLATFORM["iru-setup-java-springboot-platform"]
+    SETUP_JAVA_SPRINGBOOT_POM["iru-setup-java-springboot-pom"]
+    SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS["iru-setup-java-springboot-testcontainers"]
+    SPRINGBOOT_ROLLING_DEPLOYMENTS["iru-springboot-rolling-deployments"]
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION["iru-update-java-springboot-documentation"]
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_JAVA_GITIGNORE["iru-setup-java-gitignore"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    SETUP_JAVA_SPRINGBOOT --> SETUP_CHANGELOG
+    SETUP_JAVA_SPRINGBOOT --> SETUP_JAVA_GITIGNORE
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_APIS
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_HILLA
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_MODULES
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_PLATFORM
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_POM
+    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS
+    SETUP_JAVA_SPRINGBOOT --> SETUP_README
+    SETUP_JAVA_SPRINGBOOT -.-> UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION
+    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS --> SETUP_JAVA_SPRINGBOOT_POM
+    SPRINGBOOT_ROLLING_DEPLOYMENTS -.-> SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS
+    SPRINGBOOT_ROLLING_DEPLOYMENTS -.-> SETUP_JAVA_SPRINGBOOT_PLATFORM
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.-> SETUP_ANTORA
+    SETUP_JAVA_SPRINGBOOT -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_APIS -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_HILLA -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_MODULES -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_POM -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS -.->|spawns| AGT_GATE
+    SETUP_JAVA_SPRINGBOOT -.->|spawns| AGT_ISE
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.->|uses| AGT_EXPLORE
+    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.->|spawns| AGT_GP
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_PYTHON_BOOTSTRAP["Python Bootstrap"]
-        SETUP_PYTHON_DJANGO["iru-setup-python-django"]
-        SETUP_PYTHON_FASTAPI["iru-setup-python-fastapi"]
-        SETUP_PYTHON_GITHUB_WORKFLOWS["iru-setup-python-github-workflows"]
-        SETUP_PYTHON_GITIGNORE["iru-setup-python-gitignore"]
-        SETUP_PYTHON_REPOSITORY["iru-setup-python-repository"]
-    end
+=== Quarkus Service Bootstrap dependencies
 
-    subgraph GROUP_ANDROID_BOOTSTRAP["Android Bootstrap"]
-        SETUP_ANDROID_APP["iru-setup-android-app"]
-        SETUP_ANDROID_GITHUB_WORKFLOWS["iru-setup-android-github-workflows"]
-        SETUP_ANDROID_GITIGNORE["iru-setup-android-gitignore"]
-        SETUP_ANDROID_LIBRARY["iru-setup-android-library"]
-        SETUP_ANDROID_REPOSITORY["iru-setup-android-repository"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_QUARKUS_GITHUB_WORKFLOWS["iru-setup-quarkus-github-workflows"]
+    SETUP_QUARKUS_REPOSITORY["iru-setup-quarkus-repository"]
+    SETUP_QUARKUS_SERVICE["iru-setup-quarkus-service"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_JAVA_GITIGNORE["iru-setup-java-gitignore"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    JAVA_CODE_QUALITY["iru-java-code-quality"]:::other
+    KOTLIN_CODE_QUALITY["iru-kotlin-code-quality"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_QUARKUS_GITHUB_WORKFLOWS
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_QUARKUS_SERVICE
+    SETUP_QUARKUS_REPOSITORY -.-> SETUP_README
+    SETUP_QUARKUS_SERVICE -.-> JAVA_CODE_QUALITY
+    SETUP_QUARKUS_SERVICE -.-> KOTLIN_CODE_QUALITY
+    SETUP_QUARKUS_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_QUARKUS_SERVICE -.->|spawns| AGT_GATE
+    SETUP_QUARKUS_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_KMP_BOOTSTRAP["Kotlin Multiplatform Bootstrap"]
-        SETUP_KMP_APP["iru-setup-kmp-app"]
-        SETUP_KMP_GITHUB_WORKFLOWS["iru-setup-kmp-github-workflows"]
-        SETUP_KMP_GITIGNORE["iru-setup-kmp-gitignore"]
-        SETUP_KMP_REPOSITORY["iru-setup-kmp-repository"]
-    end
+=== TypeScript/Node Bootstrap dependencies
 
-    subgraph GROUP_SWIFT_BOOTSTRAP["Swift/Apple Bootstrap"]
-        SETUP_APPLE_APP["iru-setup-apple-app"]
-        SETUP_MACOS_APP["iru-setup-macos-app"]
-        SETUP_MACOS_GITHUB_WORKFLOWS["iru-setup-macos-github-workflows"]
-        SETUP_MACOS_REPOSITORY["iru-setup-macos-repository"]
-        SETUP_SWIFT_GITHUB_WORKFLOWS["iru-setup-swift-github-workflows"]
-        SETUP_SWIFT_GITIGNORE["iru-setup-swift-gitignore"]
-        SETUP_SWIFT_LIBRARY["iru-setup-swift-library"]
-        SETUP_SWIFT_REPOSITORY["iru-setup-swift-repository"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_ANGULAR_WEB["iru-setup-angular-web"]
+    SETUP_IONIC_APP["iru-setup-ionic-app"]
+    SETUP_NESTJS_APP["iru-setup-nestjs-app"]
+    SETUP_NEXTJS_WEB["iru-setup-nextjs-web"]
+    SETUP_REACT_NATIVE_APP["iru-setup-react-native-app"]
+    SETUP_REACT_WEB["iru-setup-react-web"]
+    SETUP_TYPESCRIPT_GITHUB_WORKFLOWS["iru-setup-typescript-github-workflows"]
+    SETUP_TYPESCRIPT_GITIGNORE["iru-setup-typescript-gitignore"]
+    SETUP_TYPESCRIPT_LIBRARY["iru-setup-typescript-library"]
+    SETUP_TYPESCRIPT_REPOSITORY["iru-setup-typescript-repository"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_ANGULAR_WEB
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_IONIC_APP
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_NESTJS_APP
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_NEXTJS_WEB
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_REACT_NATIVE_APP
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_REACT_WEB
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_README
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_GITHUB_WORKFLOWS
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_GITIGNORE
+    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_LIBRARY
+    SETUP_TYPESCRIPT_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_WINDOWS_BOOTSTRAP["Windows Desktop Bootstrap"]
-        SETUP_WINDOWS_APP["iru-setup-windows-app"]
-        SETUP_WINDOWS_GITHUB_WORKFLOWS["iru-setup-windows-github-workflows"]
-        SETUP_WINDOWS_GITIGNORE["iru-setup-windows-gitignore"]
-        SETUP_WINDOWS_REPOSITORY["iru-setup-windows-repository"]
-    end
+=== PHP Bootstrap dependencies
 
-    subgraph GROUP_CLI_BOOTSTRAP["Command-Line Tool Bootstrap"]
-        SETUP_CLI_GITHUB_WORKFLOWS["iru-setup-cli-github-workflows"]
-        SETUP_CLI_REPOSITORY["iru-setup-cli-repository"]
-        SETUP_DOTNET_CLI["iru-setup-dotnet-cli"]
-        SETUP_DOTNET_GITIGNORE["iru-setup-dotnet-gitignore"]
-        SETUP_GO_CLI["iru-setup-go-cli"]
-        SETUP_GO_GITIGNORE["iru-setup-go-gitignore"]
-        SETUP_RUST_CLI["iru-setup-rust-cli"]
-        SETUP_RUST_GITIGNORE["iru-setup-rust-gitignore"]
-        SETUP_SWIFT_CLI["iru-setup-swift-cli"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_PHP_GITHUB_WORKFLOWS["iru-setup-php-github-workflows"]
+    SETUP_PHP_GITIGNORE["iru-setup-php-gitignore"]
+    SETUP_PHP_LARAVEL["iru-setup-php-laravel"]
+    SETUP_PHP_PRESTASHOP["iru-setup-php-prestashop"]
+    SETUP_PHP_REPOSITORY["iru-setup-php-repository"]
+    SETUP_PHP_WORDPRESS["iru-setup-php-wordpress"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_PHP_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_PHP_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_GITHUB_WORKFLOWS
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_GITIGNORE
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_LARAVEL
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_PRESTASHOP
+    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_WORDPRESS
+    SETUP_PHP_REPOSITORY -.-> SETUP_README
+    SETUP_PHP_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_PHP_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_INTAKE["Ticket Intake"]
-        CREATE_GITHUB_ISSUE["iru-create-github-issue"]
-        DRAFT_GITHUB_ISSUE["iru-draft-github-issue"]
-        REVIEW_GITHUB_ISSUE["iru-review-github-issue"]
-        SPLIT_GITHUB_ISSUE["iru-split-github-issue"]
-        CREATE_JIRA_TICKET["iru-create-jira-ticket"]
-        JIRA_CUSTOM_CONTEXT["iru-jira-custom-context"]
-    end
+=== Python Bootstrap dependencies
 
-    subgraph GROUP_CYCLE["Issue-to-PR Development Cycle"]
-        CODE["iru-code"]
-        CODE_ONE_TASK_GROUP["iru-code-one-task-group"]
-        EXPLORE["iru-explore"]
-        ISSUE["iru-issue"]
-        PLAN["iru-plan"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_PYTHON_DJANGO["iru-setup-python-django"]
+    SETUP_PYTHON_FASTAPI["iru-setup-python-fastapi"]
+    SETUP_PYTHON_GITHUB_WORKFLOWS["iru-setup-python-github-workflows"]
+    SETUP_PYTHON_GITIGNORE["iru-setup-python-gitignore"]
+    SETUP_PYTHON_REPOSITORY["iru-setup-python-repository"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_DJANGO
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_FASTAPI
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_GITHUB_WORKFLOWS
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_GITIGNORE
+    SETUP_PYTHON_REPOSITORY -.-> SETUP_README
+    SETUP_PYTHON_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_PYTHON_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_JAVA["Java Development Tooling"]
-        JAVA_BUMP_VERSION["iru-java-bump-version"]
-        JAVA_CODE_ONE_TASK["iru-java-code-one-task"]
-        JAVA_CODE_ONE_TASK_GROUP["iru-java-code-one-task-group"]
-        JAVA_CODE_QUALITY["iru-java-code-quality"]
-        JAVA_COVERAGE["iru-java-coverage"]
-        JAVA_GENERATE_ALL_TESTS["iru-java-generate-all-tests"]
-        JAVA_JAVADOC["iru-java-javadoc"]
-        JAVA_TEST["iru-java-test"]
-    end
+=== Android Bootstrap dependencies
 
-    subgraph GROUP_KOTLIN["Kotlin Development Tooling"]
-        KOTLIN_CODE_QUALITY["iru-kotlin-code-quality"]
-        KOTLIN_KDOC["iru-kotlin-kdoc"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_ANDROID_APP["iru-setup-android-app"]
+    SETUP_ANDROID_GITHUB_WORKFLOWS["iru-setup-android-github-workflows"]
+    SETUP_ANDROID_GITIGNORE["iru-setup-android-gitignore"]
+    SETUP_ANDROID_LIBRARY["iru-setup-android-library"]
+    SETUP_ANDROID_REPOSITORY["iru-setup-android-repository"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_APP
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_GITHUB_WORKFLOWS
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_GITIGNORE
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_LIBRARY
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_ANDROID_REPOSITORY -.-> SETUP_README
+    SETUP_ANDROID_APP -.->|spawns| AGT_GATE
+    SETUP_ANDROID_LIBRARY -.->|spawns| AGT_GATE
+    SETUP_ANDROID_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_TYPESCRIPT["TypeScript Development Tooling"]
-        NESTJS_CODE_ONE_TASK["iru-nestjs-code-one-task"]
-        NESTJS_CODE_ONE_TASK_GROUP["iru-nestjs-code-one-task-group"]
-        NEXTJS_CODE_ONE_TASK["iru-nextjs-code-one-task"]
-        NEXTJS_CODE_ONE_TASK_GROUP["iru-nextjs-code-one-task-group"]
-        TYPESCRIPT_BUMP_VERSION["iru-typescript-bump-version"]
-        REACT_NATIVE_BUMP_VERSION["iru-react-native-bump-version"]
-        REACT_NATIVE_CODE_ONE_TASK["iru-react-native-code-one-task"]
-        REACT_NATIVE_CODE_ONE_TASK_GROUP["iru-react-native-code-one-task-group"]
-        TYPESCRIPT_CODE_ONE_TASK["iru-typescript-code-one-task"]
-        TYPESCRIPT_CODE_ONE_TASK_GROUP["iru-typescript-code-one-task-group"]
-        TYPESCRIPT_CODE_QUALITY["iru-typescript-code-quality"]
-        TYPESCRIPT_COVERAGE["iru-typescript-coverage"]
-        TYPESCRIPT_GENERATE_ALL_TESTS["iru-typescript-generate-all-tests"]
-        TYPESCRIPT_TEST["iru-typescript-test"]
-        TYPESCRIPT_TSDOC["iru-typescript-tsdoc"]
-    end
+=== Kotlin Multiplatform Bootstrap dependencies
 
-    subgraph GROUP_ANDROID["Android Development Tooling"]
-        ANDROID_BUMP_VERSION["iru-android-bump-version"]
-        ANDROID_CODE_ONE_TASK["iru-android-code-one-task"]
-        ANDROID_CODE_ONE_TASK_GROUP["iru-android-code-one-task-group"]
-        ANDROID_CODE_QUALITY["iru-android-code-quality"]
-        ANDROID_COVERAGE["iru-android-coverage"]
-        ANDROID_DOKKA["iru-android-dokka"]
-        ANDROID_GENERATE_ALL_TESTS["iru-android-generate-all-tests"]
-        ANDROID_TEST["iru-android-test"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_KMP_APP["iru-setup-kmp-app"]
+    SETUP_KMP_GITHUB_WORKFLOWS["iru-setup-kmp-github-workflows"]
+    SETUP_KMP_GITIGNORE["iru-setup-kmp-gitignore"]
+    SETUP_KMP_REPOSITORY["iru-setup-kmp-repository"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_APP
+    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_GITIGNORE
+    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_GITHUB_WORKFLOWS
+    SETUP_KMP_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_KMP_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_KMP_REPOSITORY -.-> SETUP_README
+    SETUP_KMP_APP -.->|spawns| AGT_GATE
+    SETUP_KMP_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_KMP_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_KMP["Kotlin Multiplatform Development Tooling"]
-        KMP_BUMP_VERSION["iru-kmp-bump-version"]
-        KMP_CODE_ONE_TASK["iru-kmp-code-one-task"]
-        KMP_CODE_ONE_TASK_GROUP["iru-kmp-code-one-task-group"]
-        KMP_CODE_QUALITY["iru-kmp-code-quality"]
-        KMP_COVERAGE["iru-kmp-coverage"]
-        KMP_DOKKA["iru-kmp-dokka"]
-        KMP_GENERATE_ALL_TESTS["iru-kmp-generate-all-tests"]
-        KMP_TEST["iru-kmp-test"]
-    end
+=== Swift/Apple Bootstrap dependencies
 
-    subgraph GROUP_SWIFT["Swift Development Tooling"]
-        SWIFT_BUMP_VERSION["iru-swift-bump-version"]
-        SWIFT_CODE_ONE_TASK["iru-swift-code-one-task"]
-        SWIFT_CODE_ONE_TASK_GROUP["iru-swift-code-one-task-group"]
-        SWIFT_CODE_QUALITY["iru-swift-code-quality"]
-        SWIFT_COVERAGE["iru-swift-coverage"]
-        SWIFT_DOCC["iru-swift-docc"]
-        SWIFT_GENERATE_ALL_TESTS["iru-swift-generate-all-tests"]
-        SWIFT_TEST["iru-swift-test"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_APPLE_APP["iru-setup-apple-app"]
+    SETUP_MACOS_APP["iru-setup-macos-app"]
+    SETUP_MACOS_GITHUB_WORKFLOWS["iru-setup-macos-github-workflows"]
+    SETUP_MACOS_REPOSITORY["iru-setup-macos-repository"]
+    SETUP_SWIFT_GITHUB_WORKFLOWS["iru-setup-swift-github-workflows"]
+    SETUP_SWIFT_GITIGNORE["iru-setup-swift-gitignore"]
+    SETUP_SWIFT_LIBRARY["iru-setup-swift-library"]
+    SETUP_SWIFT_REPOSITORY["iru-setup-swift-repository"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_APPLE_APP
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_README
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_GITHUB_WORKFLOWS
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
+    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_LIBRARY
+    SETUP_APPLE_APP -.->|spawns| AGT_GATE
+    SETUP_SWIFT_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_SWIFT_LIBRARY -.->|spawns| AGT_GATE
+    SETUP_SWIFT_REPOSITORY -.->|spawns| AGT_ISE
+    SETUP_MACOS_REPOSITORY -.-> SETUP_MACOS_APP
+    SETUP_MACOS_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_MACOS_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
+    SETUP_MACOS_REPOSITORY -.-> SETUP_MACOS_GITHUB_WORKFLOWS
+    SETUP_MACOS_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_MACOS_REPOSITORY -.-> SETUP_README
+    SETUP_MACOS_APP -.->|spawns| AGT_GATE
+    SETUP_MACOS_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_MACOS_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_SPRINGBOOT["Spring Boot Development Tooling"]
-        JAVA_SPRINGBOOT_CODE_ONE_TASK["iru-java-springboot-code-one-task"]
-        JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-java-springboot-code-one-task-group"]
-        JAVA_SPRINGBOOT_PERFORMANCE_TESTS["iru-java-springboot-performance-tests"]
-        KOTLIN_SPRINGBOOT_CODE_ONE_TASK["iru-kotlin-springboot-code-one-task"]
-        KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-kotlin-springboot-code-one-task-group"]
-    end
+=== Windows Desktop Bootstrap dependencies
 
-    subgraph GROUP_QUARKUS["Quarkus Development Tooling"]
-        QUARKUS_CODE_ONE_TASK["iru-quarkus-code-one-task"]
-        QUARKUS_CODE_ONE_TASK_GROUP["iru-quarkus-code-one-task-group"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_WINDOWS_APP["iru-setup-windows-app"]
+    SETUP_WINDOWS_GITHUB_WORKFLOWS["iru-setup-windows-github-workflows"]
+    SETUP_WINDOWS_GITIGNORE["iru-setup-windows-gitignore"]
+    SETUP_WINDOWS_REPOSITORY["iru-setup-windows-repository"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_APP
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_GITIGNORE
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_GITHUB_WORKFLOWS
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_WINDOWS_REPOSITORY -.-> SETUP_README
+    SETUP_WINDOWS_APP -.->|spawns| AGT_GATE
+    SETUP_WINDOWS_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_WINDOWS_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_PHP["PHP Development Tooling"]
-        PHP_BUMP_VERSION["iru-php-bump-version"]
-        PHP_CODE_ONE_TASK["iru-php-code-one-task"]
-        PHP_CODE_ONE_TASK_GROUP["iru-php-code-one-task-group"]
-        PHP_CODE_QUALITY["iru-php-code-quality"]
-        PHP_COVERAGE["iru-php-coverage"]
-        PHP_PHPDOC["iru-php-phpdoc"]
-        PHP_TEST["iru-php-test"]
-    end
+=== Command-Line Tool Bootstrap dependencies
 
-    subgraph GROUP_PYTHON["Python Development Tooling"]
-        DJANGO_CODE_ONE_TASK["iru-django-code-one-task"]
-        DJANGO_CODE_ONE_TASK_GROUP["iru-django-code-one-task-group"]
-        FASTAPI_CODE_ONE_TASK["iru-fastapi-code-one-task"]
-        FASTAPI_CODE_ONE_TASK_GROUP["iru-fastapi-code-one-task-group"]
-        PYTHON_BUMP_VERSION["iru-python-bump-version"]
-        PYTHON_CODE_QUALITY["iru-python-code-quality"]
-        PYTHON_COVERAGE["iru-python-coverage"]
-        PYTHON_DOCSTRINGS["iru-python-docstrings"]
-        PYTHON_TEST["iru-python-test"]
-    end
+[mermaid]
+....
+flowchart LR
+    SETUP_CLI_GITHUB_WORKFLOWS["iru-setup-cli-github-workflows"]
+    SETUP_CLI_REPOSITORY["iru-setup-cli-repository"]
+    SETUP_DOTNET_CLI["iru-setup-dotnet-cli"]
+    SETUP_DOTNET_GITIGNORE["iru-setup-dotnet-gitignore"]
+    SETUP_GO_CLI["iru-setup-go-cli"]
+    SETUP_GO_GITIGNORE["iru-setup-go-gitignore"]
+    SETUP_RUST_CLI["iru-setup-rust-cli"]
+    SETUP_RUST_GITIGNORE["iru-setup-rust-gitignore"]
+    SETUP_SWIFT_CLI["iru-setup-swift-cli"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    SETUP_SWIFT_GITIGNORE["iru-setup-swift-gitignore"]:::other
+    SETUP_CHANGELOG["iru-setup-changelog"]:::other
+    SETUP_README["iru-setup-readme"]:::other
+    SWIFT_COVERAGE["iru-swift-coverage"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    SETUP_CLI_REPOSITORY -.-> SETUP_RUST_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_GO_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_SWIFT_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_DOTNET_CLI
+    SETUP_CLI_REPOSITORY -.-> SETUP_ANTORA
+    SETUP_CLI_REPOSITORY -.-> SETUP_RUST_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_GO_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_DOTNET_GITIGNORE
+    SETUP_CLI_REPOSITORY -.-> SETUP_CLI_GITHUB_WORKFLOWS
+    SETUP_CLI_REPOSITORY -.-> SETUP_CHANGELOG
+    SETUP_CLI_REPOSITORY -.-> SETUP_README
+    SETUP_SWIFT_CLI -.-> SWIFT_COVERAGE
+    SETUP_RUST_CLI -.->|spawns| AGT_GATE
+    SETUP_GO_CLI -.->|spawns| AGT_GATE
+    SETUP_SWIFT_CLI -.->|spawns| AGT_GATE
+    SETUP_DOTNET_CLI -.->|spawns| AGT_GATE
+    SETUP_CLI_GITHUB_WORKFLOWS -.->|spawns| AGT_GATE
+    SETUP_CLI_REPOSITORY -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_DOTNET[".NET Development Tooling"]
-        DOTNET_BUMP_VERSION["iru-dotnet-bump-version"]
-        WINDOWS_CODE_ONE_TASK["iru-windows-code-one-task"]
-        WINDOWS_CODE_ONE_TASK_GROUP["iru-windows-code-one-task-group"]
-        DOTNET_CODE_ONE_TASK["iru-dotnet-code-one-task"]
-        DOTNET_CODE_ONE_TASK_GROUP["iru-dotnet-code-one-task-group"]
-        DOTNET_CODE_QUALITY["iru-dotnet-code-quality"]
-        DOTNET_COVERAGE["iru-dotnet-coverage"]
-        DOTNET_DOCFX["iru-dotnet-docfx"]
-        DOTNET_GENERATE_ALL_TESTS["iru-dotnet-generate-all-tests"]
-        DOTNET_TEST["iru-dotnet-test"]
-    end
+=== Ticket Intake dependencies
 
-    subgraph GROUP_RUST["Rust Development Tooling"]
-        RUST_BUMP_VERSION["iru-rust-bump-version"]
-        RUST_CODE_ONE_TASK["iru-rust-code-one-task"]
-        RUST_CODE_ONE_TASK_GROUP["iru-rust-code-one-task-group"]
-        RUST_CODE_QUALITY["iru-rust-code-quality"]
-        RUST_COVERAGE["iru-rust-coverage"]
-        RUST_RUSTDOC["iru-rust-rustdoc"]
-        RUST_TEST["iru-rust-test"]
-    end
+[mermaid]
+....
+flowchart LR
+    CREATE_GITHUB_ISSUE["iru-create-github-issue"]
+    DRAFT_GITHUB_ISSUE["iru-draft-github-issue"]
+    REVIEW_GITHUB_ISSUE["iru-review-github-issue"]
+    SPLIT_GITHUB_ISSUE["iru-split-github-issue"]
+    CREATE_JIRA_TICKET["iru-create-jira-ticket"]
+    JIRA_CUSTOM_CONTEXT["iru-jira-custom-context"]
+    EXPLORE["iru-explore"]:::other
+    CREATE_GITHUB_ISSUE --> EXPLORE
+    CREATE_JIRA_TICKET --> EXPLORE
+    DRAFT_GITHUB_ISSUE --> EXPLORE
+    DRAFT_GITHUB_ISSUE --> REVIEW_GITHUB_ISSUE
+    DRAFT_GITHUB_ISSUE --> SPLIT_GITHUB_ISSUE
+    SPLIT_GITHUB_ISSUE --> REVIEW_GITHUB_ISSUE
+    CREATE_JIRA_TICKET --> JIRA_CUSTOM_CONTEXT
+    classDef other stroke-dasharray: 4 3
+....
 
-    subgraph GROUP_GO["Go Development Tooling"]
-        GO_BUMP_VERSION["iru-go-bump-version"]
-        GO_CODE_ONE_TASK["iru-go-code-one-task"]
-        GO_CODE_ONE_TASK_GROUP["iru-go-code-one-task-group"]
-        GO_CODE_QUALITY["iru-go-code-quality"]
-        GO_COVERAGE["iru-go-coverage"]
-        GO_GODOC["iru-go-godoc"]
-        GO_TEST["iru-go-test"]
-    end
+=== Issue-to-PR Development Cycle dependencies
 
-    subgraph GROUP_DATABASE["Database Development Tooling"]
-        DATABASE_CODE_ONE_TASK["iru-database-code-one-task"]
-        DATABASE_CODE_ONE_TASK_GROUP["iru-database-code-one-task-group"]
-    end
-
-    subgraph GROUP_PR["Pull Request Lifecycle"]
-        PR_DESCRIPTION["iru-pr-description"]
-        PR_REVIEW["iru-pr-review"]
-    end
-
-    subgraph GROUP_MAINTENANCE["Repository Maintenance"]
-        BUILD_DOCS["iru-build-docs"]
-        CHECK_LICENSE["iru-check-license"]
-        CHECK_SECURITY["iru-check-security"]
-        RELEASE["iru-release"]
-        UPDATE_ANTORA["iru-update-antora"]
-        UPDATE_DOCS["iru-update-docs"]
-    end
-
-    subgraph GROUP_KNOWLEDGE["Knowledge Base Management"]
-        KNOWLEDGE_BRIEFING["iru-knowledge-briefing"]
-        KNOWLEDGE_COMPACT["iru-knowledge-compact"]
-        KNOWLEDGE_COMPLETE["iru-knowledge-complete"]
-        KNOWLEDGE_PROCESS_INBOX["iru-knowledge-process-inbox"]
-        KNOWLEDGE_SETUP["iru-knowledge-setup"]
-        KNOWLEDGE_TO_ISSUE["iru-knowledge-to-issue"]
-        KNOWLEDGE_TO_JIRA["iru-knowledge-to-jira"]
-    end
-
-    subgraph GROUP_TOOLING["Catalog Tooling"]
-        GENERATE_SKILL_DOCS["iru-generate-skill-docs"]
-    end
-
-    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_ONE_TASK
-    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_QUALITY
-    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_COVERAGE
-    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_DOKKA
-    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_TEST
-    ANDROID_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    ANDROID_GENERATE_ALL_TESTS -.-> ANDROID_COVERAGE
-    ANDROID_GENERATE_ALL_TESTS -.-> ANDROID_TEST
-    BUILD_DOCS --> SETUP_ANTORA
+[mermaid]
+....
+flowchart LR
+    CODE["iru-code"]
+    CODE_ONE_TASK_GROUP["iru-code-one-task-group"]
+    EXPLORE["iru-explore"]
+    ISSUE["iru-issue"]
+    PLAN["iru-plan"]
+    ANDROID_CODE_QUALITY["iru-android-code-quality"]:::other
+    CHECK_SECURITY["iru-check-security"]:::other
+    CREATE_JIRA_TICKET["iru-create-jira-ticket"]:::other
+    DOTNET_CODE_QUALITY["iru-dotnet-code-quality"]:::other
+    JAVA_CODE_QUALITY["iru-java-code-quality"]:::other
+    KOTLIN_CODE_QUALITY["iru-kotlin-code-quality"]:::other
+    PHP_CODE_QUALITY["iru-php-code-quality"]:::other
+    PYTHON_CODE_QUALITY["iru-python-code-quality"]:::other
+    SWIFT_CODE_QUALITY["iru-swift-code-quality"]:::other
+    TYPESCRIPT_CODE_QUALITY["iru-typescript-code-quality"]:::other
+    UPDATE_DOCS["iru-update-docs"]:::other
+    ANDROID_CODE_ONE_TASK_GROUP["iru-android-code-one-task-group"]:::other
+    CHECK_LICENSE["iru-check-license"]:::other
+    DATABASE_CODE_ONE_TASK_GROUP["iru-database-code-one-task-group"]:::other
+    DOTNET_CODE_ONE_TASK_GROUP["iru-dotnet-code-one-task-group"]:::other
+    JAVA_CODE_ONE_TASK_GROUP["iru-java-code-one-task-group"]:::other
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-java-springboot-code-one-task-group"]:::other
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-kotlin-springboot-code-one-task-group"]:::other
+    NESTJS_CODE_ONE_TASK_GROUP["iru-nestjs-code-one-task-group"]:::other
+    NEXTJS_CODE_ONE_TASK_GROUP["iru-nextjs-code-one-task-group"]:::other
+    PHP_CODE_ONE_TASK_GROUP["iru-php-code-one-task-group"]:::other
+    FASTAPI_CODE_ONE_TASK_GROUP["iru-fastapi-code-one-task-group"]:::other
+    DJANGO_CODE_ONE_TASK_GROUP["iru-django-code-one-task-group"]:::other
+    QUARKUS_CODE_ONE_TASK_GROUP["iru-quarkus-code-one-task-group"]:::other
+    SWIFT_CODE_ONE_TASK_GROUP["iru-swift-code-one-task-group"]:::other
+    TYPESCRIPT_CODE_ONE_TASK_GROUP["iru-typescript-code-one-task-group"]:::other
+    PR_DESCRIPTION["iru-pr-description"]:::other
+    PR_REVIEW["iru-pr-review"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    KMP_CODE_ONE_TASK_GROUP["iru-kmp-code-one-task-group"]:::other
+    REACT_NATIVE_CODE_ONE_TASK_GROUP["iru-react-native-code-one-task-group"]:::other
+    KMP_CODE_QUALITY["iru-kmp-code-quality"]:::other
+    WINDOWS_CODE_ONE_TASK_GROUP["iru-windows-code-one-task-group"]:::other
+    RUST_CODE_QUALITY["iru-rust-code-quality"]:::other
+    GO_CODE_QUALITY["iru-go-code-quality"]:::other
+    RUST_CODE_ONE_TASK_GROUP["iru-rust-code-one-task-group"]:::other
+    GO_CODE_ONE_TASK_GROUP["iru-go-code-one-task-group"]:::other
     CODE -.-> ANDROID_CODE_QUALITY
     CODE -.-> CHECK_SECURITY
     CODE -.-> CODE_ONE_TASK_GROUP
@@ -2618,28 +2897,46 @@ flowchart LR
     CODE_ONE_TASK_GROUP --> QUARKUS_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> SWIFT_CODE_ONE_TASK_GROUP
     CODE_ONE_TASK_GROUP --> TYPESCRIPT_CODE_ONE_TASK_GROUP
-    CREATE_GITHUB_ISSUE --> EXPLORE
-    CREATE_JIRA_TICKET --> EXPLORE
-    DRAFT_GITHUB_ISSUE --> EXPLORE
-    DRAFT_GITHUB_ISSUE --> REVIEW_GITHUB_ISSUE
-    DRAFT_GITHUB_ISSUE --> SPLIT_GITHUB_ISSUE
-    SPLIT_GITHUB_ISSUE --> REVIEW_GITHUB_ISSUE
-    CREATE_JIRA_TICKET --> JIRA_CUSTOM_CONTEXT
-    DATABASE_CODE_ONE_TASK --> EXPLORE
-    DATABASE_CODE_ONE_TASK_GROUP --> DATABASE_CODE_ONE_TASK
-    DOTNET_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_ONE_TASK
-    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_QUALITY
-    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_COVERAGE
-    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_DOCFX
-    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_TEST
-    DOTNET_GENERATE_ALL_TESTS -.-> DOTNET_COVERAGE
-    DOTNET_GENERATE_ALL_TESTS -.-> DOTNET_TEST
     ISSUE -.-> CODE
     ISSUE --> EXPLORE
     ISSUE --> PLAN
     ISSUE --> PR_DESCRIPTION
     ISSUE --> PR_REVIEW
+    PLAN --> EXPLORE
+    CODE -.->|spawns| AGT_GATE
+    CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    CODE -.->|spawns| AGT_ISE
+    ISSUE -.->|spawns| AGT_ISE
+    EXPLORE -.->|uses| AGT_EXPLORE
+    CODE_ONE_TASK_GROUP --> KMP_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> REACT_NATIVE_CODE_ONE_TASK_GROUP
+    CODE -.-> KMP_CODE_QUALITY
+    CODE_ONE_TASK_GROUP --> WINDOWS_CODE_ONE_TASK_GROUP
+    CODE -.-> RUST_CODE_QUALITY
+    CODE -.-> GO_CODE_QUALITY
+    CODE_ONE_TASK_GROUP --> RUST_CODE_ONE_TASK_GROUP
+    CODE_ONE_TASK_GROUP --> GO_CODE_ONE_TASK_GROUP
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Java Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    JAVA_BUMP_VERSION["iru-java-bump-version"]
+    JAVA_CODE_ONE_TASK["iru-java-code-one-task"]
+    JAVA_CODE_ONE_TASK_GROUP["iru-java-code-one-task-group"]
+    JAVA_CODE_QUALITY["iru-java-code-quality"]
+    JAVA_COVERAGE["iru-java-coverage"]
+    JAVA_GENERATE_ALL_TESTS["iru-java-generate-all-tests"]
+    JAVA_JAVADOC["iru-java-javadoc"]
+    JAVA_TEST["iru-java-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
     JAVA_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
     JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_ONE_TASK
     JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
@@ -2648,27 +2945,45 @@ flowchart LR
     JAVA_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
     JAVA_GENERATE_ALL_TESTS -.-> JAVA_COVERAGE
     JAVA_GENERATE_ALL_TESTS -.-> JAVA_TEST
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_SPRINGBOOT_CODE_ONE_TASK
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
-    JAVA_SPRINGBOOT_PERFORMANCE_TESTS --> EXPLORE
-    KNOWLEDGE_COMPACT --> KNOWLEDGE_COMPLETE
-    KNOWLEDGE_PROCESS_INBOX --> KNOWLEDGE_COMPACT
-    KNOWLEDGE_TO_ISSUE --> CREATE_GITHUB_ISSUE
-    KNOWLEDGE_TO_ISSUE --> EXPLORE
-    KNOWLEDGE_TO_JIRA --> CREATE_JIRA_TICKET
-    KNOWLEDGE_TO_JIRA --> EXPLORE
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_CODE_QUALITY
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_KDOC
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_SPRINGBOOT_CODE_ONE_TASK
+    JAVA_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    JAVA_GENERATE_ALL_TESTS -.->|spawns| AGT_GATE
+    JAVA_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    JAVA_GENERATE_ALL_TESTS -.->|uses| AGT_EXPLORE
+    JAVA_GENERATE_ALL_TESTS -.->|spawns| AGT_GP
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Kotlin Development Tooling dependencies
+
+No skill of the Kotlin Development Tooling group calls another skill or an agent.
+
+=== TypeScript Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    NESTJS_CODE_ONE_TASK["iru-nestjs-code-one-task"]
+    NESTJS_CODE_ONE_TASK_GROUP["iru-nestjs-code-one-task-group"]
+    NEXTJS_CODE_ONE_TASK["iru-nextjs-code-one-task"]
+    NEXTJS_CODE_ONE_TASK_GROUP["iru-nextjs-code-one-task-group"]
+    TYPESCRIPT_BUMP_VERSION["iru-typescript-bump-version"]
+    REACT_NATIVE_BUMP_VERSION["iru-react-native-bump-version"]
+    REACT_NATIVE_CODE_ONE_TASK["iru-react-native-code-one-task"]
+    REACT_NATIVE_CODE_ONE_TASK_GROUP["iru-react-native-code-one-task-group"]
+    TYPESCRIPT_CODE_ONE_TASK["iru-typescript-code-one-task"]
+    TYPESCRIPT_CODE_ONE_TASK_GROUP["iru-typescript-code-one-task-group"]
+    TYPESCRIPT_CODE_QUALITY["iru-typescript-code-quality"]
+    TYPESCRIPT_COVERAGE["iru-typescript-coverage"]
+    TYPESCRIPT_GENERATE_ALL_TESTS["iru-typescript-generate-all-tests"]
+    TYPESCRIPT_TEST["iru-typescript-test"]
+    TYPESCRIPT_TSDOC["iru-typescript-tsdoc"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    ANDROID_CODE_QUALITY["iru-android-code-quality"]:::other
+    ANDROID_TEST["iru-android-test"]:::other
     NESTJS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
     NESTJS_CODE_ONE_TASK_GROUP -.-> NESTJS_CODE_ONE_TASK
     NESTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
@@ -2681,12 +2996,258 @@ flowchart LR
     NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
     NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
     NEXTJS_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_ONE_TASK
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    TYPESCRIPT_GENERATE_ALL_TESTS -.-> TYPESCRIPT_COVERAGE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.-> TYPESCRIPT_TEST
+    NESTJS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    NEXTJS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.->|spawns| AGT_GATE
+    NESTJS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    NEXTJS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    TYPESCRIPT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.->|uses| AGT_EXPLORE
+    TYPESCRIPT_GENERATE_ALL_TESTS -.->|spawns| AGT_GP
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> REACT_NATIVE_CODE_ONE_TASK
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_QUALITY
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> ANDROID_TEST
+    TYPESCRIPT_CODE_ONE_TASK_GROUP --> REACT_NATIVE_CODE_ONE_TASK_GROUP
+    TYPESCRIPT_CODE_ONE_TASK --> REACT_NATIVE_CODE_ONE_TASK
+    TYPESCRIPT_BUMP_VERSION --> REACT_NATIVE_BUMP_VERSION
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    REACT_NATIVE_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Android Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    ANDROID_BUMP_VERSION["iru-android-bump-version"]
+    ANDROID_CODE_ONE_TASK["iru-android-code-one-task"]
+    ANDROID_CODE_ONE_TASK_GROUP["iru-android-code-one-task-group"]
+    ANDROID_CODE_QUALITY["iru-android-code-quality"]
+    ANDROID_COVERAGE["iru-android-coverage"]
+    ANDROID_DOKKA["iru-android-dokka"]
+    ANDROID_GENERATE_ALL_TESTS["iru-android-generate-all-tests"]
+    ANDROID_TEST["iru-android-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_ONE_TASK
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_QUALITY
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_COVERAGE
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_DOKKA
+    ANDROID_CODE_ONE_TASK_GROUP -.-> ANDROID_TEST
+    ANDROID_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    ANDROID_GENERATE_ALL_TESTS -.-> ANDROID_COVERAGE
+    ANDROID_GENERATE_ALL_TESTS -.-> ANDROID_TEST
+    ANDROID_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    ANDROID_GENERATE_ALL_TESTS -.->|spawns| AGT_GATE
+    ANDROID_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    ANDROID_GENERATE_ALL_TESTS -.->|uses| AGT_EXPLORE
+    ANDROID_GENERATE_ALL_TESTS -.->|spawns| AGT_GP
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Kotlin Multiplatform Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    KMP_BUMP_VERSION["iru-kmp-bump-version"]
+    KMP_CODE_ONE_TASK["iru-kmp-code-one-task"]
+    KMP_CODE_ONE_TASK_GROUP["iru-kmp-code-one-task-group"]
+    KMP_CODE_QUALITY["iru-kmp-code-quality"]
+    KMP_COVERAGE["iru-kmp-coverage"]
+    KMP_DOKKA["iru-kmp-dokka"]
+    KMP_GENERATE_ALL_TESTS["iru-kmp-generate-all-tests"]
+    KMP_TEST["iru-kmp-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_CODE_ONE_TASK
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_CODE_QUALITY
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_COVERAGE
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_DOKKA
+    KMP_CODE_ONE_TASK_GROUP -.-> KMP_TEST
+    KMP_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    KMP_GENERATE_ALL_TESTS -.-> KMP_COVERAGE
+    KMP_GENERATE_ALL_TESTS -.-> KMP_TEST
+    KMP_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    KMP_GENERATE_ALL_TESTS -.->|spawns| AGT_GATE
+    KMP_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    KMP_GENERATE_ALL_TESTS -.->|uses| AGT_EXPLORE
+    KMP_GENERATE_ALL_TESTS -.->|spawns| AGT_GP
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Swift Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    SWIFT_BUMP_VERSION["iru-swift-bump-version"]
+    SWIFT_CODE_ONE_TASK["iru-swift-code-one-task"]
+    SWIFT_CODE_ONE_TASK_GROUP["iru-swift-code-one-task-group"]
+    SWIFT_CODE_QUALITY["iru-swift-code-quality"]
+    SWIFT_COVERAGE["iru-swift-coverage"]
+    SWIFT_DOCC["iru-swift-docc"]
+    SWIFT_GENERATE_ALL_TESTS["iru-swift-generate-all-tests"]
+    SWIFT_TEST["iru-swift-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    SWIFT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_CODE_ONE_TASK
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_CODE_QUALITY
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_COVERAGE
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_DOCC
+    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_TEST
+    SWIFT_GENERATE_ALL_TESTS -.-> SWIFT_COVERAGE
+    SWIFT_GENERATE_ALL_TESTS -.-> SWIFT_TEST
+    SWIFT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    SWIFT_GENERATE_ALL_TESTS -.->|spawns| AGT_GATE
+    SWIFT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    SWIFT_GENERATE_ALL_TESTS -.->|uses| AGT_EXPLORE
+    SWIFT_GENERATE_ALL_TESTS -.->|spawns| AGT_GP
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Spring Boot Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    JAVA_SPRINGBOOT_CODE_ONE_TASK["iru-java-springboot-code-one-task"]
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-java-springboot-code-one-task-group"]
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS["iru-java-springboot-performance-tests"]
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK["iru-kotlin-springboot-code-one-task"]
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP["iru-kotlin-springboot-code-one-task-group"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    JAVA_CODE_QUALITY["iru-java-code-quality"]:::other
+    JAVA_COVERAGE["iru-java-coverage"]:::other
+    JAVA_JAVADOC["iru-java-javadoc"]:::other
+    JAVA_TEST["iru-java-test"]:::other
+    EXPLORE["iru-explore"]:::other
+    KOTLIN_CODE_QUALITY["iru-kotlin-code-quality"]:::other
+    KOTLIN_KDOC["iru-kotlin-kdoc"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_SPRINGBOOT_CODE_ONE_TASK
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS --> EXPLORE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_CODE_QUALITY
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_KDOC
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.-> KOTLIN_SPRINGBOOT_CODE_ONE_TASK
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS -.->|spawns| AGT_GATE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    JAVA_SPRINGBOOT_PERFORMANCE_TESTS -.->|uses| AGT_EXPLORE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Quarkus Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    QUARKUS_CODE_ONE_TASK["iru-quarkus-code-one-task"]
+    QUARKUS_CODE_ONE_TASK_GROUP["iru-quarkus-code-one-task-group"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    JAVA_CODE_QUALITY["iru-java-code-quality"]:::other
+    JAVA_COVERAGE["iru-java-coverage"]:::other
+    JAVA_JAVADOC["iru-java-javadoc"]:::other
+    JAVA_TEST["iru-java-test"]:::other
+    KOTLIN_CODE_QUALITY["iru-kotlin-code-quality"]:::other
+    KOTLIN_KDOC["iru-kotlin-kdoc"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> KOTLIN_CODE_QUALITY
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> KOTLIN_KDOC
+    QUARKUS_CODE_ONE_TASK_GROUP -.-> QUARKUS_CODE_ONE_TASK
+    QUARKUS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    QUARKUS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== PHP Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    PHP_BUMP_VERSION["iru-php-bump-version"]
+    PHP_CODE_ONE_TASK["iru-php-code-one-task"]
+    PHP_CODE_ONE_TASK_GROUP["iru-php-code-one-task-group"]
+    PHP_CODE_QUALITY["iru-php-code-quality"]
+    PHP_COVERAGE["iru-php-coverage"]
+    PHP_PHPDOC["iru-php-phpdoc"]
+    PHP_TEST["iru-php-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
     PHP_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_CODE_ONE_TASK
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_CODE_QUALITY
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_COVERAGE
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_PHPDOC
     PHP_CODE_ONE_TASK_GROUP -.-> PHP_TEST
+    PHP_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    PHP_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Python Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    DJANGO_CODE_ONE_TASK["iru-django-code-one-task"]
+    DJANGO_CODE_ONE_TASK_GROUP["iru-django-code-one-task-group"]
+    FASTAPI_CODE_ONE_TASK["iru-fastapi-code-one-task"]
+    FASTAPI_CODE_ONE_TASK_GROUP["iru-fastapi-code-one-task-group"]
+    PYTHON_BUMP_VERSION["iru-python-bump-version"]
+    PYTHON_CODE_QUALITY["iru-python-code-quality"]
+    PYTHON_COVERAGE["iru-python-coverage"]
+    PYTHON_DOCSTRINGS["iru-python-docstrings"]
+    PYTHON_TEST["iru-python-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
     FASTAPI_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
     FASTAPI_CODE_ONE_TASK_GROUP -.-> FASTAPI_CODE_ONE_TASK
     FASTAPI_CODE_ONE_TASK_GROUP -.-> PYTHON_CODE_QUALITY
@@ -2699,16 +3260,166 @@ flowchart LR
     DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_COVERAGE
     DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_DOCSTRINGS
     DJANGO_CODE_ONE_TASK_GROUP -.-> PYTHON_TEST
-    PLAN --> EXPLORE
+    FASTAPI_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    DJANGO_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    FASTAPI_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    DJANGO_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== .NET Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    DOTNET_BUMP_VERSION["iru-dotnet-bump-version"]
+    WINDOWS_CODE_ONE_TASK["iru-windows-code-one-task"]
+    WINDOWS_CODE_ONE_TASK_GROUP["iru-windows-code-one-task-group"]
+    DOTNET_CODE_ONE_TASK["iru-dotnet-code-one-task"]
+    DOTNET_CODE_ONE_TASK_GROUP["iru-dotnet-code-one-task-group"]
+    DOTNET_CODE_QUALITY["iru-dotnet-code-quality"]
+    DOTNET_COVERAGE["iru-dotnet-coverage"]
+    DOTNET_DOCFX["iru-dotnet-docfx"]
+    DOTNET_GENERATE_ALL_TESTS["iru-dotnet-generate-all-tests"]
+    DOTNET_TEST["iru-dotnet-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    AGT_EXPLORE(("Explore\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    DOTNET_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_ONE_TASK
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_QUALITY
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_COVERAGE
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_DOCFX
+    DOTNET_CODE_ONE_TASK_GROUP -.-> DOTNET_TEST
+    DOTNET_GENERATE_ALL_TESTS -.-> DOTNET_COVERAGE
+    DOTNET_GENERATE_ALL_TESTS -.-> DOTNET_TEST
+    DOTNET_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    DOTNET_GENERATE_ALL_TESTS -.->|spawns| AGT_GATE
+    DOTNET_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    DOTNET_GENERATE_ALL_TESTS -.->|uses| AGT_EXPLORE
+    DOTNET_GENERATE_ALL_TESTS -.->|spawns| AGT_GP
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> WINDOWS_CODE_ONE_TASK
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_QUALITY
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_COVERAGE
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_DOCFX
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_TEST
+    WINDOWS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    WINDOWS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    WINDOWS_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    WINDOWS_CODE_ONE_TASK -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Rust Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    RUST_BUMP_VERSION["iru-rust-bump-version"]
+    RUST_CODE_ONE_TASK["iru-rust-code-one-task"]
+    RUST_CODE_ONE_TASK_GROUP["iru-rust-code-one-task-group"]
+    RUST_CODE_QUALITY["iru-rust-code-quality"]
+    RUST_COVERAGE["iru-rust-coverage"]
+    RUST_RUSTDOC["iru-rust-rustdoc"]
+    RUST_TEST["iru-rust-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_CODE_ONE_TASK
+    RUST_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_CODE_QUALITY
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_COVERAGE
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_RUSTDOC
+    RUST_CODE_ONE_TASK_GROUP -.-> RUST_TEST
+    RUST_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    RUST_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Go Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    GO_BUMP_VERSION["iru-go-bump-version"]
+    GO_CODE_ONE_TASK["iru-go-code-one-task"]
+    GO_CODE_ONE_TASK_GROUP["iru-go-code-one-task-group"]
+    GO_CODE_QUALITY["iru-go-code-quality"]
+    GO_COVERAGE["iru-go-coverage"]
+    GO_GODOC["iru-go-godoc"]
+    GO_TEST["iru-go-test"]
+    CHECK_LICENSE["iru-check-license"]:::other
+    AGT_GATE(("iru-gate-runner\nagent"))
+    AGT_ISE(("iru-isolated-skill-executor\nagent"))
+    GO_CODE_ONE_TASK_GROUP -.-> GO_CODE_ONE_TASK
+    GO_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
+    GO_CODE_ONE_TASK_GROUP -.-> GO_CODE_QUALITY
+    GO_CODE_ONE_TASK_GROUP -.-> GO_COVERAGE
+    GO_CODE_ONE_TASK_GROUP -.-> GO_GODOC
+    GO_CODE_ONE_TASK_GROUP -.-> GO_TEST
+    GO_CODE_ONE_TASK_GROUP -.->|spawns| AGT_GATE
+    GO_CODE_ONE_TASK_GROUP -.->|spawns| AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Database Development Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    DATABASE_CODE_ONE_TASK["iru-database-code-one-task"]
+    DATABASE_CODE_ONE_TASK_GROUP["iru-database-code-one-task-group"]
+    EXPLORE["iru-explore"]:::other
+    DATABASE_CODE_ONE_TASK --> EXPLORE
+    DATABASE_CODE_ONE_TASK_GROUP --> DATABASE_CODE_ONE_TASK
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Pull Request Lifecycle dependencies
+
+[mermaid]
+....
+flowchart LR
+    PR_DESCRIPTION["iru-pr-description"]
+    PR_REVIEW["iru-pr-review"]
+    EXPLORE["iru-explore"]:::other
+    CR[["code-review"]]
+    AGT_GP(("general-purpose\nagent"))
     PR_REVIEW --> EXPLORE
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_CODE_QUALITY
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_COVERAGE
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_JAVADOC
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> JAVA_TEST
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> KOTLIN_CODE_QUALITY
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> KOTLIN_KDOC
-    QUARKUS_CODE_ONE_TASK_GROUP -.-> QUARKUS_CODE_ONE_TASK
+    PR_REVIEW -.->|external, not in this catalog| CR
+    PR_DESCRIPTION -.->|spawns| AGT_GP
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Repository Maintenance dependencies
+
+[mermaid]
+....
+flowchart LR
+    BUILD_DOCS["iru-build-docs"]
+    CHECK_LICENSE["iru-check-license"]
+    CHECK_SECURITY["iru-check-security"]
+    RELEASE["iru-release"]
+    UPDATE_ANTORA["iru-update-antora"]
+    UPDATE_DOCS["iru-update-docs"]
+    SETUP_ANTORA["iru-setup-antora"]:::other
+    ANDROID_BUMP_VERSION["iru-android-bump-version"]:::other
+    JAVA_BUMP_VERSION["iru-java-bump-version"]:::other
+    PHP_BUMP_VERSION["iru-php-bump-version"]:::other
+    PYTHON_BUMP_VERSION["iru-python-bump-version"]:::other
+    PR_DESCRIPTION["iru-pr-description"]:::other
+    SWIFT_BUMP_VERSION["iru-swift-bump-version"]:::other
+    TYPESCRIPT_BUMP_VERSION["iru-typescript-bump-version"]:::other
+    AGT_CS(("iru-change-summarizer\nagent"))
+    AGT_GP(("general-purpose\nagent"))
+    KMP_BUMP_VERSION["iru-kmp-bump-version"]:::other
+    REACT_NATIVE_BUMP_VERSION["iru-react-native-bump-version"]:::other
+    DOTNET_BUMP_VERSION["iru-dotnet-bump-version"]:::other
+    RUST_BUMP_VERSION["iru-rust-bump-version"]:::other
+    GO_BUMP_VERSION["iru-go-bump-version"]:::other
+    BUILD_DOCS --> SETUP_ANTORA
     RELEASE --> ANDROID_BUMP_VERSION
     RELEASE --> JAVA_BUMP_VERSION
     RELEASE --> PHP_BUMP_VERSION
@@ -2716,302 +3427,49 @@ flowchart LR
     RELEASE --> PR_DESCRIPTION
     RELEASE --> SWIFT_BUMP_VERSION
     RELEASE --> TYPESCRIPT_BUMP_VERSION
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_APP
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_GITHUB_WORKFLOWS
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_GITIGNORE
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANDROID_LIBRARY
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_ANDROID_REPOSITORY -.-> SETUP_README
-    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_GITHUB_WORKFLOWS
-    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
-    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_JAVA_LIBRARY
-    SETUP_JAVA_LIBRARY_REPOSITORY -.-> SETUP_README
-    SETUP_JAVA_SPRINGBOOT --> SETUP_CHANGELOG
-    SETUP_JAVA_SPRINGBOOT --> SETUP_JAVA_GITIGNORE
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_APIS
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_HILLA
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_MODULES
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_PLATFORM
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_POM
-    SETUP_JAVA_SPRINGBOOT -.-> SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS
-    SETUP_JAVA_SPRINGBOOT --> SETUP_README
-    SETUP_JAVA_SPRINGBOOT -.-> UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION
-    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS --> SETUP_JAVA_SPRINGBOOT_POM
-    SPRINGBOOT_ROLLING_DEPLOYMENTS -.-> SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS
-    SPRINGBOOT_ROLLING_DEPLOYMENTS -.-> SETUP_JAVA_SPRINGBOOT_PLATFORM
-    SETUP_PHP_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_PHP_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_GITHUB_WORKFLOWS
-    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_GITIGNORE
-    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_LARAVEL
-    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_PRESTASHOP
-    SETUP_PHP_REPOSITORY -.-> SETUP_PHP_WORDPRESS
-    SETUP_PHP_REPOSITORY -.-> SETUP_README
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_DJANGO
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_FASTAPI
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_GITHUB_WORKFLOWS
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_PYTHON_GITIGNORE
-    SETUP_PYTHON_REPOSITORY -.-> SETUP_README
-    SETUP_QUARKUS_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_QUARKUS_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_QUARKUS_REPOSITORY -.-> SETUP_JAVA_GITIGNORE
-    SETUP_QUARKUS_REPOSITORY -.-> SETUP_QUARKUS_GITHUB_WORKFLOWS
-    SETUP_QUARKUS_REPOSITORY -.-> SETUP_QUARKUS_SERVICE
-    SETUP_QUARKUS_REPOSITORY -.-> SETUP_README
-    SETUP_QUARKUS_SERVICE -.-> JAVA_CODE_QUALITY
-    SETUP_QUARKUS_SERVICE -.-> KOTLIN_CODE_QUALITY
-    SETUP_README --> EXPLORE
-    SETUP_REPOSITORY --> EXPLORE
-    SETUP_REPOSITORY -.-> SETUP_ANDROID_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_JAVA_LIBRARY_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_JAVA_SPRINGBOOT
-    SETUP_REPOSITORY -.-> SETUP_PHP_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_PYTHON_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_QUARKUS_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_SWIFT_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_TYPESCRIPT_REPOSITORY
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_APPLE_APP
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_README
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_GITHUB_WORKFLOWS
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
-    SETUP_SWIFT_REPOSITORY -.-> SETUP_SWIFT_LIBRARY
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_ANGULAR_WEB
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_IONIC_APP
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_NESTJS_APP
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_NEXTJS_WEB
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_REACT_NATIVE_APP
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_REACT_WEB
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_README
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_GITHUB_WORKFLOWS
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_GITIGNORE
-    SETUP_TYPESCRIPT_REPOSITORY -.-> SETUP_TYPESCRIPT_LIBRARY
-    SWIFT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_CODE_ONE_TASK
-    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_CODE_QUALITY
-    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_COVERAGE
-    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_DOCC
-    SWIFT_CODE_ONE_TASK_GROUP -.-> SWIFT_TEST
-    SWIFT_GENERATE_ALL_TESTS -.-> SWIFT_COVERAGE
-    SWIFT_GENERATE_ALL_TESTS -.-> SWIFT_TEST
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_ONE_TASK
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
-    TYPESCRIPT_GENERATE_ALL_TESTS -.-> TYPESCRIPT_COVERAGE
-    TYPESCRIPT_GENERATE_ALL_TESTS -.-> TYPESCRIPT_TEST
     UPDATE_DOCS --> SETUP_ANTORA
-    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.-> SETUP_ANTORA
-
-    PR_REVIEW -.->|external, not in this catalog| CR[["code-review"]]
-
-    ANDROID_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE(("iru-gate-runner\nagent"))
-    ANDROID_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
-    CODE -.spawns.-> AGT_GATE
-    CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    DOTNET_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    DOTNET_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
-    JAVA_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    JAVA_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    JAVA_SPRINGBOOT_PERFORMANCE_TESTS -.spawns.-> AGT_GATE
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    NESTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    NEXTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    PHP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    FASTAPI_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    DJANGO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    QUARKUS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    SETUP_ANDROID_APP -.spawns.-> AGT_GATE
-    SETUP_ANDROID_LIBRARY -.spawns.-> AGT_GATE
-    SETUP_APPLE_APP -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT_APIS -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT_HILLA -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT_MODULES -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT_POM -.spawns.-> AGT_GATE
-    SETUP_JAVA_SPRINGBOOT_TESTCONTAINERS -.spawns.-> AGT_GATE
-    SETUP_PHP_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_PYTHON_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_QUARKUS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_QUARKUS_SERVICE -.spawns.-> AGT_GATE
-    SETUP_SWIFT_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_SWIFT_LIBRARY -.spawns.-> AGT_GATE
-    SWIFT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    SWIFT_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    TYPESCRIPT_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
-    ANDROID_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE(("iru-isolated-skill-executor\nagent"))
-    CODE -.spawns.-> AGT_ISE
-    DOTNET_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    ISSUE -.spawns.-> AGT_ISE
-    JAVA_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    JAVA_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    KOTLIN_SPRINGBOOT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    NESTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    NEXTJS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    PHP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    FASTAPI_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    DJANGO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    QUARKUS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    SETUP_ANDROID_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_JAVA_LIBRARY_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_JAVA_SPRINGBOOT -.spawns.-> AGT_ISE
-    SETUP_PHP_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_PYTHON_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_QUARKUS_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_SWIFT_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_TYPESCRIPT_REPOSITORY -.spawns.-> AGT_ISE
-    SWIFT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    TYPESCRIPT_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    RELEASE -.spawns.-> AGT_CS(("iru-change-summarizer\nagent"))
-    SETUP_CHANGELOG -.spawns.-> AGT_CS
-    ANDROID_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE(("Explore\nagent"))
-    DOTNET_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
-    EXPLORE -.uses.-> AGT_EXPLORE
-    JAVA_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
-    JAVA_SPRINGBOOT_PERFORMANCE_TESTS -.uses.-> AGT_EXPLORE
-    SETUP_ANTORA -.uses.-> AGT_EXPLORE
-    SETUP_README -.uses.-> AGT_EXPLORE
-    SWIFT_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
-    TYPESCRIPT_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
-    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.uses.-> AGT_EXPLORE
-    ANDROID_GENERATE_ALL_TESTS -.spawns.-> AGT_GP(("general-purpose\nagent"))
-    DOTNET_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
-    GENERATE_SKILL_DOCS -.spawns.-> AGT_GP
-    JAVA_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
-    PR_DESCRIPTION -.spawns.-> AGT_GP
-    SWIFT_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
-    TYPESCRIPT_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
-    UPDATE_DOCS -.spawns.-> AGT_GP
-    UPDATE_JAVA_SPRINGBOOT_DOCUMENTATION -.spawns.-> AGT_GP
-    CODE_ONE_TASK_GROUP --> KMP_CODE_ONE_TASK_GROUP
-    CODE_ONE_TASK_GROUP --> REACT_NATIVE_CODE_ONE_TASK_GROUP
-    CODE -.-> KMP_CODE_QUALITY
-    KMP_CODE_ONE_TASK_GROUP -.-> KMP_CODE_ONE_TASK
-    KMP_CODE_ONE_TASK_GROUP -.-> KMP_CODE_QUALITY
-    KMP_CODE_ONE_TASK_GROUP -.-> KMP_COVERAGE
-    KMP_CODE_ONE_TASK_GROUP -.-> KMP_DOKKA
-    KMP_CODE_ONE_TASK_GROUP -.-> KMP_TEST
-    KMP_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    KMP_GENERATE_ALL_TESTS -.-> KMP_COVERAGE
-    KMP_GENERATE_ALL_TESTS -.-> KMP_TEST
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> REACT_NATIVE_CODE_ONE_TASK
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_CODE_QUALITY
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_COVERAGE
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TEST
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> TYPESCRIPT_TSDOC
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> ANDROID_CODE_QUALITY
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.-> ANDROID_TEST
-    TYPESCRIPT_CODE_ONE_TASK_GROUP --> REACT_NATIVE_CODE_ONE_TASK_GROUP
-    TYPESCRIPT_CODE_ONE_TASK --> REACT_NATIVE_CODE_ONE_TASK
-    TYPESCRIPT_BUMP_VERSION --> REACT_NATIVE_BUMP_VERSION
+    RELEASE -.->|spawns| AGT_CS
+    UPDATE_DOCS -.->|spawns| AGT_GP
     RELEASE --> KMP_BUMP_VERSION
     RELEASE --> REACT_NATIVE_BUMP_VERSION
-    SETUP_REPOSITORY -.-> SETUP_KMP_REPOSITORY
-    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_APP
-    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_GITIGNORE
-    SETUP_KMP_REPOSITORY -.-> SETUP_KMP_GITHUB_WORKFLOWS
-    SETUP_KMP_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_KMP_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_KMP_REPOSITORY -.-> SETUP_README
-    KMP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    KMP_GENERATE_ALL_TESTS -.spawns.-> AGT_GATE
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    SETUP_KMP_APP -.spawns.-> AGT_GATE
-    SETUP_KMP_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    KMP_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    REACT_NATIVE_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    SETUP_KMP_REPOSITORY -.spawns.-> AGT_ISE
-    CODE_ONE_TASK_GROUP --> WINDOWS_CODE_ONE_TASK_GROUP
-    WINDOWS_CODE_ONE_TASK_GROUP -.-> WINDOWS_CODE_ONE_TASK
-    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_CODE_QUALITY
-    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_COVERAGE
-    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_DOCFX
-    WINDOWS_CODE_ONE_TASK_GROUP -.-> DOTNET_TEST
-    WINDOWS_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    WINDOWS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    WINDOWS_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
     RELEASE --> DOTNET_BUMP_VERSION
-    SETUP_REPOSITORY -.-> SETUP_MACOS_REPOSITORY
-    SETUP_REPOSITORY -.-> SETUP_WINDOWS_REPOSITORY
-    SETUP_MACOS_REPOSITORY -.-> SETUP_MACOS_APP
-    SETUP_MACOS_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_MACOS_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
-    SETUP_MACOS_REPOSITORY -.-> SETUP_MACOS_GITHUB_WORKFLOWS
-    SETUP_MACOS_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_MACOS_REPOSITORY -.-> SETUP_README
-    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_APP
-    SETUP_WINDOWS_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_GITIGNORE
-    SETUP_WINDOWS_REPOSITORY -.-> SETUP_WINDOWS_GITHUB_WORKFLOWS
-    SETUP_WINDOWS_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_WINDOWS_REPOSITORY -.-> SETUP_README
-    SETUP_MACOS_APP -.spawns.-> AGT_GATE
-    SETUP_MACOS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_WINDOWS_APP -.spawns.-> AGT_GATE
-    SETUP_WINDOWS_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    SETUP_MACOS_REPOSITORY -.spawns.-> AGT_ISE
-    SETUP_WINDOWS_REPOSITORY -.spawns.-> AGT_ISE
-    WINDOWS_CODE_ONE_TASK -.spawns.-> AGT_ISE
-    KMP_GENERATE_ALL_TESTS -.uses.-> AGT_EXPLORE
-    KMP_GENERATE_ALL_TESTS -.spawns.-> AGT_GP
-    CODE -.-> RUST_CODE_QUALITY
-    CODE -.-> GO_CODE_QUALITY
-    CODE_ONE_TASK_GROUP --> RUST_CODE_ONE_TASK_GROUP
-    CODE_ONE_TASK_GROUP --> GO_CODE_ONE_TASK_GROUP
-    RUST_CODE_ONE_TASK_GROUP -.-> RUST_CODE_ONE_TASK
-    RUST_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    RUST_CODE_ONE_TASK_GROUP -.-> RUST_CODE_QUALITY
-    RUST_CODE_ONE_TASK_GROUP -.-> RUST_COVERAGE
-    RUST_CODE_ONE_TASK_GROUP -.-> RUST_RUSTDOC
-    RUST_CODE_ONE_TASK_GROUP -.-> RUST_TEST
-    GO_CODE_ONE_TASK_GROUP -.-> GO_CODE_ONE_TASK
-    GO_CODE_ONE_TASK_GROUP -.-> CHECK_LICENSE
-    GO_CODE_ONE_TASK_GROUP -.-> GO_CODE_QUALITY
-    GO_CODE_ONE_TASK_GROUP -.-> GO_COVERAGE
-    GO_CODE_ONE_TASK_GROUP -.-> GO_GODOC
-    GO_CODE_ONE_TASK_GROUP -.-> GO_TEST
     RELEASE --> RUST_BUMP_VERSION
     RELEASE --> GO_BUMP_VERSION
-    SETUP_REPOSITORY -.-> SETUP_CLI_REPOSITORY
-    SETUP_CLI_REPOSITORY -.-> SETUP_RUST_CLI
-    SETUP_CLI_REPOSITORY -.-> SETUP_GO_CLI
-    SETUP_CLI_REPOSITORY -.-> SETUP_SWIFT_CLI
-    SETUP_CLI_REPOSITORY -.-> SETUP_DOTNET_CLI
-    SETUP_CLI_REPOSITORY -.-> SETUP_ANTORA
-    SETUP_CLI_REPOSITORY -.-> SETUP_RUST_GITIGNORE
-    SETUP_CLI_REPOSITORY -.-> SETUP_GO_GITIGNORE
-    SETUP_CLI_REPOSITORY -.-> SETUP_SWIFT_GITIGNORE
-    SETUP_CLI_REPOSITORY -.-> SETUP_DOTNET_GITIGNORE
-    SETUP_CLI_REPOSITORY -.-> SETUP_CLI_GITHUB_WORKFLOWS
-    SETUP_CLI_REPOSITORY -.-> SETUP_CHANGELOG
-    SETUP_CLI_REPOSITORY -.-> SETUP_README
-    SETUP_SWIFT_CLI -.-> SWIFT_COVERAGE
-    RUST_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    GO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_GATE
-    SETUP_RUST_CLI -.spawns.-> AGT_GATE
-    SETUP_GO_CLI -.spawns.-> AGT_GATE
-    SETUP_SWIFT_CLI -.spawns.-> AGT_GATE
-    SETUP_DOTNET_CLI -.spawns.-> AGT_GATE
-    SETUP_CLI_GITHUB_WORKFLOWS -.spawns.-> AGT_GATE
-    RUST_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    GO_CODE_ONE_TASK_GROUP -.spawns.-> AGT_ISE
-    SETUP_CLI_REPOSITORY -.spawns.-> AGT_ISE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Knowledge Base Management dependencies
+
+[mermaid]
+....
+flowchart LR
+    KNOWLEDGE_BRIEFING["iru-knowledge-briefing"]
+    KNOWLEDGE_COMPACT["iru-knowledge-compact"]
+    KNOWLEDGE_COMPLETE["iru-knowledge-complete"]
+    KNOWLEDGE_PROCESS_INBOX["iru-knowledge-process-inbox"]
+    KNOWLEDGE_SETUP["iru-knowledge-setup"]
+    KNOWLEDGE_TO_ISSUE["iru-knowledge-to-issue"]
+    KNOWLEDGE_TO_JIRA["iru-knowledge-to-jira"]
+    CREATE_GITHUB_ISSUE["iru-create-github-issue"]:::other
+    EXPLORE["iru-explore"]:::other
+    CREATE_JIRA_TICKET["iru-create-jira-ticket"]:::other
+    KNOWLEDGE_COMPACT --> KNOWLEDGE_COMPLETE
+    KNOWLEDGE_PROCESS_INBOX --> KNOWLEDGE_COMPACT
+    KNOWLEDGE_TO_ISSUE --> CREATE_GITHUB_ISSUE
+    KNOWLEDGE_TO_ISSUE --> EXPLORE
+    KNOWLEDGE_TO_JIRA --> CREATE_JIRA_TICKET
+    KNOWLEDGE_TO_JIRA --> EXPLORE
+    classDef other stroke-dasharray: 4 3
+....
+
+=== Catalog Tooling dependencies
+
+[mermaid]
+....
+flowchart LR
+    GENERATE_SKILL_DOCS["iru-generate-skill-docs"]
+    AGT_GP(("general-purpose\nagent"))
+    GENERATE_SKILL_DOCS -.->|spawns| AGT_GP
 ....
 
 == Common workflows
