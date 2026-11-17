@@ -258,7 +258,9 @@ matter when adapting them:
   `-dev` marker on `MARKETING_VERSION`; App Store Connect and notarization take `x.y.z` only), the same patch bump
   `iru-setup-swift-github-workflows`' app flavor uses: `MARKETING_VERSION` → next patch and `CURRENT_PROJECT_VERSION`
   + 1 with that skill's quote-tolerant first-occurrence regexes, README "Current development version"/"Latest
-  release" rows and `docs/antora.yml` (latest release) when present. The commit stages with `git add -u` — a pathspec
+  release" rows and `docs/antora.yml` (latest release) when present. The branch is `sync_<released version>`
+  (release `1.4.1` → `sync_1.4.1`); if the merge conflicts, the PR opens from the release commit without a bump, so a
+  conflicting (patch) sync never lowers the integration branch's development version. The commit stages with `git add -u` — a pathspec
   list aborts the whole add when one path matches nothing.
 - **`security.yml`** — CodeQL `swift` needs macOS (no Linux Swift extractor): `xcodegen generate`, then a manual
   `xcodebuild build … -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO` between `init` and `analyze`.
@@ -354,8 +356,8 @@ Tell `iru-setup-readme` / the orchestrator: workflows are named **Build** (`buil
   (exit 3 — the gate is meaningful); `sync_versions.py` on a fixture (`MARKETING_VERSION: 1.4.0`,
   `CURRENT_PROJECT_VERSION: 7`, README rows, `antora.yml` `1.3.2`) with `RELEASE_VERSION=1.4.0 NEXT_VERSION=1.4.1` →
   `1.4.1` / `8`, README `1.4.1`/`1.4.0`, `antora.yml` `1.4.0`, the scaffold's comment lines untouched, `git add -u`
-  staging exactly those three files; a `-dev` `NEXT_VERSION` exits 1; the `sync.yml` version computation (`v1.4.0` →
-  `1.4.1`, `sync_1.4.1`; `v1.4` rejected).
+  staging exactly those three files; a `-dev` `NEXT_VERSION` exits 1; the `sync.yml` version computation (`v1.4.1` →
+  next `1.4.2`, branch `sync_1.4.1`; `v1.4` rejected).
 - **UI tests on this host**: the Automation Mode check printed "This device requires user authentication to enable
   Automation Mode" and failed as designed; the full `xcodebuild test` then failed only in the UI-test runner ("Timed
   out while enabling automation mode") while CoreTests + `<AppName>Tests` passed — the same machine passed the UI tests

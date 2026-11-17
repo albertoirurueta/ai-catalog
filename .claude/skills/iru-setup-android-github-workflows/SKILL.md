@@ -14,7 +14,8 @@ repository actually uses:
   **`main.yml`** (triggered by a published GitHub Release instead — the same pipeline, plus the actual
   publish/store step), and **`sync.yml`** + its companion `.github/scripts/sync_versions.py` (opens a pull
   request merging the released branch back into the integration branch and bumping the development
-  `-SNAPSHOT` version once a release lands).
+  `-SNAPSHOT` version once a release lands; the branch is `sync_<released version>`, e.g. release `1.0.1` →
+  `sync_1.0.1`).
 - **`branching: main-only`** — **`main.yml`** (push/PR to the stable branch — build and test only, no
   publish/store step) and **`publish.yml`** (triggered by a published GitHub Release — the actual publish/store
   step). No `sync.yml` — there's no second branch to sync back into.
@@ -393,6 +394,10 @@ Template: `templates/gitflow/.github/workflows/sync.yml` — read it in full bef
 
 Notes specific to this template:
 
+- The sync branch is `sync_<released version>` (release `1.0.1` → `sync_1.0.1`). If merging the stable branch
+  conflicts, the workflow aborts the merge, points the branch at the release commit, skips the bump and opens the
+  PR titled `Sync <release> (merge conflicts to resolve)`. A conflicting sync never bumps, so it cannot lower the
+  integration branch's development version.
 - This uses `gh pr create` directly (matching the Java sibling's `sync.yml`), not
   `peter-evans/create-pull-request` — the Java/TypeScript siblings both open the sync PR via a hand-rolled
   git+`gh` sequence rather than that action, and this skill follows the same convention for consistency.

@@ -14,6 +14,13 @@ Notes specific to this template:
     lockfile in the same step, so `sync_versions.py` only has to handle README/Antora prose, not the manifest
     itself.
   - `<lockfile-name>`: `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock`, matching `<package-manager>`.
+- The sync branch is named after the **released** version, `sync_<release_version>` (release `1.0.1` →
+  `sync_1.0.1`), not the next development version. The merge step has `id: merge`: if `git merge` conflicts it is
+  aborted, the branch is recreated from `origin/<stable-branch>` and `conflict=true` is output. Every
+  toolchain-setup, bump and commit step is gated on `steps.merge.outputs.conflict == 'false'`; push, label and PR
+  stay gated on the guard only, and the PR gets the title "Sync <release> (merge conflicts to resolve)" with a
+  body telling the reviewer to keep `<integration-branch>`'s development version. A conflicting (patch) sync
+  never bumps, so it cannot lower the integration branch's development version.
 - `CHANGELOG.md` is deliberately not touched by this workflow, for the same reason as the Java template: its
   release section and fresh `[Unreleased]` heading are written before the tag is published, and arrive on
   `<integration-branch>` via the merge step above.

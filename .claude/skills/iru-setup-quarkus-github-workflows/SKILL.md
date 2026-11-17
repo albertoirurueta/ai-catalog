@@ -12,7 +12,7 @@ Scaffold (or update) the CI/CD and security pipeline for a Quarkus service:
 |---|---|---|
 | `.github/workflows/build.yml` | push to `<integration-branch>`/`<stable-branch>`, pull requests to them, `workflow_dispatch` | build + tests per `ci-tests`, 80% coverage gate, quality reports, optional Sonar, docs (Pages deploy from `<stable-branch>` or artifact), optional native job |
 | `.github/workflows/release.yml` | GitHub Release published — **only when `distribution: registry`** | container image `<version>` + `latest` pushed to the registry |
-| `.github/workflows/sync.yml` + `.github/scripts/sync_versions.py` | GitHub Release published from `<stable-branch>` | PR merging the release back into `<integration-branch>` with the next `-SNAPSHOT` |
+| `.github/workflows/sync.yml` + `.github/scripts/sync_versions.py` | GitHub Release published from `<stable-branch>` | PR from `sync_<released version>` merging the release back into `<integration-branch>` with the next `-SNAPSHOT` |
 | `.github/workflows/security.yml` | pushes, pull requests, weekly | dependency review (+ Gradle dependency submission), CodeQL, OSV-Scanner, gitleaks |
 | `.github/dependabot.yml` | — | weekly grouped updates for the build, the actions, and (when present) the Dockerfile and docs toolchain |
 
@@ -178,6 +178,9 @@ Template: `templates/common/.github/workflows/sync.yml` — read it in full befo
 Gradle: drop the two Maven-only steps (JDK + `versions:set`) — the script rewrites `gradle.properties`. The bump is
 always minor (`1.3.0` → `1.4.0-SNAPSHOT`), matching `iru-release`'s default "next upcoming version"; flag it in
 Step 7 if the team releases patches from `<integration-branch>` too.
+
+The branch is `sync_<released version>` (release `1.0.1` → `sync_1.0.1`). If the merge conflicts, the PR opens from the
+release commit for manual resolution, with no bump, so a patch sync never lowers `<integration-branch>`'s version.
 
 ### `.github/scripts/sync_versions.py`
 

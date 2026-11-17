@@ -198,7 +198,7 @@ matter when adapting them:
   App Store review stays a deliberate manual step in App Store Connect (state it in the report). Only the API-key
   signing path is generated; for a team that shares certificates via `fastlane match`, adapt the iOS job from
   `iru-setup-swift-github-workflows`' `release.yml` (its `Fetch distribution signing certificates` step).
-- **`sync.yml`** — patch bump `x.y.z` → `x.y.(z+1)-SNAPSHOT` into `gradle.properties` `VERSION_NAME`; `VERSION_CODE`
+- **`sync.yml`** — branch `sync_<released version>` (release `1.0.1` → `sync_1.0.1`); if the merge conflicts it opens the PR from the release commit titled `Sync <release> (merge conflicts to resolve)` without bumping, so a conflicting sync never lowers the integration branch's development version. Patch bump `x.y.z` → `x.y.(z+1)-SNAPSHOT` into `gradle.properties` `VERSION_NAME`; `VERSION_CODE`
   and `iosApp/Configuration/Config.xcconfig` are never touched (release-only values, set by `iru-kmp-bump-version`
   on the release branch — the same rule that skill applies). README rows / `docs/antora.yml` follow the Android
   sibling's script.

@@ -150,7 +150,7 @@ Note for the final report (Step 12): this skill only bumps the version file(s) t
 — it does not itself bump them again to the upcoming pre-release version afterward. That second bump can happen
 automatically once the release is published, **if** this repository has a `Sync` GitHub workflow
 (`.github/workflows/sync.yml` — every `iru-setup-<stack>-github-workflows` skill in this catalog generates one,
-whatever the ecosystem): it opens a `sync_x.y.z` pull request into `develop` that merges the released branch back
+whatever the ecosystem): it opens a `sync_<released version>` pull request (e.g. `sync_1.0.1`) into `develop` that merges the released branch back
 in and bumps the version file(s)/`README.md`/the Antora docs to the next pre-release value via the version script
 it ships with (e.g. `.github/scripts/sync_versions.py`). This is purely file-driven — check whether
 `.github/workflows/sync.yml` actually exists before relying on it, regardless of the ecosystem detected in Step 2:
@@ -304,6 +304,8 @@ written to `whats-new.adoc` and `CHANGELOG.md`.
 Remind the user, per Step 4's finding: if `.github/workflows/sync.yml` exists, that once this PR is merged and a
 release is published from it, the `Sync` workflow will automatically open a follow-up PR into `develop` bumping
 the development version (no manual sync step is needed unless that workflow's minor-bump default doesn't match
-the upcoming version chosen in Step 4); if it doesn't exist, state plainly that no such automation ran and the
+the upcoming version chosen in Step 4, a check that applies only to releases whose merge is clean). For a patch
+release the merge usually conflicts on the version line: the Sync PR then opens from the release commit without a
+bump, and the reviewer resolves it keeping `develop`'s development version. If it doesn't exist, state plainly that no such automation ran and the
 next-development-version bump — if wanted now — is a manual follow-up call to the same `iru-<key>-bump-version`
 skill used in Step 6, against `develop`.

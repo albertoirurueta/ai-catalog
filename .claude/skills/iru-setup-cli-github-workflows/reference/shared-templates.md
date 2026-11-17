@@ -410,7 +410,9 @@ follows. `<version-file>` is `Cargo.toml` (and `Cargo.lock`), `internal/version/
 name: Sync
 
 # After a release is published from <stable-branch>, open a pull request that merges it back into
-# <integration-branch> and moves the version to the next minor -dev version.
+# <integration-branch> and moves the version to the next minor -dev version. The sync branch is named after the
+# released version (sync_<release_version>); if the merge conflicts, the PR is opened from the release commit for manual
+# resolution and the development version is not bumped.
 on:
   release:
     types: [released]
@@ -446,7 +448,7 @@ jobs:
           {
             echo "release_version=$RELEASE_VERSION"
             echo "next_dev=${MAJOR}.${NEXT_MINOR}.0-dev"
-            echo "sync_branch=sync_${MAJOR}.${NEXT_MINOR}.0"
+            echo "sync_branch=sync_${RELEASE_VERSION}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Skip if this release was already synced
@@ -476,15 +478,25 @@ jobs:
           git checkout -b "$SYNC_BRANCH" "origin/<integration-branch>"
 
       - name: Merge the released branch into the sync branch
+        id: merge
         if: steps.guard.outputs.exists == 'false'
         env:
           RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          SYNC_BRANCH: ${{ steps.versions.outputs.sync_branch }}
         run: |
-          git merge --no-ff --no-edit -m "Merge <stable-branch> ($RELEASE_VERSION) into <integration-branch>" \
-            "origin/<stable-branch>"
+          if git merge --no-ff --no-edit \
+              -m "Merge <stable-branch> (${RELEASE_VERSION}) into <integration-branch>" \
+              "origin/<stable-branch>"; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            git merge --abort
+            echo "::warning::Merging <stable-branch> (${RELEASE_VERSION}) into <integration-branch> conflicts; opening the sync pull request from the release commit for manual resolution, without bumping the development version."
+            git checkout -B "${SYNC_BRANCH}" "origin/<stable-branch>"
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Bump to the next development version
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         env:
           CLI_LANGUAGE: <language>
           RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
@@ -494,7 +506,7 @@ jobs:
       # The script only edits tracked files and the merge left the tree clean, so -u stages exactly its edits (a
       # pathspec list would abort the whole add as soon as one path, e.g. README.md, doesn't exist).
       - name: Commit the version bump
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         env:
           NEXT_DEV: ${{ steps.versions.outputs.next_dev }}
         run: |
@@ -519,15 +531,23 @@ jobs:
         if: steps.guard.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          CONFLICT: ${{ steps.merge.outputs.conflict }}
           SYNC_BRANCH: ${{ steps.versions.outputs.sync_branch }}
           RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
           NEXT_DEV: ${{ steps.versions.outputs.next_dev }}
         run: |
+          if [ "$CONFLICT" = "true" ]; then
+            TITLE="Sync $RELEASE_VERSION (merge conflicts to resolve)"
+            BODY="Merges \`<stable-branch>\` (\`$RELEASE_VERSION\`) back into \`<integration-branch>\`. The automatic merge conflicted (usually on the version line), so this branch points at the release commit and the development version was **not** bumped. Resolve the conflicts keeping \`<integration-branch>\`'s development version and taking the release's changes otherwise."
+          else
+            TITLE="Sync $NEXT_DEV"
+            BODY="Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`$RELEASE_VERSION\`, and moves the version in \`<version-file>\` to \`$NEXT_DEV\`."
+          fi
           gh pr create \
             --base <integration-branch> \
             --head "$SYNC_BRANCH" \
-            --title "Sync $NEXT_DEV" \
-            --body "Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`$RELEASE_VERSION\`, and moves the version in \`<version-file>\` to \`$NEXT_DEV\`." \
+            --title "$TITLE" \
+            --body "$BODY" \
             --label sync
 ```
 

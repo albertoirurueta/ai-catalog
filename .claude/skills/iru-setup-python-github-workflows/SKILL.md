@@ -298,6 +298,8 @@ Notes:
 
 Template: `templates/common/.github/workflows/sync.yml` — read it in full before filling placeholders
 
+The sync branch is `sync_<released version>` (release `1.0.1` → `sync_1.0.1`), so a patch release still gets its own PR. If merging `<stable-branch>` conflicts, the job aborts the merge, points the branch at the release commit and opens the PR titled "merge conflicts to resolve" without bumping, so a conflicting (patch) sync never lowers `<integration-branch>`'s development version.
+
 The bump is always minor (`1.3.0` → `1.4.0.dev0`), matching `iru-python-bump-version`'s Step 5 and `iru-release`'s
 default "next upcoming version"; flag it in Step 7 if the team releases patches from `<integration-branch>` too. Tags
 that aren't plain `X.Y.Z` (`1.4.0rc1`) stop the job with an error instead of guessing. `CHANGELOG.md` isn't touched —
@@ -528,7 +530,7 @@ Verified in `$TMPDIR/iru-verify/python/workflows/` (uv 0.12.8, CPython 3.13.15, 
   the matching version and failed for another. `uv lock --check` failed (exit 1) after a version change without
   `uv lock`, which is what release.yml's "Check the lockfile" relies on.
 - **Sync**: `sync_versions.py` rewrote the README rows and `docs/antora.yml`'s `version:` on a fixture; the
-  next-version computation (`1.3.0` / `v1.3.0` → `1.4.0.dev0`, `sync_1.4.0`; `1.3` and `1.3.0rc1` rejected) was run
+  next-version computation (`1.3.0` / `v1.3.0` → `1.4.0.dev0`, branch `sync_1.3.0`; `1.3` and `1.3.0rc1` rejected) was run
   in bash.
 - **Action refs** checked with `git ls-remote --tags` on the day of writing: `astral-sh/setup-uv` has no tag after
   `v7` that floats (latest `v10.3.0`), hence the exact pin; its `python-version`/`enable-cache` inputs were read from

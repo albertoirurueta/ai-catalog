@@ -245,6 +245,8 @@ stored as `1.5.0-de` and the module manager keeps offering an upgrade (only rele
 
 Template: `templates/common/.github/workflows/sync.yml` — read it in full before filling placeholders
 
+The sync branch is `sync_<released version>` (release `1.0.1` → `sync_1.0.1`), so a patch release still gets its own PR. If merging `<stable-branch>` conflicts, the job aborts the merge, points the branch at the release commit and opens the PR titled "merge conflicts to resolve" without bumping, so a conflicting (patch) sync never lowers `<integration-branch>`'s development version.
+
 The bump is always minor (`1.3.0` → `1.4.0-dev`), matching `iru-php-bump-version`'s Step 5 and `iru-release`'s
 default "next upcoming version"; flag it in Step 7 if the team releases patches from `<integration-branch>` too.
 `CHANGELOG.md` isn't touched — its release section arrives through the merge. PrestaShop: the sync PR's `-dev`
