@@ -42,9 +42,14 @@ jobs:
 
       - name: Skip if this release was already synced
         id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SYNC_BRANCH: ${{ steps.versions.outputs.sync_branch }}
         run: |
-          if git ls-remote --exit-code --heads origin "${{ steps.versions.outputs.sync_branch }}" >/dev/null 2>&1; then
-            echo "::notice::${{ steps.versions.outputs.sync_branch }} already exists on origin; skipping."
+          # A sync PR that was merged and whose branch was auto-deleted still counts as synced.
+          if git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1 \
+              || [ -n "$(gh pr list --head "$SYNC_BRANCH" --state all --json number --jq '.[0].number')" ]; then
+            echo "::notice::$SYNC_BRANCH already exists on origin or already has a pull request; skipping."
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -71,6 +76,10 @@ jobs:
               "origin/<stable-branch>"; then
             echo "conflict=false" >> "$GITHUB_OUTPUT"
           else
+            if ! git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+              echo "::error::Merging <stable-branch> (${RELEASE_VERSION}) into <integration-branch> failed without a conflict; see the git output above."
+              exit 1
+            fi
             git merge --abort
             echo "::warning::Merging <stable-branch> (${RELEASE_VERSION}) into <integration-branch> conflicts; opening the sync pull request from the release commit for manual resolution, without bumping the development version."
             git checkout -B "${SYNC_BRANCH}" "origin/<stable-branch>"
@@ -125,7 +134,7 @@ jobs:
             BODY="Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${RELEASE_VERSION}\`, and bumps the development version to \`${NEXT_VERSION}\`."
           else
             TITLE="Sync ${RELEASE_VERSION} (merge conflicts to resolve)"
-            BODY="Merges \`<stable-branch>\` (\`${RELEASE_VERSION}\`) back into \`<integration-branch>\`. The automatic merge conflicted (usually on the version line), so this branch points at the release commit and the development version was **not** bumped. Resolve the conflicts keeping \`<integration-branch>\`'s development version and taking the release's changes otherwise."
+            BODY="Merges \`<stable-branch>\` (\`${RELEASE_VERSION}\`) back into \`<integration-branch>\`. The automatic merge conflicted (usually on the version line), so this branch points at the release commit and the development version was **not** bumped. Take the release's changes when resolving the conflicts, then check the development version: after a patch release \`<integration-branch>\` is usually already ahead, so keep its version; after a minor or major release, set it to \`${NEXT_VERSION}\`."
           fi
           gh pr create \
             --base <integration-branch> \

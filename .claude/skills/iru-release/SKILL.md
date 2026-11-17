@@ -304,8 +304,9 @@ written to `whats-new.adoc` and `CHANGELOG.md`.
 Remind the user, per Step 4's finding: if `.github/workflows/sync.yml` exists, that once this PR is merged and a
 release is published from it, the `Sync` workflow will automatically open a follow-up PR into `develop` bumping
 the development version (no manual sync step is needed unless that workflow's minor-bump default doesn't match
-the upcoming version chosen in Step 4, a check that applies only to releases whose merge is clean). For a patch
-release the merge usually conflicts on the version line: the Sync PR then opens from the release commit without a
-bump, and the reviewer resolves it keeping `develop`'s development version. If it doesn't exist, state plainly that no such automation ran and the
+the upcoming version chosen in Step 4, a check that applies only to releases whose merge is clean). When the merge
+conflicts (usual for a patch release, on the version line; possible for any release, e.g. on `CHANGELOG.md`), the
+Sync PR opens from the release commit without a bump: the reviewer keeps `develop`'s development version when it is
+already ahead (the usual case after a patch release) and sets the next one otherwise. If it doesn't exist, state plainly that no such automation ran and the
 next-development-version bump — if wanted now — is a manual follow-up call to the same `iru-<key>-bump-version`
 skill used in Step 6, against `develop`.

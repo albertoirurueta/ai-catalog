@@ -79,9 +79,10 @@ not written into any build file by this step.
 * A final report naming the detected ecosystem and bump-version skill used, the versions chosen, the branch/PR
   and host, the files touched, and — whenever this repository has a `.github/workflows/sync.yml` (every
   `iru-setup-<stack>-github-workflows` skill generates one, whatever the ecosystem) — a reminder that merging and
-  publishing the release triggers that workflow, which opens a `sync_<released version>` pull request back into `develop`
-  with the next-development-version bump (a patch release usually conflicts on the version line, so its Sync PR opens
-  from the release commit without a bump, for manual resolution);
+  publishing the release triggers that workflow, which opens a `sync_<released version>` pull request back into
+  `develop` with the next-development-version bump. When the merge conflicts (usual for a patch release), the Sync PR
+  opens from the release commit without a bump, and the reviewer keeps `develop`'s version when it is already ahead
+  or sets the next one otherwise;
   otherwise a plain statement that no such automation ran and the next-dev bump is a manual follow-up.
 * If run from any branch other than `develop`: no files are touched at all — the skill stops at Step 1.
 

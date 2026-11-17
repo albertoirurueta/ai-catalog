@@ -17,8 +17,9 @@ and the Maven site report to GitHub Pages (or, with `pages: no`, uploading them 
 (gated by `publish`, along with its `setup-java` signing inputs and `mvnsettings.xml`). `develop.yml` runs this
 pipeline on every push to the integration branch; `main.yml` runs the same pipeline when a GitHub Release is
 published; `sync.yml` triggers on that same release-published event to open a pull request merging the
-released branch back into the integration branch from a `sync_<released version>` branch (on a merge conflict, from the release commit without a bump, for manual resolution) and bumping the development snapshot version across
-`pom.xml`, `README.md`, and the Antora docs, via `sync_versions.py`. `security.yml` runs a
+released branch back into the integration branch from a `sync_<released version>` branch and bumping the
+development snapshot version across `pom.xml`, `README.md`, and the Antora docs, via `sync_versions.py` (on a merge
+conflict, the PR opens from the release commit without a bump, for manual resolution). `security.yml` runs a
 dependency-review/CodeQL/OSV-Scanner/gitleaks block on every pull request and push to the integration/stable
 branches, each job individually gated by its own `security-*` argument (default `yes`); `.github/dependabot.yml`
 (grouped weekly updates for `maven` and `github-actions`) is always generated with no opt-out. The skill ships

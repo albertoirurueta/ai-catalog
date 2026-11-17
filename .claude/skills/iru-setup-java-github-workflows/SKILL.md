@@ -325,7 +325,8 @@ Template: `templates/common/.github/workflows/sync.yml` — read it in full befo
 
 Notes specific to this template:
 
-- The sync branch is named after the released version (`sync_1.0.1`), so the "already synced" guard is per release.
+- The sync branch is named after the released version (`sync_1.0.1`), so the "already synced" guard is per release;
+  it also skips when a PR from that branch exists in any state (a merged sync PR whose branch was auto-deleted).
   On a merge conflict (usual for patch releases) the merge is aborted and the PR opens from `origin/<stable-branch>`
   with no bump and a "merge conflicts to resolve" title; a conflicting sync never runs the version script.
 - `<stable-branch>`: the branch releases are published from (e.g. `main`, sometimes `master`) — resolved in Step 1,
