@@ -248,7 +248,10 @@ placeholders, and append the shared release tail to the Rust/Swift/.NET `release
   the NuGet packages — and uploads/pushes/attests nothing.
 - **sync.yml** — `NEXT_DEV = x.(y+1).0-dev`, the minor bump of `iru-rust-bump-version`/`iru-go-bump-version`/
   `iru-swift-bump-version`/`iru-dotnet-bump-version`'s Step 5 that `iru-release` uses; Rust also rewrites the package's
-  `Cargo.lock` entry so `--locked` builds keep working. The commit stages with `git add -u`.
+  `Cargo.lock` entry so `--locked` builds keep working. The commit stages with `git add -u`. The branch is
+  `sync_<released version>` (release `1.0.1` → `sync_1.0.1`). If the merge conflicts, the PR is opened from the release
+  commit ("Sync 1.0.1 (merge conflicts to resolve)") without bumping; a conflicting sync never bumps, so it cannot lower
+  the integration branch's development version.
 - **security.yml** — CodeQL per language as tabled in `shared-templates.md`; OSV-Scanner reads the lock files (for
   .NET without `packages.lock.json`, NuGet's restore audit is the effective gate — say so).
 
@@ -273,7 +276,7 @@ In a throwaway copy (or `$TMPDIR`), never in a way that commits anything:
    coverage bar, `cli_smoke_test.sh` on the debug binary — and the host target's release build + smoke test (Rust
    `cargo build --release --locked --target <host>`, Go `goreleaser check` + `goreleaser release --snapshot --clean`,
    Swift the universal build, .NET `dotnet publish -r <host-rid>`), plus `CLI_LANGUAGE=<language> RELEASE_VERSION=…
-   NEXT_DEV=… python3 .github/scripts/sync_versions.py` on a copy. A failing smoke check is a real contract break in
+   NEXT_DEV=… python3 .github/scripts/sync_versions.py` on a copy (the branch name `sync_<release version>` and the conflict fallback are not runnable locally). A failing smoke check is a real contract break in
    the project — report it, don't weaken the script.
 
 Everything that needs GitHub's runners, other operating systems, secrets, the notary service, a tap repository,

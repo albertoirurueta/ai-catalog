@@ -18,7 +18,9 @@ Scaffold (or update) four GitHub Actions workflows plus a Dependabot config for 
   the integration branch that merges the released branch back in and bumps the development snapshot version in
   `pom.xml`, `README.md`, and the Antora docs, via the companion script `.github/scripts/sync_versions.py`. This
   closes the gap where a release branch's version/doc bump never makes it back into the integration branch without
-  a manual follow-up.
+  a manual follow-up. The branch is `sync_<released version>` (release `1.0.1` → `sync_1.0.1`); on a merge conflict
+  the PR opens from the release commit with no bump, for manual resolution, so a patch sync never lowers the
+  integration branch's development version.
 - **`security.yml`** — runs on every pull request and push to the integration/stable branches: a
   `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job (`github/codeql-action@v4` for
   Java, with the JDK set up by `actions/setup-java@v6` using `cache: maven` so the CodeQL build doesn't re-download
@@ -323,6 +325,9 @@ Template: `templates/common/.github/workflows/sync.yml` — read it in full befo
 
 Notes specific to this template:
 
+- The sync branch is named after the released version (`sync_1.0.1`), so the "already synced" guard is per release.
+  On a merge conflict (usual for patch releases) the merge is aborted and the PR opens from `origin/<stable-branch>`
+  with no bump and a "merge conflicts to resolve" title; a conflicting sync never runs the version script.
 - `<stable-branch>`: the branch releases are published from (e.g. `main`, sometimes `master`) — resolved in Step 1,
   used both in the `if:` guard and the merge source.
 - The snapshot bump always assumes a minor-version bump with the patch reset to `0` (e.g. release `1.3.0` → next

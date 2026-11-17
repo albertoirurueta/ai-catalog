@@ -23,7 +23,9 @@ XcodeGen/Tuist-generated native app, `flavor: app`):
   request merging it back into the integration branch and bumps the development version, reusing
   `iru-swift-bump-version`'s exact rewrite targets (`version.txt`/`CHANGELOG.md`/README for a library,
   `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` for an app) so a manual `/iru-swift-bump-version` run and this
-  CI-driven script never drift apart (Step 8).
+  CI-driven script never drift apart (Step 8). The branch is `sync_<released version>` (release `1.0.1` →
+  `sync_1.0.1`); if the merge conflicts, the PR opens from the release commit without a bump, so a patch sync
+  never lowers the integration branch's development version.
 - **`security.yml`** and **`.github/dependabot.yml`** — generated (or updated) regardless of `branching`: a
   `dependency-review` job, a CodeQL job (`swift`, which only runs on a macOS runner — Linux CodeQL has no Swift
   extractor), an OSV-Scanner job, a `gitleaks` job (each individually omittable via `args`), and grouped weekly
@@ -460,7 +462,11 @@ Notes specific to this template: `reference/notes-release-app.md` — read it in
 Runs once a GitHub Release is published, provided it was published from the stable branch. Opens a pull request
 that merges the released branch back into the integration branch and bumps the development version — a direct
 port of `iru-setup-java-github-workflows`'s/`iru-setup-android-github-workflows`'s own `sync.yml` shell logic,
-with the version-bump step replaced by exactly the rewrite rules `iru-swift-bump-version` already verified:
+with the version-bump step replaced by exactly the rewrite rules `iru-swift-bump-version` already verified.
+The sync branch is named after the released version (`sync_<released version>`, e.g. release `1.0.1` →
+`sync_1.0.1`). If merging the stable branch conflicts, the merge step aborts, the branch is created from the
+release commit, the bump steps are skipped and the PR title says "merge conflicts to resolve" — a conflicting
+(patch) sync never bumps, so it cannot lower the integration branch's development version:
 
 ### `sync.yml`
 

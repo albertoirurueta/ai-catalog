@@ -37,7 +37,7 @@ jobs:
 
           NEXT_PATCH=$((PATCH + 1))
           NEXT_SNAPSHOT="${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT"
-          SYNC_BRANCH="sync_${MAJOR}.${MINOR}.${NEXT_PATCH}"
+          SYNC_BRANCH="sync_${RELEASE_VERSION}"
 
           echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "next_snapshot=$NEXT_SNAPSHOT" >> "$GITHUB_OUTPUT"
@@ -67,27 +67,38 @@ jobs:
           git checkout -b "${{ steps.versions.outputs.sync_branch }}" "origin/<integration-branch>"
 
       - name: Merge the released branch into the sync branch
+        id: merge
         if: steps.guard.outputs.exists == 'false'
+        env:
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          SYNC_BRANCH: ${{ steps.versions.outputs.sync_branch }}
         run: |
-          git merge --no-ff --no-edit \
-            -m "Merge <stable-branch> (${{ steps.versions.outputs.release_version }}) into <integration-branch>" \
-            "origin/<stable-branch>"
+          if git merge --no-ff --no-edit \
+              -m "Merge <stable-branch> (${RELEASE_VERSION}) into <integration-branch>" \
+              "origin/<stable-branch>"; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            git merge --abort
+            echo "::warning::Merging <stable-branch> (${RELEASE_VERSION}) into <integration-branch> conflicts; opening the sync pull request from the release commit for manual resolution, without bumping the development version."
+            git checkout -B "${SYNC_BRANCH}" "origin/<stable-branch>"
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Python
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
       - name: Bump the development snapshot version
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         env:
           RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
           NEXT_SNAPSHOT: ${{ steps.versions.outputs.next_snapshot }}
         run: python3 .github/scripts/sync_versions.py
 
       - name: Commit the version bump
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         run: |
           # --ignore-errors keeps a missing README/docs tree (or module) from aborting the step with
           # "fatal: pathspec ... did not match any files"; whatever does exist is staged.
@@ -110,10 +121,20 @@ jobs:
         if: steps.guard.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          NEXT_SNAPSHOT: ${{ steps.versions.outputs.next_snapshot }}
+          CONFLICT: ${{ steps.merge.outputs.conflict }}
         run: |
+          if [ "${CONFLICT}" = "true" ]; then
+            TITLE="Sync ${RELEASE_VERSION} (merge conflicts to resolve)"
+            BODY="Merges \`<stable-branch>\` (\`${RELEASE_VERSION}\`) back into \`<integration-branch>\`. The automatic merge conflicted (usually on the version line), so this branch points at the release commit and the development version was **not** bumped. Resolve the conflicts keeping \`<integration-branch>\`'s development version and taking the release's changes otherwise."
+          else
+            TITLE="Sync ${NEXT_SNAPSHOT}"
+            BODY="Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${RELEASE_VERSION}\`, and bumps the development version to \`${NEXT_SNAPSHOT}\` in \`<lib-module>/build.gradle.kts\`/\`<app-module>/build.gradle.kts\`, \`README.md\`, and the Antora docs."
+          fi
           gh pr create \
             --base <integration-branch> \
             --head "${{ steps.versions.outputs.sync_branch }}" \
-            --title "Sync ${{ steps.versions.outputs.next_snapshot }}" \
-            --body "Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${{ steps.versions.outputs.release_version }}\`, and bumps the development version to \`${{ steps.versions.outputs.next_snapshot }}\` in \`<lib-module>/build.gradle.kts\`/\`<app-module>/build.gradle.kts\`, \`README.md\`, and the Antora docs." \
+            --title "${TITLE}" \
+            --body "${BODY}" \
             --label sync

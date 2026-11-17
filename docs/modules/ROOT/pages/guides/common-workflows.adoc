@@ -385,6 +385,11 @@ flowchart TD
     M --> N(["Merging the release PR\ntriggers the Sync workflow's\nautomatic version bump into develop"])
 ....
 
+For a patch release, the Sync workflow opens its pull request from a branch named `sync_<release>` (for example
+`sync_1.0.1`). When merging the release back into `develop` conflicts on the version line, the branch points at the
+release commit and the development version is not bumped, so `develop` is never downgraded; the reviewer resolves the
+conflicts in that pull request, keeping `develop`'s development version.
+
 Every file that echoes the version number — the ecosystem's own version file (via `iru-<key>-bump-version`),
 `README.md`, `docs/antora.yml`, and any Antora page with a dependency snippet — is updated in the same pass, so
 nothing is left pointing at the previous release once the PR merges.

@@ -754,7 +754,7 @@ jobs:
           {
             echo "release_version=$RELEASE_VERSION"
             echo "next_version=$NEXT_VERSION"
-            echo "sync_branch=sync_$NEXT_VERSION"
+            echo "sync_branch=sync_${RELEASE_VERSION}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Skip if this release was already synced
@@ -780,20 +780,31 @@ jobs:
           git checkout -b "${{ steps.versions.outputs.sync_branch }}" "origin/<integration-branch>"
 
       - name: Merge the released branch into the sync branch
+        id: merge
         if: steps.guard.outputs.exists == 'false'
+        env:
+          SYNC_BRANCH: ${{ steps.versions.outputs.sync_branch }}
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
         run: |
-          git merge --no-ff --no-edit \
-            -m "Merge <stable-branch> (${{ steps.versions.outputs.release_version }}) into <integration-branch>" \
-            "origin/<stable-branch>"
+          if git merge --no-ff --no-edit \
+              -m "Merge <stable-branch> (${RELEASE_VERSION}) into <integration-branch>" \
+              "origin/<stable-branch>"; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            git merge --abort
+            echo "::warning::Merging <stable-branch> (${RELEASE_VERSION}) into <integration-branch> conflicts; opening the sync pull request from the release commit for manual resolution, without bumping the development version."
+            git checkout -B "${SYNC_BRANCH}" "origin/<stable-branch>"
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Python
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
       - name: Bump the development version
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         env:
           RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
           NEXT_VERSION: ${{ steps.versions.outputs.next_version }}
@@ -802,7 +813,7 @@ jobs:
       # git add -u stages every tracked file the script changed; a pathspec list would abort the whole add when one
       # path (README.md, docs/antora.yml) doesn't exist.
       - name: Commit the version bump
-        if: steps.guard.outputs.exists == 'false'
+        if: steps.guard.outputs.exists == 'false' && steps.merge.outputs.conflict == 'false'
         run: |
           git add -u
           git diff --cached --quiet || git commit -m "Sync ${{ steps.versions.outputs.next_version }}"
@@ -823,12 +834,23 @@ jobs:
         if: steps.guard.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SYNC_BRANCH: ${{ steps.versions.outputs.sync_branch }}
+          RELEASE_VERSION: ${{ steps.versions.outputs.release_version }}
+          NEXT_VERSION: ${{ steps.versions.outputs.next_version }}
+          CONFLICT: ${{ steps.merge.outputs.conflict }}
         run: |
+          if [ "$CONFLICT" = "true" ]; then
+            TITLE="Sync ${RELEASE_VERSION} (merge conflicts to resolve)"
+            BODY="Merges \`<stable-branch>\` (\`${RELEASE_VERSION}\`) back into \`<integration-branch>\`. The automatic merge conflicted (usually on the version line), so this branch points at the release commit and the development version was **not** bumped. Resolve the conflicts keeping \`<integration-branch>\`'s development version and taking the release's changes otherwise."
+          else
+            TITLE="Sync ${NEXT_VERSION}"
+            BODY="Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${RELEASE_VERSION}\`, and moves \`MARKETING_VERSION\` in \`project.yml\` to \`${NEXT_VERSION}\` (\`CURRENT_PROJECT_VERSION\` + 1)."
+          fi
           gh pr create \
             --base <integration-branch> \
-            --head "${{ steps.versions.outputs.sync_branch }}" \
-            --title "Sync ${{ steps.versions.outputs.next_version }}" \
-            --body "Merges \`<stable-branch>\` back into \`<integration-branch>\` after releasing \`${{ steps.versions.outputs.release_version }}\`, and moves \`MARKETING_VERSION\` in \`project.yml\` to \`${{ steps.versions.outputs.next_version }}\` (\`CURRENT_PROJECT_VERSION\` + 1)." \
+            --head "${SYNC_BRANCH}" \
+            --title "${TITLE}" \
+            --body "${BODY}" \
             --label sync
 ```
 

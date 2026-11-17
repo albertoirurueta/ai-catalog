@@ -34,7 +34,8 @@ repository, for whichever `flavor` the repository actually is:
   by store submission tooling instead — see Step 1). Triggered when a GitHub Release is published from the stable
   branch. Opens a pull request into the integration branch that merges the released branch back in and bumps
   the development prerelease version in `package.json` (and its lockfile), `README.md`, and the Antora docs,
-  via the companion script `.github/scripts/sync_versions.py`.
+  via the companion script `.github/scripts/sync_versions.py`. The branch is `sync_<released version>` (release
+  `1.0.1` → `sync_1.0.1`); on a merge conflict the PR opens from the release commit without a bump.
 - **`security.yml`** — runs on every pull request and push to the integration/stable branches: a
   `dependency-review` job (`actions/dependency-review-action@v5`), a CodeQL job
   (`github/codeql-action@v4`, language `javascript-typescript`, `build-mode: none` — no compile step is
@@ -638,7 +639,9 @@ Notes specific to this template: `reference/notes-release-ionic.md` — read it 
 
 Runs once a GitHub Release is published, provided it was published from the stable branch. Opens a pull
 request that merges the released branch back into the integration branch and bumps the development
-prerelease version via the companion `sync_versions.py` script (below). Skip this whole workflow — don't
+prerelease version via the companion `sync_versions.py` script (below). The branch is named after the released
+version (`sync_<released version>`); a conflicting merge falls back to a PR from the release commit with no bump
+(see `reference/notes-sync.md`). Skip this whole workflow — don't
 generate it — for the `react-native`/`ionic` flavors: their app version is normally driven by store submission
 tooling (EAS `autoIncrement`, or the build number bumped alongside a store listing — for `toolchain: metro`,
 `iru-react-native-bump-version` run by `iru-release` on the release branch), not by a `package.json`

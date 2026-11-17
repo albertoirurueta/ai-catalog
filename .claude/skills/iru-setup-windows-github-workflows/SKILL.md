@@ -257,7 +257,10 @@ Notes that matter when adapting them:
   `iru-release` uses: `Directory.Build.props` `<Version>` (or `<VersionPrefix>`/`<VersionSuffix>`), every
   `Package.appxmanifest`/`AppxManifest.xml` outside `bin/`/`obj/`/`AppPackages/`/`artifacts/` → `x.(y+1).0.0`
   (`MinVersion`/`MaxVersionTested` untouched), README rows and `docs/antora.yml`. The commit stages with `git add -u`
-  — a pathspec list aborts the whole add when one path matches nothing (verified).
+  — a pathspec list aborts the whole add when one path matches nothing (verified). The branch is
+  `sync_<released version>` (release `1.4.0` → `sync_1.4.0`). If the merge conflicts, the PR is opened from the release
+  commit (title "Sync 1.4.0 (merge conflicts to resolve)") without bumping; a conflicting sync never bumps, so it cannot
+  lower the integration branch's development version.
 - **`security.yml`** — CodeQL `csharp` on Linux: `build-mode: manual` with `dotnet build <AppName>.slnx --no-incremental
   -p:UseSharedCompilation=false` for WPF/WinForms (precise, sees source-generated code); `build-mode: none` for WinUI
   (the app can't build on Linux, and a Windows CodeQL job would cost ~1.7× — buildless extraction still covers every
@@ -344,7 +347,7 @@ the manifest.
   `antora.yml`) with `RELEASE_VERSION=1.4.0 NEXT_DEV=1.5.0-dev`: `<Version>` → `1.5.0-dev`, manifests → `1.5.0.0`,
   `MinVersion`/`MaxVersionTested` and a manifest copy under `bin/` untouched, README → `1.5.0-dev`/`1.4.0`,
   `antora.yml` → `1.4.0`; a non-`-dev` `NEXT_DEV` exits 1. The `sync.yml` version computation was run in bash
-  (`v1.4.0` → `1.5.0-dev`, `sync_1.5.0`; `v1.4` rejected).
+  (`v1.4.0` → `1.5.0-dev`, `sync_1.4.0`; `v1.4` rejected).
 - **Unverified locally, never a blocker**: every job on GitHub's runners; the Windows solution build/tests and the
   FlaUI run; the WinUI self-signed package-and-install step; `build-msix.ps1`'s `makeappx` half and the WinUI MSBuild
   packaging (`AppxPackageDir`, `WindowsAppSDKSelfContained` for a packaged app); Artifact Signing (OIDC, MSIX
