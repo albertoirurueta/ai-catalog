@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "iru-core",
-      "description": "Stack-independent skills: issue-to-PR cycle (issue, explore, plan, code, PR description and review), release, ticket intake, license and security checks, Antora docs, repository bootstrap front door, database tasks, and the iru-gate-runner, iru-isolated-skill-executor and iru-change-summarizer agents. Required by every other plugin.",
+      "description": "Stack-independent skills: issue-to-PR cycle (issue, explore, plan, code, PR description and review), release, ticket intake, license and security checks, Antora docs, repository bootstrap front door, database tasks, and the iru-gate-runner, iru-isolated-skill-executor, iru-change-summarizer and iru-functional-reviewer agents. Required by every other plugin.",
       "category": "core",
       "source": "./",
       "strict": false,
@@ -24,6 +24,7 @@
         "./.claude/skills/iru-database-code-one-task-group",
         "./.claude/skills/iru-draft-github-issue",
         "./.claude/skills/iru-explore",
+        "./.claude/skills/iru-functional-definition",
         "./.claude/skills/iru-generate-skill-docs",
         "./.claude/skills/iru-issue",
         "./.claude/skills/iru-jira-custom-context",
@@ -31,6 +32,7 @@
         "./.claude/skills/iru-pr-description",
         "./.claude/skills/iru-pr-review",
         "./.claude/skills/iru-release",
+        "./.claude/skills/iru-review-functional-definition",
         "./.claude/skills/iru-review-github-issue",
         "./.claude/skills/iru-setup-antora",
         "./.claude/skills/iru-setup-changelog",
@@ -42,6 +44,7 @@
       ],
       "agents": [
         "./.claude/agents/iru-change-summarizer.md",
+        "./.claude/agents/iru-functional-reviewer.md",
         "./.claude/agents/iru-gate-runner.md",
         "./.claude/agents/iru-isolated-skill-executor.md"
       ]

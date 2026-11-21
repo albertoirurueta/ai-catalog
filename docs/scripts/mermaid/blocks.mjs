@@ -1,4 +1,4 @@
-// Mermaid block extraction and static checks for AsciiDoc sources. Node built-ins only, so it is unit-tested by
+// Mermaid block extraction and static checks for AsciiDoc (`[mermaid]` blocks) and Markdown (```mermaid fences) sources. Node built-ins only, so it is unit-tested by
 // `npm run test:nav` without the on-demand mermaid/jsdom/puppeteer install that validate-mermaid.mjs needs.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -12,6 +12,22 @@ export function adocFiles (dir) {
     else if (name.endsWith('.adoc')) out.push(path)
   }
   return out
+}
+
+// Every `.md` file under `dir` (README files, guides and other Markdown documents with ```mermaid fences).
+export function markdownFiles (dir) {
+  const out = []
+  for (const name of readdirSync(dir).sort()) {
+    const path = join(dir, name)
+    if (statSync(path).isDirectory()) out.push(...markdownFiles(path))
+    else if (name.endsWith('.md')) out.push(path)
+  }
+  return out
+}
+
+// Every `.adoc` and `.md` file under `dir`, sorted by path.
+export function sourceFiles (dir) {
+  return [...adocFiles(dir), ...markdownFiles(dir)].sort()
 }
 
 // An AsciiDoc Mermaid block is `[mermaid]` (optionally with attributes, e.g. `[mermaid,format=svg]`) followed by a
@@ -30,6 +46,26 @@ export function extractBlocks (text) {
     let k = j + 1
     while (k < lines.length && lines[k].trim() !== delimiter) body.push(lines[k++])
     blocks.push({ line: j + 2, src: body.join('\n') })
+    i = k
+  }
+  return blocks
+}
+
+// A Markdown Mermaid block is a fenced code block (``` or ~~~, at least three, indented at most three spaces) whose
+// info string starts with `mermaid`; the closing fence uses the same character and is at least as long. An unclosed
+// fence runs to the end of the file, as in CommonMark. Returns [{ line, src }] like extractBlocks.
+export function extractMarkdownBlocks (text) {
+  const lines = text.split('\n')
+  const blocks = []
+  for (let i = 0; i < lines.length; i++) {
+    const open = lines[i].replace(/\r$/, '').match(/^ {0,3}(`{3,}|~{3,})\s*mermaid(?:\s[^`]*)?$/i)
+    if (!open) continue
+    const fence = open[1]
+    const closing = new RegExp(`^ {0,3}\\${fence[0]}{${fence.length},}\\s*$`)
+    const body = []
+    let k = i + 1
+    while (k < lines.length && !closing.test(lines[k].replace(/\r$/, ''))) body.push(lines[k++])
+    blocks.push({ line: i + 2, src: body.join('\n') })
     i = k
   }
   return blocks
@@ -90,11 +126,12 @@ export function lintBlock (src) {
   return problems
 }
 
-// Collects every block under `root`: [{ file, line, src }].
+// Collects every block under `root`, from `.adoc` and `.md` files: [{ file, line, src }].
 export function collectBlocks (root) {
   const all = []
-  for (const file of adocFiles(root)) {
-    for (const block of extractBlocks(readFileSync(file, 'utf8'))) all.push({ file, ...block })
+  for (const file of sourceFiles(root)) {
+    const extract = file.endsWith('.md') ? extractMarkdownBlocks : extractBlocks
+    for (const block of extract(readFileSync(file, 'utf8'))) all.push({ file, ...block })
   }
   return all
 }

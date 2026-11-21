@@ -49,15 +49,17 @@ and do not move on while a required item is unanswered.
 
 **Functional**
 
-1. Context: what problem or capability, who is affected, why it matters now. Add what exploration shows exists today.
-2. Functional requirements: observable, testable behaviours. Challenge vague wording ("fast", "nice") and ask for a
-   measurable form.
-3. Acceptance criteria: one or more verifiable criteria per requirement; propose candidates derived from the
-   requirements and let the user accept or change them.
-4. Technical details: offer only when the task is highly technical (classes, files, lines to change); verify every
-   artifact exists with `Read`/grep before writing it.
-5. Out of scope, and dependencies or related issues (confirm each `#N` with `gh issue view <n> --json
-   number,title,url,state`).
+Delegate the whole functional interview to the shared skill:
+
+```
+Skill({skill: "iru-functional-definition", args: "mode: embedded\ntracker: github\n<the short description and what the user said so far>"})
+```
+
+It asks for context, testable requirements, acceptance criteria with a verification method and negative cases, Out of
+scope, dependencies, technical details when the task is highly technical, and the mandatory `AC-DOC` documentation
+decision, and returns a draft path in the canonical format (`reference/functional-definition-template.md`) with any
+unresolved findings. Do not repeat those questions here. Use its draft as the starting point for Step 6. If
+`iru-functional-definition` is not installed, interview for the same items yourself using the functional template.
 
 **Documentation**
 
@@ -99,11 +101,14 @@ Ask (plain text, all optional): linked URLs, local files or documents to attach,
 
 ## Step 6 — Write the draft file
 
-Fill the matching template from `reference/issue-templates.md`. Write it to a temp file in the scratchpad directory
+For the documentation kind fill the matching template from `reference/issue-templates.md`; for the functional kind start from the draft returned by `iru-functional-definition` (same canonical headings), fill in what Step 5 added (References, label-related notes) and keep its `AC-DOC`. Write it to a temp file in the scratchpad directory
 if the system prompt lists one, otherwise to a fresh `mktemp -d` directory, as `issue-draft.md`: first line `# <title>`
 (concise, imperative), then the body. Keep the path; every later step uses it.
 
-## Step 7 — Review loop (maximum 5 rounds)
+## Step 7 — Review loop (maximum 5 rounds for documentation, 3 for functional)
+
+Agent dispatch: call the agent as `subagent_type: "iru-functional-reviewer"` when installed under `.claude/agents/`, or as
+`"iru-core:iru-functional-reviewer"` when installed as a plugin — use whichever name appears in your available agent types.
 
 Repeat:
 
@@ -117,6 +122,15 @@ Repeat:
    Suggestions: <optional improvements that are not blockers>
    ```
    Do not reformat, summarise or reorder it; read the `Verdict` and each finding from it as-is.
+   For the functional kind, in the same round also dispatch `Agent({description: "Review functional definition",
+   subagent_type: "iru-functional-reviewer", prompt: <absolute draft path, absolute path of
+   reference/functional-definition-checklist.md in this skill's directory, tracker github, iru-explore summary>})`,
+   except in round 1 when the embedded `iru-functional-definition` of Step 4 already returned `Verdict: ready` for this
+   same draft (its own loop ran the agent; repeat it only after the draft changes).
+   Merge both result blocks: the verdict is `ready` only when both are `ready`; findings are de-duplicated (same
+   section and same point count once, keeping the more specific `Question:`). Each finding keeps its own class: the
+   review skill's four (`gap`, `pending`, `inconsistency`, `doubt`) plus the agent's `missing-functionality` and
+   `incorrect`, which are resolved the same way (codebase first, else the user).
 2. `Verdict: ready`: leave the loop.
 3. Otherwise resolve each finding in this order:
    - first from the codebase and conversation (read the file, grep, re-read an earlier answer, fetch the URL);
@@ -126,7 +140,7 @@ Repeat:
    Never fill a gap with an invented answer.
 4. Rewrite the draft file and go to 1.
 
-After round 5 with `needs-work` still reported, stop looping and show the user the remaining findings; they decide
+After the last round (5, or 3 for functional) with `needs-work` still reported, stop looping and show the user the remaining findings; they decide
 to fix, accept them as known gaps in the draft, or abort. Do not create the issue while findings the user has not
 seen remain.
 

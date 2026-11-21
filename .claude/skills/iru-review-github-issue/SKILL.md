@@ -10,7 +10,8 @@ Review one GitHub issue (or a local draft of one) for gaps before anyone builds 
 findings; it never guesses an answer for the author, and it changes nothing on GitHub without explicit confirmation.
 
 The checklist lives in `reference/issue-quality-checklist.md` (relative to this skill's directory); read it in full
-before Step 3. Item ids below (C1, D1, DOC2, S1...) refer to that file.
+before Step 3. Item ids below (C1, D1, DOC2, S1...) refer to that file; F1-F9 refer to
+`reference/functional-definition-checklist.md`, read only for the functional kind.
 
 ## Step 1 — Resolve the input and fetch the issue
 
@@ -51,6 +52,11 @@ If it is genuinely ambiguous, choose `functional` and add a `doubt` finding aski
 Apply the checklist items for the detected kind: Common, plus Development (functional) or Documentation
 (documentation), plus Size signals.
 
+- For `Kind: functional`, also read `reference/functional-definition-checklist.md` (same directory) in full and apply it
+  on top of the Development items: every criterion has a verification method with concrete values, behavioural
+  requirements have negative cases, and the `AC-DOC` decision is present and specific (accepted block with target,
+  pages, content and formats, or a declined block with a reason). Report these as `gap` (missing) or `doubt` (unclear
+  or unverifiable) findings using the existing classes; no new classes or block fields are introduced.
 - Verify technical details: for every file, class, method, endpoint or config key the issue names, check it exists
   with `Read`, `Glob` or `grep`, and that it behaves as described. Do not trust the text.
 - Verify links: fetch every cited URL with `WebFetch` to confirm it resolves and is about the claimed subject.

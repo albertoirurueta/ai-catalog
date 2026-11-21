@@ -8,7 +8,7 @@
     {
       "name": "iru-core",
       "category": "core",
-      "description": "Stack-independent skills: issue-to-PR cycle (issue, explore, plan, code, PR description and review), release, ticket intake, license and security checks, Antora docs, repository bootstrap front door, database tasks, and the iru-gate-runner, iru-isolated-skill-executor and iru-change-summarizer agents. Required by every other plugin.",
+      "description": "Stack-independent skills: issue-to-PR cycle (issue, explore, plan, code, PR description and review), release, ticket intake, license and security checks, Antora docs, repository bootstrap front door, database tasks, and the iru-gate-runner, iru-isolated-skill-executor, iru-change-summarizer and iru-functional-reviewer agents. Required by every other plugin.",
       "skills": [
         "iru-issue",
         "iru-explore",
@@ -23,6 +23,8 @@
         "iru-draft-github-issue",
         "iru-review-github-issue",
         "iru-split-github-issue",
+        "iru-functional-definition",
+        "iru-review-functional-definition",
         "iru-jira-custom-context",
         "iru-check-license",
         "iru-check-security",
@@ -39,7 +41,8 @@
       "agents": [
         "iru-gate-runner",
         "iru-isolated-skill-executor",
-        "iru-change-summarizer"
+        "iru-change-summarizer",
+        "iru-functional-reviewer"
       ]
     },
     {

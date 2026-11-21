@@ -126,6 +126,8 @@ flowchart TD
 * xref:skills/iru-jira-custom-context.adoc[] — Step 4, during additional-context gathering, passing the task's
   stated purpose so this extension-point skill can gather whatever organization-specific context it's been set
   up to ask for. A "nothing provided" response is never a blocker.
+* xref:skills/iru-functional-definition.adoc[] — Step 3, in embedded mode, to produce the functional draft; falls back to
+  its own interview when that skill is not installed.
 
 === Invoked by
 
@@ -139,7 +141,7 @@ exists for `/iru-issue`/`/iru-plan` to pick up.
 
 === Related agents
 
-None — `iru-create-jira-ticket` does not spawn any agent.
+None — `iru-create-jira-ticket` does not spawn any agent itself; the xref:agents/iru-functional-reviewer.adoc[] runs inside `iru-functional-definition`.
 
 == Source
 

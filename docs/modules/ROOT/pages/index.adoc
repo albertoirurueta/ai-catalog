@@ -1,5 +1,5 @@
 = AI Catalog
-:description: 197 Claude Code Skills and 3 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
+:description: 199 Claude Code Skills and 4 agents for Java, Kotlin, PHP, Python, .NET, TypeScript, Rust, Go, mobile, desktop apps and command-line tools.
 :keywords: claude code skills, claude code agents, java and kotlin development, spring boot and quarkus bootstrap, php development, python fastapi django, typescript nestjs nextjs, android and kotlin multiplatform, react native, swift development, windows desktop apps, macos desktop apps, dotnet wpf winui winforms, rust and go development, command-line tools
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -38,13 +38,15 @@ orchestrators that call other skills in sequence.
 Several skills in this catalog spawn a sub-agent through the `Agent` tool, to run a sub-task in an isolated
 context (so its detailed output — a full test log, a static-analysis report, an entire nested skill run —
 doesn't clutter the main conversation) or to search the codebase without derailing the current flow. This
-repository defines three **custom** agents under `.claude/agents/` for its most-duplicated sub-agent shapes:
+repository defines four **custom** agents under `.claude/agents/` for its most-duplicated sub-agent shapes:
 
 * **`iru-gate-runner`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
   headers, doc-comment audits, security scans, a full build), optionally diffs it against a baseline, and
   reports back only a compact summary.
 * **`iru-isolated-skill-executor`** — runs one named skill end to end in a completely fresh context so an earlier
   exploration/planning transcript can't bias it, while the caller keeps running afterward.
+* **`iru-functional-reviewer`** — read-only review of a functional definition draft against a checklist and the real
+  repository, returning only a verdict with findings.
 * **`iru-change-summarizer`** — fans out over a git commit/tag range and returns only the user-facing changes.
 
 Skills that need ad hoc context isolation beyond those three shapes still use Claude Code's **built-in** agent
@@ -53,7 +55,7 @@ the **`general-purpose`** agent (Claude Code's default when no specific type is 
 bootstrapping the `iru-setup-antora` skill mid-run.
 
 See xref:agents/overview.adoc[] (built-in types) and xref:agents/iru-gate-runner.adoc[],
-xref:agents/iru-isolated-skill-executor.adoc[], xref:agents/iru-change-summarizer.adoc[] (custom agents) for detail on
+xref:agents/iru-isolated-skill-executor.adoc[], xref:agents/iru-change-summarizer.adoc[], xref:agents/iru-functional-reviewer.adoc[] (custom agents) for detail on
 where and why each is used.
 
 === A CLAUDE.md file
@@ -308,6 +310,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-python[Python Development Tooling]
 |Implements one bucket of FastAPI tasks, then validates the bucket once, with the PostgreSQL integration tier behind a repo-wide lock.
 |xref:skills/iru-fastapi-code-one-task-group.adoc[]
+
+|`iru-functional-definition`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Write or update a testable functional definition (requirements, acceptance criteria, AC-DOC) for a GitHub issue or Jira ticket.
+|xref:skills/iru-functional-definition.adoc[]
 
 |`iru-generate-skill-docs`
 |xref:index.adoc#group-tooling[Catalog Tooling]
@@ -633,6 +640,11 @@ features, and where the underlying models genuinely differ.
 |xref:index.adoc#group-maintenance[Repository Maintenance]
 |Cuts a release_x.y.z branch from develop, delegates the version bump, drafts release notes and opens the release PR.
 |xref:skills/iru-release.adoc[]
+
+|`iru-review-functional-definition`
+|xref:index.adoc#group-intake[Ticket Intake]
+|Read-only review of a functional definition (ticket or draft) by the reviewer agent, printing the verdict unchanged.
+|xref:skills/iru-review-functional-definition.adoc[]
 
 |`iru-review-github-issue`
 |xref:index.adoc#group-intake[Ticket Intake]
@@ -1143,7 +1155,7 @@ features, and where the underlying models genuinely differ.
 
 == Agents reference
 
-This repository defines three custom agents, all grouped under xref:index.adoc#group-agents[Sub-Agent
+This repository defines four custom agents, all grouped under xref:index.adoc#group-agents[Sub-Agent
 Infrastructure]; the built-in agent types it also relies on (`Explore`, `general-purpose`) have no `SKILL.md`-style
 file of their own and are instead described together in xref:agents/overview.adoc[].
 
@@ -1154,6 +1166,10 @@ file of their own and are instead described together in xref:agents/overview.ado
 |`iru-change-summarizer`
 |Fan out over a git commit/tag range and return only the user-facing changes.
 |xref:agents/iru-change-summarizer.adoc[]
+
+|`iru-functional-reviewer`
+|Read-only review of a functional definition draft against the checklist and the repository, returning a verdict with findings.
+|xref:agents/iru-functional-reviewer.adoc[]
 
 |`iru-gate-runner`
 |Run a single verification/quality-gate skill (tests, coverage, lint, license, docs, security, build) for any supported stack — Java/Kotlin on Maven or Gradle, PHP, Python (FastAPI/Django), .NET, TypeScript incl. NestJS/Next.js/React Native, Android, Kotlin Multiplatform, Swift — and report back only a compact summary, optionally vs. a baseline.
@@ -1585,6 +1601,11 @@ estimated difficulty folded into the draft.
   create`, matched against this repository's actual label set.
 * xref:skills/iru-draft-github-issue.adoc[`iru-draft-github-issue`] — interviews the user and writes a detailed, spec-style
   GitHub issue (functional or documentation), reviews it in a loop, offers a split, and files it after confirmation.
+* xref:skills/iru-functional-definition.adoc[`iru-functional-definition`] — writes or updates a testable functional
+  definition (requirements, acceptance criteria with verification methods, a mandatory `AC-DOC` documentation block) for
+  a GitHub issue or Jira ticket, reviewed by the `iru-functional-reviewer` agent; also called by the create/draft skills.
+* xref:skills/iru-review-functional-definition.adoc[`iru-review-functional-definition`] — read-only review of a
+  functional definition (ticket or draft) against the checklist and the repository.
 * xref:skills/iru-review-github-issue.adoc[`iru-review-github-issue`] — reviews an existing issue or a draft against a
   quality checklist and returns classified findings (gap, pending, inconsistency, doubt) with the question to ask.
 * xref:skills/iru-split-github-issue.adoc[`iru-split-github-issue`] — splits an oversized issue into dependency-ordered
@@ -2265,6 +2286,10 @@ how agents differ from skills in how they're triggered.
   and every `<key>-code-one-task-group` skill (Java, Spring Boot in Java or Kotlin, Quarkus, PHP, FastAPI, Django,
   .NET, TypeScript, NestJS, Next.js, React Native, Android, Kotlin Multiplatform, Swift), plus the `generate-all-tests` skills for every language and several bootstrap
   skills (verifying a scaffold or generated workflow actually builds).
+* xref:agents/iru-functional-reviewer.adoc[`iru-functional-reviewer`] — read-only reviewer of a functional definition
+  draft. Used by xref:skills/iru-functional-definition.adoc[`iru-functional-definition`],
+  xref:skills/iru-review-functional-definition.adoc[`iru-review-functional-definition`] and
+  xref:skills/iru-draft-github-issue.adoc[`iru-draft-github-issue`].
 * xref:agents/iru-isolated-skill-executor.adoc[`iru-isolated-skill-executor`] — runs one named skill end to end in a
   fresh context so the caller can keep running afterward. Used by xref:skills/iru-issue.adoc[`iru-issue`] to delegate the
   entire `iru-code` run for a ticket, by xref:skills/iru-code.adoc[`iru-code`] itself to delegate each task group to
@@ -2816,7 +2841,18 @@ flowchart LR
     SPLIT_GITHUB_ISSUE["iru-split-github-issue"]
     CREATE_JIRA_TICKET["iru-create-jira-ticket"]
     JIRA_CUSTOM_CONTEXT["iru-jira-custom-context"]
+    FUNCTIONAL_DEFINITION["iru-functional-definition"]
+    REVIEW_FUNCTIONAL_DEFINITION["iru-review-functional-definition"]
+    AGT_FUNC_REVIEWER(("iru-functional-reviewer\nagent"))
     EXPLORE["iru-explore"]:::other
+    CREATE_GITHUB_ISSUE --> FUNCTIONAL_DEFINITION
+    CREATE_JIRA_TICKET --> FUNCTIONAL_DEFINITION
+    DRAFT_GITHUB_ISSUE --> FUNCTIONAL_DEFINITION
+    FUNCTIONAL_DEFINITION --> EXPLORE
+    FUNCTIONAL_DEFINITION -.->|uses| AGT_FUNC_REVIEWER
+    REVIEW_FUNCTIONAL_DEFINITION --> FUNCTIONAL_DEFINITION
+    REVIEW_FUNCTIONAL_DEFINITION -.->|uses| AGT_FUNC_REVIEWER
+    DRAFT_GITHUB_ISSUE -.->|uses| AGT_FUNC_REVIEWER
     CREATE_GITHUB_ISSUE --> EXPLORE
     CREATE_JIRA_TICKET --> EXPLORE
     DRAFT_GITHUB_ISSUE --> EXPLORE

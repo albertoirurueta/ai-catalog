@@ -90,7 +90,8 @@ flowchart TD
 === Invokes
 
 * xref:skills/iru-explore.adoc[] - Step 2, general orientation to ground the draft.
-* xref:skills/iru-review-github-issue.adoc[] - Step 7, the automatic review loop over the draft file.
+* xref:skills/iru-functional-definition.adoc[] - Step 4, in embedded mode, for the functional draft.
+* xref:skills/iru-review-github-issue.adoc[] - Step 7, the automatic review loop over the draft file (documentation issues).
 * xref:skills/iru-split-github-issue.adoc[] - Step 8, offered when the issue is too large.
 
 === Invoked by
@@ -99,7 +100,7 @@ None of this repository's skills; a top-level entry point run directly by a pers
 
 === Related agents
 
-None; `iru-draft-github-issue` does not spawn any agent.
+* xref:agents/iru-functional-reviewer.adoc[] - Step 7, the review loop of functional issues.
 
 == Source
 

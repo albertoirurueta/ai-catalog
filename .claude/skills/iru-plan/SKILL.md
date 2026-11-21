@@ -259,10 +259,11 @@ all if the user chose to skip planning). Structure it as:
    ```
    ## Acceptance criteria coverage
 
-   | # | Criterion | Covered by tasks |
-   |---|---|---|
-   | 1 | "<criterion quoted from the ticket>" | Task 2, Task 3.1 |
-   | 2 | derived: <verifiable statement> | Task 4 |
+   | # | Criterion | Verification method | Covered by tasks |
+   |---|---|---|---|
+   | 1 | "<criterion quoted from the ticket>" | unit test `FooTest` | Task 2, Task 3.1 |
+   | 2 | derived: <verifiable statement> | Playwright UI test | Task 4 |
+   | 3 | "AC-DOC. Functional documentation: ..." | `/iru-update-docs` | Task 9 |
    ```
 
    List every acceptance criterion the ticket states, quoted, one row each. When the ticket states none (or the
@@ -270,6 +271,16 @@ all if the user chose to skip planning). Structure it as:
    `derived:`. Every row must name at least one task; a criterion that no task covers is a planning error — fix it
    by adding a task, or, when the gap is an open question, by placing a `[NEEDS CLARIFICATION: …]` marker on the
    row's closest task and naming that task. Keep the section up to date if the plan is edited later.
+
+   The **Verification method** column names how each criterion is proved and the **Covered by tasks** column names the
+   task that implements it or runs that verification: unit or integration tests; Playwright (web) or simulator (mobile)
+   UI tests; `curl` checks written either as integration tests or as documented commands the task runs and records;
+   form-validation tests for input rules. A criterion that only a person can judge says `manual: <what to check>`.
+   `AC-DOC` (the functional-documentation criterion of a functional definition, see `reference/functional-definition-template.md`)
+   maps to the plan's final documentation task: its text carries the documentation target, the pages and the content
+   kinds from the `AC-DOC` block, and it runs `/iru-update-docs`. When the `AC-DOC` block is declined, the row's method
+   reads `not required` (with the stated reason) and the final documentation task still runs `/iru-update-docs`. A
+   ticket without `AC-DOC` is planned as before: no extra row, and the method column is filled the same way.
 3. **Current code state** — a brief summary of the relevant existing architecture/classes/files as found during
    exploration: what exists today, how it is structured, and where the change needs to land. Reference concrete
    file paths and class/method names from the actual repository, not vague descriptions.

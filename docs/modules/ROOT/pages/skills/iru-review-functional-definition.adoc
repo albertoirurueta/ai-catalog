@@ -1,0 +1,84 @@
+= Review Functional Definition
+:description: Read-only review of a functional definition (GitHub issue, Jira ticket or local draft) against the checklist and the repository, printing the reviewer verdict unchanged.
+:keywords: iru-review-functional-definition, claude code skill, functional definition, review, acceptance criteria, github issue, jira ticket, checklist, read-only
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Review one functional definition and report the verdict of the `iru-functional-reviewer` agent.
+
+== Purpose
+
+`iru-review-functional-definition` fetches a ticket (or reads a local draft), dispatches the read-only
+`iru-functional-reviewer` agent with the functional-definition checklist, and prints the `Verdict` / `Findings` /
+`Suggestions` block unchanged. Nothing is edited, posted or filed unless the user explicitly chooses it at the end, and a
+`draft:<path>` input is never modified. It stops, writing nothing, when the ticket host is neither GitHub nor Jira.
+Rewriting a definition is the job of xref:skills/iru-functional-definition.adoc[].
+
+== Purpose group
+
+xref:index.adoc#group-intake[Ticket Intake]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
+== Invocation
+
+[source]
+----
+/iru-review-functional-definition <ticket-id>
+/iru-review-functional-definition draft:<path>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ticket-id`
+|One of the two
+|A GitHub issue number (optionally with `#`) or a Jira key.
+|Asked once if neither form is given.
+
+|`draft:<path>`
+|One of the two
+|A local Markdown draft whose first line is `# <title>`.
+|Asked once if neither form is given.
+|===
+
+== Outputs
+
+* The reviewer's result block, printed unchanged.
+* For an existing ticket only, and after an explicit choice: a comment with the findings, or a hand-over to `/iru-functional-definition`.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Resolve tracker and input\n(stop if unsupported host)"] --> B["Fetch definition\nand write draft file"]
+    B --> C["Dispatch iru-functional-reviewer"]
+    C --> D["Print result block unchanged"]
+    D --> E{Existing ticket?}
+    E -- no --> F["Stop"]
+    E -- yes --> G["Ask: leave / comment / hand over"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-functional-definition.adoc[] - Step 5, only when the user chooses to hand over and resolve the findings.
+
+=== Invoked by
+
+None of this repository's skills; a top-level entry point run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-functional-reviewer.adoc[] - Step 3, the read-only review.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-review-functional-definition/SKILL.md[`SKILL.md` on GitHub] - the file this page was generated from.

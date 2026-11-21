@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { collectBlocks, diagramType, extractBlocks, lintBlock } from './blocks.mjs'
+import { collectBlocks, diagramType, extractBlocks, extractMarkdownBlocks, lintBlock } from './blocks.mjs'
 
 test('extracts literal and listing blocks with their first source line', () => {
   const text = ['= Page', '', '[mermaid]', '....', 'flowchart LR', '  A --> B', '....', '', '[mermaid,format=svg]', '', '----', 'graph TD', '----'].join('\n')
@@ -73,4 +73,31 @@ test('collects blocks from pages and partials', () => {
   const blocks = collectBlocks(dir)
   assert.equal(blocks.length, 1)
   assert.match(blocks[0].file, /p\.adoc$/)
+})
+
+test('extracts Markdown mermaid fences with their first source line', () => {
+  const text = ['# Doc', '', '```mermaid', 'flowchart LR', '  A --> B', '```', '', '~~~mermaid', 'graph TD', '~~~'].join('\n')
+  assert.deepEqual(extractMarkdownBlocks(text), [
+    { line: 4, src: 'flowchart LR\n  A --> B' },
+    { line: 9, src: 'graph TD' }
+  ])
+})
+
+test('Markdown fences: longer fence needs a matching close, other languages are ignored', () => {
+  const text = ['````mermaid', 'graph TD', '```', 'A --> B', '````', '```js', 'x', '```', '```mermaidish', 'y', '```'].join('\n')
+  assert.deepEqual(extractMarkdownBlocks(text), [{ line: 2, src: 'graph TD\n```\nA --> B' }])
+})
+
+test('Markdown fences are not mistaken for AsciiDoc blocks and vice versa', () => {
+  assert.deepEqual(extractBlocks('```mermaid\ngraph TD\n```'), [])
+  assert.deepEqual(extractMarkdownBlocks('[mermaid]\n....\ngraph TD\n....'), [])
+})
+
+test('collectBlocks reads .adoc and .md files and lints Markdown blocks like AsciiDoc ones', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mermaid-md-'))
+  writeFileSync(join(dir, 'a.adoc'), '[mermaid]\n....\ngraph TD\n....\n')
+  writeFileSync(join(dir, 'b.md'), '```mermaid\nflowchart LR\n  A["write <timestamp>"]\n```\n')
+  const blocks = collectBlocks(dir)
+  assert.deepEqual(blocks.map((b) => [b.file.split('/').pop(), b.line]), [['a.adoc', 3], ['b.md', 2]])
+  assert.deepEqual(lintBlock(blocks[1].src).map((p) => p.offset), [1])
 })

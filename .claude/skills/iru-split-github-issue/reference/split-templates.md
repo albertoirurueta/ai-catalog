@@ -72,6 +72,12 @@ Parallel group: <n>
 
 Notes:
 
+- The canonical functional sections are kept (`Context`, `Requirements`, `Acceptance criteria` with verification
+  methods, `Out of scope`, `Dependencies and related tickets`); when the original issue used `FRn`/`Functional
+  requirements` headings, keep them consistently within the sub-issue.
+- `AC-DOC` goes on the sub-issue whose change it documents, as a verbatim or narrowed copy of the original item; when
+  the documentation spans all slices it stays on the root issue instead. Each sub-issue either carries its own `AC-DOC`
+  or states `AC-DOC. Functional documentation: not required — documented by #<n>` (never omitted).
 - Include `Technical details` and `Out of scope` sections only if the original issue had content for this slice.
 - Every sub-issue must be self-sufficient for `/iru-issue <n>`: Context, Requirements and Acceptance criteria are
   mandatory, even if short.

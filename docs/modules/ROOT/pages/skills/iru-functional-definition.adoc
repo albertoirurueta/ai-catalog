@@ -1,0 +1,108 @@
+= Functional Definition
+:description: Writes or updates a testable functional definition for a GitHub issue or Jira ticket, with requirements, acceptance criteria, verification methods and a mandatory AC-DOC block.
+:keywords: iru-functional-definition, claude code skill, functional definition, acceptance criteria, requirements, github issue, jira ticket, AC-DOC, ticket intake
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+Produce a complete, testable functional definition for a ticket, grounded in the real codebase and reviewed by a read-only agent.
+
+== Purpose
+
+`iru-functional-definition` writes a Markdown draft in the format of its functional-definition template (Context, numbered
+requirements, acceptance criteria with verification methods and at least one negative case per behavioural requirement,
+Out of scope, Dependencies, Task details and References). It explores the repository, asks only what is missing in small
+batches, adds exactly one `AC-DOC` item (functional documentation block, or a declined block with a specific reason), and
+runs up to three review rounds with the `iru-functional-reviewer` agent. Standalone it files a new ticket or updates an
+existing one after confirmation; when called by another skill (`mode: embedded` or a `tracker:` argument) it only returns
+the draft path. It writes no code and never invents requirements. It stops, writing nothing, when neither GitHub nor a Jira
+MCP integration is available.
+
+== Purpose group
+
+xref:index.adoc#group-intake[Ticket Intake]
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
+== Invocation
+
+[source]
+----
+/iru-functional-definition
+/iru-functional-definition <initial functional description>
+/iru-functional-definition <ticket-id> [<additional description>]
+/iru-functional-definition draft:<path>
+----
+
+== Inputs
+
+[cols="1,1,3,2", options="header"]
+|===
+|Argument |Required |Description |Default
+
+|`ticket-id`
+|No
+|A GitHub issue number (optionally with `#`) or a Jira key; selects update mode.
+|Create mode.
+
+|`draft:<path>`
+|No
+|A local Markdown draft (first line `# <title>`) used as the working draft.
+|None.
+
+|description
+|No
+|Free text with the initial functional description.
+|Asked once when there is no ticket.
+
+|`mode: embedded`, `tracker: github\|jira`
+|No
+|Passed by calling skills: skip tracker detection and file nothing.
+|Standalone.
+|===
+
+== Outputs
+
+* A Markdown draft in a temporary directory (`functional-definition-draft.md`).
+* Standalone and after explicit confirmation: a new issue or ticket, or an updated body (with a before/after of every changed section).
+* Embedded: the draft path, the tracker and a three-line summary; nothing is filed.
+
+== Execution flow
+
+[mermaid]
+....
+flowchart TD
+    A["Resolve tracker\n(GitHub, Jira MCP, else stop)"] --> B["Parse arguments\n(create, update or draft)"]
+    B --> C["Explore (iru-explore)"]
+    C --> D["Draft from template"]
+    D --> E["Completeness gate\n(ask what is missing)"]
+    E --> F["AC-DOC\n(accept target or decline with reason)"]
+    F --> G["Review loop\n(iru-functional-reviewer, max 3 rounds)"]
+    G --> H{Embedded?}
+    H -- yes --> I["Return draft path"]
+    H -- no --> J["Confirm, then create or update ticket"]
+....
+
+== Dependencies
+
+=== Invokes
+
+* xref:skills/iru-explore.adoc[] - Step 3, to ground the draft in the real stack, architecture and docs location.
+
+=== Invoked by
+
+* xref:skills/iru-create-github-issue.adoc[] - Step 3, in embedded mode for the functional draft.
+* xref:skills/iru-create-jira-ticket.adoc[] - Step 3, in embedded mode for the functional draft.
+* xref:skills/iru-draft-github-issue.adoc[] - Step 4, in embedded mode for functional issues.
+* xref:skills/iru-review-functional-definition.adoc[] - Step 5, when the user hands over to resolve the findings.
+
+Otherwise a top-level entry point, run directly by a person.
+
+=== Related agents
+
+* xref:agents/iru-functional-reviewer.adoc[] - Step 7, the read-only review of each draft round.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/skills/iru-functional-definition/SKILL.md[`SKILL.md` on GitHub] - the file this page was generated from.

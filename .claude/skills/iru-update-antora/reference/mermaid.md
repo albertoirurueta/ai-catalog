@@ -37,8 +37,14 @@ Every diagram written or changed must therefore be validated on its own.
   150 edges and 10 subgraphs per diagram. A very large flowchart with many subgraphs can parse and still crash while
   laying out ("Cannot set properties of undefined (setting 'order')"); split it into an overview diagram (one node per
   group, edges aggregated between groups) plus one diagram per group instead.
-- **Delimiters.** Write `[mermaid]` followed by a `....` (literal) block; `----` also works. The validator finds
-  only these two forms.
+- **Delimiters.** In AsciiDoc write `[mermaid]` followed by a `....` (literal) block; `----` also works. In Markdown
+  (`.md` files such as READMEs and ticket or knowledge documents) write a fenced block whose info string is `mermaid`
+  (three or more backticks or tildes, closed by the same character and at least the same length). The validator finds
+  only these forms; `[source,mermaid]` and other fence languages are ignored.
+- **Markdown fences.** The same static checks, size limit and label-escape rules apply to Markdown fences, because the
+  validator treats the fence body exactly like an AsciiDoc block. A Markdown renderer that shows the fence as plain
+  text or draws it itself (GitHub) does not parse it as HTML, so there the escaped forms above are rewording
+  candidates: prefer labels without angle brackets, and keep the fence free of raw tag-like text.
 
 ## Validating
 
@@ -47,6 +53,7 @@ From `docs/`, after the build:
 ```bash
 npm i --no-save mermaid@11 jsdom@31 puppeteer@25
 node scripts/mermaid/validate-mermaid.mjs modules --render     # npm run validate:mermaid when the script is wired
+node scripts/mermaid/validate-mermaid.mjs <dir-with-md-files>  # Markdown fences: any directory; .adoc and .md are both scanned
 ```
 
 - **static**: raw tag-like text, and single-escaped `&lt;` in label text of any form (any escaping in a `stateDiagram`
@@ -57,7 +64,7 @@ node scripts/mermaid/validate-mermaid.mjs modules --render     # npm run validat
   crashes.
 
 Exit 0 means every diagram passed; 1 lists each failure as `file:line` with the check that failed; 2 means a missing
-dependency or no diagram found. Use the repository's own `docs/scripts/mermaid/` when present; otherwise run the copy
+dependency or no diagram found (neither a `[mermaid]` block in `.adoc` nor a ```mermaid fence in `.md`). Use the repository's own `docs/scripts/mermaid/` when present; otherwise run the copy
 under `iru-setup-antora`'s, `iru-update-antora`'s or `iru-build-docs`' `scripts/mermaid/` with `docs/` as the working
 directory (it resolves the three packages from `docs/node_modules`).
 

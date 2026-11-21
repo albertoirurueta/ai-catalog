@@ -51,7 +51,10 @@ checked, and stop. If any signal fires (or `force: yes`), continue.
 
 Cut the issue into slices that each deliver something testable. For each sub-issue give: title, scope, the subset of
 requirements and acceptance criteria it owns (every original requirement and criterion must land in exactly one
-sub-issue; nothing may be dropped or invented), and kind (`functional` or `documentation`). Aim for at least 2 and
+sub-issue; nothing may be dropped or invented), and kind (`functional` or `documentation`). Keep the canonical sections of the
+functional definition (Context, Requirements, Acceptance criteria with verification methods, Out of scope,
+Dependencies) in every sub-issue draft. The `AC-DOC` item is assigned like any criterion: to the sub-issue whose change
+it documents, or kept on the root issue when the documentation spans all of them. Aim for at least 2 and
 rarely more than about 8 sub-issues.
 
 ## Step 4 — Compute dependencies and groups

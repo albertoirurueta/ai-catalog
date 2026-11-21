@@ -141,6 +141,10 @@ run in this same turn:
 - **Step 3 (purpose)**: answer immediately with Step 6's confirmed purpose statement, already given as the
   argument; if it still asks a clarifying follow-up, answer from Step 4/5's gathered context rather than bouncing
   the question back to the user — only actually ask the user if the gathered context genuinely doesn't cover it.
+  The meeting context and the purpose statement are the initial prompt of that skill's embedded functional
+  definition; its completeness-gate questions (verification method and concrete values, negative cases, the
+  `AC-DOC` documentation decision, reviewer findings) are never auto-answered: they reach the user, who may
+  accept listed known gaps at the confirm step.
 - **Step 4 (additional context)**: supply, as "attached files/documents", every file Step 7 marked for actual
   attachment (with its local path); supply, as "URLs", every file Step 7 marked as already linkable. Don't
   fabricate related tickets — only mention one if the user names it, and don't supply an epic unless the user

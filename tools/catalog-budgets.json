@@ -41,6 +41,8 @@
     "scripts/nav-fix/nav-item-state.test.mjs",
     "scripts/site-metrics/measure.mjs",
     "scripts/site-metrics/measure.test.mjs",
+    "reference/functional-definition-template.md",
+    "reference/functional-definition-checklist.md",
     "reference/mermaid.md",
     "scripts/mermaid/blocks.mjs",
     "scripts/mermaid/blocks.test.mjs",
@@ -249,6 +251,11 @@
     },
     {
       "caller": "iru-draft-github-issue",
+      "callee": "iru-explore",
+      "reason": "Intentional direct call: iru-explore is opus by the model-tier policy and its report (Project type, Tech stack, docs location) must land in the caller's own context; routing it through an agent would return only a summary and change what the caller can use."
+    },
+    {
+      "caller": "iru-functional-definition",
       "callee": "iru-explore",
       "reason": "Intentional direct call: iru-explore is opus by the model-tier policy and its report (Project type, Tech stack, docs location) must land in the caller's own context; routing it through an agent would return only a summary and change what the caller can use."
     },
