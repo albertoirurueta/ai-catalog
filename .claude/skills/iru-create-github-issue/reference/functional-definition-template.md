@@ -47,8 +47,9 @@ exist, or be marked "(new)".>
 - <URL or document> (<what it is for>)
 ```
 
-Required sections: Context, Requirements, Acceptance criteria (including `AC-DOC`), Out of scope, Dependencies and
-related tickets. Optional: Technical details, Task details, References.
+Required sections: Context, Requirements, Acceptance criteria (including `AC-DOC`). Optional: Technical details, Out of
+scope, Dependencies and related tickets, Task details, References. Stating Out of scope and Dependencies (even "none") is
+recommended; when the work clearly has adjacent features or prerequisites, the reviewer suggests them.
 
 Rules:
 
@@ -90,16 +91,18 @@ decision. Two forms are accepted.
 
 ```markdown
 - AC-DOC. Functional documentation: Antora module ROOT (`docs/modules/ROOT/pages/`); pages: `export.adoc` (new),
-  `configuration.adoc` (update); content: data model (ER diagram of `export_job`), sequence (request, queue, writer),
-  configuration properties (table of `export.*` keys), equations (row batching size, MathJax); formats: Mermaid for
+  `configuration.adoc` (update); content: data-model (ER diagram of `export_job`), sequence (request, queue, writer),
+  configuration (table of `export.*` keys), equations (row batching size, MathJax); formats: Mermaid for
   diagrams, SVG for figures, MathJax for equations. Verification: automated-test — the documentation build reports no
   warnings and every listed page is in `nav.adoc`.
 ```
 
 An accepted block names: the **target** (Antora site, Markdown docs folder or README section, or a documentation
-system reached through MCP such as Confluence/Notion), the **pages** to create or update, the **content kinds** drawn from
-data model, UML, sequence, workflow, architecture, API definition, configuration properties, equations, figures, and the
-**formats** (Mermaid, SVG, MathJax) — only formats the target's pipeline supports.
+system reached through MCP such as Confluence/Notion), the **pages** to create or update, the **content kinds**, written with
+exactly these slugs (the `content:` argument of `iru-update-docs`, which skips any other word): `data-model`, `uml-class`,
+`sequence`, `workflow`, `architecture`, `api`, `configuration`, `equations`, `figures` (a short note in parentheses after a
+slug is fine; screenshots and user procedures are `figures` and `workflow`), and the **formats** (Mermaid, SVG, MathJax) —
+only formats the target's pipeline supports.
 
 **Declined** (nothing to document):
 

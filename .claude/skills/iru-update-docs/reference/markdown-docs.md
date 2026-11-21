@@ -8,9 +8,10 @@ Read this file when `target: markdown` is given, when no Antora site exists, or 
 
 Arguments arrive as `key: value` lines (as `iru-code` Step 8 passes them) or inline. All are optional.
 
-- `target`: where the documentation lives. `markdown` = GitHub-flavoured Markdown in the repository; `antora` = the
-  Antora AsciiDoc module; `mcp` = a connected documentation MCP (Step 5 only; Antora and Markdown files are then
-  untouched unless they also exist and the diff affects them). Omitted: detect it (Step 2).
+- `target`: where the requested `pages:` and `content:` go. `markdown` = GitHub-flavoured Markdown in the repository;
+  `antora` = the Antora AsciiDoc module; `mcp` = a connected documentation MCP (written in Step 5 after approval).
+  Omitted: detect it (Step 2). `target` never narrows the sync: the repository's own Antora or Markdown pages that the
+  diff affects are always updated too, whatever its value.
 - `pages`: comma-separated page paths to create or update (a `.md` or `.adoc` path under the docs folder, or a README
   heading such as `README.md#Architecture`). Omitted: choose the pages the diff affects, as before.
 - `content`: comma-separated kinds to produce, among `data-model`, `uml-class`, `sequence`, `workflow`, `architecture`,

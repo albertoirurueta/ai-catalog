@@ -10,7 +10,7 @@ Review one GitHub issue (or a local draft of one) for gaps before anyone builds 
 findings; it never guesses an answer for the author, and it changes nothing on GitHub without explicit confirmation.
 
 The checklist lives in `reference/issue-quality-checklist.md` (relative to this skill's directory); read it in full
-before Step 3. Item ids below (C1, D1, DOC2, S1...) refer to that file; F1-F9 refer to
+before Step 3. Item ids below (C1, D1, DOC2, S1...) refer to that file; F1-F11 refer to
 `reference/functional-definition-checklist.md`, read only for the functional kind.
 
 ## Step 1 — Resolve the input and fetch the issue

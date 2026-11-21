@@ -19,6 +19,9 @@ Every `subagent_type` below is written in the first form.
 ## Step 1 — Resolve the tracker
 
 - A `tracker: github|jira` argument (passed by a calling skill) is used as is; skip detection.
+- A ticket reference found by Step 2's rules decides first, whatever the remote: a Jira key (`PROJ-123`) means **Jira**,
+  even in a GitHub-hosted repository (look for the Jira MCP below; without one, stop as in the last bullet). A GitHub issue
+  number needs a GitHub host.
 - Otherwise, if `iru-explore` already ran in this conversation, reuse its `Repository host:` finding. Else read the remote
   (`git remote get-url origin`, falling back to `git remote -v` or the remote the branch tracks): `github.com` or a GitHub
   Enterprise Server domain means **GitHub** (`gh` CLI, else GitHub MCP tools via `ToolSearch` "github issue").
@@ -29,10 +32,15 @@ Every `subagent_type` below is written in the first form.
 
 ## Step 2 — Parse the arguments and choose the mode
 
-Arguments are, in order, an optional ticket reference and an optional free-text description; `mode: embedded` and
-`tracker:` may also appear.
+Arguments are, in order, an optional ticket reference and an optional free-text description; `mode: embedded`,
+`tracker:` and `ticket:` lines may also appear. In embedded mode (`mode: embedded` or a `tracker:` line) a ticket is taken
+only from an explicit `ticket: <id>` line; every other line is the description, even when it starts with a number or
+`#N` (a prompt such as "#41 follow-up: …" is a description, not update mode). Standalone, only the first
+whitespace-separated token can be a ticket reference.
 
-- **`draft:<path>`**: read that Markdown file as the working draft (first line `# <title>`) and continue at Step 3.
+- **`draft:<path>`**: read that Markdown file as the working draft (first line `# <title>`). It follows create-mode rules
+  for exploration (Step 3 with no argument) and filing (Step 8 files a new ticket after confirmation), and update-mode rules
+  for content: keep its existing sections and ids, change or add only what the description and the gaps require.
 - **A ticket id** (auto-detected like `iru-explore`: Jira key pattern such as `PROJ-123` means Jira, a bare number
   optionally prefixed with `#` means GitHub, otherwise ask via `AskUserQuestion`) selects **update mode**. Fetch it:
   `gh issue view <n> --json number,title,body,labels,comments,state,url` (or the Jira MCP fetch with comments). If it
@@ -53,33 +61,36 @@ a new temporary directory (for example under `mktemp -d`) as `functional-definit
 
 - **Create mode**: fill Context from the prompt and the real files found in Step 3, then Requirements (`R1…`), Acceptance
   criteria (`AC1 (R1)…` each with a verification method and concrete values, at least one negative case per behavioural
-  requirement), Out of scope, Dependencies, Task details (due date, importance, estimated difficulty with rationale) and
-  References. Add Technical details only when the task is highly technical.
+  requirement), and, when known, Out of scope, Dependencies, Task details (due date, importance, estimated difficulty
+  with rationale) and References. Add Technical details only when the task is highly technical. In embedded mode leave
+  Task details, Dependencies and References out entirely: the calling skill asks for them and adds them itself.
 - **Update mode**: start from the existing body, keep every unchanged section and id verbatim, change or add only what the
   new description, comments or gaps require, and append new ids instead of renumbering. Never silently drop content.
 - Mark anything unknown as a question for Step 5; never write placeholders (`TBD`, `TODO`, `?`).
 
 ## Step 5 — Completeness gate
 
-List what is missing or unclear against the checklist (F1–F9) and resolve it with the user in small batches of at most
+List what is missing or unclear against every checklist item (F1–F11) and resolve it with the user in small batches of at most
 three questions:
 
-- Open answers (purpose, behaviour, values, errors, due date): plain conversational text, then wait.
-- Choices (importance, difficulty, which candidate to keep): `AskUserQuestion`.
+- Open answers (purpose, behaviour, values, errors; standalone also due date): plain conversational text, then wait.
+- Choices (which candidate to keep; standalone also importance and difficulty): `AskUserQuestion`. In embedded mode never
+  ask for due date, importance, related tickets or attachments: the caller does.
 - Propose candidates derived from the code and the prompt ("the list endpoint has no pagination; should R2 require it?")
   and let the user accept, change or reject each. Never add a requirement or criterion the user has not confirmed.
 
-Repeat until Context, Requirements, criteria with verification, negative cases, Out of scope and Dependencies are
-complete. Update the draft after every batch.
+Repeat until Context, Requirements, criteria with verification and negative cases are complete; offer Out of scope
+when the work has obvious adjacent features (optional sections, see the template). Update the draft after every batch.
 
 ## Step 6 — AC-DOC
 
 Every definition carries exactly one `AC-DOC` item. Detect documentation targets: an Antora site (`antora.yml`, find the
 module and existing pages), a Markdown docs folder or README sections, and a documentation MCP (`ToolSearch` "confluence",
-"notion", "wiki"). Offer them via `AskUserQuestion` together with "No functional documentation", and suggest content
-kinds that fit the change (sequence or flow diagram, configuration properties, UI screenshots, API reference, user
-procedure) limited to formats the target supports (Mermaid and AsciiDoc tables for Antora; Markdown and fenced Mermaid
-for a docs folder; whatever the MCP accepts). Record an accepted block as `AC-DOC. Functional documentation: <target>;
+"notion", "wiki"). Offer them via `AskUserQuestion` together with "No functional documentation", and suggest the content
+kinds that fit the change, using only the template's slugs (`data-model`, `uml-class`, `sequence`, `workflow`,
+`architecture`, `api`, `configuration`, `equations`, `figures`; UI screenshots are `figures`, a user procedure is
+`workflow`), with the formats the target supports (Mermaid, SVG and MathJax where the Antora pipeline wires them; fenced
+Mermaid, SVG and `$$` math for a Markdown docs folder; whatever the MCP accepts). Record an accepted block as `AC-DOC. Functional documentation: <target>;
 pages <names, new or existing>; content: <kinds>; formats: <formats>.` A declined block must state a specific reason
 (`AC-DOC. Functional documentation: not required — <reason>`); ask for one if the user gives none.
 
@@ -98,13 +109,21 @@ Run at most **3 rounds**:
 4. Update the draft and start the next round.
 
 After round 3, or when the user declines to answer a finding, show the remaining findings verbatim to the user before
-anything is filed; they decide whether to proceed. Reviewer suggestions (for example a size signal) are shown, not applied.
+anything is filed; standalone, they decide whether to proceed. In embedded mode do not ask that: return the findings and
+let the calling skill's gate decide (so the user is asked once). Reviewer suggestions (for example a size signal) are shown, not applied.
 
 ## Step 8 — Output
 
-- **Embedded** (`mode: embedded` or a `tracker:` argument from a calling skill): return the final draft path, the tracker
-  and a three-line summary (requirements count, criteria count, AC-DOC target or reason, unresolved findings). File
-  nothing.
+- **Embedded** (`mode: embedded` or a `tracker:` argument from a calling skill): file nothing and return exactly:
+  ```
+  Draft: <absolute path>
+  Tracker: github | jira
+  Verdict: ready | needs-work
+  Summary: <n> requirements, <m> criteria, AC-DOC <target or "not required — reason">
+  Unresolved findings:
+  - <each remaining finding verbatim from the last review block, or "none">
+  ```
+  `Verdict` is the last review round's verdict; the caller's completeness gate reads it.
 - **Standalone, create mode**: show the draft path and a summary, then file via the tracker after `AskUserQuestion`
   confirmation (create / edit the draft first / do not file), exactly as `iru-create-github-issue` Step 8 or
   `iru-create-jira-ticket` does, using the draft's first line as title and the rest as body. The draft is the deliverable

@@ -1,28 +1,48 @@
 // Mermaid block extraction and static checks for AsciiDoc (`[mermaid]` blocks) and Markdown (```mermaid fences) sources. Node built-ins only, so it is unit-tested by
 // `npm run test:nav` without the on-demand mermaid/jsdom/puppeteer install that validate-mermaid.mjs needs.
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { lstatSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-// Every `.adoc` file under `dir` (pages, partials, examples: a partial included into a page ships its diagrams too).
-export function adocFiles (dir) {
+// Directories never searched, so the validator can run on a repository root: dependencies, build output and dot
+// directories (`.git`, `.cache`, ...). Symbolic links to directories are not followed either (pnpm's `node_modules`
+// links can form cycles); a symbolic link to a file is read like the file.
+function skippedDirectory (name) {
+  return name === 'node_modules' || name === 'build' || name.startsWith('.')
+}
+
+// Every file under `dir` whose name ends with `extension`, sorted by path within each directory.
+function filesWithExtension (dir, extension) {
   const out = []
   for (const name of readdirSync(dir).sort()) {
     const path = join(dir, name)
-    if (statSync(path).isDirectory()) out.push(...adocFiles(path))
-    else if (name.endsWith('.adoc')) out.push(path)
+    const entry = lstatSync(path)
+    if (entry.isDirectory()) {
+      if (!skippedDirectory(name)) out.push(...filesWithExtension(path, extension))
+    } else if (name.endsWith(extension)) {
+      if (entry.isSymbolicLink() && !isFileTarget(path)) continue
+      out.push(path)
+    }
   }
   return out
 }
 
+// Whether a symbolic link resolves to a regular file (false for a directory or a broken link).
+function isFileTarget (path) {
+  try {
+    return statSync(path).isFile()
+  } catch {
+    return false
+  }
+}
+
+// Every `.adoc` file under `dir` (pages, partials, examples: a partial included into a page ships its diagrams too).
+export function adocFiles (dir) {
+  return filesWithExtension(dir, '.adoc')
+}
+
 // Every `.md` file under `dir` (README files, guides and other Markdown documents with ```mermaid fences).
 export function markdownFiles (dir) {
-  const out = []
-  for (const name of readdirSync(dir).sort()) {
-    const path = join(dir, name)
-    if (statSync(path).isDirectory()) out.push(...markdownFiles(path))
-    else if (name.endsWith('.md')) out.push(path)
-  }
-  return out
+  return filesWithExtension(dir, '.md')
 }
 
 // Every `.adoc` and `.md` file under `dir`, sorted by path.
@@ -53,19 +73,23 @@ export function extractBlocks (text) {
 
 // A Markdown Mermaid block is a fenced code block (``` or ~~~, at least three, indented at most three spaces) whose
 // info string starts with `mermaid`; the closing fence uses the same character and is at least as long. An unclosed
-// fence runs to the end of the file, as in CommonMark. Returns [{ line, src }] like extractBlocks.
+// fence runs to the end of the file, as in CommonMark. Every other fence (any info string, or none) is skipped up to
+// its own close, so a ```mermaid example shown inside a ````markdown or ~~~text fence is not a diagram.
+// Returns [{ line, src }] like extractBlocks.
 export function extractMarkdownBlocks (text) {
   const lines = text.split('\n')
   const blocks = []
   for (let i = 0; i < lines.length; i++) {
-    const open = lines[i].replace(/\r$/, '').match(/^ {0,3}(`{3,}|~{3,})\s*mermaid(?:\s[^`]*)?$/i)
+    const open = lines[i].replace(/\r$/, '').match(/^ {0,3}(`{3,}|~{3,})(.*)$/)
     if (!open) continue
     const fence = open[1]
+    const info = open[2].trim()
+    if (fence[0] === '`' && info.includes('`')) continue // not a fence: a backtick info string cannot contain backticks
     const closing = new RegExp(`^ {0,3}\\${fence[0]}{${fence.length},}\\s*$`)
     const body = []
     let k = i + 1
     while (k < lines.length && !closing.test(lines[k].replace(/\r$/, ''))) body.push(lines[k++])
-    blocks.push({ line: i + 2, src: body.join('\n') })
+    if (/^mermaid(?:\s|$)/i.test(info)) blocks.push({ line: i + 2, src: body.join('\n') })
     i = k
   }
   return blocks

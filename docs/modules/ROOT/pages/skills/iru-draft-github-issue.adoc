@@ -1,5 +1,5 @@
 = Draft GitHub Issue
-:description: Interviews the user and writes a complete spec-style GitHub issue, functional or documentation, reviews it in a loop, offers a split, and files it after confirmation.
+:description: Interviews the user and writes a spec-style GitHub issue, functional or documentation, reviews it in a loop, offers a split, and files it on confirmation.
 :keywords: iru-draft-github-issue, claude code skill, github issue, spec-style issue, acceptance criteria, issue review loop, documentation issue, ticket intake
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -12,9 +12,12 @@ reviewed for gaps before it exists, and split into dependency-ordered sub-issues
 `iru-draft-github-issue` is the detailed counterpart to the quick xref:skills/iru-create-github-issue.adoc[] path. It
 explores the codebase, decides whether the issue is _functional_ (context, functional requirements, acceptance
 criteria, optional technical details, out of scope, dependencies, task details) or _documentation_ (audience,
-technical vs. non-technical page structure, diagrams, bibliography, acceptance criteria), interviews the user, writes the
-draft to a file and then loops (at most five rounds) with xref:skills/iru-review-github-issue.adoc[], resolving
-findings from the codebase first and asking the user for the rest. When the issue looks too large it offers
+technical vs. non-technical page structure, diagrams, bibliography, acceptance criteria) and interviews the user. The
+functional interview is delegated to xref:skills/iru-functional-definition.adoc[] in embedded mode, which returns a draft
+in the canonical functional-definition format with the mandatory `AC-DOC` block. The skill writes the draft to a file
+and then loops with xref:skills/iru-review-github-issue.adoc[] (at most five rounds for documentation, three for
+functional; functional rounds also dispatch the `iru-functional-reviewer` agent and merge both verdicts and findings),
+resolving findings from the codebase first and asking the user for the rest. When the issue looks too large it offers
 xref:skills/iru-split-github-issue.adoc[]. Nothing is created on GitHub until the user confirms the final draft.
 It stops on non-GitHub hosts. Use it for detailed, spec-style issues (xref:skills/iru-create-github-issue.adoc[] stays the
 quick path for a simple one); for issues that already exist use xref:skills/iru-review-github-issue.adoc[] or
@@ -72,10 +75,10 @@ flowchart TD
     B -- no --> Z["Stop: GitHub only"]
     B -- yes --> C["iru-explore"]
     C --> D["Decide kind\n(functional / documentation)"]
-    D --> E["Interview user"]
+    D --> E["Interview user\n(functional: iru-functional-definition,\nembedded)"]
     E --> F["Optional context, due date,\nimportance, label"]
     F --> G["Write draft file"]
-    G --> H["Review loop, max 5 rounds\n(iru-review-github-issue)"]
+    G --> H["Review loop: iru-review-github-issue\n(+ iru-functional-reviewer for functional)\nmax 5 rounds docs, 3 functional"]
     H --> I{Too large?}
     I -- split --> J["iru-split-github-issue"]
     I -- keep --> K["Show draft + confirm"]
@@ -91,7 +94,7 @@ flowchart TD
 
 * xref:skills/iru-explore.adoc[] - Step 2, general orientation to ground the draft.
 * xref:skills/iru-functional-definition.adoc[] - Step 4, in embedded mode, for the functional draft.
-* xref:skills/iru-review-github-issue.adoc[] - Step 7, the automatic review loop over the draft file (documentation issues).
+* xref:skills/iru-review-github-issue.adoc[] - Step 7, the automatic review loop over the draft file (both kinds).
 * xref:skills/iru-split-github-issue.adoc[] - Step 8, offered when the issue is too large.
 
 === Invoked by
@@ -100,7 +103,9 @@ None of this repository's skills; a top-level entry point run directly by a pers
 
 === Related agents
 
-* xref:agents/iru-functional-reviewer.adoc[] - Step 7, the review loop of functional issues.
+* xref:agents/iru-functional-reviewer.adoc[] - Step 7, dispatched in each review round of functional issues
+  alongside `iru-review-github-issue` (skipped in round 1 when the embedded definition already returned `Verdict: ready`
+  for the same draft).
 
 == Source
 

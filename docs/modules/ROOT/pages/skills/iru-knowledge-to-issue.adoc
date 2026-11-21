@@ -23,6 +23,11 @@ actual issue. It never marks the source agreement complete: filing an issue mean
 not done, so it only appends the created issue's URL back onto the pending file and a note on the agreement
 item, leaving `iru-knowledge-complete` as the deliberate, later step that closes it out for real.
 
+The meeting context and purpose statement seed the functional definition embedded in `iru-create-github-issue`;
+its completeness-gate questions (verification methods and concrete values, negative cases, the `AC-DOC` documentation
+decision, reviewer findings) are never auto-answered — they reach the user, who may accept listed known gaps at the
+confirm step.
+
 == Purpose group
 
 xref:index.adoc#group-knowledge[Knowledge Base Management]
@@ -101,7 +106,8 @@ flowchart TD
 * xref:skills/iru-explore.adoc[] — grounds the synthesized purpose in the current codebase (no ticket
   argument, since none exists yet), reused as-is by `iru-create-github-issue`'s own exploration step.
 * xref:skills/iru-create-github-issue.adoc[] — drafts and files the actual issue from the synthesized purpose,
-  the meeting transcription/attachments, and the codebase context above.
+  the meeting transcription/attachments, and the codebase context above, which seed its embedded functional
+  definition; its completeness-gate questions are never auto-answered and reach the user.
 
 === Invoked by
 

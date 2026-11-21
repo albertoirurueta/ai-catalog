@@ -1,5 +1,5 @@
 = Functional Definition
-:description: Writes or updates a testable functional definition for a GitHub issue or Jira ticket, with requirements, acceptance criteria, verification methods and a mandatory AC-DOC block.
+:description: Writes or updates a testable functional definition for a GitHub issue or Jira ticket: requirements, acceptance criteria and a mandatory AC-DOC block.
 :keywords: iru-functional-definition, claude code skill, functional definition, acceptance criteria, requirements, github issue, jira ticket, AC-DOC, ticket intake
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -10,7 +10,8 @@ Produce a complete, testable functional definition for a ticket, grounded in the
 
 `iru-functional-definition` writes a Markdown draft in the format of its functional-definition template (Context, numbered
 requirements, acceptance criteria with verification methods and at least one negative case per behavioural requirement,
-Out of scope, Dependencies, Task details and References). It explores the repository, asks only what is missing in small
+and, when known, Out of scope, Dependencies, Task details and References; in embedded mode the last three are left to the
+calling skill). A Jira key decides the tracker even in a GitHub-hosted repository. It explores the repository, asks only what is missing in small
 batches, adds exactly one `AC-DOC` item (functional documentation block, or a declined block with a specific reason), and
 runs up to three review rounds with the `iru-functional-reviewer` agent. Standalone it files a new ticket or updates an
 existing one after confirmation; when called by another skill (`mode: embedded` or a `tracker:` argument) it only returns
@@ -58,29 +59,36 @@ Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `
 
 |`mode: embedded`, `tracker: github\|jira`
 |No
-|Passed by calling skills: skip tracker detection and file nothing.
+|Passed by calling skills: skip tracker detection, never ask for due date, importance, related tickets or attachments, and file nothing.
 |Standalone.
+
+|`ticket: <id>`
+|No
+|In embedded mode the only way to select a ticket; every other line is the description, even one starting with a number or `#N`.
+|None.
 |===
 
 == Outputs
 
 * A Markdown draft in a temporary directory (`functional-definition-draft.md`).
 * Standalone and after explicit confirmation: a new issue or ticket, or an updated body (with a before/after of every changed section).
-* Embedded: the draft path, the tracker and a three-line summary; nothing is filed.
+* Embedded: nothing is filed; it returns a block with `Draft:` (absolute path), `Tracker:`, `Verdict:` (the last review
+  round's, read by the caller's completeness gate), `Summary:` (requirement and criteria counts, AC-DOC target or reason)
+  and `Unresolved findings:`, without asking whether to proceed with gaps.
 
 == Execution flow
 
 [mermaid]
 ....
 flowchart TD
-    A["Resolve tracker\n(GitHub, Jira MCP, else stop)"] --> B["Parse arguments\n(create, update or draft)"]
+    A["Resolve tracker\n(ticket id first, GitHub, Jira MCP, else stop)"] --> B["Parse arguments\n(create, update or draft)"]
     B --> C["Explore (iru-explore)"]
     C --> D["Draft from template"]
     D --> E["Completeness gate\n(ask what is missing)"]
     E --> F["AC-DOC\n(accept target or decline with reason)"]
     F --> G["Review loop\n(iru-functional-reviewer, max 3 rounds)"]
     G --> H{Embedded?}
-    H -- yes --> I["Return draft path"]
+    H -- yes --> I["Return draft, verdict\nand unresolved findings"]
     H -- no --> J["Confirm, then create or update ticket"]
 ....
 

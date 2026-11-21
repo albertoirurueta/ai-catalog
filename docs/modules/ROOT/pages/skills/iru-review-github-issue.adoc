@@ -9,7 +9,11 @@ Review one GitHub issue, or a local draft of one, for gaps before anyone builds 
 == Purpose
 
 `iru-review-github-issue` applies a quality checklist (common items, development items for functional issues or
-documentation items for documentation issues, plus size signals) and verifies technical details against the code and
+documentation items for documentation issues, plus size signals) — and, for a functional issue, the functional definition
+checklist (`reference/functional-definition-checklist.md`, items F1-F11) on top: every criterion has a verification
+method with concrete values, behavioural requirements have negative cases, and the `AC-DOC` documentation decision is
+present and specific (an accepted block with target, pages, content and formats, or a declined block with a reason).
+It verifies technical details against the code and
 cited links by fetching them. Findings are classified as `gap`, `pending`, `inconsistency` or `doubt`, each with the exact
 question for the user, and the verdict is `ready` or `needs-work`. It never guesses an answer, and for an existing issue
 it only posts a comment or edits the body after explicit confirmation. It stops on non-GitHub hosts.
@@ -66,7 +70,7 @@ Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `
 flowchart TD
     A["Start"] --> B["Resolve input and fetch issue\n(GitHub host check for existing issues)"]
     B --> C["Detect kind"]
-    C --> D["Run checklist\n(verify code and links)"]
+    C --> D["Run checklist\n(+ functional definition checklist\nfor functional issues;\nverify code and links)"]
     D --> E["Emit result block"]
     E --> F{Existing issue,\nneeds-work, direct call?}
     F -- yes --> G["Ask: leave / comment / edit body"]

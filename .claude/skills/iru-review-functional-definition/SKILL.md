@@ -17,10 +17,10 @@ Every `subagent_type` below is written in the first form.
 
 - `draft:<path>`: a local Markdown file; no tracker is needed (tracker "none"). Read it; if unreadable, say so and stop.
 - A ticket id (auto-detected like `iru-explore`: Jira key such as `PROJ-123` means Jira, a bare number optionally with `#`
-  means GitHub, otherwise ask via `AskUserQuestion`): resolve the tracker. Reuse `iru-explore`'s `Repository host:` finding
-  if it ran in this conversation, else read the remote (`git remote get-url origin`); `github.com` or a GitHub Enterprise
-  Server domain means **GitHub**. For a non-GitHub host or no remote, look for a Jira MCP integration (`ToolSearch` "jira
-  issue"). If neither exists, tell the user plainly that only GitHub and Jira tickets can be reviewed here and stop,
+  means GitHub, otherwise ask via `AskUserQuestion`): the id decides the tracker first, whatever the remote. A Jira key
+  means **Jira** even in a GitHub-hosted repository: look for a Jira MCP integration (`ToolSearch` "jira issue"). A GitHub
+  number needs a GitHub host: reuse `iru-explore`'s `Repository host:` finding if it ran in this conversation, else read
+  the remote (`git remote get-url origin`); `github.com` or a GitHub Enterprise Server domain means **GitHub**. If neither exists, tell the user plainly that only GitHub and Jira tickets can be reviewed here and stop,
   writing nothing.
 - No argument: ask once which ticket or draft to review; stop if none is given.
 

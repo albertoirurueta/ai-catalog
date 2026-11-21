@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { collectBlocks, diagramType, extractBlocks, extractMarkdownBlocks, lintBlock } from './blocks.mjs'
+import { adocFiles, collectBlocks, diagramType, extractBlocks, extractMarkdownBlocks, lintBlock, markdownFiles } from './blocks.mjs'
 
 test('extracts literal and listing blocks with their first source line', () => {
   const text = ['= Page', '', '[mermaid]', '....', 'flowchart LR', '  A --> B', '....', '', '[mermaid,format=svg]', '', '----', 'graph TD', '----'].join('\n')
@@ -100,4 +100,33 @@ test('collectBlocks reads .adoc and .md files and lints Markdown blocks like Asc
   const blocks = collectBlocks(dir)
   assert.deepEqual(blocks.map((b) => [b.file.split('/').pop(), b.line]), [['a.adoc', 3], ['b.md', 2]])
   assert.deepEqual(lintBlock(blocks[1].src).map((p) => p.offset), [1])
+})
+
+test('file walk skips node_modules, build, dot directories and symlinked directories', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mermaid-walk-'))
+  for (const sub of ['node_modules/pkg', '.git', 'build/site', 'docs/modules', 'outside']) mkdirSync(join(dir, sub), { recursive: true })
+  for (const file of ['node_modules/pkg/a.adoc', '.git/b.md', 'build/site/c.adoc', 'outside/d.adoc', 'docs/modules/e.adoc', 'docs/f.md', 'g.adoc']) {
+    writeFileSync(join(dir, file), '')
+  }
+  symlinkSync(join(dir, 'outside'), join(dir, 'docs', 'linked'), 'dir')
+  symlinkSync(dir, join(dir, 'docs', 'modules', 'cycle'), 'dir')
+  const relative = (files) => files.map((f) => f.slice(dir.length + 1))
+  assert.deepEqual(relative(adocFiles(join(dir, 'docs'))), ['docs/modules/e.adoc'])
+  assert.deepEqual(relative(adocFiles(dir)), ['docs/modules/e.adoc', 'g.adoc', 'outside/d.adoc'])
+  assert.deepEqual(relative(markdownFiles(dir)), ['docs/f.md'])
+})
+
+test('Markdown fences: a mermaid example inside another fence is not a diagram', () => {
+  const text = [
+    '````markdown', '```mermaid', 'graph TD', '```', '````',
+    '~~~text', '```mermaid', 'graph LR', '```', '~~~',
+    '```', '```mermaid', '```',
+    '```mermaid', 'flowchart LR', '```',
+    '```js', 'unclosed ```mermaid', '```mermaid'
+  ].join('\n')
+  assert.deepEqual(extractMarkdownBlocks(text), [{ line: 15, src: 'flowchart LR' }])
+})
+
+test('Markdown fences: an unclosed mermaid fence runs to the end of the file', () => {
+  assert.deepEqual(extractMarkdownBlocks('```mermaid\ngraph TD\n  A --> B'), [{ line: 2, src: 'graph TD\n  A --> B' }])
 })

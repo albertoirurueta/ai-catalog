@@ -223,12 +223,12 @@ features, and where the underlying models genuinely differ.
 
 |`iru-create-github-issue`
 |xref:index.adoc#group-intake[Ticket Intake]
-|Draft and file a new GitHub issue, grounded in the codebase and confirmed with the user before creation.
+|Draft and file a new GitHub issue from an embedded functional definition (requirements, criteria, AC-DOC), filed only on a ready review verdict after confirmation.
 |xref:skills/iru-create-github-issue.adoc[]
 
 |`iru-create-jira-ticket`
 |xref:index.adoc#group-intake[Ticket Intake]
-|Draft and file a new Jira ticket via connected Jira MCP tools, the Jira counterpart to `iru-create-github-issue`.
+|Draft and file a new Jira ticket via connected Jira MCP tools from an embedded functional definition, the Jira counterpart to `iru-create-github-issue`.
 |xref:skills/iru-create-jira-ticket.adoc[]
 
 |`iru-database-code-one-task`
@@ -573,7 +573,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-plan`
 |xref:index.adoc#group-cycle[Issue-to-PR Development Cycle]
-|Writes a dependency-grouped, checkbox-driven implementation_plan.md for a ticket or described task, decomposing UI designs into component tasks with UI tests.
+|Writes a dependency-grouped, checkbox-driven implementation_plan.md with an acceptance-criteria coverage table (verification methods, AC-DOC), decomposing UI designs into component tasks.
 |xref:skills/iru-plan.adoc[]
 
 |`iru-pr-description`
@@ -1133,7 +1133,7 @@ features, and where the underlying models genuinely differ.
 
 |`iru-update-docs`
 |xref:index.adoc#group-maintenance[Repository Maintenance]
-|Updates Antora AsciiDoc pages from a git diff, incl. a UI section with UI-test screenshots, editing only affected pages and never source code.
+|Updates Antora AsciiDoc or Markdown pages from a git diff, with optional target, pages and content kinds, a UI section with UI-test screenshots, never source code.
 |xref:skills/iru-update-docs.adoc[]
 
 |`iru-update-java-springboot-documentation`
@@ -1598,7 +1598,8 @@ estimated difficulty folded into the draft.
 ====
 
 * xref:skills/iru-create-github-issue.adoc[`iru-create-github-issue`] — drafts and files a GitHub issue via `gh issue
-  create`, matched against this repository's actual label set.
+  create` from an embedded functional definition, matched against this repository's actual label set and filed only
+  once the definition's review verdict is ready (or its gaps are accepted).
 * xref:skills/iru-draft-github-issue.adoc[`iru-draft-github-issue`] — interviews the user and writes a detailed, spec-style
   GitHub issue (functional or documentation), reviews it in a loop, offers a split, and files it after confirmation.
 * xref:skills/iru-functional-definition.adoc[`iru-functional-definition`] — writes or updates a testable functional
@@ -2193,8 +2194,9 @@ and scanning for accidentally committed secrets.
 * xref:skills/iru-release.adoc[`iru-release`] — cuts a release branch, bumps versions via the ecosystem's
   `iru-<key>-bump-version` skill (Java/Kotlin, TypeScript, Android, Swift, PHP, Python), drafts release notes/changelog, and
   opens the release PR.
-* xref:skills/iru-update-docs.adoc[`iru-update-docs`] — brings the Antora documentation module up to date with
-  changes already made to the code.
+* xref:skills/iru-update-docs.adoc[`iru-update-docs`] — brings the Antora (or Markdown) documentation up to date with
+  changes already made to the code, optionally scoped by target, pages and content kinds (as `iru-code` passes from an
+  `AC-DOC` entry).
 * xref:skills/iru-build-docs.adoc[`iru-build-docs`] — builds the existing Antora documentation site as-is (no content
   edits), scaffolding it first via `iru-setup-antora` if it doesn't exist yet.
 * xref:skills/iru-update-antora.adoc[`iru-update-antora`] — upgrades an existing Antora toolchain to the pinned set

@@ -60,9 +60,13 @@ Skill({skill: "iru-functional-definition", args: "mode: embedded\ntracker: jira\
 
 It explores nothing twice (it reuses Step 2), asks for whatever is missing (purpose, behaviour, concrete values, negative
 cases, verification method of every criterion, the `AC-DOC` documentation decision), runs its review loop with
-`iru-functional-reviewer` and returns a draft path (format: `reference/functional-definition-template.md`, checklist:
-`reference/functional-definition-checklist.md`) plus any unresolved findings, without filing anything. Keep the path and
-the findings for Steps 7 and 8. If `iru-functional-definition` is not installed, draft Context, Requirements and
+`iru-functional-reviewer` and returns, without filing anything, a block with `Draft:` (path; format
+`reference/functional-definition-template.md`, checklist `reference/functional-definition-checklist.md`), `Verdict:` and
+`Unresolved findings:`. In embedded mode it does not ask for due date, importance, related tickets or attachments, and leaves
+Task details, Dependencies and References out of the draft: Steps 4 and 5 below ask for them once and Step 7 adds them
+(each related ticket is confirmed in Step 4, so the reviewer does not need to see it). Pass the user's words as the
+description only; never add a `ticket:` line, so a prompt such as "#41 follow-up" stays a description. Keep the path, the
+verdict and the findings for Steps 7 and 8; the definition does not ask whether to proceed with gaps, Step 8 does. If `iru-functional-definition` is not installed, draft Context, Requirements and
 Acceptance criteria yourself in that template's format and ask the user for anything missing.
 
 ## Step 4 — Ask for additional context
@@ -210,8 +214,8 @@ ticket alongside everything else.
 ## Step 8 — Confirm and create
 
 Filing a ticket is visible to everyone with access to this Jira project — never do it without explicit
-confirmation. Completeness gate: **Create the ticket now** is offered only when the functional definition returned no unresolved
-findings (`Verdict: ready`). If findings remain, list them verbatim and ask via `AskUserQuestion` between answering them
+confirmation. Completeness gate: **Create the ticket now** is offered only when the functional definition returned `Verdict: ready` with no unresolved
+findings. If findings remain, list them verbatim and ask via `AskUserQuestion` between answering them
 (back to the definition), **Accept the listed known gaps and create anyway** or **Don't create it**. Accepted gaps are
 written into the description under a `Known gaps` section (one bullet per finding) so they stay visible on the ticket.
 

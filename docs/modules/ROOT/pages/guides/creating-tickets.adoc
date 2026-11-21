@@ -312,23 +312,25 @@ the user decides.
 ....
 sequenceDiagram
     actor U as User
+    participant F as iru-create-github-issue or Jira skill
     participant D as iru-functional-definition
     participant E as iru-explore
     participant R as iru-functional-reviewer
-    participant F as iru-create-github-issue or Jira skill
-    U->>D: idea or ticket id
-    D->>E: ground in the codebase
-    E-->>D: stack, files, docs location
+    U->>F: idea
+    F->>E: ground in the codebase
+    E-->>F: stack, files, docs location
+    F->>D: mode embedded, user's description
     D->>U: interview, AC-DOC decision
     D->>D: write the draft
     loop up to 3 rounds
         D->>R: review draft with checklist
         R-->>D: findings only
-        D->>U: show findings, collect answers
+        D->>U: ask findings' questions
         D->>D: revise draft
     end
-    U->>D: approve final draft
-    D->>F: file the draft
+    D-->>F: draft path, verdict, unresolved findings
+    F->>U: context, due date, importance, then confirm
+    U->>F: create
     F-->>U: issue or ticket link
 ....
 

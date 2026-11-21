@@ -23,7 +23,7 @@ If the draft or checklist cannot be read, report that as the only finding and st
 
 1. Read the checklist and the draft. `FRn` ids and headings are equivalent to `Rn`.
 2. Run **every checklist item** (F1-F11) against the draft. Do not skip items that look fine; a passing item produces no finding.
-3. **Verify every named artefact** (files, classes, methods, endpoints, config keys, tables, documents) with Grep, Glob and Read. Record `file:line` evidence. An artefact that is missing and not marked `(new)` is an `inconsistency`; one that exists but behaves differently is `incorrect`.
+3. **Verify every named artefact** (files, classes, methods, endpoints, config keys, tables, documents) with Grep, Glob and Read. Record `file:line` evidence. An artefact that is missing and not marked `(new)`, or one that exists but behaves differently, is `incorrect`.
 4. **Fetch every cited URL** with WebFetch. Unreachable or unrelated pages are `inconsistency`. For referenced tickets use `gh issue view <n> --json number,title,state` (tracker `github`) or report that Jira keys could not be verified when no Jira tool is available to you.
 5. **Hunt `missing-functionality`**: callers of the code being changed, error and empty states, validation, permissions and roles, persistence and migrations, configuration, internationalisation, accessibility, backwards compatibility, and existing tests that will have to change.
 6. **Hunt `incorrect`**: statements contradicting the code, the documentation or another requirement; verification methods that are infeasible in this repository (for example a Playwright scenario with no Playwright setup, a `curl` against an endpoint that does not exist, a simulator test in a repository without a native project).

@@ -41,13 +41,17 @@ Markdown path and what each content kind produces. With none given, behave exact
 Don't assume a fixed docs path. Find the Antora module(s) actually present, typically by locating `antora.yml`
 file(s) in the repository (`find . -name antora.yml -not -path '*/node_modules/*'`).
 
+- **`target` never narrows what is kept in sync.** It names where the `pages:` and `content:` requested by an `AC-DOC`
+  go. Whatever its value, the repository's own documentation that the diff affects (the Antora module if one exists, else
+  the Markdown docs) is still updated as below, so behaviour that changed is never left stale.
 - **`target: markdown`, or no `antora.yml` found and the repository has a Markdown docs folder or README sections**:
   take the Markdown path of `reference/markdown-docs.md` (GitHub-flavoured: ```` ```mermaid ```` fences, equations as
   `$...$` / `$$...$$`, SVG figures beside the pages with relative links). Steps 3 and 5 apply unchanged, Step 4
   edits the `.md` pages instead, Step 4b and the Antora build of Step 6 are skipped, and Step 6 runs only the Mermaid
   check. Do not offer to set up Antora in that case.
-- **`target: antora` or `target: mcp`**: `antora` behaves as below; `mcp` limits the run to Step 5 plus any pages
-  `pages:` names.
+- **`target: antora` or `target: mcp`**: `antora` behaves as below. `mcp` sends the requested pages and content to the
+  documentation MCP in Step 5 (approval before sending, as always), in addition to updating the repository's own affected
+  pages as described here.
 - **No `antora.yml` found anywhere and no Markdown docs**: there is no documentation module yet to update. Ask the user whether Antora
   documentation should be set up now (via the `iru-setup-antora` skill) before continuing — don't assume either way.
   - **User agrees**: delegate scaffolding to the `iru-setup-antora` skill, run as a sub-agent via the Agent tool.

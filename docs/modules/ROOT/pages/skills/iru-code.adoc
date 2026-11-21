@@ -29,7 +29,8 @@ on any increase, unlike the quality gate), and verifies acceptance-criteria cove
 run is blocked) — if quality regressed, the user can choose to file the remaining
 issues as new tickets on whichever tracker the plan itself originated from (a GitHub issue via `gh issue create`,
 or a Jira ticket via the `iru-create-jira-ticket` skill, detected from the plan's own `Source:` line) — updates
-the project's Antora documentation via `iru-update-docs`, archives the plan to `.archive/` under a filename that
+the project's documentation (Antora or Markdown) via `iru-update-docs` — passing the documentation target, pages and
+content kinds of the plan's `AC-DOC` entry when one is present and not declined — archives the plan to `.archive/` under a filename that
 embeds the originating GitHub issue number or Jira key (falling back to a timestamp with no identifiable
 ticket), and asks the user for a final review; it never commits, pushes, or opens a PR itself.
 
@@ -98,8 +99,9 @@ nothing to execute and suggests running `/iru-plan` first, then stops.
   its tasks are checked `[x]`; an uncovered or unchecked row blocks archiving until follow-up tasks are added or the
   user rules the criterion out of scope. Skipped for a plan without that section.
 * A full local verification build confirmed healthy before archiving.
-* The project's Antora documentation brought up to date via `iru-update-docs` (Step 8), covering everything this run
-  changed — or a plain note that there's no Antora module to update.
+* The project's documentation (Antora or Markdown) brought up to date via `iru-update-docs` (Step 8), covering everything
+  this run changed, plus the pages and content kinds an `AC-DOC` entry requests — or a plain note that there's no
+  documentation site to update.
 * On success: `implementation_plan.md` moved to `.archive/implementation_plan_<ticket-id-or-timestamp>.md` — the
   bare GitHub issue number, the Jira key as-is (e.g. `PROJ-123`), or a timestamp with no identifiable ticket — a
   summary of groups/tasks completed/files touched/coverage/quality/security/acceptance-criteria coverage outcome/documentation updates (and any clarifications resolved), and a
@@ -138,7 +140,7 @@ flowchart TD
     S -- no --> CV{"Every acceptance-criteria row\ncovered and its tasks checked?"}
     CV -- no --> CW["Ask user: add follow-up group\nor mark criterion out of scope"]
     CW -- follow-up group added --> G
-    CV -- yes / no coverage section --> U["Step 8: update-docs skill\n(Antora documentation)"]
+    CV -- yes / no coverage section --> U["Step 8: update-docs skill\n(target, pages, content from AC-DOC if present)"]
     U --> V["Archive plan to .archive/,\nsummarize, ask for final review"]
 ....
 
@@ -154,7 +156,8 @@ flowchart TD
   back a short, self-contained summary.
 * xref:skills/iru-update-docs.adoc[] — Step 8, once per run (not per group), invoked directly via `Skill` once the
   build, quality, and security gates all pass, so the project's documentation reflects everything the whole plan
-  changed.
+  changed. When the plan's acceptance-criteria table and final documentation task carry an `AC-DOC` entry that was
+  not declined, its `target:`, `pages:` and `content:` are passed as arguments; otherwise it is invoked with none.
 * xref:skills/iru-create-jira-ticket.adoc[] — Step 7, conditionally: only when the final quality check regresses
   against baseline, the plan's own `Source:` line identifies it as Jira-originated, and the user chooses to file
   the remaining issues as new tickets rather than adding a follow-up task group or accepting them as-is. Invoked

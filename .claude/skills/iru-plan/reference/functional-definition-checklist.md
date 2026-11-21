@@ -43,9 +43,9 @@ with Read/Grep/Glob, never guess); **Hunts** are open-ended searches done by the
 
 ### F6 — AC-DOC present and well-formed
 - **Check**: exactly one `AC-DOC` item exists, either accepted (target, pages, content kinds, formats) or declined with a specific reason (`AC-DOC. Functional documentation: not required — <reason>`).
-- **Verify**: grep for `AC-DOC`; an accepted block names target, pages, content kinds and formats the target supports; a declined block has a non-generic reason.
+- **Verify**: grep for `AC-DOC`; an accepted block names target, pages, content kinds written as the template's slugs (`data-model`, `uml-class`, `sequence`, `workflow`, `architecture`, `api`, `configuration`, `equations`, `figures`; any other word is a `doubt`) and formats the target supports; a declined block has a non-generic reason.
 - **Fails**: no `AC-DOC`, or "AC-DOC. not required".
-- **Passes**: "AC-DOC. Functional documentation: Antora ROOT; pages `export.adoc` (new); content: sequence, configuration properties; formats: Mermaid."
+- **Passes**: "AC-DOC. Functional documentation: Antora ROOT; pages `export.adoc` (new); content: sequence, configuration; formats: Mermaid."
 
 ### F7 — No placeholders
 - **Check**: no `TBD`, `TODO`, `FIXME`, `???`, lone `?`, "etc.", "and so on", "to be defined", `XXX`, unfilled `<...>` template text.
@@ -59,8 +59,8 @@ with Read/Grep/Glob, never guess); **Hunts** are open-ended searches done by the
 - **Fails**: R1 says "maximum 100 rows", AC1 expects 1 000 rows.
 - **Passes**: both say "maximum 1 000 rows".
 
-### F9 — Out of scope and dependencies stated
-- **Check**: Out of scope exists (even "nothing excluded" with a reason); blocking and related tickets are listed or "none" is stated, and each referenced ticket resolves.
+### F9 — Out of scope and dependencies (optional sections)
+- **Check**: when present, Out of scope and Dependencies are specific and each referenced ticket resolves. When absent, this is not a finding; add a `Suggestions:` line only if the work clearly has adjacent features or prerequisites worth stating.
 - **Verify**: for GitHub `gh issue view <n> --json number,title,state`; for Jira use the Jira MCP; confirm title and state match the description.
 - **Fails**: "Depends on the auth rework." (no link)
 - **Passes**: "Blocked by #41 (auth rework, open). Related: #38."
@@ -69,7 +69,7 @@ with Read/Grep/Glob, never guess); **Hunts** are open-ended searches done by the
 
 ### F10 — Named artefacts exist or are marked new
 - **Check**: every file, class, method, endpoint, config key, table or document named exists in the repository, or is explicitly marked `(new)`.
-- **Verify**: Read or grep each name; a missing, unmarked one is an `inconsistency`; an artefact that exists but behaves differently from the description is `incorrect`.
+- **Verify**: Read or grep each name; a missing, unmarked one is `incorrect`, and so is an artefact that exists but behaves differently from the description.
 - **Fails**: "Change `ExportService.write()`" when no `ExportService` exists.
 - **Passes**: "Extend `src/export/CsvWriter.ts` (`writeRow`, currently ignores quoting); add `src/export/RowBatcher.ts` (new)."
 
@@ -93,11 +93,11 @@ that cannot work in this repository. Each is an `incorrect` finding with `file:l
 
 ## Finding classes
 
-- **gap**: required information is absent (F1 context, F2/F3 requirements or criteria, F4 method or values, F5 negative cases, F6 `AC-DOC`, F9 sections).
+- **gap**: required information is absent (F1 context, F2/F3 requirements or criteria, F4 method or values, F5 negative cases, F6 `AC-DOC`).
 - **pending**: the author deferred something (F7 placeholders, unresolved questions in comments).
-- **inconsistency**: two statements, or a statement and the codebase or a URL, disagree (F8, F10 missing artefact, unreachable reference).
+- **inconsistency**: two statements, or a statement and a URL or ticket, disagree (F8, F9 unresolvable ticket, unreachable reference).
 - **doubt**: the text is present but ambiguous or questionable and a human must decide (vague wording, over-prescriptive details, unjustified `manual`).
 - **missing-functionality**: the definition omits behaviour the change necessarily involves (H1).
-- **incorrect**: the definition states something false against the code, docs or another requirement, or relies on a verification method infeasible here (F10 behaviour mismatch, F11, H2).
+- **incorrect**: the definition states something false against the code, docs or another requirement, or relies on a verification method infeasible here (F10 missing or mismatching artefact, F11, H2).
 
 Every finding carries the exact question to put to the user, phrased so the answer can be pasted into the ticket.
