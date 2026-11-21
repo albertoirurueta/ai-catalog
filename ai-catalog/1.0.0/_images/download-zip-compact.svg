@@ -1,0 +1,17 @@
+<svg width="240" height="96" viewBox="0 0 240 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d">
+  <title id="t">Download zip</title>
+  <desc id="d">Button that downloads this plugin as a zip file.</desc>
+  <defs>
+    <linearGradient id="btnGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6ec4"/>
+      <stop offset="50%" stop-color="#7873f5"/>
+      <stop offset="100%" stop-color="#2fbf71"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="234" height="90" rx="45" ry="45" fill="url(#btnGradient)"/>
+  <rect x="4.5" y="4.5" width="231" height="87" rx="43.5" ry="43.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="3"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" transform="translate(62,48) scale(1.05)">
+    <path d="M0 -22 V10"/><path d="M-12 -2 L0 10 L12 -2"/><path d="M-18 14 V20 H18 V14"/>
+  </g>
+  <text x="152" y="50" text-anchor="middle" dominant-baseline="central" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="46" fill="#FFFFFF">ZIP</text>
+</svg>
