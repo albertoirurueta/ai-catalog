@@ -374,14 +374,20 @@ when every row is covered and checked proceed to Step 8.
 ## Step 8 — Update documentation
 
 Once Step 7 passes clean (healthy build, the quality and security gates both resolved, and every coverage row covered and checked), bring the project's
-Antora documentation in line with everything this run actually changed, by delegating to the `iru-update-docs` skill:
-`Skill({skill: "iru-update-docs"})`. Invoked with no argument, `iru-update-docs` covers uncommitted changes plus any
+documentation in line with everything this run actually changed, by delegating to the `iru-update-docs` skill.
+
+First look in the plan's acceptance-criteria table and final documentation task for an `AC-DOC` entry. When the entry
+is present and not declined, read its documentation target, pages and content kinds and pass them as arguments:
+`Skill({skill: "iru-update-docs", args: "target: <markdown|antora|mcp>\npages: <comma-separated paths>\ncontent: <comma-separated kinds>"})`
+(omit a line the entry does not state; kinds are `data-model`, `uml-class`, `sequence`, `workflow`, `architecture`,
+`api`, `configuration`, `equations`, `figures`). With no `AC-DOC`, or when it was declined (`not required`), invoke it
+as before: `Skill({skill: "iru-update-docs"})`. Invoked with no diff argument, `iru-update-docs` covers uncommitted changes plus any
 commits already made on the current branch that aren't on the base branch — which is exactly this run's surface,
 since Step 9 hasn't committed or archived anything yet. That means it picks up every group processed across all
 of Step 4's iterations, not just the last one, so the docs reflect the plan's full scope rather than only its
 final group.
 
-- If this repository has no Antora documentation site, `iru-update-docs` should report that plainly rather than
+- If this repository has no documentation site (Antora or Markdown), `iru-update-docs` should report that plainly rather than
   fail — treat that as nothing to do here and continue to Step 9.
 - If `iru-update-docs` needs to ask something only the user can resolve (per its own rules), let it surface via
   `AskUserQuestion` rather than guessing on its behalf.

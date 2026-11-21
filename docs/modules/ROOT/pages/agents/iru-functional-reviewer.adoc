@@ -1,0 +1,31 @@
+= Functional Reviewer
+:description: Claude Code agent that reviews a functional definition draft against a checklist and the real repository, read-only, and returns only a verdict with findings.
+:keywords: iru-functional-reviewer, claude code agent, functional definition, review, acceptance criteria, missing functionality, read-only, checklist
+
+NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
+
+A custom, read-only agent that reviews one functional definition draft for completeness, correctness and verifiability.
+
+== Purpose
+
+`iru-functional-reviewer` reads the checklist and the draft, runs every checklist item, verifies every named artefact in
+the repository with `file:line` evidence, fetches cited URLs, and hunts `missing-functionality` and `incorrect`
+statements (including verification methods that are infeasible in the repository). It never edits anything and never
+changes a ticket, and returns only a `Verdict` / `Findings` / `Suggestions` block. It runs as an agent so the verbose
+repository inspection stays out of the caller's context.
+
+Tools: `Read`, `Grep`, `Glob`, `Bash` (read-only commands) and `WebFetch`. Model: `opus`.
+
+== Plugin
+
+Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `/plugin install iru-core@ai-catalog`; see xref:guides/plugins.adoc[]).
+
+== Used by
+
+* xref:skills/iru-functional-definition.adoc[] - Step 7, up to three review rounds per definition.
+* xref:skills/iru-review-functional-definition.adoc[] - Step 3, the single review it reports.
+* xref:skills/iru-draft-github-issue.adoc[] - Step 7, the review loop of functional issues.
+
+== Source
+
+https://github.com/albertoirurueta/ai-catalog/blob/main/.claude/agents/iru-functional-reviewer.md[`iru-functional-reviewer.md` on GitHub] - the file this page was generated from.

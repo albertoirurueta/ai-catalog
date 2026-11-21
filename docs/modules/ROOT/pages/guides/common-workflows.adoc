@@ -190,6 +190,28 @@ flowchart LR
     Y --> G
 ....
 
+[[define-file-implement]]
+=== Define, file, implement
+
+For work that must be testable end to end, define the ticket before filing it.
+xref:skills/iru-functional-definition.adoc[`iru-functional-definition`] explores the codebase, interviews the user and
+writes a draft with numbered requirements, acceptance criteria that each name a verification method, and a mandatory
+`AC-DOC` documentation criterion. The draft is reviewed (at most three rounds) by
+xref:skills/iru-review-functional-definition.adoc[`iru-review-functional-definition`] and the `iru-functional-reviewer`
+agent, then filed by `iru-create-github-issue`, `iru-create-jira-ticket` or `iru-draft-github-issue`. From there the usual
+cycle applies: `/iru-issue <id>` plans the work (including a documentation task from `AC-DOC`) and `/iru-code` implements
+it and updates the docs. See xref:guides/creating-tickets.adoc#functional-definition[Functional definition].
+
+[mermaid]
+....
+flowchart LR
+    A["/iru-functional-definition"] --> B["Review loop\n(max 3 rounds)"]
+    B --> C["File: GitHub issue\nor Jira ticket"]
+    C --> D["/iru-issue with the ticket id"]
+    D --> E["/iru-plan\n(AC-DOC becomes a docs task)"]
+    E --> F["/iru-code\n+ iru-update-docs"]
+....
+
 [[bootstrapping-a-repository]]
 == Bootstrapping a repository
 

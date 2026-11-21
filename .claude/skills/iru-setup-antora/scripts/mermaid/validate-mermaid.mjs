@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Validates every Mermaid diagram of an Antora module: a green Antora build proves nothing about them, because
+// Validates every Mermaid diagram (AsciiDoc `[mermaid]` blocks and Markdown ```mermaid fences) under a directory: a green Antora build proves nothing about them, because
 // `@sntke/antora-mermaid-extension` only copies the source into the page and Mermaid renders it in the reader's browser.
 //
 //   static   `<` followed by a letter, `/`, `!` or `?` (parsed by the browser as an HTML tag), and single-escaped
@@ -13,7 +13,7 @@
 // from docs/, with the command in reference/toolchain.md:
 //     npm i --no-save mermaid@11 jsdom@31 puppeteer@25
 // Usage (from docs/):
-//     node scripts/mermaid/validate-mermaid.mjs [<modules-dir>] [--render]      (npm run validate:mermaid)
+//     node scripts/mermaid/validate-mermaid.mjs [<root-dir>] [--render]      (npm run validate:mermaid)
 // Exit code: 0 every diagram passed, 1 failures (listed as file:line), 2 missing dependency or no diagram found.
 import { createRequire } from 'node:module'
 import { relative, resolve } from 'node:path'
@@ -41,7 +41,7 @@ async function load (name) {
 
 const blocks = collectBlocks(root)
 if (blocks.length === 0) {
-  console.error(`validate-mermaid: no [mermaid] block under ${relative(process.cwd(), root) || '.'}`)
+  console.error(`validate-mermaid: no [mermaid] block or mermaid code fence under ${relative(process.cwd(), root) || '.'}`)
   process.exit(2)
 }
 const where = (b, offset = 0) => `${relative(process.cwd(), b.file)}:${b.line + offset}`

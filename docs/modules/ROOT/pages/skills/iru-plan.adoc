@@ -29,7 +29,10 @@ the work forks from is known — typically because `xref:skills/iru-issue.adoc[]
 with the user before invoking this skill — the Task summary records that too, as a `Base branch:` line, so that a
 later `/iru-pr-description` run in a separate session can recover the choice and target the pull request at the
 same base rather than the repository default. Every plan also carries an `## Acceptance criteria coverage` table
-mapping each ticket criterion (or 2-6 `derived:` statements for a free-form task) to the tasks that cover it, and any
+mapping each ticket criterion (or 2-6 `derived:` statements for a free-form task) to its verification method (unit,
+integration, Playwright or simulator UI tests, `curl` checks, form-validation tests, or `manual: <what to check>`) and
+the tasks that cover it; a functional definition's `AC-DOC` criterion maps to the final documentation task, which carries
+its documentation target, pages and content kinds and runs `/iru-update-docs` (method `not required` when declined). Any
 question that cannot be put to the user (unattended run, declined question, "decide later") is persisted as a
 plain-text `[NEEDS CLARIFICATION: ...]` marker, never guessed silently; `iru-code` refuses to start implementing
 while a marker remains. For user-interface work (screens, pages, windows, components or controls on any stack) it decomposes the design
@@ -85,8 +88,9 @@ task.
 * The plan is structured as: a task summary (including a `Source:` line naming the originating GitHub issue or
   Jira ticket, if any, a `Base branch:` line when known, a plan-wide **Language/framework** line if every task shares
   one key, and a mandatory closing `Open clarifications:` entry listing each unresolved marker or `none`), an
-  `## Acceptance criteria coverage` table (`#` / `Criterion` / `Covered by tasks`; every row names at least one task,
-  and an uncovered criterion is fixed by adding a task or a marker on the closest task), a summary of the
+  `## Acceptance criteria coverage` table (`#` / `Criterion` / `Verification method` / `Covered by tasks`; every row names
+  at least one task, and an uncovered criterion is fixed by adding a task or a marker on the closest task; an `AC-DOC`
+  row maps to the final documentation task carrying its target, pages and content kinds), a summary of the
   current relevant code state (concrete file paths and class/method names), and implementation steps organized
   into task groups — each group naming its `Parallelizable` verdict and containing its tasks/sub-tasks, every one
   carrying its own empty markdown checkbox (`[ ]`) for `iru-code` to check off later, numbered continuously across

@@ -46,6 +46,25 @@ looks like) rather than re-asking everything from scratch.
 
 Wait for the user's reply before continuing — the rest of the issue is drafted around this purpose.
 
+### Functional definition (embedded)
+
+Once the purpose is known, build the functional definition with the shared skill instead of drafting requirements here:
+
+```
+Skill({skill: "iru-functional-definition", args: "mode: embedded\ntracker: github\n<the user's prompt and Step 3 answers>"})
+```
+
+It explores nothing twice (it reuses Step 2), asks for whatever is missing (purpose, behaviour, concrete values, negative
+cases, verification method of every criterion, the `AC-DOC` documentation decision), runs its review loop with
+`iru-functional-reviewer` and returns, without filing anything, a block with `Draft:` (path; format
+`reference/functional-definition-template.md`, checklist `reference/functional-definition-checklist.md`), `Verdict:` and
+`Unresolved findings:`. In embedded mode it does not ask for due date, importance, related issues or attachments, and leaves
+Task details, Dependencies and References out of the draft: Steps 4 and 5 below ask for them once and Step 7 adds them
+(each related issue is confirmed in Step 4, so the reviewer does not need to see it). Pass the user's words as the
+description only; never add a `ticket:` line, so a prompt such as "#41 follow-up" stays a description. Keep the path, the
+verdict and the findings for Steps 7 and 8; the definition does not ask whether to proceed with gaps, Step 8 does. If `iru-functional-definition` is not installed, draft Context, Requirements and
+Acceptance criteria yourself in that template's format and ask the user for anything missing.
+
 ## Step 4 — Ask for additional context
 
 Ask the user (again as a plain, open-ended question) whether they have any of the following, making clear all of
@@ -138,13 +157,12 @@ Compose:
 
 - **Title**: a concise, imperative one-liner describing the change (e.g. "Add retry support to the HTTP client,"
   "Fix list item move detection on drag cancel").
-- **Body**, structured as:
-  - **Summary** — the purpose and motivation from Step 3, in the user's own terms.
-  - **Context** — grounded in Step 2's exploration: the relevant existing files/modules/classes and how they
-    currently behave, so whoever picks this up (including a future `/iru-explore`/`/iru-plan` run) starts oriented
-    instead of cold.
-  - **Acceptance criteria** — a short bulleted list, if the user gave any in Step 3 or they can be reasonably
-    inferred from the purpose; omit this section entirely rather than inventing criteria that weren't discussed.
+- **Body**, structured as the draft from the embedded functional definition (Step 3), in this order:
+  - **Context** — the purpose and motivation from Step 3 in the user's own terms, plus Step 2's grounding: the relevant
+    existing files/modules/classes and how they currently behave, so whoever picks this up starts oriented.
+  - **Requirements** — `R1…`, observable and testable, as returned by the definition.
+  - **Acceptance criteria** — `AC1 (R1)…` each with its verification method and concrete values, ending with the
+    mandatory `AC-DOC` item. Missing criteria are never dropped: they are asked for in Step 3's definition.
   - **Task details** — a short bulleted list combining Step 5's answers with your own assessment:
     - **Due date**: the date from Step 5, or omit this line entirely if none was given.
     - **Importance**: the level chosen in Step 5 (trivial/minor/important/blocking), or "not specified."
@@ -156,19 +174,28 @@ Compose:
       clear precedent elsewhere in the codebase, no new dependencies"). Use judgment based on the concrete
       codebase evidence, not a formula; reserve "impossible" for something that genuinely isn't achievable as
       stated (e.g. it contradicts a hard technical constraint uncovered in Step 2), not just "very hard."
+  - **Out of scope**, **Dependencies and related tickets**, and **Technical details** (only when the definition has
+    them), carried over from the draft; confirmed related issues from Step 4 go under Dependencies.
   - **References** — any URLs, confirmed related-issue links, and the actual attached files from Step 4: inline
     collapsible blocks for small text files, `![filename](url)`/`[filename](url)` links for anything uploaded to
     the `issue-attachments` release, or plain summaries for files the user chose not to attach; omit this section
     entirely if Step 4 gathered nothing.
 
-Show the full drafted title and body to the user before taking any action.
+Write the sections in the template's order (`reference/functional-definition-template.md`), whatever the order of the
+bullets above: Context, Requirements, Acceptance criteria, Technical details, Out of scope, Dependencies and related
+tickets, Task details, References. Show the full drafted title and body to the user before taking any action.
 
 ## Step 8 — Confirm and create
 
 Filing an issue is visible to everyone with access to the repository — never do it without explicit confirmation.
+Completeness gate: **Create the issue now** is offered only when the functional definition returned `Verdict: ready` with no unresolved
+findings. If findings remain, list them verbatim and ask via `AskUserQuestion` between answering them
+(back to the definition), **Accept the listed known gaps and create anyway** or **Don't create it**. Accepted gaps are
+written into the body under a `## Known gaps` section (one bullet per finding) so they stay visible on the issue.
+
 Ask the user via `AskUserQuestion`:
 
-- **Create the issue now** (recommended once the draft looks right).
+- **Create the issue now** (recommended once the draft looks right; only when the gate above passed or the gaps were accepted).
 - **Edit the draft first** — take their edits, update the draft, and re-ask.
 - **Don't create it** — stop here; the draft itself is the deliverable.
 

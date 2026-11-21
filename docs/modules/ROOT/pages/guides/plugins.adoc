@@ -74,9 +74,9 @@ Both public and private marketplaces work the same way:
 include::partial$download-catalog.adoc[]
 
 This catalog is itself a marketplace named `ai-catalog` (`.claude-plugin/marketplace.json`, generated from
-`tools/plugins.json`). It splits the 197 skills into `iru-core` (the stack-independent pipeline: `iru-issue`,
+`tools/plugins.json`). It splits the 199 skills into `iru-core` (the stack-independent pipeline: `iru-issue`,
 `iru-explore`, `iru-plan`, `iru-code`, PR and release skills, ticket intake, license and security checks, documentation,
-the repository bootstrap front door, and the three agents), `iru-knowledge`, and one plugin per stack (`iru-java`,
+the repository bootstrap front door, and the four agents), `iru-knowledge`, and one plugin per stack (`iru-java`,
 `iru-springboot`, `iru-quarkus`, `iru-dotnet`, `iru-typescript`, `iru-nestjs`, `iru-nextjs`, `iru-react-native`,
 `iru-php`, `iru-python`, `iru-android`, `iru-swift`, `iru-kmp`, `iru-rust`, `iru-go`, `iru-cli`). Every stack plugin
 depends on `iru-core`, and a few depend on a sibling stack whose gates they reuse (`iru-springboot` and `iru-quarkus` on
@@ -99,7 +99,7 @@ Things that differ from copying the files:
   working because every skill name in the catalog is unique, so none of the cross-references had to change. Keep the
   `iru-` prefix on anything you add so that stays true.
 * *Agent names.* Agents are reachable only by their namespaced name in plugin mode: `iru-core:iru-gate-runner`,
-  `iru-core:iru-isolated-skill-executor` and `iru-core:iru-change-summarizer`. The skills that dispatch agents explain
+  `iru-core:iru-isolated-skill-executor`, `iru-core:iru-change-summarizer` and `iru-core:iru-functional-reviewer`. The skills that dispatch agents explain
   this rule, and each agent's body repeats it (`subagent_type: "iru-gate-runner"` when installed under
   `.claude/agents/`, `"iru-core:iru-gate-runner"` as a plugin).
 * *`iru-core` alone is not enough for the stack-dependent front doors.* `/iru-setup-repository` hands off to the

@@ -238,9 +238,9 @@ doesn't need to touch `iru-gate-runner` itself — that agent already runs "what
 
 == Custom agent shapes
 
-xref:agents/overview.adoc[] documents the three custom agents this catalog has needed so far
-(`iru-gate-runner`, `iru-isolated-skill-executor`, `iru-change-summarizer`) and, more usefully for extension, the test it
-applies before adding a fourth: only when a built-in agent type's tool access or system prompt genuinely
+xref:agents/overview.adoc[] documents the four custom agents this catalog has needed so far
+(`iru-gate-runner`, `iru-isolated-skill-executor`, `iru-change-summarizer`, `iru-functional-reviewer`) and, more usefully
+for extension, the test it applies before adding a fifth: only when a built-in agent type's tool access or system prompt genuinely
 doesn't fit a *recurring* sub-agent shape used by more than one skill. A one-off isolation need (as several
 skills already handle by calling the built-in `general-purpose` or `Explore` types directly via `Agent`)
 doesn't warrant a new custom agent definition; a shape that starts showing up identically in a third or

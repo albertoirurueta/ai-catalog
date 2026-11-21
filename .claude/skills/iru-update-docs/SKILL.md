@@ -1,16 +1,24 @@
 ---
 name: iru-update-docs
-description: "/iru-update-docs [<git-ref-or-range>] - updates the repository's Antora AsciiDoc docs to reflect code changes: uncommitted changes plus unmerged branch commits, or the given ref/range (commit, main..HEAD, tag). Uses Mermaid and MathJax only where the pipeline supports them. For repositories with a UI it maintains the User interface section illustrated with UI-test screenshots (reference/ui-docs.md). Proposes matching updates to a connected documentation MCP (Confluence, Notion) for approval before sending; skips if read-only. Use whenever source changes should be reflected in the docs site."
+description: "/iru-update-docs [<git-ref-or-range>] [target: markdown|antora|mcp] [pages: <paths>] [content: <kinds>] - updates the repository's Antora AsciiDoc or Markdown docs to reflect code changes: uncommitted changes plus unmerged branch commits, or the given ref/range (commit, main..HEAD, tag). Produces data model, UML, sequence, workflow, architecture, API, configuration, equation and figure content on request. Uses Mermaid and MathJax only where the pipeline supports them. For repositories with a UI it maintains the User interface section illustrated with UI-test screenshots (reference/ui-docs.md). Proposes matching updates to a connected documentation MCP (Confluence, Notion) for approval before sending; skips if read-only. Use whenever source changes should be reflected in the docs site."
 model: sonnet
 ---
 
 # Update Docs
 
-Bring an Antora-based documentation module's `.adoc` pages (and its `nav.adoc`/`antora.yml` if structure or
-version changed) up to date with changes already made to the codebase. This skill only edits documentation — it
+Bring an Antora-based documentation module's `.adoc` pages (or, in a repository documented in Markdown, its `.md`
+pages; and its `nav.adoc`/`antora.yml` if structure or version changed) up to date with changes already made to the codebase. This skill only edits documentation — it
 does not change source code, and it does not invent new documented behavior that isn't actually in the code. It
 makes no assumptions about this being any particular repository, project, or language — discover everything
 about the docs module and the codebase fresh each run.
+
+## Arguments
+
+Optional `key: value` lines (or inline): `target: markdown|antora|mcp`, `pages: <comma-separated paths>`,
+`content: <comma-separated kinds>` (`data-model`, `uml-class`, `sequence`, `workflow`, `architecture`, `api`,
+`configuration`, `equations`, `figures`). Any other text is the git ref/range of Step 1. `iru-code` Step 8 passes them
+from the plan's `AC-DOC` task. Read `reference/markdown-docs.md` (next to this file) for their full meaning, the
+Markdown path and what each content kind produces. With none given, behave exactly as described below.
 
 ## Step 1 — Determine the diff to document
 
@@ -33,7 +41,18 @@ about the docs module and the codebase fresh each run.
 Don't assume a fixed docs path. Find the Antora module(s) actually present, typically by locating `antora.yml`
 file(s) in the repository (`find . -name antora.yml -not -path '*/node_modules/*'`).
 
-- **No `antora.yml` found anywhere**: there is no documentation module yet to update. Ask the user whether Antora
+- **`target` never narrows what is kept in sync.** It names where the `pages:` and `content:` requested by an `AC-DOC`
+  go. Whatever its value, the repository's own documentation that the diff affects (the Antora module if one exists, else
+  the Markdown docs) is still updated as below, so behaviour that changed is never left stale.
+- **`target: markdown`, or no `antora.yml` found and the repository has a Markdown docs folder or README sections**:
+  take the Markdown path of `reference/markdown-docs.md` (GitHub-flavoured: ```` ```mermaid ```` fences, equations as
+  `$...$` / `$$...$$`, SVG figures beside the pages with relative links). Steps 3 and 5 apply unchanged, Step 4
+  edits the `.md` pages instead, Step 4b and the Antora build of Step 6 are skipped, and Step 6 runs only the Mermaid
+  check. Do not offer to set up Antora in that case.
+- **`target: antora` or `target: mcp`**: `antora` behaves as below. `mcp` sends the requested pages and content to the
+  documentation MCP in Step 5 (approval before sending, as always), in addition to updating the repository's own affected
+  pages as described here.
+- **No `antora.yml` found anywhere and no Markdown docs**: there is no documentation module yet to update. Ask the user whether Antora
   documentation should be set up now (via the `iru-setup-antora` skill) before continuing — don't assume either way.
   - **User agrees**: delegate scaffolding to the `iru-setup-antora` skill, run as a sub-agent via the Agent tool.
     Brief that sub-agent with the actual context (what changed, per Step 1/3) so its starter pages aren't generic
@@ -105,6 +124,9 @@ When editing:
   `reference/toolchain.md` "Verified behaviors"): only use these if Step 2 confirmed a MathJax/stem extension is wired in. Add one only if the change actually
   introduces math worth stating precisely (e.g. a complexity bound or a formal definition); most changes won't
   need one, so don't force one in.
+- **Requested content** (`content:`/`pages:`): produce each listed kind on the named pages, on Antora with the
+  syntax of the bullets above, following the table in `reference/markdown-docs.md`; if a needed extension is not wired
+  in, say so and use a table or SVG figure.
 - If a change needs an entirely new page, create it in the same directory as the module's other pages, add an
   `xref:` entry to the relevant `nav.adoc` in a sensible position, and link to/from related existing pages.
 - **Nav authoring rules** for every `nav.adoc` edit: each entry is an `xref:` link or a text-only group heading
@@ -193,7 +215,8 @@ diagram ships silently. When the repository has neither the script nor `scripts/
 touched pages of the built site to confirm every diagram drew, and recommend `/iru-update-antora` (it copies
 `scripts/mermaid/` into the repository). Fix every diagram it reports in a page you touched; list failures in pages you
 did not touch without fixing them. When puppeteer cannot run, drop `--render` and say so. If Node isn't available or the build can't be run, say so explicitly and note the pages were
-updated but not locally verified against a real build.
+updated but not locally verified against a real build. On the Markdown path, Step 6 is only the Mermaid check of
+`reference/markdown-docs.md` §4.
 
 ## Step 7 — Report
 

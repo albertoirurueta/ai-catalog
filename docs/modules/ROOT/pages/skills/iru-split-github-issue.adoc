@@ -1,5 +1,5 @@
 = Split GitHub Issue
-:description: Assesses whether a GitHub issue is too large and splits it into dependency-ordered sub-issues under a root issue, tracked by a milestone, after confirmation.
+:description: Assesses whether a GitHub issue is too large and splits it into dependency-ordered sub-issues under a root issue and milestone, after confirmation.
 :keywords: iru-split-github-issue, claude code skill, github issue, sub-issues, milestone, issue dependencies, parallel groups, ticket intake
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -10,7 +10,10 @@ Turn one oversized issue into a root issue plus small, self-sufficient sub-issue
 
 `iru-split-github-issue` judges size from signals (many requirements, several independently deliverable capabilities,
 several areas touched, estimated difficulty hard or above), proposes slices that each own a subset of the
-requirements and acceptance criteria, computes `Blocked by` relations and parallel groups (same group means independent),
+requirements and acceptance criteria (every sub-issue keeps the canonical functional definition sections — Context,
+Requirements, Acceptance criteria with verification methods, plus Out of scope and Dependencies when the original has
+them — narrowed to the slice; the `AC-DOC` documentation criterion goes to the sub-issue whose change it documents, or
+stays on the root issue when it spans all of them), computes `Blocked by` relations and parallel groups (same group means independent),
 reviews each sub-issue draft with xref:skills/iru-review-github-issue.adoc[], and creates the root issue, a milestone linking it
 (reusing an existing milestone with the same title), the sub-issues and GitHub's sub-issue links. Steps 1 to 5 are read-only: nothing is created, edited or linked before the explicit
 confirmation in Step 6. An existing issue stays the root and its original text is preserved. It stops on
@@ -77,7 +80,7 @@ flowchart TD
     A["Start"] --> B["Resolve input, GitHub check, fetch"]
     B --> C{Large enough\nor force?}
     C -- no --> Z["Stop: not large enough"]
-    C -- yes --> D["Propose sub-issues"]
+    C -- yes --> D["Propose sub-issues\n(canonical sections, AC-DOC assigned)"]
     D --> E["Compute dependencies and groups"]
     E --> F["Review each draft\n(iru-review-github-issue)"]
     F --> G{User confirms?}

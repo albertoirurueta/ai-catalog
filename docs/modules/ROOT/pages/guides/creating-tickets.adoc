@@ -203,6 +203,137 @@ a|
   MCP tool(s) for a Jira ticket, including the epic link/parent field if one was assigned
 |===
 
+[[functional-definition]]
+== Functional definition
+
+`iru-functional-definition` produces a complete, testable definition of a ticket as a Markdown draft that
+`iru-create-github-issue`, `iru-create-jira-ticket` and `iru-draft-github-issue` then file. It explores the codebase
+(`iru-explore`, run inline so its report stays in context), interviews the user, writes the draft and reviews it in a
+loop of at most three rounds before anything is filed. `iru-review-functional-definition` runs the same review on its
+own against an existing draft, issue or ticket.
+
+The draft follows one tracker-neutral template (`reference/functional-definition-template.md`, shared byte-identical by
+every skill that reads a definition):
+
+[cols="1,3",options="header"]
+|===
+| Section | Content
+
+| Context | Why the work is needed, who is affected and what exists today, naming real files and modules.
+| Requirements | `R1`, `R2`, ... observable, testable behaviour. The `FRn` ids of `iru-draft-github-issue` are accepted as equivalent.
+| Acceptance criteria | `AC1 (R1)`, ... each naming the requirement it verifies and a verification method with concrete values, plus the mandatory `AC-DOC`.
+| Technical details | Optional, only for highly technical tasks; every artefact named must exist or be marked as new.
+| Out of scope, Dependencies and related tickets | What the ticket deliberately excludes; related and blocking tickets.
+| Task details, References | Optional: due date, importance, estimated difficulty, links.
+|===
+
+Every acceptance criterion states exactly one verification method followed by concrete values, so someone who did not
+write the ticket can run it and answer yes or no:
+
+[cols="1,3",options="header"]
+|===
+| Method | Use when
+
+| `automated-test` | A unit or integration test can prove it.
+| `form-input` | Behaviour of a form or input field, valid and invalid values.
+| `ui-browser` | Web UI behaviour, layout or flow, for example a Playwright scenario.
+| `ui-simulator` | Native mobile or desktop UI in a simulator or emulator.
+| `api` | HTTP or RPC contract, with request and expected response.
+| `cli` | Command-line behaviour, exit codes and output streams.
+| `data` | Persisted data, migrations and reports.
+| `performance` | A measurable bound with a stated percentile and environment.
+| `manual` | Only a person can judge; last resort, with the reason no automated method applies.
+|===
+
+The parts of a definition and how they reference each other:
+
+[mermaid]
+....
+erDiagram
+    DEFINITION ||--|{ REQUIREMENT : "states"
+    DEFINITION ||--|{ CRITERION : "lists"
+    DEFINITION ||--|| AC_DOC : "ends with"
+    REQUIREMENT ||--|{ CRITERION : "verified by"
+    DEFINITION ||--o{ RELATED_TICKET : "depends on"
+    DEFINITION {
+        string title "imperative, one line"
+        text context "names real files and modules"
+        text out_of_scope
+        text technical_details "optional"
+        text task_details "optional"
+    }
+    REQUIREMENT {
+        string id PK "R1, R2 (FR1 accepted)"
+        text behaviour "observable, testable"
+    }
+    CRITERION {
+        string id PK "AC1, AC2"
+        string requirement_id FK "the Rn it verifies"
+        string verification_method "one of the vocabulary"
+        text concrete_values "values that pass and fail"
+    }
+    AC_DOC {
+        string decision "accepted or not required"
+        string target "Antora, Markdown or MCP"
+        text pages "to create or update"
+        text content_kinds "data model, sequence, ..."
+        text formats "Mermaid, SVG, MathJax"
+        text reason "only when not required"
+    }
+    RELATED_TICKET {
+        string id PK
+        string relation "related or blocked by"
+    }
+....
+
+[cols="1,1,3",options="header"]
+|===
+| Part | Field | Rule
+
+| Requirement | `id`, behaviour | `R1`, `R2`, ... (or `FR1`, ... consistently within one draft); behaviour, not implementation.
+| Acceptance criterion | `id`, requirement, method, values | `ACm (Rn)`: every requirement has at least one criterion; exactly one verification method with concrete values; negative cases wherever the requirement accepts input or can fail.
+| `AC-DOC` | decision, target, pages, content kinds, formats | Exactly one, last; accepted names target, pages, kinds and only formats the target's pipeline supports; declined reads `not required — <reason>` with a specific reason.
+| Related ticket | id, relation | `Related:` with why, and `Blocked by:` (or `none`).
+|===
+
+`AC-DOC` is the mandatory last criterion and records the documentation decision. Either it names the documentation
+target (Antora site, Markdown docs, or a documentation system reached through MCP), the pages to create or update, the
+content kinds (data model, UML, sequence, workflow, architecture, API definition, configuration properties, equations,
+figures) and the formats (Mermaid, SVG, MathJax) the target's pipeline supports, or it declares
+`not required` with a specific reason. `iru-plan` turns an accepted `AC-DOC` into a documentation task and
+`iru-update-docs` consumes it through its `target:`, `pages:` and `content:` arguments.
+
+The review combines the checklist (`reference/functional-definition-checklist.md`) with the `iru-functional-reviewer`
+agent (`opus`), which reads the draft in a fresh context and returns findings only. Findings are shown verbatim, the
+user answers or declines them, and the draft is revised; after round three the remaining findings are shown before
+the user decides.
+
+[mermaid]
+....
+sequenceDiagram
+    actor U as User
+    participant F as iru-create-github-issue or Jira skill
+    participant D as iru-functional-definition
+    participant E as iru-explore
+    participant R as iru-functional-reviewer
+    U->>F: idea
+    F->>E: ground in the codebase
+    E-->>F: stack, files, docs location
+    F->>D: mode embedded, user's description
+    D->>U: interview, AC-DOC decision
+    D->>D: write the draft
+    loop up to 3 rounds
+        D->>R: review draft with checklist
+        R-->>D: findings only
+        D->>U: ask findings' questions
+        D->>D: revise draft
+    end
+    D-->>F: draft path, verdict, unresolved findings
+    F->>U: context, due date, importance, then confirm
+    U->>F: create
+    F-->>U: issue or ticket link
+....
+
 [[detailed-spec-style-issues]]
 == Detailed, spec-style issues
 
@@ -302,6 +433,8 @@ information, rather than depending on whoever's filing it to remember what a wel
   one-diagram version of this same workflow, alongside the catalog's other common workflows.
 * xref:guides/extending-the-catalog.adoc#_customizing_jira_ticket_creation[Customizing Jira ticket creation] —
   how to extend `iru-jira-custom-context` with organization-specific questions.
+* xref:skills/iru-functional-definition.adoc[], xref:skills/iru-review-functional-definition.adoc[],
+  xref:agents/iru-functional-reviewer.adoc[] -- detail pages for the functional definition.
 * xref:skills/iru-draft-github-issue.adoc[], xref:skills/iru-review-github-issue.adoc[],
   xref:skills/iru-split-github-issue.adoc[] -- detail pages for the detailed, spec-style path.
 * xref:index.adoc#group-intake[Ticket Intake] — the purpose group these two skills belong to.

@@ -98,12 +98,14 @@ Each skill and agent carries one `model`. The tier follows the kind of work, not
 | Model | Used for | Skills now
 
 | `haiku` | Mechanical work that runs a tool and reports: test, coverage and code-quality gates, version bumps, `-gitignore` scaffolds, `iru-check-license`, `iru-check-security`, `iru-build-docs`, `iru-knowledge-complete` and `iru-knowledge-setup`. | 58
-| `sonnet` | Writing code and files: every `iru-<key>-code-one-task` and `-code-one-task-group`, the `*-generate-all-tests` skills, the doc-audit skills that generate missing doc comments, scaffolds, workflow generators, orchestrators, ticket and PR skills. | 135
+| `sonnet` | Writing code and files: every `iru-<key>-code-one-task` and `-code-one-task-group`, the `*-generate-all-tests` skills, the doc-audit skills that generate missing doc comments, scaffolds, workflow generators, orchestrators, ticket and PR skills (including `iru-functional-definition` and `iru-review-functional-definition`). | 137
 | `opus` | Judgment over an unfamiliar repository or an open-ended review: `iru-explore`, `iru-plan`, `iru-pr-review`. | 3
 |===
 
 Agents: `iru-gate-runner` and `iru-change-summarizer` are `haiku`; `iru-isolated-skill-executor` is `inherit`, because it
-runs a whole coding skill whose own `model` must decide. Before this change about 30 `iru-setup-*` scaffold and workflow
+runs a whole coding skill whose own `model` must decide; `iru-functional-reviewer` is `opus`, because judging whether a
+definition is complete and testable is an open-ended review, and it runs in an isolated context that returns findings only.
+The functional definition loop is capped at 3 review rounds, which bounds the `opus` reviewer to three invocations per draft. Before this change about 30 `iru-setup-*` scaffold and workflow
 skills were `haiku` while 32 comparable ones were `sonnet`, and no agent set a model.
 
 == Prompt-cache analysis
@@ -152,7 +154,7 @@ scaffolds) disappeared when those orchestrators moved to `sonnet`.
 == Splitting the catalog
 
 Ask (5) of the issue was to evaluate splitting the catalog by purpose or by technology. The marketplace implements a split
-by technology: `iru-core` (25 skills, the stack-independent pipeline and the three agents), `iru-knowledge` (7) and one
+by technology: `iru-core` (28 skills, the stack-independent pipeline and the four agents), `iru-knowledge` (7) and one
 plugin per stack, from `iru-nestjs` (3 skills) to `iru-swift` (16). The alternative, a split by purpose, was evaluated and
 not taken:
 

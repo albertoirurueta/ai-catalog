@@ -1,82 +1,40 @@
 # Issue body templates
 
-Templates for `iru-draft-github-issue`. A draft file is Markdown whose first line is `# <title>` and whose remainder
+Templates for `iru-draft-github-issue` (documentation kind here; functional kind: canonical file, see below). A draft file is Markdown whose first line is `# <title>` and whose remainder
 is the issue body, so `iru-review-github-issue` and `iru-split-github-issue` can read it with `draft:<path>`.
 Omit an optional section entirely rather than leaving it empty or filled with a placeholder (`TBD`, `TODO`, `?`,
 "etc." are all review findings). Write the body in the user's language; the section names below may be translated.
 
 ## Functional template
 
+The functional template is the canonical one in `reference/functional-definition-template.md` (copied byte-identical
+into this skill; do not edit it here). Headings: Context, Requirements (`R1…`), Acceptance criteria (`AC1 (R1)…` each
+with `Verification: <method> — <concrete values>`, plus the mandatory `AC-DOC` item), Technical details (optional), Out of
+scope, Dependencies and related tickets, Task details, References. The checklist is
+`reference/functional-definition-checklist.md`. Existing drafts using `Functional requirements`, `FR1…` and
+`Dependencies and related issues` stay valid (`FRn` equals `Rn`); do not rename them only for that.
+
+Shape of a functional draft:
+
 ```markdown
 # <imperative one-line title>
 
 ## Context
-<Why this is needed: the problem or opportunity, who is affected, what exists today (name real files/modules found
-by exploration), and why now.>
-
-## Functional requirements
-- FR1. <Observable behaviour, testable, no vague wording.>
-- FR2. ...
-
+## Requirements
+- R1. <Observable, testable behaviour.>
 ## Acceptance criteria
-- AC1 (FR1). <Verifiable condition: given/when/then or a command whose output can be checked.>
-- AC2 (FR2). ...
-
-## Technical details
-<Optional. Only when the task is highly technical: files, classes, methods, config keys to change. Every artifact
-named must exist (the review verifies it).>
-
+- AC1 (R1). <Condition> — Verification: <automated-test|form-input|ui-browser|ui-simulator|api|cli|data|performance|manual> — <concrete values>
+- AC-DOC. Functional documentation: <target; pages; content; formats> | not required — <specific reason>
+## Technical details          <!-- optional -->
 ## Out of scope
-- <What this issue deliberately does not cover.>
-
-## Dependencies and related issues
-- Related: #<n> <title> (<why>)
-- Blocked by: none
-
+## Dependencies and related tickets
 ## Task details
-- Due date: <absolute date>            <!-- omit the line when none -->
-- Importance: trivial | minor | important | blocking | not specified
-- Estimated difficulty: <very easy | easy | medium | hard | very hard | extreme | impossible> - <one-line rationale>
-
-## References
-- <URLs, attached files (inline <details> block for small text files, links to `issue-attachments` release assets
-  for the rest)>
+## References                 <!-- optional -->
 ```
 
-Rules: every functional requirement is covered by at least one acceptance criterion and every criterion names the
-requirement it verifies (`ACn (FRm)`); requirements describe behaviour, implementation choices go in Technical
-details.
-
-### Worked example (functional)
-
-```markdown
-# Add CSV export to the reports page
-
-## Context
-Analysts copy report tables into spreadsheets by hand, which loses formatting and takes minutes per report. The
-reports page (`src/reports/ReportTable.tsx`) renders the data but offers no export.
-
-## Functional requirements
-- FR1. A report page offers an "Export CSV" action that downloads the currently filtered rows.
-- FR2. Fields containing the separator, quotes or line breaks are quoted per RFC 4180.
-
-## Acceptance criteria
-- AC1 (FR1). With a filter applied, clicking "Export CSV" downloads a file whose rows equal the visible rows.
-- AC2 (FR2). A cell containing `a,"b"` appears in the file as `"a,""b"""`.
-
-## Out of scope
-- Excel (.xlsx) export; scheduled exports.
-
-## Dependencies and related issues
-- Blocked by: none
-
-## Task details
-- Importance: important
-- Estimated difficulty: easy - one component plus a small serializer, no new dependencies
-
-## References
-- RFC 4180: https://www.rfc-editor.org/rfc/rfc4180
-```
+Rules: every requirement is covered by at least one criterion and every criterion names its requirement; requirements
+describe behaviour, implementation choices go in Technical details. See the template file for the verification-method
+vocabulary, the `AC-DOC` forms and a worked example.
 
 ## Documentation template
 

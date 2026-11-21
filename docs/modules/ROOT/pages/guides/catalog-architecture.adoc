@@ -190,6 +190,10 @@ gap/pending/inconsistency/doubt findings, report-only on existing issues) → op
 A split creates a root issue, sub-issues (GitHub sub-issues API) and a milestone; dependencies are recorded as a
 `+Blocked by: #N+` line and a `+Parallel group: <n>+` line in each sub-issue (same group = parallelizable) plus an
 ordered group table in the root.
+The functional definition adds a third entry: `+iru-functional-definition+` (explore inline, interview, template draft with
+`+Rn+`/`+ACn+` and the mandatory `+AC-DOC+`) → up to three review rounds with `+iru-review-functional-definition+` and the
+`+iru-functional-reviewer+` agent → the filing skills. `+iru-plan+` and `+iru-update-docs+` read the same template, so an
+accepted `+AC-DOC+` becomes a documentation task and `+iru-update-docs+` arguments (`+target:+`, `+pages:+`, `+content:+`).
 * **Release**: `+iru-release+` converts a SNAPSHOT/pre-release version into a final release and is not Maven-only —
 it discovers the installed `+iru-<key>-bump-version+` skills (from the skills available in the session, corroborated
 with `find .claude/skills -maxdepth 1 -type d -name "iru-*-bump-version"` when that directory exists — the plugin-safe
@@ -259,9 +263,69 @@ verified locally is reported rather than assumed to work. Every `+-github-workfl
 security block (Dependabot, dependency-review, CodeQL, OSV-Scanner, gitleaks) and ends with a required-secrets table;
 a stack may add opt-in scanners beyond those shared four (e.g. MobSF for Android) as long as the shared block stays.
 
+[[functional-definition-components]]
+=== Functional definition components
+
+The functional definition is shared by three layers: the skills that write and review a definition, the skills that
+file it, and the skills that consume it downstream. All of them read the same two byte-identical reference files
+(`+reference/functional-definition-template.md+` and `+reference/functional-definition-checklist.md+`), registered under
+`+shared_identical_files+` in `+tools/catalog-budgets.json+`.
+
+[mermaid]
+....
+flowchart LR
+    subgraph Shared["Shared reference files"]
+        T["functional-definition-template.md"]
+        K["functional-definition-checklist.md"]
+    end
+    subgraph Define["Define and review"]
+        FD["iru-functional-definition"]
+        RFD["iru-review-functional-definition"]
+        AG["iru-functional-reviewer agent\n(opus, read-only)"]
+    end
+    subgraph File["File"]
+        CGI["iru-create-github-issue"]
+        CJT["iru-create-jira-ticket"]
+        DGI["iru-draft-github-issue\n+ iru-review-github-issue"]
+    end
+    subgraph Consume["Consume"]
+        PL["iru-plan"]
+        CO["iru-code"]
+        UD["iru-update-docs"]
+    end
+    EX["iru-explore"] --> FD
+    FD --> AG
+    RFD --> AG
+    FD --> CGI
+    FD --> CJT
+    FD --> DGI
+    CGI --> PL
+    CJT --> PL
+    DGI --> PL
+    PL --> CO
+    CO -- "AC-DOC: target, pages, content" --> UD
+    T -.-> FD
+    T -.-> PL
+    T -.-> UD
+    K -.-> AG
+    K -.-> RFD
+....
+
+[cols="1,3",options="header"]
+|===
+| Component | Responsibility
+
+| `+iru-functional-definition+` | Explores the repository inline, interviews the user for anything missing, writes the draft (`+Rn+`, `+ACn (Rn)+` with a verification method, `+AC-DOC+`) and runs at most three review rounds before handing the draft to a filing skill or updating an existing ticket after confirmation.
+| `+iru-review-functional-definition+` | Reviews an existing draft, GitHub issue or Jira ticket on its own; prints the findings block and posts or edits nothing unless the user chooses to.
+| `+iru-functional-reviewer+` | Agent with read-only tools that runs the checklist against the real repository in a fresh context and returns only a Verdict / Findings / Suggestions block.
+| `+iru-create-github-issue+`, `+iru-create-jira-ticket+`, `+iru-draft-github-issue+` | File the definition with the canonical sections; confirmation is offered only once the definition is complete.
+| `+iru-plan+` | Maps every acceptance criterion to tasks (with its verification method) and turns an accepted `+AC-DOC+` into the final documentation task.
+| `+iru-code+`, `+iru-update-docs+` | `+iru-code+` Step 8 forwards the `+AC-DOC+` target, pages and content kinds as `+iru-update-docs+` arguments; Markdown targets get Mermaid fences, `+$$…$$+` equations and relative SVG figures.
+|===
+
 == Agents (`+.claude/agents/<name>.md+`)
 
-This repository defines three custom agents for its most-duplicated sub-agent shapes:
+This repository defines four custom agents for its most-duplicated sub-agent shapes:
 
 * **`+iru-gate-runner+`** — runs a single verification/quality-gate skill (tests, coverage, code-quality/lint, license
 headers, doc-comment audits, security scans, or a full build), optionally diffs it against a baseline, and
@@ -286,8 +350,11 @@ exploration/planning transcript can't bias it, while the caller keeps running af
 delegate the entire `+iru-code+` run for a ticket.
 * **`+iru-change-summarizer+`** — fans out over a git commit/tag range and returns only the user-facing changes.
 Used by `+iru-setup-changelog+` to summarize one release at a time when backfilling a long tag history.
+* **`+iru-functional-reviewer+`** — an `+opus+` read-only reviewer (tools Read, Grep, Glob, Bash, WebFetch) that checks a
+functional definition against `+reference/functional-definition-checklist.md+` in a fresh context and returns findings
+only. Used by `+iru-functional-definition+` and `+iru-review-functional-definition+`.
 
-Skills that need ad hoc context isolation beyond these three shapes still use Claude Code's _built-in_ agent
+Skills that need ad hoc context isolation beyond these four shapes still use Claude Code's _built-in_ agent
 types via the `+Agent+` tool: `+iru-explore+` uses the `+Explore+` agent explicitly; one-off cases like bootstrapping
 `+iru-setup-antora+` mid-run (`+iru-generate-skill-docs+`, `+iru-update-docs+`) use `+general-purpose+`, the default.
 

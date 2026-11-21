@@ -1,5 +1,5 @@
 = Create Jira Ticket
-:description: Drafts and files a Jira ticket grounded in the codebase via Jira MCP tools, attaching files natively and linking an optional epic before creation.
+:description: Drafts and files a Jira ticket via Jira MCP from an embedded functional definition, attaching files natively and linking an optional epic.
 :keywords: iru-create-jira-ticket, claude code skill, jira, jira mcp, ticket intake, epic link, bug report, feature request, attachments
 
 NOTE: This documentation was generated with the assistance of AI. Please report any inaccuracies.
@@ -20,12 +20,21 @@ REST API has a native attachment endpoint (`issue/\{key}/attachments`) that acce
 GitHub's issue API — every file is uploaded straight to the newly created ticket once a connected Jira MCP tool
 exposes that capability. If no attachment-capable tool is available, it falls back to `iru-create-github-issue`'s
 own workaround: small text-based files are embedded inline in the description, and everything else is just
-described without being attached. It also asks for the task's due date (optional) and importance (trivial/minor/
+described without being attached. Once the purpose is known, the requirements and acceptance criteria come from
+`iru-functional-definition` run in embedded mode (`tracker: jira`): it asks for whatever is missing (behaviour,
+concrete values, negative cases, the verification method of every criterion, the mandatory `AC-DOC` documentation
+decision), runs its `iru-functional-reviewer` review loop and returns the draft path, a verdict and any unresolved
+findings without filing anything. It also asks for the task's due date (optional) and importance (trivial/minor/
 important/blocking — defaulting to minor, or to blocking when the purpose reads as a bug/incident affecting
 production). It resolves the target Jira project and issue type against this Jira instance's actual configuration
-rather than inventing one, drafts a summary and a structured description (Summary, Context, Acceptance criteria,
-Task details — due date, importance, and an agent-assessed estimated difficulty from very easy to impossible —
-References), and always shows the draft for explicit confirmation before filing it. Unlike GitHub, there is no
+rather than inventing one, drafts a summary and a description in the functional-definition template's order (Context,
+Requirements, Acceptance criteria ending with `AC-DOC`, Technical details, Out of scope, Dependencies and related
+tickets when present, Task details — due date, importance, and an agent-assessed estimated difficulty from very easy
+to impossible — and References), converted to the format the Jira connection expects (wiki markup or ADF). Filing is
+gated on completeness: **Create the ticket now** is offered only when the definition returned `Verdict: ready` with no
+unresolved findings; otherwise the findings are listed and the user either answers them, accepts them as known gaps
+(written into a `Known gaps` section of the description) or does not file. It always shows the draft for explicit
+confirmation before filing it. Unlike GitHub, there is no
 ubiquitous Jira CLI fallback — this skill stops early if no Jira MCP tool is connected at all. It is for new tickets
 only: not for tickets that already exist (nothing to file), and not for work that should be tracked as a GitHub issue
 (use `iru-create-github-issue`).
@@ -63,7 +72,9 @@ Shipped by the `iru-core` plugin of the `ai-catalog` marketplace (install with `
 
 * No repository source/code changes — this skill's durable side effects are the filed Jira ticket itself and,
   for every file the connected Jira MCP tooling could actually upload, a real attachment on that ticket.
-* A drafted ticket summary, description (Summary, Context, Acceptance criteria, Task details, References),
+* A drafted ticket summary, description (Context, Requirements, Acceptance criteria with the `AC-DOC` item, optional
+  Technical details, Out of scope and Dependencies and related tickets, Task details, References, and a `Known gaps`
+  section when the user accepted unresolved review findings),
   project, issue type, and — if one was given — the epic it will be assigned to, shown to the user before any
   action is taken, including the list of files about to be attached. Task details combines the due date/
   importance answers with an estimated-difficulty assessment (very easy/easy/medium/hard/very hard/extreme/
@@ -89,7 +100,8 @@ flowchart TD
     B -- no --> Z["Stop: no fallback without Jira MCP;\nsuggest create-github-issue instead"]
     B -- yes --> C["Invoke explore skill\n(general orientation, no ticket yet)"]
     C --> D["Ask user: purpose of the task\n(plain conversational question)"]
-    D --> E["Ask user: additional context?\n(URLs, files/documents, related\ntickets, optional epic)"]
+    D --> D1["Functional definition\n(iru-functional-definition, embedded:\nrequirements, criteria, AC-DOC, review)"]
+    D1 --> E["Ask user: additional context?\n(URLs, files/documents, related\ntickets, optional epic)"]
     E --> E2["Confirm + explore epic if given\n(description, child tickets)"]
     E2 --> E3["Delegate to iru-jira-custom-context\nfor org-specific context"]
     E3 --> F["Fetch URLs via WebFetch;\nRead attached files for context;\nconfirm related tickets via Jira MCP tools"]
@@ -105,15 +117,21 @@ flowchart TD
     G --> H["Resolve issue type:\nBug vs. Story/Task/New Feature,\nmatched against this project's real types"]
     H -- ambiguous / can't list --> I["Ask user to pick"]
     H -- clear match --> J
-    I --> J["Draft summary + description:\nSummary, Context, Acceptance\ncriteria, Task details (due date,\nimportance, estimated difficulty),\nReferences (incl. epic)"]
+    I --> J["Draft summary + description in template order:\nContext, Requirements, Acceptance criteria,\nTask details (due date, importance,\nestimated difficulty), References (incl. epic)"]
     J --> K["Show draft, project, issue type,\nepic assignment to user"]
-    K --> L{User choice}
+    K --> K1{Verdict ready and\nno unresolved findings?}
+    K1 -- no --> K2{User choice on gaps}
+    K2 -- answer them --> D1
+    K2 -- accept known gaps --> K3["Add Known gaps section"]
+    K2 -- don't create --> M
+    K3 --> L
+    K1 -- yes --> L{User choice}
     L -- edit first --> J
     L -- don't create --> M["Stop: draft is\nthe deliverable"]
     L -- create now --> N["Create via connected Jira MCP\ntool(s), incl. epic link if given"]
     N -- creation fails --> O["Surface exact error;\nask how to proceed"]
     N -- succeeds --> P["Upload each flagged file\nas a real attachment via Jira MCP\n(one at a time; failures noted,\ndon't block the rest)"]
-    P --> Q["Report ticket key/URL,\nany attachment failures;\nsuggest /iru-issue or /plan"]
+    P --> Q["Report ticket key/URL,\nany attachment failures;\nsuggest /iru-issue or /iru-plan"]
 ....
 
 == Dependencies
@@ -126,6 +144,9 @@ flowchart TD
 * xref:skills/iru-jira-custom-context.adoc[] — Step 4, during additional-context gathering, passing the task's
   stated purpose so this extension-point skill can gather whatever organization-specific context it's been set
   up to ask for. A "nothing provided" response is never a blocker.
+* xref:skills/iru-functional-definition.adoc[] — Step 3, in embedded mode, to produce the functional draft
+  (requirements, acceptance criteria and the `AC-DOC` block) and its verdict, which Step 8's completeness gate reads
+  (answering the remaining findings goes back to it); falls back to its own interview when that skill is not installed.
 
 === Invoked by
 
@@ -139,7 +160,7 @@ exists for `/iru-issue`/`/iru-plan` to pick up.
 
 === Related agents
 
-None — `iru-create-jira-ticket` does not spawn any agent.
+None — `iru-create-jira-ticket` does not spawn any agent itself; the xref:agents/iru-functional-reviewer.adoc[] runs inside `iru-functional-definition`.
 
 == Source
 
